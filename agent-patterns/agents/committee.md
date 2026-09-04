@@ -13,9 +13,9 @@ permission:
   # NB: permission rules are last-match-wins, so the broad deny MUST come first.
   task:
     "*": deny
-    panelist-gemma: allow
-    panelist-qwen27: allow
-    panelist-qwen35: allow
+    panelist-minimalist: allow
+    panelist-skeptic: allow
+    panelist-pragmatist: allow
     judge: allow
     synthesizer: allow
     explore: allow

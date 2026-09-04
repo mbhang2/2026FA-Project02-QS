@@ -10,7 +10,7 @@ name: test-reviewer
 # audit procedure, so it is pinned to a larger model with more steps than the tester.
 description: Independent audit of test results — re-runs the suite, checks for skipped/deleted/weakened tests and coverage gaps, and verdicts PASS or FAIL. Use as the judge after the tester in the orchestrated loop.
 mode: subagent
-model: "litellm/deepseek-v4-pro"
+model: "litellm/deepseek-v4-flash"
 claude:
   model: claude-sonnet-5
 codex:

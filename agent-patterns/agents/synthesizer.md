@@ -9,7 +9,7 @@ name: synthesizer
 # committee pattern's otherwise-zero-cloud-cost property for this one call.
 description: Synthesizes committee output — merges panelist answers and judge reports into one decisive final answer with rationale and preserved dissent. Used by the committee agent.
 mode: subagent
-model: "litellm/deepseek-v4-pro"
+model: "litellm/deepseek-v4-flash"
 claude:
   model: claude-sonnet-5
 codex:

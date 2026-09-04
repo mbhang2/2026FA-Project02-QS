@@ -4,7 +4,7 @@ description: Execute a plan or task with the full build loop — coder, tester, 
 disable-model-invocation: true
 ---
 
-<!-- Skill equivalent of ai-agent-config/commands/deliver.md. -->
+<!-- Skill equivalent of commands/deliver.md. -->
 
 Deliver the task or plan given in the invoking message with the full build loop.
 

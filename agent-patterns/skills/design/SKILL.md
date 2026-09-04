@@ -4,7 +4,7 @@ description: Plan a feature or architecture change with the Architect — grill 
 disable-model-invocation: true
 ---
 
-<!-- Skill equivalent of ai-agent-config/commands/design.md. -->
+<!-- Skill equivalent of commands/design.md. -->
 
 Plan the feature or change described in the invoking message.
 

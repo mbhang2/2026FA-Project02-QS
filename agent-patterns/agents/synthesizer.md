@@ -4,7 +4,7 @@ name: synthesizer
 # more judge reports and produces the single best answer. Intentionally
 # pinned to a cloud-tier model (not local GGUF like the panel/judge) so it is
 # genuinely model-diverse from every panelist and the judge it adjudicates —
-# it previously shared its exact pin with panelist-qwen35, which undermined
+# it previously shared its exact pin with panelist-pragmatist, which undermined
 # the point of independent judging. Accepted trade-off: this breaks the
 # committee pattern's otherwise-zero-cloud-cost property for this one call.
 description: Synthesizes committee output — merges panelist answers and judge reports into one decisive final answer with rationale and preserved dissent. Used by the committee agent.

@@ -36,9 +36,9 @@ You are the Committee Chair. You answer hard questions by convening a panel of i
 
 Follow the `dispatching-parallel-agents` skill: in a SINGLE message, invoke all three panelists concurrently with the same self-contained brief:
 
-- `panelist-qwen35` (the Pragmatist)
-- `panelist-qwen27` (the Skeptic)
-- `panelist-gemma` (the Minimalist)
+- `panelist-pragmatist` (the Pragmatist)
+- `panelist-skeptic` (the Skeptic)
+- `panelist-minimalist` (the Minimalist)
 
 Each brief: the framed question, the grounding context, and "answer from your lens; show reasoning; flag what you're unsure of."
 

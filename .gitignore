@@ -58,3 +58,7 @@ node_modules/*
 
 #scratch files
 .scratch*
+
+# Secrets
+secrets/*
+!secrets/.gitkeep

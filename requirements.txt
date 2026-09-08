@@ -1,11 +1,12 @@
-# Runtime dependencies for scripts/inventory.py (Task 1 data inventory).
-# Pinned to what the inventory was generated with; loosen deliberately.
+# Runtime dependencies for scripts/inventory.py and scripts/probe_dbn.py.
+# Pinned to what the committed inventory was generated with; loosen deliberately.
 
 boto3==1.43.89                  # R2 / S3 listing and ranged reads
 databento==0.86.0               # DBN decode to DataFrame (pulls databento-dbn)
 zstandard==0.25.0               # raw zstd frame handling; two prefixes are double-compressed
 pandas==3.0.5
 pandas_market_calendars==5.4.0  # CME_Equity / CBOE_Equity_Options trading calendars
+PyYAML==6.0.3                   # config/exclusions.yaml
 
 # Present in the environment and useful for the loader work, not imported by
 # scripts/inventory.py itself:

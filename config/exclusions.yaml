@@ -1,0 +1,101 @@
+# Supersession record: which object is authoritative for a given (symbol, date).
+#
+# Nothing outside this file may hardcode a patches/ path. scripts/inventory.py and
+# every loader resolve authority here, so a superseded object is never read even
+# though it is still present in the bucket.
+#
+# raw/ is byte-identical to the source data lake and stays that way. The
+# contaminated objects below are deliberately NOT deleted -- that rclone check
+# result is the evidence the mirror is faithful. Exclusion is declared here and
+# enforced in code, never by deletion.
+#
+# sha256 is of the compressed patch object exactly as stored in R2.
+
+supersessions:
+  - date: 2025-07-03
+    symbol: NQ
+    original: raw/trades/NQ/glbx-mdp3-20250703.trades.dbn.zst
+    reason: >
+      DBN header reports ES.FUT; content byte-identical to the ES/ file of the
+      same date. NQ has no data at this key.
+    superseded_by: patches/trades/NQ/glbx-mdp3-20250703.trades.dbn.zst
+    sha256: bde5c02407ad9d115399ee85bebc44940d3e7752fce23e9ccf2c9e75c9c9dfd7
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    recorded: 2026-09-08
+    found_in: f40c3c3
+
+  - date: 2025-07-04
+    symbol: NQ
+    original: raw/trades/NQ/glbx-mdp3-20250704.trades.dbn.zst
+    reason: >
+      DBN header reports ES.FUT; content byte-identical to the ES/ file of the
+      same date. NQ has no data at this key.
+    superseded_by: patches/trades/NQ/glbx-mdp3-20250704.trades.dbn.zst
+    sha256: b02430b579ce4409ad81dc04aacf8c7783db4ca3da73dae20b1bc285403558ed
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    recorded: 2026-09-08
+    found_in: f40c3c3
+
+  - date: 2025-07-06
+    symbol: NQ
+    original: raw/trades/NQ/glbx-mdp3-20250706.trades.dbn.zst
+    reason: >
+      DBN header reports ES.FUT; content byte-identical to the ES/ file of the
+      same date. NQ has no data at this key.
+    superseded_by: patches/trades/NQ/glbx-mdp3-20250706.trades.dbn.zst
+    sha256: c40ed044a999f2627cd1b4ada1965339ddc4d5f8dafa8f53d9911de908e7de20
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    recorded: 2026-09-08
+    found_in: f40c3c3
+
+  - date: 2025-07-07
+    symbol: NQ
+    original: raw/trades/NQ/glbx-mdp3-20250707.trades.dbn.zst
+    reason: >
+      DBN header reports ES.FUT; content byte-identical to the ES/ file of the
+      same date. NQ has no data at this key.
+    superseded_by: patches/trades/NQ/glbx-mdp3-20250707.trades.dbn.zst
+    sha256: 7a93f7a3ab0443b8fbe7efd0d263c122c510490f627622d175aaf7bff43988f1
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    recorded: 2026-09-08
+    found_in: f40c3c3
+
+  - date: 2025-07-08
+    symbol: NQ
+    original: raw/trades/NQ/glbx-mdp3-20250708.trades.dbn.zst
+    reason: >
+      DBN header reports ES.FUT; content byte-identical to the ES/ file of the
+      same date. NQ has no data at this key.
+    superseded_by: patches/trades/NQ/glbx-mdp3-20250708.trades.dbn.zst
+    sha256: 40b0e98a947c276cc4ab40671634f0afaeab181752e9742fc651a113c2b6ed6b
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    recorded: 2026-09-08
+    found_in: f40c3c3
+
+  - date: 2025-07-09
+    symbol: NQ
+    original: raw/trades/NQ/glbx-mdp3-20250709.trades.dbn.zst
+    reason: >
+      DBN header reports ES.FUT; content byte-identical to the ES/ file of the
+      same date. NQ has no data at this key.
+    superseded_by: patches/trades/NQ/glbx-mdp3-20250709.trades.dbn.zst
+    sha256: 75887b8086dedd5935d15acad6349e90d169b8b87b49d459a70101f99d45f996
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    recorded: 2026-09-08
+    found_in: f40c3c3
+
+# Provenance for the replacement download.
+job_provenance:
+  GLBX-20260908-MRU3SPA6VW:
+    prefix: patches/_jobs/GLBX-20260908-MRU3SPA6VW/
+    dataset: GLBX.MDP3
+    schema: trades
+    symbols: [NQ.FUT]
+    stype_in: parent
+    submitted: 2026-09-08
+    dbn_version: 3
+    note: >
+      Patch objects are DBN v3; the raw/ mirror is DBN v1. Both decode to the same
+      13 columns and dtypes with a ts_recv index, so the difference is invisible
+      above the reader, but it is recorded per file in data/manifest.json because
+      the heterogeneity is permanent.

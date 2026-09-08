@@ -1,0 +1,37 @@
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  regressions:
+    name: data-integrity regressions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      # No R2 credentials in CI, by design. The live tier skips itself; the
+      # offline tier asserts against the committed data/manifest.json, which is
+      # regenerated from the bucket by scripts/inventory.py, so a regression in
+      # the data reaches CI as a diff in that file.
+      - name: Run regression tests
+        run: pytest -q
+
+      - name: Check the scripts import cleanly
+        run: |
+          python -c "import sys; sys.path.insert(0, 'scripts'); import inventory, probe_dbn"
+          python scripts/inventory.py --help > /dev/null
+          python scripts/probe_dbn.py --help > /dev/null

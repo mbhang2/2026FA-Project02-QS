@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import io
 import json
 import os
@@ -47,17 +48,24 @@ import botocore.config
 import databento_dbn as ddbn
 import pandas as pd
 import pandas_market_calendars as mcal
+import yaml
 import zstandard
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = REPO_ROOT / "data" / "manifest.json"
+EXCLUSIONS_PATH = REPO_ROOT / "config" / "exclusions.yaml"
 DOC_PATH = REPO_ROOT / "docs" / "data-inventory.md"
 CACHE_DIR = REPO_ROOT / ".scratch" / "inventory-cache"
 
 # Bump the relevant entry when a probe function changes shape or fixes a bug, so
 # stale cache entries from an older version of this script are discarded rather
 # than reused. Versions are per-cache so one change does not invalidate the rest.
-CACHE_VERSIONS = {"dbn_metadata": 2, "record_counts": 2, "frame_profiles": 3}
+CACHE_VERSIONS = {
+    "dbn_metadata": 2,
+    "record_counts": 2,
+    "frame_profiles": 3,
+    "checksums": 1,
+}
 
 ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
 DBN_MAGIC = b"DBN"
@@ -79,18 +87,22 @@ SAMPLE_COUNTS = {
     "raw/opra_definition": 6,
     "raw/opra_statistics": 6,
     "raw/opra_cbbo1m": 2,
+    # Only six objects, ~18 MB in total: count every one of them exactly rather
+    # than extrapolating, so the manifest can be checked against the patch job.
+    "patches/trades": 6,
 }
 
 # Which market calendar governs which prefix.
 CALENDARS = {
     "raw/trades": "CME_Equity",
+    "patches/trades": "CME_Equity",
     "raw/opra_cbbo1m": "CBOE_Equity_Options",
     "raw/opra_definition": "CBOE_Equity_Options",
     "raw/opra_statistics": "CBOE_Equity_Options",
 }
 
 KEY_RE = re.compile(
-    r"^raw/(?P<prefix>[a-z0-9_]+)/"
+    r"^(?P<root>raw|patches)/(?P<group>[a-z0-9_]+)/"
     r"(?:(?P<symbol>[A-Z]{1,4})/)?"
     r"(?P<stem>[a-z0-9-]+)-(?P<date>\d{8})\.(?P<kind>[a-z0-9-]+)\.dbn\.zst$"
 )
@@ -330,6 +342,63 @@ def read_full_df(s3, bucket: str, key: str) -> pd.DataFrame:
     return db.DBNStore.from_bytes(buf).to_df()
 
 
+def sha256_of(s3, bucket: str, key: str) -> str:
+    """SHA-256 of the compressed object exactly as stored, streamed."""
+    h = hashlib.sha256()
+    body = s3.get_object(Bucket=bucket, Key=key)["Body"]
+    while True:
+        chunk = body.read(1 << 22)
+        if not chunk:
+            break
+        h.update(chunk)
+    return h.hexdigest()
+
+
+# --------------------------------------------------------------------------- #
+# supersessions
+# --------------------------------------------------------------------------- #
+def load_exclusions(path: Path = EXCLUSIONS_PATH) -> dict:
+    """Read config/exclusions.yaml -- the only place a patches/ path may be named.
+
+    Absent file is not an error: a fresh checkout with no supersessions yet is a
+    legitimate state, and the inventory should still run.
+    """
+    if not path.exists():
+        return {"supersessions": [], "job_provenance": {}}
+    doc = yaml.safe_load(path.read_text()) or {}
+    out = []
+    for e in doc.get("supersessions") or []:
+        d = e["date"]
+        out.append(
+            {
+                "date": d.isoformat() if isinstance(d, dt.date) else str(d),
+                "symbol": str(e["symbol"]),
+                "original": str(e["original"]),
+                "superseded_by": str(e["superseded_by"]),
+                "sha256": str(e["sha256"]).lower(),
+                "reason": " ".join(str(e.get("reason", "")).split()),
+                "databento_job": str(e.get("databento_job", "")),
+                "recorded": str(e.get("recorded", "")),
+                "found_in": str(e.get("found_in", "")),
+            }
+        )
+    def plain(x):
+        # YAML turns bare dates into date objects and folded scalars into
+        # multi-line strings; both need flattening before they reach JSON.
+        if isinstance(x, (dt.date, dt.datetime)):
+            return x.isoformat()
+        if isinstance(x, str):
+            return " ".join(x.split())
+        if isinstance(x, list):
+            return [plain(i) for i in x]
+        if isinstance(x, dict):
+            return {str(k): plain(v) for k, v in x.items()}
+        return x
+
+    prov = {str(job): plain(v or {}) for job, v in (doc.get("job_provenance") or {}).items()}
+    return {"supersessions": sorted(out, key=lambda e: (e["symbol"], e["date"])), "job_provenance": prov}
+
+
 # --------------------------------------------------------------------------- #
 # key parsing
 # --------------------------------------------------------------------------- #
@@ -341,7 +410,8 @@ def parse_key(key: str) -> dict | None:
     ymd = d["date"]
     return {
         "key": key,
-        "prefix": f"raw/{d['prefix']}",
+        "prefix": f"{d['root']}/{d['group']}",
+        "root": d["root"],
         "folder_symbol": d["symbol"],
         "file_date": dt.date(int(ymd[:4]), int(ymd[4:6]), int(ymd[6:])),
         "stem": d["stem"],
@@ -535,6 +605,10 @@ def build(args) -> dict:
     bucket = os.environ["R2_BUCKET"]
     s3 = s3_client(args.workers)
 
+    exclusions = load_exclusions()
+    log(f"loaded {len(exclusions['supersessions'])} supersession(s) from "
+        f"{EXCLUSIONS_PATH.relative_to(REPO_ROOT)}")
+
     log("listing bucket ...")
     objects = list_objects(s3, bucket)
 
@@ -581,7 +655,7 @@ def build(args) -> dict:
     ccache = Cache("record_counts", enabled=not args.no_cache)
     sample_keys: list[str] = []
     for prefix, rows in sorted(by_prefix.items()):
-        if prefix == "raw/trades":
+        if prefix.endswith("/trades"):
             for sym in sorted({r["folder_symbol"] for r in rows}):
                 srows = [r for r in rows if r["folder_symbol"] == sym]
                 sample_keys += [r["key"] for r in stride_sample(srows, SAMPLE_COUNTS[prefix])]
@@ -606,7 +680,7 @@ def build(args) -> dict:
     profile_keys: list[str] = []
     head_only: set[str] = set()
     for prefix, rows in sorted(by_prefix.items()):
-        if prefix == "raw/trades":
+        if prefix.endswith("/trades"):
             # One sample per (symbol, weekday-class) so the session profile shows a
             # Sunday open-only file, a Friday close-out file and ordinary midweek
             # days in both DST regimes -- the four shapes a bar builder must handle.
@@ -649,6 +723,22 @@ def build(args) -> dict:
             log(f"  {k}")
         scache.flush()
 
+    # ---- checksums for everything a supersession points at ----------------- #
+    # These are small (six objects, ~18 MB) and they are the only objects whose
+    # identity is asserted in config, so verify rather than trust.
+    hcache = Cache("checksums", enabled=not args.no_cache)
+    want_hash = sorted(
+        {e["superseded_by"] for e in exclusions["supersessions"]} & set(size_by_key)
+    )
+    pending = [k for k in want_hash if args.refresh or hcache.get(k, size_by_key[k]) is None]
+    if pending:
+        log(f"checksumming {len(pending)} patch object(s) ...")
+        with ThreadPoolExecutor(min(6, args.workers)) as ex:
+            hasher = lambda k: with_retry(sha256_of, s3, bucket, k)
+            for key, digest in zip(pending, ex.map(hasher, pending)):
+                hcache.put(key, size_by_key[key], {"sha256": digest})
+        hcache.flush()
+
     # ---- assemble ---------------------------------------------------------- #
     prefixes: dict[str, Any] = {}
     anomalies: list[dict] = []
@@ -683,15 +773,7 @@ def build(args) -> dict:
         for sym in sorted(groups):
             srows = sorted(groups[sym], key=lambda r: r["file_date"])
             sdates = [r["file_date"] for r in srows]
-            if prefix == "raw/trades":
-                span_sessions = [d for d in sessions if sdates[0] <= d <= sdates[-1]]
-                expected = expected_utc_file_dates(span_sessions)
-                expected = {d for d in expected if sdates[0] <= d <= sdates[-1]}
-            else:
-                expected = {d for d in sessions if sdates[0] <= d <= sdates[-1]}
             present = set(sdates)
-            missing = sorted(expected - present)
-            unexpected = sorted(present - expected)
 
             in_sample = [
                 r
@@ -711,35 +793,16 @@ def build(args) -> dict:
                 content_by_date[tuple(r["meta"]["query_symbols"])].append(r["file_date"])
 
             # A file whose DBN header names a different root than its folder does
-            # not provide data for this symbol, however it is named. Coverage the
-            # research loop can actually use is the folder minus those files.
+            # not provide data for this symbol, however it is named.
             mismatched = [
                 r
                 for r in srows
-                if prefix == "raw/trades"
+                if prefix.endswith("/trades")
                 and r["meta"]["query_symbols"]
                 and r["meta"]["query_symbols"][0].split(".")[0] != sym
             ]
-            mismatched_dates = sorted(r["file_date"] for r in mismatched)
-            usable = present - set(mismatched_dates)
-            content_missing = sorted(expected - usable)
-            session_set = set(sessions)
 
-            def classify(d: dt.date) -> str:
-                if d not in session_set:
-                    return "evening_open_only_date"
-                if d.isoformat() in early:
-                    return "half_session_date"
-                return "full_session_date"
-
-            # A shortened session that is absent here but present on every other
-            # shortened session in range is a vendor gap, not a calendar quirk.
-            half_in_range = [
-                e for e in sorted(early) if sdates[0].isoformat() <= e <= sdates[-1].isoformat()
-            ]
-            half_present = sum(
-                1 for e in half_in_range if dt.date.fromisoformat(e) in present
-            )
+            versions = Counter(r["meta"]["dbn_version"] for r in srows)
 
             sym_entries[sym] = {
                 "objects": len(srows),
@@ -747,34 +810,23 @@ def build(args) -> dict:
                 "first_file_date": sdates[0].isoformat(),
                 "last_file_date": sdates[-1].isoformat(),
                 "distinct_file_dates": len(present),
-                "expected_file_dates": len(expected),
-                "missing_file_dates": [d.isoformat() for d in missing],
-                "missing_count": len(missing),
-                "missing_file_dates_classified": {
-                    d.isoformat(): classify(d) for d in missing
+                "dbn_versions": {
+                    str(v): {
+                        "files": n,
+                        "first_date": min(
+                            r["file_date"] for r in srows if r["meta"]["dbn_version"] == v
+                        ).isoformat(),
+                        "last_date": max(
+                            r["file_date"] for r in srows if r["meta"]["dbn_version"] == v
+                        ).isoformat(),
+                    }
+                    for v, n in sorted(versions.items())
                 },
-                "half_session_dates_in_range": len(half_in_range),
-                "half_session_dates_present": half_present,
-                "files_with_foreign_content": {
+                "header_symbol_mismatches": {
                     "count": len(mismatched),
-                    "dates": [d.isoformat() for d in mismatched_dates],
+                    "dates": [r["file_date"].isoformat() for r in mismatched],
+                    "keys": [r["key"] for r in mismatched],
                 },
-                "usable_file_dates": len(usable),
-                "content_missing_dates": [d.isoformat() for d in content_missing],
-                "content_missing_count": len(content_missing),
-                "one_line_coverage": (
-                    f"{sym}: {len(usable)} usable file-dates covering "
-                    f"{min(usable).isoformat() if usable else '-'} to "
-                    f"{max(usable).isoformat() if usable else '-'}, "
-                    f"{len(content_missing)} expected date(s) absent"
-                    + (
-                        f" (including {len(mismatched_dates)} present-but-foreign: "
-                        f"{mismatched_dates[0].isoformat()} to {mismatched_dates[-1].isoformat()})"
-                        if mismatched_dates
-                        else ""
-                    )
-                ),
-                "unexpected_file_dates": [d.isoformat() for d in unexpected],
                 "dbn_query_symbols": {
                     "|".join(k): {
                         "files": v,
@@ -795,14 +847,14 @@ def build(args) -> dict:
                 "size_outliers": size_outliers(srows, set(sessions), early),
             }
 
-            # folder label vs actual content
-            if prefix == "raw/trades":
+            # folder label vs actual content -- reported here as a storage fact;
+            # whether it still costs us coverage is decided in the authority pass.
+            if prefix.endswith("/trades"):
                 meta_by_key = {r["key"]: r["meta"] for r in rows}
                 for qs, dl in sorted(content_by_date.items()):
                     root = qs[0].split(".")[0] if qs else None
                     if not root or root == sym:
                         continue
-                    # Is the same content also sitting in the folder it belongs to?
                     dupes = []
                     for d in sorted(dl):
                         here = f"{prefix}/{sym}/glbx-mdp3-{d:%Y%m%d}.trades.dbn.zst"
@@ -825,17 +877,21 @@ def build(args) -> dict:
                             "prefix": prefix,
                             "kind": "folder_symbol_mismatch",
                             "detail": (
-                                f"{len(dl)} file(s) under raw/trades/{sym}/ carry DBN query "
+                                f"{len(dl)} file(s) under {prefix}/{sym}/ carry DBN query "
                                 f"symbol {'|'.join(qs)}, i.e. they hold {root} data, not {sym}. "
-                                f"{len(dupes)} of them duplicate the {root}/ file of the same date "
-                                "(identical DBN metadata). Reading these as "
-                                f"{sym} silently substitutes {root} prices; {sym} has no data at "
-                                "all on those dates."
+                                f"{len(dupes)} of them duplicate the {root}/ file of the same "
+                                f"date (identical DBN metadata). Reading these as {sym} "
+                                f"silently substitutes {root} prices."
                             ),
                             "first_date": min(dl).isoformat(),
                             "last_date": max(dl).isoformat(),
                             "file_count": len(dl),
+                            "folder": sym,
                             "dates": [d.isoformat() for d in sorted(dl)],
+                            "keys": [
+                                f"{prefix}/{sym}/glbx-mdp3-{d:%Y%m%d}.trades.dbn.zst"
+                                for d in sorted(dl)
+                            ],
                             "duplicate_of_sibling_folder": dupes,
                         }
                     )
@@ -890,40 +946,6 @@ def build(args) -> dict:
                 }
             )
 
-        for sym, v in sorted(sym_entries.items()):
-            hard = [
-                d
-                for d, why in v["missing_file_dates_classified"].items()
-                if why != "evening_open_only_date"
-            ]
-            if hard:
-                anomalies.append(
-                    {
-                        "severity": "warning",
-                        "prefix": prefix,
-                        "kind": "missing_session_date",
-                        "detail": f"{sym}: {len(hard)} trading session date(s) have no file at "
-                        f"all: {', '.join(hard)}. Classified from the {cal_name} calendar, so "
-                        "these are not holidays.",
-                        "first_date": min(hard),
-                        "last_date": max(hard),
-                    }
-                )
-            if v["files_with_foreign_content"]["count"]:
-                anomalies.append(
-                    {
-                        "severity": "critical",
-                        "prefix": prefix,
-                        "kind": "silent_coverage_hole",
-                        "detail": f"{sym} has no usable data on "
-                        f"{v['files_with_foreign_content']['count']} date(s) even though a file "
-                        "exists for each of them: "
-                        f"{', '.join(v['files_with_foreign_content']['dates'])}",
-                        "first_date": v["files_with_foreign_content"]["dates"][0],
-                        "last_date": v["files_with_foreign_content"]["dates"][-1],
-                    }
-                )
-
         total_bytes = sum(r["size"] for r in rows)
         sampled_bytes = sum(size_by_key[k] for k in counts_here)
         sampled_rows = sum(v["records"] for v in counts_here.values())
@@ -943,13 +965,20 @@ def build(args) -> dict:
             "stype_out": sorted({r["meta"]["stype_out"] for r in rows}),
             "ts_out": sorted({r["meta"]["ts_out"] for r in rows}),
             "partition": {
+                # Derived from the keys themselves rather than hardcoded, so a new
+                # prefix describes itself correctly the first time it appears.
                 "layout": (
-                    "raw/trades/<SYMBOL_FOLDER>/glbx-mdp3-<YYYYMMDD>.trades.dbn.zst"
-                    if prefix == "raw/trades"
-                    else f"{prefix}/opra-pillar-<YYYYMMDD>.{rows[0]['kind']}.dbn.zst"
+                    f"{prefix}/<SYMBOL_FOLDER>/{rows[0]['stem']}-<YYYYMMDD>."
+                    f"{rows[0]['kind']}.dbn.zst"
+                    if rows[0]["folder_symbol"]
+                    else f"{prefix}/{rows[0]['stem']}-<YYYYMMDD>.{rows[0]['kind']}.dbn.zst"
                 ),
-                "keys": ["symbol_folder", "utc_date"] if prefix == "raw/trades" else ["utc_date"],
-                "one_object_per": "symbol x UTC date" if prefix == "raw/trades" else "UTC date",
+                "keys": (
+                    ["symbol_folder", "utc_date"] if rows[0]["folder_symbol"] else ["utc_date"]
+                ),
+                "one_object_per": (
+                    "symbol x UTC date" if rows[0]["folder_symbol"] else "UTC date"
+                ),
                 "date_basis": "UTC calendar day (from the DBN metadata start/end, "
                 "which are UTC midnight boundaries) -- NOT the CME session date",
                 "distinct_header_variants": len(header_variants),
@@ -975,6 +1004,243 @@ def build(args) -> dict:
             "sampled_profiles": profiles,
         }
 
+    # ---- authority resolution --------------------------------------------- #
+    # Coverage is a property of instruments, not of storage prefixes. A raw/ object
+    # that a supersession replaces is never read; the patches/ object stands in its
+    # place. This is the only code that turns config/exclusions.yaml into a decision,
+    # and no patches/ path is named anywhere else.
+    by_key = {r["key"]: r for r in parsed}
+    superseded_by_key = {e["original"]: e for e in exclusions["supersessions"]}
+    patch_targets = {e["superseded_by"] for e in exclusions["supersessions"]}
+
+    for e in exclusions["supersessions"]:
+        missing_side = [k for k in (e["original"], e["superseded_by"]) if k not in by_key]
+        if missing_side:
+            anomalies.append(
+                {
+                    "severity": "critical",
+                    "prefix": "config/exclusions.yaml",
+                    "kind": "supersession_key_missing",
+                    "detail": f"{e['date']} {e['symbol']}: no object in the bucket for "
+                    + ", ".join(missing_side),
+                    "first_date": e["date"],
+                    "last_date": e["date"],
+                }
+            )
+            continue
+        recorded = hcache.get(e["superseded_by"], by_key[e["superseded_by"]]["size"])
+        actual = recorded["sha256"] if recorded else None
+        if actual and actual != e["sha256"]:
+            anomalies.append(
+                {
+                    "severity": "critical",
+                    "prefix": "config/exclusions.yaml",
+                    "kind": "supersession_checksum_mismatch",
+                    "detail": f"{e['superseded_by']} hashes to {actual} but exclusions.yaml "
+                    f"declares {e['sha256']}. The patch object is not the one that was "
+                    "reviewed; do not read it until this is resolved.",
+                    "first_date": e["date"],
+                    "last_date": e["date"],
+                }
+            )
+
+    for r in parsed:
+        if r["root"] == "patches" and r["key"] not in patch_targets:
+            anomalies.append(
+                {
+                    "severity": "warning",
+                    "prefix": r["prefix"],
+                    "kind": "unreferenced_patch_object",
+                    "detail": f"{r['key']} exists but no entry in config/exclusions.yaml "
+                    "points at it, so nothing will ever read it.",
+                    "first_date": r["file_date"].isoformat(),
+                    "last_date": r["file_date"].isoformat(),
+                }
+            )
+
+    # A folder/header mismatch that a supersession fully covers is a recorded and
+    # handled fact, not a live hazard. Downgrade it so the critical list stays
+    # meaningful; an uncovered date keeps it critical.
+    for x in anomalies:
+        if x["kind"] != "folder_symbol_mismatch":
+            continue
+        covered_keys = {e["original"] for e in exclusions["supersessions"]}
+        uncovered = [
+            d for d, k in zip(x["dates"], x["keys"]) if k not in covered_keys
+        ]
+        if not uncovered:
+            x["severity"] = "warning"
+            x["kind"] = "folder_symbol_mismatch_superseded"
+            x["detail"] += (
+                f" All {len(x['dates'])} date(s) are superseded in "
+                f"{EXCLUSIONS_PATH.relative_to(REPO_ROOT)}, so nothing reads them."
+            )
+        else:
+            x["detail"] += (
+                f" {len(uncovered)} of these date(s) have no supersession: "
+                + ", ".join(uncovered)
+            )
+        x["uncovered_dates"] = uncovered
+
+    instrument_coverage: dict[str, Any] = {}
+    for prefix, rows in sorted(by_prefix.items()):
+        if not prefix.startswith("raw/"):
+            continue  # patches/ contributes through supersessions, never on its own
+        cal_name = CALENDARS[prefix]
+        for sym in sorted({r["folder_symbol"] or (r["meta"]["query_symbols"] or ["<none>"])[0]
+                           for r in rows}):
+            base = [
+                r
+                for r in rows
+                if (r["folder_symbol"] or (r["meta"]["query_symbols"] or ["<none>"])[0]) == sym
+            ]
+            # swap in the authoritative object for every superseded date
+            resolved: dict[dt.date, dict] = {}
+            replaced: list[dict] = []
+            for r in sorted(base, key=lambda r: r["file_date"]):
+                e = superseded_by_key.get(r["key"])
+                if e and e["superseded_by"] in by_key:
+                    resolved[r["file_date"]] = by_key[e["superseded_by"]]
+                    replaced.append(e)
+                else:
+                    resolved[r["file_date"]] = r
+
+            dates = sorted(resolved)
+            sessions, cal_info = trading_days(cal_name, dates[0], dates[-1])
+            session_set, early = set(sessions), set(cal_info["early_close_days"])
+            if prefix.endswith("/trades"):
+                expected = expected_utc_file_dates(
+                    [d for d in sessions if dates[0] <= d <= dates[-1]]
+                )
+                expected = {d for d in expected if dates[0] <= d <= dates[-1]}
+            else:
+                expected = {d for d in sessions if dates[0] <= d <= dates[-1]}
+
+            present = set(dates)
+            # a resolved object still counts only if its own header names this symbol
+            usable = {
+                d
+                for d, r in resolved.items()
+                if not prefix.endswith("/trades")
+                or (
+                    r["meta"]["query_symbols"]
+                    and r["meta"]["query_symbols"][0].split(".")[0] == sym
+                )
+            }
+            unusable = sorted(present - usable)
+            absent = sorted(expected - present)
+            missing = sorted(expected - usable)
+            unexpected = sorted(present - expected)
+
+            def classify(d: dt.date) -> str:
+                if d not in session_set:
+                    return "evening_open_only_date"
+                if d.isoformat() in early:
+                    return "half_session_date"
+                return "full_session_date"
+
+            half_in_range = [
+                e_ for e_ in sorted(early) if dates[0].isoformat() <= e_ <= dates[-1].isoformat()
+            ]
+            half_present = sum(1 for e_ in half_in_range if dt.date.fromisoformat(e_) in usable)
+
+            sources = Counter(r["prefix"] for r in resolved.values())
+            versions = Counter(r["meta"]["dbn_version"] for r in resolved.values())
+
+            in_sample = [
+                r
+                for r in resolved.values()
+                if r["key"] in sample_key_set and ccache.get(r["key"], r["size"])
+            ]
+            srows_ = sum(ccache.get(r["key"], r["size"])["records"] for r in in_sample)
+            sbytes_ = sum(r["size"] for r in in_sample)
+            tbytes_ = sum(r["size"] for r in resolved.values())
+            per_byte = srows_ / sbytes_ if sbytes_ else None
+
+            instrument_coverage[sym] = {
+                "calendar": {"name": cal_name, **cal_info},
+                "first_date": dates[0].isoformat(),
+                "last_date": dates[-1].isoformat(),
+                "file_dates_present": len(present),
+                "expected_file_dates": len(expected),
+                "usable_file_dates": len(usable),
+                "missing_file_dates": [d.isoformat() for d in missing],
+                "missing_count": len(missing),
+                "missing_file_dates_classified": {d.isoformat(): classify(d) for d in missing},
+                "absent_file_dates": [d.isoformat() for d in absent],
+                "present_but_unusable_dates": [d.isoformat() for d in unusable],
+                "unexpected_file_dates": [d.isoformat() for d in unexpected],
+                "half_session_dates_in_range": len(half_in_range),
+                "half_session_dates_present": half_present,
+                "supersessions_applied": {
+                    "count": len(replaced),
+                    "dates": [e["date"] for e in replaced],
+                    "keys": [e["superseded_by"] for e in replaced],
+                },
+                "sources": {k: v for k, v in sorted(sources.items())},
+                "dbn_versions": {str(k): v for k, v in sorted(versions.items())},
+                "total_bytes": tbytes_,
+                "row_counts": {
+                    "sampled_files": len(in_sample),
+                    "sampled_bytes": sbytes_,
+                    "sampled_rows_exact": srows_,
+                    "rows_per_compressed_byte": round(per_byte, 6) if per_byte else None,
+                    "estimated_total_rows": int(round(per_byte * tbytes_)) if per_byte else None,
+                },
+                "authoritative_keys_for_superseded_dates": {
+                    e["date"]: {
+                        "key": e["superseded_by"],
+                        "header_symbol": (by_key[e["superseded_by"]]["meta"]["query_symbols"] or [None])[0],
+                        "dbn_version": by_key[e["superseded_by"]]["meta"]["dbn_version"],
+                        "replaces": e["original"],
+                    }
+                    for e in replaced
+                    if e["superseded_by"] in by_key
+                },
+                "one_line_coverage": (
+                    f"**{sym}**: {len(usable)} usable file-dates covering "
+                    f"{min(usable).isoformat() if usable else '-'} to "
+                    f"{max(usable).isoformat() if usable else '-'}, "
+                    f"{len(missing)} expected date(s) with no usable data"
+                    + (
+                        f"; {len(replaced)} date(s) served from patches/"
+                        if replaced
+                        else ""
+                    )
+                ),
+            }
+
+            hard = [
+                d for d, why in instrument_coverage[sym]["missing_file_dates_classified"].items()
+                if why != "evening_open_only_date"
+            ]
+            if hard:
+                anomalies.append(
+                    {
+                        "severity": "warning",
+                        "prefix": prefix,
+                        "kind": "missing_session_date",
+                        "detail": f"{sym}: {len(hard)} trading session date(s) have no usable "
+                        f"data after supersessions are applied: {', '.join(hard)}. Classified "
+                        f"from the {cal_name} calendar, so these are not holidays.",
+                        "first_date": min(hard),
+                        "last_date": max(hard),
+                    }
+                )
+            if unusable:
+                anomalies.append(
+                    {
+                        "severity": "critical",
+                        "prefix": prefix,
+                        "kind": "unpatched_coverage_hole",
+                        "detail": f"{sym} has no usable data on {len(unusable)} date(s) even "
+                        "though a file exists and no supersession covers them: "
+                        + ", ".join(d.isoformat() for d in unusable),
+                        "first_date": unusable[0].isoformat(),
+                        "last_date": unusable[-1].isoformat(),
+                    }
+                )
+
     # ---- sidecar (non-DBN) objects ---------------------------------------- #
     sidecars = []
     for o in unparsed:
@@ -988,11 +1254,14 @@ def build(args) -> dict:
             sidecars[-1]["not_available"] = sorted(
                 c["date"] for c in cond if c["condition"] != "available"
             )
-            pfx = "raw/" + o["key"].split("/")[1]
-            last_file = max(
-                v["last_file_date"] for v in prefixes[pfx]["symbols"].values()
+            parts = o["key"].split("/")
+            pfx = "/".join(parts[:2])
+            last_file = (
+                max(v["last_file_date"] for v in prefixes[pfx]["symbols"].values())
+                if pfx in prefixes
+                else None
             )
-            if cond[-1]["date"] < last_file:
+            if last_file and cond[-1]["date"] < last_file:
                 anomalies.append(
                     {
                         "severity": "warning",
@@ -1012,7 +1281,7 @@ def build(args) -> dict:
                     anomalies.append(
                         {
                             "severity": "warning",
-                            "prefix": "raw/opra_definition",
+                            "prefix": pfx,
                             "kind": "vendor_condition",
                             "detail": f"Databento reports {c['date']} as '{c['condition']}'",
                             "first_date": c["date"],
@@ -1020,30 +1289,74 @@ def build(args) -> dict:
                         }
                     )
 
-    # ---- cross-prefix coverage -------------------------------------------- #
-    trades_syms = prefixes.get("raw/trades", {}).get("symbols", {})
-    opra_first = min(
-        (v["first_file_date"] for p, d in prefixes.items() if p != "raw/trades"
-         for v in d["symbols"].values()),
-        default=None,
-    )
-    opra_last = max(
-        (v["last_file_date"] for p, d in prefixes.items() if p != "raw/trades"
-         for v in d["symbols"].values()),
-        default=None,
-    )
+    # ---- cross-instrument coverage ---------------------------------------- #
+    futures = {k: v for k, v in instrument_coverage.items() if "." not in k}
+    options = {k: v for k, v in instrument_coverage.items() if "." in k}
+    opra_first = min((v["first_date"] for v in options.values()), default=None)
+    opra_last = max((v["last_date"] for v in options.values()), default=None)
     overlaps = {}
-    for sym, v in sorted(trades_syms.items()):
+    for sym, v in sorted(futures.items()):
         if opra_first and opra_last:
-            lo, hi = max(v["first_file_date"], opra_first), min(v["last_file_date"], opra_last)
+            lo, hi = max(v["first_date"], opra_first), min(v["last_date"], opra_last)
             overlaps[sym] = {"start": lo, "end": hi, "nonempty": lo <= hi}
 
+    # ---- per-file record --------------------------------------------------- #
+    # One compact row per DBN object. dbn_version in particular is permanently
+    # heterogeneous (the mirror is v1, later downloads are v3+), so it belongs in
+    # the manifest rather than being rediscovered at read time.
+    files = {
+        r["key"]: [
+            r["size"],
+            r["meta"]["dbn_version"],
+            r["meta"]["compression_layers"],
+            (r["meta"]["query_symbols"] or [None])[0],
+        ]
+        for r in sorted(parsed, key=lambda r: r["key"])
+    }
+
     return {
-        "schema_version": "1",
+        "schema_version": "2",
         "bucket": bucket,
         "generated_by": "scripts/inventory.py",
         "object_count": len(objects),
         "total_bytes": sum(o["size"] for o in objects),
+        "files_fields": ["size_bytes", "dbn_version", "zstd_layers", "dbn_header_symbol"],
+        "files": files,
+        "supersessions": {
+            "config": str(EXCLUSIONS_PATH.relative_to(REPO_ROOT)),
+            "count": len(exclusions["supersessions"]),
+            "entries": [
+                {
+                    **e,
+                    "sha256_verified_against_bucket": (
+                        (hcache.get(e["superseded_by"], by_key[e["superseded_by"]]["size"]) or {})
+                        .get("sha256")
+                        == e["sha256"]
+                        if e["superseded_by"] in by_key
+                        else None
+                    ),
+                    "patch_dbn_version": (
+                        by_key[e["superseded_by"]]["meta"]["dbn_version"]
+                        if e["superseded_by"] in by_key
+                        else None
+                    ),
+                    "patch_header_symbol": (
+                        (by_key[e["superseded_by"]]["meta"]["query_symbols"] or [None])[0]
+                        if e["superseded_by"] in by_key
+                        else None
+                    ),
+                    "patch_records_exact": (
+                        (ccache.get(e["superseded_by"], by_key[e["superseded_by"]]["size"]) or {})
+                        .get("records")
+                        if e["superseded_by"] in by_key
+                        else None
+                    ),
+                }
+                for e in exclusions["supersessions"]
+            ],
+            "job_provenance": exclusions["job_provenance"],
+        },
+        "instrument_coverage": instrument_coverage,
         "prefixes": prefixes,
         "sidecar_objects": sorted(sidecars, key=lambda r: r["key"]),
         "coverage_overlap_trades_vs_opra": overlaps,
@@ -1089,12 +1402,19 @@ def render_markdown(m: dict) -> str:
     a("## Read this first")
     a("")
     tr = m["prefixes"].get("raw/trades", {}).get("symbols", {})
-    a("Coverage, one line per symbol:")
+    cov = m["instrument_coverage"]
+    sup = m["supersessions"]
+    a("Coverage after supersessions are applied, one line per instrument:")
     a("")
-    for _p, d in sorted(m["prefixes"].items()):
-        for sym, v in sorted(d["symbols"].items()):
-            a(f"- **`{_p}` / {sym}** — {v['one_line_coverage']}")
+    for sym, v in sorted(cov.items()):
+        a(f"- {v['one_line_coverage']}")
     a("")
+    if sup["count"]:
+        applied = sum(v["supersessions_applied"]["count"] for v in cov.values())
+        a(f"{sup['count']} supersession(s) are declared in `{sup['config']}` and "
+          f"{applied} are applied above. The superseded objects are still in the bucket "
+          "and are never read; `raw/` stays byte-identical to the source lake.")
+        a("")
     crit = [x for x in m["anomalies"] if x["severity"] == "critical"]
     if crit:
         a("Things that will silently corrupt results if not handled:")
@@ -1106,13 +1426,16 @@ def render_markdown(m: dict) -> str:
             seen.add(x["detail"])
             a(f"- **{x['kind']}** — {x['detail']} ({x['first_date']} → {x['last_date']}).")
         a("")
-    a("Two structural facts that contradict the task brief's starting assumptions:")
+    a("Three structural facts worth knowing before writing a reader:")
     a("")
     a("- The objects are **not parquet**. They are Databento DBN under zstd, so there is no "
       "parquet footer to read and `read_parquet` will not open them. Row counts and schema "
       "come from the DBN header plus a sampled decode instead.")
     a("- **ES is present**, with its own year of history, and the OPRA prefixes are QQQ "
       "options as described.")
+    a("- **DBN version is not uniform.** The `raw/` mirror is v1 and the patch objects are "
+      "v3. Both decode to the same columns and dtypes, but the version is recorded per "
+      "file in `data/manifest.json` under `files` rather than assumed.")
     a("")
 
     # 1 partition
@@ -1135,33 +1458,40 @@ def render_markdown(m: dict) -> str:
     # 2 symbols
     a("## 2. Symbols present in `trades`")
     a("")
-    a("| Folder | Files | DBN query symbol(s) in the files | Dates |")
-    a("|---|---|---|---|")
-    for sym, v in sorted(tr.items()):
-        for qs, info in sorted(v["dbn_query_symbols"].items()):
-            a(f"| `{sym}` | {info['files']} | `{qs}` | {info['first_date']} → {info['last_date']} |")
+    a("| Prefix | Folder | Files | DBN query symbol(s) in the files | Dates |")
+    a("|---|---|---|---|---|")
+    for pfx, d in sorted(m["prefixes"].items()):
+        if not pfx.endswith("/trades"):
+            continue
+        for sym, v in sorted(d["symbols"].items()):
+            for qs, info in sorted(v["dbn_query_symbols"].items()):
+                a(f"| `{pfx}` | `{sym}` | {info['files']} | `{qs}` "
+                  f"| {info['first_date']} → {info['last_date']} |")
     a("")
-    if crit:
-        a("> The folder name and the file contents disagree — see *Read this first*. "
-          "The symbol column above comes from each file's own DBN header, which is "
-          "authoritative; the folder name is not.")
-        a("")
+    a("The symbol column comes from each file's own DBN header, which is authoritative; "
+      "the folder name is not. Where the two disagree the file is excluded from that "
+      "symbol's coverage, and a supersession in "
+      f"`{m['supersessions']['config']}` names the object that replaces it.")
+    a("")
 
     # 3 coverage
     a("## 3. Date coverage")
     a("")
-    a("| Prefix / symbol | First | Last | Files | Expected | Absent | Usable dates | No usable data |")
-    a("|---|---|---|---|---|---|---|---|")
-    for p, d in sorted(m["prefixes"].items()):
-        for sym, v in sorted(d["symbols"].items()):
-            label = f"`{p}` / {sym}" if p == "raw/trades" else f"`{p}`"
-            a(f"| {label} | {v['first_file_date']} | {v['last_file_date']} | "
-              f"{v['objects']} | {v['expected_file_dates']} | {v['missing_count']} | "
-              f"{v['usable_file_dates']} | {v['content_missing_count']} |")
+    a("Authority-resolved: a date served by a patch object is counted once, against the "
+      "patch, and the superseded object is ignored.")
     a("")
-    a("*Files* counts objects. *Usable dates* excludes files whose DBN header names a "
-      "different instrument root than their folder, which is why the two columns differ "
-      "for NQ. *No usable data* is the column that matters for a walk-forward split.")
+    a("| Instrument | First | Last | Expected | Usable | Gaps | From `raw/` | From `patches/` |")
+    a("|---|---|---|---|---|---|---|---|")
+    for sym, v in sorted(cov.items()):
+        src = v["sources"]
+        a(f"| {sym} | {v['first_date']} | {v['last_date']} | {v['expected_file_dates']} "
+          f"| {v['usable_file_dates']} | {v['missing_count']} "
+          f"| {sum(n for k, n in src.items() if k.startswith('raw/'))} "
+          f"| {sum(n for k, n in src.items() if k.startswith('patches/'))} |")
+    a("")
+    a("*Gaps* is the column that matters for a walk-forward split: expected dates with no "
+      "usable data, counting both absent files and files whose header names another "
+      "instrument.")
     a("")
     ov = m["coverage_overlap_trades_vs_opra"]
     if ov:
@@ -1182,33 +1512,37 @@ def render_markdown(m: dict) -> str:
       "gaps; a date the calendar keeps as a shortened session is expected, and its "
       "absence is reported.")
     a("")
-    for p, d in sorted(m["prefixes"].items()):
-        for sym, v in sorted(d["symbols"].items()):
-            label = f"`{p}` / {sym}" if p == "raw/trades" else f"`{p}`"
-            a(f"**{label}** — calendar `{d['calendar']['name']}`, "
-              f"{v['missing_count']} missing, {len(v['unexpected_file_dates'])} unexpected.")
-            a("")
-            if v["missing_file_dates"]:
-                for d_, why in sorted(v["missing_file_dates_classified"].items()):
-                    extra = ""
-                    if why == "half_session_date":
-                        extra = (
-                            f" — but {v['half_session_dates_present']} of the "
-                            f"{v['half_session_dates_in_range']} shortened sessions in range "
-                            "do have a file, so this is a vendor gap rather than a "
-                            "calendar artefact"
-                        )
-                    a(f"- **no file**: {d_} ({why.replace('_', ' ')}){extra}")
-            else:
-                a("- no missing files")
-            if v["files_with_foreign_content"]["count"]:
-                a("- **file present but holds another instrument's data**: "
-                  + ", ".join(v["files_with_foreign_content"]["dates"]))
-            if v["unexpected_file_dates"]:
-                a("- present but not on the calendar: " + ", ".join(v["unexpected_file_dates"]))
-            a("")
-        if d["calendar"]["early_close_days"]:
-            a(f"- `{p}` early closes (normal close {d['calendar']['normal_close_ct']} CT): "
+    for sym, v in sorted(cov.items()):
+        a(f"**{sym}** — calendar `{v['calendar']['name']}`, {v['missing_count']} gap(s), "
+          f"{len(v['unexpected_file_dates'])} unexpected.")
+        a("")
+        if v["missing_file_dates"]:
+            for d_, why in sorted(v["missing_file_dates_classified"].items()):
+                extra = ""
+                if why == "half_session_date":
+                    extra = (
+                        f" — but {v['half_session_dates_present']} of the "
+                        f"{v['half_session_dates_in_range']} shortened sessions in range "
+                        "do have usable data, so this is a vendor gap rather than a "
+                        "calendar artefact"
+                    )
+                kind = (
+                    "no file"
+                    if d_ in v["absent_file_dates"]
+                    else "file present but unusable"
+                )
+                a(f"- **{kind}**: {d_} ({why.replace('_', ' ')}){extra}")
+        else:
+            a("- no gaps")
+        if v["supersessions_applied"]["count"]:
+            a(f"- resolved by supersession: "
+              + ", ".join(v["supersessions_applied"]["dates"]))
+        if v["unexpected_file_dates"]:
+            a("- present but not on the calendar: " + ", ".join(v["unexpected_file_dates"]))
+        a("")
+    for pfx, d in sorted(m["prefixes"].items()):
+        if d["calendar"]["early_close_days"] and pfx.startswith("raw/"):
+            a(f"- `{pfx}` early closes (normal close {d['calendar']['normal_close_ct']} CT): "
               + ", ".join(d["calendar"]["early_close_days"]))
             a("")
 
@@ -1221,17 +1555,25 @@ def render_markdown(m: dict) -> str:
     a("")
     a("| Prefix / symbol | Record width | Sampled files | Rows counted | Estimated total rows |")
     a("|---|---|---|---|---|")
+    def total_cell(rc: dict, objects: int) -> str:
+        # When every object was counted there is nothing to extrapolate, and
+        # calling the number an estimate would understate what we know.
+        if not rc["estimated_total_rows"]:
+            return "—"
+        if rc["sampled_files"] >= objects:
+            return f"{rc['sampled_rows_exact']:,} (exact, all files counted)"
+        return f"~{rc['estimated_total_rows']:,}"
+
     for p, d in sorted(m["prefixes"].items()):
         rc = d["row_counts"]
         w = "/".join(str(x) for x in d["record_size_bytes"])
-        est = f"{rc['estimated_total_rows']:,}" if rc["estimated_total_rows"] else "—"
-        a(f"| `{p}` | {w} B | {rc['sampled_files']} | {rc['sampled_rows_exact']:,} | ~{est} |")
-        if p == "raw/trades":
+        a(f"| `{p}` | {w} B | {rc['sampled_files']} | {rc['sampled_rows_exact']:,} "
+          f"| {total_cell(rc, d['objects'])} |")
+        if p.endswith("/trades"):
             for sym, v in sorted(d["symbols"].items()):
                 r2 = v["row_counts"]
-                e2 = f"{r2['estimated_total_rows']:,}" if r2["estimated_total_rows"] else "—"
                 a(f"| `{p}` / {sym} | {w} B | {r2['sampled_files']} | "
-                  f"{r2['sampled_rows_exact']:,} | ~{e2} |")
+                  f"{r2['sampled_rows_exact']:,} | {total_cell(r2, v['objects'])} |")
     a("")
 
     # 6 schema
@@ -1258,6 +1600,12 @@ def render_markdown(m: dict) -> str:
           f"max {d['instrument_count_per_file']['max']:,}")
         a(f"- distinct header variants across all {d['objects']:,} files: "
           f"{d['partition']['distinct_header_variants']}")
+        vspans = []
+        for sym, sv in sorted(d["symbols"].items()):
+            for ver, info in sorted(sv["dbn_versions"].items()):
+                vspans.append(f"v{ver}: {info['files']} file(s) in `{sym}` "
+                              f"({info['first_date']} → {info['last_date']})")
+        a("- DBN versions: " + "; ".join(vspans))
         prof = d["sampled_profiles"]
         if prof:
             k0 = sorted(prof)[0]
@@ -1326,6 +1674,23 @@ def render_markdown(m: dict) -> str:
       "file boundary would anchor them to 18:00/19:00 CT, an hour or two into the "
       "session, and would shift by an hour at each DST change.")
     a("")
+    pp = m["prefixes"].get("patches/trades", {}).get("sampled_profiles", {})
+    if pp:
+        a("The patch objects behave identically despite being DBN v3:")
+        a("")
+        a("| Sampled patch file | Shape | Rows | CT span | 17:00 open | RTH |")
+        a("|---|---|---|---|---|---|")
+        for k in sorted(pp):
+            pr = pp[k]
+            if not pr.get("ct_hour_histogram"):
+                continue
+            pk = parse_key(k)
+            a(f"| `{k.split('/')[-1]}` ({pk['folder_symbol']}) "
+              f"| {weekday_class(pk['file_date']).replace('_', ' ')} "
+              f"| {pr['rows']:,} | {pr['ts_first_ct'][:19]} → {pr['ts_last_ct'][:19]} "
+              f"| {'yes' if pr['covers_globex_open_1700ct'] else 'no'} "
+              f"| {'yes' if pr['covers_rth_0830_1500ct'] else 'no'} |")
+        a("")
 
     # 8 sizes
     a("## 8. File-size distribution and outliers")
@@ -1371,6 +1736,43 @@ def render_markdown(m: dict) -> str:
                   f"({o['ratio_to_neighbour_median']}×, {o['flag']})")
             if len(unexplained) > 25:
                 a(f"- … {len(unexplained) - 25} more, see `data/manifest.json`")
+            a("")
+
+    # 9 supersessions
+    a("## 9. Supersessions")
+    a("")
+    if not sup["count"]:
+        a(f"None declared in `{sup['config']}`.")
+        a("")
+    else:
+        a(f"`{sup['config']}` is the single source of truth for which object is "
+          "authoritative for a given (symbol, date). Nothing else names a `patches/` "
+          "path. The superseded objects remain in the bucket untouched — `raw/` is "
+          "byte-identical to the source lake and that is the evidence the mirror is "
+          "faithful, so exclusion is declared in config and enforced in code, never by "
+          "deletion.")
+        a("")
+        a("| Date | Symbol | Superseded object | Authoritative object | Header | DBN | Rows | sha256 |")
+        a("|---|---|---|---|---|---|---|---|")
+        for e in sup["entries"]:
+            rows_ = f"{e['patch_records_exact']:,}" if e["patch_records_exact"] else "—"
+            ok = {True: "verified", False: "**MISMATCH**", None: "—"}[
+                e["sha256_verified_against_bucket"]
+            ]
+            a(f"| {e['date']} | {e['symbol']} | `{e['original'].split('/')[-1]}` "
+              f"| `{e['superseded_by']}` | {e['patch_header_symbol']} "
+              f"| v{e['patch_dbn_version']} | {rows_} | {ok} |")
+        a("")
+        a("`sha256` compares the digest recorded in config against the object as it "
+          "currently stands in the bucket, recomputed on every run.")
+        a("")
+        for job, prov in sorted(sup["job_provenance"].items()):
+            a(f"**Databento job `{job}`** — {prov.get('dataset')} / {prov.get('schema')} / "
+              f"{', '.join(prov.get('symbols', []))}, `stype_in={prov.get('stype_in')}`, "
+              f"submitted {prov.get('submitted')}. Provenance files at `{prov.get('prefix')}`.")
+            if prov.get("note"):
+                a("")
+                a(f"> {prov['note']}")
             a("")
 
     # anomalies

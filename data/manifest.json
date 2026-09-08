@@ -1,0 +1,3665 @@
+{
+  "anomalies": [
+    {
+      "dates": [
+        "2025-07-03",
+        "2025-07-04",
+        "2025-07-06",
+        "2025-07-07",
+        "2025-07-08",
+        "2025-07-09"
+      ],
+      "detail": "6 file(s) under raw/trades/NQ/ carry DBN query symbol ES.FUT, i.e. they hold ES data, not NQ. 6 of them duplicate the ES/ file of the same date (identical DBN metadata). Reading these as NQ silently substitutes ES prices; NQ has no data at all on those dates.",
+      "duplicate_of_sibling_folder": [
+        "2025-07-03",
+        "2025-07-04",
+        "2025-07-06",
+        "2025-07-07",
+        "2025-07-08",
+        "2025-07-09"
+      ],
+      "file_count": 6,
+      "first_date": "2025-07-03",
+      "kind": "folder_symbol_mismatch",
+      "last_date": "2025-07-09",
+      "prefix": "raw/trades",
+      "severity": "critical"
+    },
+    {
+      "detail": "NQ has no usable data on 6 date(s) even though a file exists for each of them: 2025-07-03, 2025-07-04, 2025-07-06, 2025-07-07, 2025-07-08, 2025-07-09",
+      "first_date": "2025-07-03",
+      "kind": "silent_coverage_hole",
+      "last_date": "2025-07-09",
+      "prefix": "raw/trades",
+      "severity": "critical"
+    },
+    {
+      "detail": "compression depth is not uniform across this prefix: 11 file(s) at 1 layer(s) (2026-07-06 \u2192 2026-07-20); 501 file(s) at 2 layer(s) (2024-07-03 \u2192 2026-07-02). A reader that decompresses a fixed number of times fails on one group or the other; unwrap until the DBN magic appears.",
+      "first_date": "2024-07-03",
+      "kind": "inconsistent_zstd_layering",
+      "last_date": "2026-07-20",
+      "prefix": "raw/opra_definition",
+      "severity": "warning"
+    },
+    {
+      "detail": "raw/opra_definition/condition.json documents data condition only to 2026-07-03, but the prefix holds files through 2026-07-20. The later files come from a separate vendor job and have no condition record; note this lines up with the change in compression depth.",
+      "first_date": "2026-07-03",
+      "kind": "sidecar_coverage_short",
+      "last_date": "2026-07-20",
+      "prefix": "raw/opra_definition",
+      "severity": "warning"
+    },
+    {
+      "detail": "Databento reports 2025-10-22 as 'degraded'",
+      "first_date": "2025-10-22",
+      "kind": "vendor_condition",
+      "last_date": "2025-10-22",
+      "prefix": "raw/opra_definition",
+      "severity": "warning"
+    },
+    {
+      "detail": "compression depth is not uniform across this prefix: 11 file(s) at 1 layer(s) (2026-07-06 \u2192 2026-07-20); 501 file(s) at 2 layer(s) (2024-07-03 \u2192 2026-07-02). A reader that decompresses a fixed number of times fails on one group or the other; unwrap until the DBN magic appears.",
+      "first_date": "2024-07-03",
+      "kind": "inconsistent_zstd_layering",
+      "last_date": "2026-07-20",
+      "prefix": "raw/opra_statistics",
+      "severity": "warning"
+    },
+    {
+      "detail": "NQ: 1 trading session date(s) have no file at all: 2025-04-18. Classified from the CME_Equity calendar, so these are not holidays.",
+      "first_date": "2025-04-18",
+      "kind": "missing_session_date",
+      "last_date": "2025-04-18",
+      "prefix": "raw/trades",
+      "severity": "warning"
+    }
+  ],
+  "bucket": "msfe-practicum",
+  "coverage_overlap_trades_vs_opra": {
+    "ES": {
+      "end": "2026-07-10",
+      "nonempty": true,
+      "start": "2025-07-03"
+    },
+    "NQ": {
+      "end": "2026-07-10",
+      "nonempty": true,
+      "start": "2024-07-03"
+    }
+  },
+  "generated_by": "scripts/inventory.py",
+  "notes": {
+    "no_signal_content": "This inventory deliberately contains no prices, returns or any other outcome-derived statistic.",
+    "row_count_caveat": "Prefix row totals are extrapolations from exactly counted sampled files. Only sampled_rows_exact is a measured number.",
+    "session_convention": "CME Globex session opens 17:00 America/Chicago and the session date rolls there; files are split on UTC day, so one session spans two files."
+  },
+  "object_count": 2491,
+  "prefixes": {
+    "raw/opra_cbbo1m": {
+      "calendar": {
+        "early_close_days": [
+          "2024-07-03",
+          "2024-11-29",
+          "2025-07-03",
+          "2025-11-28"
+        ],
+        "name": "CBOE_Equity_Options",
+        "normal_close_ct": "15:00"
+      },
+      "compression_layer_spans": {
+        "1": {
+          "files": 512,
+          "first_date": "2024-07-03",
+          "last_date": "2026-07-20"
+        }
+      },
+      "compression_layers": [
+        1
+      ],
+      "dataset": [
+        "OPRA.PILLAR"
+      ],
+      "dbn_schema": [
+        "cbbo-1m"
+      ],
+      "dbn_versions": [
+        1
+      ],
+      "file_format": "Databento DBN, zstd-compressed",
+      "instrument_count_per_file": {
+        "max": 13327,
+        "median": 8452,
+        "min": 6894
+      },
+      "objects": 512,
+      "partition": {
+        "date_basis": "UTC calendar day (from the DBN metadata start/end, which are UTC midnight boundaries) -- NOT the CME session date",
+        "distinct_header_variants": 1,
+        "keys": [
+          "utc_date"
+        ],
+        "layout": "raw/opra_cbbo1m/opra-pillar-<YYYYMMDD>.cbbo-1m.dbn.zst",
+        "one_object_per": "UTC date"
+      },
+      "record_size_bytes": [
+        80
+      ],
+      "row_counts": {
+        "estimated_total_rows": 1791809477,
+        "method": "exact count on a strided sample, extrapolated by compressed bytes; no prefix is scanned in full",
+        "rows_per_compressed_byte": 0.043756,
+        "sampled_bytes": 134873011,
+        "sampled_files": 2,
+        "sampled_keys": [
+          "raw/opra_cbbo1m/opra-pillar-20250106.cbbo-1m.dbn.zst",
+          "raw/opra_cbbo1m/opra-pillar-20260114.cbbo-1m.dbn.zst"
+        ],
+        "sampled_rows_exact": 5901524
+      },
+      "sampled_profiles": {
+        "raw/opra_cbbo1m/opra-pillar-20250714.cbbo-1m.dbn.zst": {
+          "_size": 78304272,
+          "_v": 3,
+          "contract_symbols": {
+            "QQQ   250715C00540000": 46,
+            "QQQ   250717C00568000": 46,
+            "QQQ   250721C00520000": 46,
+            "QQQ   250721C00525000": 46,
+            "QQQ   250723C00498000": 46,
+            "QQQ   250725C00440000": 46,
+            "QQQ   250725C00573000": 46,
+            "QQQ   250731C00437000": 46,
+            "QQQ   250731C00481000": 46,
+            "QQQ   250731C00555000": 46,
+            "QQQ   250801C00450000": 46,
+            "QQQ   250815C00320000": 46,
+            "QQQ   250815C00645000": 46,
+            "QQQ   250829C00561000": 46,
+            "QQQ   250829C00625000": 46,
+            "QQQ   250919C00545000": 46,
+            "QQQ   251231C00477000": 46,
+            "QQQ   251231C00541000": 46,
+            "QQQ   260331C00600000": 46,
+            "QQQ   270617C00655000": 46
+          },
+          "distinct_contract_symbols": 8364,
+          "partial_read": true,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "float64",
+                "name": "bid_px_00"
+              },
+              {
+                "dtype": "float64",
+                "name": "ask_px_00"
+              },
+              {
+                "dtype": "uint32",
+                "name": "bid_sz_00"
+              },
+              {
+                "dtype": "uint32",
+                "name": "ask_sz_00"
+              },
+              {
+                "dtype": "uint16",
+                "name": "bid_pb_00"
+              },
+              {
+                "dtype": "uint16",
+                "name": "ask_pb_00"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 0
+        }
+      },
+      "size_bytes": {
+        "max": 132880648,
+        "mean": 79980247,
+        "median": 84070992,
+        "min": 27349392,
+        "p05": 52303090,
+        "p25": 57867056,
+        "p75": 93100120,
+        "p95": 111086152
+      },
+      "stype_in": [
+        "parent"
+      ],
+      "stype_out": [
+        "instrument_id"
+      ],
+      "symbols": {
+        "QQQ.OPT": {
+          "content_missing_count": 0,
+          "content_missing_dates": [],
+          "dbn_query_symbols": {
+            "QQQ.OPT": {
+              "files": 512,
+              "first_date": "2024-07-03",
+              "last_date": "2026-07-20"
+            }
+          },
+          "distinct_file_dates": 512,
+          "expected_file_dates": 512,
+          "files_with_foreign_content": {
+            "count": 0,
+            "dates": []
+          },
+          "first_file_date": "2024-07-03",
+          "half_session_dates_in_range": 4,
+          "half_session_dates_present": 4,
+          "last_file_date": "2026-07-20",
+          "missing_count": 0,
+          "missing_file_dates": [],
+          "missing_file_dates_classified": {},
+          "objects": 512,
+          "one_line_coverage": "QQQ.OPT: 512 usable file-dates covering 2024-07-03 to 2026-07-20, 0 expected date(s) absent",
+          "row_counts": {
+            "estimated_total_rows": 1791809477,
+            "method": "exact count on a strided sample, extrapolated by compressed bytes",
+            "rows_per_compressed_byte": 0.043756,
+            "sampled_bytes": 134873011,
+            "sampled_files": 2,
+            "sampled_rows_exact": 5901524
+          },
+          "size_bytes": {
+            "max": 132880648,
+            "mean": 79980247,
+            "median": 84070992,
+            "min": 27349392,
+            "p05": 52303090,
+            "p25": 57867056,
+            "p75": 93100120,
+            "p95": 111086152
+          },
+          "size_outliers": [],
+          "total_bytes": 40949886725,
+          "unexpected_file_dates": [],
+          "usable_file_dates": 512
+        }
+      },
+      "total_bytes": 40949886725,
+      "ts_out": [
+        false
+      ]
+    },
+    "raw/opra_definition": {
+      "calendar": {
+        "early_close_days": [
+          "2024-07-03",
+          "2024-11-29",
+          "2025-07-03",
+          "2025-11-28"
+        ],
+        "name": "CBOE_Equity_Options",
+        "normal_close_ct": "15:00"
+      },
+      "compression_layer_spans": {
+        "1": {
+          "files": 11,
+          "first_date": "2026-07-06",
+          "last_date": "2026-07-20"
+        },
+        "2": {
+          "files": 501,
+          "first_date": "2024-07-03",
+          "last_date": "2026-07-02"
+        }
+      },
+      "compression_layers": [
+        1,
+        2
+      ],
+      "dataset": [
+        "OPRA.PILLAR"
+      ],
+      "dbn_schema": [
+        "definition"
+      ],
+      "dbn_versions": [
+        1
+      ],
+      "file_format": "Databento DBN, zstd-compressed",
+      "instrument_count_per_file": {
+        "max": 13327,
+        "median": 8452,
+        "min": 6894
+      },
+      "objects": 512,
+      "partition": {
+        "date_basis": "UTC calendar day (from the DBN metadata start/end, which are UTC midnight boundaries) -- NOT the CME session date",
+        "distinct_header_variants": 2,
+        "keys": [
+          "utc_date"
+        ],
+        "layout": "raw/opra_definition/opra-pillar-<YYYYMMDD>.definition.dbn.zst",
+        "one_object_per": "UTC date"
+      },
+      "record_size_bytes": [
+        360
+      ],
+      "row_counts": {
+        "estimated_total_rows": 4422059,
+        "method": "exact count on a strided sample, extrapolated by compressed bytes; no prefix is scanned in full",
+        "rows_per_compressed_byte": 0.027388,
+        "sampled_bytes": 1861471,
+        "sampled_files": 6,
+        "sampled_keys": [
+          "raw/opra_definition/opra-pillar-20240903.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20250106.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20250509.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20250911.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20260114.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20260518.definition.dbn.zst"
+        ],
+        "sampled_rows_exact": 50982
+      },
+      "sampled_profiles": {
+        "raw/opra_definition/opra-pillar-20250714.definition.dbn.zst": {
+          "_size": 311010,
+          "_v": 3,
+          "contract_symbols": {
+            "QQQ   251219P00274780": 1,
+            "QQQ   251219P00339780": 1,
+            "QQQ   251219P00439780": 1,
+            "QQQ   251219P00524780": 1,
+            "QQQ   251219P00615000": 1,
+            "QQQ   260116P00189780": 1,
+            "QQQ   260116P00209780": 1,
+            "QQQ   260116P00259780": 1,
+            "QQQ   260116P00294780": 1,
+            "QQQ   260116P00324780": 1,
+            "QQQ   260116P00379780": 1,
+            "QQQ   260116P00424780": 1,
+            "QQQ   260618P00184780": 1,
+            "QQQ   261218P00214780": 1,
+            "QQQ   261218P00234780": 1,
+            "QQQ   261218P00249780": 1,
+            "QQQ   261218P00279780": 1,
+            "QQQ   261218P00354780": 1,
+            "QQQ   261218P00399780": 1,
+            "QQQ   270115P00540000": 1
+          },
+          "covers_globex_open_1700ct": false,
+          "covers_rth_0830_1500ct": false,
+          "ct_hour_histogram": {
+            "5": 8294,
+            "7": 70
+          },
+          "distinct_contract_symbols": 8364,
+          "distinct_ct_hours": 2,
+          "partial_read": false,
+          "rows": 8364,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "raw_symbol"
+              },
+              {
+                "dtype": "str",
+                "name": "security_update_action"
+              },
+              {
+                "dtype": "str",
+                "name": "instrument_class"
+              },
+              {
+                "dtype": "float64",
+                "name": "min_price_increment"
+              },
+              {
+                "dtype": "float64",
+                "name": "display_factor"
+              },
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "expiration",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "activation",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "float64",
+                "name": "high_limit_price"
+              },
+              {
+                "dtype": "float64",
+                "name": "low_limit_price"
+              },
+              {
+                "dtype": "float64",
+                "name": "max_price_variation"
+              },
+              {
+                "dtype": "float64",
+                "name": "trading_reference_price"
+              },
+              {
+                "dtype": "float64",
+                "name": "unit_of_measure_qty"
+              },
+              {
+                "dtype": "float64",
+                "name": "min_price_increment_amount"
+              },
+              {
+                "dtype": "float64",
+                "name": "price_ratio"
+              },
+              {
+                "dtype": "int32",
+                "name": "inst_attrib_value"
+              },
+              {
+                "dtype": "uint32",
+                "name": "underlying_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "raw_instrument_id"
+              },
+              {
+                "dtype": "int32",
+                "name": "market_depth_implied"
+              },
+              {
+                "dtype": "int32",
+                "name": "market_depth"
+              },
+              {
+                "dtype": "uint32",
+                "name": "market_segment_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "max_trade_vol"
+              },
+              {
+                "dtype": "int32",
+                "name": "min_lot_size"
+              },
+              {
+                "dtype": "int32",
+                "name": "min_lot_size_block"
+              },
+              {
+                "dtype": "int32",
+                "name": "min_lot_size_round_lot"
+              },
+              {
+                "dtype": "uint32",
+                "name": "min_trade_vol"
+              },
+              {
+                "dtype": "int32",
+                "name": "contract_multiplier"
+              },
+              {
+                "dtype": "int32",
+                "name": "decay_quantity"
+              },
+              {
+                "dtype": "int32",
+                "name": "original_contract_size"
+              },
+              {
+                "dtype": "uint16",
+                "name": "trading_reference_date"
+              },
+              {
+                "dtype": "int16",
+                "name": "appl_id"
+              },
+              {
+                "dtype": "uint16",
+                "name": "maturity_year"
+              },
+              {
+                "dtype": "uint16",
+                "name": "decay_start_date"
+              },
+              {
+                "dtype": "uint16",
+                "name": "channel_id"
+              },
+              {
+                "dtype": "str",
+                "name": "currency"
+              },
+              {
+                "dtype": "str",
+                "name": "settl_currency"
+              },
+              {
+                "dtype": "str",
+                "name": "secsubtype"
+              },
+              {
+                "dtype": "str",
+                "name": "group"
+              },
+              {
+                "dtype": "str",
+                "name": "exchange"
+              },
+              {
+                "dtype": "str",
+                "name": "asset"
+              },
+              {
+                "dtype": "str",
+                "name": "cfi"
+              },
+              {
+                "dtype": "str",
+                "name": "security_type"
+              },
+              {
+                "dtype": "str",
+                "name": "unit_of_measure"
+              },
+              {
+                "dtype": "str",
+                "name": "underlying"
+              },
+              {
+                "dtype": "str",
+                "name": "strike_price_currency"
+              },
+              {
+                "dtype": "float64",
+                "name": "strike_price"
+              },
+              {
+                "dtype": "str",
+                "name": "match_algorithm"
+              },
+              {
+                "dtype": "uint8",
+                "name": "md_security_trading_status"
+              },
+              {
+                "dtype": "uint8",
+                "name": "main_fraction"
+              },
+              {
+                "dtype": "uint8",
+                "name": "price_display_format"
+              },
+              {
+                "dtype": "uint8",
+                "name": "settl_price_type"
+              },
+              {
+                "dtype": "uint8",
+                "name": "sub_fraction"
+              },
+              {
+                "dtype": "uint8",
+                "name": "underlying_product"
+              },
+              {
+                "dtype": "uint8",
+                "name": "maturity_month"
+              },
+              {
+                "dtype": "uint8",
+                "name": "maturity_day"
+              },
+              {
+                "dtype": "uint8",
+                "name": "maturity_week"
+              },
+              {
+                "dtype": "str",
+                "name": "user_defined_instrument"
+              },
+              {
+                "dtype": "int8",
+                "name": "contract_multiplier_unit"
+              },
+              {
+                "dtype": "int8",
+                "name": "flow_schedule_type"
+              },
+              {
+                "dtype": "uint8",
+                "name": "tick_rule"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 0,
+          "ts_first_ct": "2025-07-14T05:30:00.464023115-05:00",
+          "ts_first_utc": "2025-07-14T10:30:00.464023115+00:00",
+          "ts_last_ct": "2025-07-14T07:00:01.088868527-05:00",
+          "ts_last_utc": "2025-07-14T12:00:01.088868527+00:00"
+        }
+      },
+      "size_bytes": {
+        "max": 491917,
+        "mean": 315350,
+        "median": 307808,
+        "min": 237466,
+        "p05": 256527,
+        "p25": 278848,
+        "p75": 336558,
+        "p95": 413196
+      },
+      "stype_in": [
+        "parent"
+      ],
+      "stype_out": [
+        "instrument_id"
+      ],
+      "symbols": {
+        "QQQ.OPT": {
+          "content_missing_count": 0,
+          "content_missing_dates": [],
+          "dbn_query_symbols": {
+            "QQQ.OPT": {
+              "files": 512,
+              "first_date": "2024-07-03",
+              "last_date": "2026-07-20"
+            }
+          },
+          "distinct_file_dates": 512,
+          "expected_file_dates": 512,
+          "files_with_foreign_content": {
+            "count": 0,
+            "dates": []
+          },
+          "first_file_date": "2024-07-03",
+          "half_session_dates_in_range": 4,
+          "half_session_dates_present": 4,
+          "last_file_date": "2026-07-20",
+          "missing_count": 0,
+          "missing_file_dates": [],
+          "missing_file_dates_classified": {},
+          "objects": 512,
+          "one_line_coverage": "QQQ.OPT: 512 usable file-dates covering 2024-07-03 to 2026-07-20, 0 expected date(s) absent",
+          "row_counts": {
+            "estimated_total_rows": 4422059,
+            "method": "exact count on a strided sample, extrapolated by compressed bytes",
+            "rows_per_compressed_byte": 0.027388,
+            "sampled_bytes": 1861471,
+            "sampled_files": 6,
+            "sampled_rows_exact": 50982
+          },
+          "size_bytes": {
+            "max": 491917,
+            "mean": 315350,
+            "median": 307808,
+            "min": 237466,
+            "p05": 256527,
+            "p25": 278848,
+            "p75": 336558,
+            "p95": 413196
+          },
+          "size_outliers": [],
+          "total_bytes": 161459632,
+          "unexpected_file_dates": [],
+          "usable_file_dates": 512
+        }
+      },
+      "total_bytes": 161459632,
+      "ts_out": [
+        false
+      ]
+    },
+    "raw/opra_statistics": {
+      "calendar": {
+        "early_close_days": [
+          "2024-07-03",
+          "2024-11-29",
+          "2025-07-03",
+          "2025-11-28"
+        ],
+        "name": "CBOE_Equity_Options",
+        "normal_close_ct": "15:00"
+      },
+      "compression_layer_spans": {
+        "1": {
+          "files": 11,
+          "first_date": "2026-07-06",
+          "last_date": "2026-07-20"
+        },
+        "2": {
+          "files": 501,
+          "first_date": "2024-07-03",
+          "last_date": "2026-07-02"
+        }
+      },
+      "compression_layers": [
+        1,
+        2
+      ],
+      "dataset": [
+        "OPRA.PILLAR"
+      ],
+      "dbn_schema": [
+        "statistics"
+      ],
+      "dbn_versions": [
+        1
+      ],
+      "file_format": "Databento DBN, zstd-compressed",
+      "instrument_count_per_file": {
+        "max": 13327,
+        "median": 8452,
+        "min": 6894
+      },
+      "objects": 512,
+      "partition": {
+        "date_basis": "UTC calendar day (from the DBN metadata start/end, which are UTC midnight boundaries) -- NOT the CME session date",
+        "distinct_header_variants": 2,
+        "keys": [
+          "utc_date"
+        ],
+        "layout": "raw/opra_statistics/opra-pillar-<YYYYMMDD>.statistics.dbn.zst",
+        "one_object_per": "UTC date"
+      },
+      "record_size_bytes": [
+        64
+      ],
+      "row_counts": {
+        "estimated_total_rows": 346963486,
+        "method": "exact count on a strided sample, extrapolated by compressed bytes; no prefix is scanned in full",
+        "rows_per_compressed_byte": 0.207076,
+        "sampled_bytes": 19459718,
+        "sampled_files": 6,
+        "sampled_keys": [
+          "raw/opra_statistics/opra-pillar-20240903.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20250106.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20250509.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20250911.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20260114.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20260518.statistics.dbn.zst"
+        ],
+        "sampled_rows_exact": 4029644
+      },
+      "sampled_profiles": {
+        "raw/opra_statistics/opra-pillar-20250714.statistics.dbn.zst": {
+          "_size": 3049398,
+          "_v": 3,
+          "contract_symbols": {
+            "QQQ   250714C00553000": 106,
+            "QQQ   250714C00556000": 106,
+            "QQQ   250714C00564000": 106,
+            "QQQ   250718C00552000": 106,
+            "QQQ   250718C00570000": 106,
+            "QQQ   250718P00515000": 106,
+            "QQQ   250718P00530000": 106,
+            "QQQ   250718P00537000": 106,
+            "QQQ   250718P00544000": 106,
+            "QQQ   250718P00545000": 106,
+            "QQQ   250718P00550000": 106,
+            "QQQ   250731C00560000": 106,
+            "QQQ   250815P00520000": 106,
+            "QQQ   250815P00545000": 106,
+            "QQQ   250829P00515000": 106,
+            "QQQ   250919P00535000": 106,
+            "QQQ   250919P00540000": 106,
+            "QQQ   250919P00550000": 106,
+            "QQQ   250930P00460000": 106,
+            "QQQ   260116P00500000": 106
+          },
+          "covers_globex_open_1700ct": false,
+          "covers_rth_0830_1500ct": false,
+          "ct_hour_histogram": {
+            "15": 66912,
+            "16": 439048,
+            "5": 149292
+          },
+          "distinct_contract_symbols": 8364,
+          "distinct_ct_hours": 3,
+          "partial_read": false,
+          "rows": 655252,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_ref",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "int32",
+                "name": "quantity"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint16",
+                "name": "stat_type"
+              },
+              {
+                "dtype": "uint16",
+                "name": "channel_id"
+              },
+              {
+                "dtype": "uint8",
+                "name": "update_action"
+              },
+              {
+                "dtype": "uint8",
+                "name": "stat_flags"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 0,
+          "ts_first_ct": "2025-07-14T05:30:00.464023115-05:00",
+          "ts_first_utc": "2025-07-14T10:30:00.464023115+00:00",
+          "ts_last_ct": "2025-07-14T16:31:07.510954648-05:00",
+          "ts_last_utc": "2025-07-14T21:31:07.510954648+00:00"
+        }
+      },
+      "size_bytes": {
+        "max": 5143105,
+        "mean": 3272530,
+        "median": 3149015,
+        "min": 1975718,
+        "p05": 2622588,
+        "p25": 2851803,
+        "p75": 3525833,
+        "p95": 4394533
+      },
+      "stype_in": [
+        "parent"
+      ],
+      "stype_out": [
+        "instrument_id"
+      ],
+      "symbols": {
+        "QQQ.OPT": {
+          "content_missing_count": 0,
+          "content_missing_dates": [],
+          "dbn_query_symbols": {
+            "QQQ.OPT": {
+              "files": 512,
+              "first_date": "2024-07-03",
+              "last_date": "2026-07-20"
+            }
+          },
+          "distinct_file_dates": 512,
+          "expected_file_dates": 512,
+          "files_with_foreign_content": {
+            "count": 0,
+            "dates": []
+          },
+          "first_file_date": "2024-07-03",
+          "half_session_dates_in_range": 4,
+          "half_session_dates_present": 4,
+          "last_file_date": "2026-07-20",
+          "missing_count": 0,
+          "missing_file_dates": [],
+          "missing_file_dates_classified": {},
+          "objects": 512,
+          "one_line_coverage": "QQQ.OPT: 512 usable file-dates covering 2024-07-03 to 2026-07-20, 0 expected date(s) absent",
+          "row_counts": {
+            "estimated_total_rows": 346963486,
+            "method": "exact count on a strided sample, extrapolated by compressed bytes",
+            "rows_per_compressed_byte": 0.207076,
+            "sampled_bytes": 19459718,
+            "sampled_files": 6,
+            "sampled_rows_exact": 4029644
+          },
+          "size_bytes": {
+            "max": 5143105,
+            "mean": 3272530,
+            "median": 3149015,
+            "min": 1975718,
+            "p05": 2622588,
+            "p25": 2851803,
+            "p75": 3525833,
+            "p95": 4394533
+          },
+          "size_outliers": [],
+          "total_bytes": 1675535507,
+          "unexpected_file_dates": [],
+          "usable_file_dates": 512
+        }
+      },
+      "total_bytes": 1675535507,
+      "ts_out": [
+        false
+      ]
+    },
+    "raw/trades": {
+      "calendar": {
+        "early_close_days": [
+          "2024-07-03",
+          "2024-07-04",
+          "2024-09-02",
+          "2024-11-28",
+          "2024-11-29",
+          "2024-12-24",
+          "2025-01-20",
+          "2025-02-17",
+          "2025-04-18",
+          "2025-05-26",
+          "2025-06-19",
+          "2025-07-03",
+          "2025-07-04",
+          "2025-09-01",
+          "2025-11-27",
+          "2025-11-28",
+          "2025-12-24",
+          "2026-01-19",
+          "2026-02-16",
+          "2026-04-03",
+          "2026-05-25",
+          "2026-06-19",
+          "2026-07-03"
+        ],
+        "name": "CME_Equity",
+        "normal_close_ct": "16:00"
+      },
+      "compression_layer_spans": {
+        "1": {
+          "files": 952,
+          "first_date": "2024-07-03",
+          "last_date": "2026-07-10"
+        }
+      },
+      "compression_layers": [
+        1
+      ],
+      "dataset": [
+        "GLBX.MDP3"
+      ],
+      "dbn_schema": [
+        "trades"
+      ],
+      "dbn_versions": [
+        1
+      ],
+      "file_format": "Databento DBN, zstd-compressed",
+      "instrument_count_per_file": {
+        "max": 46,
+        "median": 25,
+        "min": 20
+      },
+      "objects": 952,
+      "partition": {
+        "date_basis": "UTC calendar day (from the DBN metadata start/end, which are UTC midnight boundaries) -- NOT the CME session date",
+        "distinct_header_variants": 2,
+        "keys": [
+          "symbol_folder",
+          "utc_date"
+        ],
+        "layout": "raw/trades/<SYMBOL_FOLDER>/glbx-mdp3-<YYYYMMDD>.trades.dbn.zst",
+        "one_object_per": "symbol x UTC date"
+      },
+      "record_size_bytes": [
+        48
+      ],
+      "row_counts": {
+        "estimated_total_rows": 333839229,
+        "method": "exact count on a strided sample, extrapolated by compressed bytes; no prefix is scanned in full",
+        "rows_per_compressed_byte": 0.060486,
+        "sampled_bytes": 117398469,
+        "sampled_files": 20,
+        "sampled_keys": [
+          "raw/trades/ES/glbx-mdp3-20250722.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20250828.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20251005.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20251111.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20251218.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260125.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260303.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260409.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260517.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260623.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20240808.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20241021.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20250103.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20250318.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20250601.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20250813.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20251026.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20260108.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20260323.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20260604.trades.dbn.zst"
+        ],
+        "sampled_rows_exact": 7100954
+      },
+      "sampled_profiles": {
+        "raw/trades/ES/glbx-mdp3-20260104.trades.dbn.zst": {
+          "_size": 107000,
+          "_v": 3,
+          "contract_symbols": {
+            "ESH6": 6717,
+            "ESH6-ESM6": 5,
+            "ESM6": 3
+          },
+          "covers_globex_open_1700ct": true,
+          "covers_rth_0830_1500ct": false,
+          "ct_hour_histogram": {
+            "17": 6725
+          },
+          "distinct_contract_symbols": 3,
+          "distinct_ct_hours": 1,
+          "partial_read": false,
+          "rows": 6725,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 5,
+          "ts_first_ct": "2026-01-04T17:00:00.024420958-06:00",
+          "ts_first_utc": "2026-01-04T23:00:00.024420958+00:00",
+          "ts_last_ct": "2026-01-04T17:59:59.498849855-06:00",
+          "ts_last_utc": "2026-01-04T23:59:59.498849855+00:00"
+        },
+        "raw/trades/ES/glbx-mdp3-20260105.trades.dbn.zst": {
+          "_size": 5169338,
+          "_v": 3,
+          "contract_symbols": {
+            "ESH6": 350757,
+            "ESH6-ESM6": 65,
+            "ESH6-ESU6": 1,
+            "ESM6": 233,
+            "ESU6": 3
+          },
+          "covers_globex_open_1700ct": true,
+          "covers_rth_0830_1500ct": true,
+          "ct_hour_histogram": {
+            "0": 2424,
+            "1": 2786,
+            "10": 34808,
+            "11": 28513,
+            "12": 24928,
+            "13": 23724,
+            "14": 40441,
+            "15": 7795,
+            "17": 3072,
+            "18": 4727,
+            "19": 4903,
+            "2": 6799,
+            "20": 2443,
+            "21": 1935,
+            "22": 1648,
+            "23": 1932,
+            "3": 4322,
+            "4": 3409,
+            "5": 3116,
+            "6": 4223,
+            "7": 6729,
+            "8": 73538,
+            "9": 62844
+          },
+          "distinct_contract_symbols": 5,
+          "distinct_ct_hours": 23,
+          "partial_read": false,
+          "rows": 351059,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 66,
+          "ts_first_ct": "2026-01-04T18:00:00.042011911-06:00",
+          "ts_first_utc": "2026-01-05T00:00:00.042011911+00:00",
+          "ts_last_ct": "2026-01-05T17:59:48.867044032-06:00",
+          "ts_last_utc": "2026-01-05T23:59:48.867044032+00:00"
+        },
+        "raw/trades/ES/glbx-mdp3-20260109.trades.dbn.zst": {
+          "_size": 5647978,
+          "_v": 3,
+          "contract_symbols": {
+            "ESH6": 382801,
+            "ESH6-ESM6": 141,
+            "ESH6-ESU6": 3,
+            "ESM6": 247,
+            "ESM6-ESU6": 19,
+            "ESM6-ESZ6": 5,
+            "ESU6": 10
+          },
+          "covers_globex_open_1700ct": false,
+          "covers_rth_0830_1500ct": true,
+          "ct_hour_histogram": {
+            "0": 1718,
+            "1": 2301,
+            "10": 49123,
+            "11": 26267,
+            "12": 27501,
+            "13": 19022,
+            "14": 36320,
+            "15": 9833,
+            "18": 2582,
+            "19": 3546,
+            "2": 4505,
+            "20": 2738,
+            "21": 1660,
+            "22": 1335,
+            "23": 1764,
+            "3": 3628,
+            "4": 2450,
+            "5": 3192,
+            "6": 3278,
+            "7": 13539,
+            "8": 68096,
+            "9": 98828
+          },
+          "distinct_contract_symbols": 7,
+          "distinct_ct_hours": 22,
+          "partial_read": false,
+          "rows": 383226,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 168,
+          "ts_first_ct": "2026-01-08T18:00:00.050811334-06:00",
+          "ts_first_utc": "2026-01-09T00:00:00.050811334+00:00",
+          "ts_last_ct": "2026-01-09T15:59:59.003027666-06:00",
+          "ts_last_utc": "2026-01-09T21:59:59.003027666+00:00"
+        },
+        "raw/trades/ES/glbx-mdp3-20260310.trades.dbn.zst": {
+          "_size": 11341652,
+          "_v": 3,
+          "contract_symbols": {
+            "ESH6": 692011,
+            "ESH6-ESM6": 2061,
+            "ESH6-ESU6": 4,
+            "ESM6": 21020,
+            "ESM6-ESU6": 14,
+            "ESU6": 49,
+            "ESZ6": 1
+          },
+          "covers_globex_open_1700ct": true,
+          "covers_rth_0830_1500ct": true,
+          "ct_hour_histogram": {
+            "0": 4609,
+            "1": 5318,
+            "10": 56010,
+            "11": 48679,
+            "12": 65701,
+            "13": 107179,
+            "14": 82264,
+            "15": 15772,
+            "17": 4521,
+            "18": 2971,
+            "19": 11693,
+            "2": 14332,
+            "20": 8547,
+            "21": 6290,
+            "22": 7254,
+            "23": 3718,
+            "3": 20616,
+            "4": 11691,
+            "5": 14797,
+            "6": 20683,
+            "7": 24180,
+            "8": 87435,
+            "9": 90900
+          },
+          "distinct_contract_symbols": 7,
+          "distinct_ct_hours": 23,
+          "partial_read": false,
+          "rows": 715160,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 2079,
+          "ts_first_ct": "2026-03-09T19:00:00.037397883-05:00",
+          "ts_first_utc": "2026-03-10T00:00:00.037397883+00:00",
+          "ts_last_ct": "2026-03-10T18:59:59.440747845-05:00",
+          "ts_last_utc": "2026-03-10T23:59:59.440747845+00:00"
+        },
+        "raw/trades/NQ/glbx-mdp3-20250710.trades.dbn.zst": {
+          "_size": 4421380,
+          "_v": 3,
+          "contract_symbols": {
+            "NQU5": 248064,
+            "NQU5-NQZ5": 64,
+            "NQZ5": 175
+          },
+          "covers_globex_open_1700ct": true,
+          "covers_rth_0830_1500ct": true,
+          "ct_hour_histogram": {
+            "0": 2074,
+            "1": 2005,
+            "10": 28064,
+            "11": 22683,
+            "12": 18472,
+            "13": 15458,
+            "14": 23279,
+            "15": 6359,
+            "17": 2123,
+            "18": 1786,
+            "19": 2923,
+            "2": 3908,
+            "20": 3117,
+            "21": 2224,
+            "22": 2000,
+            "23": 1298,
+            "3": 3435,
+            "4": 3041,
+            "5": 2457,
+            "6": 4046,
+            "7": 6621,
+            "8": 40885,
+            "9": 50045
+          },
+          "distinct_contract_symbols": 3,
+          "distinct_ct_hours": 23,
+          "partial_read": false,
+          "rows": 248303,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 64,
+          "ts_first_ct": "2025-07-09T19:00:00.321014888-05:00",
+          "ts_first_utc": "2025-07-10T00:00:00.321014888+00:00",
+          "ts_last_ct": "2025-07-10T18:59:59.999730752-05:00",
+          "ts_last_utc": "2025-07-10T23:59:59.999730752+00:00"
+        },
+        "raw/trades/NQ/glbx-mdp3-20250713.trades.dbn.zst": {
+          "_size": 209822,
+          "_v": 3,
+          "contract_symbols": {
+            "NQU5": 11847,
+            "NQU5-NQZ5": 28,
+            "NQZ5": 44
+          },
+          "covers_globex_open_1700ct": true,
+          "covers_rth_0830_1500ct": false,
+          "ct_hour_histogram": {
+            "17": 6861,
+            "18": 5058
+          },
+          "distinct_contract_symbols": 3,
+          "distinct_ct_hours": 2,
+          "partial_read": false,
+          "rows": 11919,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 28,
+          "ts_first_ct": "2025-07-13T17:00:00.099249097-05:00",
+          "ts_first_utc": "2025-07-13T22:00:00.099249097+00:00",
+          "ts_last_ct": "2025-07-13T18:59:57.734605058-05:00",
+          "ts_last_utc": "2025-07-13T23:59:57.734605058+00:00"
+        },
+        "raw/trades/NQ/glbx-mdp3-20250718.trades.dbn.zst": {
+          "_size": 4751392,
+          "_v": 3,
+          "contract_symbols": {
+            "NQH6": 2,
+            "NQU5": 268067,
+            "NQU5-NQH6": 2,
+            "NQU5-NQZ5": 142,
+            "NQZ5": 298,
+            "NQZ5-NQH6": 1
+          },
+          "covers_globex_open_1700ct": false,
+          "covers_rth_0830_1500ct": true,
+          "ct_hour_histogram": {
+            "0": 2385,
+            "1": 2493,
+            "10": 29514,
+            "11": 33806,
+            "12": 24047,
+            "13": 16850,
+            "14": 25375,
+            "15": 6337,
+            "19": 2224,
+            "2": 3954,
+            "20": 1709,
+            "21": 1574,
+            "22": 1452,
+            "23": 943,
+            "3": 2520,
+            "4": 1698,
+            "5": 3356,
+            "6": 3443,
+            "7": 4989,
+            "8": 50186,
+            "9": 49657
+          },
+          "distinct_contract_symbols": 6,
+          "distinct_ct_hours": 21,
+          "partial_read": false,
+          "rows": 268512,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 145,
+          "ts_first_ct": "2025-07-17T19:00:00.069384773-05:00",
+          "ts_first_utc": "2025-07-18T00:00:00.069384773+00:00",
+          "ts_last_ct": "2025-07-18T15:59:58.467232148-05:00",
+          "ts_last_utc": "2025-07-18T20:59:58.467232148+00:00"
+        },
+        "raw/trades/NQ/glbx-mdp3-20251103.trades.dbn.zst": {
+          "_size": 5626660,
+          "_v": 3,
+          "contract_symbols": {
+            "NQH6": 259,
+            "NQH6-NQM6": 2,
+            "NQM6": 8,
+            "NQZ5": 310478,
+            "NQZ5-NQH6": 123,
+            "NQZ5-NQM6": 1
+          },
+          "covers_globex_open_1700ct": true,
+          "covers_rth_0830_1500ct": true,
+          "ct_hour_histogram": {
+            "0": 2645,
+            "1": 2944,
+            "10": 35268,
+            "11": 27557,
+            "12": 18102,
+            "13": 24637,
+            "14": 27124,
+            "15": 9520,
+            "17": 1918,
+            "18": 3602,
+            "19": 3996,
+            "2": 3976,
+            "20": 3601,
+            "21": 2889,
+            "22": 1820,
+            "23": 2315,
+            "3": 4956,
+            "4": 3427,
+            "5": 3788,
+            "6": 4392,
+            "7": 7891,
+            "8": 52568,
+            "9": 61935
+          },
+          "distinct_contract_symbols": 6,
+          "distinct_ct_hours": 23,
+          "partial_read": false,
+          "rows": 310871,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 126,
+          "ts_first_ct": "2025-11-02T18:00:00.363384912-06:00",
+          "ts_first_utc": "2025-11-03T00:00:00.363384912+00:00",
+          "ts_last_ct": "2025-11-03T17:59:59.447372347-06:00",
+          "ts_last_utc": "2025-11-03T23:59:59.447372347+00:00"
+        }
+      },
+      "size_bytes": {
+        "max": 17720723,
+        "mean": 5797572,
+        "median": 6081647,
+        "min": 41424,
+        "p05": 107175,
+        "p25": 4533210,
+        "p75": 7825516,
+        "p95": 11086033
+      },
+      "stype_in": [
+        "parent"
+      ],
+      "stype_out": [
+        "instrument_id"
+      ],
+      "symbols": {
+        "ES": {
+          "content_missing_count": 0,
+          "content_missing_dates": [],
+          "dbn_query_symbols": {
+            "ES.FUT": {
+              "files": 320,
+              "first_date": "2025-07-03",
+              "last_date": "2026-07-10"
+            }
+          },
+          "distinct_file_dates": 320,
+          "expected_file_dates": 320,
+          "files_with_foreign_content": {
+            "count": 0,
+            "dates": []
+          },
+          "first_file_date": "2025-07-03",
+          "half_session_dates_in_range": 12,
+          "half_session_dates_present": 12,
+          "last_file_date": "2026-07-10",
+          "missing_count": 0,
+          "missing_file_dates": [],
+          "missing_file_dates_classified": {},
+          "objects": 320,
+          "one_line_coverage": "ES: 320 usable file-dates covering 2025-07-03 to 2026-07-10, 0 expected date(s) absent",
+          "row_counts": {
+            "estimated_total_rows": 126484402,
+            "method": "exact count on a strided sample, extrapolated by compressed bytes",
+            "rows_per_compressed_byte": 0.06558,
+            "sampled_bytes": 59233904,
+            "sampled_files": 10,
+            "sampled_rows_exact": 3884558
+          },
+          "size_bytes": {
+            "max": 17720723,
+            "mean": 6027201,
+            "median": 5951740,
+            "min": 41424,
+            "p05": 103880,
+            "p25": 4058016,
+            "p75": 8563257,
+            "p95": 12801169
+          },
+          "size_outliers": [
+            {
+              "date": "2025-07-06",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250706.trades.dbn.zst",
+              "neighbour_median_bytes": 4529073,
+              "ratio_to_neighbour_median": 0.0327,
+              "size_bytes": 147925
+            },
+            {
+              "date": "2025-07-13",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250713.trades.dbn.zst",
+              "neighbour_median_bytes": 4580554,
+              "ratio_to_neighbour_median": 0.0407,
+              "size_bytes": 186570
+            },
+            {
+              "date": "2025-07-20",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250720.trades.dbn.zst",
+              "neighbour_median_bytes": 4255310,
+              "ratio_to_neighbour_median": 0.0167,
+              "size_bytes": 71217
+            },
+            {
+              "date": "2025-07-27",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250727.trades.dbn.zst",
+              "neighbour_median_bytes": 4589829,
+              "ratio_to_neighbour_median": 0.0317,
+              "size_bytes": 145505
+            },
+            {
+              "date": "2025-08-03",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250803.trades.dbn.zst",
+              "neighbour_median_bytes": 5765193,
+              "ratio_to_neighbour_median": 0.0332,
+              "size_bytes": 191188
+            },
+            {
+              "date": "2025-08-10",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250810.trades.dbn.zst",
+              "neighbour_median_bytes": 5288028,
+              "ratio_to_neighbour_median": 0.0187,
+              "size_bytes": 98970
+            },
+            {
+              "date": "2025-08-17",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250817.trades.dbn.zst",
+              "neighbour_median_bytes": 5188897,
+              "ratio_to_neighbour_median": 0.0143,
+              "size_bytes": 74053
+            },
+            {
+              "date": "2025-08-24",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250824.trades.dbn.zst",
+              "neighbour_median_bytes": 4880347,
+              "ratio_to_neighbour_median": 0.0188,
+              "size_bytes": 91707
+            },
+            {
+              "date": "2025-08-31",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250831.trades.dbn.zst",
+              "neighbour_median_bytes": 4623094,
+              "ratio_to_neighbour_median": 0.0155,
+              "size_bytes": 71675
+            },
+            {
+              "date": "2025-09-07",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250907.trades.dbn.zst",
+              "neighbour_median_bytes": 5261418,
+              "ratio_to_neighbour_median": 0.0285,
+              "size_bytes": 150182
+            },
+            {
+              "date": "2025-09-14",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250914.trades.dbn.zst",
+              "neighbour_median_bytes": 5598345,
+              "ratio_to_neighbour_median": 0.0129,
+              "size_bytes": 71969
+            },
+            {
+              "date": "2025-09-21",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250921.trades.dbn.zst",
+              "neighbour_median_bytes": 6146796,
+              "ratio_to_neighbour_median": 0.011,
+              "size_bytes": 67322
+            },
+            {
+              "date": "2025-09-28",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20250928.trades.dbn.zst",
+              "neighbour_median_bytes": 5095824,
+              "ratio_to_neighbour_median": 0.0152,
+              "size_bytes": 77253
+            },
+            {
+              "date": "2025-10-05",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251005.trades.dbn.zst",
+              "neighbour_median_bytes": 5340132,
+              "ratio_to_neighbour_median": 0.0201,
+              "size_bytes": 107175
+            },
+            {
+              "date": "2025-10-12",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251012.trades.dbn.zst",
+              "neighbour_median_bytes": 9139798,
+              "ratio_to_neighbour_median": 0.0569,
+              "size_bytes": 520449
+            },
+            {
+              "date": "2025-10-19",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251019.trades.dbn.zst",
+              "neighbour_median_bytes": 9139798,
+              "ratio_to_neighbour_median": 0.0154,
+              "size_bytes": 140634
+            },
+            {
+              "date": "2025-10-26",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251026.trades.dbn.zst",
+              "neighbour_median_bytes": 5825628,
+              "ratio_to_neighbour_median": 0.0403,
+              "size_bytes": 234531
+            },
+            {
+              "date": "2025-11-02",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251102.trades.dbn.zst",
+              "neighbour_median_bytes": 7837596,
+              "ratio_to_neighbour_median": 0.011,
+              "size_bytes": 86129
+            },
+            {
+              "date": "2025-11-09",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251109.trades.dbn.zst",
+              "neighbour_median_bytes": 7681333,
+              "ratio_to_neighbour_median": 0.0176,
+              "size_bytes": 134956
+            },
+            {
+              "date": "2025-11-16",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251116.trades.dbn.zst",
+              "neighbour_median_bytes": 10907403,
+              "ratio_to_neighbour_median": 0.0128,
+              "size_bytes": 139862
+            },
+            {
+              "date": "2025-11-23",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251123.trades.dbn.zst",
+              "neighbour_median_bytes": 8997801,
+              "ratio_to_neighbour_median": 0.0127,
+              "size_bytes": 114399
+            },
+            {
+              "date": "2025-11-27",
+              "explained_by": "early_close",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251127.trades.dbn.zst",
+              "neighbour_median_bytes": 6785186,
+              "ratio_to_neighbour_median": 0.089,
+              "size_bytes": 604049
+            },
+            {
+              "date": "2025-11-30",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251130.trades.dbn.zst",
+              "neighbour_median_bytes": 6406484,
+              "ratio_to_neighbour_median": 0.0162,
+              "size_bytes": 103880
+            },
+            {
+              "date": "2025-12-07",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251207.trades.dbn.zst",
+              "neighbour_median_bytes": 6477615,
+              "ratio_to_neighbour_median": 0.0087,
+              "size_bytes": 56501
+            },
+            {
+              "date": "2025-12-14",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251214.trades.dbn.zst",
+              "neighbour_median_bytes": 10166464,
+              "ratio_to_neighbour_median": 0.0142,
+              "size_bytes": 144161
+            },
+            {
+              "date": "2025-12-21",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251221.trades.dbn.zst",
+              "neighbour_median_bytes": 4963082,
+              "ratio_to_neighbour_median": 0.0133,
+              "size_bytes": 65872
+            },
+            {
+              "date": "2025-12-25",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251225.trades.dbn.zst",
+              "neighbour_median_bytes": 3318445,
+              "ratio_to_neighbour_median": 0.014,
+              "size_bytes": 46425
+            },
+            {
+              "date": "2025-12-28",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20251228.trades.dbn.zst",
+              "neighbour_median_bytes": 3318445,
+              "ratio_to_neighbour_median": 0.0125,
+              "size_bytes": 41424
+            },
+            {
+              "date": "2026-01-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260101.trades.dbn.zst",
+              "neighbour_median_bytes": 3742714,
+              "ratio_to_neighbour_median": 0.0171,
+              "size_bytes": 63944
+            },
+            {
+              "date": "2026-01-04",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260104.trades.dbn.zst",
+              "neighbour_median_bytes": 4872012,
+              "ratio_to_neighbour_median": 0.022,
+              "size_bytes": 107000
+            },
+            {
+              "date": "2026-01-11",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260111.trades.dbn.zst",
+              "neighbour_median_bytes": 5542190,
+              "ratio_to_neighbour_median": 0.0151,
+              "size_bytes": 83700
+            },
+            {
+              "date": "2026-01-18",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260118.trades.dbn.zst",
+              "neighbour_median_bytes": 6021074,
+              "ratio_to_neighbour_median": 0.0353,
+              "size_bytes": 212423
+            },
+            {
+              "date": "2026-01-25",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260125.trades.dbn.zst",
+              "neighbour_median_bytes": 6252534,
+              "ratio_to_neighbour_median": 0.0271,
+              "size_bytes": 169620
+            },
+            {
+              "date": "2026-02-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260201.trades.dbn.zst",
+              "neighbour_median_bytes": 9697300,
+              "ratio_to_neighbour_median": 0.0255,
+              "size_bytes": 247546
+            },
+            {
+              "date": "2026-02-08",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260208.trades.dbn.zst",
+              "neighbour_median_bytes": 9697300,
+              "ratio_to_neighbour_median": 0.0132,
+              "size_bytes": 128042
+            },
+            {
+              "date": "2026-02-15",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260215.trades.dbn.zst",
+              "neighbour_median_bytes": 7401925,
+              "ratio_to_neighbour_median": 0.0112,
+              "size_bytes": 82698
+            },
+            {
+              "date": "2026-02-22",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260222.trades.dbn.zst",
+              "neighbour_median_bytes": 7080684,
+              "ratio_to_neighbour_median": 0.0186,
+              "size_bytes": 131368
+            },
+            {
+              "date": "2026-03-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260301.trades.dbn.zst",
+              "neighbour_median_bytes": 8305738,
+              "ratio_to_neighbour_median": 0.0433,
+              "size_bytes": 359751
+            },
+            {
+              "date": "2026-03-08",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260308.trades.dbn.zst",
+              "neighbour_median_bytes": 11404702,
+              "ratio_to_neighbour_median": 0.0676,
+              "size_bytes": 770746
+            },
+            {
+              "date": "2026-03-15",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260315.trades.dbn.zst",
+              "neighbour_median_bytes": 11519401,
+              "ratio_to_neighbour_median": 0.0516,
+              "size_bytes": 594173
+            },
+            {
+              "date": "2026-03-22",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260322.trades.dbn.zst",
+              "neighbour_median_bytes": 9759763,
+              "ratio_to_neighbour_median": 0.0432,
+              "size_bytes": 421824
+            },
+            {
+              "date": "2026-03-29",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260329.trades.dbn.zst",
+              "neighbour_median_bytes": 8850227,
+              "ratio_to_neighbour_median": 0.0378,
+              "size_bytes": 334954
+            },
+            {
+              "date": "2026-04-03",
+              "explained_by": "early_close",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260403.trades.dbn.zst",
+              "neighbour_median_bytes": 8687057,
+              "ratio_to_neighbour_median": 0.054,
+              "size_bytes": 469125
+            },
+            {
+              "date": "2026-04-05",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260405.trades.dbn.zst",
+              "neighbour_median_bytes": 8687057,
+              "ratio_to_neighbour_median": 0.0303,
+              "size_bytes": 263023
+            },
+            {
+              "date": "2026-04-12",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260412.trades.dbn.zst",
+              "neighbour_median_bytes": 6409394,
+              "ratio_to_neighbour_median": 0.0518,
+              "size_bytes": 332079
+            },
+            {
+              "date": "2026-04-19",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260419.trades.dbn.zst",
+              "neighbour_median_bytes": 6333891,
+              "ratio_to_neighbour_median": 0.05,
+              "size_bytes": 316927
+            },
+            {
+              "date": "2026-04-26",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260426.trades.dbn.zst",
+              "neighbour_median_bytes": 6643587,
+              "ratio_to_neighbour_median": 0.0205,
+              "size_bytes": 136222
+            },
+            {
+              "date": "2026-05-03",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260503.trades.dbn.zst",
+              "neighbour_median_bytes": 6680255,
+              "ratio_to_neighbour_median": 0.0188,
+              "size_bytes": 125718
+            },
+            {
+              "date": "2026-05-10",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260510.trades.dbn.zst",
+              "neighbour_median_bytes": 6685675,
+              "ratio_to_neighbour_median": 0.025,
+              "size_bytes": 167229
+            },
+            {
+              "date": "2026-05-17",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260517.trades.dbn.zst",
+              "neighbour_median_bytes": 8003707,
+              "ratio_to_neighbour_median": 0.0394,
+              "size_bytes": 315348
+            },
+            {
+              "date": "2026-05-24",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260524.trades.dbn.zst",
+              "neighbour_median_bytes": 6587578,
+              "ratio_to_neighbour_median": 0.0291,
+              "size_bytes": 191743
+            },
+            {
+              "date": "2026-05-31",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260531.trades.dbn.zst",
+              "neighbour_median_bytes": 6304274,
+              "ratio_to_neighbour_median": 0.0195,
+              "size_bytes": 123206
+            },
+            {
+              "date": "2026-06-07",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260607.trades.dbn.zst",
+              "neighbour_median_bytes": 11120624,
+              "ratio_to_neighbour_median": 0.0432,
+              "size_bytes": 480626
+            },
+            {
+              "date": "2026-06-14",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260614.trades.dbn.zst",
+              "neighbour_median_bytes": 12130803,
+              "ratio_to_neighbour_median": 0.0396,
+              "size_bytes": 480936
+            },
+            {
+              "date": "2026-06-21",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260621.trades.dbn.zst",
+              "neighbour_median_bytes": 9836842,
+              "ratio_to_neighbour_median": 0.0197,
+              "size_bytes": 193465
+            },
+            {
+              "date": "2026-06-28",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260628.trades.dbn.zst",
+              "neighbour_median_bytes": 8370495,
+              "ratio_to_neighbour_median": 0.0253,
+              "size_bytes": 211914
+            },
+            {
+              "date": "2026-07-05",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260705.trades.dbn.zst",
+              "neighbour_median_bytes": 6333938,
+              "ratio_to_neighbour_median": 0.0188,
+              "size_bytes": 119264
+            }
+          ],
+          "total_bytes": 1928704610,
+          "unexpected_file_dates": [],
+          "usable_file_dates": 320
+        },
+        "NQ": {
+          "content_missing_count": 7,
+          "content_missing_dates": [
+            "2025-04-18",
+            "2025-07-03",
+            "2025-07-04",
+            "2025-07-06",
+            "2025-07-07",
+            "2025-07-08",
+            "2025-07-09"
+          ],
+          "dbn_query_symbols": {
+            "ES.FUT": {
+              "files": 6,
+              "first_date": "2025-07-03",
+              "last_date": "2025-07-09"
+            },
+            "NQ.FUT": {
+              "files": 626,
+              "first_date": "2024-07-03",
+              "last_date": "2026-07-10"
+            }
+          },
+          "distinct_file_dates": 632,
+          "expected_file_dates": 633,
+          "files_with_foreign_content": {
+            "count": 6,
+            "dates": [
+              "2025-07-03",
+              "2025-07-04",
+              "2025-07-06",
+              "2025-07-07",
+              "2025-07-08",
+              "2025-07-09"
+            ]
+          },
+          "first_file_date": "2024-07-03",
+          "half_session_dates_in_range": 23,
+          "half_session_dates_present": 22,
+          "last_file_date": "2026-07-10",
+          "missing_count": 1,
+          "missing_file_dates": [
+            "2025-04-18"
+          ],
+          "missing_file_dates_classified": {
+            "2025-04-18": "half_session_date"
+          },
+          "objects": 632,
+          "one_line_coverage": "NQ: 626 usable file-dates covering 2024-07-03 to 2026-07-10, 7 expected date(s) absent (including 6 present-but-foreign: 2025-07-03 to 2025-07-09)",
+          "row_counts": {
+            "estimated_total_rows": 198552846,
+            "method": "exact count on a strided sample, extrapolated by compressed bytes",
+            "rows_per_compressed_byte": 0.055298,
+            "sampled_bytes": 58164565,
+            "sampled_files": 10,
+            "sampled_rows_exact": 3216396
+          },
+          "size_bytes": {
+            "max": 15547624,
+            "mean": 5681303,
+            "median": 6144989,
+            "min": 41464,
+            "p05": 114324,
+            "p25": 4789698,
+            "p75": 7672370,
+            "p95": 10119069
+          },
+          "size_outliers": [
+            {
+              "date": "2024-07-07",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240707.trades.dbn.zst",
+              "neighbour_median_bytes": 6273236,
+              "ratio_to_neighbour_median": 0.0152,
+              "size_bytes": 95403
+            },
+            {
+              "date": "2024-07-14",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240714.trades.dbn.zst",
+              "neighbour_median_bytes": 7778790,
+              "ratio_to_neighbour_median": 0.0207,
+              "size_bytes": 161391
+            },
+            {
+              "date": "2024-07-21",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240721.trades.dbn.zst",
+              "neighbour_median_bytes": 8617356,
+              "ratio_to_neighbour_median": 0.0272,
+              "size_bytes": 234107
+            },
+            {
+              "date": "2024-07-28",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240728.trades.dbn.zst",
+              "neighbour_median_bytes": 8941827,
+              "ratio_to_neighbour_median": 0.0148,
+              "size_bytes": 132328
+            },
+            {
+              "date": "2024-08-04",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240804.trades.dbn.zst",
+              "neighbour_median_bytes": 8941827,
+              "ratio_to_neighbour_median": 0.0348,
+              "size_bytes": 311548
+            },
+            {
+              "date": "2024-08-11",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240811.trades.dbn.zst",
+              "neighbour_median_bytes": 6449694,
+              "ratio_to_neighbour_median": 0.0269,
+              "size_bytes": 173516
+            },
+            {
+              "date": "2024-08-18",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240818.trades.dbn.zst",
+              "neighbour_median_bytes": 5853257,
+              "ratio_to_neighbour_median": 0.02,
+              "size_bytes": 116835
+            },
+            {
+              "date": "2024-08-25",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240825.trades.dbn.zst",
+              "neighbour_median_bytes": 5979465,
+              "ratio_to_neighbour_median": 0.0232,
+              "size_bytes": 138787
+            },
+            {
+              "date": "2024-09-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240901.trades.dbn.zst",
+              "neighbour_median_bytes": 6920706,
+              "ratio_to_neighbour_median": 0.0098,
+              "size_bytes": 67554
+            },
+            {
+              "date": "2024-09-08",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240908.trades.dbn.zst",
+              "neighbour_median_bytes": 7337322,
+              "ratio_to_neighbour_median": 0.0249,
+              "size_bytes": 182995
+            },
+            {
+              "date": "2024-09-15",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240915.trades.dbn.zst",
+              "neighbour_median_bytes": 7583195,
+              "ratio_to_neighbour_median": 0.0213,
+              "size_bytes": 161720
+            },
+            {
+              "date": "2024-09-22",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240922.trades.dbn.zst",
+              "neighbour_median_bytes": 5983619,
+              "ratio_to_neighbour_median": 0.0153,
+              "size_bytes": 91308
+            },
+            {
+              "date": "2024-09-29",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20240929.trades.dbn.zst",
+              "neighbour_median_bytes": 5998493,
+              "ratio_to_neighbour_median": 0.0191,
+              "size_bytes": 114324
+            },
+            {
+              "date": "2024-10-06",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241006.trades.dbn.zst",
+              "neighbour_median_bytes": 5722003,
+              "ratio_to_neighbour_median": 0.0217,
+              "size_bytes": 124145
+            },
+            {
+              "date": "2024-10-13",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241013.trades.dbn.zst",
+              "neighbour_median_bytes": 5084724,
+              "ratio_to_neighbour_median": 0.0191,
+              "size_bytes": 97050
+            },
+            {
+              "date": "2024-10-20",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241020.trades.dbn.zst",
+              "neighbour_median_bytes": 5417587,
+              "ratio_to_neighbour_median": 0.0143,
+              "size_bytes": 77486
+            },
+            {
+              "date": "2024-10-27",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241027.trades.dbn.zst",
+              "neighbour_median_bytes": 6055086,
+              "ratio_to_neighbour_median": 0.0229,
+              "size_bytes": 138610
+            },
+            {
+              "date": "2024-11-03",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241103.trades.dbn.zst",
+              "neighbour_median_bytes": 5914134,
+              "ratio_to_neighbour_median": 0.027,
+              "size_bytes": 159840
+            },
+            {
+              "date": "2024-11-10",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241110.trades.dbn.zst",
+              "neighbour_median_bytes": 5975487,
+              "ratio_to_neighbour_median": 0.0134,
+              "size_bytes": 79830
+            },
+            {
+              "date": "2024-11-17",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241117.trades.dbn.zst",
+              "neighbour_median_bytes": 6463709,
+              "ratio_to_neighbour_median": 0.0172,
+              "size_bytes": 111447
+            },
+            {
+              "date": "2024-11-24",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241124.trades.dbn.zst",
+              "neighbour_median_bytes": 6249354,
+              "ratio_to_neighbour_median": 0.0123,
+              "size_bytes": 76581
+            },
+            {
+              "date": "2024-12-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241201.trades.dbn.zst",
+              "neighbour_median_bytes": 5227209,
+              "ratio_to_neighbour_median": 0.0161,
+              "size_bytes": 84334
+            },
+            {
+              "date": "2024-12-08",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241208.trades.dbn.zst",
+              "neighbour_median_bytes": 5617354,
+              "ratio_to_neighbour_median": 0.0132,
+              "size_bytes": 73881
+            },
+            {
+              "date": "2024-12-15",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241215.trades.dbn.zst",
+              "neighbour_median_bytes": 8024917,
+              "ratio_to_neighbour_median": 0.0127,
+              "size_bytes": 101994
+            },
+            {
+              "date": "2024-12-22",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241222.trades.dbn.zst",
+              "neighbour_median_bytes": 7494118,
+              "ratio_to_neighbour_median": 0.0126,
+              "size_bytes": 94436
+            },
+            {
+              "date": "2024-12-25",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241225.trades.dbn.zst",
+              "neighbour_median_bytes": 6066979,
+              "ratio_to_neighbour_median": 0.0094,
+              "size_bytes": 56780
+            },
+            {
+              "date": "2024-12-29",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20241229.trades.dbn.zst",
+              "neighbour_median_bytes": 5805615,
+              "ratio_to_neighbour_median": 0.0151,
+              "size_bytes": 87800
+            },
+            {
+              "date": "2025-01-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250101.trades.dbn.zst",
+              "neighbour_median_bytes": 6200379,
+              "ratio_to_neighbour_median": 0.0138,
+              "size_bytes": 85834
+            },
+            {
+              "date": "2025-01-05",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250105.trades.dbn.zst",
+              "neighbour_median_bytes": 6577713,
+              "ratio_to_neighbour_median": 0.0095,
+              "size_bytes": 62576
+            },
+            {
+              "date": "2025-01-12",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250112.trades.dbn.zst",
+              "neighbour_median_bytes": 7581314,
+              "ratio_to_neighbour_median": 0.0138,
+              "size_bytes": 104427
+            },
+            {
+              "date": "2025-01-19",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250119.trades.dbn.zst",
+              "neighbour_median_bytes": 6462112,
+              "ratio_to_neighbour_median": 0.016,
+              "size_bytes": 103566
+            },
+            {
+              "date": "2025-01-26",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250126.trades.dbn.zst",
+              "neighbour_median_bytes": 7016376,
+              "ratio_to_neighbour_median": 0.0376,
+              "size_bytes": 263834
+            },
+            {
+              "date": "2025-02-02",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250202.trades.dbn.zst",
+              "neighbour_median_bytes": 7844745,
+              "ratio_to_neighbour_median": 0.0436,
+              "size_bytes": 342053
+            },
+            {
+              "date": "2025-02-09",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250209.trades.dbn.zst",
+              "neighbour_median_bytes": 6141470,
+              "ratio_to_neighbour_median": 0.0241,
+              "size_bytes": 147902
+            },
+            {
+              "date": "2025-02-16",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250216.trades.dbn.zst",
+              "neighbour_median_bytes": 5640704,
+              "ratio_to_neighbour_median": 0.0213,
+              "size_bytes": 120167
+            },
+            {
+              "date": "2025-02-23",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250223.trades.dbn.zst",
+              "neighbour_median_bytes": 8076268,
+              "ratio_to_neighbour_median": 0.0179,
+              "size_bytes": 144499
+            },
+            {
+              "date": "2025-03-02",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250302.trades.dbn.zst",
+              "neighbour_median_bytes": 9983325,
+              "ratio_to_neighbour_median": 0.0173,
+              "size_bytes": 172798
+            },
+            {
+              "date": "2025-03-09",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250309.trades.dbn.zst",
+              "neighbour_median_bytes": 9989572,
+              "ratio_to_neighbour_median": 0.0267,
+              "size_bytes": 266462
+            },
+            {
+              "date": "2025-03-16",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250316.trades.dbn.zst",
+              "neighbour_median_bytes": 9912394,
+              "ratio_to_neighbour_median": 0.0396,
+              "size_bytes": 392951
+            },
+            {
+              "date": "2025-03-23",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250323.trades.dbn.zst",
+              "neighbour_median_bytes": 7883746,
+              "ratio_to_neighbour_median": 0.0314,
+              "size_bytes": 247413
+            },
+            {
+              "date": "2025-03-30",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250330.trades.dbn.zst",
+              "neighbour_median_bytes": 8922638,
+              "ratio_to_neighbour_median": 0.0344,
+              "size_bytes": 307041
+            },
+            {
+              "date": "2025-04-06",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250406.trades.dbn.zst",
+              "neighbour_median_bytes": 11969204,
+              "ratio_to_neighbour_median": 0.0559,
+              "size_bytes": 669246
+            },
+            {
+              "date": "2025-04-13",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250413.trades.dbn.zst",
+              "neighbour_median_bytes": 9054169,
+              "ratio_to_neighbour_median": 0.0387,
+              "size_bytes": 350298
+            },
+            {
+              "date": "2025-04-20",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250420.trades.dbn.zst",
+              "neighbour_median_bytes": 7470354,
+              "ratio_to_neighbour_median": 0.0153,
+              "size_bytes": 114344
+            },
+            {
+              "date": "2025-04-27",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250427.trades.dbn.zst",
+              "neighbour_median_bytes": 7228196,
+              "ratio_to_neighbour_median": 0.0174,
+              "size_bytes": 125509
+            },
+            {
+              "date": "2025-05-04",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250504.trades.dbn.zst",
+              "neighbour_median_bytes": 6953895,
+              "ratio_to_neighbour_median": 0.0257,
+              "size_bytes": 178396
+            },
+            {
+              "date": "2025-05-11",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250511.trades.dbn.zst",
+              "neighbour_median_bytes": 6384403,
+              "ratio_to_neighbour_median": 0.0423,
+              "size_bytes": 270300
+            },
+            {
+              "date": "2025-05-18",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250518.trades.dbn.zst",
+              "neighbour_median_bytes": 6238568,
+              "ratio_to_neighbour_median": 0.0387,
+              "size_bytes": 241342
+            },
+            {
+              "date": "2025-05-25",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250525.trades.dbn.zst",
+              "neighbour_median_bytes": 6101932,
+              "ratio_to_neighbour_median": 0.038,
+              "size_bytes": 232006
+            },
+            {
+              "date": "2025-06-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250601.trades.dbn.zst",
+              "neighbour_median_bytes": 5465027,
+              "ratio_to_neighbour_median": 0.0252,
+              "size_bytes": 137790
+            },
+            {
+              "date": "2025-06-08",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250608.trades.dbn.zst",
+              "neighbour_median_bytes": 5417800,
+              "ratio_to_neighbour_median": 0.0268,
+              "size_bytes": 145089
+            },
+            {
+              "date": "2025-06-15",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250615.trades.dbn.zst",
+              "neighbour_median_bytes": 6234676,
+              "ratio_to_neighbour_median": 0.0462,
+              "size_bytes": 287900
+            },
+            {
+              "date": "2025-06-22",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250622.trades.dbn.zst",
+              "neighbour_median_bytes": 5820474,
+              "ratio_to_neighbour_median": 0.0435,
+              "size_bytes": 253120
+            },
+            {
+              "date": "2025-06-29",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250629.trades.dbn.zst",
+              "neighbour_median_bytes": 4806976,
+              "ratio_to_neighbour_median": 0.034,
+              "size_bytes": 163659
+            },
+            {
+              "date": "2025-07-06",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250706.trades.dbn.zst",
+              "neighbour_median_bytes": 4877978,
+              "ratio_to_neighbour_median": 0.033,
+              "size_bytes": 161172
+            },
+            {
+              "date": "2025-07-13",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250713.trades.dbn.zst",
+              "neighbour_median_bytes": 5001532,
+              "ratio_to_neighbour_median": 0.042,
+              "size_bytes": 209822
+            },
+            {
+              "date": "2025-07-20",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250720.trades.dbn.zst",
+              "neighbour_median_bytes": 4964359,
+              "ratio_to_neighbour_median": 0.0197,
+              "size_bytes": 97953
+            },
+            {
+              "date": "2025-07-27",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250727.trades.dbn.zst",
+              "neighbour_median_bytes": 5823760,
+              "ratio_to_neighbour_median": 0.0262,
+              "size_bytes": 152447
+            },
+            {
+              "date": "2025-08-03",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250803.trades.dbn.zst",
+              "neighbour_median_bytes": 6095995,
+              "ratio_to_neighbour_median": 0.0403,
+              "size_bytes": 245902
+            },
+            {
+              "date": "2025-08-10",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250810.trades.dbn.zst",
+              "neighbour_median_bytes": 5405395,
+              "ratio_to_neighbour_median": 0.0229,
+              "size_bytes": 123653
+            },
+            {
+              "date": "2025-08-17",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250817.trades.dbn.zst",
+              "neighbour_median_bytes": 5612102,
+              "ratio_to_neighbour_median": 0.0156,
+              "size_bytes": 87513
+            },
+            {
+              "date": "2025-08-24",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250824.trades.dbn.zst",
+              "neighbour_median_bytes": 5575988,
+              "ratio_to_neighbour_median": 0.022,
+              "size_bytes": 122431
+            },
+            {
+              "date": "2025-08-31",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250831.trades.dbn.zst",
+              "neighbour_median_bytes": 5428406,
+              "ratio_to_neighbour_median": 0.0195,
+              "size_bytes": 105778
+            },
+            {
+              "date": "2025-09-07",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250907.trades.dbn.zst",
+              "neighbour_median_bytes": 5456298,
+              "ratio_to_neighbour_median": 0.0328,
+              "size_bytes": 179185
+            },
+            {
+              "date": "2025-09-14",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250914.trades.dbn.zst",
+              "neighbour_median_bytes": 5632262,
+              "ratio_to_neighbour_median": 0.0184,
+              "size_bytes": 103860
+            },
+            {
+              "date": "2025-09-21",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250921.trades.dbn.zst",
+              "neighbour_median_bytes": 6210490,
+              "ratio_to_neighbour_median": 0.0163,
+              "size_bytes": 101151
+            },
+            {
+              "date": "2025-09-28",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20250928.trades.dbn.zst",
+              "neighbour_median_bytes": 5560594,
+              "ratio_to_neighbour_median": 0.0196,
+              "size_bytes": 108891
+            },
+            {
+              "date": "2025-10-05",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251005.trades.dbn.zst",
+              "neighbour_median_bytes": 5430389,
+              "ratio_to_neighbour_median": 0.0233,
+              "size_bytes": 126301
+            },
+            {
+              "date": "2025-10-12",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251012.trades.dbn.zst",
+              "neighbour_median_bytes": 7638410,
+              "ratio_to_neighbour_median": 0.0561,
+              "size_bytes": 428478
+            },
+            {
+              "date": "2025-10-19",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251019.trades.dbn.zst",
+              "neighbour_median_bytes": 7638410,
+              "ratio_to_neighbour_median": 0.0207,
+              "size_bytes": 158238
+            },
+            {
+              "date": "2025-10-26",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251026.trades.dbn.zst",
+              "neighbour_median_bytes": 5641091,
+              "ratio_to_neighbour_median": 0.0354,
+              "size_bytes": 199634
+            },
+            {
+              "date": "2025-11-02",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251102.trades.dbn.zst",
+              "neighbour_median_bytes": 7009879,
+              "ratio_to_neighbour_median": 0.0138,
+              "size_bytes": 96470
+            },
+            {
+              "date": "2025-11-09",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251109.trades.dbn.zst",
+              "neighbour_median_bytes": 7586287,
+              "ratio_to_neighbour_median": 0.0177,
+              "size_bytes": 134500
+            },
+            {
+              "date": "2025-11-16",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251116.trades.dbn.zst",
+              "neighbour_median_bytes": 9551527,
+              "ratio_to_neighbour_median": 0.0161,
+              "size_bytes": 153999
+            },
+            {
+              "date": "2025-11-23",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251123.trades.dbn.zst",
+              "neighbour_median_bytes": 8315056,
+              "ratio_to_neighbour_median": 0.0145,
+              "size_bytes": 120195
+            },
+            {
+              "date": "2025-11-30",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251130.trades.dbn.zst",
+              "neighbour_median_bytes": 6179942,
+              "ratio_to_neighbour_median": 0.0228,
+              "size_bytes": 141141
+            },
+            {
+              "date": "2025-12-07",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251207.trades.dbn.zst",
+              "neighbour_median_bytes": 6425718,
+              "ratio_to_neighbour_median": 0.0102,
+              "size_bytes": 65232
+            },
+            {
+              "date": "2025-12-14",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251214.trades.dbn.zst",
+              "neighbour_median_bytes": 8191049,
+              "ratio_to_neighbour_median": 0.0195,
+              "size_bytes": 159901
+            },
+            {
+              "date": "2025-12-21",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251221.trades.dbn.zst",
+              "neighbour_median_bytes": 5026340,
+              "ratio_to_neighbour_median": 0.02,
+              "size_bytes": 100342
+            },
+            {
+              "date": "2025-12-25",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251225.trades.dbn.zst",
+              "neighbour_median_bytes": 3540911,
+              "ratio_to_neighbour_median": 0.0117,
+              "size_bytes": 41464
+            },
+            {
+              "date": "2025-12-28",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20251228.trades.dbn.zst",
+              "neighbour_median_bytes": 3540911,
+              "ratio_to_neighbour_median": 0.0149,
+              "size_bytes": 52783
+            },
+            {
+              "date": "2026-01-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260101.trades.dbn.zst",
+              "neighbour_median_bytes": 3836033,
+              "ratio_to_neighbour_median": 0.0157,
+              "size_bytes": 60258
+            },
+            {
+              "date": "2026-01-04",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260104.trades.dbn.zst",
+              "neighbour_median_bytes": 5071603,
+              "ratio_to_neighbour_median": 0.023,
+              "size_bytes": 116687
+            },
+            {
+              "date": "2026-01-11",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260111.trades.dbn.zst",
+              "neighbour_median_bytes": 5675714,
+              "ratio_to_neighbour_median": 0.0155,
+              "size_bytes": 87755
+            },
+            {
+              "date": "2026-01-18",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260118.trades.dbn.zst",
+              "neighbour_median_bytes": 6313185,
+              "ratio_to_neighbour_median": 0.0246,
+              "size_bytes": 155037
+            },
+            {
+              "date": "2026-01-25",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260125.trades.dbn.zst",
+              "neighbour_median_bytes": 6215434,
+              "ratio_to_neighbour_median": 0.0253,
+              "size_bytes": 157465
+            },
+            {
+              "date": "2026-02-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260201.trades.dbn.zst",
+              "neighbour_median_bytes": 8197290,
+              "ratio_to_neighbour_median": 0.0262,
+              "size_bytes": 214568
+            },
+            {
+              "date": "2026-02-08",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260208.trades.dbn.zst",
+              "neighbour_median_bytes": 8073361,
+              "ratio_to_neighbour_median": 0.0147,
+              "size_bytes": 118653
+            },
+            {
+              "date": "2026-02-15",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260215.trades.dbn.zst",
+              "neighbour_median_bytes": 6464543,
+              "ratio_to_neighbour_median": 0.0135,
+              "size_bytes": 86971
+            },
+            {
+              "date": "2026-02-22",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260222.trades.dbn.zst",
+              "neighbour_median_bytes": 6586283,
+              "ratio_to_neighbour_median": 0.0216,
+              "size_bytes": 142531
+            },
+            {
+              "date": "2026-03-01",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260301.trades.dbn.zst",
+              "neighbour_median_bytes": 7554182,
+              "ratio_to_neighbour_median": 0.0334,
+              "size_bytes": 252437
+            },
+            {
+              "date": "2026-03-08",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260308.trades.dbn.zst",
+              "neighbour_median_bytes": 7873834,
+              "ratio_to_neighbour_median": 0.0609,
+              "size_bytes": 479661
+            },
+            {
+              "date": "2026-03-15",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260315.trades.dbn.zst",
+              "neighbour_median_bytes": 7601094,
+              "ratio_to_neighbour_median": 0.0466,
+              "size_bytes": 354116
+            },
+            {
+              "date": "2026-03-22",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260322.trades.dbn.zst",
+              "neighbour_median_bytes": 7241686,
+              "ratio_to_neighbour_median": 0.0525,
+              "size_bytes": 380531
+            },
+            {
+              "date": "2026-03-29",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260329.trades.dbn.zst",
+              "neighbour_median_bytes": 6889198,
+              "ratio_to_neighbour_median": 0.0498,
+              "size_bytes": 342823
+            },
+            {
+              "date": "2026-04-03",
+              "explained_by": "early_close",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260403.trades.dbn.zst",
+              "neighbour_median_bytes": 6888673,
+              "ratio_to_neighbour_median": 0.0688,
+              "size_bytes": 474234
+            },
+            {
+              "date": "2026-04-05",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260405.trades.dbn.zst",
+              "neighbour_median_bytes": 6888673,
+              "ratio_to_neighbour_median": 0.066,
+              "size_bytes": 454378
+            },
+            {
+              "date": "2026-04-12",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260412.trades.dbn.zst",
+              "neighbour_median_bytes": 5983682,
+              "ratio_to_neighbour_median": 0.0598,
+              "size_bytes": 357761
+            },
+            {
+              "date": "2026-04-19",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260419.trades.dbn.zst",
+              "neighbour_median_bytes": 6121238,
+              "ratio_to_neighbour_median": 0.0523,
+              "size_bytes": 320308
+            },
+            {
+              "date": "2026-04-26",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260426.trades.dbn.zst",
+              "neighbour_median_bytes": 6436900,
+              "ratio_to_neighbour_median": 0.0276,
+              "size_bytes": 177549
+            },
+            {
+              "date": "2026-05-03",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260503.trades.dbn.zst",
+              "neighbour_median_bytes": 6609021,
+              "ratio_to_neighbour_median": 0.0312,
+              "size_bytes": 206428
+            },
+            {
+              "date": "2026-05-10",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260510.trades.dbn.zst",
+              "neighbour_median_bytes": 7046410,
+              "ratio_to_neighbour_median": 0.0368,
+              "size_bytes": 259310
+            },
+            {
+              "date": "2026-05-17",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260517.trades.dbn.zst",
+              "neighbour_median_bytes": 7736511,
+              "ratio_to_neighbour_median": 0.0635,
+              "size_bytes": 491637
+            },
+            {
+              "date": "2026-05-24",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260524.trades.dbn.zst",
+              "neighbour_median_bytes": 7264518,
+              "ratio_to_neighbour_median": 0.0336,
+              "size_bytes": 243902
+            },
+            {
+              "date": "2026-05-31",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260531.trades.dbn.zst",
+              "neighbour_median_bytes": 6830328,
+              "ratio_to_neighbour_median": 0.0285,
+              "size_bytes": 194446
+            },
+            {
+              "date": "2026-06-07",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260607.trades.dbn.zst",
+              "neighbour_median_bytes": 9206592,
+              "ratio_to_neighbour_median": 0.0611,
+              "size_bytes": 562727
+            },
+            {
+              "date": "2026-06-14",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260614.trades.dbn.zst",
+              "neighbour_median_bytes": 8572132,
+              "ratio_to_neighbour_median": 0.0413,
+              "size_bytes": 354357
+            },
+            {
+              "date": "2026-06-21",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260621.trades.dbn.zst",
+              "neighbour_median_bytes": 8241883,
+              "ratio_to_neighbour_median": 0.0392,
+              "size_bytes": 322878
+            },
+            {
+              "date": "2026-06-28",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260628.trades.dbn.zst",
+              "neighbour_median_bytes": 7258188,
+              "ratio_to_neighbour_median": 0.0393,
+              "size_bytes": 285184
+            },
+            {
+              "date": "2026-07-05",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260705.trades.dbn.zst",
+              "neighbour_median_bytes": 6534485,
+              "ratio_to_neighbour_median": 0.0319,
+              "size_bytes": 208373
+            }
+          ],
+          "total_bytes": 3590583978,
+          "unexpected_file_dates": [],
+          "usable_file_dates": 626
+        }
+      },
+      "total_bytes": 5519288588,
+      "ts_out": [
+        false
+      ]
+    }
+  },
+  "schema_version": "1",
+  "sidecar_objects": [
+    {
+      "conditions": {
+        "available": 523,
+        "degraded": 1
+      },
+      "date_range": [
+        "2024-07-03",
+        "2026-07-03"
+      ],
+      "key": "raw/opra_definition/condition.json",
+      "not_available": [
+        "2025-10-22"
+      ],
+      "size": 62881
+    },
+    {
+      "key": "raw/opra_definition/manifest.json",
+      "size": 259456
+    },
+    {
+      "key": "raw/opra_definition/metadata.json",
+      "size": 694
+    }
+  ],
+  "total_bytes": 48306493483
+}

@@ -2,7 +2,7 @@
 
 Two tiers:
 
-* offline tests read `data/manifest.json` and `config/exclusions.yaml`, both
+* offline tests read `data/manifest.json` and `config/corrections.yaml`, both
   committed, so they run anywhere including CI with no credentials;
 * tests marked `live` re-read the bucket and are skipped unless the R2
   environment is present.
@@ -49,15 +49,15 @@ def manifest() -> dict:
 
 
 @pytest.fixture(scope="session")
-def exclusions() -> dict:
-    path = REPO_ROOT / "config" / "exclusions.yaml"
-    assert path.exists(), "config/exclusions.yaml is missing"
+def corrections_doc() -> dict:
+    path = REPO_ROOT / "config" / "corrections.yaml"
+    assert path.exists(), "config/corrections.yaml is missing"
     return yaml.safe_load(path.read_text())
 
 
 @pytest.fixture(scope="session")
-def supersessions(exclusions) -> list[dict]:
-    return exclusions.get("supersessions") or []
+def corrections(corrections_doc) -> list[dict]:
+    return corrections_doc.get("corrections") or []
 
 
 @pytest.fixture(scope="session")

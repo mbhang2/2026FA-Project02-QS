@@ -53,7 +53,7 @@ import zstandard
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = REPO_ROOT / "data" / "manifest.json"
-EXCLUSIONS_PATH = REPO_ROOT / "config" / "exclusions.yaml"
+CORRECTIONS_PATH = REPO_ROOT / "config" / "corrections.yaml"
 DOC_PATH = REPO_ROOT / "docs" / "data-inventory.md"
 CACHE_DIR = REPO_ROOT / ".scratch" / "inventory-cache"
 
@@ -87,22 +87,18 @@ SAMPLE_COUNTS = {
     "raw/opra_definition": 6,
     "raw/opra_statistics": 6,
     "raw/opra_cbbo1m": 2,
-    # Only six objects, ~18 MB in total: count every one of them exactly rather
-    # than extrapolating, so the manifest can be checked against the patch job.
-    "patches/trades": 6,
 }
 
 # Which market calendar governs which prefix.
 CALENDARS = {
     "raw/trades": "CME_Equity",
-    "patches/trades": "CME_Equity",
     "raw/opra_cbbo1m": "CBOE_Equity_Options",
     "raw/opra_definition": "CBOE_Equity_Options",
     "raw/opra_statistics": "CBOE_Equity_Options",
 }
 
 KEY_RE = re.compile(
-    r"^(?P<root>raw|patches)/(?P<group>[a-z0-9_]+)/"
+    r"^(?P<root>raw)/(?P<group>[a-z0-9_]+)/"
     r"(?:(?P<symbol>[A-Z]{1,4})/)?"
     r"(?P<stem>[a-z0-9-]+)-(?P<date>\d{8})\.(?P<kind>[a-z0-9-]+)\.dbn\.zst$"
 )
@@ -355,48 +351,44 @@ def sha256_of(s3, bucket: str, key: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
-# supersessions
+# corrections record
 # --------------------------------------------------------------------------- #
-def load_exclusions(path: Path = EXCLUSIONS_PATH) -> dict:
-    """Read config/exclusions.yaml -- the only place a patches/ path may be named.
+def yaml_plain(x):
+    """YAML turns bare dates into date objects and folds long scalars over several
+    lines; both need flattening before they reach JSON."""
+    if isinstance(x, (dt.date, dt.datetime)):
+        return x.isoformat()
+    if isinstance(x, str):
+        return " ".join(x.split())
+    if isinstance(x, list):
+        return [yaml_plain(i) for i in x]
+    if isinstance(x, dict):
+        return {str(k): yaml_plain(v) for k, v in x.items()}
+    return x
 
-    Absent file is not an error: a fresh checkout with no supersessions yet is a
-    legitimate state, and the inventory should still run.
+
+def load_corrections(path: Path = CORRECTIONS_PATH) -> dict:
+    """Read config/corrections.yaml.
+
+    This is a historical record, not a mechanism: the bucket holds one canonical
+    object per (symbol, date) and nothing here resolves a path or redirects a
+    read. The inventory uses it for two narrow purposes -- reporting the recorded
+    sha256 of the six corrected objects, and telling an expected divergence from
+    an unexplained one when the integrity check finds a changed object.
+
+    An absent file is not an error; a checkout with no corrections yet is a
+    legitimate state and the inventory should still run.
     """
     if not path.exists():
-        return {"supersessions": [], "job_provenance": {}}
-    doc = yaml.safe_load(path.read_text()) or {}
-    out = []
-    for e in doc.get("supersessions") or []:
-        d = e["date"]
-        out.append(
-            {
-                "date": d.isoformat() if isinstance(d, dt.date) else str(d),
-                "symbol": str(e["symbol"]),
-                "original": str(e["original"]),
-                "superseded_by": str(e["superseded_by"]),
-                "sha256": str(e["sha256"]).lower(),
-                "reason": " ".join(str(e.get("reason", "")).split()),
-                "databento_job": str(e.get("databento_job", "")),
-                "recorded": str(e.get("recorded", "")),
-                "found_in": str(e.get("found_in", "")),
-            }
-        )
-    def plain(x):
-        # YAML turns bare dates into date objects and folded scalars into
-        # multi-line strings; both need flattening before they reach JSON.
-        if isinstance(x, (dt.date, dt.datetime)):
-            return x.isoformat()
-        if isinstance(x, str):
-            return " ".join(x.split())
-        if isinstance(x, list):
-            return [plain(i) for i in x]
-        if isinstance(x, dict):
-            return {str(k): plain(v) for k, v in x.items()}
-        return x
-
-    prov = {str(job): plain(v or {}) for job, v in (doc.get("job_provenance") or {}).items()}
-    return {"supersessions": sorted(out, key=lambda e: (e["symbol"], e["date"])), "job_provenance": prov}
+        return {"corrections": [], "job_provenance": {}, "divergence": {}}
+    doc = yaml_plain(yaml.safe_load(path.read_text()) or {})
+    return {
+        "corrections": sorted(
+            doc.get("corrections") or [], key=lambda e: (e["symbol"], e["date"])
+        ),
+        "job_provenance": doc.get("job_provenance") or {},
+        "divergence": doc.get("divergence_from_source_lake") or {},
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -420,11 +412,39 @@ def parse_key(key: str) -> dict | None:
 
 
 def list_objects(s3, bucket: str) -> list[dict]:
+    """One listing gives key, size, ETag and last-modified for every object.
+
+    The ETag is what makes per-object integrity affordable: R2 returns the plain
+    MD5 for a single-part upload, so the whole bucket can be fingerprinted from
+    listings alone, at zero egress. A composite ETag (one containing a dash) is a
+    multipart upload whose value is a hash of part hashes and is not comparable
+    across re-uploads -- those are flagged rather than trusted.
+    """
     out: list[dict] = []
     for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket):
         for o in page.get("Contents", []):
-            out.append({"key": o["Key"], "size": o["Size"]})
+            out.append(
+                {
+                    "key": o["Key"],
+                    "size": o["Size"],
+                    "etag": o["ETag"].strip('"'),
+                    "last_modified": o["LastModified"]
+                    .astimezone(dt.timezone.utc)
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                }
+            )
     return sorted(out, key=lambda r: r["key"])
+
+
+def previous_manifest(path: Path = MANIFEST_PATH) -> dict | None:
+    """The committed manifest, used as the integrity baseline for this run."""
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return None
 
 
 # --------------------------------------------------------------------------- #
@@ -605,9 +625,10 @@ def build(args) -> dict:
     bucket = os.environ["R2_BUCKET"]
     s3 = s3_client(args.workers)
 
-    exclusions = load_exclusions()
-    log(f"loaded {len(exclusions['supersessions'])} supersession(s) from "
-        f"{EXCLUSIONS_PATH.relative_to(REPO_ROOT)}")
+    corrections = load_corrections()
+    log(f"loaded {len(corrections['corrections'])} historical correction(s) from "
+        f"{CORRECTIONS_PATH.relative_to(REPO_ROOT)}")
+    baseline = previous_manifest()
 
     log("listing bucket ...")
     objects = list_objects(s3, bucket)
@@ -616,7 +637,7 @@ def build(args) -> dict:
     for o in objects:
         p = parse_key(o["key"])
         if p:
-            p["size"] = o["size"]
+            p.update(size=o["size"], etag=o["etag"], last_modified=o["last_modified"])
             parsed.append(p)
         else:
             unparsed.append(o)
@@ -661,7 +682,10 @@ def build(args) -> dict:
                 sample_keys += [r["key"] for r in stride_sample(srows, SAMPLE_COUNTS[prefix])]
         else:
             sample_keys += [r["key"] for r in stride_sample(rows, SAMPLE_COUNTS.get(prefix, 4))]
-    sample_keys = sorted(set(sample_keys))
+    # The corrected objects are the ones whose identity is asserted in config, so
+    # count them exactly rather than leaving it to the stride.
+    sample_keys += [e["key"] for e in corrections["corrections"]]
+    sample_keys = sorted({k for k in sample_keys if k in {r["key"] for r in parsed}})
     sample_key_set = set(sample_keys)
     size_by_key = {r["key"]: r["size"] for r in parsed}
 
@@ -697,6 +721,17 @@ def build(args) -> dict:
                         and r["meta"]["query_symbols"][0].split(".")[0] == sym
                     ]
                     profile_keys += [r["key"] for r in stride_sample(pool, 1)]
+                # and one file of each DBN version, so the v1/v3 mix inside raw/ is
+                # evidenced rather than asserted
+                for ver in sorted({r["meta"]["dbn_version"] for r in srows}):
+                    pool = [
+                        r
+                        for r in srows
+                        if r["meta"]["dbn_version"] == ver
+                        and r["meta"]["query_symbols"]
+                        and r["meta"]["query_symbols"][0].split(".")[0] == sym
+                    ]
+                    profile_keys += [r["key"] for r in stride_sample(pool, 1)]
         elif prefix == "raw/opra_cbbo1m":
             # 76 MB/day: take the schema from a ranged read, never the whole file.
             for r in stride_sample(rows, 1):
@@ -723,21 +758,24 @@ def build(args) -> dict:
             log(f"  {k}")
         scache.flush()
 
-    # ---- checksums for everything a supersession points at ----------------- #
-    # These are small (six objects, ~18 MB) and they are the only objects whose
-    # identity is asserted in config, so verify rather than trust.
+    # ---- sha256 for the corrected objects ---------------------------------- #
+    # Digests were computed when the replacements were made and are recorded in
+    # config/corrections.yaml, so the default run copies them rather than pulling
+    # the bytes again. --verify-sha256 re-reads those six objects (~18 MB) and
+    # checks them; the live test tier does the same.
     hcache = Cache("checksums", enabled=not args.no_cache)
-    want_hash = sorted(
-        {e["superseded_by"] for e in exclusions["supersessions"]} & set(size_by_key)
-    )
-    pending = [k for k in want_hash if args.refresh or hcache.get(k, size_by_key[k]) is None]
-    if pending:
-        log(f"checksumming {len(pending)} patch object(s) ...")
-        with ThreadPoolExecutor(min(6, args.workers)) as ex:
-            hasher = lambda k: with_retry(sha256_of, s3, bucket, k)
-            for key, digest in zip(pending, ex.map(hasher, pending)):
-                hcache.put(key, size_by_key[key], {"sha256": digest})
-        hcache.flush()
+    corrected_keys = sorted({e["key"] for e in corrections["corrections"]} & set(size_by_key))
+    if args.verify_sha256:
+        pending = [
+            k for k in corrected_keys if args.refresh or hcache.get(k, size_by_key[k]) is None
+        ]
+        if pending:
+            log(f"verifying sha256 of {len(pending)} corrected object(s) ...")
+            with ThreadPoolExecutor(min(6, args.workers)) as ex:
+                hasher = lambda k: with_retry(sha256_of, s3, bucket, k)
+                for key, digest in zip(pending, ex.map(hasher, pending)):
+                    hcache.put(key, size_by_key[key], {"sha256": digest})
+            hcache.flush()
 
     # ---- assemble ---------------------------------------------------------- #
     prefixes: dict[str, Any] = {}
@@ -1004,106 +1042,191 @@ def build(args) -> dict:
             "sampled_profiles": profiles,
         }
 
-    # ---- authority resolution --------------------------------------------- #
-    # Coverage is a property of instruments, not of storage prefixes. A raw/ object
-    # that a supersession replaces is never read; the patches/ object stands in its
-    # place. This is the only code that turns config/exclusions.yaml into a decision,
-    # and no patches/ path is named anywhere else.
+    # ---- integrity against the committed manifest -------------------------- #
+    # The in-place overwrite gave up `rclone check` against the source lake as a
+    # mirror-integrity test, so the repo has to be able to answer "did anything in
+    # raw/ change?" on its own. Size and ETag come from the listing, which costs no
+    # egress, and are compared against whatever data/manifest.json held before this
+    # run. A change on an object named in config/corrections.yaml is the recorded
+    # divergence and is reported as such; anything else is a critical anomaly.
     by_key = {r["key"]: r for r in parsed}
-    superseded_by_key = {e["original"]: e for e in exclusions["supersessions"]}
-    patch_targets = {e["superseded_by"] for e in exclusions["supersessions"]}
+    corrected_by_key = {e["key"]: e for e in corrections["corrections"]}
 
-    for e in exclusions["supersessions"]:
-        missing_side = [k for k in (e["original"], e["superseded_by"]) if k not in by_key]
-        if missing_side:
+    composite = sorted(o["key"] for o in objects if "-" in o["etag"])
+    if composite:
+        anomalies.append(
+            {
+                "severity": "warning",
+                "prefix": "bucket",
+                "kind": "composite_etag",
+                "detail": f"{len(composite)} object(s) have a multipart ETag, which is a "
+                "hash of part hashes rather than the object's MD5 and is not comparable "
+                "across re-uploads: " + ", ".join(composite[:10])
+                + (" ..." if len(composite) > 10 else "")
+                + ". Integrity for those falls back to size alone.",
+            }
+        )
+
+    integrity: dict[str, Any] = {
+        "method": "size and ETag from ListObjectsV2, compared against the previous "
+        "data/manifest.json. R2 returns the plain MD5 as the ETag for single-part "
+        "uploads, so this fingerprints every object at zero egress.",
+        "objects_fingerprinted": len(objects),
+        "composite_etags": composite,
+        "baseline": "data/manifest.json (previous revision)" if baseline else None,
+        "comparable_baseline": False,
+        "added": [],
+        "removed": [],
+        "changed": [],
+        "status": "no baseline",
+    }
+    old_files = (baseline or {}).get("files") or {}
+    old_fields = (baseline or {}).get("files_fields") or []
+    if old_files:
+        i_size = old_fields.index("size_bytes") if "size_bytes" in old_fields else 0
+        i_etag = old_fields.index("etag") if "etag" in old_fields else None
+        integrity["comparable_baseline"] = True
+        integrity["baseline_had_etags"] = i_etag is not None
+        live = {o["key"]: o for o in objects}
+        integrity["added"] = sorted(set(live) - set(old_files))
+        integrity["removed"] = sorted(set(old_files) - set(live))
+        for key in sorted(set(live) & set(old_files)):
+            row, cur = old_files[key], live[key]
+            diffs = {}
+            if row[i_size] != cur["size"]:
+                diffs["size_bytes"] = [row[i_size], cur["size"]]
+            if i_etag is not None and len(row) > i_etag and row[i_etag] != cur["etag"]:
+                diffs["etag"] = [row[i_etag], cur["etag"]]
+            if diffs:
+                integrity["changed"].append(
+                    {
+                        "key": key,
+                        "changes": diffs,
+                        "classification": (
+                            "recorded_correction" if key in corrected_by_key else "unexplained"
+                        ),
+                    }
+                )
+        unexplained = [c for c in integrity["changed"] if c["classification"] == "unexplained"]
+        if unexplained or integrity["added"] or integrity["removed"]:
+            # The comparison is against the manifest on disk, which this run is about
+            # to overwrite. Say so loudly: the durable record of a drift is the git
+            # diff of data/manifest.json, so commit or inspect before re-running.
+            log(f"DRIFT: {len(unexplained)} unexplained change(s), "
+                f"{len(integrity['added'])} added, {len(integrity['removed'])} removed "
+                "vs the committed manifest. Inspect `git diff data/manifest.json` before "
+                "re-running -- a second run re-baselines against this one.")
+        integrity["status"] = (
+            "clean"
+            if not (unexplained or integrity["added"] or integrity["removed"])
+            else "drift"
+        )
+        if unexplained:
             anomalies.append(
                 {
                     "severity": "critical",
-                    "prefix": "config/exclusions.yaml",
-                    "kind": "supersession_key_missing",
-                    "detail": f"{e['date']} {e['symbol']}: no object in the bucket for "
-                    + ", ".join(missing_side),
+                    "prefix": "bucket",
+                    "kind": "object_changed_unexplained",
+                    "detail": f"{len(unexplained)} object(s) differ in size or ETag from the "
+                    "committed manifest and are not named in config/corrections.yaml: "
+                    + ", ".join(c["key"] for c in unexplained[:10])
+                    + (" ..." if len(unexplained) > 10 else "")
+                    + ". Either the bucket was modified without a record, or the record is "
+                    "missing an entry.",
+                }
+            )
+        for kind, keys, sev in (
+            ("object_removed", integrity["removed"], "critical"),
+            ("object_added", integrity["added"], "warning"),
+        ):
+            if keys:
+                anomalies.append(
+                    {
+                        "severity": sev,
+                        "prefix": "bucket",
+                        "kind": kind,
+                        "detail": f"{len(keys)} object(s) {kind.split('_')[1]} since the "
+                        "committed manifest: " + ", ".join(keys[:10])
+                        + (" ..." if len(keys) > 10 else ""),
+                    }
+                )
+
+    # every object is expected to live under raw/; a second location reappearing
+    # is exactly the situation this task removed, so say so rather than absorb it
+    stray = sorted(o["key"] for o in objects if not o["key"].startswith("raw/"))
+    if stray:
+        anomalies.append(
+            {
+                "severity": "critical",
+                "prefix": "bucket",
+                "kind": "object_outside_raw",
+                "detail": f"{len(stray)} object(s) sit outside raw/, which is meant to be the "
+                "one canonical location: " + ", ".join(stray[:10])
+                + (" ..." if len(stray) > 10 else ""),
+            }
+        )
+
+    for e in corrections["corrections"]:
+        if e["key"] not in by_key:
+            anomalies.append(
+                {
+                    "severity": "critical",
+                    "prefix": str(CORRECTIONS_PATH.relative_to(REPO_ROOT)),
+                    "kind": "corrected_object_missing",
+                    "detail": f"{e['date']} {e['symbol']}: {e['key']} is recorded as corrected "
+                    "but no such object is in the bucket.",
                     "first_date": e["date"],
                     "last_date": e["date"],
                 }
             )
             continue
-        recorded = hcache.get(e["superseded_by"], by_key[e["superseded_by"]]["size"])
-        actual = recorded["sha256"] if recorded else None
-        if actual and actual != e["sha256"]:
+        cur = by_key[e["key"]]
+        want = e.get("replacement") or {}
+        header = (cur["meta"]["query_symbols"] or [None])[0]
+        if header != want.get("dbn_header_symbol") or cur["size"] != want.get("size_bytes"):
             anomalies.append(
                 {
                     "severity": "critical",
-                    "prefix": "config/exclusions.yaml",
-                    "kind": "supersession_checksum_mismatch",
-                    "detail": f"{e['superseded_by']} hashes to {actual} but exclusions.yaml "
-                    f"declares {e['sha256']}. The patch object is not the one that was "
-                    "reviewed; do not read it until this is resolved.",
+                    "prefix": str(CORRECTIONS_PATH.relative_to(REPO_ROOT)),
+                    "kind": "correction_reverted",
+                    "detail": f"{e['key']} reports {header} at {cur['size']:,} bytes; "
+                    f"corrections.yaml records the replacement as "
+                    f"{want.get('dbn_header_symbol')} at {want.get('size_bytes'):,} bytes. "
+                    "The corrected bytes may have been reverted.",
+                    "first_date": e["date"],
+                    "last_date": e["date"],
+                }
+            )
+        recorded = hcache.get(e["key"], cur["size"]) if args.verify_sha256 else None
+        if recorded and recorded["sha256"] != want.get("sha256"):
+            anomalies.append(
+                {
+                    "severity": "critical",
+                    "prefix": str(CORRECTIONS_PATH.relative_to(REPO_ROOT)),
+                    "kind": "correction_checksum_mismatch",
+                    "detail": f"{e['key']} hashes to {recorded['sha256']} but "
+                    f"corrections.yaml declares {want.get('sha256')}.",
                     "first_date": e["date"],
                     "last_date": e["date"],
                 }
             )
 
-    for r in parsed:
-        if r["root"] == "patches" and r["key"] not in patch_targets:
-            anomalies.append(
-                {
-                    "severity": "warning",
-                    "prefix": r["prefix"],
-                    "kind": "unreferenced_patch_object",
-                    "detail": f"{r['key']} exists but no entry in config/exclusions.yaml "
-                    "points at it, so nothing will ever read it.",
-                    "first_date": r["file_date"].isoformat(),
-                    "last_date": r["file_date"].isoformat(),
-                }
-            )
-
-    # A folder/header mismatch that a supersession fully covers is a recorded and
-    # handled fact, not a live hazard. Downgrade it so the critical list stays
-    # meaningful; an uncovered date keeps it critical.
-    for x in anomalies:
-        if x["kind"] != "folder_symbol_mismatch":
-            continue
-        covered_keys = {e["original"] for e in exclusions["supersessions"]}
-        uncovered = [
-            d for d, k in zip(x["dates"], x["keys"]) if k not in covered_keys
-        ]
-        if not uncovered:
-            x["severity"] = "warning"
-            x["kind"] = "folder_symbol_mismatch_superseded"
-            x["detail"] += (
-                f" All {len(x['dates'])} date(s) are superseded in "
-                f"{EXCLUSIONS_PATH.relative_to(REPO_ROOT)}, so nothing reads them."
-            )
-        else:
-            x["detail"] += (
-                f" {len(uncovered)} of these date(s) have no supersession: "
-                + ", ".join(uncovered)
-            )
-        x["uncovered_dates"] = uncovered
-
+    # ---- coverage ----------------------------------------------------------- #
+    # One canonical object per (symbol, date) under raw/, so coverage is a straight
+    # read of the bucket. There is no second location and nothing to resolve.
     instrument_coverage: dict[str, Any] = {}
     for prefix, rows in sorted(by_prefix.items()):
-        if not prefix.startswith("raw/"):
-            continue  # patches/ contributes through supersessions, never on its own
         cal_name = CALENDARS[prefix]
         for sym in sorted({r["folder_symbol"] or (r["meta"]["query_symbols"] or ["<none>"])[0]
                            for r in rows}):
-            base = [
-                r
-                for r in rows
+            resolved = {
+                r["file_date"]: r
+                for r in sorted(rows, key=lambda r: r["file_date"])
                 if (r["folder_symbol"] or (r["meta"]["query_symbols"] or ["<none>"])[0]) == sym
-            ]
-            # swap in the authoritative object for every superseded date
-            resolved: dict[dt.date, dict] = {}
-            replaced: list[dict] = []
-            for r in sorted(base, key=lambda r: r["file_date"]):
-                e = superseded_by_key.get(r["key"])
-                if e and e["superseded_by"] in by_key:
-                    resolved[r["file_date"]] = by_key[e["superseded_by"]]
-                    replaced.append(e)
-                else:
-                    resolved[r["file_date"]] = r
+            }
+            corrected_dates = sorted(
+                d for d, r in resolved.items() if r["key"] in corrected_by_key
+            )
 
             dates = sorted(resolved)
             sessions, cal_info = trading_days(cal_name, dates[0], dates[-1])
@@ -1117,7 +1240,7 @@ def build(args) -> dict:
                 expected = {d for d in sessions if dates[0] <= d <= dates[-1]}
 
             present = set(dates)
-            # a resolved object still counts only if its own header names this symbol
+            # an object counts only if its own DBN header names this symbol
             usable = {
                 d
                 for d, r in resolved.items()
@@ -1172,11 +1295,7 @@ def build(args) -> dict:
                 "unexpected_file_dates": [d.isoformat() for d in unexpected],
                 "half_session_dates_in_range": len(half_in_range),
                 "half_session_dates_present": half_present,
-                "supersessions_applied": {
-                    "count": len(replaced),
-                    "dates": [e["date"] for e in replaced],
-                    "keys": [e["superseded_by"] for e in replaced],
-                },
+                "historically_corrected_dates": [d.isoformat() for d in corrected_dates],
                 "sources": {k: v for k, v in sorted(sources.items())},
                 "dbn_versions": {str(k): v for k, v in sorted(versions.items())},
                 "total_bytes": tbytes_,
@@ -1187,15 +1306,17 @@ def build(args) -> dict:
                     "rows_per_compressed_byte": round(per_byte, 6) if per_byte else None,
                     "estimated_total_rows": int(round(per_byte * tbytes_)) if per_byte else None,
                 },
-                "authoritative_keys_for_superseded_dates": {
-                    e["date"]: {
-                        "key": e["superseded_by"],
-                        "header_symbol": (by_key[e["superseded_by"]]["meta"]["query_symbols"] or [None])[0],
-                        "dbn_version": by_key[e["superseded_by"]]["meta"]["dbn_version"],
-                        "replaces": e["original"],
+                "corrected_objects": {
+                    d.isoformat(): {
+                        "key": resolved[d]["key"],
+                        "header_symbol": (resolved[d]["meta"]["query_symbols"] or [None])[0],
+                        "dbn_version": resolved[d]["meta"]["dbn_version"],
+                        "size_bytes": resolved[d]["size"],
+                        "etag": resolved[d]["etag"],
+                        "sha256": (corrected_by_key[resolved[d]["key"]].get("replacement") or {})
+                        .get("sha256"),
                     }
-                    for e in replaced
-                    if e["superseded_by"] in by_key
+                    for d in corrected_dates
                 },
                 "one_line_coverage": (
                     f"**{sym}**: {len(usable)} usable file-dates covering "
@@ -1203,8 +1324,8 @@ def build(args) -> dict:
                     f"{max(usable).isoformat() if usable else '-'}, "
                     f"{len(missing)} expected date(s) with no usable data"
                     + (
-                        f"; {len(replaced)} date(s) served from patches/"
-                        if replaced
+                        f"; {len(corrected_dates)} date(s) hold historically corrected data"
+                        if corrected_dates
                         else ""
                     )
                 ),
@@ -1221,8 +1342,8 @@ def build(args) -> dict:
                         "prefix": prefix,
                         "kind": "missing_session_date",
                         "detail": f"{sym}: {len(hard)} trading session date(s) have no usable "
-                        f"data after supersessions are applied: {', '.join(hard)}. Classified "
-                        f"from the {cal_name} calendar, so these are not holidays.",
+                        f"data: {', '.join(hard)}. Classified from the {cal_name} calendar, "
+                        "so these are not holidays.",
                         "first_date": min(hard),
                         "last_date": max(hard),
                     }
@@ -1304,57 +1425,74 @@ def build(args) -> dict:
     # One compact row per DBN object. dbn_version in particular is permanently
     # heterogeneous (the mirror is v1, later downloads are v3+), so it belongs in
     # the manifest rather than being rediscovered at read time.
-    files = {
-        r["key"]: [
-            r["size"],
-            r["meta"]["dbn_version"],
-            r["meta"]["compression_layers"],
-            (r["meta"]["query_symbols"] or [None])[0],
+    # Every object, not just the DBN ones: the integrity comparison is meant to
+    # cover the whole bucket, and the vendor JSON sidecars are as worth watching as
+    # the data. Non-DBN objects carry nulls in the DBN columns.
+    meta_by_key = {r["key"]: r for r in parsed}
+    files = {}
+    for o in sorted(objects, key=lambda o: o["key"]):
+        r = meta_by_key.get(o["key"])
+        files[o["key"]] = [
+            o["size"],
+            r["meta"]["dbn_version"] if r else None,
+            r["meta"]["compression_layers"] if r else None,
+            (r["meta"]["query_symbols"] or [None])[0] if r else None,
+            o["etag"],
+            o["last_modified"],
         ]
-        for r in sorted(parsed, key=lambda r: r["key"])
-    }
 
     return {
-        "schema_version": "2",
+        "schema_version": "3",
         "bucket": bucket,
         "generated_by": "scripts/inventory.py",
         "object_count": len(objects),
         "total_bytes": sum(o["size"] for o in objects),
-        "files_fields": ["size_bytes", "dbn_version", "zstd_layers", "dbn_header_symbol"],
+        "files_fields": [
+            "size_bytes",
+            "dbn_version",
+            "zstd_layers",
+            "dbn_header_symbol",
+            "etag",
+            "last_modified",
+        ],
         "files": files,
-        "supersessions": {
-            "config": str(EXCLUSIONS_PATH.relative_to(REPO_ROOT)),
-            "count": len(exclusions["supersessions"]),
+        "integrity": integrity,
+        "corrections": {
+            "config": str(CORRECTIONS_PATH.relative_to(REPO_ROOT)),
+            "count": len(corrections["corrections"]),
+            "divergence_from_source_lake": corrections["divergence"],
             "entries": [
                 {
                     **e,
+                    "in_bucket": e["key"] in by_key,
+                    "current_header_symbol": (
+                        (by_key[e["key"]]["meta"]["query_symbols"] or [None])[0]
+                        if e["key"] in by_key
+                        else None
+                    ),
+                    "current_dbn_version": (
+                        by_key[e["key"]]["meta"]["dbn_version"] if e["key"] in by_key else None
+                    ),
+                    "current_size_bytes": by_key[e["key"]]["size"] if e["key"] in by_key else None,
+                    "current_etag": by_key[e["key"]]["etag"] if e["key"] in by_key else None,
+                    "current_records_exact": (
+                        (ccache.get(e["key"], by_key[e["key"]]["size"]) or {}).get("records")
+                        if e["key"] in by_key
+                        else None
+                    ),
+                    "sha256_source": str(CORRECTIONS_PATH.relative_to(REPO_ROOT)),
                     "sha256_verified_against_bucket": (
-                        (hcache.get(e["superseded_by"], by_key[e["superseded_by"]]["size"]) or {})
-                        .get("sha256")
-                        == e["sha256"]
-                        if e["superseded_by"] in by_key
-                        else None
-                    ),
-                    "patch_dbn_version": (
-                        by_key[e["superseded_by"]]["meta"]["dbn_version"]
-                        if e["superseded_by"] in by_key
-                        else None
-                    ),
-                    "patch_header_symbol": (
-                        (by_key[e["superseded_by"]]["meta"]["query_symbols"] or [None])[0]
-                        if e["superseded_by"] in by_key
-                        else None
-                    ),
-                    "patch_records_exact": (
-                        (ccache.get(e["superseded_by"], by_key[e["superseded_by"]]["size"]) or {})
-                        .get("records")
-                        if e["superseded_by"] in by_key
+                        (
+                            (hcache.get(e["key"], by_key[e["key"]]["size"]) or {}).get("sha256")
+                            == (e.get("replacement") or {}).get("sha256")
+                        )
+                        if (args.verify_sha256 and e["key"] in by_key)
                         else None
                     ),
                 }
-                for e in exclusions["supersessions"]
+                for e in corrections["corrections"]
             ],
-            "job_provenance": exclusions["job_provenance"],
+            "job_provenance": corrections["job_provenance"],
         },
         "instrument_coverage": instrument_coverage,
         "prefixes": prefixes,
@@ -1369,6 +1507,12 @@ def build(args) -> dict:
             "session spans two files.",
             "row_count_caveat": "Prefix row totals are extrapolations from exactly counted "
             "sampled files. Only sampled_rows_exact is a measured number.",
+            "integrity_baseline": "The integrity block compares the live listing against the "
+            "data/manifest.json present before this run. Re-running re-baselines, so the "
+            "durable record of a drift is the git diff of this file.",
+            "canonical_location": "raw/ holds exactly one object per (symbol, date). Nothing "
+            "resolves a path at read time; config/corrections.yaml is a historical record, "
+            "not a mechanism.",
             "no_signal_content": "This inventory deliberately contains no prices, returns or "
             "any other outcome-derived statistic.",
         },
@@ -1403,17 +1547,22 @@ def render_markdown(m: dict) -> str:
     a("")
     tr = m["prefixes"].get("raw/trades", {}).get("symbols", {})
     cov = m["instrument_coverage"]
-    sup = m["supersessions"]
-    a("Coverage after supersessions are applied, one line per instrument:")
+    corr = m["corrections"]
+    integ = m["integrity"]
+    a("`raw/` is the one canonical location: one object per (symbol, date), nothing to "
+      "resolve at read time. Coverage, one line per instrument:")
     a("")
     for sym, v in sorted(cov.items()):
         a(f"- {v['one_line_coverage']}")
     a("")
-    if sup["count"]:
-        applied = sum(v["supersessions_applied"]["count"] for v in cov.values())
-        a(f"{sup['count']} supersession(s) are declared in `{sup['config']}` and "
-          f"{applied} are applied above. The superseded objects are still in the bucket "
-          "and are never read; `raw/` stays byte-identical to the source lake.")
+    if corr["count"]:
+        div = corr["divergence_from_source_lake"] or {}
+        a(f"**`raw/` is not byte-identical to `{div.get('source', 'the source lake')}`.** "
+          f"{corr['count']} object(s) were corrected in place on {div.get('applied')} after "
+          "Task 1 found them holding another instrument's data; the contaminated originals "
+          f"remain in `{div.get('originals_recoverable_from', div.get('source'))}`, so nothing "
+          f"is unrecoverable. `{corr['config']}` is the record — evidence, not a mechanism: "
+          "nothing reads it at runtime. See §9.")
         a("")
     crit = [x for x in m["anomalies"] if x["severity"] == "critical"]
     if crit:
@@ -1424,7 +1573,8 @@ def render_markdown(m: dict) -> str:
             if x["detail"] in seen:
                 continue
             seen.add(x["detail"])
-            a(f"- **{x['kind']}** — {x['detail']} ({x['first_date']} → {x['last_date']}).")
+            rng = (f" ({x['first_date']} → {x['last_date']})") if x.get("first_date") else ""
+            a(f"- **{x['kind']}** — {x['detail']}{rng}")
         a("")
     a("Three structural facts worth knowing before writing a reader:")
     a("")
@@ -1433,9 +1583,10 @@ def render_markdown(m: dict) -> str:
       "come from the DBN header plus a sampled decode instead.")
     a("- **ES is present**, with its own year of history, and the OPRA prefixes are QQQ "
       "options as described.")
-    a("- **DBN version is not uniform.** The `raw/` mirror is v1 and the patch objects are "
-      "v3. Both decode to the same columns and dtypes, but the version is recorded per "
-      "file in `data/manifest.json` under `files` rather than assumed.")
+    a("- **DBN version is not uniform inside `raw/`.** Most of the mirror is v1; the six "
+      "corrected objects are v3. Both decode to the same columns and dtypes, but the "
+      "version is recorded per object in `data/manifest.json` under `files` rather than "
+      "assumed. This mix is permanent.")
     a("")
 
     # 1 partition
@@ -1468,26 +1619,23 @@ def render_markdown(m: dict) -> str:
                 a(f"| `{pfx}` | `{sym}` | {info['files']} | `{qs}` "
                   f"| {info['first_date']} → {info['last_date']} |")
     a("")
-    a("The symbol column comes from each file's own DBN header, which is authoritative; "
-      "the folder name is not. Where the two disagree the file is excluded from that "
-      "symbol's coverage, and a supersession in "
-      f"`{m['supersessions']['config']}` names the object that replaces it.")
+    a("The symbol column comes from each object's own DBN header, which is "
+      "authoritative; the folder name is not. The two must agree for every object — a "
+      "file whose header names another instrument would be excluded from coverage and "
+      f"raise a critical anomaly. Six objects once disagreed; see `{corr['config']}` "
+      "and §9.")
     a("")
 
     # 3 coverage
     a("## 3. Date coverage")
     a("")
-    a("Authority-resolved: a date served by a patch object is counted once, against the "
-      "patch, and the superseded object is ignored.")
-    a("")
-    a("| Instrument | First | Last | Expected | Usable | Gaps | From `raw/` | From `patches/` |")
+    a("| Instrument | First | Last | Expected | Usable | Gaps | Objects | Corrected |")
     a("|---|---|---|---|---|---|---|---|")
     for sym, v in sorted(cov.items()):
-        src = v["sources"]
         a(f"| {sym} | {v['first_date']} | {v['last_date']} | {v['expected_file_dates']} "
           f"| {v['usable_file_dates']} | {v['missing_count']} "
-          f"| {sum(n for k, n in src.items() if k.startswith('raw/'))} "
-          f"| {sum(n for k, n in src.items() if k.startswith('patches/'))} |")
+          f"| {sum(v['sources'].values())} "
+          f"| {len(v['historically_corrected_dates'])} |")
     a("")
     a("*Gaps* is the column that matters for a walk-forward split: expected dates with no "
       "usable data, counting both absent files and files whose header names another "
@@ -1534,9 +1682,9 @@ def render_markdown(m: dict) -> str:
                 a(f"- **{kind}**: {d_} ({why.replace('_', ' ')}){extra}")
         else:
             a("- no gaps")
-        if v["supersessions_applied"]["count"]:
-            a(f"- resolved by supersession: "
-              + ", ".join(v["supersessions_applied"]["dates"]))
+        if v["historically_corrected_dates"]:
+            a("- historically corrected (see §9): "
+              + ", ".join(v["historically_corrected_dates"]))
         if v["unexpected_file_dates"]:
             a("- present but not on the calendar: " + ", ".join(v["unexpected_file_dates"]))
         a("")
@@ -1674,22 +1822,22 @@ def render_markdown(m: dict) -> str:
       "file boundary would anchor them to 18:00/19:00 CT, an hour or two into the "
       "session, and would shift by an hour at each DST change.")
     a("")
-    pp = m["prefixes"].get("patches/trades", {}).get("sampled_profiles", {})
-    if pp:
-        a("The patch objects behave identically despite being DBN v3:")
+    by_ver: dict[int, list[str]] = {}
+    for k in sorted(tp):
+        by_ver.setdefault(m["files"][k][1], []).append(k)
+    if len(by_ver) > 1:
+        a("The DBN v3 objects behave identically to the v1 ones — same columns, same "
+          "dtypes, same index (see §6), and the same session shape:")
         a("")
-        a("| Sampled patch file | Shape | Rows | CT span | 17:00 open | RTH |")
-        a("|---|---|---|---|---|---|")
-        for k in sorted(pp):
-            pr = pp[k]
-            if not pr.get("ct_hour_histogram"):
-                continue
-            pk = parse_key(k)
-            a(f"| `{k.split('/')[-1]}` ({pk['folder_symbol']}) "
-              f"| {weekday_class(pk['file_date']).replace('_', ' ')} "
-              f"| {pr['rows']:,} | {pr['ts_first_ct'][:19]} → {pr['ts_last_ct'][:19]} "
-              f"| {'yes' if pr['covers_globex_open_1700ct'] else 'no'} "
-              f"| {'yes' if pr['covers_rth_0830_1500ct'] else 'no'} |")
+        for ver in sorted(by_ver):
+            for k in by_ver[ver]:
+                pr = tp[k]
+                if not pr.get("ct_hour_histogram"):
+                    continue
+                pk = parse_key(k)
+                a(f"- **v{ver}** `{k}` — {weekday_class(pk['file_date']).replace('_', ' ')}, "
+                  f"{pr['rows']:,} rows, CT {pr['ts_first_ct'][:19]} → "
+                  f"{pr['ts_last_ct'][:19]}")
         a("")
 
     # 8 sizes
@@ -1738,42 +1886,104 @@ def render_markdown(m: dict) -> str:
                 a(f"- … {len(unexplained) - 25} more, see `data/manifest.json`")
             a("")
 
-    # 9 supersessions
-    a("## 9. Supersessions")
+    # 9 corrections
+    a("## 9. Corrections and divergence from the source lake")
     a("")
-    if not sup["count"]:
-        a(f"None declared in `{sup['config']}`.")
+    if not corr["count"]:
+        a(f"None recorded in `{corr['config']}`; `raw/` matches the source lake.")
         a("")
     else:
-        a(f"`{sup['config']}` is the single source of truth for which object is "
-          "authoritative for a given (symbol, date). Nothing else names a `patches/` "
-          "path. The superseded objects remain in the bucket untouched — `raw/` is "
-          "byte-identical to the source lake and that is the evidence the mirror is "
-          "faithful, so exclusion is declared in config and enforced in code, never by "
-          "deletion.")
+        div = corr["divergence_from_source_lake"] or {}
+        a(f"**`raw/` deliberately diverges from `{div.get('source')}` on "
+          f"{div.get('objects_differing', corr['count'])} objects and on nothing else.**")
         a("")
-        a("| Date | Symbol | Superseded object | Authoritative object | Header | DBN | Rows | sha256 |")
+        a("Task 1 found six objects under `raw/trades/NQ/` whose DBN header reported "
+          "`ES.FUT`, holding data byte-identical to the `raw/trades/ES/` object of the "
+          "same date; NQ had no data at all on those dates. Correct NQ data was "
+          f"re-downloaded from Databento and, on {div.get('applied')}, "
+          f"{div.get('method', 'written over the originals')}. The contaminated originals "
+          f"remain in `{div.get('originals_recoverable_from', div.get('source'))}`, so "
+          "nothing is unrecoverable.")
+        a("")
+        a(f"`{corr['config']}` is the record of that. It is evidence, not a mechanism: "
+          "nothing reads it at runtime, no path is resolved anywhere, and each key below "
+          "is simply the canonical object for its (symbol, date).")
+        a("")
+        a("| Date | Object | Was | Now | DBN | Size | Rows | sha256 |")
         a("|---|---|---|---|---|---|---|---|")
-        for e in sup["entries"]:
-            rows_ = f"{e['patch_records_exact']:,}" if e["patch_records_exact"] else "—"
-            ok = {True: "verified", False: "**MISMATCH**", None: "—"}[
+        for e in corr["entries"]:
+            orig = e.get("original") or {}
+            rep = e.get("replacement") or {}
+            rows_ = f"{e['current_records_exact']:,}" if e["current_records_exact"] else "—"
+            check = {True: " ✓", False: " **MISMATCH**", None: ""}[
                 e["sha256_verified_against_bucket"]
             ]
-            a(f"| {e['date']} | {e['symbol']} | `{e['original'].split('/')[-1]}` "
-              f"| `{e['superseded_by']}` | {e['patch_header_symbol']} "
-              f"| v{e['patch_dbn_version']} | {rows_} | {ok} |")
+            a(f"| {e['date']} | `{e['key'].split('/')[-1]}` | {orig.get('dbn_header_symbol')} "
+              f"(v{orig.get('dbn_version')}, {human_bytes(orig.get('size_bytes', 0))}) "
+              f"| {e['current_header_symbol']} | v{e['current_dbn_version']} "
+              f"| {human_bytes(e['current_size_bytes'] or 0)} | {rows_} "
+              f"| `{(rep.get('sha256') or '')[:12]}…`{check} |")
         a("")
-        a("`sha256` compares the digest recorded in config against the object as it "
-          "currently stands in the bucket, recomputed on every run.")
+        a(f"Digests are the ones recorded in `{corr['config']}` when the replacements were "
+          "made; `scripts/inventory.py --verify-sha256` re-reads those six objects and "
+          "checks them, and the live test tier does the same. The originals' digests were "
+          "never computed — the bytes were overwritten before one was taken — so their "
+          "size, DBN version and header symbol (carried above from the manifest generated "
+          "while they were still in place) are the record instead.")
         a("")
-        for job, prov in sorted(sup["job_provenance"].items()):
+        for job, prov in sorted(corr["job_provenance"].items()):
             a(f"**Databento job `{job}`** — {prov.get('dataset')} / {prov.get('schema')} / "
               f"{', '.join(prov.get('symbols', []))}, `stype_in={prov.get('stype_in')}`, "
-              f"submitted {prov.get('submitted')}. Provenance files at `{prov.get('prefix')}`.")
+              f"submitted {prov.get('submitted')}.")
+            if prov.get("sidecars_purged_from"):
+                a("")
+                a(f"> The vendor sidecars for this job lived at "
+                  f"`{prov['sidecars_purged_from']}` and were purged with the rest of that "
+                  f"prefix; the query parameters are transcribed into `{corr['config']}`.")
             if prov.get("note"):
                 a("")
                 a(f"> {prov['note']}")
             a("")
+
+    # 10 integrity
+    a("## 10. Per-object integrity")
+    a("")
+    a("The in-place overwrite gave up `rclone check` against the source lake as a "
+      "mirror-integrity test, so the repo has to answer *did anything in `raw/` change?* "
+      "on its own.")
+    a("")
+    a(f"- {integ['objects_fingerprinted']:,} objects carry size, ETag and last-modified in "
+      "`data/manifest.json`. R2 returns the plain MD5 as the ETag for a single-part "
+      "upload, so this is a full fingerprint taken from `ListObjectsV2` at **zero "
+      "egress** — no object is downloaded to compute it.")
+    a(f"- multipart (composite) ETags found: **{len(integ['composite_etags'])}**"
+      + (" — those are a hash of part hashes, not the object's MD5, and fall back to a "
+         "size-only comparison" if integ["composite_etags"] else
+         ", so every ETag here is a directly comparable MD5"))
+    a(f"- every run compares the live listing against the committed manifest. Status this "
+      f"run: **{integ['status']}**"
+      + ("" if integ["comparable_baseline"] else " (no prior manifest to compare against)"))
+    a("")
+    if integ["changed"] or integ["added"] or integ["removed"]:
+        a("| Key | Change | Classification |")
+        a("|---|---|---|")
+        for c in integ["changed"][:40]:
+            what = "; ".join(
+                f"{f} {v[0]} → {v[1]}" for f, v in sorted(c["changes"].items())
+            )
+            a(f"| `{c['key']}` | {what} | {c['classification']} |")
+        for k in integ["added"][:20]:
+            a(f"| `{k}` | added | — |")
+        for k in integ["removed"][:20]:
+            a(f"| `{k}` | removed | — |")
+        a("")
+        a("A change on an object recorded in the corrections file is the divergence "
+          "described in §9. Anything else is a critical anomaly: either the bucket was "
+          "modified without a record, or the record is missing an entry.")
+        a("")
+    else:
+        a("No object changed since the committed manifest.")
+        a("")
 
     # anomalies
     a("## Anomalies and design inputs")
@@ -1811,6 +2021,9 @@ def main() -> int:
     ap.add_argument("--refresh", action="store_true", help="re-probe every object, ignoring cache")
     ap.add_argument("--no-cache", action="store_true", help="neither read nor write the cache")
     ap.add_argument("--workers", type=int, default=24, help="parallel ranged reads (default 24)")
+    ap.add_argument("--verify-sha256", action="store_true",
+                    help="re-read the corrected objects and check their digests against "
+                    "config/corrections.yaml (~18 MB); off by default")
     args = ap.parse_args()
 
     manifest = build(args)

@@ -9,9 +9,15 @@ Accepts a local path, an `s3://bucket/key` URI, or a bare bucket key resolved
 against `$R2_BUCKET`:
 
     python scripts/probe_dbn.py raw/trades/NQ/glbx-mdp3-20250703.trades.dbn.zst
-    python scripts/probe_dbn.py patches/trades/NQ/glbx-mdp3-20250703.trades.dbn.zst --count
+    python scripts/probe_dbn.py raw/trades/NQ/glbx-mdp3-20250703.trades.dbn.zst --count
     python scripts/probe_dbn.py ./local/glbx-mdp3-20250703.trades.dbn.zst --rows 5
-    python scripts/probe_dbn.py raw/... patches/... --compare
+
+`--compare` takes two arbitrary objects and asserts they decode to the same
+frame -- useful for checking a DBN v1 object against a v3 one, or a local
+download against what is in the bucket:
+
+    python scripts/probe_dbn.py raw/trades/NQ/glbx-mdp3-20250710.trades.dbn.zst \
+                                raw/trades/NQ/glbx-mdp3-20250709.trades.dbn.zst --compare
 
 Reads are ranged by default; `--count` streams the whole object to count records
 exactly, so do not point it at `raw/opra_cbbo1m` casually (76 MB per day).

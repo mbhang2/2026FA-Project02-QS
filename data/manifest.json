@@ -269,14 +269,59 @@
   },
   "coverage_overlap_trades_vs_opra": {
     "ES": {
-      "end": "2026-07-10",
-      "nonempty": true,
-      "start": "2025-07-03"
+      "QQQ.OPT": {
+        "first": "2025-07-07",
+        "futures_sessions_without_options": [
+          "2025-07-04",
+          "2025-09-01",
+          "2025-11-27",
+          "2026-01-19",
+          "2026-02-16",
+          "2026-04-03",
+          "2026-05-25",
+          "2026-06-19",
+          "2026-07-03"
+        ],
+        "last": "2026-07-10",
+        "note": "futures sessions the options data cannot support; these are days CME equity futures trade but US equity options are closed",
+        "sessions_with_same_day_options": 255
+      },
+      "file_date_range": {
+        "end": "2026-07-10",
+        "nonempty": true,
+        "start": "2025-07-03"
+      }
     },
     "NQ": {
-      "end": "2026-07-10",
-      "nonempty": true,
-      "start": "2024-07-03"
+      "QQQ.OPT": {
+        "first": "2024-07-05",
+        "futures_sessions_without_options": [
+          "2024-07-04",
+          "2024-09-02",
+          "2024-11-28",
+          "2025-01-20",
+          "2025-02-17",
+          "2025-05-26",
+          "2025-06-19",
+          "2025-07-04",
+          "2025-09-01",
+          "2025-11-27",
+          "2026-01-19",
+          "2026-02-16",
+          "2026-04-03",
+          "2026-05-25",
+          "2026-06-19",
+          "2026-07-03"
+        ],
+        "last": "2026-07-10",
+        "note": "futures sessions the options data cannot support; these are days CME equity futures trade but US equity options are closed",
+        "sessions_with_same_day_options": 505
+      },
+      "file_date_range": {
+        "end": "2026-07-10",
+        "nonempty": true,
+        "start": "2024-07-03"
+      }
     }
   },
   "files": {
@@ -20253,7 +20298,7 @@
       "missing_count": 0,
       "missing_file_dates": [],
       "missing_file_dates_classified": {},
-      "one_line_coverage": "**ES**: 320 usable file-dates covering 2025-07-03 to 2026-07-10, 0 expected date(s) with no usable data",
+      "one_line_coverage": "**ES**: 264 assemblable sessions (2025-07-04 to 2026-07-10) from 320 usable file-dates, 0 expected file-date(s) with no usable data",
       "present_but_unusable_dates": [],
       "row_counts": {
         "estimated_total_rows": 126484402,
@@ -20261,6 +20306,18 @@
         "sampled_bytes": 59233904,
         "sampled_files": 10,
         "sampled_rows_exact": 3884558
+      },
+      "sessions": {
+        "assemblable": 264,
+        "candidate_sessions_in_span": 265,
+        "definition": "a CME session D is assemblable when both UTC objects it spans are present: the D-1 file holding the 17:00 CT evening open and the D file holding the rest. File-date counts are NOT session counts.",
+        "evening_only_file_dates": 55,
+        "first": "2025-07-04",
+        "last": "2026-07-10",
+        "missing_own_file": [],
+        "missing_prior_evening_file": [
+          "2025-07-03"
+        ]
       },
       "sources": {
         "raw/trades": 320
@@ -20377,7 +20434,7 @@
       "missing_file_dates_classified": {
         "2025-04-18": "half_session_date"
       },
-      "one_line_coverage": "**NQ**: 632 usable file-dates covering 2024-07-03 to 2026-07-10, 1 expected date(s) with no usable data; 6 date(s) hold historically corrected data",
+      "one_line_coverage": "**NQ**: 521 assemblable sessions (2024-07-04 to 2026-07-10) from 632 usable file-dates, 1 expected file-date(s) with no usable data; 6 date(s) hold historically corrected data",
       "present_but_unusable_dates": [],
       "row_counts": {
         "estimated_total_rows": 202889116,
@@ -20385,6 +20442,20 @@
         "sampled_bytes": 76216503,
         "sampled_files": 16,
         "sampled_rows_exact": 4309015
+      },
+      "sessions": {
+        "assemblable": 521,
+        "candidate_sessions_in_span": 523,
+        "definition": "a CME session D is assemblable when both UTC objects it spans are present: the D-1 file holding the 17:00 CT evening open and the D file holding the rest. File-date counts are NOT session counts.",
+        "evening_only_file_dates": 110,
+        "first": "2024-07-04",
+        "last": "2026-07-10",
+        "missing_own_file": [
+          "2025-04-18"
+        ],
+        "missing_prior_evening_file": [
+          "2024-07-03"
+        ]
       },
       "sources": {
         "raw/trades": 632
@@ -20419,7 +20490,7 @@
       "missing_count": 0,
       "missing_file_dates": [],
       "missing_file_dates_classified": {},
-      "one_line_coverage": "**QQQ.OPT**: 512 usable file-dates covering 2024-07-03 to 2026-07-20, 0 expected date(s) with no usable data",
+      "one_line_coverage": "**QQQ.OPT**: 512 assemblable sessions (2024-07-03 to 2026-07-20) from 512 usable file-dates, 0 expected file-date(s) with no usable data",
       "present_but_unusable_dates": [],
       "row_counts": {
         "estimated_total_rows": 346963486,
@@ -20427,6 +20498,16 @@
         "sampled_bytes": 19459718,
         "sampled_files": 6,
         "sampled_rows_exact": 4029644
+      },
+      "sessions": {
+        "assemblable": 512,
+        "candidate_sessions_in_span": 512,
+        "definition": "a CME session D is assemblable when both UTC objects it spans are present: the D-1 file holding the 17:00 CT evening open and the D file holding the rest. File-date counts are NOT session counts.",
+        "evening_only_file_dates": 0,
+        "first": "2024-07-03",
+        "last": "2026-07-20",
+        "missing_own_file": [],
+        "missing_prior_evening_file": []
       },
       "sources": {
         "raw/opra_statistics": 512

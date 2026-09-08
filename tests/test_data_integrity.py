@@ -261,3 +261,46 @@ def test_es_coverage(manifest):
 def test_no_critical_anomalies(manifest):
     critical = [a for a in manifest["anomalies"] if a["severity"] == "critical"]
     assert not critical, "\n".join(f"{a['kind']}: {a['detail']}" for a in critical)
+
+
+# --------------------------------------------------------------------------- #
+# 6. session counts: the denominator for every power calculation
+# --------------------------------------------------------------------------- #
+# File-date counts are not session counts. These pin the numbers the split
+# calendar and the holdout-power arithmetic are computed from, because getting
+# the denominator wrong is silent -- nothing crashes, the conclusions are just
+# drawn against the wrong N.
+def test_assemblable_session_counts(manifest):
+    cov = manifest["instrument_coverage"]
+    assert cov["NQ"]["sessions"]["assemblable"] == 521
+    assert cov["ES"]["sessions"]["assemblable"] == 264
+    assert cov["QQQ.OPT"]["sessions"]["assemblable"] == 512
+
+
+def test_session_counts_are_not_file_date_counts(manifest):
+    """The distinction is the whole point; if they ever coincide for a futures
+    symbol, the session logic has silently stopped requiring the evening file."""
+    for sym, objects in (("NQ", 632), ("ES", 320)):
+        v = manifest["instrument_coverage"][sym]
+        assert sum(v["sources"].values()) == objects
+        assert v["sessions"]["assemblable"] < objects
+        assert v["sessions"]["evening_only_file_dates"] > 0
+
+
+def test_only_two_sessions_are_genuinely_lost(manifest):
+    nq = manifest["instrument_coverage"]["NQ"]["sessions"]
+    assert nq["missing_own_file"] == ["2025-04-18"]        # the Good Friday gap
+    assert nq["missing_prior_evening_file"] == ["2024-07-03"]  # leading boundary
+    es = manifest["instrument_coverage"]["ES"]["sessions"]
+    assert es["missing_own_file"] == []
+    assert es["missing_prior_evening_file"] == ["2025-07-03"]
+
+
+def test_gex_eligible_session_counts(manifest):
+    """505, not 512 and not 521. The 16 futures sessions that drop out are days
+    CME equity futures trade while US equity options are closed."""
+    ov = manifest["coverage_overlap_trades_vs_opra"]
+    assert ov["NQ"]["QQQ.OPT"]["sessions_with_same_day_options"] == 505
+    assert ov["ES"]["QQQ.OPT"]["sessions_with_same_day_options"] == 255
+    assert len(ov["NQ"]["QQQ.OPT"]["futures_sessions_without_options"]) == 16
+    assert len(ov["ES"]["QQQ.OPT"]["futures_sessions_without_options"]) == 9

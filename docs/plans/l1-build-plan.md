@@ -15,11 +15,30 @@ Status markers: **[decided]** · **[open]** · **[proposed]**
 Bucket `msfe-practicum`, single prefix `raw/`, 2,491 objects, ~45 GiB. Format is
 **Databento DBN under zstd, not parquet** — no footer, `read_parquet` does not apply.
 
-| | |
-|---|---|
-| NQ | 632 dates, one gap (2025-04-18, Good Friday) |
-| ES | 320 dates from 2025-07-03 |
-| QQQ options | 512 dates, 2024-07-03 → 2026-07-20 |
+**File-dates are not sessions.** Objects are split on UTC day and a CME session spans
+two of them, so the session count is the one every power calculation must use.
+
+| | objects (UTC file-dates) | **assemblable sessions** | span (sessions) |
+|---|---|---|---|
+| NQ | 632 | **521** | 2024-07-04 → 2026-07-10 |
+| ES | 320 | **264** | 2025-07-04 → 2026-07-10 |
+| QQQ options | 512 | 512 (no assembly needed) | 2024-07-03 → 2026-07-20 |
+
+*Assemblable* = a CME session date `D` where both UTC objects it spans are present: the
+`D-1` file holding the 17:00 CT evening open, and the `D` file holding the rest. The
+632 → 521 drop is almost entirely a change of unit, not lost data: 110 of the 632
+file-dates are evening-open-only files (105 Sundays plus 2024-12-25, 2025-01-01,
+2025-01-09, 2025-12-25, 2026-01-01), which are inputs to a session rather than sessions.
+Only **two** sessions are genuinely lost — 2025-04-18 (the Good Friday gap) and
+2024-07-03 (the leading boundary, no 07-02 evening file). ES loses one, 2025-07-03,
+for the same boundary reason.
+
+OPRA needs no assembly: QQQ options trade 08:30–15:00 CT, inside a single UTC day.
+
+Every count above is generated, not remembered: `scripts/inventory.py` writes them to
+`data/manifest.json` under `instrument_coverage[<sym>].sessions` and
+`coverage_overlap_trades_vs_opra`, renders them in `docs/data-inventory.md` §3, and the
+test suite pins 521 / 264 / 505 / 255 so a change has to be deliberate.
 
 `ohlcv_1m` deliberately excluded — bars are built from `trades`.
 
@@ -109,7 +128,9 @@ tick-vs-envelope and asserting identical fills.
 
 Priority order, all within the free one-year Databento window:
 
-1. **Extend all series to present.** Data stops 2026-07-20; ~35 more sessions exist.
+1. **Extend all series to present.** `trades` stops **2026-07-10** and OPRA
+   **2026-07-20** — they are not the same date. Against the CME calendar to 2026-09-08
+   that is **42 missing sessions for NQ/ES** and **36 for QQQ options**.
    These are the most valuable sessions owned, because the holdout squeeze is a
    shortage of recent post-model-cutoff data. Worth a recurring monthly pull.
 2. **`tbbo` for NQ.** Every trade with prevailing best bid/offer — the input for
@@ -125,33 +146,61 @@ Priority order, all within the free one-year Databento window:
 
 ## Resolved
 
-**Symbols — both present, asymmetric.** NQ 632 sessions; ES 320 from 2025-07-03.
+**Symbols — both present, asymmetric.** NQ 521 assemblable sessions from 2024-07-04;
+ES 264 from 2025-07-04. (632 and 320 are UTC file-date counts, not sessions.)
 
 **OPRA is QQQ only** — no SPX, no NDX. **NQ has a GEX feature set, ES has none.**
 Known limitation for the writeup: QQQ options are a partial view of Nasdaq-100 dealer
 gamma, since NDX index options carry a large share and are absent.
 
-**GEX-using strategies are capped by NQ ∩ OPRA** (~505–512 sessions), not the full 632.
+**GEX-using strategies are capped by NQ ∩ OPRA at exactly 505 sessions**
+(2024-07-05 → 2026-07-10), not 632 and not 521. The 16 assemblable NQ sessions that drop
+out are days CME equity futures trade but US equity options are closed — Independence
+Day, Labor Day, Thanksgiving, MLK, Presidents' Day, Memorial Day, Juneteenth, Good
+Friday.
+
+For ES, assemblable ∩ same-day QQQ is 255 of 264, if option (d) below becomes a
+GEX-using transfer test rather than a non-GEX one.
+
+*Implementation trap:* if a GEX feature ever needs the **prior** session's options data,
+test against the previous *options trading day*, never `D-1`. Every Monday's `D-1` is a
+Sunday with no OPRA file by construction, and the naive test collapses 505 → 391. On the
+correct test the answer stays 505.
 
 ## Open questions
 
 **[open] Holdout size vs statistical power — the binding constraint and the next
 decision.** At ~one firing per day, a 3-month holdout is ~63 trades; DSR and PBO on 63
-observations are weak. ~505 GEX-eligible sessions cannot give both a large training set
+observations are weak. 505 GEX-eligible sessions cannot give both a large training set
 and a statistically meaningful final holdout. Options, not exclusive:
 (a) thin final holdout, lean on CPCV within train+validation, treat the holdout as
 confirmatory rather than primary;
 (b) longer holdout, less training data;
 (c) relax one-firing-per-day to raise trade count — a pre-registered design choice, not
 a response to weak power;
-(d) ES's 320 sessions as a transfer test for non-GEX strategies — correlation ~0.95 so
-not clean OOS, but transfer is ADAS's anti-overfitting defense and it turns the NQ/ES
-asymmetry into a second axis of evidence.
+(d) ES's 264 sessions as a transfer test for non-GEX strategies, 255 if the test is
+GEX-using — correlation ~0.95 so not clean OOS, but transfer is ADAS's anti-overfitting
+defense and it turns the NQ/ES asymmetry into a second axis of evidence.
 
 Collision worth noting: every eval window must postdate the backbone model's cutoff,
-and data ends 2026-07-20 — so the post-cutoff window and the natural time-ordered
+and `trades` ends 2026-07-10 — so the post-cutoff window and the natural time-ordered
 holdout want to be the *same* few dozen sessions. Extending the series to present
 (acquisition item 1) directly relieves this.
+
+**[open] Two calendar rules the split must pre-register.** Both change what a session
+*is*, so they belong in `config/calendar.yaml` rather than being settled the first time
+a strategy trips over one.
+
+(i) **2025-01-09.** `CME_Equity` says no session — the National Day of Mourning for
+Carter. The file holds 62,374 trades / 1.14 MB, against ~300k / ~7.9 MB for the
+neighbouring full days and 57 KB for a genuine evening-only file like Christmas. It is a
+real shortened session the calendar denies. Today it counts as evening-only and
+2025-01-10 still assembles from it, so nothing breaks; treating it as tradeable needs
+something beyond `CME_Equity`.
+
+(ii) **The 16 CME-open / OPRA-closed days.** NQ sessions with a stale-GEX feature, or
+excluded from GEX strategies outright? The choice moves the GEX denominator between 505
+and 521.
 
 **[open] Metric.** No cross-section, so rank IC and long-short constructions don't
 apply. Time-series expectancy on effectively one instrument; effective N is

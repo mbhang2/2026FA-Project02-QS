@@ -470,6 +470,35 @@ def trading_days(calendar: str, start: dt.date, end: dt.date) -> tuple[list[dt.d
     return days, {"normal_close_ct": normal, "early_close_days": early}
 
 
+def assemblable_sessions(sessions: Iterable[dt.date], present: set[dt.date]) -> dict:
+    """Which CME sessions can actually be reconstructed from the objects we hold.
+
+    This is the denominator every power calculation needs, and it is not the file
+    count. A session `D` runs 17:00 CT on `D-1` to 16:00 CT on `D`; in UTC that
+    straddles exactly two daily objects, so `D` is usable only when both the
+    `D-1` file (holding the evening open) and the `D` file are present.
+
+    The gap between the two numbers is mostly a change of unit rather than lost
+    data: Sunday and holiday-eve objects exist to carry an evening open and are
+    inputs to a session, not sessions themselves.
+    """
+    sess = sorted(sessions)
+    ok, no_own, no_prior = [], [], []
+    for d in sess:
+        if d not in present:
+            no_own.append(d)
+        elif (d - dt.timedelta(days=1)) not in present:
+            no_prior.append(d)
+        else:
+            ok.append(d)
+    return {
+        "sessions": ok,
+        "missing_own_file": no_own,
+        "missing_prior_evening_file": no_prior,
+        "evening_only_file_dates": sorted(present - set(sess)),
+    }
+
+
 def expected_utc_file_dates(sessions: Iterable[dt.date]) -> set[dt.date]:
     """Map CME session dates to the UTC dates whose files must exist.
 
@@ -1218,6 +1247,8 @@ def build(args) -> dict:
     # One canonical object per (symbol, date) under raw/, so coverage is a straight
     # read of the bucket. There is no second location and nothing to resolve.
     instrument_coverage: dict[str, Any] = {}
+    session_sets: dict[str, set[dt.date]] = {}   # symbol -> assemblable session dates
+    usable_file_dates: dict[str, set[dt.date]] = {}
     for prefix, rows in sorted(by_prefix.items()):
         cal_name = CALENDARS[prefix]
         for sym in sorted({r["folder_symbol"] or (r["meta"]["query_symbols"] or ["<none>"])[0]
@@ -1270,6 +1301,23 @@ def build(args) -> dict:
             ]
             half_present = sum(1 for e_ in half_in_range if dt.date.fromisoformat(e_) in usable)
 
+            # The session-level view. For the OPRA prefixes a session needs only its
+            # own file -- QQQ options trade 08:30-15:00 CT, inside one UTC day -- so
+            # the two numbers coincide there and diverge only for futures.
+            span_sessions = [d for d in sessions if dates[0] <= d <= dates[-1]]
+            if prefix.endswith("/trades"):
+                asm = assemblable_sessions(span_sessions, usable)
+            else:
+                asm = {
+                    "sessions": [d for d in span_sessions if d in usable],
+                    "missing_own_file": [d for d in span_sessions if d not in usable],
+                    "missing_prior_evening_file": [],
+                    "evening_only_file_dates": [],
+                }
+
+            session_sets[sym] = set(asm["sessions"])
+            usable_file_dates[sym] = set(usable)
+
             sources = Counter(r["prefix"] for r in resolved.values())
             versions = Counter(r["meta"]["dbn_version"] for r in resolved.values())
 
@@ -1299,6 +1347,20 @@ def build(args) -> dict:
                 "half_session_dates_in_range": len(half_in_range),
                 "half_session_dates_present": half_present,
                 "historically_corrected_dates": [d.isoformat() for d in corrected_dates],
+                "sessions": {
+                    "assemblable": len(asm["sessions"]),
+                    "first": asm["sessions"][0].isoformat() if asm["sessions"] else None,
+                    "last": asm["sessions"][-1].isoformat() if asm["sessions"] else None,
+                    "candidate_sessions_in_span": len(span_sessions),
+                    "missing_own_file": [d.isoformat() for d in asm["missing_own_file"]],
+                    "missing_prior_evening_file": [
+                        d.isoformat() for d in asm["missing_prior_evening_file"]
+                    ],
+                    "evening_only_file_dates": len(asm["evening_only_file_dates"]),
+                    "definition": "a CME session D is assemblable when both UTC objects it "
+                    "spans are present: the D-1 file holding the 17:00 CT evening open and "
+                    "the D file holding the rest. File-date counts are NOT session counts.",
+                },
                 "sources": {k: v for k, v in sorted(sources.items())},
                 "dbn_versions": {str(k): v for k, v in sorted(versions.items())},
                 "total_bytes": tbytes_,
@@ -1322,10 +1384,11 @@ def build(args) -> dict:
                     for d in corrected_dates
                 },
                 "one_line_coverage": (
-                    f"**{sym}**: {len(usable)} usable file-dates covering "
-                    f"{min(usable).isoformat() if usable else '-'} to "
-                    f"{max(usable).isoformat() if usable else '-'}, "
-                    f"{len(missing)} expected date(s) with no usable data"
+                    f"**{sym}**: {len(asm['sessions'])} assemblable sessions "
+                    f"({asm['sessions'][0].isoformat() if asm['sessions'] else '-'} to "
+                    f"{asm['sessions'][-1].isoformat() if asm['sessions'] else '-'}) "
+                    f"from {len(usable)} usable file-dates, "
+                    f"{len(missing)} expected file-date(s) with no usable data"
                     + (
                         f"; {len(corrected_dates)} date(s) hold historically corrected data"
                         if corrected_dates
@@ -1414,15 +1477,34 @@ def build(args) -> dict:
                     )
 
     # ---- cross-instrument coverage ---------------------------------------- #
+    # The number a GEX-using strategy is actually capped by: futures sessions that
+    # also have same-day options data. Same-day is the right test -- QQQ options
+    # trade 08:30-15:00 CT, inside the session's own UTC day, so unlike the futures
+    # side there is nothing to assemble. A prior-session feature must look up the
+    # previous *options trading day*, never D-1: every Monday's D-1 is a Sunday with
+    # no OPRA file by construction, and that mistake silently deletes ~110 sessions.
     futures = {k: v for k, v in instrument_coverage.items() if "." not in k}
     options = {k: v for k, v in instrument_coverage.items() if "." in k}
     opra_first = min((v["first_date"] for v in options.values()), default=None)
     opra_last = max((v["last_date"] for v in options.values()), default=None)
     overlaps = {}
     for sym, v in sorted(futures.items()):
-        if opra_first and opra_last:
-            lo, hi = max(v["first_date"], opra_first), min(v["last_date"], opra_last)
-            overlaps[sym] = {"start": lo, "end": hi, "nonempty": lo <= hi}
+        if not (opra_first and opra_last):
+            continue
+        lo, hi = max(v["first_date"], opra_first), min(v["last_date"], opra_last)
+        entry = {"file_date_range": {"start": lo, "end": hi, "nonempty": lo <= hi}}
+        for opt, ov in sorted(options.items()):
+            both = sorted(session_sets[sym] & usable_file_dates[opt])
+            only_fut = sorted(session_sets[sym] - usable_file_dates[opt])
+            entry[opt] = {
+                "sessions_with_same_day_options": len(both),
+                "first": both[0].isoformat() if both else None,
+                "last": both[-1].isoformat() if both else None,
+                "futures_sessions_without_options": [d.isoformat() for d in only_fut],
+                "note": "futures sessions the options data cannot support; these are "
+                "days CME equity futures trade but US equity options are closed",
+            }
+        overlaps[sym] = entry
 
     # ---- per-file record --------------------------------------------------- #
     # One compact row per DBN object. dbn_version in particular is permanently
@@ -1632,26 +1714,73 @@ def render_markdown(m: dict) -> str:
     # 3 coverage
     a("## 3. Date coverage")
     a("")
-    a("| Instrument | First | Last | Expected | Usable | Gaps | Objects | Corrected |")
-    a("|---|---|---|---|---|---|---|---|")
-    for sym, v in sorted(cov.items()):
-        a(f"| {sym} | {v['first_date']} | {v['last_date']} | {v['expected_file_dates']} "
-          f"| {v['usable_file_dates']} | {v['missing_count']} "
-          f"| {sum(v['sources'].values())} "
-          f"| {len(v['historically_corrected_dates'])} |")
+    a("**Assemblable sessions, not file-dates, is the denominator for any power "
+      "calculation.** A CME session `D` runs 17:00 CT on `D-1` to 16:00 CT on `D`, so in "
+      "UTC it straddles exactly two objects; `D` is usable only when both are present. "
+      "Sunday and holiday-eve objects carry an evening open and are inputs to a session, "
+      "not sessions in their own right, which is most of the difference between the two "
+      "columns below.")
     a("")
-    a("*Gaps* is the column that matters for a walk-forward split: expected dates with no "
-      "usable data, counting both absent files and files whose header names another "
-      "instrument.")
+    a("| Instrument | **Sessions** | Session span | Objects | Usable file-dates "
+      "| File-date gaps | Corrected |")
+    a("|---|---|---|---|---|---|---|")
+    for sym, v in sorted(cov.items()):
+        se = v["sessions"]
+        a(f"| {sym} | **{se['assemblable']}** | {se['first']} → {se['last']} "
+          f"| {sum(v['sources'].values())} | {v['usable_file_dates']} "
+          f"| {v['missing_count']} | {len(v['historically_corrected_dates'])} |")
+    a("")
+    for sym, v in sorted(cov.items()):
+        se = v["sessions"]
+        lost = se["missing_own_file"] + se["missing_prior_evening_file"]
+        if not lost and not se["evening_only_file_dates"]:
+            continue
+        bits = []
+        if se["evening_only_file_dates"]:
+            bits.append(f"{se['evening_only_file_dates']} evening-open-only objects")
+        if se["missing_own_file"]:
+            bits.append("no own file on " + ", ".join(se["missing_own_file"]))
+        if se["missing_prior_evening_file"]:
+            bits.append(
+                "no prior-evening file for " + ", ".join(se["missing_prior_evening_file"])
+            )
+        a(f"- **{sym}**: {se['candidate_sessions_in_span']} candidate sessions in span; "
+          + "; ".join(bits) + f" → {se['assemblable']} assemblable.")
+    a("")
+    a("*File-date gaps* counts expected dates with no usable data, from absent objects and "
+      "from objects whose header names another instrument. A gap on an evening-only date "
+      "costs the following session, not its own.")
     a("")
     ov = m["coverage_overlap_trades_vs_opra"]
     if ov:
-        a("Overlap with the QQQ options data (the GEX feature source), by file-date "
-          "range — subtract the unusable dates listed above before using it:")
+        a("### Sessions a GEX-using strategy can actually use")
+        a("")
+        a("Futures sessions that also have **same-day** options data. Same-day is the "
+          "correct test: QQQ options trade 08:30–15:00 CT, inside the session's own UTC "
+          "day, so unlike the futures side there is nothing to assemble. A feature "
+          "needing the *prior* session's options must look up the previous **options "
+          "trading day** — never `D-1`, whose Monday value is a Sunday with no OPRA file "
+          "by construction.")
+        a("")
+        a("| Futures | Options | Sessions with same-day options | Span | Futures sessions "
+          "without |")
+        a("|---|---|---|---|---|")
+        for sym, o in sorted(ov.items()):
+            for opt, x in sorted(o.items()):
+                if opt == "file_date_range":
+                    continue
+                a(f"| {sym} | {opt} | **{x['sessions_with_same_day_options']}** "
+                  f"| {x['first']} → {x['last']} "
+                  f"| {len(x['futures_sessions_without_options'])} |")
         a("")
         for sym, o in sorted(ov.items()):
-            a(f"- **{sym}**: {o['start']} → {o['end']}")
-        a("")
+            for opt, x in sorted(o.items()):
+                if opt == "file_date_range" or not x["futures_sessions_without_options"]:
+                    continue
+                a(f"{sym} sessions with no {opt} data — days CME equity futures trade but "
+                  "US equity options are closed: "
+                  + ", ".join(x["futures_sessions_without_options"]))
+                a("")
 
     # 4 gaps
     a("## 4. Gaps")

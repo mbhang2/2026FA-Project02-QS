@@ -8,9 +8,9 @@ Everything below is read from the bucket, not assumed. Re-run the script to rege
 
 `raw/` is the one canonical location: one object per (symbol, date), nothing to resolve at read time. Coverage, one line per instrument:
 
-- **ES**: 320 usable file-dates covering 2025-07-03 to 2026-07-10, 0 expected date(s) with no usable data
-- **NQ**: 632 usable file-dates covering 2024-07-03 to 2026-07-10, 1 expected date(s) with no usable data; 6 date(s) hold historically corrected data
-- **QQQ.OPT**: 512 usable file-dates covering 2024-07-03 to 2026-07-20, 0 expected date(s) with no usable data
+- **ES**: 264 assemblable sessions (2025-07-04 to 2026-07-10) from 320 usable file-dates, 0 expected file-date(s) with no usable data
+- **NQ**: 521 assemblable sessions (2024-07-04 to 2026-07-10) from 632 usable file-dates, 1 expected file-date(s) with no usable data; 6 date(s) hold historically corrected data
+- **QQQ.OPT**: 512 assemblable sessions (2024-07-03 to 2026-07-20) from 512 usable file-dates, 0 expected file-date(s) with no usable data
 
 **`raw/` is not byte-identical to `gexalgo/raw`.** 6 object(s) were corrected in place on 2026-09-08 after Task 1 found them holding another instrument's data; the contaminated originals remain in `gexalgo/raw`, so nothing is unrecoverable. `config/corrections.yaml` is the record — evidence, not a mechanism: nothing reads it at runtime. See §9.
 
@@ -42,18 +42,31 @@ The symbol column comes from each object's own DBN header, which is authoritativ
 
 ## 3. Date coverage
 
-| Instrument | First | Last | Expected | Usable | Gaps | Objects | Corrected |
-|---|---|---|---|---|---|---|---|
-| ES | 2025-07-03 | 2026-07-10 | 320 | 320 | 0 | 320 | 0 |
-| NQ | 2024-07-03 | 2026-07-10 | 633 | 632 | 1 | 632 | 6 |
-| QQQ.OPT | 2024-07-03 | 2026-07-20 | 512 | 512 | 0 | 512 | 0 |
+**Assemblable sessions, not file-dates, is the denominator for any power calculation.** A CME session `D` runs 17:00 CT on `D-1` to 16:00 CT on `D`, so in UTC it straddles exactly two objects; `D` is usable only when both are present. Sunday and holiday-eve objects carry an evening open and are inputs to a session, not sessions in their own right, which is most of the difference between the two columns below.
 
-*Gaps* is the column that matters for a walk-forward split: expected dates with no usable data, counting both absent files and files whose header names another instrument.
+| Instrument | **Sessions** | Session span | Objects | Usable file-dates | File-date gaps | Corrected |
+|---|---|---|---|---|---|---|
+| ES | **264** | 2025-07-04 → 2026-07-10 | 320 | 320 | 0 | 0 |
+| NQ | **521** | 2024-07-04 → 2026-07-10 | 632 | 632 | 1 | 6 |
+| QQQ.OPT | **512** | 2024-07-03 → 2026-07-20 | 512 | 512 | 0 | 0 |
 
-Overlap with the QQQ options data (the GEX feature source), by file-date range — subtract the unusable dates listed above before using it:
+- **ES**: 265 candidate sessions in span; 55 evening-open-only objects; no prior-evening file for 2025-07-03 → 264 assemblable.
+- **NQ**: 523 candidate sessions in span; 110 evening-open-only objects; no own file on 2025-04-18; no prior-evening file for 2024-07-03 → 521 assemblable.
 
-- **ES**: 2025-07-03 → 2026-07-10
-- **NQ**: 2024-07-03 → 2026-07-10
+*File-date gaps* counts expected dates with no usable data, from absent objects and from objects whose header names another instrument. A gap on an evening-only date costs the following session, not its own.
+
+### Sessions a GEX-using strategy can actually use
+
+Futures sessions that also have **same-day** options data. Same-day is the correct test: QQQ options trade 08:30–15:00 CT, inside the session's own UTC day, so unlike the futures side there is nothing to assemble. A feature needing the *prior* session's options must look up the previous **options trading day** — never `D-1`, whose Monday value is a Sunday with no OPRA file by construction.
+
+| Futures | Options | Sessions with same-day options | Span | Futures sessions without |
+|---|---|---|---|---|
+| ES | QQQ.OPT | **255** | 2025-07-07 → 2026-07-10 | 9 |
+| NQ | QQQ.OPT | **505** | 2024-07-05 → 2026-07-10 | 16 |
+
+ES sessions with no QQQ.OPT data — days CME equity futures trade but US equity options are closed: 2025-07-04, 2025-09-01, 2025-11-27, 2026-01-19, 2026-02-16, 2026-04-03, 2026-05-25, 2026-06-19, 2026-07-03
+
+NQ sessions with no QQQ.OPT data — days CME equity futures trade but US equity options are closed: 2024-07-04, 2024-09-02, 2024-11-28, 2025-01-20, 2025-02-17, 2025-05-26, 2025-06-19, 2025-07-04, 2025-09-01, 2025-11-27, 2026-01-19, 2026-02-16, 2026-04-03, 2026-05-25, 2026-06-19, 2026-07-03
 
 ## 4. Gaps
 

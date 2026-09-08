@@ -55,10 +55,24 @@ node_modules/*
 
 #environment files
 .env*
+!.envrc
+!.env.example
 
 #scratch files
 .scratch*
 
 # Secrets
 secrets/*
-!secrets/.gitkeep
+!secrets/.gitkeep.venv/
+__pycache__/
+*.pyc
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Python
+.venv/
+__pycache__/
+*.pyc

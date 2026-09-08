@@ -44,6 +44,9 @@ inst/doc
 private_data*
 private_data/*
 
+# generated caches; data/manifest.json stays tracked
+data/cache/
+
 # Python artifacts
 __pycache__/
 *.py[cod]
@@ -63,7 +66,8 @@ node_modules/*
 
 # Secrets
 secrets/*
-!secrets/.gitkeep.venv/
+!secrets/.gitkeep
+.venv/
 __pycache__/
 *.pyc
 

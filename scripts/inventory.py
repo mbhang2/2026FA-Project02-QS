@@ -55,7 +55,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = REPO_ROOT / "data" / "manifest.json"
 CORRECTIONS_PATH = REPO_ROOT / "config" / "corrections.yaml"
 DOC_PATH = REPO_ROOT / "docs" / "data-inventory.md"
-CACHE_DIR = REPO_ROOT / ".scratch" / "inventory-cache"
+# Gitignored probe cache. Purely a speed-up -- deleting it changes nothing about
+# the output, only how long a run takes. Lives under data/cache/ so the repo has
+# one cache location rather than one per script.
+CACHE_DIR = REPO_ROOT / "data" / "cache" / "inventory"
 
 # Bump the relevant entry when a probe function changes shape or fixes a bug, so
 # stale cache entries from an older version of this script are discarded rather
@@ -148,7 +151,7 @@ def with_retry(fn, *a, attempts: int = 5, **kw):
 
 class Cache:
     """Per-object probe cache keyed by (key, size). Purely a speed-up: deleting
-    .scratch/ changes nothing about the output."""
+    data/cache/ changes nothing about the output, only how long a run takes."""
 
     def __init__(self, name: str, enabled: bool = True):
         self.version = CACHE_VERSIONS[name]

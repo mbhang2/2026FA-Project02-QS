@@ -19,7 +19,7 @@ def main() -> None:
         train_end="2024-02-01",
         val_end="2024-03-01",
         end="2024-04-01",
-        strategy_module_path="src.strategy.reference_strategies.buy_and_hold",
+        strategy_module_path="src.strategy.candidate",
         fee_bps=1.0,
         slippage_bps=1.0,
         output_dir="output",

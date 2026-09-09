@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "l1-harness"
+version = "0.1.0"
+description = "Backtest simulator and research-loop harness for the MSFE practicum"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "pandas",
+]
+
+[project.optional-dependencies]
+# The NQ/ES/QQQ adapter and the bucket inventory. Not needed to run the
+# simulator on synthetic data, which is the point of building synthetic first.
+dataset-nq = [
+    "boto3",
+    "databento",
+    "zstandard",
+    "pandas_market_calendars",
+    "PyYAML",
+]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+# `src` is itself the package, so imports read src.core.* / src.strategies.* --
+# the names the permission tiers and the CI path check are written against.
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "live: needs read access to the R2 bucket (skipped without R2_* in the environment)",
+    "slow: calibration sweeps; deselect with -m 'not slow'",
+]

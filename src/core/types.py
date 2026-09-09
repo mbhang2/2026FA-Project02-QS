@@ -1,0 +1,392 @@
+"""Core value types shared by the simulator, the datasets and the loop.
+
+Everything here is immutable and dataset-agnostic. See
+`docs/design/simulator-interface.md` for the contract these types encode; where a
+comment below says "the reason", the spec has the longer version.
+"""
+
+from __future__ import annotations
+
+import enum
+from dataclasses import dataclass, field
+from typing import Any, Protocol, Sequence
+
+# Nanoseconds since the Unix epoch, UTC. Integer rather than a datetime so bar
+# boundary arithmetic is exact -- floating seconds accumulate error over a
+# multi-year walk and put ticks on the wrong side of a boundary.
+Ts = int
+
+NS_PER_SECOND = 1_000_000_000
+
+
+class LookaheadError(RuntimeError):
+    """Raised when something reaches at or beyond the current instant.
+
+    Not an IndexError: reading past the cursor is a research bug, not a bounds
+    slip, and it must not be caught by an incidental `except IndexError`.
+    """
+
+
+class HoldoutLocked(RuntimeError):
+    """Raised when the holdout split is requested without an explicit unlock."""
+
+
+class Split(enum.StrEnum):
+    TRAIN = "train"
+    VALIDATION = "validation"
+    HOLDOUT = "holdout"
+
+
+class Side(enum.StrEnum):
+    BUY = "buy"
+    SELL = "sell"
+
+    @property
+    def sign(self) -> int:
+        return 1 if self is Side.BUY else -1
+
+    @property
+    def opposite(self) -> "Side":
+        return Side.SELL if self is Side.BUY else Side.BUY
+
+
+class OrderType(enum.StrEnum):
+    MARKET = "market"
+    LIMIT = "limit"
+    STOP = "stop"
+    STOP_LIMIT = "stop_limit"
+
+
+class TimeInForce(enum.StrEnum):
+    IOC = "IOC"      # fill what you can against this tick, cancel the rest
+    FOK = "FOK"      # fill in full against this tick or cancel
+    GTC = "GTC"      # rests until filled or cancelled
+    GTD = "GTD"      # rests until `expire_ts`
+    DAY = "DAY"      # rests until the session closes
+
+
+class OrderStatus(enum.StrEnum):
+    PENDING = "pending"      # submitted, not yet eligible (see T+1 rule)
+    WORKING = "working"
+    FILLED = "filled"
+    CANCELLED = "cancelled"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+
+
+class LifecycleKind(enum.StrEnum):
+    ORDER_ACCEPTED = "order_accepted"
+    ORDER_REJECTED = "order_rejected"
+    CANCEL_CONFIRMED = "cancel_confirmed"
+    GTD_EXPIRED = "gtd_expired"
+    DAY_EXPIRED = "day_expired"
+    OCO_CANCELLED = "oco_cancelled"
+    SESSION_OPEN = "session_open"
+    SESSION_CLOSE = "session_close"
+
+
+@dataclass(frozen=True, slots=True)
+class Tick:
+    ts: Ts
+    price: float
+    size: int
+    session: int          # session index; bars anchor to a session's first tick
+    seq: int = 0          # position in the walk, assigned by the engine
+
+
+@dataclass(frozen=True, slots=True)
+class DataCapabilities:
+    """What a dataset can support. A fill model declares what it requires, and
+    the mismatch is caught at wiring time rather than mid-run."""
+
+    has_trades: bool = True
+    has_quotes: bool = False
+    has_book: bool = False
+
+    def satisfies(self, required: "DataCapabilities") -> bool:
+        return (
+            (self.has_trades or not required.has_trades)
+            and (self.has_quotes or not required.has_quotes)
+            and (self.has_book or not required.has_book)
+        )
+
+    def as_dict(self) -> dict[str, bool]:
+        return {
+            "has_trades": self.has_trades,
+            "has_quotes": self.has_quotes,
+            "has_book": self.has_book,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Subscription:
+    """A request for aggregated data. MVP is time bars only; the `kind` tag is
+    what lets tick/volume/dollar bars slot in without touching the event loop."""
+
+    interval_ns: int
+    kind: str = "time"
+    emit_empty: bool = False
+    sub_id: str = ""
+
+    def __post_init__(self) -> None:
+        if self.kind != "time":
+            raise NotImplementedError(f"MVP supports time bars only, not {self.kind!r}")
+        if self.interval_ns <= 0:
+            raise ValueError("interval_ns must be positive")
+        if not self.sub_id:
+            object.__setattr__(self, "sub_id", f"{self.kind}:{self.interval_ns}")
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "sub_id": self.sub_id,
+            "kind": self.kind,
+            "interval_ns": self.interval_ns,
+            "emit_empty": self.emit_empty,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Bar:
+    """Stamped with its open, delivered on its close.
+
+    Both timestamps are carried because stamping by open while delivering at
+    close is exactly where a downstream join silently grabs future data. Nothing
+    downstream should have to infer which one it is holding.
+    """
+
+    sub_id: str
+    open_ts: Ts
+    close_ts: Ts
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+    tick_count: int
+    session: int
+
+    @property
+    def is_empty(self) -> bool:
+        return self.tick_count == 0
+
+
+@dataclass(frozen=True, slots=True)
+class BarEvent:
+    """Every bar that closed at this timestamp, in one callback.
+
+    One callback per timestamp, never one per timeframe: if a 5m and a 1m bar
+    both close at 09:35 and arrive separately, the ordering between them becomes
+    a hidden variable that affects results and is recorded nowhere.
+    """
+
+    ts: Ts
+    seq: int
+    bars: tuple[Bar, ...]
+
+    def by_sub(self, sub_id: str) -> Bar | None:
+        for b in self.bars:
+            if b.sub_id == sub_id:
+                return b
+        return None
+
+
+@dataclass(frozen=True, slots=True)
+class Fill:
+    price: float
+    size: int
+
+
+@dataclass(frozen=True, slots=True)
+class FillEvent:
+    """Present-instant state only -- never a partially formed bar.
+
+    A strategy that wants finer intra-bar state subscribes to a finer timeframe.
+    One rule instead of two.
+    """
+
+    ts: Ts
+    seq: int
+    order_id: int
+    side: Side
+    price: float
+    size: int
+    position: int
+    last_trade_price: float
+    working_order_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class LifecycleEvent:
+    ts: Ts
+    seq: int
+    kind: LifecycleKind
+    order_id: int | None = None
+    detail: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class BracketSpec:
+    """Stop and target armed atomically by the simulator when the entry fills.
+
+    Strategy-managed exits are where the historical fade artefact lived: an entry
+    filled at 12:30:05 sits unprotected until the next bar callback at 12:35.
+    """
+
+    stop_offset: float | None = None
+    target_offset: float | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("stop_offset", "target_offset"):
+            v = getattr(self, name)
+            if v is not None and v <= 0:
+                raise ValueError(f"{name} is a positive distance from the fill price")
+
+
+@dataclass
+class Order:
+    order_id: int
+    side: Side
+    size: int
+    order_type: OrderType
+    tif: TimeInForce
+    limit_price: float | None = None
+    stop_price: float | None = None
+    expire_ts: Ts | None = None
+    bracket: BracketSpec | None = None
+    parent_id: int | None = None
+    oco_group: int | None = None
+    reduce_only: bool = False
+    # The T+1 rule lives here: an order submitted while handling the callback at
+    # sequence S is not resolvable until a strictly later tick.
+    eligible_from_seq: int = 0
+    status: OrderStatus = OrderStatus.PENDING
+    filled_size: int = 0
+    submitted_ts: Ts = 0
+    stop_armed: bool = False   # stop-limit: becomes a limit once the stop trades
+
+    @property
+    def remaining(self) -> int:
+        return self.size - self.filled_size
+
+    @property
+    def is_working(self) -> bool:
+        return self.status in (OrderStatus.PENDING, OrderStatus.WORKING)
+
+
+# --------------------------------------------------------------------------- #
+# actions
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True, slots=True)
+class Submit:
+    side: Side
+    size: int
+    order_type: OrderType = OrderType.MARKET
+    tif: TimeInForce = TimeInForce.DAY
+    limit_price: float | None = None
+    stop_price: float | None = None
+    expire_ts: Ts | None = None
+    bracket: BracketSpec | None = None
+    reduce_only: bool = False
+    tag: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class Modify:
+    order_id: int
+    limit_price: float | None = None
+    stop_price: float | None = None
+    size: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Cancel:
+    order_id: int
+
+
+Action = Submit | Modify | Cancel
+
+
+# --------------------------------------------------------------------------- #
+# blotter
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True, slots=True)
+class BlotterRow:
+    seq: int
+    ts: Ts
+    order_id: int
+    side: Side
+    price: float
+    size: int
+    position_after: int
+    commission: float
+    realized_pnl: float
+    tag: str = ""
+
+    def as_row(self) -> tuple:
+        """Stable tuple used for the determinism digest. Floats are rounded to a
+        fixed number of places so a byte comparison is meaningful."""
+        return (
+            self.seq,
+            self.ts,
+            self.order_id,
+            str(self.side),
+            round(self.price, 10),
+            self.size,
+            self.position_after,
+            round(self.commission, 10),
+            round(self.realized_pnl, 10),
+            self.tag,
+        )
+
+
+@dataclass
+class Blotter:
+    rows: list[BlotterRow] = field(default_factory=list)
+    final_position: int = 0
+    final_price: float = 0.0
+
+    def add(self, row: BlotterRow) -> None:
+        self.rows.append(row)
+
+    @property
+    def realized_pnl(self) -> float:
+        return sum(r.realized_pnl for r in self.rows)
+
+    @property
+    def commission(self) -> float:
+        return sum(r.commission for r in self.rows)
+
+    def digest(self) -> str:
+        import hashlib
+        import json
+
+        payload = json.dumps([r.as_row() for r in self.rows], sort_keys=True)
+        return hashlib.sha256(payload.encode()).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class ScoreTuple:
+    """Placeholder metric. The interface is fixed; the metric is [open] -- it must
+    become invariant to turnover, leverage, universe size and decision frequency."""
+
+    net_pnl: float
+    trade_count: int
+    mean_return_per_trade: float
+    vol_normalized_return: float
+    t_stat: float
+
+    def as_dict(self) -> dict[str, float | int]:
+        return {
+            "net_pnl": self.net_pnl,
+            "trade_count": self.trade_count,
+            "mean_return_per_trade": self.mean_return_per_trade,
+            "vol_normalized_return": self.vol_normalized_return,
+            "t_stat": self.t_stat,
+        }
+
+
+class Strategy(Protocol):
+    def setup(self, ctx: Any) -> Sequence[Subscription]: ...
+    def on_bars(self, ev: BarEvent, ctx: Any) -> Sequence[Action]: ...
+    def on_fill(self, ev: FillEvent, ctx: Any) -> Sequence[Action]: ...
+    def on_lifecycle(self, ev: LifecycleEvent, ctx: Any) -> Sequence[Action]: ...

@@ -1,0 +1,108 @@
+"""Two-sided calibration: the null half and the power half.
+
+A gate that rejects everything passes a null test trivially and is useless, so
+calibration is two-sided. Both halves are ordinary runs on the synthetic dataset,
+which is the test that the `Dataset` abstraction is real rather than decorative.
+
+The accept rule here is a **placeholder standing in for the committee**. It is
+deliberately the dumb single-scalar rule the loop starts with, so the numbers it
+produces are a floor: whatever the committee does later should be no worse.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Callable, Sequence
+
+from .datasets.synthetic import SyntheticDataset, SyntheticSpec
+from .engine import Engine
+from .scorer import score
+from .types import ScoreTuple, Split
+
+
+@dataclass(frozen=True)
+class AcceptRule:
+    """MVP stand-in for the committee. `t_min` is the only real dial."""
+
+    t_min: float = 3.0
+    require_positive_net: bool = True
+
+    def accepts(self, s: ScoreTuple) -> bool:
+        if self.require_positive_net and s.net_pnl <= 0:
+            return False
+        return s.t_stat >= self.t_min
+
+
+@dataclass(frozen=True)
+class TrialResult:
+    seed: int
+    signal_strength: float
+    score: ScoreTuple
+    accepted: bool
+    fill_model: str
+
+
+def run_trial(
+    strategy_factory: Callable[[], object],
+    *,
+    signal_strength: float,
+    seed: int,
+    n_sessions: int = 60,
+    vol_per_tick: float = 0.15,
+    fill_model: str = "unfavorable",
+    split: Split = Split.VALIDATION,
+    warmup_sessions: int = 1,
+    rule: AcceptRule | None = None,
+) -> TrialResult:
+    ds = SyntheticDataset(
+        SyntheticSpec(
+            n_sessions=n_sessions,
+            vol_per_tick=vol_per_tick,
+            signal_strength=signal_strength,
+            seed=seed,
+        )
+    )
+    eng = Engine(
+        ds,
+        strategy_factory(),
+        split=split,
+        fill_model=fill_model,
+        warmup_sessions=warmup_sessions,
+        seed=seed,
+    )
+    eng.run()
+    s = score(eng.blotter)
+    return TrialResult(
+        seed=seed,
+        signal_strength=signal_strength,
+        score=s,
+        accepted=(rule or AcceptRule()).accepts(s),
+        fill_model=fill_model,
+    )
+
+
+def acceptance_rate(
+    strategy_factory: Callable[[], object],
+    *,
+    signal_strength: float,
+    seeds: Sequence[int],
+    rule: AcceptRule | None = None,
+    **kw,
+) -> tuple[float, list[TrialResult]]:
+    """Fraction of independent trials the rule accepts.
+
+    At `signal_strength=0` this is a false-acceptance rate on a known null, which
+    is a publishable number. Above zero it is power.
+    """
+    rule = rule or AcceptRule()
+    out = [
+        run_trial(
+            strategy_factory,
+            signal_strength=signal_strength,
+            seed=seed,
+            rule=rule,
+            **kw,
+        )
+        for seed in seeds
+    ]
+    return sum(r.accepted for r in out) / len(out), out

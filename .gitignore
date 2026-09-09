@@ -75,6 +75,9 @@ __pycache__/
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
+build/
+dist/
 
 # Python
 .venv/

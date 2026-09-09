@@ -1,4 +1,5 @@
-# Test dependencies. Install on top of requirements.txt.
+# Test dependencies. Install on top of requirements.txt, then `pip install -e .`
+# for the simulator package itself.
 -r requirements.txt
 
 pytest==9.1.1

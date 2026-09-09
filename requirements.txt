@@ -1,4 +1,7 @@
-# Runtime dependencies for scripts/inventory.py and scripts/probe_dbn.py.
+# Pinned dependencies for the NQ/ES/QQQ adapter and the bucket inventory
+# (scripts/inventory.py, scripts/probe_dbn.py). The simulator itself needs only
+# what pyproject.toml declares -- numpy and pandas -- which is why it can be
+# built and calibrated on synthetic data with none of this installed.
 # Pinned to what the committed inventory was generated with; loosen deliberately.
 
 boto3==1.43.89                  # R2 / S3 listing and ranged reads

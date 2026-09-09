@@ -1,269 +1,206 @@
-# L1 Build Plan and Data Decisions — v4
+# L1 Build Plan — the Research Harness
 
-Updated 2026-09-08 after Tasks 1 (`f40c3c3`), 1b (`601f1f3`) and 1c (`97b6d7b`).
-Companion to `architecture-proposal-v1.md`, which defines L1/L1.5/L2 and the
-committee.
+The deliverable is the agentic research loop and its keep/discard gate, not a
+profitable strategy. Quant finance is the test bed because it is a domain where a
+system that fools itself still produces a number that looks like success.
 
-**Data-layer detail now lives in the repo** — `docs/data-inventory.md`,
-`data/manifest.json`, `config/corrections.yaml`. This doc is the plan and the decision
-record; it does not duplicate them.
+**The harness is dataset-agnostic.** Datasets, fill models and scoring metrics are
+interfaces. The NQ/ES/QQQ data described in `docs/datasets/nq-es-qqq.md` is the first
+adapter, not an assumption. A strategy family, an instrument, or an asset class can be
+swapped without touching the loop.
+
+Nothing in this document is specific to a dataset. If something dataset-specific turns
+up here, it is in the wrong file.
+
+Rewritten 2026-09-08, splitting the v4 plan into this and the dataset adapter document.
+Companion to `architecture-proposal-v1.md`, which defines L1/L1.5/L2 and the committee.
 
 Status markers: **[decided]** · **[open]** · **[proposed]**
 
-## Data layer — summary
+## What the harness guarantees
 
-Bucket `msfe-practicum`, single prefix `raw/`, 2,491 objects, ~45 GiB. Format is
-**Databento DBN under zstd, not parquet** — no footer, `read_parquet` does not apply.
+These are dataset-independent and are the actual contribution:
 
-**File-dates are not sessions.** Objects are split on UTC day and a CME session spans
-two of them, so the session count is the one every power calculation must use.
+1. The agent proposes a change, it is evaluated, and it is kept or reverted — with
+   every trial logged, including crashes and abandoned runs.
+2. The scorer is code the agent cannot edit or call.
+3. Splits are pre-registered before any outcome is observed; the holdout opens once.
+4. **N is global** — see below.
+5. Accepting a candidate requires clearing a conjunctive gate, not a single scalar.
+6. The harness demonstrably rejects nothing-there data and demonstrably detects a
+   planted signal of known strength.
 
-| | objects (UTC file-dates) | **assemblable sessions** | span (sessions) |
-|---|---|---|---|
-| NQ | 632 | **521** | 2024-07-04 → 2026-07-10 |
-| ES | 320 | **264** | 2025-07-04 → 2026-07-10 |
-| QQQ options | 512 | 512 (no assembly needed) | 2024-07-03 → 2026-07-20 |
+## Interfaces
 
-*Assemblable* = a CME session date `D` where both UTC objects it spans are present: the
-`D-1` file holding the 17:00 CT evening open, and the `D` file holding the rest. The
-632 → 521 drop is almost entirely a change of unit, not lost data: 110 of the 632
-file-dates are evening-open-only files (105 Sundays plus 2024-12-25, 2025-01-01,
-2025-01-09, 2025-12-25, 2026-01-01), which are inputs to a session rather than sessions.
-Only **two** sessions are genuinely lost — 2025-04-18 (the Good Friday gap) and
-2024-07-03 (the leading boundary, no 07-02 evening file). ES loses one, 2025-07-03,
-for the same boundary reason.
+### Dataset
 
-OPRA needs no assembly: QQQ options trade 08:30–15:00 CT, inside a single UTC day.
+```python
+class Dataset(Protocol):
+    name: str
+    def periods(self) -> Sequence[Period]: ...     # sessions, days, bars — its own unit
+    def load(self, period: Period) -> View: ...    # refuses anything outside the request
+    def calendar(self) -> Calendar: ...            # pre-registered train/val/holdout
+    def digest(self) -> str: ...                   # pins the exact data a run used
+```
 
-Every count above is generated, not remembered: `scripts/inventory.py` writes them to
-`data/manifest.json` under `instrument_coverage[<sym>].sessions` and
-`coverage_overlap_trades_vs_opra`, renders them in `docs/data-inventory.md` §3, and the
-test suite pins 521 / 264 / 505 / 255 so a change has to be deliberate.
+`digest()` matters: every ledger row records which data version produced it, so a trial
+is reproducible against the bytes it actually ran on rather than against whatever the
+store holds later.
 
-`ohlcv_1m` deliberately excluded — bars are built from `trades`.
+The unit is the dataset's own — a session, a trading day, a bar, a fold. The harness
+does not assume sessions exist.
 
-`raw/` intentionally diverges from `gexalgo/raw` on six objects (see Corrections).
-Originals remain in the source lake.
+### Strategy
 
-## Data facts that constrain the loader
+```python
+class Strategy(Protocol):
+    def setup(self, ctx) -> None: ...                     # once per run
+    def on_period(self, view) -> Sequence[Intent]: ...    # once per period, in order
+```
 
-1. **DBN version heterogeneity is permanent.** Mirror is v1; corrections and all
-   future downloads are v3+. Both decode to identical pandas schema, so it is
-   invisible above the reader — but the **v3 metadata block is larger (3,272 vs 2,438
-   bytes)**, so any code seeking past the header by fixed offset instead of by the
-   length field breaks. `dbn_version` is recorded per object.
-2. **Files split on UTC day, not CME session.** One Globex session spans two files;
-   Sunday files hold only the weekly 17:00 CT open; Friday files stop at the 16:00 CT
-   close. Coverage is full Globex, not RTH. Anchoring VWAP to a file boundary would
-   anchor it to 18:00–19:00 CT and shift at each DST change.
-3. **Double zstd, inconsistently.** `opra_definition` / `opra_statistics` compressed
-   twice through 2026-07-02, once for the last 11 files. Unwrap in a loop until DBN
-   magic appears.
-4. **Timestamps unambiguous.** `datetime64[ns, UTC]`, `ts_recv` index, `ts_event`
-   column, never naive. CST/CDT requires explicit `tz_convert`.
-5. **`stype_in=PARENT` on `NQ.FUT`** means files contain *all* NQ contracts, not the
-   front month. Contract selection and roll are a derived-layer decision.
-6. **`trades` is trades only** — no book or BBO, so no queue position or true spread
-   cost. (`tbbo` acquisition is planned; see Data acquisition.)
+The `setup()` / `on_period()` split is what makes the per-period view enforceable:
+anything a strategy wants to precompute has to be declared before the walk starts, so
+`on_period` can be handed a view that raises on future access. (The v4 plan called this
+`setup()` / `on_bar()`; the harness does not assume bars any more than it assumes
+sessions, so the per-period name is the general one.)
 
-## Corrections
+### Fill model
 
-Six files under `raw/trades/NQ/` for 2025-07-03…09 carried `ES.FUT` in their DBN
-header; NQ had no data on those dates. Correct data was re-downloaded (Databento batch
-`GLBX-20260908-MRU3SPA6VW`) and **written over the contaminated objects in place**.
-`config/corrections.yaml` is the historical record — evidence, not a runtime
-mechanism. Nothing resolves through it at read time.
+```python
+class FillModel(Protocol):
+    def resolve(self, intents, period_data) -> Blotter: ...
+```
 
-*The contamination exists in the source lake too — any `gexalgo` research touching
-2025-07-03 → 2025-07-09 should be re-checked.*
+Strategies emit **intents** — entries, exits, bracket levels — never P&L. If a strategy
+can compute its own objective, it can optimize a number it controls. The fill model
+turns intents into a blotter; the engine never assumes brackets, bars, or a particular
+order type exist.
 
-Known gap in the record: the originals' sha256 was never taken and cannot be recovered
-from this repo. `corrections.yaml` records `sha256: null` explicitly. Recoverable from
-`gexalgo/raw` if ever needed.
+A fill model must **resolve** intra-bar ordering rather than silently assume it. Where
+the representation cannot say which of two levels was touched first, the resolution has
+to come from a finer representation or be declared unresolvable — an assumption made
+quietly at this layer becomes directional bias in every result above it, and it looks
+like alpha. What that costs and how one adapter plans to satisfy it is a dataset
+concern, not a harness one.
 
-## Decisions
+### Scorer
 
-**[decided] Symbol identity comes from the DBN header, not the path.** Primary guard:
-the set of `raw/trades/<SYM>/` files whose header disagrees with their folder must be
-**empty**. A new contamination fails it.
+```python
+def score(blotter: Blotter, *, period: Period) -> ScoreTuple: ...
+```
 
-**[decided] Bucket integrity is fingerprinted from listings, not downloads.** All 2,491
-ETags are plain 32-hex MD5 (no multipart), so the whole bucket is verifiable at zero
-egress. `inventory.py` compares live listing against the committed manifest each run;
-a change on a key in `corrections.yaml` classifies as `recorded_correction`, anything
-else as a critical anomaly. A test asserts the ETags stay non-composite, so a future
-multipart upload fails rather than silently degrading to size-only comparison. This
-replaces byte-identity with the source lake, which the overwrite gave up.
+Blotter in, score tuple out. Nothing dataset-specific. The metric must be invariant to
+turnover, leverage and universe size — those invariances are exactly what make it
+portable, and their absence is what makes raw Sharpe unusable here.
 
-**[decided] Exclusion by declaration, never deletion** — for anything found from here
-on. (The six corrections were an overwrite, decided deliberately; `raw/` is otherwise
-append-only.)
+## Pre-registration and N
 
-**[decided] Data acquisition is Michael-only** (Databento account). Teammates cannot
-re-fetch from source, so the committed manifest is the team's only integrity check —
-evidence, not bookkeeping.
+Calendars are **per dataset**, held in a registry. Each declares train / validation /
+holdout, committed before any outcome on that dataset is observed. A split chosen after
+exploring the data is not a pre-registration.
 
-**[decided] Bars derived from `trades` by pinned, versioned code.**
+**[decided] N is global across all datasets, not per dataset.** Otherwise adding a
+dataset silently buys a fresh holdout and resets the multiple-testing accounting —
+reintroducing the exact false-discovery hole this project exists to close. The trial
+ledger spans every dataset, and any deflated-Sharpe or Harvey threshold computed
+anywhere uses the global count.
 
-**[decided] One bucket now; holdout partitioned before run 1.**
+This rule is pre-registered now, while it is abstract and no experiment depends on it.
 
-**[proposed] The loader's primary unit is a session, not a date range.**
-`load_session(symbol, session_date)` assembles from two UTC-day files with tz-aware
-17:00→16:00 CT boundaries. A range primitive pushes session assembly onto every caller
-and they will not all agree.
+## Two-sided calibration
 
-**[proposed] Derived layer partitioned by session date.** Session assembly happens once
-at build time, not once per run. Record actual UTC session bounds per date — they shift
-with DST and early closes.
+A gate that rejects everything passes a null test trivially and is useless. Calibration
+is therefore two-sided, and the synthetic dataset provides both halves:
 
-**[proposed] Path envelope as the loop's execution layer.** 1m OHLC cannot resolve
-which of a 25pt stop and a 100pt target was touched first, so the backtester must
-assume, and the assumption becomes directional bias — structurally the same failure
-that produced the +$48/trade fade artefact. Precompute, per bar, the ordered sequence
-of running-extreme updates; comparing positions resolves *any* fixed bracket exactly.
-Amplitude-filtered zigzag for trailing stops. Validate by replaying ~2 weeks
-tick-vs-envelope and asserting identical fills.
+- **Null:** no signal present. The gate must reject essentially everything. The
+  false-acceptance rate at a known null is a publishable number.
+- **Power:** a planted signal of known strength. The gate must accept it. Sweeping the
+  strength gives a power curve — how large an edge has to be before this harness can
+  see it.
 
-## Data acquisition — planned
+Both are just dataset implementations, which is the test that the abstraction is real.
 
-Priority order, all within the free one-year Databento window:
+## Build order
 
-1. **Extend all series to present.** `trades` stops **2026-07-10** and OPRA
-   **2026-07-20** — they are not the same date. Against the CME calendar to 2026-09-08
-   that is **42 missing sessions for NQ/ES** and **36 for QQQ options**.
-   These are the most valuable sessions owned, because the holdout squeeze is a
-   shortage of recent post-model-cutoff data. Worth a recurring monthly pull.
-2. **`tbbo` for NQ.** Every trade with prevailing best bid/offer — the input for
-   realistic fill costing. Upgrades the robustness auditor from "assume the trade
-   price" to "you paid the spread."
-3. **10–15 days of `mbo`** as a fill-model validation sample only — replay the same
-   trades against true queue position to confirm the tbbo-based assumptions are
-   conservative. Not for features: observations are the binding constraint, not
-   features, and MBO deepens the dimension that isn't binding.
-4. *Scope, not need:* SPY options (would give ES a GEX set symmetric with QQQ→NQ),
-   NDX index options (would address QQQ being a partial view of Nasdaq-100 dealer
-   gamma). Both large. Neither needed for the walking skeleton.
+Steps 1–6 need no market data and are not blocked by anything.
 
-## Resolved
+1. **Dataset interface + synthetic implementation.** Parameterizable: pure noise, or a
+   planted signal of specified strength.
+2. **Scorer**, in a file the agent's tooling cannot open. Enforced by tool permissions
+   *and* a CI check on changed paths — the CI check is the one that holds.
+3. **Trial ledger**, before the loop that fills it. Append-only per run: global N, git
+   SHA, dataset name and digest, hypothesis family, wall-clock, score tuple, outcome
+   including crashes and abandonment. If it does not exist before run 1, N is a
+   reconstruction.
+4. **Engine + fill model interface.** Walks periods, calls the strategy, resolves
+   intents, emits a blotter.
+5. **Loop harness.** Propose → evaluate on validation → keep or `git reset --hard` →
+   log. Serial, wall-clock budgeted. Accept rule deliberately dumb at this stage:
+   single scalar.
+6. **Walking skeleton on synthetic**, end to end, with the dumbest possible strategy.
+   Then null and power calibration — which by now is just running it.
+7. **Committee as a second accept tier.** Cheap scalar keeps/resets inside the loop;
+   promotion runs four auditors in parallel — leakage, statistics, economics,
+   robustness — any one can veto. Plus purged/embargoed CV, DSR with global N, PBO via
+   CSCV, Harvey t > 3.0.
+8. **First real dataset adapter** and its pre-registered calendar.
+9. **First real run**, holdout still closed.
 
-**Symbols — both present, asymmetric.** NQ 521 assemblable sessions from 2024-07-04;
-ES 264 from 2025-07-04. (632 and 320 are UTC file-date counts, not sessions.)
+Build step 6 as a thin vertical slice rather than completing each layer first. The
+interfaces are the expensive part to change, and only an end-to-end run reveals whether
+they are right.
 
-**OPRA is QQQ only** — no SPX, no NDX. **NQ has a GEX feature set, ES has none.**
-Known limitation for the writeup: QQQ options are a partial view of Nasdaq-100 dealer
-gamma, since NDX index options carry a large share and are absent.
+## Design principles
 
-**GEX-using strategies are capped by NQ ∩ OPRA at exactly 505 sessions**
-(2024-07-05 → 2026-07-10), not 632 and not 521. The 16 assemblable NQ sessions that drop
-out are days CME equity futures trade but US equity options are closed — Independence
-Day, Labor Day, Thanksgiving, MLK, Presidents' Day, Memorial Day, Juneteenth, Good
-Friday.
+**Make the bug unrepresentable rather than documented.** A prompt telling an agent to
+avoid lookahead does not prevent lookahead; an API that cannot express it does. The
+per-period view raises on future access; strategies cannot import the scorer;
+strategies emit intents rather than P&L.
 
-For ES, assemblable ∩ same-day QQQ is 255 of 264, if option (d) below becomes a
-GEX-using transfer test rather than a non-GEX one.
+**Log what was rejected, not just what was kept.** Crashed runs, abandoned trials,
+excluded data, falsified hypotheses. A process whose rejections cannot be inspected
+cannot be evaluated.
 
-*Implementation trap:* if a GEX feature ever needs the **prior** session's options data,
-test against the previous *options trading day*, never `D-1`. Every Monday's `D-1` is a
-Sunday with no OPRA file by construction, and the naive test collapses 505 → 391. On the
-correct test the answer stays 505.
+**Verify cheap representations against expensive ones on a sample.** Before trusting a
+compression or approximation, replay a window both ways and assert agreement.
+
+## Permission tiers
+
+The agent may write **only** under `src/strategies/`.
+
+| Path | Agent may call | Agent may edit |
+|---|---|---|
+| `scripts/` | no | no |
+| `config/` | via loader | no |
+| `src/core/` (dataset, engine, ledger) | yes | no |
+| `src/core/scorer.py` | no | no |
+| `src/strategies/` | it is the agent's code | yes |
+
+Enforced by tool permissions and by a CI check comparing changed paths against an
+allowlist. The CI check is the one that actually holds — configs drift and get copied
+wrong.
+
+```
+config/calendars/<dataset>.yaml  immutable — pre-registered splits, one per dataset
+scripts/                         run-once prep, human-only
+src/core/                        importable by strategies, never editable
+  dataset.py engine.py ledger.py
+  scorer.py                      not importable by strategies either
+src/strategies/current.py        THE ONLY THING THE AGENT WRITES
+runs/                            trial ledger, append-only JSONL, committed
+data/                            committed artifacts;  data/cache/ gitignored
+tests/                           offline in CI; live tests skip without credentials
+docs/plans/                      this document
+docs/datasets/                   one file per adapter
+docs/tasks/                      task briefs, versioned alongside their outputs
+```
 
 ## Open questions
 
-**[open] Holdout size vs statistical power — the binding constraint and the next
-decision.** At ~one firing per day, a 3-month holdout is ~63 trades; DSR and PBO on 63
-observations are weak. 505 GEX-eligible sessions cannot give both a large training set
-and a statistically meaningful final holdout. Options, not exclusive:
-(a) thin final holdout, lean on CPCV within train+validation, treat the holdout as
-confirmatory rather than primary;
-(b) longer holdout, less training data;
-(c) relax one-firing-per-day to raise trade count — a pre-registered design choice, not
-a response to weak power;
-(d) ES's 264 sessions as a transfer test for non-GEX strategies, 255 if the test is
-GEX-using — correlation ~0.95 so not clean OOS, but transfer is ADAS's anti-overfitting
-defense and it turns the NQ/ES asymmetry into a second axis of evidence.
-
-Collision worth noting: every eval window must postdate the backbone model's cutoff,
-and `trades` ends 2026-07-10 — so the post-cutoff window and the natural time-ordered
-holdout want to be the *same* few dozen sessions. Extending the series to present
-(acquisition item 1) directly relieves this.
-
-**[open] Two calendar rules the split must pre-register.** Both change what a session
-*is*, so they belong in `config/calendar.yaml` rather than being settled the first time
-a strategy trips over one.
-
-(i) **2025-01-09.** `CME_Equity` says no session — the National Day of Mourning for
-Carter. The file holds 62,374 trades / 1.14 MB, against ~300k / ~7.9 MB for the
-neighbouring full days and 57 KB for a genuine evening-only file like Christmas. It is a
-real shortened session the calendar denies. Today it counts as evening-only and
-2025-01-10 still assembles from it, so nothing breaks; treating it as tradeable needs
-something beyond `CME_Equity`.
-
-(ii) **The 16 CME-open / OPRA-closed days.** NQ sessions with a stale-GEX feature, or
-excluded from GEX strategies outright? The choice moves the GEX denominator between 505
-and 521.
-
-**[open] Metric.** No cross-section, so rank IC and long-short constructions don't
-apply. Time-series expectancy on effectively one instrument; effective N is
-trades/day × days. Must be invariant to turnover and leverage.
-
-**[open] `gex_snapshots_dedup_v4`** — copy into `derived/`, or rebuild from
-`opra_cbbo1m`?
+**[open] The metric.** Must be invariant to turnover, leverage and universe size.
 
 **[open] Python or R for the strategy layer.** Gate implementations (`purgedcv`,
 `skfolio`) are Python; Peterson authored `quantstrat`, whose indicator/signal/rule
 decomposition may be the expected shape. Ask directly.
 
-## L1 build order
-
-1. ~~Inventory and manifest~~ `f40c3c3`
-1b. ~~Patch supersession, regression tests, CI~~ `601f1f3`
-1c. ~~Post-overwrite reconciliation, bucket fingerprint~~ `97b6d7b`
-2. **Split calendar**, committed before anything else reads the data. Blocked on the
-   holdout-size decision.
-3. **Loader.** Session-oriented; normalizes DBN versions; never seeks by fixed offset;
-   the only path to data, and it refuses anything outside the requested window.
-4. **Derived layer.** Bars, path envelope, contract/roll selection; GEX if in scope.
-   Built once by pinned code, SHA in the manifest.
-5. **Scorer**, in a file the agent's tooling cannot open. Tool permissions *and* a CI
-   check on the diff.
-6. **Trial ledger**, before the loop that fills it. Append-only per run: N, git SHA,
-   hypothesis family, wall-clock, score tuple, outcome *including crashes*.
-7. **Loop harness.** Propose → backtest on validation → keep or `git reset --hard` →
-   log. Serial, wall-clock budgeted, `setup()` / `on_bar()` split.
-8. **Agent edit surface.** One strategy module; everything else read-only.
-9. **Committee as a second accept tier.** Cheap scalar inside the loop; promotion runs
-   four auditors in parallel, any-one-vetoes, plus purged CV, DSR with honest N, PBO
-   via CSCV, Harvey t > 3.0. Robustness auditor re-runs promoted candidates against
-   tick-level fills.
-10. **Null calibration.** Shuffled-label or synthetic no-signal data; confirm the gate
-    rejects everything. Rejection rate on a known null is a publishable number.
-11. **First real run, holdout still closed.**
-
-## Repo layout — permission tiers
-
-The agent may write **only** under `src/strategies/`. Enforced by tool permissions and
-a CI check comparing changed paths against an allowlist.
-
-```
-config/calendar.yaml        immutable — pre-registered splits
-config/corrections.yaml     historical record, not a runtime mechanism
-scripts/                    run-once prep, human-only
-  inventory.py probe_dbn.py
-src/core/                   importable by strategies, never editable
-  loader.py engine.py ledger.py
-  scorer.py                 not importable by strategies either
-src/strategies/current.py   THE ONLY THING THE AGENT WRITES
-data/manifest.json          committed;  data/cache/ gitignored
-runs/                       trial ledger, append-only JSONL, committed
-tests/                      offline in CI; live tests skip without R2_*
-docs/tasks/                 task briefs, versioned alongside their outputs
-```
-
-## Excluded hypothesis families
-
-Already falsified on this data; pre-register as excluded and log the exclusion.
-
-- GEX node attraction as a mechanical statistical phenomenon (seven methodologies,
-  null; the ~20% touch rate is the base rate for any level at that distance)
-- Sequence models (GRU, 1D-CNN) at current sample size — consistently underfit
-- Two-stage confirmation architectures — widen the effective stop, degrade performance
+**[open] How holdout is budgeted across an agent's iterations** — for the mentors.

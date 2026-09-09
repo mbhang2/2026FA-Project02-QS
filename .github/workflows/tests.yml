@@ -40,9 +40,15 @@ jobs:
       - name: Run tests
         run: pytest -q
 
-      - name: Check the scripts import cleanly
+      # The reference the agent reads is generated from the code, so it cannot
+      # drift from it silently.
+      - name: Context API reference is current
+        run: python scripts/gen_context_api.py --check
+
+      - name: Check the entry points import cleanly
         run: |
           python -c "import sys; sys.path.insert(0, 'scripts'); import inventory, probe_dbn"
           python scripts/inventory.py --help > /dev/null
           python scripts/probe_dbn.py --help > /dev/null
           python scripts/calibrate.py --help > /dev/null
+          python run.py --help > /dev/null

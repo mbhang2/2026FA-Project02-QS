@@ -42,6 +42,7 @@ from src.strategies.current import MomentumStrategy  # noqa: E402
 
 M1 = Subscription(interval_ns=60 * NS_PER_SECOND)
 M5 = Subscription(interval_ns=5 * 60 * NS_PER_SECOND)
+M1_ID, M5_ID = M1.sub_id, M5.sub_id
 
 
 def dataset(**kw) -> SyntheticDataset:
@@ -56,7 +57,7 @@ def dataset(**kw) -> SyntheticDataset:
 class Recorder:
     """Minimal strategy that records what it was handed."""
 
-    def __init__(self, subs=(M5,), submit_on_first_bar=False):
+    def __init__(self, subs=("5m",), submit_on_first_bar=False):
         self.subs = list(subs)
         self.submit_on_first_bar = submit_on_first_bar
         self.bar_events: list[BarEvent] = []
@@ -64,24 +65,21 @@ class Recorder:
         self.lifecycle = []
         self._submitted = False
 
-    def setup(self, ctx):
-        return self.subs
+    def setup(self, ctx) -> None:
+        for s in self.subs:
+            ctx.subscribe(s)
 
-    def on_bars(self, ev, ctx) -> list[Action]:
-        self.bar_events.append(ev)
+    def on_bars(self, ctx) -> None:
+        self.bar_events.append(BarEvent(ts=ctx.ts, seq=ctx._seq, bars=ctx.closed))
         if self.submit_on_first_bar and not self._submitted and ctx.actionable:
             self._submitted = True
-            return [Submit(side=Side.BUY, size=1, order_type=OrderType.MARKET,
-                           tif=TimeInForce.DAY, tag="probe")]
-        return []
+            ctx.buy(size=1, tag="probe")
 
-    def on_fill(self, ev, ctx):
-        self.fills.append(ev)
-        return []
+    def on_fill(self, ctx) -> None:
+        self.fills.append(ctx.fill)
 
-    def on_lifecycle(self, ev, ctx):
-        self.lifecycle.append(ev)
-        return []
+    def on_lifecycle(self, ctx) -> None:
+        self.lifecycle.append(ctx.event)
 
 
 # --------------------------------------------------------------------------- #
@@ -102,9 +100,10 @@ def test_history_view_refuses_to_reach_forward():
 
 def test_strategy_reaching_past_the_cursor_raises_during_a_run():
     class Peeker(Recorder):
-        def on_bars(self, ev, ctx):
-            h = ctx.bars[M5.sub_id]
-            return [] if len(h) == 0 else h[len(h)] and []
+        def on_bars(self, ctx):
+            h = ctx.history(M5_ID)
+            if len(h):
+                h[len(h)]   # the element that does not exist yet
 
     with pytest.raises(LookaheadError):
         Engine(dataset(), Peeker(), split=Split.VALIDATION).run()
@@ -145,7 +144,7 @@ def test_every_fill_respects_its_order_eligibility():
 # 3. bars closing at the same timestamp arrive in one callback
 # --------------------------------------------------------------------------- #
 def test_simultaneous_closes_arrive_in_one_callback():
-    strat = Recorder(subs=(M1, M5))
+    strat = Recorder(subs=("1m", "5m"))
     Engine(dataset(), strat, split=Split.VALIDATION).run()
 
     multi = [ev for ev in strat.bar_events if len(ev.bars) > 1]
@@ -160,7 +159,7 @@ def test_simultaneous_closes_arrive_in_one_callback():
 
 
 def test_bars_are_stamped_by_open_and_delivered_on_close():
-    strat = Recorder(subs=(M5,))
+    strat = Recorder(subs=("5m",))
     Engine(dataset(), strat, split=Split.VALIDATION).run()
     for ev in strat.bar_events:
         for b in ev.bars:

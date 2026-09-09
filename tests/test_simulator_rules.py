@@ -46,29 +46,33 @@ def ds(**kw) -> SyntheticDataset:
 
 
 class Noop:
-    def __init__(self, subs, actions_on_first_bar=()):
+    """Subscribes, records lifecycle events, and optionally fires a fixed set of
+    context calls on its first actionable bar."""
+
+    def __init__(self, subs, calls=()):
         self.subs = list(subs)
-        self._actions = list(actions_on_first_bar)
+        self._calls = list(calls)
         self._fired = False
         self.lifecycle = []
         self.bar_events = []
+        self.order_ids = {}
 
-    def setup(self, ctx):
-        return self.subs
+    def setup(self, ctx) -> None:
+        for s in self.subs:
+            ctx.subscribe(s)
 
-    def on_bars(self, ev, ctx):
-        self.bar_events.append(ev)
-        if self._actions and not self._fired and ctx.actionable:
+    def on_bars(self, ctx) -> None:
+        self.bar_events.append(ctx.closed)
+        if self._calls and not self._fired and ctx.actionable:
             self._fired = True
-            return list(self._actions)
-        return []
+            for name, call in self._calls:
+                self.order_ids[name] = call(ctx)
 
-    def on_fill(self, ev, ctx):
-        return []
+    def on_fill(self, ctx) -> None:
+        pass
 
-    def on_lifecycle(self, ev, ctx):
-        self.lifecycle.append(ev)
-        return []
+    def on_lifecycle(self, ctx) -> None:
+        self.lifecycle.append(ctx.event)
 
 
 # --------------------------------------------------------------------------- #
@@ -123,17 +127,14 @@ def test_emit_empty_cannot_invent_a_bar_before_the_first_tick():
 # session boundary
 # --------------------------------------------------------------------------- #
 def test_day_orders_are_cancelled_at_the_session_close_and_gtc_survives():
-    sub = Subscription(interval_ns=60 * NS_PER_SECOND)
-    far_below = Submit(side=Side.BUY, size=1, order_type=OrderType.LIMIT,
-                       tif=TimeInForce.DAY, limit_price=1.0, tag="day")
-    far_below_gtc = Submit(side=Side.BUY, size=1, order_type=OrderType.LIMIT,
-                           tif=TimeInForce.GTC, limit_price=1.0, tag="gtc")
-    strat = Noop([sub], actions_on_first_bar=[far_below, far_below_gtc])
+    strat = Noop(["1m"], calls=[
+        ("day", lambda c: c.buy(1, type="limit", limit=1.0, tif="DAY", tag="day")),
+        ("gtc", lambda c: c.buy(1, type="limit", limit=1.0, tif="GTC", tag="gtc")),
+    ])
     eng = Engine(ds(), strat, split=Split.VALIDATION)
     eng.run()
 
-    by_tag = {tag: oid for oid, tag in eng._order_tags.items()}
-    day, gtc = eng.orders[by_tag["day"]], eng.orders[by_tag["gtc"]]
+    day, gtc = eng.orders[strat.order_ids["day"]], eng.orders[strat.order_ids["gtc"]]
     assert day.status is OrderStatus.EXPIRED, "a DAY order survived the session close"
     assert gtc.is_working, "a GTC order did not survive the session close"
     assert any(e.kind is LifecycleKind.DAY_EXPIRED for e in strat.lifecycle)
@@ -142,10 +143,7 @@ def test_day_orders_are_cancelled_at_the_session_close_and_gtc_survives():
 def test_positions_are_not_flattened_at_a_session_boundary_but_are_recorded():
     """A strategy that wants to be flat overnight has to say so; the record makes
     an unintended hold visible rather than silent."""
-    sub = Subscription(interval_ns=60 * NS_PER_SECOND)
-    entry = Submit(side=Side.BUY, size=1, order_type=OrderType.MARKET,
-                   tif=TimeInForce.DAY, tag="entry")
-    strat = Noop([sub], actions_on_first_bar=[entry])
+    strat = Noop(["1m"], calls=[("entry", lambda c: c.buy(1, tag="entry"))])
     eng = Engine(ds(), strat, split=Split.VALIDATION)
     rec = eng.run()
 
@@ -158,11 +156,9 @@ def test_positions_are_not_flattened_at_a_session_boundary_but_are_recorded():
 # brackets and OCO
 # --------------------------------------------------------------------------- #
 def test_a_bracket_is_armed_at_fill_time_and_its_legs_are_oco():
-    sub = Subscription(interval_ns=60 * NS_PER_SECOND)
-    entry = Submit(side=Side.BUY, size=1, order_type=OrderType.MARKET,
-                   tif=TimeInForce.DAY,
-                   bracket=BracketSpec(stop_offset=0.5, target_offset=0.5), tag="entry")
-    strat = Noop([sub], actions_on_first_bar=[entry])
+    strat = Noop(["1m"], calls=[
+        ("entry", lambda c: c.buy(1, stop_offset=0.5, target_offset=0.5, tag="entry"))
+    ])
     eng = Engine(ds(signal_strength=0.5), strat, split=Split.VALIDATION)
     eng.run()
 
@@ -182,11 +178,9 @@ def test_a_bracket_is_armed_at_fill_time_and_its_legs_are_oco():
 
 
 def test_a_bracket_leg_cannot_fill_on_the_tick_that_armed_it():
-    sub = Subscription(interval_ns=60 * NS_PER_SECOND)
-    entry = Submit(side=Side.BUY, size=1, order_type=OrderType.MARKET,
-                   tif=TimeInForce.DAY,
-                   bracket=BracketSpec(stop_offset=0.25, target_offset=0.25), tag="e")
-    strat = Noop([sub], actions_on_first_bar=[entry])
+    strat = Noop(["1m"], calls=[
+        ("e", lambda c: c.buy(1, stop_offset=0.25, target_offset=0.25, tag="e"))
+    ])
     eng = Engine(ds(signal_strength=0.5), strat, split=Split.VALIDATION)
     eng.run()
     entry_row = eng.blotter.rows[0]
@@ -211,8 +205,7 @@ def test_holdout_is_refused_until_explicitly_unlocked():
 def test_the_holdout_unlock_reason_reaches_the_run_record():
     d = ds()
     d.unlock_holdout("mentor sign-off")
-    eng = Engine(d, Noop([Subscription(interval_ns=60 * NS_PER_SECOND)]),
-                 split=Split.HOLDOUT)
+    eng = Engine(d, Noop(["1m"]), split=Split.HOLDOUT)
     rec = eng.run()
     assert rec.holdout_unlock_reason == "mentor sign-off"
     assert rec.split == "holdout"
@@ -230,19 +223,16 @@ def test_splits_must_be_chronological_and_respect_the_embargo():
 
 
 def test_warmup_reaches_backward_but_is_not_actionable():
-    sub = Subscription(interval_ns=60 * NS_PER_SECOND)
-
     class Watcher(Noop):
         def __init__(self):
-            super().__init__([sub])
+            super().__init__(["1m"])
             self.sessions_seen = []
             self.actionable_sessions = set()
 
-        def on_bars(self, ev, ctx):
+        def on_bars(self, ctx):
             self.sessions_seen.append(ctx.session)
             if ctx.actionable:
                 self.actionable_sessions.add(ctx.session)
-            return []
 
     d = ds()
     w = Watcher()
@@ -256,20 +246,15 @@ def test_warmup_reaches_backward_but_is_not_actionable():
 # action cap
 # --------------------------------------------------------------------------- #
 def test_actions_beyond_the_cap_are_dropped_counted_and_reported():
-    sub = Subscription(interval_ns=60 * NS_PER_SECOND)
-
     class Spammer(Noop):
         def __init__(self):
-            super().__init__([sub])
+            super().__init__(["1m"])
 
-        def on_bars(self, ev, ctx):
+        def on_bars(self, ctx):
             if not ctx.actionable:
-                return []
-            return [
-                Submit(side=Side.BUY, size=1, order_type=OrderType.LIMIT,
-                       tif=TimeInForce.DAY, limit_price=1.0)
-                for _ in range(10)
-            ]
+                return
+            for _ in range(10):
+                ctx.buy(1, type="limit", limit=1.0)
 
     eng = Engine(ds(), Spammer(), split=Split.VALIDATION, action_cap=4)
     rec = eng.run()
@@ -283,8 +268,8 @@ def test_actions_beyond_the_cap_are_dropped_counted_and_reported():
 # --------------------------------------------------------------------------- #
 def test_the_run_record_pins_what_the_trial_actually_ran_on():
     d = ds(signal_strength=0.5)
-    eng = Engine(d, Noop([Subscription(interval_ns=60 * NS_PER_SECOND)]),
-                 split=Split.VALIDATION, fill_model="unfavorable", seed=11)
+    eng = Engine(d, Noop(["1m"]), split=Split.VALIDATION,
+                 fill_model="unfavorable", seed=11)
     rec = eng.run()
     got = rec.as_dict()
     for field in (
@@ -311,5 +296,4 @@ def test_a_fill_model_requiring_absent_capabilities_fails_at_wiring_time():
     model = UnfavorableFill()
     model.requires = DataCapabilities(has_trades=True, has_quotes=True)
     with pytest.raises(ValueError, match="requires"):
-        Engine(ds(), Noop([Subscription(interval_ns=60 * NS_PER_SECOND)]),
-               fill_model=model)
+        Engine(ds(), Noop(["1m"]), fill_model=model)

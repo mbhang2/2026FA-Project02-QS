@@ -231,16 +231,34 @@ class BracketSpec:
 
     Strategy-managed exits are where the historical fade artefact lived: an entry
     filled at 12:30:05 sits unprotected until the next bar callback at 12:35.
+
+    Levels come either as absolute prices or as distances from the fill. Absolute
+    is what a strategy usually means -- "stop below that swing low" is a level,
+    not a distance -- but a distance is the only form available before a market
+    order's fill price is known. Both are supported; mixing them is rejected at
+    the context.
     """
 
     stop_offset: float | None = None
     target_offset: float | None = None
+    stop_price: float | None = None
+    target_price: float | None = None
 
     def __post_init__(self) -> None:
         for name in ("stop_offset", "target_offset"):
             v = getattr(self, name)
             if v is not None and v <= 0:
                 raise ValueError(f"{name} is a positive distance from the fill price")
+        if (self.stop_offset is not None and self.stop_price is not None) or (
+            self.target_offset is not None and self.target_price is not None
+        ):
+            raise ValueError("give a bracket level as a price or as an offset, not both")
+
+    @property
+    def is_empty(self) -> bool:
+        return not any(
+            (self.stop_offset, self.target_offset, self.stop_price, self.target_price)
+        )
 
 
 @dataclass

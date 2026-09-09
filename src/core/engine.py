@@ -24,6 +24,13 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
 from .bars import BarBuilder
+from .context import (
+    BarContext,
+    FillContext,
+    IntentQueue,
+    LifecycleContext,
+    SetupContext,
+)
 from .dataset import Dataset
 from .fills import FillModel, check_capabilities, get_fill_model
 from .types import (
@@ -56,41 +63,6 @@ DEFAULT_ACTION_CAP = 64
 
 
 @dataclass
-class SetupContext:
-    """What `setup()` sees: the train split in bulk, and nothing else.
-
-    Bulk is the point -- a strategy fitting parameters needs the whole training
-    period at once, and there is no lookahead risk in data that is, by
-    construction, entirely before the split it will be scored on.
-    """
-
-    dataset: Any
-    _train_ticks: list[Tick]
-
-    def ticks(self) -> Sequence[Tick]:
-        return self._train_ticks
-
-    def train_bars(self, sub: Subscription) -> list[Bar]:
-        """Aggregate the train split at an arbitrary interval, using the same
-        code path the live walk uses."""
-        return aggregate(self._train_ticks, sub, self.dataset)
-
-
-@dataclass
-class RunContext:
-    """What a callback sees. Present-instant state only."""
-
-    ts: Ts
-    seq: int
-    session: int
-    position: int
-    last_trade_price: float
-    bars: BarHistory
-    working_order_ids: tuple[int, ...]
-    actionable: bool
-
-
-@dataclass
 class RunRecord:
     """One row for the trial ledger. The loop owner appends it."""
 
@@ -106,6 +78,7 @@ class RunRecord:
     action_cap: int
     action_cap_hits: int
     actions_dropped: int
+    warmup_actions_ignored: int
     ticks: int
     bars_delivered: int
     fills: int
@@ -198,6 +171,8 @@ class Engine:
 
         self.action_cap_hits = 0
         self.actions_dropped = 0
+        self.warmup_actions_ignored = 0
+        self._fills_since_callback: list = []
         self.n_ticks = 0
         self.n_bars = 0
         self.n_fills = 0
@@ -226,9 +201,20 @@ class Engine:
             if self.split is not Split.TRAIN
             else []
         )
-        subs = list(self.strategy.setup(SetupContext(self.dataset, train)))
+        setup_ctx = SetupContext(self.dataset, train)
+        declared = self.strategy.setup(setup_ctx)
+        setup_ctx._expire()
+        subs = list(setup_ctx.subscriptions())
+        if declared:
+            # tolerate the pre-Task-5 shape rather than silently ignoring it
+            raise TypeError(
+                "setup() returns nothing now; declare subscriptions with "
+                "ctx.subscribe('5m') instead of returning them"
+            )
         if not subs:
-            raise ValueError("setup() must declare at least one subscription")
+            raise ValueError(
+                "setup() declared no subscriptions; call ctx.subscribe('5m')"
+            )
         # Stable order: interval ascending, then id. The single-callback rule is
         # only meaningful if the bars inside it arrive the same way every run.
         subs.sort(key=lambda s: (s.interval_ns, s.sub_id))
@@ -255,7 +241,8 @@ class Engine:
 
             # 2. fill callbacks
             for ev in fills:
-                self._dispatch(self.strategy.on_fill, ev, tick, actionable)
+                self._fills_since_callback.append(ev)
+                self._dispatch("fill", ev, tick, actionable)
 
             # 3. bars that closed at this timestamp, in one callback
             closed: list[Bar] = []
@@ -267,7 +254,7 @@ class Engine:
                     self.history._append(b)
                 self.n_bars += len(closed)
                 ev = BarEvent(ts=tick.ts, seq=tick.seq, bars=tuple(closed))
-                self._dispatch(self.strategy.on_bars, ev, tick, actionable)
+                self._dispatch("bars", ev, tick, actionable)
 
             # the triggering tick belongs to the next bar
             for s in self.subs:
@@ -299,7 +286,7 @@ class Engine:
                 self.history._append(b)
             self.n_bars += len(tail)
             self._dispatch(
-                self.strategy.on_bars,
+                "bars",
                 BarEvent(ts=close_ts, seq=seq, bars=tuple(tail)),
                 Tick(close_ts, self.last_price, 0, session, seq),
                 actionable,
@@ -425,11 +412,15 @@ class Engine:
         exit_side = parent.side.opposite
         group = self._next_oco_group
         self._next_oco_group += 1
-        if b.stop_offset is not None:
+        if b.stop_price is not None or b.stop_offset is not None:
             stop_px = (
-                fill.price - b.stop_offset
-                if parent.side is Side.BUY
-                else fill.price + b.stop_offset
+                b.stop_price
+                if b.stop_price is not None
+                else (
+                    fill.price - b.stop_offset
+                    if parent.side is Side.BUY
+                    else fill.price + b.stop_offset
+                )
             )
             self._new_order(
                 Submit(
@@ -445,11 +436,15 @@ class Engine:
                 oco_group=group,
                 parent_id=parent.order_id,
             )
-        if b.target_offset is not None:
+        if b.target_price is not None or b.target_offset is not None:
             tgt_px = (
-                fill.price + b.target_offset
-                if parent.side is Side.BUY
-                else fill.price - b.target_offset
+                b.target_price
+                if b.target_price is not None
+                else (
+                    fill.price + b.target_offset
+                    if parent.side is Side.BUY
+                    else fill.price - b.target_offset
+                )
             )
             self._new_order(
                 Submit(
@@ -475,6 +470,11 @@ class Engine:
             ):
                 self._cancel(other, LifecycleKind.OCO_CANCELLED, tick.ts, tick.seq)
 
+    def _alloc_order_id(self) -> int:
+        oid = self._next_order_id
+        self._next_order_id += 1
+        return oid
+
     def _new_order(
         self,
         s: Submit,
@@ -482,9 +482,9 @@ class Engine:
         *,
         oco_group: int | None = None,
         parent_id: int | None = None,
+        order_id: int | None = None,
     ) -> Order:
-        oid = self._next_order_id
-        self._next_order_id += 1
+        oid = self._alloc_order_id() if order_id is None else order_id
         order = Order(
             order_id=oid,
             side=s.side,
@@ -519,35 +519,53 @@ class Engine:
         return tuple(sorted(o.order_id for o in self.orders.values() if o.is_working))
 
     # ---- callbacks and actions ---------------------------------------------- #
-    def _dispatch(self, handler, event, tick: Tick, actionable: bool) -> None:
-        ctx = RunContext(
+    def _dispatch(self, kind: str, event, tick: Tick, actionable: bool) -> None:
+        """Build the callback's context, run the callback, apply what it queued.
+
+        The context is expired the moment the callback returns: a strategy that
+        stashes it and reaches for it later would be reading state from an
+        instant it is not standing in.
+        """
+        queue = IntentQueue(self.action_cap, self._alloc_order_id, live=actionable)
+        common = dict(
             ts=tick.ts,
             seq=tick.seq,
             session=tick.session,
-            position=self.position,
-            last_trade_price=self.last_price,
-            bars=self.history,
-            working_order_ids=self._working_ids(),
+            fills=tuple(self._fills_since_callback),
             actionable=actionable,
         )
-        actions = handler(event, ctx) or ()
-        if actionable:
-            self._apply_actions(actions, tick)
+        if kind == "bars":
+            ctx = BarContext(self, queue, event=event, **common)
+            handler = self.strategy.on_bars
+        elif kind == "fill":
+            ctx = FillContext(self, queue, fill=event, **common)
+            handler = self.strategy.on_fill
+        else:
+            ctx = LifecycleContext(self, queue, event=event, **common)
+            handler = self.strategy.on_lifecycle
 
-    def _apply_actions(self, actions: Sequence[Action], tick: Tick) -> None:
-        n = 0
-        for a in actions:
-            if n >= self.action_cap:
-                # A ping-pong bug -- fill, modify, fill, modify -- otherwise hangs
-                # the run and the wall-clock budget kills it with no record of
-                # why. Dropping past the cap turns a mystery timeout into a
-                # counted, reported number.
-                self.action_cap_hits += 1
-                self.actions_dropped += len(actions) - n
-                break
-            n += 1
+        try:
+            handler(ctx)
+        finally:
+            ctx._expire()
+
+        self._fills_since_callback = []
+        if queue.cap_hit:
+            # A ping-pong bug -- fill, modify, fill, modify -- otherwise hangs the
+            # run and the wall-clock budget kills it with no record of why.
+            # Dropping past the cap turns a mystery timeout into a counted number.
+            self.action_cap_hits += 1
+            self.actions_dropped += queue.dropped
+        self.warmup_actions_ignored += queue.ignored
+        if actionable:
+            self._apply_actions(queue.actions, tick)
+
+    def _apply_actions(
+        self, actions: Sequence[tuple[Action, int | None]], tick: Tick
+    ) -> None:
+        for a, oid in actions:
             if isinstance(a, Submit):
-                self._new_order(a, tick)
+                self._new_order(a, tick, order_id=oid)
             elif isinstance(a, Cancel):
                 o = self.orders.get(a.order_id)
                 if o is not None and o.is_working:
@@ -591,7 +609,7 @@ class Engine:
         while self._pending_events:
             batch, self._pending_events = self._pending_events, []
             for ev in batch:
-                self._dispatch(self.strategy.on_lifecycle, ev, tick, actionable)
+                self._dispatch("lifecycle", ev, tick, actionable)
 
     def scored_sessions(self) -> list[int]:
         """The actionable sessions of the served split -- the observation unit
@@ -623,6 +641,7 @@ class Engine:
             action_cap=self.action_cap,
             action_cap_hits=self.action_cap_hits,
             actions_dropped=self.actions_dropped,
+            warmup_actions_ignored=self.warmup_actions_ignored,
             ticks=self.n_ticks,
             bars_delivered=self.n_bars,
             fills=self.n_fills,

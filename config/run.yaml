@@ -1,0 +1,50 @@
+# Run configuration. Immutable, for the same reason the scorer is.
+#
+# Whoever chooses the split, the fill model and the seed can point a run at the
+# holdout, select favorable fills, or retry until a lucky seed lands. None of
+# those require touching the scorer and all three are cheaper ways to fake a
+# result. This file is the only place they are set; nothing reads them from the
+# strategy or from arguments the agent controls.
+
+profiles:
+
+  # What the loop harness runs.
+  harness:
+    dataset: synthetic
+    split: validation
+    fill_model: unfavorable        # the loop scores on the pessimistic model
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 900
+    notional_base: 1.0
+
+  # What the agent may run itself, so it can execute what it writes rather than
+  # shipping syntax errors into the loop. Fixed: validation only, no arguments
+  # that change any of it, holdout unreachable. Every invocation still emits a
+  # ledger record.
+  agent:
+    dataset: synthetic
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+
+# Dataset definitions the profiles name.
+datasets:
+  synthetic:
+    kind: synthetic
+    n_sessions: 175
+    ticks_per_session: 390
+    vol_per_tick: 0.15
+    signal_strength: 0.0
+
+  synthetic-signal:
+    kind: synthetic
+    n_sessions: 175
+    ticks_per_session: 390
+    vol_per_tick: 0.15
+    signal_strength: 0.5
+
+ledger: runs/ledger.jsonl

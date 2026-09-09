@@ -23,10 +23,25 @@ Status markers: **[decided]** · **[open]**
 | blotter construction | — |
 | scoring | — |
 
-The strategy **never** computes P&L and **never** imports the scorer. It emits
-timestamped intents; the simulator decides what happened. Both halves of that are
-enforced, not requested: `src/core/scorer.py` raises on import from `src.strategies.*`,
-and a CI path check makes `src/strategies/**` the only writable tree.
+The strategy acts through a **context object** passed into each callback. It does
+not return actions and it does not decide what happened: it calls `ctx.buy(...)`,
+the call is queued, the callback returns, and the simulator applies the queue.
+
+### The boundary is the objective function, not P&L
+
+An earlier version of this spec said "strategies emit intents, never P&L". That
+was imprecise, and the imprecision cost something: a strategy needs position P&L
+for risk logic, it has it in live trading, and it could reconstruct it from its
+own fills anyway. Hiding it was theatre.
+
+**The strategy may know how it is doing. It may not know how it is being
+judged.** `ctx` exposes realized and unrealized P&L; it exposes nothing the
+scorer computes. `src.core.scorer` and `src.core.metrics` remain unreachable from
+`src.strategies`, enforced at import time and by a static check, and a CI path
+check makes `src/strategies/**` the only writable tree.
+
+Not exposed, deliberately: the score or anything the scorer computes, the split
+identity, the seed, and any data beyond the current instant.
 
 ## Splits
 
@@ -114,29 +129,78 @@ timestamp, resulting position, working orders, last trade price. Never a
 partially-formed bar. A strategy wanting finer intra-bar state subscribes to a finer
 timeframe — one rule instead of two.
 
-## Actions
+## The context API
 
-On any callback the strategy returns zero or more of: `Submit`, `Modify`, `Cancel`.
-Orders have persistent ids, assigned by the simulator and returned on
-`OrderAccepted`.
+On any callback the strategy calls methods on `ctx`. **Calls are queued, not
+applied**: the context records the intent, the callback returns, and the engine
+applies the queue. Nothing about the guarantees changes — the recorded intent
+list is exactly what the strategy used to return, so T+1 eligibility, the action
+cap and auditability are untouched.
 
-Order types: `market`, `limit`, `stop`, `stop_limit`, and **native bracket / OCO**.
-Brackets matter — entry with stop and target attached, armed atomically by the simulator
-at fill time. Otherwise a strategy filled at 12:30:05 sits unprotected until 12:35, and
-exits managed by strategy code is exactly where the historical fade artefact lived. When
-one leg of an OCO fills, the sibling is cancelled in the same instant, before any
-callback is delivered.
+Why a facade rather than returned structs. An LLM writes hundreds of these files,
+and `ctx.buy(...)` is the idiom in backtrader, zipline, QuantConnect and
+freqtrade — there is a great deal of it in training data, and assembling lists of
+dataclasses is not. One class with docstrings autocompletes and can be dumped as
+a reference the agent reads; a set of struct definitions cannot. And a method can
+reject `size=0` or a stop on the wrong side of the entry with a specific message
+at the moment of the mistake. Every malformed action was a wasted trial and a
+wasted entry in N; this converts some of them into corrected ones.
+
+```python
+class Strategy:
+    def setup(self, ctx: SetupContext) -> None:
+        ctx.subscribe("5m")
+        self.model = fit(ctx.train_bars("5m"))
+
+    def on_bars(self, ctx: BarContext) -> None:
+        bar = ctx.bars["5m"]
+        if self.signal(bar) > 0 and not ctx.position:
+            self.oid = ctx.buy(size=1, stop=bar.low - 25, target=bar.close + 100)
+
+    def on_fill(self, ctx: FillContext) -> None: ...
+    def on_lifecycle(self, ctx: LifecycleContext) -> None: ...
+```
+
+**Reads.** `ctx.bars[sub]` (the bar that just closed), `ctx.history(sub)` (a
+`HistoryView` that raises on reaching forward), `ctx.position`, `ctx.working_orders`,
+`ctx.fills` (since the previous callback), `ctx.last_price`, `ctx.ts` / `ctx.now`,
+`ctx.session`, `ctx.realized_pnl`, `ctx.unrealized_pnl`, `ctx.equity`.
+
+**Writes.** `ctx.buy(...)`, `ctx.sell(...)`, `ctx.close()`, `ctx.modify(oid, ...)`,
+`ctx.cancel(oid)`. Order methods **return the order id** so modify and cancel have
+something to reference; the id is allocated when the call is queued, not when it
+is applied.
+
+Order types: `market`, `limit`, `stop`, `stop_limit`, and **native bracket /
+OCO**. Brackets matter — entry with stop and target attached, armed atomically by
+the simulator at fill time. Otherwise a strategy filled at 12:30:05 sits
+unprotected until 12:35, and exits managed by strategy code is exactly where the
+historical fade artefact lived. When one leg of an OCO fills, the sibling is
+cancelled in the same instant, before any callback is delivered.
+
+Bracket levels may be given as **absolute prices** (`stop=`, `target=`) or as
+**distances from the fill** (`stop_offset=`, `target_offset=`). Mixing the two
+forms on one order is rejected. Absolute levels are checked against the last
+trade price at submission — the best estimate of the entry available then.
 
 Time in force: `IOC`, `FOK`, `GTC`, `GTD`, `DAY`.
 
-**[decided] Resting orders at a session boundary.** At session close: `DAY` orders are
-cancelled and reported as `LifecycleKind.DAY_EXPIRED`; `GTD` orders are cancelled if
-their expiry is at or before the close; `GTC` and unexpired `GTD` survive into the next
-session, including bracket legs, whose parent position also survives. `IOC` and `FOK`
-never rest. Positions are **not** flattened at the boundary — a strategy that wants to
-be flat overnight must say so, and the run record carries the end-of-session position so
-that an unintended overnight hold is visible rather than silent.
+**[decided] The context is valid only during its own callback.** A strategy can
+stash `ctx` in `setup()` and reach for it later; doing so raises
+`ContextExpired`. Otherwise a strategy could hold a context across the walk and
+read state from an instant it is not standing in.
 
+**[decided] Validation raises with a specific message**, at the call, naming the
+rule: a non-zero size, a stop below the entry for a long and above it for a
+short, a target on the opposite side, a limit price on a limit order, a known
+subscription, an order that is still working before a modify or cancel.
+Silent no-ops are the failure mode this replaces.
+
+**[decided] The action cap is checked when a call is queued**, not when the queue
+is applied, so an order dropped past the cap never consumes an id. Drops are
+counted and reported exactly as before.
+
+## Lifecycle events
 ## Lifecycle events
 
 Delivered on the same actionable channel as fills: `ORDER_ACCEPTED`, `ORDER_REJECTED`,
@@ -181,6 +245,39 @@ Two guards, both required and both implemented:
 - `src.strategies.*` cannot import `src.core.scorer`, enforced at import time and
   asserted statically over the source tree
 
+## The run entry point
+
+`src/strategies/current.py` is a library — no `main()`, nothing that runs itself.
+`run.py` runs it, and `run.py` is immutable:
+
+```
+run.py                                    <- immutable
+  reads config: dataset, split, fill model, seed, wall-clock budget
+  imports src.strategies.current
+  Engine(...).run()
+  score(blotter)                          <- the harness calls it, never the strategy
+  appends the run record to runs/ledger.jsonl
+```
+
+**[decided] Run configuration is immutable, for the same reason the scorer is.**
+Whoever chooses the split, the fill model and the seed can point a run at the
+holdout, select favorable fills, or retry until a lucky seed lands. None of those
+require touching the scorer and all three are cheaper ways to fake a result.
+Config comes from `config/`, never from the strategy and never from arguments the
+agent controls.
+
+**[decided] The agent may run evaluations, and every one counts.** An agent that
+cannot execute what it writes ships syntax errors into the loop, so it gets a
+fixed-config entry point: validation split only, no meaningful arguments, holdout
+unreachable. **Every invocation emits a ledger record**, whatever triggered it. If
+an agent can run fifty exploratory backtests, pick the best and present it as one
+candidate, then N is fiction and the multiple-testing argument collapses
+silently, in the one place nobody would look. Each record carries `trigger`
+(`harness` or `agent`) so the distinction is visible without being exploitable.
+
+This constrains the loop harness as much as the simulator, and it belongs in the
+spec its owner reads.
+
 ## Determinism
 
 Same data, same strategy, same seed → **byte-identical blotter**. The honest-N argument
@@ -207,10 +304,10 @@ class Dataset(Protocol):
     def digest(self) -> str: ...                 # pins the exact data a run used
 
 class Strategy(Protocol):
-    def setup(self, ctx: SetupContext) -> Sequence[Subscription]: ...
-    def on_bars(self, ev: BarEvent, ctx: RunContext) -> Sequence[Action]: ...
-    def on_fill(self, ev: FillEvent, ctx: RunContext) -> Sequence[Action]: ...
-    def on_lifecycle(self, ev: LifecycleEvent, ctx: RunContext) -> Sequence[Action]: ...
+    def setup(self, ctx: SetupContext) -> None: ...
+    def on_bars(self, ctx: BarContext) -> None: ...
+    def on_fill(self, ctx: FillContext) -> None: ...
+    def on_lifecycle(self, ctx: LifecycleContext) -> None: ...
 
 class FillModel(Protocol):
     requires: DataCapabilities

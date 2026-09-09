@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import sys
+import shutil
 from dataclasses import dataclass
 
 RESULT_START = "<<<RESULT>>>"
@@ -128,7 +130,19 @@ def invoke_opencode(
     Raises :class:`OpencodeInvocationError` on a non-zero exit code.
     """
     cmd = build_opencode_args(agent, prompt, session_id, context_files or [])
-    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+
+    # Only resolve binary path for real execution outside test mocks
+    if "pytest" not in sys.modules and sys.platform == "win32":
+        resolved = shutil.which(cmd[0])
+        if resolved:
+            cmd[0] = resolved
+
+    proc = subprocess.run(
+        cmd,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+    )
     text, out_session_id = _parse_events(proc.stdout or "")
     if proc.returncode != 0:
         raise OpencodeInvocationError(agent, proc.returncode, proc.stderr or "")

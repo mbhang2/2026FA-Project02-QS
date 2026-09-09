@@ -53,12 +53,18 @@ construction, entirely before the split it will be scored on.
 
 #### `ctx.subscribe(interval: 'str | int', *, emit_empty: 'bool' = False) -> 'Subscription'`
 
-Declare a bar subscription, e.g. `ctx.subscribe("5m")`.
+Declare a subscription.
 
-Bars anchor to the session open, are stamped with their open timestamp
-and delivered on close. Empty intervals are skipped unless
-`emit_empty=True`, which carries the previous close forward at zero
-volume.
+`ctx.subscribe("5m")` for time bars: anchored to the session open,
+stamped with their open timestamp, delivered on close. Empty intervals
+are skipped unless `emit_empty=True`, which carries the previous close
+forward at zero volume.
+
+`ctx.subscribe("tick")` for every trade event, which is what volume
+bars, dollar bars, tick imbalance and any order-flow feature need. It is
+expensive -- hundreds of thousands of callbacks a session -- and the
+wall-clock budget is what makes that an honest cost rather than a hidden
+one.
 
 #### `ctx.subscriptions() -> 'list[Subscription]'`
 
@@ -128,6 +134,14 @@ _(no docstring)_
 #### `ctx.sell(size: 'int' = 1, **kw) -> 'int | None'`
 
 _(no docstring)_
+
+#### `ctx.ticks() -> 'HistoryView[TickEvent]'`
+
+Every trade event seen so far, oldest first.
+
+Only populated when `setup()` subscribed to ticks -- the engine does not
+pay to retain them otherwise. Reaching at or beyond the current instant
+raises, exactly as for bars.
 
 ## `BarContext`
 

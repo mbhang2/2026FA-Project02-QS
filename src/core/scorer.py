@@ -52,7 +52,6 @@ def score(
     notional_base: float = 1.0,
     min_sessions: int = MIN_SESSIONS,
     min_downside_sessions: int = MIN_DOWNSIDE_SESSIONS,
-    fill_model_spread: float | None = None,
 ) -> ScoreTuple:
     """Sortino on per-session returns, with Sharpe and the shape moments beside it.
 
@@ -60,6 +59,10 @@ def score(
     it counts, including the ones the strategy sat out. Passing none at all is a
     programming error rather than a licence to score on trades: without a
     calendar there is no observation unit, so the result is the reject sentinel.
+
+    The fill-model spread is a diagnostic, not a term in the score, so it is
+    computed by `fill_model_spread()` and recorded rather than passed in here --
+    an argument this function accepted and never read.
     """
     if not period:
         return ScoreTuple(

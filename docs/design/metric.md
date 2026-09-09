@@ -425,3 +425,102 @@ forcing the loop to use Sharpe because that is what the maths supports.
 The version here approximates from the tabulated moments. An exact one resamples
 the stored draws, which the table deliberately does not keep in order to stay
 reviewable — worth revisiting when the committee is built.
+
+## Two statistical points, recorded because they are the first questions asked
+
+### The pool's exchangeability assumption, and what replaces it on real data
+
+The empirical null bootstraps N sessions from a pool of no-signal session
+returns, which assumes those sessions are **exchangeable**. That holds for the
+synthetic generator: sessions are seeded independently, and the reference
+strategy is flat at every boundary so no position links one to the next.
+
+**Real futures sessions are not obviously exchangeable.** Volatility clusters
+across days, a trend persists over weeks, and a strategy's session returns
+inherit both. An i.i.d. bootstrap over such a pool understates the variance of
+the N-session statistic and therefore sets thresholds too low — the failure is in
+the unsafe direction.
+
+The fix is a **block bootstrap**: resample contiguous blocks of sessions longer
+than the autocorrelation horizon rather than single sessions, in the stationary
+or circular variants (Politis & Romano). Block length is then a parameter that
+has to be chosen from the measured autocorrelation of the session-return series,
+and it belongs in the tabulation provenance beside the seed and trial count.
+
+**The method transfers; this particular table does not.** `threshold_for` and
+`far_for` are agnostic to how the draws were produced — only
+`null.tabulate` changes. Stated plainly here because a table built on the
+synthetic generator must not be carried across to the NQ adapter unexamined.
+
+### `far_for` returns a p-value, and that is worth saying out loud
+
+`far_for(score, n)` is the probability of seeing a score at least this good when
+there is nothing there. That is a p-value. It follows that **the ledger's FAR
+column is a table of p-values**, one per trial, computed against a null that was
+measured rather than assumed.
+
+Which means false-discovery control over it is off the shelf:
+
+- **Benjamini–Hochberg** over the column controls FDR at a chosen level;
+- **Holm** controls the family-wise error rate if that is preferred;
+- **expected-max deflation** — `null.expected_max(n_trials, n_sessions)` — is the
+  DSR-shaped version, and with an empirical null it works for any metric rather
+  than only for Sharpe.
+
+And **global N becomes the length of that column**, not a bespoke construction:
+every trial the harness ran, on every dataset, including the crashed and
+abandoned ones, is one p-value in the table.
+
+That reframing is worth more than it looks. It turns the project's central claim
+from "we built a gate" — which invites the question of whether the gate is any
+good — into "we log calibrated p-values and apply standard multiple-testing
+machinery to them", which is a far easier thing to defend, and whose failure
+modes are already documented in the statistics literature rather than in ours.
+
+The remaining bespoke part is the calibration itself: producing a p-value that is
+actually uniform under the null for a metric with no closed form. That is what
+Task 6 built, and it is the contribution.
+
+## Correction (Task 7): the root cause was the generator, not the bracket
+
+Task 6 attributed the fixed-bracket strategy's exploding loss tail — mean loss
+1.54 → 31.45 as the planted signal strengthened — to the bracket capping every
+win while a gapped stop lost more in a stronger trend, and fixed it with a
+volatility-scaled reference strategy. Task 7 made the generator carry price
+across session boundaries, and measured the same strategy again:
+
+| signal | mean win | mean loss | win/loss | overnight holds |
+|---|---|---|---|---|
+| 0.00 | 0.740 | −1.022 | 0.724 | 27.8 |
+| 0.50 | 0.740 | −1.024 | 0.723 | 21.0 |
+| 1.00 | 0.740 | −1.032 | 0.717 | 13.0 |
+| 1.50 | 0.740 | −1.022 | 0.724 | 5.0 |
+
+**The loss tail is flat.** With continuous prices the *fixed*-bracket strategy's
+payoff shape is already invariant to signal strength, and its acceptance curve is
+monotone: 0.00, 0.00, 0.00, 0.25, 1.00, 1.00, 1.00, 1.00
+(`ablation-fixed-bracket-continuous.json`).
+
+So the proximate description was right and the attribution was wrong. The cause
+was the generator restarting every session at the same price, and a strategy
+holding overnight realizing the whole of the previous session's drift as a loss
+that grew with the signal. The bracket was where the symptom surfaced.
+
+Two things follow, and neither is that Task 6 was wasted.
+
+The vol-scaled reference strategy is still the right apparatus. A bracket sized
+in absolute price will misbehave on real data whose volatility differs across
+regimes, and the rig should not be measuring that. It was fixing a real problem;
+it was not fixing *this* one.
+
+And the more useful lesson is about the rig rather than the metric: a
+diagnostic that separates metric behaviour from strategy behaviour found the
+strategy, correctly, and stopped there — because the dataset was not one of the
+things it was set up to vary. **The generator was apparatus too, and nothing was
+holding it to the same standard.** That is worth remembering before the first
+real adapter, where the dataset is no longer something anyone can inspect by
+reading forty lines of numpy.
+
+None of this moved the calibration: the null and the power curve are unchanged
+to floating point, because the reference strategy was already flat at every
+session boundary and so never crossed the discontinuity.

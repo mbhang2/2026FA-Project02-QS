@@ -41,6 +41,7 @@ from .types import (
     Side,
     Submit,
     Subscription,
+    TickEvent,
     TimeInForce,
     Ts,
 )
@@ -246,6 +247,16 @@ class BaseContext:
         self._check()
         return self._engine._avg_price
 
+    def ticks(self) -> HistoryView[TickEvent]:
+        """Every trade event seen so far, oldest first.
+
+        Only populated when `setup()` subscribed to ticks -- the engine does not
+        pay to retain them otherwise. Reaching at or beyond the current instant
+        raises, exactly as for bars.
+        """
+        self._check()
+        return self._engine.tick_history
+
     def history(self, sub: str | Subscription) -> HistoryView[Bar]:
         """Closed bars for a subscription, oldest first.
 
@@ -436,10 +447,28 @@ class _LatestBars:
 def _sub_id(sub: str | Subscription) -> str:
     if isinstance(sub, Subscription):
         return sub.sub_id
-    s = str(sub)
+    s = str(sub).strip()
+    if s.lower() in ("tick", "ticks"):
+        return "tick"
     if ":" in s:
         return s
     return f"time:{parse_interval(s)}"
+
+
+class TickContext(BaseContext):
+    """Delivered for every trade event, between the fill callbacks it may have
+    caused and the bar closes it may trigger."""
+
+    __slots__ = ("_tick",)
+
+    def __init__(self, engine, queue, *, tick: TickEvent, **kw):
+        super().__init__(engine, queue, **kw)
+        self._tick = tick
+
+    @property
+    def tick(self) -> TickEvent:
+        self._check()
+        return self._tick
 
 
 class BarContext(BaseContext):
@@ -522,15 +551,24 @@ class SetupContext:
         return self._dataset.name
 
     def subscribe(self, interval: str | int, *, emit_empty: bool = False) -> Subscription:
-        """Declare a bar subscription, e.g. `ctx.subscribe("5m")`.
+        """Declare a subscription.
 
-        Bars anchor to the session open, are stamped with their open timestamp
-        and delivered on close. Empty intervals are skipped unless
-        `emit_empty=True`, which carries the previous close forward at zero
-        volume.
+        `ctx.subscribe("5m")` for time bars: anchored to the session open,
+        stamped with their open timestamp, delivered on close. Empty intervals
+        are skipped unless `emit_empty=True`, which carries the previous close
+        forward at zero volume.
+
+        `ctx.subscribe("tick")` for every trade event, which is what volume
+        bars, dollar bars, tick imbalance and any order-flow feature need. It is
+        expensive -- hundreds of thousands of callbacks a session -- and the
+        wall-clock budget is what makes that an honest cost rather than a hidden
+        one.
         """
         self._check()
-        sub = Subscription(interval_ns=parse_interval(interval), emit_empty=emit_empty)
+        if isinstance(interval, str) and interval.strip().lower() in ("tick", "ticks"):
+            sub = Subscription(kind="tick", emit_empty=emit_empty)
+        else:
+            sub = Subscription(interval_ns=parse_interval(interval), emit_empty=emit_empty)
         for existing in self._subs:
             if existing.sub_id == sub.sub_id:
                 if existing.emit_empty != sub.emit_empty:
@@ -561,4 +599,8 @@ class SetupContext:
             if isinstance(interval, Subscription)
             else Subscription(interval_ns=parse_interval(interval))
         )
+        if not sub.is_bars:
+            raise ContextError(
+                "train_bars() aggregates; for raw train events use ctx.ticks()"
+            )
         return aggregate(self._train_ticks, sub, self._dataset)

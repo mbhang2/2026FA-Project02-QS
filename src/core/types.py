@@ -93,6 +93,10 @@ class Tick:
     size: int
     session: int          # session index; bars anchor to a session's first tick
     seq: int = 0          # position in the walk, assigned by the engine
+    # Aggressor. `None` where the feed does not say, which a strategy must handle
+    # rather than assume -- the alternative is silently treating "unknown" as
+    # "buy" in every order-flow feature ever written against it.
+    side: "Side | None" = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,23 +123,48 @@ class DataCapabilities:
         }
 
 
+SUBSCRIPTION_KINDS = ("time", "tick")
+
+
 @dataclass(frozen=True, slots=True)
 class Subscription:
-    """A request for aggregated data. MVP is time bars only; the `kind` tag is
-    what lets tick/volume/dollar bars slot in without touching the event loop."""
+    """A request for data. `kind` is what lets a new aggregation slot in.
 
-    interval_ns: int
+    `interval_ns` is optional because not every kind has one: a tick
+    subscription delivers every trade event and has nothing to bucket by. It was
+    a required positive integer until Task 7, which is the part that had to
+    change -- the implementation could have been added behind the old type only
+    by inventing a meaningless interval for ticks.
+
+    Volume, dollar and imbalance bars are the next kinds. They fit the same tag
+    without touching the event loop, which is the point of the tag.
+    """
+
+    interval_ns: int | None = None
     kind: str = "time"
     emit_empty: bool = False
     sub_id: str = ""
 
     def __post_init__(self) -> None:
-        if self.kind != "time":
-            raise NotImplementedError(f"MVP supports time bars only, not {self.kind!r}")
-        if self.interval_ns <= 0:
-            raise ValueError("interval_ns must be positive")
+        if self.kind not in SUBSCRIPTION_KINDS:
+            raise NotImplementedError(
+                f"unknown subscription kind {self.kind!r}; have {SUBSCRIPTION_KINDS}"
+            )
+        if self.kind == "time":
+            if self.interval_ns is None or self.interval_ns <= 0:
+                raise ValueError("a time subscription needs a positive interval_ns")
+        else:
+            if self.interval_ns is not None:
+                raise ValueError(f"a {self.kind} subscription has no interval")
+            if self.emit_empty:
+                raise ValueError(f"emit_empty means nothing for a {self.kind} subscription")
         if not self.sub_id:
-            object.__setattr__(self, "sub_id", f"{self.kind}:{self.interval_ns}")
+            suffix = "" if self.interval_ns is None else f":{self.interval_ns}"
+            object.__setattr__(self, "sub_id", f"{self.kind}{suffix}")
+
+    @property
+    def is_bars(self) -> bool:
+        return self.kind == "time"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -189,6 +218,29 @@ class BarEvent:
             if b.sub_id == sub_id:
                 return b
         return None
+
+
+@dataclass(frozen=True, slots=True)
+class TickEvent:
+    """Every trade event, for strategies that build their own representation.
+
+    The premise of the split is that the immutable side provides raw data and the
+    agent decides what to make of it. Time bars alone left the aggregation choice
+    being made for the agent: volume bars, dollar bars, tick imbalance,
+    cumulative delta and every order-flow feature need the events themselves.
+
+    Expensive by design. A few hundred thousand trades a session is tens of
+    millions of callbacks across a split, and the wall-clock budget is what
+    disciplines that -- a strategy wanting tick granularity pays for it in
+    trials, which is an honest trade rather than a hidden one.
+    """
+
+    ts: Ts
+    seq: int
+    price: float
+    size: int
+    side: Side | None      # aggressor; None where the feed does not say
+    session: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -437,6 +489,9 @@ class ScoreTuple:
 
 
 class Strategy(Protocol):
+    """`on_tick` is optional: a strategy that never subscribes to ticks does not
+    need to define it, and the engine does not call what is not there."""
+
     def setup(self, ctx: Any) -> Sequence[Subscription]: ...
     def on_bars(self, ev: BarEvent, ctx: Any) -> Sequence[Action]: ...
     def on_fill(self, ev: FillEvent, ctx: Any) -> Sequence[Action]: ...

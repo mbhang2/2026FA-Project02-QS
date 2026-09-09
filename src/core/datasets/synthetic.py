@@ -26,7 +26,7 @@ from typing import Iterator
 import numpy as np
 
 from ..dataset import Calendar, HoldoutLock, SplitBounds, sessions_for
-from ..types import NS_PER_SECOND, DataCapabilities, Split, Tick, Ts
+from ..types import NS_PER_SECOND, DataCapabilities, Side, Split, Tick, Ts
 
 SESSION_ORIGIN_NS = 1_700_000_000 * NS_PER_SECOND  # arbitrary, fixed, UTC
 
@@ -38,6 +38,13 @@ class SyntheticSpec:
     tick_spacing_ns: int = 30 * NS_PER_SECOND
     session_gap_ns: int = 17 * 3600 * NS_PER_SECOND
     start_price: float = 100.0
+    # Sessions used to restart at start_price, which put a discontinuity at every
+    # boundary: a position carried across it realized the whole previous
+    # session's drift. Measured at signal 1.0, same-session trades averaged +1.30
+    # and overnight ones -16.78. Prices now carry forward, with an optional
+    # overnight gap, so the process is continuous the way a real one is.
+    continuous_sessions: bool = True
+    overnight_gap_vol: float = 0.0
     tick_size: float = 0.25
     vol_per_tick: float = 0.02            # sd of the per-tick noise, in price units
     signal_strength: float = 0.0          # 0 = pure noise
@@ -127,6 +134,25 @@ class SyntheticDataset:
             n_sessions=n,
         )
 
+    def _session_open(self, session: int) -> float:
+        """Where a session starts.
+
+        Recursive by construction and memoised through the tick cache: session k
+        opens where session k-1 closed, plus an optional overnight gap. The
+        recursion is why `ticks()` for a late split still produces the same
+        prices as a full walk -- the opens are chained, not sampled.
+        """
+        if session <= 0 or not self.spec.continuous_sessions:
+            return self.spec.start_price
+        prev = self._session_ticks(session - 1)
+        close = prev[-1].price if prev else self.spec.start_price
+        if self.spec.overnight_gap_vol:
+            g = np.random.default_rng([self.spec.seed, session, 7]).normal(
+                0.0, self.spec.overnight_gap_vol
+            )
+            close += float(g)
+        return close
+
     def _session_ticks(self, session: int) -> list[Tick]:
         """Cached per session so a warmup replay and the live walk see identical
         bytes, and so two runs at the same seed are byte-identical."""
@@ -153,11 +179,25 @@ class SyntheticDataset:
                 if prev:
                     drift[i : i + k] = s.signal_strength * np.sign(prev) / k
 
-        path = s.start_price + np.cumsum(noise + drift)
+        path = self._session_open(session) + np.cumsum(noise + drift)
         # Round to the tick grid: a simulator that fills at unquantised prices
         # flatters any strategy whose edge is smaller than a tick.
         prices = np.round(path / s.tick_size) * s.tick_size
         sizes = rng.integers(1, 5, size=n)
+
+        # Aggressor from the tick rule: an uptick is a buy, a downtick a sell,
+        # an unchanged trade inherits the last classification. Not a claim about
+        # market microstructure -- it is a stand-in that makes order-flow
+        # features non-degenerate on synthetic data, and the real adapter has the
+        # field from the feed.
+        sides: list[Side | None] = []
+        last = None
+        for i in range(n):
+            if i and prices[i] > prices[i - 1]:
+                last = Side.BUY
+            elif i and prices[i] < prices[i - 1]:
+                last = Side.SELL
+            sides.append(last)
 
         out = [
             Tick(
@@ -165,6 +205,7 @@ class SyntheticDataset:
                 price=float(prices[i]),
                 size=int(sizes[i]),
                 session=session,
+                side=sides[i],
             )
             for i in range(n)
         ]

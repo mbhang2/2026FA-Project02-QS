@@ -69,9 +69,28 @@ record. Serving holdout without it raises `HoldoutLocked`.
 
 ## Subscriptions
 
-The strategy declares subscriptions in `setup()`. MVP supports **time bars only** at
-arbitrary intervals (1s, 30s, 1m, 5m, daily…). Tick, volume and dollar bars come later —
-the subscription type is a tagged union so they slot in without touching the event loop.
+The strategy declares subscriptions in `setup()`. Two kinds:
+
+**`ctx.subscribe("5m")` — time bars** at arbitrary intervals (1s, 30s, 1m, 5m,
+daily…).
+
+**`ctx.subscribe("tick")` — every trade event**: price, size, aggressor side,
+timestamp. Added in Task 7, because until then the agent could only subscribe to
+time bars and the aggregation choice was still being made for it. Volume bars,
+dollar bars, tick-imbalance bars, cumulative delta and every order-flow feature
+need the events themselves. Aggressor side is `None` where the feed does not
+say, which a strategy must handle rather than assume.
+
+It is **expensive by design**. A few hundred thousand trades a session is tens of
+millions of callbacks across a split, and the wall-clock budget is what
+disciplines it: a strategy wanting tick granularity pays for it in trials, which
+is an honest trade rather than a hidden one.
+
+**This was an API break, not an addition.** `Subscription.interval_ns` was a
+required positive integer; it is now optional, because a tick stream has nothing
+to bucket by and inventing an interval for it would have been the kind of lie
+that costs a coordinated break later. Volume and dollar bars fit the existing
+`kind` tag without further change.
 
 - Bars are **anchored to the session open**, not wall-clock.
 - A bar is **stamped with its open timestamp** but **delivered on close**. A bar opening
@@ -95,9 +114,15 @@ The simulator walks ticks. At each tick, in this order:
 
 1. **Resolve resting orders** against the tick via the fill model → `FillEvent`s.
 2. **Deliver fill callbacks.** Actionable.
-3. **If this tick's timestamp crosses one or more subscribed bar boundaries**, close
+3. **Deliver the tick event**, if subscribed. Actionable.
+4. **If this tick's timestamp crosses one or more subscribed bar boundaries**, close
    those bars and deliver **one** `BarEvent` carrying every bar that closed at that
    timestamp. Actionable.
+
+Fills first because a strategy should learn about its own fill before being asked
+to react to the trade that caused it. The tick before the bars because the tick
+that closes a bar belongs to the *next* bar — delivering it after the close would
+report it out of order.
 
 Bar closure is triggered by the first tick with `ts >= boundary`; bar contents are ticks
 in `[start, boundary)`. The triggering tick belongs to the *next* bar.
@@ -118,6 +143,25 @@ whose eligibility has not been reached. Asserted and tested.
 **A strategy cannot read at or beyond its current index.** History is served through a
 view whose `__getitem__` raises `LookaheadError` for any position at or past the cursor.
 The most recent readable element is the bar that just closed.
+
+**[decided] The wall-clock budget is enforced, and an abandoned run is a trial.**
+`wall_clock_budget_s` comes from the run profile. The action cap protects against
+a ping-pong bug; it does not protect against an O(n²) feature recomputation,
+which is the likelier failure once a strategy computes features from raw ticks. A
+nightly loop of hundreds of runs becomes a nightly loop of three if one strategy
+can spin. On overrun the run terminates and emits a ledger record with outcome
+`abandoned_on_budget` — not `crashed`, because nothing went wrong except that the
+strategy was too slow, and the distinction matters when reading the ledger. The
+clock is checked every 4,096 ticks *and* every 32 callbacks, since a slow
+strategy is slow in callbacks.
+
+**[decided] `reduce_only` is enforced.** It was accepted, carried on the order and
+checked nowhere: a strategy passing it on an oversized order got a position flip
+and no complaint. It is now clamped to the current position, rejected when flat,
+and rejected when it would increase exposure. A parameter that is accepted and
+silently ignored is worse than an absent one, because the strategy believes it
+took effect — the same sweep fixed GTD orders, which expired only at a session
+boundary and so rested through any mid-session expiry.
 
 **[decided] Cap actions per tick at 64**, and log every hit in the run record. A
 ping-pong bug — fill, modify, fill, modify — otherwise hangs the run and the wall-clock
@@ -180,8 +224,17 @@ cancelled in the same instant, before any callback is delivered.
 
 Bracket levels may be given as **absolute prices** (`stop=`, `target=`) or as
 **distances from the fill** (`stop_offset=`, `target_offset=`). Mixing the two
-forms on one order is rejected. Absolute levels are checked against the last
-trade price at submission — the best estimate of the entry available then.
+forms on one order is rejected.
+
+**Prefer offsets on a market order.** They resolve at the fill, so there is no
+side to get wrong. Absolute levels on a market order are checked against the last
+trade price at submission, which is the best estimate available then and still
+permits the bracket to arm on the wrong side after a T+1 fill at a different
+price. **Known limitation:** in that case the simulator arms the level anyway and
+the position is stopped out on the next tick. That is punitive, and deliberately
+so — the test for an ambiguity is whether it favours the strategy, and this one
+does not. Absolute levels are the right form for a limit entry, where the entry
+price is known at submission.
 
 Time in force: `IOC`, `FOK`, `GTC`, `GTD`, `DAY`.
 
@@ -265,6 +318,15 @@ holdout, select favorable fills, or retry until a lucky seed lands. None of thos
 require touching the scorer and all three are cheaper ways to fake a result.
 Config comes from `config/`, never from the strategy and never from arguments the
 agent controls.
+
+**[decided] The strategy source is stored beside the ledger row.** `strategy_digest`
+identifies a trial; it does not reproduce one. To re-run trial 47 you need its
+source, and at that moment the source was uncommitted and is now gone.
+`runs/sources/<digest>.py` is content-addressed, so a hundred runs of one
+strategy cost one copy, and `scripts/replay.py <ledger> <row> --check` reproduces
+the blotter digest from it. Without this, "every trial is reproducible" held only
+for accepted trials that survived to a commit — and the rejected ones are exactly
+what N counts.
 
 **[decided] The agent may run evaluations, and every one counts.** An agent that
 cannot execute what it writes ships syntax errors into the loop, so it gets a

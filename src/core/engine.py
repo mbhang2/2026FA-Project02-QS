@@ -4,13 +4,17 @@ Ordering within a tick, and why it is this order:
 
 1. resolve resting orders against the tick  -> FillEvents
 2. deliver fill callbacks                    (actionable)
-3. deliver one BarEvent for every bar that closed at this timestamp (actionable)
+3. deliver the tick event, if subscribed     (actionable)
+4. deliver one BarEvent for every bar that closed at this timestamp (actionable)
 
-Fills before bars because a fill is a fact about this tick and a bar is a summary
-of ticks that ended before it. One BarEvent rather than one per timeframe,
-because if a 5m and a 1m bar both close at 09:35 and arrive separately, the
-ordering between them becomes a hidden variable that affects results and is
-recorded nowhere.
+Fills before everything because a fill is a fact about this tick, and a strategy
+should learn about its own fill before being asked to react to the trade that
+caused it. The tick before the bars because a bar is a summary of ticks that
+ended before this one -- the tick that closes a bar belongs to the next bar, so
+delivering it after the close would report it out of order. One BarEvent rather
+than one per timeframe, because if a 5m and a 1m bar both close at 09:35 and
+arrive separately, the ordering between them becomes a hidden variable that
+affects results and is recorded nowhere.
 
 Everything a strategy submits at tick T becomes eligible at T+1, strictly after.
 Without that a strategy fills at the close of the bar it just saw, which is a
@@ -20,7 +24,7 @@ clean one-bar lookahead producing beautiful and entirely fake results.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Iterable, Sequence
 
 from .bars import BarBuilder
@@ -30,6 +34,7 @@ from .context import (
     IntentQueue,
     LifecycleContext,
     SetupContext,
+    TickContext,
 )
 from .dataset import Dataset
 from .fills import FillModel, check_capabilities, get_fill_model
@@ -54,12 +59,37 @@ from .types import (
     Submit,
     Subscription,
     Tick,
+    TickEvent,
     TimeInForce,
     Ts,
 )
-from .view import BarHistory
+from .view import BarHistory, HistoryView
 
 DEFAULT_ACTION_CAP = 64
+
+# How often the walk looks at the clock. Every tick would be a syscall per tick.
+# Counted in ticks *and* in callbacks, because a slow strategy is slow in
+# callbacks: a tick-only counter lets a strategy sleeping in on_bars overshoot
+# its budget several times over before anyone looks.
+BUDGET_CHECK_EVERY_TICKS = 4096
+BUDGET_CHECK_EVERY_CALLBACKS = 32
+
+
+class BudgetExceeded(RuntimeError):
+    """The run outlived its wall-clock budget and was abandoned.
+
+    The action cap protects against a ping-pong bug; it does not protect against
+    an O(n^2) feature recomputation, which is the likelier failure once a
+    strategy computes features from raw ticks. A nightly loop of hundreds of runs
+    becomes a nightly loop of three if one strategy can spin.
+    """
+
+    def __init__(self, budget_s: float, elapsed_s: float, ticks: int):
+        self.budget_s, self.elapsed_s, self.ticks = budget_s, elapsed_s, ticks
+        super().__init__(
+            f"abandoned after {elapsed_s:.1f}s against a {budget_s:g}s budget "
+            f"({ticks:,} ticks in)"
+        )
 
 
 @dataclass
@@ -80,11 +110,13 @@ class RunRecord:
     actions_dropped: int
     warmup_actions_ignored: int
     ticks: int
+    tick_events_delivered: int
     bars_delivered: int
     fills: int
     outcome: str
     error: str | None
     warmup_sessions: int
+    wall_clock_budget_s: float | None
     end_of_session_positions: dict[str, int]
     holdout_unlock_reason: str | None
     blotter_digest: str
@@ -146,6 +178,7 @@ class Engine:
         commission_per_contract: float = 0.01,
         action_cap: int = DEFAULT_ACTION_CAP,
         seed: int | None = None,
+        wall_clock_budget_s: float | None = None,
     ):
         self.dataset = dataset
         self.strategy = strategy
@@ -158,6 +191,9 @@ class Engine:
         self.commission = commission_per_contract
         self.action_cap = action_cap
         self.seed = seed
+        self.wall_clock_budget_s = wall_clock_budget_s
+        self._deadline: float | None = None
+        self._callbacks = 0
 
         self.blotter = Blotter()
         self.orders: dict[int, Order] = {}
@@ -173,6 +209,9 @@ class Engine:
         self.actions_dropped = 0
         self.warmup_actions_ignored = 0
         self._fills_since_callback: list = []
+        self.tick_history: HistoryView = HistoryView()
+        self._tick_subscribed = False
+        self.n_tick_events = 0
         self.n_ticks = 0
         self.n_bars = 0
         self.n_fills = 0
@@ -182,8 +221,16 @@ class Engine:
     def run(self) -> RunRecord:
         started = time.monotonic()
         outcome, error = "completed", None
+        self._deadline = (
+            started + self.wall_clock_budget_s if self.wall_clock_budget_s else None
+        )
         try:
             self._run_inner()
+        except BudgetExceeded as exc:
+            # An abandoned run is a trial and must be counted. It is not a crash:
+            # nothing went wrong except that the strategy was too slow, and the
+            # distinction matters when reading the ledger.
+            outcome, error = "abandoned_on_budget", str(exc)
         except Exception as exc:  # a crash is a ledger row, not a lost trial
             outcome, error = "crashed", f"{type(exc).__name__}: {exc}"
             raise
@@ -217,15 +264,25 @@ class Engine:
             )
         # Stable order: interval ascending, then id. The single-callback rule is
         # only meaningful if the bars inside it arrive the same way every run.
-        subs.sort(key=lambda s: (s.interval_ns, s.sub_id))
+        # ticks first, then bars by interval: a stable order for the record, and
+        # the delivery order is pinned separately in the walk below
+        subs.sort(key=lambda s: (s.interval_ns is not None, s.interval_ns or 0, s.sub_id))
         self.subs = subs
-        self.builders = {s.sub_id: BarBuilder(s) for s in subs}
-        self.history = BarHistory([s.sub_id for s in subs])
+        bar_subs = [s for s in subs if s.is_bars]
+        self._tick_subscribed = any(not s.is_bars for s in subs)
+        if self._tick_subscribed and not hasattr(self.strategy, "on_tick"):
+            raise TypeError(
+                "the strategy subscribed to ticks but has no on_tick(ctx) callback"
+            )
+        self.builders = {s.sub_id: BarBuilder(s) for s in bar_subs}
+        self.history = BarHistory([s.sub_id for s in bar_subs])
 
         session = None
         for seq, tick in enumerate(self.dataset.ticks(self.split, warmup=self.warmup_sessions)):
-            tick = Tick(tick.ts, tick.price, tick.size, tick.session, seq)
+            tick = Tick(tick.ts, tick.price, tick.size, tick.session, seq, tick.side)
             self.n_ticks += 1
+            if self._deadline and seq % BUDGET_CHECK_EVERY_TICKS == 0:
+                self._check_budget()
 
             if tick.session != session:
                 if session is not None:
@@ -244,10 +301,20 @@ class Engine:
                 self._fills_since_callback.append(ev)
                 self._dispatch("fill", ev, tick, actionable)
 
-            # 3. bars that closed at this timestamp, in one callback
+            # 3. the tick itself, before any bar it closes
+            if self._tick_subscribed:
+                ev = TickEvent(
+                    ts=tick.ts, seq=tick.seq, price=tick.price, size=tick.size,
+                    side=tick.side, session=tick.session,
+                )
+                self.tick_history._append(ev)
+                self.n_tick_events += 1
+                self._dispatch("tick", ev, tick, actionable)
+
+            # 4. bars that closed at this timestamp, in one callback
             closed: list[Bar] = []
-            for s in self.subs:
-                closed.extend(self.builders[s.sub_id].bars_closed_by(tick))
+            for s in self.builders.values():
+                closed.extend(s.bars_closed_by(tick))
             if closed:
                 closed.sort(key=lambda b: (b.close_ts, b.sub_id))
                 for b in closed:
@@ -257,8 +324,8 @@ class Engine:
                 self._dispatch("bars", ev, tick, actionable)
 
             # the triggering tick belongs to the next bar
-            for s in self.subs:
-                self.builders[s.sub_id].add(tick)
+            for builder in self.builders.values():
+                builder.add(tick)
 
             # lifecycle events raised while resolving are delivered last so the
             # strategy has already seen the fill that caused them
@@ -273,13 +340,13 @@ class Engine:
     # ---- sessions ---------------------------------------------------------- #
     def _open_session(self, session: int, tick: Tick) -> None:
         start, _ = self.dataset.session_bounds(session)
-        for s in self.subs:
-            self.builders[s.sub_id].start_session(session, start)
+        for builder in self.builders.values():
+            builder.start_session(session, start)
         self._emit(LifecycleKind.SESSION_OPEN, tick.ts, tick.seq)
 
     def _close_session(self, session: int, seq: int, *, actionable: bool) -> None:
         _, close_ts = self.dataset.session_bounds(session)
-        tail = [b for s in self.subs if (b := self.builders[s.sub_id].flush_session())]
+        tail = [b for bl in self.builders.values() if (b := bl.flush_session())]
         if tail:
             tail.sort(key=lambda b: (b.close_ts, b.sub_id))
             for b in tail:
@@ -319,6 +386,16 @@ class Engine:
                 continue
             if tick.seq < order.eligible_from_seq:
                 continue  # the T+1 rule
+            if (
+                order.tif is TimeInForce.GTD
+                and order.expire_ts is not None
+                and tick.ts >= order.expire_ts
+            ):
+                # Until Task 7 this was only checked at a session boundary, so a
+                # GTD order expiring mid-session rested on regardless -- accepted,
+                # carried, and quietly not done.
+                self._cancel(order, LifecycleKind.GTD_EXPIRED, tick.ts, tick.seq)
+                continue
             if order.status is OrderStatus.PENDING:
                 order.status = OrderStatus.WORKING
 
@@ -507,6 +584,39 @@ class Engine:
         self._emit(LifecycleKind.ORDER_ACCEPTED, tick.ts, tick.seq, oid)
         return order
 
+    def _clamp_reduce_only(self, s: Submit, tick: Tick, oid: int) -> Submit | None:
+        """A reduce-only order may not open or increase exposure.
+
+        Accepted, carried on the order and checked nowhere until Task 7: a
+        strategy passing reduce_only=True on an oversized order got a position
+        flip and no complaint. A parameter that is accepted and silently ignored
+        is worse than an absent one, because the strategy believes it took
+        effect.
+        """
+        pos = self.position
+        if pos == 0:
+            self._emit(
+                LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, oid,
+                "reduce_only with no position open",
+            )
+            return None
+        if (pos > 0) == (s.side is Side.BUY):
+            self._emit(
+                LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, oid,
+                f"reduce_only {s.side} would increase a position of {pos}",
+            )
+            return None
+        # Working reduce-only orders already spoken for -- a bracket's stop and
+        # target are both reduce-only against the same position, and clamping
+        # each to the full size is correct because only one of them can fill.
+        if s.size > abs(pos):
+            self._emit(
+                LifecycleKind.ORDER_ACCEPTED, tick.ts, tick.seq, oid,
+                f"reduce_only size clamped from {s.size} to {abs(pos)}",
+            )
+            return replace(s, size=abs(pos))
+        return s
+
     def _cancel(self, order: Order, kind: LifecycleKind, ts: Ts, seq: int) -> None:
         order.status = (
             OrderStatus.EXPIRED
@@ -519,6 +629,15 @@ class Engine:
         return tuple(sorted(o.order_id for o in self.orders.values() if o.is_working))
 
     # ---- callbacks and actions ---------------------------------------------- #
+    def _check_budget(self) -> None:
+        now = time.monotonic()
+        if now > self._deadline:
+            raise BudgetExceeded(
+                self.wall_clock_budget_s,
+                now - (self._deadline - self.wall_clock_budget_s),
+                self.n_ticks,
+            )
+
     def _dispatch(self, kind: str, event, tick: Tick, actionable: bool) -> None:
         """Build the callback's context, run the callback, apply what it queued.
 
@@ -537,12 +656,19 @@ class Engine:
         if kind == "bars":
             ctx = BarContext(self, queue, event=event, **common)
             handler = self.strategy.on_bars
+        elif kind == "tick":
+            ctx = TickContext(self, queue, tick=event, **common)
+            handler = self.strategy.on_tick
         elif kind == "fill":
             ctx = FillContext(self, queue, fill=event, **common)
             handler = self.strategy.on_fill
         else:
             ctx = LifecycleContext(self, queue, event=event, **common)
             handler = self.strategy.on_lifecycle
+
+        self._callbacks += 1
+        if self._deadline and self._callbacks % BUDGET_CHECK_EVERY_CALLBACKS == 0:
+            self._check_budget()
 
         try:
             handler(ctx)
@@ -565,6 +691,10 @@ class Engine:
     ) -> None:
         for a, oid in actions:
             if isinstance(a, Submit):
+                if a.reduce_only:
+                    a = self._clamp_reduce_only(a, tick, oid)
+                    if a is None:
+                        continue
                 self._new_order(a, tick, order_id=oid)
             elif isinstance(a, Cancel):
                 o = self.orders.get(a.order_id)
@@ -588,6 +718,12 @@ class Engine:
                 if a.stop_price is not None:
                     o.stop_price = a.stop_price
                 if a.size is not None:
+                    if a.size <= o.filled_size:
+                        self._emit(
+                            LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, a.order_id,
+                            f"cannot resize to {a.size}: {o.filled_size} already filled",
+                        )
+                        continue
                     o.size = a.size
                 # A modified order is a new intent and re-enters the queue under
                 # the same T+1 rule.
@@ -643,11 +779,13 @@ class Engine:
             actions_dropped=self.actions_dropped,
             warmup_actions_ignored=self.warmup_actions_ignored,
             ticks=self.n_ticks,
+            tick_events_delivered=self.n_tick_events,
             bars_delivered=self.n_bars,
             fills=self.n_fills,
             outcome=outcome,
             error=error,
             warmup_sessions=self.warmup_sessions,
+            wall_clock_budget_s=self.wall_clock_budget_s,
             end_of_session_positions=dict(self.end_of_session_positions),
             holdout_unlock_reason=(lock.reason or None) if lock else None,
             blotter_digest=self.blotter.digest(),

@@ -51,4 +51,6 @@ jobs:
           python scripts/inventory.py --help > /dev/null
           python scripts/probe_dbn.py --help > /dev/null
           python scripts/calibrate.py --help > /dev/null
+          python scripts/tabulate_null.py --help > /dev/null
+          python scripts/replay.py --help > /dev/null
           python run.py --help > /dev/null

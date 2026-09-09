@@ -354,29 +354,30 @@ def test_the_spread_between_fill_models_has_the_right_sign_at_scale():
 
 
 @pytest.mark.slow
-def test_the_sweep_turns_over_at_high_signal_and_the_cause_is_the_payoff():
-    """The screening criterion fails at the strongest planted signal, and this
-    records why rather than trimming the sweep to where it passes.
+def test_the_loss_tail_no_longer_widens_with_signal_strength():
+    """Records the corrected attribution, and fails if it regresses.
 
-    `MomentumStrategy` has a fixed 0.75 bracket, so every win is capped -- while a
-    stop gapped through under the pessimistic fill model loses more the stronger
-    the trend. Past a point the loss tail grows faster than the edge, session
-    dispersion outruns session mean, and any mean-over-risk ratio must fall. That
-    is the metric behaving correctly on a payoff that genuinely got riskier;
-    `test_sortino_is_monotone_in_edge_when_the_risk_profile_is_held_fixed` in
-    tests/test_metrics.py shows the metric itself is monotone.
+    Task 4 measured the fixed-bracket strategy's mean loss growing from 1.54 to
+    31.45 as the planted signal strengthened, and attributed it to the bracket
+    capping every win while a gapped stop lost more in a stronger trend. Task 6
+    accepted that reading and fixed it with a volatility-scaled reference
+    strategy. Task 7 made the generator carry price across sessions, and the loss
+    tail flattened for the *fixed*-bracket strategy too -- mean loss steady near
+    1.02 at every signal strength.
 
-    If someone gives the strategy a volatility-scaled bracket this test should
-    start failing, and the sweep should then be monotone through 1.0.
+    So the proximate description was right and the root cause was not the
+    bracket: it was the generator restarting each session at the same price, and
+    a strategy holding overnight realizing the whole of the previous session's
+    drift. The vol-scaled reference is still the right apparatus -- a bracket
+    that ignores volatility will misbehave on real data whose regimes differ --
+    but it was fixing a symptom whose cause was elsewhere.
     """
     import statistics as st
 
-    from src.core import metrics
-
     stats = {}
-    for sig in (0.75, 1.0):
+    for sig in (0.0, 0.5, 1.0):
         wins, losses = [], []
-        for seed in (1, 2, 3, 4):
+        for seed in (1, 2):
             eng = Engine(
                 SyntheticDataset(SyntheticSpec(n_sessions=175, ticks_per_session=390,
                                                vol_per_tick=0.15, signal_strength=sig,
@@ -390,10 +391,12 @@ def test_the_sweep_turns_over_at_high_signal_and_the_cause_is_the_payoff():
             losses += [c for c in closes if c <= 0]
         stats[sig] = (st.mean(wins), st.mean(losses))
 
-    (win_lo, loss_lo), (win_hi, loss_hi) = stats[0.75], stats[1.0]
-    assert win_hi == pytest.approx(win_lo, rel=0.05), (
-        "the upside is no longer capped by the bracket, so the diagnosis has changed"
+    ratios = [w / abs(l) for w, l in stats.values()]
+    assert max(ratios) / min(ratios) < 1.1, (
+        f"the payoff shape moves with signal strength again: {stats}. "
+        "If the generator stopped carrying price across sessions, that is why."
     )
-    assert loss_hi < loss_lo * 1.5, (
-        f"the loss tail did not widen with signal strength: {loss_lo} -> {loss_hi}"
+    losses = [abs(l) for _, l in stats.values()]
+    assert max(losses) / min(losses) < 1.1, (
+        f"the loss tail is widening with signal strength again: {stats}"
     )

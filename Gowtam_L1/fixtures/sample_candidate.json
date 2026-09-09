@@ -1,0 +1,11 @@
+{
+  "candidate_id": "cand_momentum_20d",
+  "hypothesis": "A simple 20-day momentum signal on the given asset produces positive risk-adjusted returns over the validation window.",
+  "source_paper_ref": null,
+  "asset_ids": ["asset_a"],
+  "start": "2024-01-01",
+  "train_end": "2024-02-01",
+  "val_end": "2024-03-01",
+  "end": "2024-04-01",
+  "prior_context": []
+}

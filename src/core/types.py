@@ -8,6 +8,7 @@ comment below says "the reason", the spec has the longer version.
 from __future__ import annotations
 
 import enum
+import math
 from dataclasses import dataclass, field
 from typing import Any, Protocol, Sequence
 
@@ -366,22 +367,54 @@ class Blotter:
 
 @dataclass(frozen=True, slots=True)
 class ScoreTuple:
-    """Placeholder metric. The interface is fixed; the metric is [open] -- it must
-    become invariant to turnover, leverage, universe size and decision frequency."""
+    """What the loop accepts or rejects on.
 
+    `primary` is the single scalar -- Sortino on per-session returns. Sharpe,
+    skew and kurtosis ride along on the same series because DSR and PBO are
+    defined for Sharpe, and a committee with nothing to deflate is awkward to
+    retrofit. `rejected` carries the observation floor: below it the ratio is not
+    a measurement, and `primary` is the reject sentinel rather than a large
+    number computed from a handful of sessions.
+    """
+
+    primary: float
+    sharpe: float
+    skew: float
+    kurtosis: float
+    n_sessions: int
     net_pnl: float
     trade_count: int
-    mean_return_per_trade: float
-    vol_normalized_return: float
-    t_stat: float
+    rejected: bool = False
+    reject_reason: str = ""
+    metric: str = "sortino_per_session"
 
-    def as_dict(self) -> dict[str, float | int]:
+    @property
+    def significance(self) -> float:
+        """The t-like quantity the accept rule thresholds: ratio x sqrt(N).
+
+        Exact for Sharpe, an approximation for Sortino, and stated as such -- it
+        is here so the Task 3 threshold of 3.0 could be carried over unchanged
+        rather than tuned to make a curve look better.
+        """
+        if self.rejected or self.n_sessions <= 0 or self.primary == float("-inf"):
+            return float("-inf")
+        if self.primary == float("inf"):
+            return float("inf")
+        return self.primary * math.sqrt(self.n_sessions)
+
+    def as_dict(self) -> dict:
         return {
+            "metric": self.metric,
+            "primary": self.primary,
+            "significance": self.significance,
+            "sharpe": self.sharpe,
+            "skew": self.skew,
+            "kurtosis": self.kurtosis,
+            "n_sessions": self.n_sessions,
             "net_pnl": self.net_pnl,
             "trade_count": self.trade_count,
-            "mean_return_per_trade": self.mean_return_per_trade,
-            "vol_normalized_return": self.vol_normalized_return,
-            "t_stat": self.t_stat,
+            "rejected": self.rejected,
+            "reject_reason": self.reject_reason,
         }
 
 

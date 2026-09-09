@@ -202,7 +202,7 @@ def test_importing_the_scorer_from_a_strategy_module_raises(tmp_path):
             capture_output=True, text=True, cwd=REPO_ROOT,
         )
         assert r.returncode != 0
-        assert "may not import src.core.scorer" in r.stderr
+        assert "may not import src.core" in r.stderr, r.stderr[-400:]
     finally:
         probe.unlink(missing_ok=True)
 
@@ -258,12 +258,16 @@ def test_agent_path_check_exits_nonzero_on_a_core_diff():
 # --------------------------------------------------------------------------- #
 # 7 & 8. two-sided calibration
 # --------------------------------------------------------------------------- #
-CAL = dict(n_sessions=40, vol_per_tick=0.15)
+# 175 sessions so the validation split clears the pre-registered 30-session floor
+# (0.2 x 175 = 35), with half-length sessions so the sweep is affordable in a
+# test. The committed curves in data/calibration/ use the full configuration.
+CAL = dict(n_sessions=175, ticks_per_session=390, vol_per_tick=0.15)
+SEEDS = range(1, 7)
 
 
 def test_null_the_gate_accepts_essentially_nothing():
     rate, results = acceptance_rate(
-        MomentumStrategy, signal_strength=0.0, seeds=range(1, 13),
+        MomentumStrategy, signal_strength=0.0, seeds=SEEDS,
         rule=AcceptRule(t_min=3.0), **CAL,
     )
     assert any(r.score.trade_count > 0 for r in results), "no trades, so no null test"
@@ -272,7 +276,7 @@ def test_null_the_gate_accepts_essentially_nothing():
 
 def test_power_the_gate_finds_a_planted_signal():
     strong, _ = acceptance_rate(
-        MomentumStrategy, signal_strength=0.75, seeds=range(1, 13),
+        MomentumStrategy, signal_strength=0.75, seeds=SEEDS,
         rule=AcceptRule(t_min=3.0), **CAL,
     )
     assert strong >= 0.5, f"only {strong:.0%} acceptance on a strong planted signal"
@@ -280,15 +284,17 @@ def test_power_the_gate_finds_a_planted_signal():
 
 @pytest.mark.slow
 def test_power_curve_is_monotone_in_signal_strength():
-    seeds = range(1, 13)
     curve = []
     for s in (0.0, 0.25, 0.5, 0.75):
         rate, _ = acceptance_rate(
-            MomentumStrategy, signal_strength=s, seeds=seeds,
+            MomentumStrategy, signal_strength=s, seeds=SEEDS,
             rule=AcceptRule(t_min=3.0), **CAL,
         )
         curve.append(rate)
-    assert curve == sorted(curve), f"power curve is not monotone: {curve}"
+    # The screening criterion for any metric: monotone in planted signal
+    # strength. If it is not, the metric is wrong -- the threshold does not move
+    # to hide it. This is the test the placeholder per-trade t failed.
+    assert curve == sorted(curve), f"acceptance is not monotone in signal: {curve}"
     assert curve[0] == 0.0 and curve[-1] > 0.5
 
 
@@ -336,12 +342,59 @@ def test_the_spread_between_fill_models_has_the_right_sign_at_scale():
         out = {}
         for model in ("favorable", "unfavorable"):
             eng = Engine(
-                SyntheticDataset(SyntheticSpec(n_sessions=60, vol_per_tick=0.15,
+                SyntheticDataset(SyntheticSpec(n_sessions=200, vol_per_tick=0.15,
                                                signal_strength=s, seed=1)),
                 MomentumStrategy(), split=Split.VALIDATION, fill_model=model,
             )
             eng.run()
-            out[model] = score(eng.blotter)
-        assert out["favorable"].mean_return_per_trade >= (
-            out["unfavorable"].mean_return_per_trade
-        ), f"unfavorable beat favorable at signal {s}: {out}"
+            out[model] = score(eng.blotter, period=eng.session_calendar())
+        assert out["favorable"].net_pnl >= out["unfavorable"].net_pnl, (
+            f"unfavorable beat favorable at signal {s}: "
+            f"{out['favorable'].net_pnl} vs {out['unfavorable'].net_pnl}"
+        )
+
+
+@pytest.mark.slow
+def test_the_sweep_turns_over_at_high_signal_and_the_cause_is_the_payoff():
+    """The screening criterion fails at the strongest planted signal, and this
+    records why rather than trimming the sweep to where it passes.
+
+    `MomentumStrategy` has a fixed 0.75 bracket, so every win is capped -- while a
+    stop gapped through under the pessimistic fill model loses more the stronger
+    the trend. Past a point the loss tail grows faster than the edge, session
+    dispersion outruns session mean, and any mean-over-risk ratio must fall. That
+    is the metric behaving correctly on a payoff that genuinely got riskier;
+    `test_sortino_is_monotone_in_edge_when_the_risk_profile_is_held_fixed` in
+    tests/test_metrics.py shows the metric itself is monotone.
+
+    If someone gives the strategy a volatility-scaled bracket this test should
+    start failing, and the sweep should then be monotone through 1.0.
+    """
+    import statistics as st
+
+    from src.core import metrics
+
+    stats = {}
+    for sig in (0.75, 1.0):
+        wins, losses = [], []
+        for seed in (1, 2, 3, 4):
+            eng = Engine(
+                SyntheticDataset(SyntheticSpec(n_sessions=175, ticks_per_session=390,
+                                               vol_per_tick=0.15, signal_strength=sig,
+                                               seed=seed)),
+                MomentumStrategy(), split=Split.VALIDATION, warmup_sessions=1,
+            )
+            eng.run()
+            closes = [r.realized_pnl - r.commission for r in eng.blotter.rows
+                      if r.realized_pnl != 0.0]
+            wins += [c for c in closes if c > 0]
+            losses += [c for c in closes if c <= 0]
+        stats[sig] = (st.mean(wins), st.mean(losses))
+
+    (win_lo, loss_lo), (win_hi, loss_hi) = stats[0.75], stats[1.0]
+    assert win_hi == pytest.approx(win_lo, rel=0.05), (
+        "the upside is no longer capped by the bracket, so the diagnosis has changed"
+    )
+    assert loss_hi < loss_lo * 1.5, (
+        f"the loss tail did not widen with signal strength: {loss_lo} -> {loss_hi}"
+    )

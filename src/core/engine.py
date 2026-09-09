@@ -116,6 +116,7 @@ class RunRecord:
     holdout_unlock_reason: str | None
     blotter_digest: str
     score: dict | None = None
+    diagnostics: dict | None = None
 
     def as_dict(self) -> dict:
         return {k: getattr(self, k) for k in self.__dataclass_fields__}
@@ -591,6 +592,20 @@ class Engine:
             batch, self._pending_events = self._pending_events, []
             for ev in batch:
                 self._dispatch(self.strategy.on_lifecycle, ev, tick, actionable)
+
+    def scored_sessions(self) -> list[int]:
+        """The actionable sessions of the served split -- the observation unit
+        the metric scores on. Warmup sessions are excluded: the strategy saw
+        their bars but could not act, so they are not observations."""
+        from .dataset import sessions_for
+
+        _, live = sessions_for(self.dataset.calendar(), self.split, self.warmup_sessions)
+        return list(live)
+
+    def session_calendar(self):
+        from .metrics import session_calendar
+
+        return session_calendar(self.dataset, self.scored_sessions())
 
     # ---- record -------------------------------------------------------------- #
     def _make_record(self, outcome: str, error: str | None, wall: float) -> RunRecord:

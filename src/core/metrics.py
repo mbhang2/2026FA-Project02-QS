@@ -42,6 +42,16 @@ from .types import Blotter, BlotterRow, Ts
 # large number computed from a handful of observations.
 MIN_SESSIONS = 30
 
+# Sortino needs losses to have a denominator. Below this many below-MAR sessions
+# the downside deviation is estimated from too few points, and at zero it is not
+# estimable at all -- the ratio is then genuinely infinite and an accept rule
+# that thresholds it accepts unconditionally. An unbounded auto-accept does not
+# just pass one bad candidate; it steers the search toward whatever produces it.
+# Below the floor the score falls back to Sharpe, which is always defined, and
+# the fallback path carries its own name so it is calibrated against its own
+# null rather than Sortino's.
+MIN_DOWNSIDE_SESSIONS = 5
+
 # The sentinel. -inf rather than None so any comparison against a threshold
 # rejects, however careless the caller.
 REJECT = float("-inf")
@@ -138,7 +148,35 @@ def downside_deviation(returns: Sequence[float], mar: float = MAR) -> float:
     return math.sqrt(total / n)
 
 
+def has_dispersion(returns: Sequence[float], rel_tol: float = 1e-9) -> bool:
+    """Whether the return series varies at all, to within floating-point noise.
+
+    An exact equality test is not enough: forty sessions that each returned the
+    same 0.98 have a standard deviation of about 1e-16 rather than zero, and a
+    ratio computed from that is 1e15 -- finite, so an `isfinite` guard passes it,
+    and large enough to clear any threshold. The tolerance is relative to the
+    size of the returns so it does not depend on the units.
+    """
+    n = len(returns)
+    if n < 2:
+        return False
+    mean = sum(returns) / n
+    scale = max(abs(mean), max(abs(r) for r in returns), 1e-12)
+    sd = math.sqrt(sum((r - mean) ** 2 for r in returns) / (n - 1))
+    return sd > rel_tol * scale
+
+
+def downside_count(returns: Sequence[float], mar: float = MAR) -> int:
+    return sum(1 for r in returns if r < mar)
+
+
 def sortino(returns: Sequence[float], mar: float = MAR) -> float:
+    """The ratio itself, unguarded. `scorer.score` applies the downside floor.
+
+    Kept unguarded here because the null tabulation needs the raw statistic, and
+    because a guard belongs where the decision is made rather than inside the
+    definition of the statistic.
+    """
     n = len(returns)
     if n == 0:
         return REJECT

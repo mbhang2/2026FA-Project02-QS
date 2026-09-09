@@ -14,10 +14,17 @@ the loop calls and the file the permission tiers name.
 from __future__ import annotations
 
 import inspect
+import math
 from typing import Sequence
 
 from . import metrics
-from .metrics import MIN_SESSIONS, REJECT, Diagnostics, SessionSpan
+from .metrics import (
+    MIN_DOWNSIDE_SESSIONS,
+    MIN_SESSIONS,
+    REJECT,
+    Diagnostics,
+    SessionSpan,
+)
 from .types import Blotter, ScoreTuple
 
 _FORBIDDEN_PREFIX = "src.strategies"
@@ -44,6 +51,7 @@ def score(
     period: Sequence[SessionSpan] | None = None,
     notional_base: float = 1.0,
     min_sessions: int = MIN_SESSIONS,
+    min_downside_sessions: int = MIN_DOWNSIDE_SESSIONS,
     fill_model_spread: float | None = None,
 ) -> ScoreTuple:
     """Sortino on per-session returns, with Sharpe and the shape moments beside it.
@@ -84,9 +92,52 @@ def score(
             reject_reason=f"{n} sessions is below the pre-registered floor of {min_sessions}",
         )
 
+    sharpe = metrics.sharpe(returns)
+    losers = metrics.downside_count(returns)
+    if not metrics.has_dispersion(returns) or not math.isfinite(sharpe):
+        # Zero dispersion: every session returned the same thing. Sortino is
+        # infinite and so is the fallback, so there is nothing left to threshold.
+        # Reject rather than accept -- an unbounded score does not just pass one
+        # bad candidate, it steers the search toward whatever produces it.
+        # The tolerance is relative: floating-point noise makes an identical
+        # series have a standard deviation near 1e-16 rather than zero, which is
+        # finite and enormous instead of infinite and obvious.
+        return ScoreTuple(
+            primary=REJECT,
+            sharpe=0.0,
+            skew=0.0,
+            kurtosis=0.0,
+            n_sessions=n,
+            net_pnl=net,
+            trade_count=trades,
+            rejected=True,
+            reject_reason="per-session returns have no dispersion; no ratio is defined",
+        )
+    if losers < min_downside_sessions:
+        # Too few below-MAR sessions to estimate downside deviation, and at zero
+        # the ratio is infinite and an accept rule thresholding it accepts
+        # unconditionally. Sharpe is always defined; the metric name changes with
+        # it, so the fallback is scored against its own null rather than
+        # Sortino's.
+        return ScoreTuple(
+            primary=sharpe,
+            sharpe=sharpe,
+            skew=metrics.skewness(returns),
+            kurtosis=metrics.excess_kurtosis(returns),
+            n_sessions=n,
+            net_pnl=net,
+            trade_count=trades,
+            rejected=False,
+            reject_reason=(
+                f"{losers} below-MAR session(s) is under the pre-registered "
+                f"{min_downside_sessions}; scored on Sharpe instead"
+            ),
+            metric="sharpe_per_session",
+        )
+
     return ScoreTuple(
         primary=metrics.sortino(returns),
-        sharpe=metrics.sharpe(returns),
+        sharpe=sharpe,
         skew=metrics.skewness(returns),
         kurtosis=metrics.excess_kurtosis(returns),
         n_sessions=n,

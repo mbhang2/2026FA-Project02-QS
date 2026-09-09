@@ -26,8 +26,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.core.calibration import AcceptRule, acceptance_rate  # noqa: E402
-from src.strategies.current import MomentumStrategy  # noqa: E402
+from src.core.calibration import (  # noqa: E402
+    AcceptRule,
+    EmpiricalAcceptRule,
+    ReferenceStrategy,
+    acceptance_rate,
+)
+from src.core.calibration import null as nullmod  # noqa: E402
 
 STRENGTHS = [0.0, 0.05, 0.1, 0.2, 0.35, 0.5, 0.75, 1.0]
 
@@ -35,17 +40,28 @@ STRENGTHS = [0.0, 0.05, 0.1, 0.2, 0.35, 0.5, 0.75, 1.0]
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seeds", type=int, default=20, help="independent trials per point")
-    ap.add_argument("--t-min", type=float, default=3.0)
+    ap.add_argument("--t-min", type=float, default=3.0,
+                    help="parametric rule: threshold on ratio x sqrt(N). Kept so the "
+                         "pre-calibration curve stays reproducible")
+    ap.add_argument("--far", type=float,
+                    help="empirical rule: target false-acceptance rate, threshold "
+                         "read off the tabulated null. This is the calibrated path")
     ap.add_argument("--sessions", type=int, default=175)
     ap.add_argument("--ticks-per-session", type=int, default=390)
     ap.add_argument("--fill-model", default="unfavorable")
     ap.add_argument("--json", type=Path, help="also write the curve here")
     args = ap.parse_args()
 
-    rule = AcceptRule(t_min=args.t_min)
+    if args.far:
+        rule = EmpiricalAcceptRule(far=args.far)
+        rule_label = (f"empirical: far <= {args.far:g} from the tabulated null, net > 0")
+    else:
+        rule = AcceptRule(t_min=args.t_min)
+        rule_label = f"parametric: ratio x sqrt(N) >= {args.t_min}, net > 0"
     seeds = list(range(1, args.seeds + 1))
     rows = []
-    print(f"accept rule: t >= {args.t_min}, net > 0   fill model: {args.fill_model}")
+    print(f"accept rule: {rule_label}   fill model: {args.fill_model}")
+    print(f"strategy:    {ReferenceStrategy.name} (immutable calibration apparatus)")
     print(f"{args.seeds} seeds x {args.sessions} sessions per point\n")
     print(f"{'signal':>7} | {'accept':>7} {'sortino':>8} {'signif':>8} {'sharpe':>7} "
           f"| {'accept':>7} {'per-trade t':>12} | {'mean net':>10} {'trades':>7} {'expo':>5}")
@@ -53,7 +69,7 @@ def main() -> int:
           f"| {'-- placeholder --':^21} |")
     for s in STRENGTHS:
         rate, results = acceptance_rate(
-            MomentumStrategy,
+            ReferenceStrategy,
             signal_strength=s,
             seeds=seeds,
             rule=rule,
@@ -85,6 +101,7 @@ def main() -> int:
                 "mean_trades": tc,
                 "mean_sessions_with_exposure": ex,
                 "n_sessions": results[0].score.n_sessions,
+                "metrics_used": sorted({r.score.metric for r in results}),
                 "placeholder_acceptance_rate": prate,
                 "placeholder_mean_t": pt,
             }
@@ -110,7 +127,10 @@ def main() -> int:
             json.dumps(
                 {
                     "metric": "sortino_per_session",
-                    "t_min": args.t_min,
+                    "strategy": ReferenceStrategy.name,
+                    "accept_rule": rule_label,
+                    "far": args.far,
+                    "t_min": None if args.far else args.t_min,
                     "seeds": args.seeds,
                     "sessions": args.sessions,
                     "ticks_per_session": args.ticks_per_session,

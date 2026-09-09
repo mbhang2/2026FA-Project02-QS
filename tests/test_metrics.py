@@ -225,9 +225,16 @@ def test_mar_is_zero_and_stated():
 
 
 def test_no_losing_session_is_flagged_rather_than_silently_infinite():
+    """The raw statistic is infinite; `score` no longer returns it.
+
+    Task 6 added the downside floor: too few below-MAR sessions falls back to
+    Sharpe, and a series with no dispersion at all is rejected rather than
+    accepted. See tests/test_calibration_null.py for the guard's own tests.
+    """
     assert metrics.sortino([1.0] * 50) == float("inf")
     s = score(blotter_from({i: [1.0] for i in range(40)}), period=calendar(40))
-    assert s.primary == float("inf") and s.significance == float("inf")
+    assert s.rejected and s.primary == REJECT
+    assert "no dispersion" in s.reject_reason
 
 
 # --------------------------------------------------------------------------- #

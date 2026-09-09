@@ -210,3 +210,218 @@ correction, and this is the size of the problem it has to solve.
   precisely so that comparison can be made rather than assumed.
 - **Mark-to-market attribution**, once `Dataset` exposes a per-session close.
 - **The `inf` case**, above.
+
+---
+
+# Calibration (Task 6)
+
+The metric's definition is unchanged. What changed is that it now ships with the
+sampling distribution of its own score under no signal, so whoever sets a
+threshold gets a known false-acceptance rate instead of a guess.
+
+Three things had been sharing the word "gate". The scorer and its null are here;
+the accept rule — applying a threshold, keep or reset — belongs to the loop
+harness owner; the committee's multiple-testing correction is later and separate.
+**Nothing below decides accept policy.** It supplies the numbers policy needs.
+
+## The reference strategy is apparatus, not strategy
+
+It was `src/strategies/current.py` — the agent's file — so a power curve measured
+the metric, the threshold **and** whatever that file contained. Task 4's sweep
+turned over at the strongest planted signal and it took a separate diagnostic to
+establish the cause. That diagnostic should not have been needed.
+
+It now lives at `src/core/calibration/reference.py`, immutable, and
+`src.strategies` cannot import the rig for the same reason it cannot import the
+scorer. Two changes make its payoff shape invariant to signal strength, which is
+what "acceptance must be monotone in signal strength" needs in order to be a
+property of the *metric*:
+
+**A volatility-scaled bracket.** Sized in units of recent average bar range
+rather than in absolute price. Measured across the sweep:
+
+| signal | mean win | mean loss | win/loss | fixed bracket win/loss |
+|---|---|---|---|---|
+| 0.00 | 0.809 | −0.948 | 0.854 | 0.707 |
+| 0.50 | 0.993 | −1.144 | 0.868 | 0.523 |
+| 1.00 | 1.451 | −1.605 | 0.904 | 0.091 |
+| 1.50 | 2.018 | −2.203 | 0.916 | 0.043 |
+
+Win and loss now scale together. With the fixed bracket the ratio collapsed by a
+factor of sixteen across the same range.
+
+**Flat at every session boundary.** The synthetic generator starts every session
+at the same price, so a position carried across the gap realizes the whole of the
+previous session's drift. At signal 1.0, same-session trades averaged **+1.30**
+and the twenty-two overnight ones averaged **−16.78**; all five of the worst
+losses in the run were overnight holds. Carrying overnight measures the
+generator's discontinuity, not the metric. The session length is learned from bar
+counts rather than assumed, so this works on any dataset — but a dataset whose
+price process is continuous across sessions would not need it, and **the
+generator's session reset is a modelling artefact worth fixing at source** when
+the first real adapter makes the comparison possible.
+
+The fixed-bracket result is kept as a recorded finding: mean win pinned at 0.740
+while mean loss grew from 1.54 to 31.45. It is a good demonstration that the rig
+separates metric behaviour from strategy behaviour.
+
+## The empirical null
+
+`significance = ratio × √N` is exact for Sharpe and only an approximation for
+Sortino, and Task 4 measured what the approximation costs: **6.1% false
+acceptance at N=30 against a nominal 0.1%.** So the relation is no longer
+assumed. `src/core/calibration/null.py` measures it:
+
+1. simulate no-signal runs of the reference strategy
+2. pool every per-session return they produce
+3. bootstrap N sessions per draw and compute the metric
+4. tabulate the quantiles
+
+`threshold_for(far, n_sessions, metric=...)` returns the score needed for a
+stated false-acceptance rate; `far_for(score, n_sessions)` inverts it. Exact for
+any metric, no closed form, no Sharpe-only assumption. The table is committed at
+`data/calibration/empirical-null.json` **with the session-return pool inside it**,
+so the whole thing is auditable and re-tabulating does not mean re-simulating.
+
+Provenance: 120 no-signal runs × 35 validation sessions = 4,200 pooled session
+returns, 50,000 bootstrap draws per session count, seeds recorded in the file.
+
+**Why bootstrap.** A stable 0.1% quantile needs tens of thousands of draws and a
+simulated run costs seconds. The expensive part — what a session's returns look
+like under this strategy and this fill model — is simulated; the cheap part — the
+sampling distribution of a statistic over N of them — is resampled. It assumes
+sessions are exchangeable under the null, which holds here because the generator
+seeds each session independently and the reference strategy is flat at every
+boundary. **On a dataset with genuine cross-session dependence the pool would have
+to be blocked**, and that is a real constraint on reusing this for the NQ adapter.
+
+### Calibrated thresholds
+
+Sortino on per-session returns:
+
+| N | far=0.05 | far=0.01 | far=0.001 |
+|---|---|---|---|
+| 30 | −0.014 | +0.189 | **+0.485** |
+| 50 | −0.099 | +0.030 | +0.196 |
+| 100 | −0.182 | −0.102 | −0.002 |
+
+The thresholds are negative at loose rates because the null itself has a negative
+mean: the reference strategy loses money on noise through the pessimistic fill
+model, so beating the null does not require making money. That is why the accept
+rule keeps a separate `net > 0` condition.
+
+### Verification
+
+Held out, not in sample: the pool is split by run, quantiles are re-tabulated
+from one half and the false-acceptance rate is measured on bootstrap draws from
+the other.
+
+| N | promised | measured (held out) |
+|---|---|---|
+| 30 | 0.05 | 0.0486 |
+| 30 | 0.01 | 0.0095 |
+| 30 | **0.001** | **0.00112** |
+| 50 | 0.001 | 0.00101 |
+| 100 | 0.001 | 0.00105 |
+
+Against 6.1% actual for a nominal 0.1% before. On *freshly simulated* noise from
+seeds the table never saw, the measured rate is 0.00085 at N=30 — slightly below
+target, because a smaller verification pool contains fewer extreme sessions and
+so measures a thinner tail. Both checks are in `tests/test_calibration_null.py`;
+the held-out one is the two-sided test and the fresh-simulation one is one-sided.
+
+## The infinite-Sortino guard
+
+Sortino needs losses to have a denominator. With no below-MAR session it is
+genuinely infinite, and an accept rule thresholding it accepts unconditionally —
+which does not just pass one bad candidate, it steers the search toward whatever
+produces one.
+
+**[decided] Below `MIN_DOWNSIDE_SESSIONS = 5` below-MAR sessions, the score falls
+back to Sharpe**, which is always defined. The metric name changes with it, so
+the fallback is compared against its own tabulated null rather than Sortino's. If
+even Sharpe is infinite — every session returned exactly the same thing — the
+trial is **rejected**, not accepted.
+
+One thing the tabulation shows that is worth stating: **the fallback never fires
+under the null.** In 50,000 draws at every session count, no draw had fewer than
+five losing sessions. The Sharpe null is therefore tabulated unconditionally,
+because the conditioning event has no observable sample — and the fact that a
+candidate reaching the fallback is somewhere the null never goes is itself
+information.
+
+Note that the primary scalar is **not comparable across the switch**: a Sortino
+of 3.99 and a Sharpe of 1.84 are different statistics. Each is thresholded
+against its own null, which is what makes the comparison valid at the level of
+the decision rather than the number.
+
+## The power curve, and what fixed it
+
+`data/calibration/sortino-empirical-null.json`, 20 seeds, 35 validation sessions,
+accept rule `far ≤ 0.001` off the tabulated null:
+
+| signal | accept | sortino | sharpe | metric used | mean net |
+|---|---|---|---|---|---|
+| 0.00 | 0.00 | −0.280 | −0.262 | sortino | −23.44 |
+| 0.05 | 0.00 | −0.168 | −0.152 | sortino | −13.71 |
+| 0.10 | 0.05 | −0.031 | −0.042 | sortino | −2.91 |
+| 0.20 | 0.75 | +0.843 | +0.367 | sortino | +38.24 |
+| 0.35 | 1.00 | +3.985 | +1.108 | both | +128.86 |
+| 0.50 | 1.00 | — | +1.843 | sharpe | +241.18 |
+| 0.75 | 1.00 | — | +3.686 | sharpe | +507.07 |
+| 1.00 | 1.00 | — | +5.874 | sharpe | +780.83 |
+
+**Monotone, and 0% on the null.** The curve is also more sensitive than before:
+full power arrives at signal 0.35 where the old configuration needed 0.75.
+
+### How much was the strategy and how much was the metric
+
+An ablation, committed as `ablation-vol-scaled-parametric-rule.json`: the *new*
+reference strategy scored with the *old* parametric rule (`ratio × √N ≥ 3.0`).
+
+| signal | empirical rule | parametric rule | Task 4 (fixed bracket, parametric) |
+|---|---|---|---|
+| 0.20 | 0.75 | 0.75 | — |
+| 0.50 | 1.00 | 1.00 | 0.80 |
+| 0.75 | 1.00 | 1.00 | 1.00 |
+| 1.00 | 1.00 | 1.00 | **0.90** |
+
+The two rules give the same power curve to within one point at one signal
+strength. **Essentially all of the old non-monotonicity was the reference
+strategy's payoff shape**, not the metric and not the threshold relation.
+
+That is not an argument for keeping the parametric rule. The two differ in the
+thing the power curve cannot see: at N=30 the parametric rule's actual false
+acceptance is 6.1% and the empirical rule's is 0.1%. The calibration buys a known
+error rate, not more power.
+
+## Is 30 still the right floor?
+
+It can come down to about 20, and no further. Held out, thresholds tabulated on
+half the pool and measured on the other:
+
+| N | promised far | measured |
+|---|---|---|
+| 10 | 0.001 | **0.0087** |
+| 20 | 0.001 | 0.0010 |
+| 30 | 0.001 | 0.0011 |
+| 50 | 0.001 | 0.0007 |
+
+At ten sessions the calibration itself stops generalizing — the 0.1% quantile of
+a ten-session statistic is estimated from too few effective extremes and misses
+by nearly ninefold out of sample. At twenty it holds. **Recommendation: keep 30
+unless sessions are genuinely scarce**, since 20 is at the edge of where the
+tabulation is trustworthy and the cost of the floor is only power.
+
+## For the committee: DSR against an empirical null
+
+DSR deflates by the expected maximum of N draws from the null. The closed form
+for that expectation exists only for Sharpe. With an empirical null it is a
+simulation, for **any** metric — `null.expected_max(n_trials, n_sessions,
+metric=...)`. Nothing in the bibliography does this, and it is what lets the
+global-N correction apply to whatever scalar the loop ends up using rather than
+forcing the loop to use Sharpe because that is what the maths supports.
+
+The version here approximates from the tabulated moments. An exact one resamples
+the stored draws, which the table deliberately does not keep in order to stay
+reviewable — worth revisiting when the committee is built.

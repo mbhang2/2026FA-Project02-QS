@@ -209,9 +209,7 @@ class BaseContext:
     @property
     def working_orders(self) -> tuple[Order, ...]:
         self._check()
-        return tuple(
-            o for o in self._engine.orders.values() if o.is_working
-        )
+        return tuple(self._engine._working.values())
 
     @property
     def working_order_ids(self) -> tuple[int, ...]:

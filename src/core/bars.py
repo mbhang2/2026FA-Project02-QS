@@ -94,6 +94,28 @@ class BarBuilder:
         self._vol += tick.size
         self._n += 1
 
+    def add_span(self, high: float, low: float, close: float, volume: int, count: int,
+                 first: float) -> None:
+        """Fold a whole run of ticks in at once.
+
+        Only valid when the span crosses no boundary of this subscription, which
+        is what the event walk guarantees before calling it. The reductions are
+        the same ones `add` performs one tick at a time -- this exists because
+        doing them one tick at a time in Python was most of the cost of a
+        session.
+        """
+        if count <= 0:
+            return
+        if self._n == 0:
+            self._o = first
+            self._h, self._l = high, low
+        else:
+            self._h = max(self._h, high)
+            self._l = min(self._l, low)
+        self._c = close
+        self._vol += volume
+        self._n += count
+
     def _close_current(self) -> Bar | None:
         close_ts = self.current_boundary
         if self._n == 0:

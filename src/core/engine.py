@@ -24,6 +24,8 @@ clean one-bar lookahead producing beautiful and entirely fake results.
 from __future__ import annotations
 
 import time
+
+import numpy as np
 from dataclasses import dataclass, field, replace
 from typing import Any, Iterable, Sequence
 
@@ -110,6 +112,7 @@ class RunRecord:
     actions_dropped: int
     warmup_actions_ignored: int
     ticks: int
+    ticks_stepped: int
     tick_events_delivered: int
     bars_delivered: int
     fills: int
@@ -179,6 +182,11 @@ class Engine:
         action_cap: int = DEFAULT_ACTION_CAP,
         seed: int | None = None,
         wall_clock_budget_s: float | None = None,
+        # Steps every tick instead of jumping between events. The two paths must
+        # produce identical blotters -- that is what the differential tests
+        # assert -- and this switch is how they are compared. It is not a tuning
+        # knob: the fast path is not an approximation.
+        event_walk: bool = True,
     ):
         self.dataset = dataset
         self.strategy = strategy
@@ -192,11 +200,21 @@ class Engine:
         self.action_cap = action_cap
         self.seed = seed
         self.wall_clock_budget_s = wall_clock_budget_s
+        self.event_walk = event_walk
         self._deadline: float | None = None
         self._callbacks = 0
+        self._next_budget_seq = BUDGET_CHECK_EVERY_TICKS
+        self._session_seq0 = 0
 
         self.blotter = Blotter()
         self.orders: dict[int, Order] = {}
+        # Only the orders that can still do something, in creation order. The
+        # resolver used to scan `orders` and test `is_working` on each, which
+        # made every tick cost O(orders ever placed) -- quadratic in session
+        # length, and on a real NQ session that was 35 million `is_working` calls
+        # for 388,000 ticks. Insertion order matches `orders`, so the sequence
+        # the resolver sees is unchanged.
+        self._working: dict[int, Order] = {}
         self._next_order_id = 1
         self._next_oco_group = 1
         self.position = 0
@@ -213,6 +231,10 @@ class Engine:
         self._tick_subscribed = False
         self.n_tick_events = 0
         self.n_ticks = 0
+        # Ticks the walk actually stopped at. n_ticks - n_stepped is what the
+        # jump saved, and it is reported so the speedup is a measurement rather
+        # than a claim.
+        self.n_stepped = 0
         self.n_bars = 0
         self.n_fills = 0
         self.end_of_session_positions: dict[str, int] = {}
@@ -278,64 +300,207 @@ class Engine:
         self.history = BarHistory([s.sub_id for s in bar_subs])
 
         session = None
-        for seq, tick in enumerate(self.dataset.ticks(self.split, warmup=self.warmup_sessions)):
-            tick = Tick(tick.ts, tick.price, tick.size, tick.session, seq, tick.side)
-            self.n_ticks += 1
-            if self._deadline and seq % BUDGET_CHECK_EVERY_TICKS == 0:
-                self._check_budget()
+        seq = -1
+        for batch in self._sessions_of(
+            self.dataset.ticks(self.split, warmup=self.warmup_sessions)
+        ):
+            if session is not None:
+                self._close_session(session, seq + 1, actionable=session not in warm)
+            session = batch[0].session
+            actionable = session not in warm
+            self._open_session(session, Tick(batch[0].ts, batch[0].price,
+                                             batch[0].size, session, seq + 1,
+                                             batch[0].side))
 
-            if tick.session != session:
-                if session is not None:
-                    self._close_session(session, tick.seq, actionable=session not in warm)
-                session = tick.session
-                self._open_session(session, tick)
+            self._session_seq0 = seq + 1
+            price = np.fromiter((t.price for t in batch), dtype=float, count=len(batch))
+            tsarr = np.fromiter((t.ts for t in batch), dtype=np.int64, count=len(batch))
+            sizes = np.fromiter((t.size for t in batch), dtype=np.int64, count=len(batch))
+            n = len(batch)
 
-            actionable = tick.session not in warm
-            self.last_price = tick.price
+            i = 0
+            while i < n:
+                seq += 1
+                src = batch[i]
+                tick = Tick(src.ts, src.price, src.size, session, seq, src.side)
+                self.n_ticks += 1
+                self.n_stepped += 1
+                if self._deadline and seq >= self._next_budget_seq:
+                    self._next_budget_seq = seq + BUDGET_CHECK_EVERY_TICKS
+                    self._check_budget()
+                self._step(tick, actionable)
 
-            # 1. resolve resting orders against this tick
-            fills = self._resolve(tick)
-
-            # 2. fill callbacks
-            for ev in fills:
-                self._fills_since_callback.append(ev)
-                self._dispatch("fill", ev, tick, actionable)
-
-            # 3. the tick itself, before any bar it closes
-            if self._tick_subscribed:
-                ev = TickEvent(
-                    ts=tick.ts, seq=tick.seq, price=tick.price, size=tick.size,
-                    side=tick.side, session=tick.session,
-                )
-                self.tick_history._append(ev)
-                self.n_tick_events += 1
-                self._dispatch("tick", ev, tick, actionable)
-
-            # 4. bars that closed at this timestamp, in one callback
-            closed: list[Bar] = []
-            for s in self.builders.values():
-                closed.extend(s.bars_closed_by(tick))
-            if closed:
-                closed.sort(key=lambda b: (b.close_ts, b.sub_id))
-                for b in closed:
-                    self.history._append(b)
-                self.n_bars += len(closed)
-                ev = BarEvent(ts=tick.ts, seq=tick.seq, bars=tuple(closed))
-                self._dispatch("bars", ev, tick, actionable)
-
-            # the triggering tick belongs to the next bar
-            for builder in self.builders.values():
-                builder.add(tick)
-
-            # lifecycle events raised while resolving are delivered last so the
-            # strategy has already seen the fill that caused them
-            self._drain_lifecycle(tick, actionable)
+                nxt = self._next_event(i, n, tsarr, price)
+                if nxt > i + 1:
+                    # Nothing can happen in (i, nxt): no boundary is crossed and
+                    # no resting level can be reached, so the only work is bar
+                    # accumulation and it folds in one go.
+                    lo, hi = i + 1, nxt
+                    seg = price[lo:hi]
+                    for builder in self.builders.values():
+                        builder.add_span(
+                            high=float(seg.max()), low=float(seg.min()),
+                            close=float(seg[-1]), volume=int(sizes[lo:hi].sum()),
+                            count=hi - lo, first=float(seg[0]),
+                        )
+                    skipped = hi - lo
+                    self.n_ticks += skipped
+                    seq += skipped
+                    self.last_price = float(seg[-1])
+                i = nxt
 
         if session is not None:
             self._close_session(session, self.n_ticks, actionable=session not in warm)
 
         self.blotter.final_position = self.position
         self.blotter.final_price = self.last_price
+
+    def _next_event(self, i: int, n: int, tsarr, price) -> int:
+        """The next index at which anything can happen. Never later than the truth.
+
+        Two candidates, both computable without stepping:
+
+        * the next bar boundary, from a search over the timestamps;
+        * the first tick that could reach any resting level, from a search over
+          the prices.
+
+        The price conditions here are deliberately **weaker** than the fill
+        model's -- `<=` where `unfavorable` needs `<`, and the trigger condition
+        of a stop-limit that has not armed. That one-sidedness is the safety
+        property: the walk may stop somewhere nothing happens, and cannot skip
+        somewhere something would have. The fill model is still the only thing
+        that decides a fill.
+
+        A tick subscription disables all of it: every tick must be delivered, and
+        that is the point -- the cost of tick granularity is visible in the
+        wall-clock budget rather than hidden.
+        """
+        if self._tick_subscribed or not self.event_walk:
+            return i + 1
+        # the last tick of a session is always an event, so `last_price` and the
+        # session tail are exactly what a full walk would leave behind
+        cand = n - 1 if i < n - 1 else n
+
+        boundary = min(
+            (b.current_boundary for b in self.builders.values()), default=None
+        )
+        if boundary is not None:
+            cand = min(cand, int(np.searchsorted(tsarr, boundary, side="left")))
+        if cand <= i + 1:
+            return i + 1
+
+        for order in self._working.values():
+            start = max(i + 1, order.eligible_from_seq - (self._seq_base(i)))
+            start = max(start, i + 1)
+            if start >= cand:
+                continue
+            if order.tif in (TimeInForce.IOC, TimeInForce.FOK):
+                return start          # decided on its first eligible tick
+            if order.order_type is OrderType.MARKET:
+                return start
+            if order.expire_ts is not None:
+                cand = min(cand, int(np.searchsorted(tsarr, order.expire_ts, side="left")))
+                if cand <= start:
+                    return max(start, cand)
+            level, upward = self._trigger(order)
+            if level is None:
+                return start
+            seg = price[start:cand]
+            if seg.size == 0:
+                continue
+            hit = seg >= level if upward else seg <= level
+            if hit.any():
+                cand = start + int(hit.argmax())
+                if cand <= i + 1:
+                    return i + 1
+        return max(cand, i + 1)
+
+    def _seq_base(self, i: int) -> int:
+        """`eligible_from_seq` is in global sequence; the arrays are per session."""
+        return self._session_seq0
+
+    @staticmethod
+    def _trigger(order: Order) -> tuple[float | None, bool]:
+        """(price level, whether it is reached from below) for a resting order.
+
+        `None` means "cannot be expressed as a level" and the caller stops at the
+        order's next eligible tick instead of trying to be clever.
+        """
+        if order.order_type is OrderType.LIMIT:
+            if order.limit_price is None:
+                return None, False
+            return order.limit_price, order.side is Side.SELL
+        if order.order_type is OrderType.STOP:
+            if order.stop_price is None:
+                return None, False
+            return order.stop_price, order.side is Side.BUY
+        if order.order_type is OrderType.STOP_LIMIT:
+            if order.stop_armed:
+                if order.limit_price is None:
+                    return None, False
+                return order.limit_price, order.side is Side.SELL
+            if order.stop_price is None:
+                return None, False
+            return order.stop_price, order.side is Side.BUY
+        return None, False
+
+    def _sessions_of(self, ticks):
+        """Group the tick stream into sessions without materialising the whole
+        split. A session is the unit the walk vectorises over."""
+        batch: list[Tick] = []
+        current = None
+        for t in ticks:
+            if current is None:
+                current = t.session
+            elif t.session != current:
+                yield batch
+                batch, current = [], t.session
+            batch.append(t)
+        if batch:
+            yield batch
+
+    def _step(self, tick: Tick, actionable: bool) -> None:
+        """Everything that happens at one tick. Unchanged in order and content;
+        the walk simply calls it only where something can happen."""
+        self.last_price = tick.price
+
+        # 1. resolve resting orders against this tick
+        fills = self._resolve(tick)
+
+        # 2. fill callbacks
+        for ev in fills:
+            self._fills_since_callback.append(ev)
+            self._dispatch("fill", ev, tick, actionable)
+
+        # 3. the tick itself, before any bar it closes
+        if self._tick_subscribed:
+            ev = TickEvent(
+                ts=tick.ts, seq=tick.seq, price=tick.price, size=tick.size,
+                side=tick.side, session=tick.session,
+            )
+            self.tick_history._append(ev)
+            self.n_tick_events += 1
+            self._dispatch("tick", ev, tick, actionable)
+
+        # 4. bars that closed at this timestamp, in one callback
+        closed: list[Bar] = []
+        for s in self.builders.values():
+            closed.extend(s.bars_closed_by(tick))
+        if closed:
+            closed.sort(key=lambda b: (b.close_ts, b.sub_id))
+            for b in closed:
+                self.history._append(b)
+            self.n_bars += len(closed)
+            ev = BarEvent(ts=tick.ts, seq=tick.seq, bars=tuple(closed))
+            self._dispatch("bars", ev, tick, actionable)
+
+        # the triggering tick belongs to the next bar
+        for builder in self.builders.values():
+            builder.add(tick)
+
+        # lifecycle events raised while resolving are delivered last so the
+        # strategy has already seen the fill that caused them
+        self._drain_lifecycle(tick, actionable)
 
     # ---- sessions ---------------------------------------------------------- #
     def _open_session(self, session: int, tick: Tick) -> None:
@@ -363,9 +528,7 @@ class Engine:
         # unexpired GTD survive, brackets included, and so does the position. A
         # strategy that wants to be flat overnight has to say so -- and the
         # end-of-session position is recorded so an unintended hold is visible.
-        for order in list(self.orders.values()):
-            if not order.is_working:
-                continue
+        for order in list(self._working.values()):
             if order.tif is TimeInForce.DAY:
                 self._cancel(order, LifecycleKind.DAY_EXPIRED, close_ts, seq)
             elif order.tif is TimeInForce.GTD and order.expire_ts is not None:
@@ -381,9 +544,7 @@ class Engine:
     # ---- order handling ----------------------------------------------------- #
     def _resolve(self, tick: Tick) -> list[FillEvent]:
         out: list[FillEvent] = []
-        for order in list(self.orders.values()):
-            if not order.is_working:
-                continue
+        for order in list(self._working.values()):
             if tick.seq < order.eligible_from_seq:
                 continue  # the T+1 rule
             if (
@@ -441,6 +602,7 @@ class Engine:
         order.filled_size += fill.size
         if order.remaining == 0:
             order.status = OrderStatus.FILLED
+            self._working.pop(order.order_id, None)
 
         self.n_fills += 1
         self.blotter.add(
@@ -539,11 +701,10 @@ class Engine:
             )
 
     def _cancel_oco_siblings(self, filled: Order, tick: Tick) -> None:
-        for other in self.orders.values():
+        for other in list(self._working.values()):
             if (
                 other.order_id != filled.order_id
                 and other.oco_group == filled.oco_group
-                and other.is_working
             ):
                 self._cancel(other, LifecycleKind.OCO_CANCELLED, tick.ts, tick.seq)
 
@@ -579,6 +740,7 @@ class Engine:
             submitted_ts=tick.ts,
         )
         self.orders[oid] = order
+        self._working[oid] = order
         if s.tag:
             self._order_tags[oid] = s.tag
         self._emit(LifecycleKind.ORDER_ACCEPTED, tick.ts, tick.seq, oid)
@@ -623,10 +785,11 @@ class Engine:
             if kind in (LifecycleKind.DAY_EXPIRED, LifecycleKind.GTD_EXPIRED)
             else OrderStatus.CANCELLED
         )
+        self._working.pop(order.order_id, None)
         self._emit(kind, ts, seq, order.order_id)
 
     def _working_ids(self) -> tuple[int, ...]:
-        return tuple(sorted(o.order_id for o in self.orders.values() if o.is_working))
+        return tuple(sorted(self._working))
 
     # ---- callbacks and actions ---------------------------------------------- #
     def _check_budget(self) -> None:
@@ -779,6 +942,7 @@ class Engine:
             actions_dropped=self.actions_dropped,
             warmup_actions_ignored=self.warmup_actions_ignored,
             ticks=self.n_ticks,
+            ticks_stepped=self.n_stepped,
             tick_events_delivered=self.n_tick_events,
             bars_delivered=self.n_bars,
             fills=self.n_fills,

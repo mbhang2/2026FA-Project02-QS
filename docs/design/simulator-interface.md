@@ -340,6 +340,39 @@ silently, in the one place nobody would look. Each record carries `trigger`
 This constrains the loop harness as much as the simulator, and it belongs in the
 spec its owner reads.
 
+## The walk is event-driven
+
+The engine does not step every tick. Between two bar closes, with no resting
+order reachable, nothing can happen: no fill, no callback, no action. The only
+work in that span is bar aggregation, and that folds in one operation.
+
+So the walk jumps to `min(next bar boundary, first tick that could reach any
+resting level)`. Both are computed by search rather than iteration.
+
+**It is a pure optimization and is tested as one.** `Engine(event_walk=False)`
+steps every tick, and `tests/test_event_walk.py` runs each scenario both ways and
+asserts identical blotters row for row -- including the cases the jump is most
+likely to get wrong: several resting triggers between the same pair of closes, a
+bracket arming while its sibling triggers, a stop-limit arming, a trigger landing
+exactly on a boundary, a GTD expiry mid-span, and a session where the strategy is
+never flat.
+
+The safety property is one-sided. The price conditions used to find the next
+candidate are deliberately **weaker** than the fill model's -- `<=` where
+`unfavorable` needs `<`, and a stop-limit's trigger rather than its limit. The
+walk may therefore stop somewhere nothing happens; it cannot skip somewhere
+something would have. The fill model remains the only thing that decides a fill.
+
+`RunRecord.ticks_stepped` against `RunRecord.ticks` reports how much was skipped,
+so the speedup is a measurement rather than a claim.
+
+**A tick subscription disables it.** Every tick must be delivered, and that is
+correct: the cost of tick granularity belongs in the wall-clock budget where it
+is visible, not hidden. Measured on real NQ sessions, a tick subscriber runs
+**5.1x slower** than the same strategy on bars alone. Bar interval, by contrast,
+is nearly free -- 30-second bars cost the same as five-minute ones, because the
+walk stops at boundaries and fills either way.
+
 ## Determinism
 
 Same data, same strategy, same seed → **byte-identical blotter**. The honest-N argument

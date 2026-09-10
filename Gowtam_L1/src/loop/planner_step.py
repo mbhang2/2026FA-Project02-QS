@@ -1,40 +1,27 @@
-"""Planner step (Task 4.1): hypothesis -> atomic ``TaskPlan``."""
+"""Planner step (Task 4.1 / PLAN_NEXT B.1–B.3): hypothesis -> atomic ``TaskPlan``.
+
+As of Workstream B the planner runs in a *fresh* OpenCode session every time
+(no session continuity across the candidate). The session id it captures is
+strictly provenance; it is never reused for later roles.
+"""
 
 from __future__ import annotations
 
 from src.loop import paths
+from src.loop.prompt_doc import build_planner_prompt
 from src.opencode_bridge.invoke import invoke_opencode
 from src.opencode_bridge.parse import parse_or_retry
 from src.schemas import ApprovedCandidate, TaskPlan
 
 
-def build_planner_prompt(
-    candidate: ApprovedCandidate, prior_reasoning: str | None = None
-) -> str:
-    body = (
-        f"Approved candidate:\n{candidate.model_dump_json(indent=2)}\n\n"
-        "Produce an atomic task plan for implementing this candidate as a "
-        "Strategy-conforming module in the single file "
-        f"candidates/{candidate.candidate_id}/{paths.STRATEGY_FILE}."
-    )
-    if prior_reasoning:
-        body += (
-            "\n\nThis is a replan. Prior plan is invalid past this point for the "
-            f"following reason:\n{prior_reasoning}"
-        )
-    return body
-
-
 def run_planner_step(
     candidate: ApprovedCandidate,
-    session_id: str | None = None,
     prior_reasoning: str | None = None,
 ) -> tuple[TaskPlan, str | None]:
-    """Produce a ``TaskPlan`` and return it along with the (resolved) session id.
+    """Produce a ``TaskPlan`` in a fresh session; return it plus the session id.
 
-    On a fresh candidate ``session_id`` is ``None``; the first invoke creates a
-    real OpenCode session whose id is captured and returned so the driver can
-    persist it for the whole candidate.
+    ``session_id`` (2nd element) is the fresh session that produced the plan; it
+    is returned for provenance only and is not reused by later roles.
     """
     prompt = build_planner_prompt(candidate, prior_reasoning)
     context_files = [
@@ -43,17 +30,14 @@ def run_planner_step(
     ]
     cwd = str(paths.candidate_dir(candidate.candidate_id))
 
-    result = invoke_opencode("planner", prompt, session_id, context_files, cwd=cwd)
-    current_session = result.session_id or session_id
+    result = invoke_opencode("planner", prompt, None, context_files, cwd=cwd)
 
     def retry(exc):
         adjusted = prompt + f"\n\n<parse-error>\n{exc}\n</parse-error>\nRetry, correcting the JSON."
-        return invoke_opencode(
-            "planner", adjusted, current_session, context_files, cwd=cwd
-        ).stdout
+        return invoke_opencode("planner", adjusted, None, context_files, cwd=cwd).stdout
 
     plan: TaskPlan = parse_or_retry(result.stdout, TaskPlan, retry)
 
     plan_path = paths.candidate_file(candidate.candidate_id, "plan.json")
     plan_path.write_text(plan.model_dump_json(indent=2))
-    return plan, current_session
+    return plan, result.session_id

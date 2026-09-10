@@ -23,6 +23,8 @@ class ExperimentSpec:
     fee_bps: float = 0.0
     slippage_bps: float = 0.0
     output_dir: str = "output"
+    data_source: str = "placeholder.csv"
+    data_frequency: str = "1d"
 
     def validate(self) -> None:
         """Raise a readable error for each invalid field; do not short-circuit."""

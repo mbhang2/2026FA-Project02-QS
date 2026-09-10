@@ -32,7 +32,7 @@ def test_auto_candidate_id_is_unique():
 
 
 def test_run_full_success_path(monkeypatch):
-    from src.schemas import CandidateState, CandidatePackage, TaskPlan
+    from src.schemas import CandidateState, CandidatePackage, CommitteeVerdict, TaskPlan
 
     cid = "run_success"
 
@@ -41,6 +41,13 @@ def test_run_full_success_path(monkeypatch):
     )
     monkeypatch.setattr(run, "verify_strategy_conformance", lambda c: True)
     monkeypatch.setattr(run, "run_engine_for_candidate", lambda c: {"composite_score": 1.0})
+    monkeypatch.setattr(run, "run_statistician_step", lambda c: None)
+    monkeypatch.setattr(run, "run_auditor_step", lambda c: None)
+    monkeypatch.setattr(
+        run, "run_committee_step",
+        lambda c: CommitteeVerdict(candidate_id=cid, verdict="PASS", reasoning="ok"),
+    )
+    monkeypatch.setattr(run, "_write_reproducibility", lambda c: None)
 
     captured = {}
 
@@ -61,6 +68,39 @@ def test_run_full_success_path(monkeypatch):
     pkg = run.run_full(_candidate(cid))
     assert pkg.final_status == "PASSED_TO_COMMITTEE"
     assert saved["status"] == "PACKAGED"
+
+
+def test_run_full_committee_veto_fails(monkeypatch):
+    from src.schemas import CandidateState, CandidatePackage, CommitteeVerdict, TaskPlan
+
+    cid = "run_veto"
+
+    monkeypatch.setattr(
+        run, "run_candidate", lambda c: CandidateState(candidate_id=cid, status="ENGINE_RUN")
+    )
+    monkeypatch.setattr(run, "verify_strategy_conformance", lambda c: True)
+    monkeypatch.setattr(run, "run_engine_for_candidate", lambda c: {"composite_score": 1.0})
+    monkeypatch.setattr(run, "run_statistician_step", lambda c: None)
+    monkeypatch.setattr(run, "run_auditor_step", lambda c: None)
+    monkeypatch.setattr(
+        run, "run_committee_step",
+        lambda c: CommitteeVerdict(candidate_id=cid, verdict="VETO", reasoning="leak detected"),
+    )
+    monkeypatch.setattr(run, "_write_reproducibility", lambda c: None)
+
+    saved = {}
+    monkeypatch.setattr(run, "save_state", lambda s: saved.__setitem__("reason", s.failure_reason))
+    monkeypatch.setattr(
+        run, "assemble_package",
+        lambda c: CandidatePackage(
+            candidate=_candidate(cid), plan=TaskPlan(candidate_id=cid, tasks=[]),
+            review_log=[], final_status="FAILED", failure_reason="committee_veto: leak detected",
+        ),
+    )
+
+    pkg = run.run_full(_candidate(cid))
+    assert pkg.final_status == "FAILED"
+    assert "committee_veto" in saved["reason"]
 
 
 def test_run_full_conformance_failure(monkeypatch):

@@ -37,3 +37,30 @@ class Strategy(Protocol):
             implementation; the protocol itself only fixes the shape.
         """
         ...
+
+
+@runtime_checkable
+class VectorizedStrategy(Protocol):
+    """Optional fast-path interface (additive to :class:`Strategy`).
+
+    Implementations provide ``generate_positions_vectorized``, which computes
+    positions for every bar in one causal pass, so the engine can skip the
+    O(n^2) per-bar ``generate_positions`` recompute at intraday/tick
+    resolution. This is *purely* a performance extension: the per-bar
+    ``Strategy`` path remains the correctness baseline and must stay in sync.
+
+    Contract (non-negotiable): the returned ``pd.Series`` is index-aligned with
+    ``prices``, and ``positions[t]`` must depend only on bars *strictly before*
+    ``t`` — i.e. the implementation applies the standard one-bar shift
+    internally (``signal.shift(1).fillna(0.0)``). This makes a correct vectorized
+    implementation byte-for-byte equivalent to the per-bar path.
+    """
+
+    def generate_positions_vectorized(self, prices: pd.DataFrame) -> pd.Series:
+        """Return the full position series, aligned to ``prices.index``.
+
+        ``positions[t]`` must be computable from ``prices.iloc[:t]`` alone
+        (history strictly before ``t``); a lookahead implementation is caught by
+        the engine's causality probe (see ``assert_causal_vectorized``).
+        """
+        ...

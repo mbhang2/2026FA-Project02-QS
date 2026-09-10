@@ -73,7 +73,7 @@ def test_minor_fix_retries_then_proceeds(monkeypatch):
 
     worker_prompts = []
 
-    def worker_fake(agent, prompt, session_id=None, cwd=None):
+    def worker_fake(agent, prompt, session_id=None, context_files=None, cwd=None):
         worker_prompts.append(prompt)
         return OpencodeResult("", "", 0, agent)
 

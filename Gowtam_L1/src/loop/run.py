@@ -23,7 +23,11 @@ from datetime import datetime
 from pathlib import Path
 
 from src.loop import paths
+from src.loop.auditor_step import run_auditor_step
+from src.loop.committee_step import run_committee_step
 from src.loop.driver import run_candidate
+from src.loop.reproducibility import capture_reproducibility
+from src.loop.statistician_step import run_statistician_step
 from src.loop.state_store import load_state, save_state
 from src.packaging.package_candidate import (
     EngineRunError,
@@ -52,7 +56,12 @@ def auto_candidate_id(hypothesis: str) -> str:
 
 
 def run_full(candidate: ApprovedCandidate) -> CandidatePackage:
-    """Run the loop, then conformance -> engine -> package (with state transitions)."""
+    """Run the fully-agentic staged pipeline to a committee PASS/VETO + package.
+
+    Stages: planner -> worker -> reviewer (build loop, in ``run_candidate``) ->
+    conformance -> engine -> statistician -> auditor -> committee -> package.
+    There is no human stage; the committee's PASS/VETO is the binding outcome.
+    """
     cid = candidate.candidate_id
     state = run_candidate(candidate)
 
@@ -73,9 +82,37 @@ def run_full(candidate: ApprovedCandidate) -> CandidatePackage:
         save_state(state)
         return assemble_package(cid)
 
+    # Staged agentic post-engine committee (B.4): read-only statistician and
+    # auditor, then the judge that aggregates them into a binding PASS/VETO.
+    run_statistician_step(candidate)
+    run_auditor_step(candidate)
+    verdict = run_committee_step(candidate)
+
+    _write_reproducibility(candidate)
+
+    if verdict.verdict == "VETO":
+        state.status = "FAILED"
+        state.failure_reason = f"committee_veto: {verdict.reasoning}"
+        save_state(state)
+        return assemble_package(cid)
+
     state.status = "PACKAGED"
     save_state(state)
     return assemble_package(cid)
+
+
+def _write_reproducibility(candidate: ApprovedCandidate) -> None:
+    """Record the reproducibility block (B.5) and attach it to the trial log."""
+    cid = candidate.candidate_id
+    repro = capture_reproducibility(candidate)
+    paths.candidate_file(cid, "reproducibility.json").write_text(
+        json.dumps(repro, indent=2)
+    )
+    tl_path = paths.candidate_file(cid, "trial_log.json")
+    if tl_path.exists():
+        record = json.loads(tl_path.read_text())
+        record["reproducibility"] = repro
+        tl_path.write_text(json.dumps(record, indent=2))
 
 
 def summarize(candidate_id: str) -> dict:

@@ -98,7 +98,10 @@ rclone ls r2:msfe-practicum/raw/trades | head -5
 rclone size r2:msfe-practicum/raw/trades --fast-list
 ```
 
-Expected: a few filenames, then `Total objects: 952 / Total size: 5.140 GiB`.
+Expected: a few filenames, then a four-figure object count. Don't match on the exact
+numbers —
+it changes as we correct files and extend the series. `docs/data-inventory.md` carries
+the current figures.
 
 Now test the Python path too — rclone working does **not** prove the dotenv file
 loaded, and they fail independently:
@@ -118,10 +121,54 @@ print([o['Key'] for o in r['Contents']])
 
 Both commands returning data means you're done.
 
-## 5. Troubleshooting
+**`rclone lsd r2:` returning 403 AccessDenied is normal.** Your token is scoped to
+one bucket, so listing *all* buckets is denied. Per-bucket commands work fine. Not a
+broken key — see section 5 for the error that is.
 
-**`403 AccessDenied` on `rclone lsd r2:`** — expected, ignore it. Your token is
-scoped to one bucket, so listing *all* buckets is denied. Per-bucket commands work.
+## 5. What's in the bucket
+
+Databento DBN under zstd — **not parquet**, so `read_parquet` won't open it. Use the
+`databento` package. One prefix, `raw/`, 2,595 objects, roughly 45 GiB. Object counts
+below are stable; sizes are approximate and `docs/data-inventory.md` is the live
+source.
+
+| Prefix | Objects | Notes |
+|---|---|---|
+| `raw/trades` | 1,056 | tick trades, NQ + ES — our primary price source |
+| `raw/opra_cbbo1m` | 512 | QQQ options quotes, per-minute; feeds GEX only |
+| `raw/opra_definition` | 512 | options instrument definitions |
+| `raw/opra_statistics` | 512 | options statistics |
+
+Plus 3 sidecar objects, for 2,595 in total.
+
+Coverage: NQ 684 dates with one gap (2025-04-18), ES 372 dates from 2025-07-03, QQQ
+options 2024-07-03 → 2026-07-20. Futures run to 2026-09-09 and options do not — don't
+assume the two series end together.
+
+Things to know before you query:
+
+- **Bars are built from `trades`**, not from a vendor bar file. Session boundaries,
+  VWAP anchoring (17:00 CT Globex open) and roll conventions live in versioned code so
+  they're reviewable. Please don't introduce a second bar source — that's how you end
+  up with two sets of conventions and no way to tell which produced a result.
+- **`opra_cbbo1m` is 38 GiB.** Don't scan it casually. It feeds the GEX build and
+  nothing else.
+- **`raw/` was mirrored from our source data lake on 2026-09-08 and intentionally
+  diverges from it on six objects.** Six NQ files for 2025-07-03…09 originally
+  contained ES data and were corrected in place the same day.
+  `config/corrections.yaml` is the record and `docs/data-inventory.md` §9 explains it.
+  Bucket integrity is now verified against `data/manifest.json` rather than against
+  the lake.
+- **The layout will change** — the holdout period gets split into a separate bucket
+  before our first agent run. Don't hardcode paths; go through the loader.
+
+Read `CLAUDE.md` before writing code against any of this. It carries the data
+invariants — DBN version mixing, UTC-day file splits, header-over-path symbol
+identity — that will bite you otherwise.
+
+## 6. Troubleshooting
+
+**`403 AccessDenied` on `rclone lsd r2:`** — expected, ignore it.
 
 **`401 Unauthorized`** — the credential wasn't recognised. Three usual causes:
 
@@ -148,3 +195,19 @@ retry once before debugging.
 
 **Slow transfers** — add `--fast-list` for listing, `--transfers 16` for copies. R2
 charges no egress, so pulling data costs time and nothing else.
+
+**Need data we don't have?** Ask me — the Databento account is tied to my login, so
+all downloads go through me. Don't try to acquire it separately; we'd end up with two
+provenance trails.
+
+## 7. Where downloads go — **not in the repo**
+
+Vendor downloads land **outside the working tree**, in `~/dl/databento/`, and are
+uploaded to R2 from there. Never into the repo, not even temporarily: a couple of GiB of
+tick data inside the working tree is one `git add -A` from a very bad afternoon, and
+unlike a leaked key you cannot rotate a 2 GiB blob out of history quickly.
+
+`ext/` is in `.gitignore` purely as a guard for that habit — the directory does not
+exist and should not be recreated. The repo holds the *derived, committed* artifacts
+(`data/manifest.json`, `data/nq-contract-selection.json`) and the session cache under
+`data/cache/`, which is gitignored; the raw bytes live in the bucket.

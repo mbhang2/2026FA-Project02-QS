@@ -173,25 +173,38 @@ The agent may write **only** under `src/strategies/`.
 | `scripts/` | no | no |
 | `config/` | via loader | no |
 | `src/core/` (dataset, engine, ledger) | yes | no |
-| `src/core/scorer.py` | no | no |
+| `src/core/scoring/scorer.py` | no | no |
 | `src/strategies/` | it is the agent's code | yes |
 
 Enforced by tool permissions and by a CI check comparing changed paths against an
 allowlist. The CI check is the one that actually holds — configs drift and get copied
 wrong.
 
+`scripts/` is **build-time**: it produces the committed artifacts (`data/manifest.json`,
+the published session list, the contract-selection file, the tabulated null,
+`docs/data-inventory.md`). `src/core/` is **run-time**: it consumes them. Nothing under
+`src/core/` may import anything under `scripts/`, and a test asserts it — otherwise a
+trial could re-derive its own coverage, or tabulate its own null and mark its own
+homework.
+
 ```
 config/calendars/<dataset>.yaml  immutable — pre-registered splits, one per dataset
-scripts/                         run-once prep, human-only
-src/core/                        importable by strategies, never editable
-  dataset.py engine.py ledger.py
-  scorer.py                      not importable by strategies either
+config/corrections.yaml          historical record of corrected objects
+scripts/                         build-time; produces committed artifacts
+src/core/                        run-time; importable by strategies, never editable
+  data/      dataset protocol, adapters, cache access
+  engine/    event loop, bars, orders, fill models, context
+  scoring/   metrics.py, scorer.py, calibration/ — none importable by strategies
+  types.py   shared value types
 src/strategies/current.py        THE ONLY THING THE AGENT WRITES
 runs/                            trial ledger, append-only JSONL, committed
 data/                            committed artifacts;  data/cache/ gitignored
 tests/                           offline in CI; live tests skip without credentials
+docs/agent/data.md               generated; what the RESEARCH agent may subscribe to
+docs/design/                     simulator interface, metric, generated context API
 docs/plans/                      this document
 docs/datasets/                   one file per adapter
+docs/setup/                      onboarding
 docs/tasks/                      task briefs, versioned alongside their outputs
 ```
 

@@ -35,7 +35,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Iterable, Sequence
 
-from .types import Blotter, BlotterRow, Ts
+from ..types import Blotter, BlotterRow, Ts
 
 # Pre-registered, not tuned: below this many sessions the ratio is not a
 # measurement and the loop must treat the trial as a reject rather than accept a
@@ -66,7 +66,7 @@ def _reject_import_from_strategies() -> None:
         name = frame.frame.f_globals.get("__name__", "")
         if name == _FORBIDDEN_PREFIX or name.startswith(_FORBIDDEN_PREFIX + "."):
             raise ImportError(
-                f"{name} may not import src.core.metrics. The metric is the number "
+                f"{name} may not import src.core.scoring.metrics. The metric is the number "
                 "the agent is graded on; a strategy that can compute it can optimize "
                 "a number it controls."
             )

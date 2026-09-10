@@ -27,9 +27,21 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import inventory as inv  # noqa: E402
 
-from src.core.datasets.nq import NQDataset  # noqa: E402
+from src.core.data.nq import NQDataset  # noqa: E402
 
 OUT = REPO_ROOT / "data" / "nq-contract-selection.json"
+
+# A session is flagged `near_roll` when the chosen contract holds less than this
+# share of session volume -- i.e. the rule had a real competitor. Measured, not
+# guessed: outside the roll weeks the minimum share is 0.90 and the median 0.998,
+# so every session below the line is within four calendar days of a roll. Stored
+# rather than left to each strategy to re-derive, because a threshold that lives
+# in strategy code is a threshold that differs between strategies.
+NEAR_ROLL_SHARE = 0.90
+
+
+def near_roll(row: dict) -> bool:
+    return row["share_of_session_volume"] < NEAR_ROLL_SHARE
 
 
 def main() -> int:
@@ -61,6 +73,11 @@ def main() -> int:
                   f"({time.monotonic() - t0:.0f}s)", flush=True)
 
     ordered = dict(sorted(existing.items()))
+    # Derived at write time, so it is applied to rows recorded by earlier runs
+    # too -- a flag that only exists on newly fetched sessions is worse than no
+    # flag, because it reads as False on the old ones.
+    for row in ordered.values():
+        row["near_roll"] = near_roll(row)
     rolls = []
     prev = None
     for k, v in ordered.items():
@@ -78,11 +95,19 @@ def main() -> int:
                  "contracts in the session. Recorded so a roll is data."),
         "rule": "highest traded volume among outright contracts in the session",
         "sessions_recorded": len(ordered),
+        "near_roll_rule": (
+            f"share_of_session_volume < {NEAR_ROLL_SHARE}: the chosen contract "
+            "had a real competitor in that session. Every flagged session is "
+            "within four calendar days of a roll."
+        ),
+        "near_roll_sessions": sum(1 for v in ordered.values() if v["near_roll"]),
         "rolls": rolls,
         "sessions": ordered,
     }, indent=2, sort_keys=True) + "\n")
     print(f"wrote {args.out.relative_to(REPO_ROOT)}: {len(ordered)} sessions, "
-          f"{len(rolls)} roll(s), {time.monotonic() - t0:.0f}s")
+          f"{len(rolls)} roll(s), "
+          f"{sum(1 for v in ordered.values() if v['near_roll'])} near-roll, "
+          f"{time.monotonic() - t0:.0f}s")
     for r in rolls:
         print(f"  {r['session']}  {r['from']} -> {r['to']}  "
               f"share {r['share_before']:.3f} -> {r['share_after']:.3f}")

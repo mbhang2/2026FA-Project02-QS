@@ -3,7 +3,7 @@
 The single scalar the loop accepts or rejects on, its conventions, its
 diagnostics, and the screening criterion any replacement has to pass.
 
-Implemented in `src/core/metrics.py`; `src/core/scorer.py` is the fixed surface
+Implemented in `src/core/scoring/metrics.py`; `src/core/scoring/scorer.py` is the fixed surface
 the loop calls. Neither is importable from `src.strategies` — a strategy that can
 compute its own objective can optimize a number it controls, so both refuse the
 import at import time and a static check over the strategy tree backs it up.
@@ -231,7 +231,7 @@ the metric, the threshold **and** whatever that file contained. Task 4's sweep
 turned over at the strongest planted signal and it took a separate diagnostic to
 establish the cause. That diagnostic should not have been needed.
 
-It now lives at `src/core/calibration/reference.py`, immutable, and
+It now lives at `src/core/scoring/calibration/reference.py`, immutable, and
 `src.strategies` cannot import the rig for the same reason it cannot import the
 scorer. Two changes make its payoff shape invariant to signal strength, which is
 what "acceptance must be monotone in signal strength" needs in order to be a
@@ -270,7 +270,7 @@ separates metric behaviour from strategy behaviour.
 `significance = ratio × √N` is exact for Sharpe and only an approximation for
 Sortino, and Task 4 measured what the approximation costs: **6.1% false
 acceptance at N=30 against a nominal 0.1%.** So the relation is no longer
-assumed. `src/core/calibration/null.py` measures it:
+assumed. `src/core/scoring/calibration/null.py` measures it:
 
 1. simulate no-signal runs of the reference strategy
 2. pool every per-session return they produce

@@ -19,7 +19,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.core import context as ctxmod  # noqa: E402
+from src.core.engine import context as ctxmod  # noqa: E402
 
 OUT = REPO_ROOT / "docs" / "design" / "context-api.md"
 
@@ -58,7 +58,7 @@ def members(cls):
 def render() -> str:
     L = ["# Context API reference", ""]
     L.append(
-        "Everything a strategy can read or do. Generated from `src/core/context.py` "
+        "Everything a strategy can read or do. Generated from `src/core/engine/context.py` "
         "by `scripts/gen_context_api.py` — edit the code, not this file."
     )
     L += ["", _clean(ctxmod.__doc__), ""]

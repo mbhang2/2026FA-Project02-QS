@@ -29,7 +29,7 @@ def _reject_import_from_strategies() -> None:
         name = frame.frame.f_globals.get("__name__", "")
         if name == _FORBIDDEN_PREFIX or name.startswith(_FORBIDDEN_PREFIX + "."):
             raise ImportError(
-                f"{name} may not import src.core.calibration. The rig measures the "
+                f"{name} may not import src.core.scoring.calibration. The rig measures the "
                 "harness; a strategy that can reach it can be written against the "
                 "null it is being judged against."
             )

@@ -26,13 +26,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.core.calibration import (  # noqa: E402
+from src.core.scoring.calibration import (  # noqa: E402
     AcceptRule,
     EmpiricalAcceptRule,
     ReferenceStrategy,
     acceptance_rate,
 )
-from src.core.calibration import null as nullmod  # noqa: E402
+from src.core.scoring.calibration import null as nullmod  # noqa: E402
 
 STRENGTHS = [0.0, 0.05, 0.1, 0.2, 0.35, 0.5, 0.75, 1.0]
 

@@ -25,8 +25,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.datasets import dbn  # noqa: E402
-from src.core.datasets.nq import (  # noqa: E402
+from src.core.data import dbn  # noqa: E402
+from src.core.data.nq import (  # noqa: E402
     CME_TZ,
     NQDataset,
     NQSpec,
@@ -38,8 +38,8 @@ MANIFEST = json.loads((REPO_ROOT / "data" / "manifest.json").read_text())
 COVERAGE = MANIFEST["instrument_coverage"]["NQ"]["sessions"]
 
 # From docs/datasets/nq-es-qqq.md. Documented, not guessed.
-EXPECTED_SESSIONS = 521
-FIRST_SESSION, LAST_SESSION = dt.date(2024, 7, 4), dt.date(2026, 7, 10)
+EXPECTED_SESSIONS = 564
+FIRST_SESSION, LAST_SESSION = dt.date(2024, 7, 4), dt.date(2026, 9, 9)
 NO_OWN_FILE = "2025-04-18"          # Good Friday
 NO_PRIOR_EVENING = "2024-07-03"     # the leading boundary
 CORRECTED = ["2025-07-03", "2025-07-04", "2025-07-06",

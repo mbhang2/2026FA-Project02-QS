@@ -21,13 +21,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.core import metrics  # noqa: E402
-from src.core.calibration import ReferenceStrategy  # noqa: E402
-from src.core.calibration import null as N  # noqa: E402
-from src.core.datasets.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
+from src.core.scoring import metrics  # noqa: E402
+from src.core.scoring.calibration import ReferenceStrategy  # noqa: E402
+from src.core.scoring.calibration import null as N  # noqa: E402
+from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
-from src.core.metrics import MIN_DOWNSIDE_SESSIONS, SessionSpan  # noqa: E402
-from src.core.scorer import score  # noqa: E402
+from src.core.scoring.metrics import MIN_DOWNSIDE_SESSIONS, SessionSpan  # noqa: E402
+from src.core.scoring.scorer import score  # noqa: E402
 from src.core.types import Blotter, BlotterRow, Side, Split  # noqa: E402
 
 DAY = 86_400 * 1_000_000_000
@@ -53,14 +53,14 @@ def test_strategies_cannot_import_the_calibration_rig():
     """Same reason as the scorer: a strategy that can read the null it is judged
     against can be written to clear it."""
     probe = REPO_ROOT / "src" / "strategies" / "_probe_calibration.py"
-    probe.write_text("from src.core import calibration  # noqa: F401\n")
+    probe.write_text("from src.core.scoring import calibration  # noqa: F401\n")
     try:
         r = subprocess.run(
             [sys.executable, "-c", "import src.strategies._probe_calibration"],
             capture_output=True, text=True, cwd=REPO_ROOT,
         )
         assert r.returncode != 0
-        assert "may not import src.core.calibration" in r.stderr
+        assert "may not import src.core.scoring.calibration" in r.stderr
     finally:
         probe.unlink(missing_ok=True)
 

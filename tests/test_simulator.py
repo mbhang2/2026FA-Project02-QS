@@ -19,8 +19,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.calibration import AcceptRule, acceptance_rate  # noqa: E402
-from src.core.datasets.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
+from src.core.scoring.calibration import AcceptRule, acceptance_rate  # noqa: E402
+from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
 from src.core.types import (  # noqa: E402
     NS_PER_SECOND,
@@ -37,7 +37,7 @@ from src.core.types import (  # noqa: E402
     Subscription,
     TimeInForce,
 )
-from src.core.view import HistoryView  # noqa: E402
+from src.core.engine.view import HistoryView  # noqa: E402
 from src.strategies.current import MomentumStrategy  # noqa: E402
 
 M1 = Subscription(interval_ns=60 * NS_PER_SECOND)
@@ -193,7 +193,7 @@ def test_same_seed_gives_a_byte_identical_blotter():
 def test_importing_the_scorer_from_a_strategy_module_raises(tmp_path):
     """Runtime guard: the import itself fails, wherever it is attempted from."""
     probe = REPO_ROOT / "src" / "strategies" / "_import_probe_tmp.py"
-    probe.write_text("from src.core import scorer  # noqa: F401\n")
+    probe.write_text("from src.core.scoring import scorer  # noqa: F401\n")
     try:
         r = subprocess.run(
             [sys.executable, "-c",
@@ -238,8 +238,8 @@ def test_agent_path_allowlist():
 
     assert violations(["src/strategies/current.py"]) == []
     assert violations(["src/strategies/a.py", "src/strategies/b/c.py"]) == []
-    assert violations(["src/core/engine.py"]) == ["src/core/engine.py"]
-    assert violations(["src/core/scorer.py"]) == ["src/core/scorer.py"]
+    assert violations(["src/core/engine/engine.py"]) == ["src/core/engine/engine.py"]
+    assert violations(["src/core/scoring/scorer.py"]) == ["src/core/scoring/scorer.py"]
     assert violations(["tests/test_simulator.py", "src/strategies/x.py"]) == [
         "tests/test_simulator.py"
     ]
@@ -247,11 +247,11 @@ def test_agent_path_allowlist():
 
 def test_agent_path_check_exits_nonzero_on_a_core_diff():
     r = subprocess.run(
-        [sys.executable, "scripts/check_agent_paths.py", "--paths", "src/core/scorer.py"],
+        [sys.executable, "scripts/check_agent_paths.py", "--paths", "src/core/scoring/scorer.py"],
         capture_output=True, text=True, cwd=REPO_ROOT,
     )
     assert r.returncode == 1
-    assert "src/core/scorer.py" in r.stderr
+    assert "src/core/scoring/scorer.py" in r.stderr
 
 
 # --------------------------------------------------------------------------- #
@@ -303,7 +303,7 @@ def test_unfavorable_never_fills_where_favorable_would_not():
     different positions and therefore different subsequent trades, so at small
     sample the per-trade means are not comparable.
     """
-    from src.core.fills import FavorableFill, UnfavorableFill
+    from src.core.engine.fills import FavorableFill, UnfavorableFill
     from src.core.types import Order, Tick, TimeInForce
 
     fav, unf = FavorableFill(), UnfavorableFill()
@@ -335,7 +335,7 @@ def test_the_spread_between_fill_models_has_the_right_sign_at_scale():
     """The spread is a first-class output -- a candidate that collapses between
     the two modes is telling you its edge lives in the optimism. It only means
     something over enough trades for the two paths to be comparable."""
-    from src.core.scorer import score
+    from src.core.scoring.scorer import score
 
     for s in (0.0, 0.25, 0.5):
         out = {}

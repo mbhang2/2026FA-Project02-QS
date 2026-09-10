@@ -7,7 +7,7 @@ it is offset from the thing a trader would call a five-minute bar.
 
 from __future__ import annotations
 
-from .types import Bar, Subscription, Tick, Ts
+from ..types import Bar, Subscription, Tick, Ts
 
 
 class BarBuilder:

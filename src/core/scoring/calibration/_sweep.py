@@ -14,11 +14,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Sequence
 
-from ..datasets.synthetic import SyntheticDataset, SyntheticSpec
-from ..engine import Engine
+from ...data.synthetic import SyntheticDataset, SyntheticSpec
+from ...engine import Engine
 from ..metrics import placeholder_score
 from ..scorer import score, score_diagnostics
-from ..types import ScoreTuple, Split
+from ...types import ScoreTuple, Split
 
 
 @dataclass(frozen=True)

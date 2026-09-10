@@ -20,8 +20,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.context import ContextError  # noqa: E402
-from src.core.datasets.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
+from src.core.engine.context import ContextError  # noqa: E402
+from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import BudgetExceeded, Engine  # noqa: E402
 from src.core.types import (  # noqa: E402
     LifecycleKind,

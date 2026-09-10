@@ -45,6 +45,12 @@ jobs:
       - name: Context API reference is current
         run: python scripts/gen_context_api.py --check
 
+      # The research agent's data reference is generated from data/manifest.json,
+      # so extending the series without regenerating it fails here rather than
+      # showing an agent session counts that stopped being true.
+      - name: Agent data reference is current
+        run: python scripts/gen_agent_data.py --check
+
       - name: Check the entry points import cleanly
         run: |
           python -c "import sys; sys.path.insert(0, 'scripts'); import inventory, probe_dbn"
@@ -55,4 +61,6 @@ jobs:
           python scripts/replay.py --help > /dev/null
           python scripts/nq_contracts.py --help > /dev/null
           python scripts/nq_smoke.py --help > /dev/null
+          python scripts/gen_agent_data.py --help > /dev/null
+          python scripts/check_agent_paths.py --paths src/strategies/current.py
           python run.py --help > /dev/null

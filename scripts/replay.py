@@ -20,7 +20,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.datasets.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
+from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
 from src.core.types import Split  # noqa: E402
 

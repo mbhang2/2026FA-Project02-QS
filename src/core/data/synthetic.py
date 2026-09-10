@@ -25,7 +25,7 @@ from typing import Iterator
 
 import numpy as np
 
-from ..dataset import Calendar, HoldoutLock, SplitBounds, sessions_for
+from .dataset import Calendar, HoldoutLock, SplitBounds, sessions_for
 from ..types import NS_PER_SECOND, DataCapabilities, Side, Split, Tick, Ts
 
 SESSION_ORIGIN_NS = 1_700_000_000 * NS_PER_SECOND  # arbitrary, fixed, UTC

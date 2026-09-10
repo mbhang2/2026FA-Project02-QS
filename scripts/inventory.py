@@ -54,7 +54,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # The DBN reading rules -- double zstd, never seek by fixed offset, symbol from
 # the header -- live in one place so this script and the NQ adapter cannot drift
 # apart on them.
-from src.core.datasets.dbn import (  # noqa: E402
+from src.core.data.dbn import (  # noqa: E402
     count_records,
     dbn_metadata,
     read_full_df,

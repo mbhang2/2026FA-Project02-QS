@@ -20,8 +20,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.context import ContextError, ContextExpired, parse_interval  # noqa: E402
-from src.core.datasets.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
+from src.core.engine.context import ContextError, ContextExpired, parse_interval  # noqa: E402
+from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
 from src.core.types import OrderStatus, Split  # noqa: E402
 from src.strategies.current import MomentumStrategy  # noqa: E402
@@ -379,7 +379,7 @@ def test_strategies_still_cannot_import_the_scorer_or_the_metric():
     imports the metric -- either way the import fails and says why."""
     for module in ("scorer", "metrics"):
         probe = REPO_ROOT / "src" / "strategies" / f"_probe_{module}.py"
-        probe.write_text(f"from src.core import {module}  # noqa: F401\n")
+        probe.write_text(f"from src.core.scoring import {module}  # noqa: F401\n")
         try:
             r = subprocess.run(
                 [sys.executable, "-c", f"import src.strategies._probe_{module}"],
@@ -388,7 +388,7 @@ def test_strategies_still_cannot_import_the_scorer_or_the_metric():
             assert r.returncode != 0, f"importing {module} from a strategy succeeded"
             assert "ImportError" in r.stderr
             assert any(
-                f"may not import src.core.{m}" in r.stderr for m in ("scorer", "metrics")
+                f"may not import src.core.scoring.{m}" in r.stderr for m in ("scorer", "metrics")
             ), r.stderr[-400:]
         finally:
             probe.unlink(missing_ok=True)

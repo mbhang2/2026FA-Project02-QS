@@ -7,7 +7,8 @@ the next callback. On pure-noise data it has no edge by construction, which is
 what makes the null half of calibration meaningful.
 
 Everything you can call is on `ctx`. See `docs/design/context-api.md`, which is
-generated from the code, or read the docstrings directly.
+generated from the code, or read the docstrings directly. What you can subscribe
+to and what the fields mean is `docs/agent/data.md`, generated from the manifest.
 """
 
 from __future__ import annotations

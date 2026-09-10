@@ -29,8 +29,8 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 import inventory as inv  # noqa: E402
 
 import run as runner  # noqa: E402
-from src.core.calibration import ReferenceStrategy  # noqa: E402
-from src.core.datasets.nq import CACHE_ROOT, NQDataset, NQSpec  # noqa: E402
+from src.core.scoring.calibration import ReferenceStrategy  # noqa: E402
+from src.core.data.nq import CACHE_ROOT, NQDataset, NQSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
 from src.core.types import Split  # noqa: E402
 
@@ -71,7 +71,7 @@ def main() -> int:
           f"{per_session * full / 60:.0f} min for all {full} sessions")
 
     row = runner._row(record.as_dict(), "smoke", "nq-smoke", args.ledger)
-    row["strategy"] = "src/core/calibration/reference.py::ReferenceStrategy"
+    row["strategy"] = "src/core/scoring/calibration/reference.py::ReferenceStrategy"
     row["note"] = "plumbing check on real data; not scored, not a result"
     runner.append_ledger(args.ledger, row)
     print(f"ledger    {args.ledger}")

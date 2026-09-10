@@ -1,6 +1,12 @@
 {
   "anomalies": [
     {
+      "detail": "104 object(s) added since the committed manifest: raw/trades/ES/glbx-mdp3-20260712.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260713.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260714.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260715.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260716.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260717.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260719.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260720.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260721.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260722.trades.dbn.zst ...",
+      "kind": "object_added",
+      "prefix": "bucket",
+      "severity": "warning"
+    },
+    {
       "detail": "compression depth is not uniform across this prefix: 11 file(s) at 1 layer(s) (2026-07-06 \u2192 2026-07-20); 501 file(s) at 2 layer(s) (2024-07-03 \u2192 2026-07-02). A reader that decompresses a fixed number of times fails on one group or the other; unwrap until the DBN magic appears.",
       "first_date": "2024-07-03",
       "kind": "inconsistent_zstd_layering",
@@ -280,14 +286,51 @@
           "2026-04-03",
           "2026-05-25",
           "2026-06-19",
-          "2026-07-03"
+          "2026-07-03",
+          "2026-07-21",
+          "2026-07-22",
+          "2026-07-23",
+          "2026-07-24",
+          "2026-07-27",
+          "2026-07-28",
+          "2026-07-29",
+          "2026-07-30",
+          "2026-07-31",
+          "2026-08-03",
+          "2026-08-04",
+          "2026-08-05",
+          "2026-08-06",
+          "2026-08-07",
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-17",
+          "2026-08-18",
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21",
+          "2026-08-24",
+          "2026-08-25",
+          "2026-08-26",
+          "2026-08-27",
+          "2026-08-28",
+          "2026-08-31",
+          "2026-09-01",
+          "2026-09-02",
+          "2026-09-03",
+          "2026-09-04",
+          "2026-09-07",
+          "2026-09-08",
+          "2026-09-09"
         ],
-        "last": "2026-07-10",
+        "last": "2026-07-20",
         "note": "futures sessions the options data cannot support; these are days CME equity futures trade but US equity options are closed",
-        "sessions_with_same_day_options": 255
+        "sessions_with_same_day_options": 261
       },
       "file_date_range": {
-        "end": "2026-07-10",
+        "end": "2026-07-20",
         "nonempty": true,
         "start": "2025-07-03"
       }
@@ -311,14 +354,51 @@
           "2026-04-03",
           "2026-05-25",
           "2026-06-19",
-          "2026-07-03"
+          "2026-07-03",
+          "2026-07-21",
+          "2026-07-22",
+          "2026-07-23",
+          "2026-07-24",
+          "2026-07-27",
+          "2026-07-28",
+          "2026-07-29",
+          "2026-07-30",
+          "2026-07-31",
+          "2026-08-03",
+          "2026-08-04",
+          "2026-08-05",
+          "2026-08-06",
+          "2026-08-07",
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-17",
+          "2026-08-18",
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21",
+          "2026-08-24",
+          "2026-08-25",
+          "2026-08-26",
+          "2026-08-27",
+          "2026-08-28",
+          "2026-08-31",
+          "2026-09-01",
+          "2026-09-02",
+          "2026-09-03",
+          "2026-09-04",
+          "2026-09-07",
+          "2026-09-08",
+          "2026-09-09"
         ],
-        "last": "2026-07-10",
+        "last": "2026-07-20",
         "note": "futures sessions the options data cannot support; these are days CME equity futures trade but US equity options are closed",
-        "sessions_with_same_day_options": 505
+        "sessions_with_same_day_options": 511
       },
       "file_date_range": {
-        "end": "2026-07-10",
+        "end": "2026-07-20",
         "nonempty": true,
         "start": "2024-07-03"
       }
@@ -15197,6 +15277,422 @@
       "fe5d0875490629b028eb42b0429c5801",
       "2026-09-08T15:18:03.832000Z"
     ],
+    "raw/trades/ES/glbx-mdp3-20260712.trades.dbn.zst": [
+      162621,
+      3,
+      1,
+      "ES.FUT",
+      "8901e097ec27b8536233e6d9ef6bf81c",
+      "2026-09-10T20:33:32.764000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260713.trades.dbn.zst": [
+      6753293,
+      3,
+      1,
+      "ES.FUT",
+      "7238a52c67d60110b6003b8ed68f762d",
+      "2026-09-10T20:33:33.044000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260714.trades.dbn.zst": [
+      6282361,
+      3,
+      1,
+      "ES.FUT",
+      "b2acbab9e2290af1a29378f66b57b8fd",
+      "2026-09-10T20:33:33.049000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260715.trades.dbn.zst": [
+      6614342,
+      3,
+      1,
+      "ES.FUT",
+      "ab1cb9ce786066474975b961fa38c285",
+      "2026-09-10T20:33:33.101000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260716.trades.dbn.zst": [
+      6792236,
+      3,
+      1,
+      "ES.FUT",
+      "e73972dd6e1662eeb1cd929aa03d1e1f",
+      "2026-09-10T20:33:33.255000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260717.trades.dbn.zst": [
+      8457234,
+      3,
+      1,
+      "ES.FUT",
+      "18a6d5e2ac6a6ff748a1ecc61d675b98",
+      "2026-09-10T20:33:33.678000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260719.trades.dbn.zst": [
+      194530,
+      3,
+      1,
+      "ES.FUT",
+      "6ba099f52f0fd1d9ddd52c48a759fc77",
+      "2026-09-10T20:33:33.375000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260720.trades.dbn.zst": [
+      6849901,
+      3,
+      1,
+      "ES.FUT",
+      "8f1193a930c71548348cf38fab2aee6c",
+      "2026-09-10T20:33:33.863000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260721.trades.dbn.zst": [
+      4811788,
+      3,
+      1,
+      "ES.FUT",
+      "93e8ea1a1f3674ca79d766afdad17201",
+      "2026-09-10T20:33:33.761000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260722.trades.dbn.zst": [
+      5061301,
+      3,
+      1,
+      "ES.FUT",
+      "e4a353b73a7dbdc38b5e2dea16e726d9",
+      "2026-09-10T20:33:33.927000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260723.trades.dbn.zst": [
+      8523433,
+      3,
+      1,
+      "ES.FUT",
+      "9d4e4b2147947b164461f4e077f76e41",
+      "2026-09-10T20:33:34.223000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260724.trades.dbn.zst": [
+      7228758,
+      3,
+      1,
+      "ES.FUT",
+      "8ffab0214d3613ed3d54a184d577e015",
+      "2026-09-10T20:33:34.228000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260726.trades.dbn.zst": [
+      173300,
+      3,
+      1,
+      "ES.FUT",
+      "bba43771708f5a3c40b49a5ab3badcd6",
+      "2026-09-10T20:33:34.211000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260727.trades.dbn.zst": [
+      7781848,
+      3,
+      1,
+      "ES.FUT",
+      "c9e18510868fb0218b86767237af16e9",
+      "2026-09-10T20:33:34.508000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260728.trades.dbn.zst": [
+      7468848,
+      3,
+      1,
+      "ES.FUT",
+      "33b7782393f180921991871da5f5be94",
+      "2026-09-10T20:33:34.738000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260729.trades.dbn.zst": [
+      11574154,
+      3,
+      1,
+      "ES.FUT",
+      "c15d8886e69f3505e4205d0e5c58d54f",
+      "2026-09-10T20:33:34.793000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260730.trades.dbn.zst": [
+      8799584,
+      3,
+      1,
+      "ES.FUT",
+      "cb033dc2231d24293554d4a7817a0100",
+      "2026-09-10T20:33:34.886000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260731.trades.dbn.zst": [
+      9199936,
+      3,
+      1,
+      "ES.FUT",
+      "e754a536a38ce9eda03bb3897fdebe0f",
+      "2026-09-10T20:33:35.121000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260802.trades.dbn.zst": [
+      203779,
+      3,
+      1,
+      "ES.FUT",
+      "382fcd340bf98514ad1acce647732623",
+      "2026-09-10T20:33:35.052000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260803.trades.dbn.zst": [
+      6367130,
+      3,
+      1,
+      "ES.FUT",
+      "303b74c05297bfd56ce8d6f0a46c163c",
+      "2026-09-10T20:33:35.463000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260804.trades.dbn.zst": [
+      7322480,
+      3,
+      1,
+      "ES.FUT",
+      "8bd1b8146e362c57889b06b7246c2c34",
+      "2026-09-10T20:33:35.526000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260805.trades.dbn.zst": [
+      7123926,
+      3,
+      1,
+      "ES.FUT",
+      "3ee36d115e54bcd9049441bffd17fceb",
+      "2026-09-10T20:33:35.767000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260806.trades.dbn.zst": [
+      6514435,
+      3,
+      1,
+      "ES.FUT",
+      "65c993a777344d88f7633cc9d5151b94",
+      "2026-09-10T20:33:35.634000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260807.trades.dbn.zst": [
+      6256169,
+      3,
+      1,
+      "ES.FUT",
+      "be570ea73fd278d4bbd8f6c4c66e45f4",
+      "2026-09-10T20:33:36.182000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260809.trades.dbn.zst": [
+      96153,
+      3,
+      1,
+      "ES.FUT",
+      "dc0d5d04df97adad49273fda0496ea4b",
+      "2026-09-10T20:33:35.862000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260810.trades.dbn.zst": [
+      4403677,
+      3,
+      1,
+      "ES.FUT",
+      "03e28d1214d8fb746e264f46940a4e3b",
+      "2026-09-10T20:33:36.204000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260811.trades.dbn.zst": [
+      4456306,
+      3,
+      1,
+      "ES.FUT",
+      "767d7c29a40d2fdb01daeff458501d8b",
+      "2026-09-10T20:33:36.336000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260812.trades.dbn.zst": [
+      4347972,
+      3,
+      1,
+      "ES.FUT",
+      "d70c6b64fd946eeabff3e1fcc9de212d",
+      "2026-09-10T20:33:36.442000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260813.trades.dbn.zst": [
+      4533286,
+      3,
+      1,
+      "ES.FUT",
+      "89d251e434170cfd18c06fea823c0712",
+      "2026-09-10T20:33:36.670000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260814.trades.dbn.zst": [
+      3785917,
+      3,
+      1,
+      "ES.FUT",
+      "edacc6e9a98eb64bb3dbdf3c4f49f2cd",
+      "2026-09-10T20:33:36.648000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260816.trades.dbn.zst": [
+      62433,
+      3,
+      1,
+      "ES.FUT",
+      "19448a53ee03a415499b583d5a189799",
+      "2026-09-10T20:33:36.681000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260817.trades.dbn.zst": [
+      4078240,
+      3,
+      1,
+      "ES.FUT",
+      "be7003132f39704e798d9a7cf8dca989",
+      "2026-09-10T20:33:36.806000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260818.trades.dbn.zst": [
+      5707580,
+      3,
+      1,
+      "ES.FUT",
+      "fb16b67ecaee50c279414a8193006a45",
+      "2026-09-10T20:33:37.130000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260819.trades.dbn.zst": [
+      6503179,
+      3,
+      1,
+      "ES.FUT",
+      "be5109975914d3b5e6b141b6332a9d4c",
+      "2026-09-10T20:33:37.538000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260820.trades.dbn.zst": [
+      6677092,
+      3,
+      1,
+      "ES.FUT",
+      "7e6b4fe3e4f93fdf42728ea3ee481c35",
+      "2026-09-10T20:33:37.179000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260821.trades.dbn.zst": [
+      4828062,
+      3,
+      1,
+      "ES.FUT",
+      "8a3522016b5d90e0d9ad6d319a28d114",
+      "2026-09-10T20:33:37.330000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260823.trades.dbn.zst": [
+      94504,
+      3,
+      1,
+      "ES.FUT",
+      "fd82758095ea61908c508a7ec92c8fdb",
+      "2026-09-10T20:33:37.473000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260824.trades.dbn.zst": [
+      5128054,
+      3,
+      1,
+      "ES.FUT",
+      "4619a5058499e2ebd221c89356f9344d",
+      "2026-09-10T20:33:37.713000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260825.trades.dbn.zst": [
+      4706695,
+      3,
+      1,
+      "ES.FUT",
+      "c910d5461606b0f18a7a3aaa3e71948f",
+      "2026-09-10T20:33:37.817000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260826.trades.dbn.zst": [
+      4918199,
+      3,
+      1,
+      "ES.FUT",
+      "1f568ec85a70faae2dca650a9ad6aeff",
+      "2026-09-10T20:33:38.082000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260827.trades.dbn.zst": [
+      5953357,
+      3,
+      1,
+      "ES.FUT",
+      "a2764e9d5c1367009ea65da0501fdad0",
+      "2026-09-10T20:33:38.558000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260828.trades.dbn.zst": [
+      6884040,
+      3,
+      1,
+      "ES.FUT",
+      "94ccb06e4e3d5bf58912fd0be5bc723c",
+      "2026-09-10T20:33:38.289000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260830.trades.dbn.zst": [
+      179374,
+      3,
+      1,
+      "ES.FUT",
+      "3db447a21f44f0e0f9bead860f2a8033",
+      "2026-09-10T20:33:38.208000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260831.trades.dbn.zst": [
+      5146584,
+      3,
+      1,
+      "ES.FUT",
+      "24ab0a7202b4627e226ad825e8e64800",
+      "2026-09-10T20:33:38.553000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260901.trades.dbn.zst": [
+      6549710,
+      3,
+      1,
+      "ES.FUT",
+      "11b3be4b778254104c7e5113274eca30",
+      "2026-09-10T20:33:38.737000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260902.trades.dbn.zst": [
+      5749235,
+      3,
+      1,
+      "ES.FUT",
+      "a87cfb607ea309b5d431941dd64493f8",
+      "2026-09-10T20:33:38.727000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260903.trades.dbn.zst": [
+      6306938,
+      3,
+      1,
+      "ES.FUT",
+      "0ba662b897deb2ccf298c643fb9513f5",
+      "2026-09-10T20:33:38.992000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260904.trades.dbn.zst": [
+      5410426,
+      3,
+      1,
+      "ES.FUT",
+      "c4106693d058807d37e5e7684a3cb030",
+      "2026-09-10T20:33:39.232000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260906.trades.dbn.zst": [
+      50756,
+      3,
+      1,
+      "ES.FUT",
+      "cd0ef755fb9174600f0c9b61fa635659",
+      "2026-09-10T20:33:39.025000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260907.trades.dbn.zst": [
+      993040,
+      3,
+      1,
+      "ES.FUT",
+      "7785d7849d10914eea0b5aff672c506e",
+      "2026-09-10T20:33:39.103000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260908.trades.dbn.zst": [
+      6092980,
+      3,
+      1,
+      "ES.FUT",
+      "47bd807e701db94df2071704b977bd78",
+      "2026-09-10T20:33:40.170000Z"
+    ],
+    "raw/trades/ES/glbx-mdp3-20260909.trades.dbn.zst": [
+      6148394,
+      3,
+      1,
+      "ES.FUT",
+      "10c9279c2c52fa0a607319bf921ffa5e",
+      "2026-09-10T20:33:39.478000Z"
+    ],
     "raw/trades/NQ/glbx-mdp3-20240703.trades.dbn.zst": [
       4465466,
       1,
@@ -20252,6 +20748,422 @@
       "NQ.FUT",
       "aebae82923ad53b4b45a7f2ecd2c5ca1",
       "2026-09-08T15:18:49.910000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260712.trades.dbn.zst": [
+      202080,
+      3,
+      1,
+      "NQ.FUT",
+      "750728a814a37a9a3e4926b825e8c0f8",
+      "2026-09-10T20:33:22.784000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260713.trades.dbn.zst": [
+      6055263,
+      3,
+      1,
+      "NQ.FUT",
+      "b09cb01cb0d6aa95b18c5e3eb058715e",
+      "2026-09-10T20:33:23.071000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260714.trades.dbn.zst": [
+      5757728,
+      3,
+      1,
+      "NQ.FUT",
+      "fe441f2ac06a0e27e9667529b783cf90",
+      "2026-09-10T20:33:23.026000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260715.trades.dbn.zst": [
+      6000453,
+      3,
+      1,
+      "NQ.FUT",
+      "f26ca036d04e867812de70a044b678c9",
+      "2026-09-10T20:33:23.246000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260716.trades.dbn.zst": [
+      6010904,
+      3,
+      1,
+      "NQ.FUT",
+      "6e411bff9146ef30e207e0f605587203",
+      "2026-09-10T20:33:24.038000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260717.trades.dbn.zst": [
+      7678705,
+      3,
+      1,
+      "NQ.FUT",
+      "a6cfae7423cc0ae9cf0781876c130419",
+      "2026-09-10T20:33:24.014000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260719.trades.dbn.zst": [
+      201995,
+      3,
+      1,
+      "NQ.FUT",
+      "0e48bcf7ac648caab4b35c56b0612fcf",
+      "2026-09-10T20:33:23.369000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260720.trades.dbn.zst": [
+      6122544,
+      3,
+      1,
+      "NQ.FUT",
+      "65ec23bc31327754877dfca46feecf4d",
+      "2026-09-10T20:33:23.910000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260721.trades.dbn.zst": [
+      5243315,
+      3,
+      1,
+      "NQ.FUT",
+      "8c04955fcfd42f9ea5edd09ce25bc46e",
+      "2026-09-10T20:33:24.025000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260722.trades.dbn.zst": [
+      5309175,
+      3,
+      1,
+      "NQ.FUT",
+      "65935667b4c595e8e56130a5444f5b68",
+      "2026-09-10T20:33:24.659000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260723.trades.dbn.zst": [
+      7836851,
+      3,
+      1,
+      "NQ.FUT",
+      "bf731e80b7801d8a060ad62f3563c4cf",
+      "2026-09-10T20:33:25.029000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260724.trades.dbn.zst": [
+      6953897,
+      3,
+      1,
+      "NQ.FUT",
+      "36336bbca5a2264da5c0edb916d5ad9e",
+      "2026-09-10T20:33:24.642000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260726.trades.dbn.zst": [
+      201303,
+      3,
+      1,
+      "NQ.FUT",
+      "a7da46bc9980bd7c6dac36342a98c3e3",
+      "2026-09-10T20:33:24.463000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260727.trades.dbn.zst": [
+      7215213,
+      3,
+      1,
+      "NQ.FUT",
+      "424edb3ae66026b438a71ee6412953ec",
+      "2026-09-10T20:33:25.564000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260728.trades.dbn.zst": [
+      8276509,
+      3,
+      1,
+      "NQ.FUT",
+      "be7262de3d906c6bd416e5d36d6246d0",
+      "2026-09-10T20:33:25.811000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260729.trades.dbn.zst": [
+      10094571,
+      3,
+      1,
+      "NQ.FUT",
+      "23de7049f82cf4c21b8a1fa20a3c6036",
+      "2026-09-10T20:33:25.546000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260730.trades.dbn.zst": [
+      8703694,
+      3,
+      1,
+      "NQ.FUT",
+      "cc882105f5edb2ec15479d5800b232ef",
+      "2026-09-10T20:33:25.867000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260731.trades.dbn.zst": [
+      8178147,
+      3,
+      1,
+      "NQ.FUT",
+      "1530be353e2ce285922211ad03ab5e42",
+      "2026-09-10T20:33:26.132000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260802.trades.dbn.zst": [
+      229632,
+      3,
+      1,
+      "NQ.FUT",
+      "b9c66ce6e379ce61f12a3230ae958d72",
+      "2026-09-10T20:33:26.033000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260803.trades.dbn.zst": [
+      6321704,
+      3,
+      1,
+      "NQ.FUT",
+      "5e9699533bb8c6413fd1523dcb146b3c",
+      "2026-09-10T20:33:26.676000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260804.trades.dbn.zst": [
+      7290898,
+      3,
+      1,
+      "NQ.FUT",
+      "613b70f19bcf72122ed87ea7405fb939",
+      "2026-09-10T20:33:26.681000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260805.trades.dbn.zst": [
+      6900295,
+      3,
+      1,
+      "NQ.FUT",
+      "e94349ba4116cf7c7b08dfd00f0c7045",
+      "2026-09-10T20:33:26.926000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260806.trades.dbn.zst": [
+      6892219,
+      3,
+      1,
+      "NQ.FUT",
+      "61aa31217635bce3a51238c0b8103dbd",
+      "2026-09-10T20:33:26.693000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260807.trades.dbn.zst": [
+      6432902,
+      3,
+      1,
+      "NQ.FUT",
+      "21f876e8161b002e7df8544c96065856",
+      "2026-09-10T20:33:27.683000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260809.trades.dbn.zst": [
+      155768,
+      3,
+      1,
+      "NQ.FUT",
+      "8528c8a60b58e70fb39d54a34f8bfef6",
+      "2026-09-10T20:33:26.970000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260810.trades.dbn.zst": [
+      4760573,
+      3,
+      1,
+      "NQ.FUT",
+      "09fe2484c34292402bae948e7b09bd76",
+      "2026-09-10T20:33:27.243000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260811.trades.dbn.zst": [
+      5159993,
+      3,
+      1,
+      "NQ.FUT",
+      "42a6f0815886cc9b325ed2b47e96894b",
+      "2026-09-10T20:33:27.695000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260812.trades.dbn.zst": [
+      4816974,
+      3,
+      1,
+      "NQ.FUT",
+      "dc64ebbc0149c14e6cc18149ef989e80",
+      "2026-09-10T20:33:27.440000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260813.trades.dbn.zst": [
+      5268842,
+      3,
+      1,
+      "NQ.FUT",
+      "13d673a2b963b69f61685f2a787996e1",
+      "2026-09-10T20:33:27.843000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260814.trades.dbn.zst": [
+      4568442,
+      3,
+      1,
+      "NQ.FUT",
+      "84297d3371581319fefc124e9da8d070",
+      "2026-09-10T20:33:28.310000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260816.trades.dbn.zst": [
+      88966,
+      3,
+      1,
+      "NQ.FUT",
+      "e1329e115368565fa1435702c0685419",
+      "2026-09-10T20:33:27.949000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260817.trades.dbn.zst": [
+      4692281,
+      3,
+      1,
+      "NQ.FUT",
+      "8da218123b93423d8a97494a6721c8ba",
+      "2026-09-10T20:33:28.132000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260818.trades.dbn.zst": [
+      6704701,
+      3,
+      1,
+      "NQ.FUT",
+      "f5f6b00ad813a3ac8a2e97f21ae1774c",
+      "2026-09-10T20:33:28.574000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260819.trades.dbn.zst": [
+      6919303,
+      3,
+      1,
+      "NQ.FUT",
+      "f81efa01da05e4d6949cd1f48325753e",
+      "2026-09-10T20:33:29.077000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260820.trades.dbn.zst": [
+      6873975,
+      3,
+      1,
+      "NQ.FUT",
+      "826eb0dc33419b2b6e091e3ffc140449",
+      "2026-09-10T20:33:29.020000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260821.trades.dbn.zst": [
+      5666489,
+      3,
+      1,
+      "NQ.FUT",
+      "aceedc36a64325be531a9f03bf4fac15",
+      "2026-09-10T20:33:28.783000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260823.trades.dbn.zst": [
+      149863,
+      3,
+      1,
+      "NQ.FUT",
+      "4f4bdda90fc9886a4639e53a824c0d8f",
+      "2026-09-10T20:33:28.822000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260824.trades.dbn.zst": [
+      6169677,
+      3,
+      1,
+      "NQ.FUT",
+      "5caa5013b521479443f937c987cfccac",
+      "2026-09-10T20:33:29.172000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260825.trades.dbn.zst": [
+      5726296,
+      3,
+      1,
+      "NQ.FUT",
+      "eb7bcb063705d63561ad8fc10902b47f",
+      "2026-09-10T20:33:29.502000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260826.trades.dbn.zst": [
+      5514372,
+      3,
+      1,
+      "NQ.FUT",
+      "e9b6bbd3b6b0a070e313512df85299ff",
+      "2026-09-10T20:33:29.848000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260827.trades.dbn.zst": [
+      6557985,
+      3,
+      1,
+      "NQ.FUT",
+      "f19632999555201cd49d628d09932875",
+      "2026-09-10T20:33:30.197000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260828.trades.dbn.zst": [
+      7050061,
+      3,
+      1,
+      "NQ.FUT",
+      "16bca6b5d29cfe6bbe0a9279b032b0aa",
+      "2026-09-10T20:33:29.942000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260830.trades.dbn.zst": [
+      250077,
+      3,
+      1,
+      "NQ.FUT",
+      "507bb09d87806f760dd7a23da5d8b49c",
+      "2026-09-10T20:33:29.851000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260831.trades.dbn.zst": [
+      5290508,
+      3,
+      1,
+      "NQ.FUT",
+      "4495ce04aec93b138ad2e041f7b2c222",
+      "2026-09-10T20:33:30.807000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260901.trades.dbn.zst": [
+      6459969,
+      3,
+      1,
+      "NQ.FUT",
+      "d01a5aac37b8f2981d1221aaa6171326",
+      "2026-09-10T20:33:31.313000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260902.trades.dbn.zst": [
+      5330472,
+      3,
+      1,
+      "NQ.FUT",
+      "8e495ef795f05d8fef2a68e149fae2bb",
+      "2026-09-10T20:33:30.647000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260903.trades.dbn.zst": [
+      6423468,
+      3,
+      1,
+      "NQ.FUT",
+      "e40f09cf7f3c5485d75282ab0d0084e4",
+      "2026-09-10T20:33:30.689000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260904.trades.dbn.zst": [
+      5520593,
+      3,
+      1,
+      "NQ.FUT",
+      "36f85819e0e792f7166415b0599e0b12",
+      "2026-09-10T20:33:31.324000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260906.trades.dbn.zst": [
+      87748,
+      3,
+      1,
+      "NQ.FUT",
+      "20553824e63735a2fd3df1a4fb9d3191",
+      "2026-09-10T20:33:30.984000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260907.trades.dbn.zst": [
+      1152431,
+      3,
+      1,
+      "NQ.FUT",
+      "db47e0f418364adcb0a081e91e177a8c",
+      "2026-09-10T20:33:31.172000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260908.trades.dbn.zst": [
+      6299283,
+      3,
+      1,
+      "NQ.FUT",
+      "d5837cd455c594d61726fe22c09f3406",
+      "2026-09-10T20:33:31.705000Z"
+    ],
+    "raw/trades/NQ/glbx-mdp3-20260909.trades.dbn.zst": [
+      5904714,
+      3,
+      1,
+      "NQ.FUT",
+      "5a83dcfdf1f6ecc6e149d57b937a1df4",
+      "2026-09-10T20:33:32.077000Z"
     ]
   },
   "files_fields": [
@@ -20279,37 +21191,39 @@
           "2026-04-03",
           "2026-05-25",
           "2026-06-19",
-          "2026-07-03"
+          "2026-07-03",
+          "2026-09-07"
         ],
         "name": "CME_Equity",
         "normal_close_ct": "16:00"
       },
       "corrected_objects": {},
       "dbn_versions": {
-        "1": 320
+        "1": 320,
+        "3": 52
       },
-      "expected_file_dates": 320,
-      "file_dates_present": 320,
+      "expected_file_dates": 372,
+      "file_dates_present": 372,
       "first_date": "2025-07-03",
-      "half_session_dates_in_range": 12,
-      "half_session_dates_present": 12,
+      "half_session_dates_in_range": 13,
+      "half_session_dates_present": 13,
       "historically_corrected_dates": [],
-      "last_date": "2026-07-10",
+      "last_date": "2026-09-09",
       "missing_count": 0,
       "missing_file_dates": [],
       "missing_file_dates_classified": {},
-      "one_line_coverage": "**ES**: 264 assemblable sessions (2025-07-04 to 2026-07-10) from 320 usable file-dates, 0 expected file-date(s) with no usable data",
+      "one_line_coverage": "**ES**: 307 assemblable sessions (2025-07-04 to 2026-09-09) from 372 usable file-dates, 0 expected file-date(s) with no usable data",
       "present_but_unusable_dates": [],
       "row_counts": {
-        "estimated_total_rows": 126484402,
-        "rows_per_compressed_byte": 0.06558,
-        "sampled_bytes": 59233904,
+        "estimated_total_rows": 148355092,
+        "rows_per_compressed_byte": 0.067587,
+        "sampled_bytes": 60585224,
         "sampled_files": 10,
-        "sampled_rows_exact": 3884558
+        "sampled_rows_exact": 4094792
       },
       "sessions": {
-        "assemblable": 264,
-        "candidate_sessions_in_span": 265,
+        "assemblable": 307,
+        "candidate_sessions_in_span": 308,
         "dates": [
           "2025-07-04",
           "2025-07-07",
@@ -20574,23 +21488,66 @@
           "2026-07-07",
           "2026-07-08",
           "2026-07-09",
-          "2026-07-10"
+          "2026-07-10",
+          "2026-07-13",
+          "2026-07-14",
+          "2026-07-15",
+          "2026-07-16",
+          "2026-07-17",
+          "2026-07-20",
+          "2026-07-21",
+          "2026-07-22",
+          "2026-07-23",
+          "2026-07-24",
+          "2026-07-27",
+          "2026-07-28",
+          "2026-07-29",
+          "2026-07-30",
+          "2026-07-31",
+          "2026-08-03",
+          "2026-08-04",
+          "2026-08-05",
+          "2026-08-06",
+          "2026-08-07",
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-17",
+          "2026-08-18",
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21",
+          "2026-08-24",
+          "2026-08-25",
+          "2026-08-26",
+          "2026-08-27",
+          "2026-08-28",
+          "2026-08-31",
+          "2026-09-01",
+          "2026-09-02",
+          "2026-09-03",
+          "2026-09-04",
+          "2026-09-07",
+          "2026-09-08",
+          "2026-09-09"
         ],
         "definition": "a CME session D is assemblable when both UTC objects it spans are present: the D-1 file holding the 17:00 CT evening open and the D file holding the rest. File-date counts are NOT session counts.",
-        "evening_only_file_dates": 55,
+        "evening_only_file_dates": 64,
         "first": "2025-07-04",
-        "last": "2026-07-10",
+        "last": "2026-09-09",
         "missing_own_file": [],
         "missing_prior_evening_file": [
           "2025-07-03"
         ]
       },
       "sources": {
-        "raw/trades": 320
+        "raw/trades": 372
       },
-      "total_bytes": 1928704610,
+      "total_bytes": 2195014180,
       "unexpected_file_dates": [],
-      "usable_file_dates": 320
+      "usable_file_dates": 372
     },
     "NQ": {
       "absent_file_dates": [
@@ -20620,7 +21577,8 @@
           "2026-04-03",
           "2026-05-25",
           "2026-06-19",
-          "2026-07-03"
+          "2026-07-03",
+          "2026-09-07"
         ],
         "name": "CME_Equity",
         "normal_close_ct": "16:00"
@@ -20677,13 +21635,13 @@
       },
       "dbn_versions": {
         "1": 626,
-        "3": 6
+        "3": 58
       },
-      "expected_file_dates": 633,
-      "file_dates_present": 632,
+      "expected_file_dates": 685,
+      "file_dates_present": 684,
       "first_date": "2024-07-03",
-      "half_session_dates_in_range": 23,
-      "half_session_dates_present": 22,
+      "half_session_dates_in_range": 24,
+      "half_session_dates_present": 23,
       "historically_corrected_dates": [
         "2025-07-03",
         "2025-07-04",
@@ -20692,7 +21650,7 @@
         "2025-07-08",
         "2025-07-09"
       ],
-      "last_date": "2026-07-10",
+      "last_date": "2026-09-09",
       "missing_count": 1,
       "missing_file_dates": [
         "2025-04-18"
@@ -20700,18 +21658,18 @@
       "missing_file_dates_classified": {
         "2025-04-18": "half_session_date"
       },
-      "one_line_coverage": "**NQ**: 521 assemblable sessions (2024-07-04 to 2026-07-10) from 632 usable file-dates, 1 expected file-date(s) with no usable data; 6 date(s) hold historically corrected data",
+      "one_line_coverage": "**NQ**: 564 assemblable sessions (2024-07-04 to 2026-09-09) from 684 usable file-dates, 1 expected file-date(s) with no usable data; 6 date(s) hold historically corrected data",
       "present_but_unusable_dates": [],
       "row_counts": {
-        "estimated_total_rows": 202889116,
-        "rows_per_compressed_byte": 0.056537,
-        "sampled_bytes": 76216503,
+        "estimated_total_rows": 219655211,
+        "rows_per_compressed_byte": 0.05693,
+        "sampled_bytes": 82553111,
         "sampled_files": 16,
-        "sampled_rows_exact": 4309015
+        "sampled_rows_exact": 4699780
       },
       "sessions": {
-        "assemblable": 521,
-        "candidate_sessions_in_span": 523,
+        "assemblable": 564,
+        "candidate_sessions_in_span": 566,
         "dates": [
           "2024-07-04",
           "2024-07-05",
@@ -21233,12 +22191,55 @@
           "2026-07-07",
           "2026-07-08",
           "2026-07-09",
-          "2026-07-10"
+          "2026-07-10",
+          "2026-07-13",
+          "2026-07-14",
+          "2026-07-15",
+          "2026-07-16",
+          "2026-07-17",
+          "2026-07-20",
+          "2026-07-21",
+          "2026-07-22",
+          "2026-07-23",
+          "2026-07-24",
+          "2026-07-27",
+          "2026-07-28",
+          "2026-07-29",
+          "2026-07-30",
+          "2026-07-31",
+          "2026-08-03",
+          "2026-08-04",
+          "2026-08-05",
+          "2026-08-06",
+          "2026-08-07",
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-17",
+          "2026-08-18",
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21",
+          "2026-08-24",
+          "2026-08-25",
+          "2026-08-26",
+          "2026-08-27",
+          "2026-08-28",
+          "2026-08-31",
+          "2026-09-01",
+          "2026-09-02",
+          "2026-09-03",
+          "2026-09-04",
+          "2026-09-07",
+          "2026-09-08",
+          "2026-09-09"
         ],
         "definition": "a CME session D is assemblable when both UTC objects it spans are present: the D-1 file holding the 17:00 CT evening open and the D file holding the rest. File-date counts are NOT session counts.",
-        "evening_only_file_dates": 110,
+        "evening_only_file_dates": 119,
         "first": "2024-07-04",
-        "last": "2026-07-10",
+        "last": "2026-09-09",
         "missing_own_file": [
           "2025-04-18"
         ],
@@ -21247,11 +22248,11 @@
         ]
       },
       "sources": {
-        "raw/trades": 632
+        "raw/trades": 684
       },
-      "total_bytes": 3588638917,
+      "total_bytes": 3858312738,
       "unexpected_file_dates": [],
-      "usable_file_dates": 632
+      "usable_file_dates": 684
     },
     "QQQ.OPT": {
       "absent_file_dates": [],
@@ -21821,16 +22822,121 @@
     }
   },
   "integrity": {
-    "added": [],
+    "added": [
+      "raw/trades/ES/glbx-mdp3-20260712.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260713.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260714.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260715.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260716.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260717.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260719.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260720.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260721.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260722.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260723.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260724.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260726.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260727.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260728.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260729.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260730.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260731.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260802.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260803.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260804.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260805.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260806.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260807.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260809.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260810.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260811.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260812.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260813.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260814.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260816.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260817.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260818.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260819.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260820.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260821.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260823.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260824.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260825.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260826.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260827.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260828.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260830.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260831.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260901.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260902.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260903.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260904.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260906.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260907.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260908.trades.dbn.zst",
+      "raw/trades/ES/glbx-mdp3-20260909.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260712.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260713.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260714.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260715.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260716.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260717.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260719.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260720.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260721.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260722.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260723.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260724.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260726.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260727.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260728.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260729.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260730.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260731.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260802.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260803.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260804.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260805.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260806.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260807.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260809.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260810.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260811.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260812.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260813.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260814.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260816.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260817.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260818.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260819.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260820.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260821.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260823.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260824.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260825.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260826.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260827.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260828.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260830.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260831.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260901.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260902.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260903.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260904.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260906.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260907.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260908.trades.dbn.zst",
+      "raw/trades/NQ/glbx-mdp3-20260909.trades.dbn.zst"
+    ],
     "baseline": "data/manifest.json (previous revision)",
     "baseline_had_etags": true,
     "changed": [],
     "comparable_baseline": true,
     "composite_etags": [],
     "method": "size and ETag from ListObjectsV2, compared against the previous data/manifest.json. R2 returns the plain MD5 as the ETag for single-part uploads, so this fingerprints every object at zero egress.",
-    "objects_fingerprinted": 2491,
+    "objects_fingerprinted": 2595,
     "removed": [],
-    "status": "clean"
+    "status": "drift"
   },
   "notes": {
     "canonical_location": "raw/ holds exactly one object per (symbol, date). Nothing resolves a path at read time; config/corrections.yaml is a historical record, not a mechanism.",
@@ -21839,7 +22945,7 @@
     "row_count_caveat": "Prefix row totals are extrapolations from exactly counted sampled files. Only sampled_rows_exact is a measured number.",
     "session_convention": "CME Globex session opens 17:00 America/Chicago and the session date rolls there; files are split on UTC day, so one session spans two files."
   },
-  "object_count": 2491,
+  "object_count": 2595,
   "prefixes": {
     "raw/opra_cbbo1m": {
       "calendar": {
@@ -22805,16 +23911,17 @@
           "2026-04-03",
           "2026-05-25",
           "2026-06-19",
-          "2026-07-03"
+          "2026-07-03",
+          "2026-09-07"
         ],
         "name": "CME_Equity",
         "normal_close_ct": "16:00"
       },
       "compression_layer_spans": {
         "1": {
-          "files": 952,
+          "files": 1056,
           "first_date": "2024-07-03",
-          "last_date": "2026-07-10"
+          "last_date": "2026-09-09"
         }
       },
       "compression_layers": [
@@ -22833,13 +23940,13 @@
       "file_format": "Databento DBN, zstd-compressed",
       "instrument_count_per_file": {
         "max": 46,
-        "median": 23,
+        "median": 25,
         "min": 20
       },
-      "objects": 952,
+      "objects": 1056,
       "partition": {
         "date_basis": "UTC calendar day (from the DBN metadata start/end, which are UTC midnight boundaries) -- NOT the CME session date",
-        "distinct_header_variants": 3,
+        "distinct_header_variants": 4,
         "keys": [
           "symbol_folder",
           "utc_date"
@@ -22851,129 +23958,42 @@
         48
       ],
       "row_counts": {
-        "estimated_total_rows": 333751356,
+        "estimated_total_rows": 371922863,
         "method": "exact count on a strided sample, extrapolated by compressed bytes; no prefix is scanned in full",
-        "rows_per_compressed_byte": 0.060491,
-        "sampled_bytes": 135450407,
+        "rows_per_compressed_byte": 0.061441,
+        "sampled_bytes": 143138335,
         "sampled_files": 26,
         "sampled_keys": [
-          "raw/trades/ES/glbx-mdp3-20250722.trades.dbn.zst",
-          "raw/trades/ES/glbx-mdp3-20250828.trades.dbn.zst",
-          "raw/trades/ES/glbx-mdp3-20251005.trades.dbn.zst",
-          "raw/trades/ES/glbx-mdp3-20251111.trades.dbn.zst",
-          "raw/trades/ES/glbx-mdp3-20251218.trades.dbn.zst",
-          "raw/trades/ES/glbx-mdp3-20260125.trades.dbn.zst",
-          "raw/trades/ES/glbx-mdp3-20260303.trades.dbn.zst",
-          "raw/trades/ES/glbx-mdp3-20260409.trades.dbn.zst",
-          "raw/trades/ES/glbx-mdp3-20260517.trades.dbn.zst",
-          "raw/trades/ES/glbx-mdp3-20260623.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20240808.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20241021.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20250103.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20250318.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20250601.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20250724.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20250905.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20251020.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20251202.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260114.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260226.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260410.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260525.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260707.trades.dbn.zst",
+          "raw/trades/ES/glbx-mdp3-20260819.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20240812.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20241030.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20250119.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20250408.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20250627.trades.dbn.zst",
           "raw/trades/NQ/glbx-mdp3-20250703.trades.dbn.zst",
           "raw/trades/NQ/glbx-mdp3-20250704.trades.dbn.zst",
           "raw/trades/NQ/glbx-mdp3-20250706.trades.dbn.zst",
           "raw/trades/NQ/glbx-mdp3-20250707.trades.dbn.zst",
           "raw/trades/NQ/glbx-mdp3-20250708.trades.dbn.zst",
           "raw/trades/NQ/glbx-mdp3-20250709.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20250813.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20251026.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20260108.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20260323.trades.dbn.zst",
-          "raw/trades/NQ/glbx-mdp3-20260604.trades.dbn.zst"
+          "raw/trades/NQ/glbx-mdp3-20250916.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20251204.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20260223.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20260513.trades.dbn.zst",
+          "raw/trades/NQ/glbx-mdp3-20260731.trades.dbn.zst"
         ],
-        "sampled_rows_exact": 8193573
+        "sampled_rows_exact": 8794572
       },
       "sampled_profiles": {
-        "raw/trades/ES/glbx-mdp3-20260104.trades.dbn.zst": {
-          "_size": 107000,
-          "_v": 3,
-          "contract_symbols": {
-            "ESH6": 6717,
-            "ESH6-ESM6": 5,
-            "ESM6": 3
-          },
-          "covers_globex_open_1700ct": true,
-          "covers_rth_0830_1500ct": false,
-          "ct_hour_histogram": {
-            "17": 6725
-          },
-          "distinct_contract_symbols": 3,
-          "distinct_ct_hours": 1,
-          "partial_read": false,
-          "rows": 6725,
-          "schema": {
-            "columns": [
-              {
-                "dtype": "datetime64[ns, UTC]",
-                "name": "ts_event",
-                "tz": "UTC",
-                "unit": "ns"
-              },
-              {
-                "dtype": "uint8",
-                "name": "rtype"
-              },
-              {
-                "dtype": "uint16",
-                "name": "publisher_id"
-              },
-              {
-                "dtype": "uint32",
-                "name": "instrument_id"
-              },
-              {
-                "dtype": "str",
-                "name": "action"
-              },
-              {
-                "dtype": "str",
-                "name": "side"
-              },
-              {
-                "dtype": "uint8",
-                "name": "depth"
-              },
-              {
-                "dtype": "float64",
-                "name": "price"
-              },
-              {
-                "dtype": "uint32",
-                "name": "size"
-              },
-              {
-                "dtype": "uint8",
-                "name": "flags"
-              },
-              {
-                "dtype": "int32",
-                "name": "ts_in_delta"
-              },
-              {
-                "dtype": "uint32",
-                "name": "sequence"
-              },
-              {
-                "dtype": "str",
-                "name": "symbol"
-              }
-            ],
-            "index": {
-              "dtype": "datetime64[ns, UTC]",
-              "name": "ts_recv",
-              "tz": "UTC",
-              "unit": "ns"
-            }
-          },
-          "spread_rows": 5,
-          "ts_first_ct": "2026-01-04T17:00:00.024420958-06:00",
-          "ts_first_utc": "2026-01-04T23:00:00.024420958+00:00",
-          "ts_last_ct": "2026-01-04T17:59:59.498849855-06:00",
-          "ts_last_utc": "2026-01-04T23:59:59.498849855+00:00"
-        },
         "raw/trades/ES/glbx-mdp3-20260105.trades.dbn.zst": {
           "_size": 5169338,
           "_v": 3,
@@ -23196,48 +24216,47 @@
           "ts_last_ct": "2026-01-06T17:59:55.794781591-06:00",
           "ts_last_utc": "2026-01-06T23:59:55.794781591+00:00"
         },
-        "raw/trades/ES/glbx-mdp3-20260109.trades.dbn.zst": {
-          "_size": 5647978,
+        "raw/trades/ES/glbx-mdp3-20260206.trades.dbn.zst": {
+          "_size": 9139393,
           "_v": 3,
           "contract_symbols": {
-            "ESH6": 382801,
-            "ESH6-ESM6": 141,
-            "ESH6-ESU6": 3,
-            "ESM6": 247,
-            "ESM6-ESU6": 19,
-            "ESM6-ESZ6": 5,
-            "ESU6": 10
+            "ESH6": 593111,
+            "ESH6-ESM6": 666,
+            "ESM6": 1139,
+            "ESM6-ESU6": 8,
+            "ESU6": 22,
+            "ESZ6": 2
           },
           "covers_globex_open_1700ct": false,
           "covers_rth_0830_1500ct": true,
           "ct_hour_histogram": {
-            "0": 1718,
-            "1": 2301,
-            "10": 49123,
-            "11": 26267,
-            "12": 27501,
-            "13": 19022,
-            "14": 36320,
-            "15": 9833,
-            "18": 2582,
-            "19": 3546,
-            "2": 4505,
-            "20": 2738,
-            "21": 1660,
-            "22": 1335,
-            "23": 1764,
-            "3": 3628,
-            "4": 2450,
-            "5": 3192,
-            "6": 3278,
-            "7": 13539,
-            "8": 68096,
-            "9": 98828
+            "0": 4748,
+            "1": 5551,
+            "10": 60414,
+            "11": 39817,
+            "12": 27360,
+            "13": 24205,
+            "14": 55198,
+            "15": 14185,
+            "18": 14234,
+            "19": 12276,
+            "2": 11826,
+            "20": 8994,
+            "21": 7074,
+            "22": 5368,
+            "23": 5861,
+            "3": 15463,
+            "4": 7393,
+            "5": 11047,
+            "6": 11018,
+            "7": 14060,
+            "8": 107062,
+            "9": 131794
           },
-          "distinct_contract_symbols": 7,
+          "distinct_contract_symbols": 6,
           "distinct_ct_hours": 22,
           "partial_read": false,
-          "rows": 383226,
+          "rows": 594948,
           "schema": {
             "columns": [
               {
@@ -23302,143 +24321,30 @@
               "unit": "ns"
             }
           },
-          "spread_rows": 168,
-          "ts_first_ct": "2026-01-08T18:00:00.050811334-06:00",
-          "ts_first_utc": "2026-01-09T00:00:00.050811334+00:00",
-          "ts_last_ct": "2026-01-09T15:59:59.003027666-06:00",
-          "ts_last_utc": "2026-01-09T21:59:59.003027666+00:00"
+          "spread_rows": 674,
+          "ts_first_ct": "2026-02-05T18:00:00.001575122-06:00",
+          "ts_first_utc": "2026-02-06T00:00:00.001575122+00:00",
+          "ts_last_ct": "2026-02-06T15:59:59.027760020-06:00",
+          "ts_last_utc": "2026-02-06T21:59:59.027760020+00:00"
         },
-        "raw/trades/ES/glbx-mdp3-20260310.trades.dbn.zst": {
-          "_size": 11341652,
+        "raw/trades/ES/glbx-mdp3-20260208.trades.dbn.zst": {
+          "_size": 128042,
           "_v": 3,
           "contract_symbols": {
-            "ESH6": 692011,
-            "ESH6-ESM6": 2061,
-            "ESH6-ESU6": 4,
-            "ESM6": 21020,
-            "ESM6-ESU6": 14,
-            "ESU6": 49,
-            "ESZ6": 1
-          },
-          "covers_globex_open_1700ct": true,
-          "covers_rth_0830_1500ct": true,
-          "ct_hour_histogram": {
-            "0": 4609,
-            "1": 5318,
-            "10": 56010,
-            "11": 48679,
-            "12": 65701,
-            "13": 107179,
-            "14": 82264,
-            "15": 15772,
-            "17": 4521,
-            "18": 2971,
-            "19": 11693,
-            "2": 14332,
-            "20": 8547,
-            "21": 6290,
-            "22": 7254,
-            "23": 3718,
-            "3": 20616,
-            "4": 11691,
-            "5": 14797,
-            "6": 20683,
-            "7": 24180,
-            "8": 87435,
-            "9": 90900
-          },
-          "distinct_contract_symbols": 7,
-          "distinct_ct_hours": 23,
-          "partial_read": false,
-          "rows": 715160,
-          "schema": {
-            "columns": [
-              {
-                "dtype": "datetime64[ns, UTC]",
-                "name": "ts_event",
-                "tz": "UTC",
-                "unit": "ns"
-              },
-              {
-                "dtype": "uint8",
-                "name": "rtype"
-              },
-              {
-                "dtype": "uint16",
-                "name": "publisher_id"
-              },
-              {
-                "dtype": "uint32",
-                "name": "instrument_id"
-              },
-              {
-                "dtype": "str",
-                "name": "action"
-              },
-              {
-                "dtype": "str",
-                "name": "side"
-              },
-              {
-                "dtype": "uint8",
-                "name": "depth"
-              },
-              {
-                "dtype": "float64",
-                "name": "price"
-              },
-              {
-                "dtype": "uint32",
-                "name": "size"
-              },
-              {
-                "dtype": "uint8",
-                "name": "flags"
-              },
-              {
-                "dtype": "int32",
-                "name": "ts_in_delta"
-              },
-              {
-                "dtype": "uint32",
-                "name": "sequence"
-              },
-              {
-                "dtype": "str",
-                "name": "symbol"
-              }
-            ],
-            "index": {
-              "dtype": "datetime64[ns, UTC]",
-              "name": "ts_recv",
-              "tz": "UTC",
-              "unit": "ns"
-            }
-          },
-          "spread_rows": 2079,
-          "ts_first_ct": "2026-03-09T19:00:00.037397883-05:00",
-          "ts_first_utc": "2026-03-10T00:00:00.037397883+00:00",
-          "ts_last_ct": "2026-03-10T18:59:59.440747845-05:00",
-          "ts_last_utc": "2026-03-10T23:59:59.440747845+00:00"
-        },
-        "raw/trades/NQ/glbx-mdp3-20250706.trades.dbn.zst": {
-          "_size": 141808,
-          "_v": 3,
-          "contract_symbols": {
-            "NQU5": 8732,
-            "NQU5-NQZ5": 5,
-            "NQZ5": 36
+            "ESH6": 7876,
+            "ESH6-ESM6": 17,
+            "ESM6": 34,
+            "ESU6": 2
           },
           "covers_globex_open_1700ct": true,
           "covers_rth_0830_1500ct": false,
           "ct_hour_histogram": {
-            "17": 5453,
-            "18": 3320
+            "17": 7929
           },
-          "distinct_contract_symbols": 3,
-          "distinct_ct_hours": 2,
+          "distinct_contract_symbols": 4,
+          "distinct_ct_hours": 1,
           "partial_read": false,
-          "rows": 8773,
+          "rows": 7929,
           "schema": {
             "columns": [
               {
@@ -23503,51 +24409,53 @@
               "unit": "ns"
             }
           },
-          "spread_rows": 5,
-          "ts_first_ct": "2025-07-06T17:00:00.099875242-05:00",
-          "ts_first_utc": "2025-07-06T22:00:00.099875242+00:00",
-          "ts_last_ct": "2025-07-06T18:59:59.418308197-05:00",
-          "ts_last_utc": "2025-07-06T23:59:59.418308197+00:00"
+          "spread_rows": 17,
+          "ts_first_ct": "2026-02-08T17:00:00.039881799-06:00",
+          "ts_first_utc": "2026-02-08T23:00:00.039881799+00:00",
+          "ts_last_ct": "2026-02-08T17:59:59.567304707-06:00",
+          "ts_last_utc": "2026-02-08T23:59:59.567304707+00:00"
         },
-        "raw/trades/NQ/glbx-mdp3-20250707.trades.dbn.zst": {
-          "_size": 5015342,
+        "raw/trades/ES/glbx-mdp3-20260409.trades.dbn.zst": {
+          "_size": 7265961,
           "_v": 3,
           "contract_symbols": {
-            "NQU5": 303195,
-            "NQU5-NQZ5": 81,
-            "NQZ5": 266
+            "ESM6": 482712,
+            "ESM6-ESU6": 155,
+            "ESM6-ESZ6": 1,
+            "ESU6": 539,
+            "ESZ6": 3
           },
           "covers_globex_open_1700ct": true,
           "covers_rth_0830_1500ct": true,
           "ct_hour_histogram": {
-            "0": 2160,
-            "1": 2831,
-            "10": 26849,
-            "11": 48316,
-            "12": 29436,
-            "13": 34155,
-            "14": 31474,
-            "15": 7986,
-            "17": 3259,
-            "18": 2570,
-            "19": 2905,
-            "2": 3091,
-            "20": 4930,
-            "21": 2933,
-            "22": 2355,
-            "23": 2596,
-            "3": 4342,
-            "4": 3055,
-            "5": 3708,
-            "6": 3388,
-            "7": 6550,
-            "8": 36653,
-            "9": 38000
+            "0": 2664,
+            "1": 4874,
+            "10": 82641,
+            "11": 56904,
+            "12": 38627,
+            "13": 49385,
+            "14": 53498,
+            "15": 12750,
+            "17": 4569,
+            "18": 1846,
+            "19": 5655,
+            "2": 8690,
+            "20": 5772,
+            "21": 2914,
+            "22": 2544,
+            "23": 1691,
+            "3": 7525,
+            "4": 5184,
+            "5": 5936,
+            "6": 8071,
+            "7": 11751,
+            "8": 51025,
+            "9": 58894
           },
-          "distinct_contract_symbols": 3,
+          "distinct_contract_symbols": 5,
           "distinct_ct_hours": 23,
           "partial_read": false,
-          "rows": 303542,
+          "rows": 483410,
           "schema": {
             "columns": [
               {
@@ -23612,51 +24520,54 @@
               "unit": "ns"
             }
           },
-          "spread_rows": 81,
-          "ts_first_ct": "2025-07-06T19:00:00.121395571-05:00",
-          "ts_first_utc": "2025-07-07T00:00:00.121395571+00:00",
-          "ts_last_ct": "2025-07-07T18:59:59.934114057-05:00",
-          "ts_last_utc": "2025-07-07T23:59:59.934114057+00:00"
+          "spread_rows": 156,
+          "ts_first_ct": "2026-04-08T19:00:00.042070677-05:00",
+          "ts_first_utc": "2026-04-09T00:00:00.042070677+00:00",
+          "ts_last_ct": "2026-04-09T18:59:59.903267257-05:00",
+          "ts_last_utc": "2026-04-09T23:59:59.903267257+00:00"
         },
-        "raw/trades/NQ/glbx-mdp3-20250708.trades.dbn.zst": {
-          "_size": 4465892,
+        "raw/trades/ES/glbx-mdp3-20260811.trades.dbn.zst": {
+          "_size": 4456306,
           "_v": 3,
           "contract_symbols": {
-            "NQU5": 268687,
-            "NQU5-NQZ5": 60,
-            "NQZ5": 149
+            "ESH7": 4,
+            "ESU6": 296478,
+            "ESU6-ESH7": 10,
+            "ESU6-ESZ6": 294,
+            "ESZ6": 299,
+            "ESZ6-ESH7": 1
           },
           "covers_globex_open_1700ct": true,
           "covers_rth_0830_1500ct": true,
           "ct_hour_histogram": {
-            "0": 1878,
-            "1": 2788,
-            "10": 29774,
-            "11": 32657,
-            "12": 24733,
-            "13": 19182,
-            "14": 25999,
-            "15": 5995,
-            "17": 1502,
-            "18": 1566,
-            "19": 3554,
-            "2": 4489,
-            "20": 3250,
-            "21": 3032,
-            "22": 1987,
-            "23": 1566,
-            "3": 3553,
-            "4": 2824,
-            "5": 3453,
-            "6": 2831,
-            "7": 6298,
-            "8": 32742,
-            "9": 53243
+            "0": 1848,
+            "1": 3802,
+            "10": 38640,
+            "11": 25436,
+            "12": 23507,
+            "13": 25298,
+            "14": 37917,
+            "15": 9562,
+            "17": 1820,
+            "18": 821,
+            "19": 3437,
+            "2": 4202,
+            "20": 3469,
+            "21": 1952,
+            "22": 1742,
+            "23": 1234,
+            "3": 4761,
+            "4": 3433,
+            "5": 4111,
+            "6": 8753,
+            "7": 7789,
+            "8": 43987,
+            "9": 39565
           },
-          "distinct_contract_symbols": 3,
+          "distinct_contract_symbols": 6,
           "distinct_ct_hours": 23,
           "partial_read": false,
-          "rows": 268896,
+          "rows": 297086,
           "schema": {
             "columns": [
               {
@@ -23721,11 +24632,11 @@
               "unit": "ns"
             }
           },
-          "spread_rows": 60,
-          "ts_first_ct": "2025-07-07T19:00:00.106439991-05:00",
-          "ts_first_utc": "2025-07-08T00:00:00.106439991+00:00",
-          "ts_last_ct": "2025-07-08T18:59:58.607844367-05:00",
-          "ts_last_utc": "2025-07-08T23:59:58.607844367+00:00"
+          "spread_rows": 305,
+          "ts_first_ct": "2026-08-10T19:00:00.039191614-05:00",
+          "ts_first_utc": "2026-08-11T00:00:00.039191614+00:00",
+          "ts_last_ct": "2026-08-11T18:59:55.588554422-05:00",
+          "ts_last_utc": "2026-08-11T23:59:55.588554422+00:00"
         },
         "raw/trades/NQ/glbx-mdp3-20250711.trades.dbn.zst": {
           "_size": 5145830,
@@ -23835,6 +24746,311 @@
           "ts_first_utc": "2025-07-11T00:00:00.050170249+00:00",
           "ts_last_ct": "2025-07-11T15:59:59.718941551-05:00",
           "ts_last_utc": "2025-07-11T20:59:59.718941551+00:00"
+        },
+        "raw/trades/NQ/glbx-mdp3-20250806.trades.dbn.zst": {
+          "_size": 5976598,
+          "_v": 3,
+          "contract_symbols": {
+            "NQH6": 5,
+            "NQU5": 336528,
+            "NQU5-NQZ5": 95,
+            "NQZ5": 465
+          },
+          "covers_globex_open_1700ct": true,
+          "covers_rth_0830_1500ct": true,
+          "ct_hour_histogram": {
+            "0": 2861,
+            "1": 2992,
+            "10": 45724,
+            "11": 26450,
+            "12": 17725,
+            "13": 22554,
+            "14": 30017,
+            "15": 10670,
+            "17": 7444,
+            "18": 3522,
+            "19": 3646,
+            "2": 4941,
+            "20": 4250,
+            "21": 3975,
+            "22": 2302,
+            "23": 1593,
+            "3": 5491,
+            "4": 4904,
+            "5": 7068,
+            "6": 6814,
+            "7": 7863,
+            "8": 53967,
+            "9": 60320
+          },
+          "distinct_contract_symbols": 4,
+          "distinct_ct_hours": 23,
+          "partial_read": false,
+          "rows": 337093,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 95,
+          "ts_first_ct": "2025-08-05T19:00:00.052186978-05:00",
+          "ts_first_utc": "2025-08-06T00:00:00.052186978+00:00",
+          "ts_last_ct": "2025-08-06T18:59:59.134621622-05:00",
+          "ts_last_utc": "2025-08-06T23:59:59.134621622+00:00"
+        },
+        "raw/trades/NQ/glbx-mdp3-20250808.trades.dbn.zst": {
+          "_size": 4915458,
+          "_v": 3,
+          "contract_symbols": {
+            "NQH6": 1,
+            "NQU5": 274101,
+            "NQU5-NQZ5": 141,
+            "NQZ5": 439
+          },
+          "covers_globex_open_1700ct": false,
+          "covers_rth_0830_1500ct": true,
+          "ct_hour_histogram": {
+            "0": 3046,
+            "1": 2970,
+            "10": 36573,
+            "11": 24884,
+            "12": 22298,
+            "13": 18590,
+            "14": 30292,
+            "15": 11117,
+            "19": 3904,
+            "2": 2218,
+            "20": 2038,
+            "21": 1394,
+            "22": 1805,
+            "23": 1715,
+            "3": 2903,
+            "4": 2901,
+            "5": 2321,
+            "6": 3905,
+            "7": 8737,
+            "8": 41498,
+            "9": 49573
+          },
+          "distinct_contract_symbols": 4,
+          "distinct_ct_hours": 21,
+          "partial_read": false,
+          "rows": 274682,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 141,
+          "ts_first_ct": "2025-08-07T19:00:00.028652996-05:00",
+          "ts_first_utc": "2025-08-08T00:00:00.028652996+00:00",
+          "ts_last_ct": "2025-08-08T15:59:58.477487346-05:00",
+          "ts_last_utc": "2025-08-08T20:59:58.477487346+00:00"
+        },
+        "raw/trades/NQ/glbx-mdp3-20250810.trades.dbn.zst": {
+          "_size": 123653,
+          "_v": 3,
+          "contract_symbols": {
+            "NQU5": 6986,
+            "NQZ5": 13
+          },
+          "covers_globex_open_1700ct": true,
+          "covers_rth_0830_1500ct": false,
+          "ct_hour_histogram": {
+            "17": 4210,
+            "18": 2789
+          },
+          "distinct_contract_symbols": 2,
+          "distinct_ct_hours": 2,
+          "partial_read": false,
+          "rows": 6999,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 0,
+          "ts_first_ct": "2025-08-10T17:00:00.063215799-05:00",
+          "ts_first_utc": "2025-08-10T22:00:00.063215799+00:00",
+          "ts_last_ct": "2025-08-10T18:59:55.124291797-05:00",
+          "ts_last_utc": "2025-08-10T23:59:55.124291797+00:00"
         },
         "raw/trades/NQ/glbx-mdp3-20251103.trades.dbn.zst": {
           "_size": 5626660,
@@ -23947,17 +25163,124 @@
           "ts_first_utc": "2025-11-03T00:00:00.363384912+00:00",
           "ts_last_ct": "2025-11-03T17:59:59.447372347-06:00",
           "ts_last_utc": "2025-11-03T23:59:59.447372347+00:00"
+        },
+        "raw/trades/NQ/glbx-mdp3-20260807.trades.dbn.zst": {
+          "_size": 6432902,
+          "_v": 3,
+          "contract_symbols": {
+            "NQU6": 381664,
+            "NQU6-NQZ6": 198,
+            "NQZ6": 660
+          },
+          "covers_globex_open_1700ct": false,
+          "covers_rth_0830_1500ct": true,
+          "ct_hour_histogram": {
+            "0": 2798,
+            "1": 4109,
+            "10": 39012,
+            "11": 34674,
+            "12": 17170,
+            "13": 16742,
+            "14": 36316,
+            "15": 9304,
+            "19": 9381,
+            "2": 3653,
+            "20": 7912,
+            "21": 4816,
+            "22": 3057,
+            "23": 4055,
+            "3": 5631,
+            "4": 2734,
+            "5": 2639,
+            "6": 5499,
+            "7": 20658,
+            "8": 72257,
+            "9": 80105
+          },
+          "distinct_contract_symbols": 3,
+          "distinct_ct_hours": 21,
+          "partial_read": false,
+          "rows": 382522,
+          "schema": {
+            "columns": [
+              {
+                "dtype": "datetime64[ns, UTC]",
+                "name": "ts_event",
+                "tz": "UTC",
+                "unit": "ns"
+              },
+              {
+                "dtype": "uint8",
+                "name": "rtype"
+              },
+              {
+                "dtype": "uint16",
+                "name": "publisher_id"
+              },
+              {
+                "dtype": "uint32",
+                "name": "instrument_id"
+              },
+              {
+                "dtype": "str",
+                "name": "action"
+              },
+              {
+                "dtype": "str",
+                "name": "side"
+              },
+              {
+                "dtype": "uint8",
+                "name": "depth"
+              },
+              {
+                "dtype": "float64",
+                "name": "price"
+              },
+              {
+                "dtype": "uint32",
+                "name": "size"
+              },
+              {
+                "dtype": "uint8",
+                "name": "flags"
+              },
+              {
+                "dtype": "int32",
+                "name": "ts_in_delta"
+              },
+              {
+                "dtype": "uint32",
+                "name": "sequence"
+              },
+              {
+                "dtype": "str",
+                "name": "symbol"
+              }
+            ],
+            "index": {
+              "dtype": "datetime64[ns, UTC]",
+              "name": "ts_recv",
+              "tz": "UTC",
+              "unit": "ns"
+            }
+          },
+          "spread_rows": 198,
+          "ts_first_ct": "2026-08-06T19:00:00.033215827-05:00",
+          "ts_first_utc": "2026-08-07T00:00:00.033215827+00:00",
+          "ts_last_ct": "2026-08-07T15:59:59.813913476-05:00",
+          "ts_last_utc": "2026-08-07T20:59:59.813913476+00:00"
         }
       },
       "size_bytes": {
         "max": 17720723,
-        "mean": 5795528,
-        "median": 6081647,
+        "mean": 5732317,
+        "median": 6055263,
         "min": 41424,
-        "p05": 107175,
-        "p25": 4529073,
-        "p75": 7825516,
-        "p95": 11086033
+        "p05": 107000,
+        "p25": 4533210,
+        "p75": 7708677,
+        "p95": 10980058
       },
       "stype_in": [
         "parent"
@@ -23969,9 +25292,9 @@
         "ES": {
           "dbn_query_symbols": {
             "ES.FUT": {
-              "files": 320,
+              "files": 372,
               "first_date": "2025-07-03",
-              "last_date": "2026-07-10"
+              "last_date": "2026-09-09"
             }
           },
           "dbn_versions": {
@@ -23979,34 +25302,39 @@
               "files": 320,
               "first_date": "2025-07-03",
               "last_date": "2026-07-10"
+            },
+            "3": {
+              "files": 52,
+              "first_date": "2026-07-12",
+              "last_date": "2026-09-09"
             }
           },
-          "distinct_file_dates": 320,
+          "distinct_file_dates": 372,
           "first_file_date": "2025-07-03",
           "header_symbol_mismatches": {
             "count": 0,
             "dates": [],
             "keys": []
           },
-          "last_file_date": "2026-07-10",
-          "objects": 320,
+          "last_file_date": "2026-09-09",
+          "objects": 372,
           "row_counts": {
-            "estimated_total_rows": 126484402,
+            "estimated_total_rows": 148355092,
             "method": "exact count on a strided sample, extrapolated by compressed bytes",
-            "rows_per_compressed_byte": 0.06558,
-            "sampled_bytes": 59233904,
+            "rows_per_compressed_byte": 0.067587,
+            "sampled_bytes": 60585224,
             "sampled_files": 10,
-            "sampled_rows_exact": 3884558
+            "sampled_rows_exact": 4094792
           },
           "size_bytes": {
             "max": 17720723,
-            "mean": 6027201,
+            "mean": 5900575,
             "median": 5951740,
             "min": 41424,
-            "p05": 103880,
-            "p25": 4058016,
-            "p75": 8563257,
-            "p95": 12801169
+            "p05": 98970,
+            "p25": 4059523,
+            "p75": 8308392,
+            "p95": 12275198
           },
           "size_outliers": [
             {
@@ -24521,16 +25849,97 @@
               "neighbour_median_bytes": 6333938,
               "ratio_to_neighbour_median": 0.0188,
               "size_bytes": 119264
+            },
+            {
+              "date": "2026-07-12",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260712.trades.dbn.zst",
+              "neighbour_median_bytes": 6683817,
+              "ratio_to_neighbour_median": 0.0243,
+              "size_bytes": 162621
+            },
+            {
+              "date": "2026-07-19",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260719.trades.dbn.zst",
+              "neighbour_median_bytes": 6772764,
+              "ratio_to_neighbour_median": 0.0287,
+              "size_bytes": 194530
+            },
+            {
+              "date": "2026-07-26",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260726.trades.dbn.zst",
+              "neighbour_median_bytes": 7625348,
+              "ratio_to_neighbour_median": 0.0227,
+              "size_bytes": 173300
+            },
+            {
+              "date": "2026-08-02",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260802.trades.dbn.zst",
+              "neighbour_median_bytes": 7395664,
+              "ratio_to_neighbour_median": 0.0276,
+              "size_bytes": 203779
+            },
+            {
+              "date": "2026-08-09",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260809.trades.dbn.zst",
+              "neighbour_median_bytes": 5394727,
+              "ratio_to_neighbour_median": 0.0178,
+              "size_bytes": 96153
+            },
+            {
+              "date": "2026-08-16",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260816.trades.dbn.zst",
+              "neighbour_median_bytes": 4494796,
+              "ratio_to_neighbour_median": 0.0139,
+              "size_bytes": 62433
+            },
+            {
+              "date": "2026-08-23",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260823.trades.dbn.zst",
+              "neighbour_median_bytes": 5417817,
+              "ratio_to_neighbour_median": 0.0174,
+              "size_bytes": 94504
+            },
+            {
+              "date": "2026-08-30",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260830.trades.dbn.zst",
+              "neighbour_median_bytes": 5579830,
+              "ratio_to_neighbour_median": 0.0321,
+              "size_bytes": 179374
+            },
+            {
+              "date": "2026-09-06",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/ES/glbx-mdp3-20260906.trades.dbn.zst",
+              "neighbour_median_bytes": 5921107,
+              "ratio_to_neighbour_median": 0.0086,
+              "size_bytes": 50756
             }
           ],
-          "total_bytes": 1928704610
+          "total_bytes": 2195014180
         },
         "NQ": {
           "dbn_query_symbols": {
             "NQ.FUT": {
-              "files": 632,
+              "files": 684,
               "first_date": "2024-07-03",
-              "last_date": "2026-07-10"
+              "last_date": "2026-09-09"
             }
           },
           "dbn_versions": {
@@ -24540,37 +25949,37 @@
               "last_date": "2026-07-10"
             },
             "3": {
-              "files": 6,
+              "files": 58,
               "first_date": "2025-07-03",
-              "last_date": "2025-07-09"
+              "last_date": "2026-09-09"
             }
           },
-          "distinct_file_dates": 632,
+          "distinct_file_dates": 684,
           "first_file_date": "2024-07-03",
           "header_symbol_mismatches": {
             "count": 0,
             "dates": [],
             "keys": []
           },
-          "last_file_date": "2026-07-10",
-          "objects": 632,
+          "last_file_date": "2026-09-09",
+          "objects": 684,
           "row_counts": {
-            "estimated_total_rows": 202889116,
+            "estimated_total_rows": 219655211,
             "method": "exact count on a strided sample, extrapolated by compressed bytes",
-            "rows_per_compressed_byte": 0.056537,
-            "sampled_bytes": 76216503,
+            "rows_per_compressed_byte": 0.05693,
+            "sampled_bytes": 82553111,
             "sampled_files": 16,
-            "sampled_rows_exact": 4309015
+            "sampled_rows_exact": 4699780
           },
           "size_bytes": {
             "max": 15547624,
-            "mean": 5678226,
-            "median": 6144989,
+            "mean": 5640808,
+            "median": 6104974,
             "min": 41464,
             "p05": 114324,
-            "p25": 4757756,
-            "p75": 7672370,
-            "p95": 10119069
+            "p25": 4759665,
+            "p75": 7599409,
+            "p95": 10098002
           },
           "size_outliers": [
             {
@@ -25562,12 +26971,93 @@
               "neighbour_median_bytes": 6534485,
               "ratio_to_neighbour_median": 0.0319,
               "size_bytes": 208373
+            },
+            {
+              "date": "2026-07-12",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260712.trades.dbn.zst",
+              "neighbour_median_bytes": 6033083,
+              "ratio_to_neighbour_median": 0.0335,
+              "size_bytes": 202080
+            },
+            {
+              "date": "2026-07-19",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260719.trades.dbn.zst",
+              "neighbour_median_bytes": 6033083,
+              "ratio_to_neighbour_median": 0.0335,
+              "size_bytes": 201995
+            },
+            {
+              "date": "2026-07-26",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260726.trades.dbn.zst",
+              "neighbour_median_bytes": 7526032,
+              "ratio_to_neighbour_median": 0.0267,
+              "size_bytes": 201303
+            },
+            {
+              "date": "2026-08-02",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260802.trades.dbn.zst",
+              "neighbour_median_bytes": 7253055,
+              "ratio_to_neighbour_median": 0.0317,
+              "size_bytes": 229632
+            },
+            {
+              "date": "2026-08-09",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260809.trades.dbn.zst",
+              "neighbour_median_bytes": 5795273,
+              "ratio_to_neighbour_median": 0.0269,
+              "size_bytes": 155768
+            },
+            {
+              "date": "2026-08-16",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260816.trades.dbn.zst",
+              "neighbour_median_bytes": 5214417,
+              "ratio_to_neighbour_median": 0.0171,
+              "size_bytes": 88966
+            },
+            {
+              "date": "2026-08-23",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260823.trades.dbn.zst",
+              "neighbour_median_bytes": 6363831,
+              "ratio_to_neighbour_median": 0.0235,
+              "size_bytes": 149863
+            },
+            {
+              "date": "2026-08-30",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260830.trades.dbn.zst",
+              "neighbour_median_bytes": 5947986,
+              "ratio_to_neighbour_median": 0.042,
+              "size_bytes": 250077
+            },
+            {
+              "date": "2026-09-06",
+              "explained_by": "evening_open_only",
+              "flag": "small",
+              "key": "raw/trades/NQ/glbx-mdp3-20260906.trades.dbn.zst",
+              "neighbour_median_bytes": 5712653,
+              "ratio_to_neighbour_median": 0.0154,
+              "size_bytes": 87748
             }
           ],
-          "total_bytes": 3588638917
+          "total_bytes": 3858312738
         }
       },
-      "total_bytes": 5517343527,
+      "total_bytes": 6053326918,
       "ts_out": [
         false
       ]
@@ -25599,5 +27089,5 @@
       "size": 694
     }
   ],
-  "total_bytes": 48304548422
+  "total_bytes": 48840531813
 }

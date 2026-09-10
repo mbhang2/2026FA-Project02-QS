@@ -47,7 +47,22 @@ from typing import Sequence
 
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+def _repo_root() -> Path:
+    """Walk up to the marker rather than counting directories.
+
+    `parents[3]` was correct until this file moved one level deeper, and it would
+    have kept resolving to *a* directory rather than failing -- the manifest would
+    simply not have been found. Counting parents is a hazard in a tree that is
+    allowed to be reorganised.
+    """
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "pyproject.toml").exists():
+            return parent
+    return here.parents[-1]
+
+
+REPO_ROOT = _repo_root()
 NULL_PATH = REPO_ROOT / "data" / "calibration" / "empirical-null.json"
 
 # The false-acceptance rates the table stores. Anything between them is
@@ -63,7 +78,7 @@ METRICS = ("sortino_per_session", "sharpe_per_session")
 
 
 # --------------------------------------------------------------------------- #
-# vectorised statistics -- identical in definition to src.core.metrics
+# vectorised statistics -- identical in definition to src.core.scoring.metrics
 # --------------------------------------------------------------------------- #
 def _sortino(samples: np.ndarray) -> np.ndarray:
     """`samples` is (trials, n). Same definition as `metrics.sortino`: MAR 0,
@@ -105,10 +120,10 @@ def null_session_returns(
 ) -> list[float]:
     """Per-session returns from independent no-signal runs of the reference
     strategy. The expensive half of the null."""
-    from ..datasets.synthetic import SyntheticDataset, SyntheticSpec
-    from ..engine import Engine
+    from ...data.synthetic import SyntheticDataset, SyntheticSpec
+    from ...engine import Engine
     from ..metrics import session_returns
-    from ..types import Split
+    from ...types import Split
     from .reference import ReferenceStrategy
 
     pool: list[float] = []

@@ -242,17 +242,17 @@ def test_record_width_is_unchanged_across_dbn_versions(manifest):
 # --------------------------------------------------------------------------- #
 def test_nq_coverage(manifest):
     nq = manifest["instrument_coverage"]["NQ"]
-    assert nq["usable_file_dates"] == 632
+    assert nq["usable_file_dates"] == 684
     assert nq["missing_file_dates"] == ["2025-04-18"], (
         "NQ should have exactly one gap, Good Friday 2025-04-18"
     )
-    assert nq["sources"] == {"raw/trades": 632}
+    assert nq["sources"] == {"raw/trades": 684}
     assert nq["historically_corrected_dates"] == CORRECTED_DATES
 
 
 def test_es_coverage(manifest):
     es = manifest["instrument_coverage"]["ES"]
-    assert es["usable_file_dates"] == 320
+    assert es["usable_file_dates"] == 372
     assert es["first_date"] == "2025-07-03"
     assert es["missing_file_dates"] == []
     assert es["historically_corrected_dates"] == []
@@ -272,15 +272,15 @@ def test_no_critical_anomalies(manifest):
 # drawn against the wrong N.
 def test_assemblable_session_counts(manifest):
     cov = manifest["instrument_coverage"]
-    assert cov["NQ"]["sessions"]["assemblable"] == 521
-    assert cov["ES"]["sessions"]["assemblable"] == 264
+    assert cov["NQ"]["sessions"]["assemblable"] == 564
+    assert cov["ES"]["sessions"]["assemblable"] == 307
     assert cov["QQQ.OPT"]["sessions"]["assemblable"] == 512
 
 
 def test_session_counts_are_not_file_date_counts(manifest):
     """The distinction is the whole point; if they ever coincide for a futures
     symbol, the session logic has silently stopped requiring the evening file."""
-    for sym, objects in (("NQ", 632), ("ES", 320)):
+    for sym, objects in (("NQ", 684), ("ES", 372)):
         v = manifest["instrument_coverage"][sym]
         assert sum(v["sources"].values()) == objects
         assert v["sessions"]["assemblable"] < objects
@@ -297,10 +297,19 @@ def test_only_two_sessions_are_genuinely_lost(manifest):
 
 
 def test_gex_eligible_session_counts(manifest):
-    """505, not 512 and not 521. The 16 futures sessions that drop out are days
-    CME equity futures trade while US equity options are closed."""
+    """511, not 512 and not 564.
+
+    Two different reasons a futures session has no same-day options, and they must
+    not be collapsed: 16 are structural (CME equity futures trade while US equity
+    options are closed) and recur every year; 37 are simply past the end of OPRA
+    coverage, because `trades` was extended to 2026-09-09 and OPRA was not.
+    Extending OPRA recovers the second set and nothing recovers the first.
+    """
     ov = manifest["coverage_overlap_trades_vs_opra"]
-    assert ov["NQ"]["QQQ.OPT"]["sessions_with_same_day_options"] == 505
-    assert ov["ES"]["QQQ.OPT"]["sessions_with_same_day_options"] == 255
-    assert len(ov["NQ"]["QQQ.OPT"]["futures_sessions_without_options"]) == 16
-    assert len(ov["ES"]["QQQ.OPT"]["futures_sessions_without_options"]) == 9
+    last_opra = manifest["instrument_coverage"]["QQQ.OPT"]["last_date"]
+    assert ov["NQ"]["QQQ.OPT"]["sessions_with_same_day_options"] == 511
+    assert ov["ES"]["QQQ.OPT"]["sessions_with_same_day_options"] == 261
+    for sym, structural in (("NQ", 16), ("ES", 9)):
+        missing = ov[sym]["QQQ.OPT"]["futures_sessions_without_options"]
+        assert len([d for d in missing if d <= last_opra]) == structural
+        assert len([d for d in missing if d > last_opra]) == 37

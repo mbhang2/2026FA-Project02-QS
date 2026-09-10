@@ -21,7 +21,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.calibration import null as nullmod  # noqa: E402
+from src.core.scoring.calibration import null as nullmod  # noqa: E402
 
 
 def main() -> int:
@@ -62,7 +62,7 @@ def main() -> int:
         "sessions_per_run": args.sessions,
         "ticks_per_session": args.ticks_per_session,
         "seed0": args.seed0,
-        "strategy": "src/core/calibration/reference.py::ReferenceStrategy",
+        "strategy": "src/core/scoring/calibration/reference.py::ReferenceStrategy",
         "fill_model": "unfavorable",
         "wall_clock_s": round(time.monotonic() - t0, 1),
     }

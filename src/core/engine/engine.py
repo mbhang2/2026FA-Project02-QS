@@ -38,9 +38,9 @@ from .context import (
     SetupContext,
     TickContext,
 )
-from .dataset import Dataset
+from ..data.dataset import Dataset
 from .fills import FillModel, check_capabilities, get_fill_model
-from .types import (
+from ..types import (
     Action,
     Bar,
     BarEvent,
@@ -914,13 +914,13 @@ class Engine:
         """The actionable sessions of the served split -- the observation unit
         the metric scores on. Warmup sessions are excluded: the strategy saw
         their bars but could not act, so they are not observations."""
-        from .dataset import sessions_for
+        from ..data.dataset import sessions_for
 
         _, live = sessions_for(self.dataset.calendar(), self.split, self.warmup_sessions)
         return list(live)
 
     def session_calendar(self):
-        from .metrics import session_calendar
+        from ..scoring.metrics import session_calendar
 
         return session_calendar(self.dataset, self.scored_sessions())
 

@@ -1,13 +1,13 @@
 """Blotter in, score tuple out. Nothing dataset-specific.
 
-**Strategies may not import this module, nor `src.core.metrics`.** If a strategy
+**Strategies may not import this module, nor `src.core.scoring.metrics`.** If a strategy
 can compute its own objective it can optimize a number it controls, so the
 prohibition is enforced at import time rather than asked for in a prompt --
 importing from anywhere under `src.strategies` raises. A static check over the
 source tree backs it up, for the case where a strategy defers the import to call
 time.
 
-The metric itself lives in `src.core.metrics`; this module is the fixed surface
+The metric itself lives in `src.core.scoring.metrics`; this module is the fixed surface
 the loop calls and the file the permission tiers name.
 """
 
@@ -25,7 +25,7 @@ from .metrics import (
     Diagnostics,
     SessionSpan,
 )
-from .types import Blotter, ScoreTuple
+from ..types import Blotter, ScoreTuple
 
 _FORBIDDEN_PREFIX = "src.strategies"
 
@@ -36,7 +36,7 @@ def _reject_import_from_strategies() -> None:
         name = frame.frame.f_globals.get("__name__", "")
         if name == _FORBIDDEN_PREFIX or name.startswith(_FORBIDDEN_PREFIX + "."):
             raise ImportError(
-                f"{name} may not import src.core.scorer. A strategy that can compute "
+                f"{name} may not import src.core.scoring.scorer. A strategy that can compute "
                 "its own objective can optimize a number it controls; the harness "
                 "calls the scorer, the strategy does not."
             )

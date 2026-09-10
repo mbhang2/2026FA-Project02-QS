@@ -36,7 +36,7 @@ own fills anyway. Hiding it was theatre.
 
 **The strategy may know how it is doing. It may not know how it is being
 judged.** `ctx` exposes realized and unrealized P&L; it exposes nothing the
-scorer computes. `src.core.scorer` and `src.core.metrics` remain unreachable from
+scorer computes. `src.core.scoring.scorer` and `src.core.scoring.metrics` remain unreachable from
 `src.strategies`, enforced at import time and by a static check, and a CI path
 check makes `src/strategies/**` the only writable tree.
 
@@ -284,7 +284,7 @@ silently vary with available data, two ledger rows are not measuring the same th
 ## Scorer
 
 `score(blotter, *, period) -> ScoreTuple`. Blotter in, score tuple out, nothing
-dataset-specific. Lives in `src/core/scorer.py`.
+dataset-specific. Lives in `src/core/scoring/scorer.py`.
 
 **[open] The metric.** It must be invariant to turnover, leverage, universe size, *and
 decision frequency* — candidates may subscribe to different timeframes and produce trade
@@ -295,7 +295,7 @@ The interface is fixed even though the metric is not.
 Two guards, both required and both implemented:
 
 - CI check on changed paths — `src/strategies/**` is the only writable tree
-- `src.strategies.*` cannot import `src.core.scorer`, enforced at import time and
+- `src.strategies.*` cannot import `src.core.scoring.scorer`, enforced at import time and
   asserted statically over the source tree
 
 ## The run entry point

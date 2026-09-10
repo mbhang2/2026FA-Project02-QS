@@ -1,6 +1,6 @@
 # Context API reference
 
-Everything a strategy can read or do. Generated from `src/core/context.py` by `scripts/gen_context_api.py` — edit the code, not this file.
+Everything a strategy can read or do. Generated from `src/core/engine/context.py` by `scripts/gen_context_api.py` — edit the code, not this file.
 
 What a strategy is handed, and the only surface it can act through.
 

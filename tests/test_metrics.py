@@ -17,9 +17,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.core import metrics  # noqa: E402
-from src.core.metrics import MIN_SESSIONS, REJECT, SessionSpan  # noqa: E402
-from src.core.scorer import score  # noqa: E402
+from src.core.scoring import metrics  # noqa: E402
+from src.core.scoring.metrics import MIN_SESSIONS, REJECT, SessionSpan  # noqa: E402
+from src.core.scoring.scorer import score  # noqa: E402
 from src.core.types import Blotter, BlotterRow, Side  # noqa: E402
 
 DAY = 86_400 * 1_000_000_000
@@ -163,7 +163,7 @@ def test_padding_with_flat_sessions_lowers_the_score():
             f"adding {extra} flat sessions did not lower the score"
         )
     # and the diagnostic keeps selectivity visible
-    from src.core.scorer import score_diagnostics
+    from src.core.scoring.scorer import score_diagnostics
 
     d = score_diagnostics(b, calendar(120))
     assert d.n_sessions == 120 and d.sessions_with_exposure < 120
@@ -254,7 +254,7 @@ def test_sharpe_is_computed_on_the_same_series():
 # diagnostics are recorded, never scored
 # --------------------------------------------------------------------------- #
 def test_diagnostics_do_not_move_the_score():
-    from src.core.scorer import score_diagnostics
+    from src.core.scoring.scorer import score_diagnostics
 
     b, cal = sample()
     base = score(b, period=cal)
@@ -278,14 +278,14 @@ def test_strategies_cannot_import_the_metric():
     import subprocess
 
     probe = REPO_ROOT / "src" / "strategies" / "_metric_probe_tmp.py"
-    probe.write_text("from src.core import metrics  # noqa: F401\n")
+    probe.write_text("from src.core.scoring import metrics  # noqa: F401\n")
     try:
         r = subprocess.run(
             [sys.executable, "-c", "import src.strategies._metric_probe_tmp"],
             capture_output=True, text=True, cwd=REPO_ROOT,
         )
         assert r.returncode != 0
-        assert "may not import src.core.metrics" in r.stderr
+        assert "may not import src.core.scoring.metrics" in r.stderr
     finally:
         probe.unlink(missing_ok=True)
 

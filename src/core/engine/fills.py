@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from .types import (
+from ..types import (
     DataCapabilities,
     Fill,
     Order,

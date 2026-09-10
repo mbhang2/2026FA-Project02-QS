@@ -16,7 +16,7 @@ Status markers: **[decided]** · **[open]** · **[proposed]**
 
 ## Coverage and session arithmetic
 
-Bucket `msfe-practicum`, single prefix `raw/`, 2,491 objects, ~45 GiB. Format is
+Bucket `msfe-practicum`, single prefix `raw/`, 2,595 objects, ~45 GiB. Format is
 **Databento DBN under zstd, not parquet** — no footer, `read_parquet` does not apply.
 
 **File-dates are not sessions.** Objects are split on UTC day and a CME session spans
@@ -25,15 +25,21 @@ the adapter's `periods()` unit.
 
 | | objects (UTC file-dates) | **assemblable sessions** | span (sessions) |
 |---|---|---|---|
-| NQ | 632 | **521** | 2024-07-04 → 2026-07-10 |
-| ES | 320 | **264** | 2025-07-04 → 2026-07-10 |
+| NQ | 684 | **564** | 2024-07-04 → 2026-09-09 |
+| ES | 372 | **307** | 2025-07-04 → 2026-09-09 |
 | QQQ options | 512 | 512 (no assembly needed) | 2024-07-03 → 2026-07-20 |
+
+Extended on 2026-09-10: `trades` gained 104 objects and now runs to 2026-09-09, taking
+NQ from 521 sessions to 564 and ES from 264 to 307. OPRA was **not** extended and still
+stops 2026-07-20, so the futures and options series no longer end on the same date —
+which moves the GEX intersection below, and is the number to watch.
 
 *Assemblable* = a CME session date `D` where both UTC objects it spans are present: the
 `D-1` file holding the 17:00 CT evening open, and the `D` file holding the rest. The
-632 → 521 drop is almost entirely a change of unit, not lost data: 110 of the 632
-file-dates are evening-open-only files (105 Sundays plus 2024-12-25, 2025-01-01,
-2025-01-09, 2025-12-25, 2026-01-01), which are inputs to a session rather than sessions.
+684 → 564 drop is almost entirely a change of unit, not lost data: 119 of the 684
+file-dates are evening-open-only files (114 Sundays plus 2024-12-25, 2025-01-01,
+2025-01-09, 2025-12-25, 2026-01-01), which are inputs to a session rather than
+sessions.
 Only **two** sessions are genuinely lost — 2025-04-18 (the Good Friday gap) and
 2024-07-03 (the leading boundary, no 07-02 evening file). ES loses one, 2025-07-03,
 for the same boundary reason.
@@ -43,7 +49,7 @@ OPRA needs no assembly: QQQ options trade 08:30–15:00 CT, inside a single UTC 
 Every count above is generated, not remembered: `scripts/inventory.py` writes them to
 `data/manifest.json` under `instrument_coverage[<sym>].sessions` and
 `coverage_overlap_trades_vs_opra`, renders them in `docs/data-inventory.md` §3, and the
-test suite pins 521 / 264 / 505 / 255 so a change has to be deliberate.
+test suite pins 564 / 307 / 511 / 261 so a change has to be deliberate.
 
 `ohlcv_1m` deliberately excluded — bars are built from `trades`.
 
@@ -52,26 +58,33 @@ Originals remain in the source lake.
 
 ### Symbols and the GEX intersection
 
-**Symbols — both present, asymmetric.** NQ 521 assemblable sessions from 2024-07-04;
-ES 264 from 2025-07-04. (632 and 320 are UTC file-date counts, not sessions.)
+**Symbols — both present, asymmetric.** NQ 564 assemblable sessions from 2024-07-04;
+ES 307 from 2025-07-04. (684 and 372 are UTC file-date counts, not sessions.)
 
 **OPRA is QQQ only** — no SPX, no NDX. **NQ has a GEX feature set, ES has none.**
 Known limitation for the writeup: QQQ options are a partial view of Nasdaq-100 dealer
 gamma, since NDX index options carry a large share and are absent.
 
-**GEX-using strategies are capped by NQ ∩ OPRA at exactly 505 sessions**
-(2024-07-05 → 2026-07-10), not 632 and not 521. The 16 assemblable NQ sessions that drop
-out are days CME equity futures trade but US equity options are closed — Independence
-Day, Labor Day, Thanksgiving, MLK, Presidents' Day, Memorial Day, Juneteenth, Good
-Friday.
+**GEX-using strategies are capped by NQ ∩ OPRA at exactly 511 sessions**
+(2024-07-05 → 2026-07-20), not 684 and not 564. Fifty-three assemblable NQ sessions drop
+out, and they are two different things that must not be lumped together:
 
-For ES, assemblable ∩ same-day QQQ is 255 of 264, if option (d) below becomes a
-GEX-using transfer test rather than a non-GEX one.
+- **16 holiday mismatches** — days CME equity futures trade but US equity options are
+  closed: Independence Day, Labor Day, Thanksgiving, MLK, Presidents' Day, Memorial Day,
+  Juneteenth, Good Friday. Structural; they recur every year.
+- **37 sessions past the end of OPRA coverage** (2026-07-21 → 2026-09-09). Not
+  structural — an artefact of extending `trades` without extending OPRA, and it is
+  precisely the recent window a holdout most wants. Extending OPRA recovers all 37 and
+  takes the intersection to 548.
+
+For ES, assemblable ∩ same-day QQQ is 261 of 307 (9 holiday mismatches and the same 37
+uncovered sessions), if option (d) below becomes a GEX-using transfer test rather than a
+non-GEX one.
 
 *Implementation trap:* if a GEX feature ever needs the **prior** session's options data,
 test against the previous *options trading day*, never `D-1`. Every Monday's `D-1` is a
-Sunday with no OPRA file by construction, and the naive test collapses 505 → 391. On the
-correct test the answer stays 505.
+Sunday with no OPRA file by construction, and the naive test collapses the
+intersection by roughly a fifth. On the correct test it is unchanged.
 
 ## Data invariants
 
@@ -128,7 +141,7 @@ from this repo. `corrections.yaml` records `sha256: null` explicitly. Recoverabl
 the set of `raw/trades/<SYM>/` files whose header disagrees with their folder must be
 **empty**. A new contamination fails it.
 
-**[decided] Bucket integrity is fingerprinted from listings, not downloads.** All 2,491
+**[decided] Bucket integrity is fingerprinted from listings, not downloads.** All 2,595
 ETags are plain 32-hex MD5 (no multipart), so the whole bucket is verifiable at zero
 egress. `inventory.py` compares live listing against the committed manifest each run;
 a change on a key in `corrections.yaml` classifies as `recorded_correction`, anything
@@ -189,11 +202,12 @@ post-overwrite reconciliation and bucket fingerprint (`97b6d7b`).
 
 Priority order, all within the free one-year Databento window:
 
-1. **Extend all series to present.** `trades` stops **2026-07-10** and OPRA
-   **2026-07-20** — they are not the same date. Against the CME calendar to 2026-09-08
-   that is **42 missing sessions for NQ/ES** and **36 for QQQ options**.
-   These are the most valuable sessions owned, because the holdout squeeze is a
-   shortage of recent post-model-cutoff data. Worth a recurring monthly pull.
+1. **Extend all series to present.** ~~`trades` stops 2026-07-10~~ — done on
+   2026-09-10: `trades` now runs to **2026-09-09** (+43 NQ sessions, +43 ES). **OPRA
+   still stops 2026-07-20** and is now the binding series: 37 futures sessions have no
+   same-day options, which is exactly the recent post-cutoff window the holdout wants.
+   Pull OPRA next, and keep the monthly cadence — the two series drifting apart is what
+   just cost 37 GEX-eligible sessions.
 2. **`tbbo` for NQ.** Every trade with prevailing best bid/offer — the input for
    realistic fill costing. Upgrades the robustness auditor from "assume the trade
    price" to "you paid the spread."
@@ -209,28 +223,29 @@ Priority order, all within the free one-year Databento window:
 
 **[open] Holdout size vs statistical power — the binding constraint and the next
 decision.** At ~one firing per day, a 3-month holdout is ~63 trades; DSR and PBO on 63
-observations are weak. 505 GEX-eligible sessions cannot give both a large training set
+observations are weak. 511 GEX-eligible sessions cannot give both a large training set
 and a statistically meaningful final holdout. Options, not exclusive:
 (a) thin final holdout, lean on CPCV within train+validation, treat the holdout as
 confirmatory rather than primary;
 (b) longer holdout, less training data;
 (c) relax one-firing-per-day to raise trade count — a pre-registered design choice, not
 a response to weak power;
-(d) ES's 264 sessions as a transfer test for non-GEX strategies, 255 if the test is
+(d) ES's 307 sessions as a transfer test for non-GEX strategies, 261 if the test is
 GEX-using — correlation ~0.95 so not clean OOS, but transfer is ADAS's anti-overfitting
 defense and it turns the NQ/ES asymmetry into a second axis of evidence.
 
 Collision worth noting: every eval window must postdate the backbone model's cutoff,
-and `trades` ends 2026-07-10 — so the post-cutoff window and the natural time-ordered
-holdout want to be the *same* few dozen sessions. Extending the series to present
-(acquisition item 1) directly relieves this.
+and `trades` ends 2026-09-09 — so the post-cutoff window and the natural time-ordered
+holdout want to be the *same* few dozen sessions. The 2026-09-10 extension relieved this
+for `trades`; for anything GEX-using it does not, because OPRA still ends 2026-07-20 and
+the intersection ends with it.
 
 Note that under the harness's global-N rule this is not a per-dataset budget: trials
 spent here count against the same N as trials on any other dataset.
 
 **[open] Two calendar rules the split must pre-register.** Both change what a session
 *is*, so they belong in this adapter's pre-registered calendar —
-`config/calendars/nq-es-qqq.yaml`, which the v4 plan called `config/calendar.yaml`
+`config/calendars/nq-trades.yaml`, which the v4 plan called `config/calendar.yaml`
 before calendars became per-dataset — rather than being settled the first time a
 strategy trips over one.
 
@@ -242,8 +257,9 @@ real shortened session the calendar denies. Today it counts as evening-only and
 something beyond `CME_Equity`.
 
 (ii) **The 16 CME-open / OPRA-closed days.** NQ sessions with a stale-GEX feature, or
-excluded from GEX strategies outright? The choice moves the GEX denominator between 505
-and 521.
+excluded from GEX strategies outright? The choice moves the GEX denominator between 511
+and 527. (The 37 sessions past the end of OPRA coverage are *not* this question — they
+are missing data, not a calendar rule, and extending OPRA settles them.)
 
 **[open] `gex_snapshots_dedup_v4`** — copy into `derived/`, or rebuild from
 `opra_cbbo1m`?
@@ -276,7 +292,7 @@ artifact), and lookahead is subtle (whole-day rank as an entry gate collapsed +$
 
 # What the adapter found (Task 8)
 
-This document had never been executed against. `src/core/datasets/nq.py` is its
+This document had never been executed against. `src/core/data/nq.py` is its
 first test. Everything above held. Four things were incomplete, and one
 expectation that reads naturally from it is wrong.
 
@@ -302,6 +318,14 @@ the aggressor: `B` where the trade was bid-initiated, `A` where ask-initiated,
 Side.SELL`, `N → None`, and every order-flow feature the agent writes will depend
 on that mapping. `None` is a real value and must be handled rather than folded
 into one side.
+
+**Measured, because the rate is the whole argument.** Across the 542 NQ sessions
+in the local cache — 202,852,206 ticks — `N` appears **683 times**, one tick in
+297,000 (101,305,713 `B` and 101,545,810 `A`). It is far too rare to show up in
+any test a strategy author writes, and far too real to ignore: folding it into
+`B` puts a permanent one-sided bias into every signed-volume feature, on data
+that cannot be re-run. `docs/agent/data.md` states the rule to the research
+agent; this is where the number lives.
 
 ## Incomplete: the session list existed only as a count
 
@@ -352,6 +376,14 @@ A session is about 250,000–300,000 trades. Measured on this machine:
 | end to end, per session | ~12.6 s |
 | all 521 sessions, one trial | **~110 min** |
 
+**Superseded by the event-driven walk (`c92b07a`).** Those figures were measured
+before it. Same sessions, same blotters, measured after: ~385,000 ticks/s, 0.72 s
+per session, and the full trial about **6 min** — a 17× improvement, of which 10×
+came from a working-order index and the rest from the jump. The table above is
+kept because the *shape* of the argument is unchanged: the engine walk, not the
+cache and not the network, is what a trial costs. At 564 sessions the full trial
+is about 6.8 min.
+
 **The cache is not the bottleneck.** A warm-cache run of five sessions took 63.1 s
 against 63.2 s cold — the engine walking 286,000 ticks a session dominates, at
 about 22,600 ticks/s. The cache is still worth having, because it removes the
@@ -363,7 +395,7 @@ it belongs to whoever designs the loop rather than to this adapter.
 
 ### What the rule does on the roll days in range
 
-`data/nq-contract-selection.json` records all 521 sessions. **Eight rolls, one per
+`data/nq-contract-selection.json` records all 564 sessions. **Eight rolls, one per
 quarter, no flicker** — the chosen contract never returns to one it has left:
 
 | roll session | from → to | share before | share after |
@@ -377,10 +409,13 @@ quarter, no flicker** — the chosen contract never returns to one it has left:
 | 2026-03-16 | NQH6 → NQM6 | 0.861 | 0.407 |
 | 2026-06-15 | NQM6 → NQU6 | 0.699 | 0.510 |
 
-**The ambiguity is real and confined.** 39 of 521 sessions have the front month
+**The ambiguity is real and confined.** 39 of 564 sessions have the front month
 below 90% of session volume, and every one of them is within four calendar days
 of a roll — the Friday before through the Thursday after, five sessions per roll.
-Outside those windows the minimum is 0.90 and the median 0.998.
+Outside those windows the minimum is 0.90 and the median 0.998. Those 39 are
+flagged `near_roll` in `data/nq-contract-selection.json` so no strategy has to
+re-derive the threshold; the flag is derived from `share_of_session_volume`, and
+the rule is stored beside it in the same file.
 
 So the rule is not close to a coin flip anywhere except in a roll week, where it
 genuinely is: on 2025-09-15 the outgoing contract holds 38% and the incoming one

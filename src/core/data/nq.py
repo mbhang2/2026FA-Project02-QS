@@ -37,11 +37,26 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from ..dataset import Calendar, HoldoutLock, SplitBounds
+from .dataset import Calendar, HoldoutLock, SplitBounds, calendar_path
 from ..types import NS_PER_SECOND, DataCapabilities, Side, Split, Tick, Ts
 from . import dbn
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+def _repo_root() -> Path:
+    """Walk up to the marker rather than counting directories.
+
+    `parents[3]` was correct until this file moved one level deeper, and it would
+    have kept resolving to *a* directory rather than failing -- the manifest would
+    simply not have been found. Counting parents is a hazard in a tree that is
+    allowed to be reorganised.
+    """
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "pyproject.toml").exists():
+            return parent
+    return here.parents[-1]
+
+
+REPO_ROOT = _repo_root()
 MANIFEST_PATH = REPO_ROOT / "data" / "manifest.json"
 CORRECTIONS_PATH = REPO_ROOT / "config" / "corrections.yaml"
 CACHE_ROOT = REPO_ROOT / "data" / "cache" / "sessions"
@@ -208,7 +223,7 @@ class NQDataset:
 
     def calendar(self) -> Calendar:
         raise NotImplementedError(
-            "config/calendars/nq-es-qqq.yaml is not written. The split is "
+            f"{calendar_path(self.name)} is not written. The split is "
             "pre-registered by a human before any outcome is observed, and this "
             "adapter must not invent one."
         )
@@ -297,7 +312,7 @@ class NQDataset:
 
     def _read_day(self, key: str) -> pd.DataFrame:
         if self._s3 is None:
-            from ..dataset import Dataset  # noqa: F401  (documentation only)
+            from .dataset import Dataset  # noqa: F401  (documentation only)
 
             raise RuntimeError(
                 "this dataset needs an S3 client; construct it with NQDataset(s3, bucket)"
@@ -367,7 +382,7 @@ class NQDataset:
             if self.spec.smoke_sessions is None:
                 raise NotImplementedError(
                     "no split calendar exists for this dataset yet; iterate "
-                    "sessions explicitly, or write config/calendars/nq-es-qqq.yaml"
+                    f"sessions explicitly, or write {calendar_path(self.name)}"
                 )
             if split is Split.HOLDOUT:
                 raise NotImplementedError("the smoke path never serves the holdout")

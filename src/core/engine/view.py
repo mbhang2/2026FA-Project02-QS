@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Generic, Iterator, Sequence, TypeVar
 
-from .types import Bar, LookaheadError
+from ..types import Bar, LookaheadError
 
 T = TypeVar("T")
 

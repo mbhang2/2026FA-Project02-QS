@@ -7,7 +7,7 @@ one is the one that actually holds, because configs drift and get copied wrong.
 Run over a diff:
 
     python scripts/check_agent_paths.py --base origin/main
-    python scripts/check_agent_paths.py --paths src/core/engine.py   # for tests
+    python scripts/check_agent_paths.py --paths src/core/engine/engine.py  # for tests
 
 Exits non-zero and names the offending paths. Human commits are not agent
 commits: CI runs this only on branches the loop pushes, identified by the
@@ -26,7 +26,7 @@ AGENT_ALLOWLIST = ("src/strategies/",)
 
 # Never writable, agent or not, without a deliberate human commit: if a strategy
 # could reach the scorer it could optimize a number it controls.
-SCORER_PATH = "src/core/scorer.py"
+SCORER_PATH = "src/core/scoring/scorer.py"
 
 
 def violations(paths: list[str]) -> list[str]:

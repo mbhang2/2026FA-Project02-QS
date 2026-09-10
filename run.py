@@ -35,9 +35,9 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.datasets.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
+from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
-from src.core.scorer import score, score_diagnostics  # noqa: E402
+from src.core.scoring.scorer import score, score_diagnostics  # noqa: E402
 from src.core.types import HoldoutLocked, Split  # noqa: E402
 
 CONFIG_PATH = REPO_ROOT / "config" / "run.yaml"

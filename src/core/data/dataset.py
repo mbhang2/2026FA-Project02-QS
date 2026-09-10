@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterator, Protocol, Sequence
 
-from .types import DataCapabilities, HoldoutLocked, Split, Tick, Ts
+from ..types import DataCapabilities, HoldoutLocked, Split, Tick, Ts
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,6 +77,21 @@ class Calendar:
             "embargo_sessions": self.embargo_sessions,
             "n_sessions": self.n_sessions,
         }
+
+
+CALENDAR_DIR = "config/calendars"
+
+
+def calendar_path(name: str) -> str:
+    """Where the pre-registered split for a dataset lives, derived from its name.
+
+    `Dataset.name` may carry an instrument suffix (`nq-trades:NQ`); the calendar is
+    per dataset, not per instrument, so the suffix is dropped. Derived rather than
+    written down because the adapter, the error message it raises and the file a
+    human is meant to create had already drifted to two different names -- and the
+    only symptom of that drift is a pre-registration nobody reads.
+    """
+    return f"{CALENDAR_DIR}/{name.split(':', 1)[0]}.yaml"
 
 
 class Dataset(Protocol):

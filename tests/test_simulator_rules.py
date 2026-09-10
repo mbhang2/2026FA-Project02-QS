@@ -17,9 +17,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.bars import BarBuilder  # noqa: E402
-from src.core.dataset import Calendar, SplitBounds  # noqa: E402
-from src.core.datasets.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
+from src.core.engine.bars import BarBuilder  # noqa: E402
+from src.core.data.dataset import Calendar, SplitBounds  # noqa: E402
+from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
 from src.core.types import (  # noqa: E402
     NS_PER_SECOND,
@@ -290,7 +290,7 @@ def test_the_dataset_digest_changes_with_the_data_and_not_with_the_run():
 
 
 def test_a_fill_model_requiring_absent_capabilities_fails_at_wiring_time():
-    from src.core.fills import UnfavorableFill
+    from src.core.engine.fills import UnfavorableFill
     from src.core.types import DataCapabilities
 
     model = UnfavorableFill()

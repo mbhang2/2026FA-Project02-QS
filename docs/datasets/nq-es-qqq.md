@@ -271,3 +271,120 @@ Two hard-won lessons behind those: execution artifacts masquerade as alpha (a fa
 strategy showed +$48/trade across 13/13 positive months and was entirely stop-placement
 artifact), and lookahead is subtle (whole-day rank as an entry gate collapsed +$83 →
 −$9/trade when rewritten causally).
+
+---
+
+# What the adapter found (Task 8)
+
+This document had never been executed against. `src/core/datasets/nq.py` is its
+first test. Everything above held. Four things were incomplete, and one
+expectation that reads naturally from it is wrong.
+
+## Wrong: DST does not change a session's length
+
+The document says the UTC session bounds shift with DST, which is true and
+matters. The natural inference — that a session spanning a transition is 22 or 24
+hours — is **not** true. **Every CME session is 23 hours**, transitions included.
+
+The change happens at 02:00 local on a Sunday, which falls inside the weekend
+halt between Friday's 16:00 CT close and Sunday's 17:00 CT open. No session ever
+contains it. What moves is the UTC bound of every session — the 17:00 CT open is
+22:00Z under CDT and 23:00Z under CST — which is exactly the thing that breaks
+code holding a fixed offset, and exactly not a thing that changes any session's
+duration. Both facts are now asserted in `tests/test_nq_adapter.py`.
+
+## Incomplete: the `side` field encoding
+
+Invariant 7 covers `stype_in=PARENT` and the schema is listed in
+`docs/data-inventory.md`, but nothing says what the `side` column *means*. It is
+the aggressor: `B` where the trade was bid-initiated, `A` where ask-initiated,
+`N` where the feed does not say. The adapter maps `B → Side.BUY`, `A →
+Side.SELL`, `N → None`, and every order-flow feature the agent writes will depend
+on that mapping. `None` is a real value and must be handled rather than folded
+into one side.
+
+## Incomplete: the session list existed only as a count
+
+Coverage was recorded as *521 assemblable sessions* plus the two losses. That is
+not enough to build against: an adapter given only a count has to re-derive
+*which* dates from a trading calendar, and the two implementations disagree on
+exactly the days that matter. Deriving from file dates plus "has a predecessor"
+gives **526**, because Sunday and holiday-eve objects are file dates with
+predecessors and are not sessions.
+
+`scripts/inventory.py` now publishes the list itself, at
+`instrument_coverage.NQ.sessions.dates`, and the adapter reads it and cross-checks
+that every listed session has both its objects. The count-only version had been
+correct and unusable.
+
+## Incomplete: 2025-07-04 is a session, not a holiday
+
+Independence Day 2025 fell on a Friday and CME equity index futures traded a
+**shortened** session, so it is a session date with an early close — the
+calendar's `early_close_days` lists it. It assembles from the Thursday 17:00 CT
+open to about 12:00 CT, 55,277 ticks against 247,828 for an ordinary session. The
+document mentions holiday-eve files without saying that a shortened holiday
+session is still a session, and it is easy to read the other way.
+
+## Incomplete: contract selection had no stated rule
+
+`stype_in=PARENT` is documented; what to do about it was not. Front-month
+selection is a **research convention, not a fact**, so it now lives in immutable
+code with the rule written down — *highest traded volume among outright contracts
+in the session* — and the choice is recorded per session in
+`data/nq-contract-selection.json` so a roll is visible as data rather than
+inferred. Spreads are separate instruments in a PARENT file (`NQU5-NQZ5`) and are
+excluded, because a spread must not win a volume comparison against the outright
+it is built from.
+
+On an ordinary session the chosen contract carries **99.9%** of session volume,
+so the rule is not close to ambiguous away from a roll.
+
+## Cost, which nothing recorded
+
+A session is about 250,000–300,000 trades. Measured on this machine:
+
+| | |
+|---|---|
+| load one session, no cache | 2.5 s |
+| load one session, warm cache | 0.31 s |
+| **engine walk of one session** | **~10 s** |
+| end to end, per session | ~12.6 s |
+| all 521 sessions, one trial | **~110 min** |
+
+**The cache is not the bottleneck.** A warm-cache run of five sessions took 63.1 s
+against 63.2 s cold — the engine walking 286,000 ticks a session dominates, at
+about 22,600 ticks/s. The cache is still worth having, because it removes the
+network and the DBN decode from the loop and makes repeat runs reproducible from
+local bytes, but it buys about 2 s of the 12.6.
+
+That number is the constraint on how many trials a night the loop can afford, and
+it belongs to whoever designs the loop rather than to this adapter.
+
+### What the rule does on the roll days in range
+
+`data/nq-contract-selection.json` records all 521 sessions. **Eight rolls, one per
+quarter, no flicker** — the chosen contract never returns to one it has left:
+
+| roll session | from → to | share before | share after |
+|---|---|---|---|
+| 2024-09-16 | NQU4 → NQZ4 | 0.761 | 0.442 |
+| 2024-12-17 | NQZ4 → NQH5 | 0.407 | 0.629 |
+| 2025-03-18 | NQH5 → NQM5 | 0.438 | 0.574 |
+| 2025-06-16 | NQM5 → NQU5 | 0.802 | 0.446 |
+| 2025-09-16 | NQU5 → NQZ5 | 0.380 | 0.611 |
+| 2025-12-15 | NQZ5 → NQH6 | 0.886 | 0.412 |
+| 2026-03-16 | NQH6 → NQM6 | 0.861 | 0.407 |
+| 2026-06-15 | NQM6 → NQU6 | 0.699 | 0.510 |
+
+**The ambiguity is real and confined.** 39 of 521 sessions have the front month
+below 90% of session volume, and every one of them is within four calendar days
+of a roll — the Friday before through the Thursday after, five sessions per roll.
+Outside those windows the minimum is 0.90 and the median 0.998.
+
+So the rule is not close to a coin flip anywhere except in a roll week, where it
+genuinely is: on 2025-09-15 the outgoing contract holds 38% and the incoming one
+most of the rest. Anything sensitive to which side of a roll a session lands on
+should read this file rather than assume, and a strategy whose result depends on
+those 39 sessions is telling you something about the roll convention rather than
+about the market.

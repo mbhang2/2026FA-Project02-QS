@@ -53,4 +53,6 @@ jobs:
           python scripts/calibrate.py --help > /dev/null
           python scripts/tabulate_null.py --help > /dev/null
           python scripts/replay.py --help > /dev/null
+          python scripts/nq_contracts.py --help > /dev/null
+          python scripts/nq_smoke.py --help > /dev/null
           python run.py --help > /dev/null

@@ -12,6 +12,8 @@ dependencies = [
     "numpy>=1.24",
     "scipy>=1.10",
     "pyarrow>=12.0",
+    "boto3>=1.28",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

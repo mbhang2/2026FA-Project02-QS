@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 import statistics as st
 import subprocess
+import json
 import sys
 from pathlib import Path
 
@@ -258,3 +259,133 @@ def test_false_acceptance_on_freshly_simulated_noise_is_not_worse_than_promised(
             f"at N={n} the table promises far={far} and fresh noise measured "
             f"{measured:.5f}"
         )
+
+
+# --------------------------------------------------------------------------- #
+# one null per dataset, and the table says which
+# --------------------------------------------------------------------------- #
+NQ_NULL = REPO_ROOT / "data" / "calibration" / "empirical-null-nq-trades.json"
+
+
+def test_every_committed_null_is_tagged_with_what_it_was_measured_on():
+    """An untagged table is one nobody can check. Task 15 scored a real NQ run
+    against the synthetic table and got a plausible number that meant nothing."""
+    for path in (REPO_ROOT / "data" / "calibration").glob("empirical-null*.json"):
+        if path.stem.endswith("-verification"):
+            continue          # a report about a table, not a table
+        doc = json.loads(path.read_text())
+        assert doc.get("dataset"), f"{path.name} carries no dataset tag"
+
+
+def test_asking_about_one_dataset_never_reads_another_ones_table():
+    with pytest.raises(N.WrongNullTable):
+        N.threshold_for(0.001, 86, dataset="nq-trades:NQ", path=N.NULL_PATH)
+    with pytest.raises(N.WrongNullTable):
+        N.threshold_for(0.001, 86, dataset="synthetic", path=NQ_NULL)
+
+
+def test_a_dataset_with_no_measured_null_raises_rather_than_falling_back():
+    """The failure that matters is silent reuse, so the absent case must be loud
+    and must say what to run."""
+    with pytest.raises(FileNotFoundError, match="tabulate_null"):
+        N.threshold_for(0.001, 50, dataset="es-trades:ES")
+
+
+def test_the_dataset_family_is_what_a_null_belongs_to():
+    assert N.null_key("synthetic:s=0:seed=1") == "synthetic"
+    assert N.null_key("nq-trades:NQ") == "nq-trades"
+    assert N.null_path_for("synthetic:s=0.5:seed=9") == N.NULL_PATH
+    assert N.null_path_for("nq-trades:NQ").name == "empirical-null-nq-trades.json"
+
+
+def test_the_real_null_is_much_stricter_than_the_synthetic_one():
+    """The number this task exists for. Synthetic sessions have far less
+    dispersion than real ones, so the synthetic table sets thresholds a strategy
+    with no edge can clear."""
+    if not NQ_NULL.exists():
+        pytest.skip("the real-data null has not been tabulated here")
+    synthetic = N.threshold_for(0.001, 86, dataset="synthetic")
+    real = N.threshold_for(0.001, 86, dataset="nq-trades:NQ")
+    assert synthetic == pytest.approx(0.0336, abs=0.02)
+    assert real > 0.4
+    assert real > 5 * max(synthetic, 0.01)
+
+
+def test_the_task_15_score_reads_as_nothing_against_the_right_null():
+    """Sortino +0.0076 over 86 sessions, from the first real run. It was 0.18%
+    against the synthetic table -- almost an accept at a 0.1% policy -- and is a
+    coin flip against the real one."""
+    if not NQ_NULL.exists():
+        pytest.skip("the real-data null has not been tabulated here")
+    score, n = 0.0076030169676602425, 86
+    assert N.far_for(score, n, dataset="synthetic") < 0.01
+    assert N.far_for(score, n, dataset="nq-trades:NQ") > 0.1
+
+
+# --------------------------------------------------------------------------- #
+# the block bootstrap
+# --------------------------------------------------------------------------- #
+def test_block_length_one_is_the_iid_resample_exactly():
+    """Not approximately: the same generator state produces the same integers, so
+    the old behaviour is a special case of the new code path rather than a
+    parallel one. If this ever drifts, the block implementation is wrong."""
+    import numpy as np
+
+    pool = np.asarray(json.loads(N.NULL_PATH.read_text())["pool"], dtype=float)
+    legacy = np.random.default_rng(99).choice(pool, size=(2000, 40), replace=True)
+    blocked = pool[N._draw_indices(np.random.default_rng(99), pool.size, 40, 2000, 1)]
+    assert np.array_equal(legacy, blocked)
+
+
+def test_blocks_are_contiguous_and_wrap():
+    import numpy as np
+
+    idx = N._draw_indices(np.random.default_rng(3), 50, 12, 200, 8)
+    steps = (idx[:, 1:] - idx[:, :-1]) % 50
+    # every step is either +1 within a block or a jump to a new block start
+    assert (steps == 1).mean() > 0.5, "blocks are not contiguous"
+    assert idx.max() < 50 and idx.min() >= 0
+
+
+def test_the_block_length_is_measured_from_the_pool():
+    """A block length chosen for convenience is the same class of unexamined
+    assumption this task exists to remove."""
+    if not NQ_NULL.exists():
+        pytest.skip("the real-data null has not been tabulated here")
+    doc = json.loads(NQ_NULL.read_text())
+    measured = doc["provenance"]["block_length_measurement"]
+    assert doc["provenance"]["block_length_source"] == "measured"
+    assert doc["block_length"] == measured["block_length"] > 1
+    assert doc["bootstrap"] == "stationary"
+    # the returns themselves are near-uncorrelated; their absolute values are not,
+    # and that is what sets the block length
+    assert abs(measured["lag1_returns"]) < measured["significance_band"]
+    assert measured["lag1_abs_returns"] > measured["significance_band"]
+
+
+def test_the_real_null_was_built_on_training_sessions_only():
+    if not NQ_NULL.exists():
+        pytest.skip("the real-data null has not been tabulated here")
+    prov = json.loads(NQ_NULL.read_text())["provenance"]
+    assert prov["split"] == "train"
+    assert prov["sessions_in_pool"] < prov["sessions_scored"]
+    assert prov["contaminated_sessions_remaining_in_pool"] == []
+    for field in ("dataset_digest", "fill_model", "seed", "contract_selection",
+                  "exclusion_rule", "blotter_digest"):
+        assert prov.get(field) not in (None, ""), field
+
+
+def test_tabulating_the_null_on_anything_but_train_is_refused():
+    """Calibrating the gate with the data the gate is applied to is not
+    recoverable afterwards, so it is refused at the call rather than reviewed."""
+    from src.core.types import Split
+
+    class Fake:
+        name = "fake:X"
+
+        def digest(self):
+            return "0"
+
+    for split in (Split.VALIDATION, Split.HOLDOUT):
+        with pytest.raises(ValueError, match="training sessions only"):
+            N.real_session_returns(Fake(), split=split)

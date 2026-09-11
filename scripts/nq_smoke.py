@@ -15,10 +15,8 @@ It also reports cold- and warm-cache timings, which is the number that decides
 how many trials a night the loop can afford.
 
 With `--split` it serves a pre-registered split from `config/calendars/` and
-scores it. The score is reported because the plumbing that produces it is what is
-being checked; **the FAR beside it is the method working with the wrong table**
-and is labelled as such wherever it is printed. The holdout is not reachable from
-here.
+scores it, against the null measured on this dataset's own training sessions.
+The holdout is not reachable from here.
 """
 
 from __future__ import annotations
@@ -53,13 +51,10 @@ def report_score(engine, record, ds) -> str:
     checked: a calendar, per-session returns, a metric and a ScoreTuple have
     never met real data. The FAR is here for the same reason and no other.
 
-    **It is the method working with the wrong table.** The empirical null was
-    tabulated on synthetic sessions resampled i.i.d., which assumes
-    exchangeability. Real futures sessions cluster in volatility and trend, so
-    the assumption fails in the unsafe direction: an i.i.d. bootstrap understates
-    the variance of an N-session statistic and therefore sets thresholds too low
-    and reports false-acceptance rates that are too small. A real-data null needs
-    a block bootstrap and is its own task.
+    The FAR is read from the null measured on **this dataset's own training
+    sessions**, with a block bootstrap, and `far_for` refuses a table tagged with
+    a different dataset. Task 15 scored this same run against the synthetic table
+    and got 0.18%; the honest answer is 32%.
     """
     from src.core.scoring.calibration import null as nullmod
     from src.core.scoring.scorer import score, score_diagnostics
@@ -80,21 +75,20 @@ def report_score(engine, record, ds) -> str:
     if result.rejected:
         print(f"REJECTED      {result.reject_reason}")
 
+    # `dataset=` is the whole guard: without it this reads the synthetic table,
+    # which is what Task 15 did. A Sortino of 0.0076 came back at a false
+    # acceptance of 0.18% against a 0.1% policy; against the real null it is 32%.
     try:
         far = nullmod.far_for(result.primary, result.n_sessions,
-                              metric=result.metric)
-        print(f"far_for       {far:.4g}   <-- SYNTHETIC TABLE, DOES NOT TRANSFER")
-    except Exception as exc:  # pragma: no cover - reported, not swallowed
+                              metric=result.metric, dataset=ds.name)
+        table = nullmod.null_path_for(ds.name).name
+        print(f"far_for       {far:.4g}   (null: {table})")
+    except Exception as exc:
         far = None
         print(f"far_for       unavailable: {type(exc).__name__}: {exc}")
-    print("              the null was tabulated on synthetic sessions resampled")
-    print("              i.i.d.; real sessions cluster, so this understates the")
-    print("              variance and reads too favourably. Not a p-value for")
-    print("              this dataset.")
     return (
-        "plumbing check on the pre-registered split; the score is real and the "
-        "FAR beside it is computed against a synthetic i.i.d. null that does not "
-        "transfer to clustered real sessions"
+        "plumbing check on the pre-registered split, scored against the null "
+        "measured on this dataset's own training sessions"
     )
 
 

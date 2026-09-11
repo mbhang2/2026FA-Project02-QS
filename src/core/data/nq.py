@@ -262,6 +262,24 @@ class NQDataset:
         _, live = self._split_positions(split, warmup)
         return [self._ordinal(i) for i in live]
 
+    def early_close_dates(self) -> frozenset[int]:
+        """Sessions the exchange closes early, as `Tick.session` ids.
+
+        Read from the calendar the inventory already publishes in the manifest,
+        not re-derived. Exposed because a shortened session is a fact about the
+        data that consumers have to be able to see: the calibration rig excludes
+        early closes and their successors from the null pool, because a strategy
+        cannot know a session is ending early and so cannot be flat before it
+        does.
+        """
+        cal = self._manifest["instrument_coverage"][self.spec.symbol].get("calendar", {})
+        known = set(self._sessions)
+        return frozenset(
+            d.toordinal()
+            for raw in cal.get("early_close_days", [])
+            if (d := dt.date.fromisoformat(raw)) in known
+        )
+
     def unlock_holdout(self, reason: str) -> None:
         self._lock.unlock(reason)
 

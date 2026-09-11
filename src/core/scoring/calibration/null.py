@@ -65,6 +65,37 @@ def _repo_root() -> Path:
 REPO_ROOT = _repo_root()
 NULL_PATH = REPO_ROOT / "data" / "calibration" / "empirical-null.json"
 
+
+class WrongNullTable(ValueError):
+    """The tabulated null was measured on a different dataset than the one asked
+    about.
+
+    Its own class because the failure is not a bad argument, it is a category
+    error with no symptom. Task 15 scored a real NQ run against the synthetic
+    table: `threshold_for(0.001, 86)` was 0.0336, so a Sortino of 0.0076 -- a
+    significance of 0.07, which is nothing -- came back at a false-acceptance
+    rate of 0.18% against a 0.1% policy. The run completed, the number was
+    plausible, and it was meaningless. Nothing would have caught it.
+    """
+
+
+def null_key(dataset_name: str) -> str:
+    """The dataset family a null belongs to.
+
+    One null per family, not per instance: `synthetic:s=0:seed=1` and
+    `synthetic:s=0.2:seed=7` share a return-generating process, and the seed is
+    not what the null is about.
+    """
+    return str(dataset_name).split(":", 1)[0]
+
+
+def null_path_for(dataset_name: str | None) -> Path:
+    """Where the null for a dataset lives. Never a fallback to another one."""
+    key = null_key(dataset_name or "synthetic")
+    if key == "synthetic":
+        return NULL_PATH
+    return NULL_PATH.with_name(f"empirical-null-{key}.json")
+
 # The false-acceptance rates the table stores. Anything between them is
 # interpolated in log(far); anything outside is clamped, loudly.
 FAR_GRID = (0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005)
@@ -143,6 +174,215 @@ def null_session_returns(
     return pool
 
 
+# Sessions the exchange closes early, and the session immediately after one.
+#
+# The reference strategy is meant to be flat at every session boundary and
+# cannot be, because nothing tells a strategy when the session ends: it learns
+# the shortest session it has seen (23 hours, every full CME session) and a
+# shortened session simply never reaches that. Over the 384 NQ training sessions
+# twelve ended with a position open, and every one of them is an early close.
+#
+# So the pool excludes early closes and their successors -- the successor because
+# the stranded position is flattened on its first bar, which puts the overnight
+# move into that session's return. The rule is structural and comes from the
+# exchange calendar in the manifest, not from which sessions happened to catch
+# the strategy out; excluding the ones that went wrong would be conditioning the
+# null on an outcome, which is the class of mistake this whole task is about.
+def excluded_sessions(dataset, sessions: Sequence) -> set:
+    """Session ids to leave out of the pool, and nothing else.
+
+    Returns dataset session ids, so the caller can subtract them from a session
+    calendar directly.
+    """
+    early = set(getattr(dataset, "early_close_dates", lambda: ())())
+    if not early:
+        return set()
+    out = set()
+    ordered = list(sessions)
+    for i, s in enumerate(ordered):
+        if s in early:
+            out.add(s)
+            if i + 1 < len(ordered):
+                out.add(ordered[i + 1])
+    return out
+
+
+def real_session_returns(
+    dataset,
+    *,
+    split=None,
+    fill_model: str = "unfavorable",
+    warmup_sessions: int = 0,
+    seed: int = 1,
+) -> tuple[list[float], dict]:
+    """Per-session returns of the reference strategy on a real dataset.
+
+    The strategy has no edge by construction, so on real data its session returns
+    are a null sample drawn from the real return-generating process. That is the
+    whole idea: keep the strategy that does nothing and change the world it does
+    nothing in.
+
+    **Training split only, and asserted.** Building the yardstick from validation
+    or holdout sessions calibrates the evaluation with the evaluation data, which
+    is the same error as fitting on the test set and is not recoverable
+    afterwards.
+    """
+    from ...engine import Engine
+    from ..metrics import session_calendar, session_returns
+    from ...types import Split
+    from .reference import ReferenceStrategy
+
+    split = Split.TRAIN if split is None else Split(split)
+    if split is not Split.TRAIN:
+        raise ValueError(
+            f"the null is tabulated on training sessions only, not {split}. "
+            "Calibrating the gate with the data the gate is applied to makes the "
+            "false-acceptance rate a statement about nothing."
+        )
+
+    strategy = ReferenceStrategy()
+    engine = Engine(dataset, strategy, split=split, fill_model=fill_model,
+                    warmup_sessions=warmup_sessions, seed=seed)
+    record = engine.run()
+
+    scored = engine.scored_sessions()
+    dropped = excluded_sessions(dataset, scored)
+    kept = [s for s in scored if s not in dropped]
+    calendar = session_calendar(dataset, kept)
+    pool = session_returns(engine.blotter, calendar)
+
+    left_open = {
+        int(k): v for k, v in record.end_of_session_positions.items() if v != 0
+    }
+    still_contaminated = sorted(set(left_open) & set(kept))
+
+    provenance = {
+        "dataset": dataset.name,
+        "dataset_digest": dataset.digest(),
+        "split": str(split),
+        "fill_model": fill_model,
+        "seed": seed,
+        "warmup_sessions": warmup_sessions,
+        "strategy": "src/core/scoring/calibration/reference.py::ReferenceStrategy",
+        "contract_selection": _contract_selection_version(),
+        "sessions_scored": len(scored),
+        "sessions_excluded": len(dropped),
+        "sessions_in_pool": len(kept),
+        "exclusion_rule": (
+            "early-close sessions and the session immediately after one. "
+            "Structural, from the exchange calendar in data/manifest.json, not "
+            "from which sessions stranded a position."
+        ),
+        "sessions_ending_with_a_position_open": len(left_open),
+        "contaminated_sessions_remaining_in_pool": still_contaminated,
+        "first_session": min(kept) if kept else None,
+        "last_session": max(kept) if kept else None,
+        "ticks": record.ticks,
+        "fills": record.fills,
+        "blotter_digest": record.blotter_digest,
+        "wall_clock_s": record.wall_clock_s,
+    }
+    return pool, provenance
+
+
+def _contract_selection_version() -> dict:
+    """Which front-month decisions the pool was built against."""
+    path = REPO_ROOT / "data" / "nq-contract-selection.json"
+    if not path.exists():
+        return {}
+    doc = json.loads(path.read_text())
+    return {
+        "sessions_recorded": doc.get("sessions_recorded"),
+        "rule": doc.get("rule"),
+        "near_roll_rule": doc.get("near_roll_rule"),
+        "rolls": len(doc.get("rolls", [])),
+    }
+
+
+# --------------------------------------------------------------------------- #
+# how long a block has to be
+# --------------------------------------------------------------------------- #
+def autocorrelation(x: Sequence[float], max_lag: int = 40) -> list[float]:
+    """Sample autocorrelation at lags 1..max_lag."""
+    a = np.asarray(x, dtype=float)
+    a = a - a.mean()
+    denom = float((a * a).sum())
+    if denom <= 0:
+        return [0.0] * max_lag
+    return [float((a[:-k] * a[k:]).sum() / denom) for k in range(1, max_lag + 1)]
+
+
+def measure_block_length(pool: Sequence[float], *, max_lag: int = 40) -> dict:
+    """The block length the data implies, measured rather than chosen.
+
+    Two series are examined, because they fail exchangeability in different ways.
+    The returns themselves carry any drift dependence. Their absolute values
+    carry volatility clustering, which is the one that actually inflates the
+    variance of an N-session ratio: Sortino's denominator is a dispersion
+    estimate, and runs of high-dispersion sessions make that estimate itself
+    serially dependent.
+
+    The block length is the first lag at which the autocorrelation falls inside
+    the +/- 1.96/sqrt(N) band -- the decorrelation lag -- taken over whichever of
+    the two series stays outside it longer. Unambiguous, reproducible from the
+    pool alone, and recorded in the table beside the seed.
+    """
+    a = np.asarray(pool, dtype=float)
+    n = a.size
+    band = 1.96 / math.sqrt(n) if n > 1 else float("inf")
+    acf_r = autocorrelation(a, max_lag)
+    acf_abs = autocorrelation(np.abs(a), max_lag)
+
+    def decorrelation_lag(acf: Sequence[float]) -> int:
+        for i, v in enumerate(acf, start=1):
+            if abs(v) < band:
+                return i
+        return len(acf) + 1
+
+    lag_r = decorrelation_lag(acf_r)
+    lag_abs = decorrelation_lag(acf_abs)
+    block = max(1, lag_r, lag_abs)
+    return {
+        "n": int(n),
+        "significance_band": band,
+        "lag1_returns": acf_r[0] if acf_r else 0.0,
+        "lag1_abs_returns": acf_abs[0] if acf_abs else 0.0,
+        "acf_returns": acf_r[:10],
+        "acf_abs_returns": acf_abs[:10],
+        "decorrelation_lag_returns": lag_r,
+        "decorrelation_lag_abs_returns": lag_abs,
+        "block_length": int(block),
+        "rule": (
+            "first lag at which |acf| falls inside +/-1.96/sqrt(n), taken over "
+            "returns and |returns|, whichever persists longer"
+        ),
+    }
+
+
+def _draw_indices(rng, pool_size: int, n: int, trials: int, block_length: int):
+    """Stationary bootstrap indices (Politis & Romano).
+
+    Blocks of geometric length with mean `block_length`, wrapping at the end of
+    the pool so every position is equally likely to start a block. At
+    `block_length == 1` the restart probability is 1 and every draw is an
+    independent uniform pick -- the i.i.d. resample exactly, which is what makes
+    the old behaviour a special case of the new one rather than a different code
+    path.
+    """
+    if block_length < 1:
+        raise ValueError(f"block_length must be >= 1, got {block_length}")
+    if block_length == 1:
+        return rng.integers(0, pool_size, size=(trials, n))
+    p = 1.0 / block_length
+    idx = np.empty((trials, n), dtype=np.int64)
+    idx[:, 0] = rng.integers(0, pool_size, size=trials)
+    for t in range(1, n):
+        restart = rng.random(trials) < p
+        stepped = (idx[:, t - 1] + 1) % pool_size
+        idx[:, t] = np.where(restart, rng.integers(0, pool_size, size=trials), stepped)
+    return idx
+
+
 def tabulate(
     pool: Sequence[float],
     *,
@@ -151,6 +391,9 @@ def tabulate(
     far_grid: Sequence[float] = FAR_GRID,
     min_downside_sessions: int = 5,
     seed: int = 20_260_909,
+    block_length: int = 1,
+    dataset: str = "synthetic",
+    provenance: dict | None = None,
 ) -> dict:
     """Bootstrap the sampling distribution of each metric at each session count.
 
@@ -163,7 +406,7 @@ def tabulate(
     table: dict[str, dict[str, dict]] = {m: {} for m in METRICS}
 
     for n in n_grid:
-        draws = rng.choice(arr, size=(trials, n), replace=True)
+        draws = arr[_draw_indices(rng, arr.size, n, trials, block_length)]
         sortino = _sortino(draws)
         sharpe = _sharpe(draws)
         losers = _downside_count(draws)
@@ -208,13 +451,17 @@ def tabulate(
     return {
         "note": (
             "Empirical null: the sampling distribution of the score with no signal "
-            "present. Built by simulating no-signal runs of the immutable reference "
-            "strategy, pooling their per-session returns, and bootstrapping N of them "
-            "per draw. threshold_for()/far_for() read this table."
+            "present. Built by running the immutable reference strategy with no edge, "
+            "pooling its per-session returns, and resampling N of them per draw. "
+            "threshold_for()/far_for() read this table."
         ),
+        "dataset": dataset,
         "metrics": list(METRICS),
+        "bootstrap": "stationary" if block_length > 1 else "iid",
+        "block_length": int(block_length),
         "bootstrap_trials_per_n": trials,
         "bootstrap_seed": seed,
+        "provenance": provenance or {},
         "min_downside_sessions": min_downside_sessions,
         "pool_size": int(arr.size),
         "far_grid": list(far_grid),
@@ -227,18 +474,44 @@ def tabulate(
 # --------------------------------------------------------------------------- #
 # reading it
 # --------------------------------------------------------------------------- #
-_CACHE: dict | None = None
+_CACHE_BY_PATH: dict[str, dict] = {}
 
 
-def load(path: Path = NULL_PATH) -> dict:
-    global _CACHE
-    if _CACHE is None or _CACHE.get("_path") != str(path):
-        if not path.exists():
+def load(path: Path = NULL_PATH, *, dataset: str | None = None) -> dict:
+    """Read a tabulated null, refusing one measured on a different dataset.
+
+    The check is the point of `dataset`: without it the synthetic table is the
+    default for everything and a real run reads it silently.
+    """
+    key = str(path)
+    if key not in _CACHE_BY_PATH:
+        if not Path(path).exists():
             raise FileNotFoundError(
-                f"no tabulated null at {path}; run scripts/tabulate_null.py"
+                f"no tabulated null at {path}"
+                + (
+                    f"; the null for {dataset!r} has not been measured. Run "
+                    "scripts/tabulate_null.py --dataset "
+                    f"{null_key(dataset)}"
+                    if dataset
+                    else "; run scripts/tabulate_null.py"
+                )
             )
-        _CACHE = {**json.loads(path.read_text()), "_path": str(path)}
-    return _CACHE
+        _CACHE_BY_PATH[key] = {**json.loads(Path(path).read_text()), "_path": key}
+    doc = _CACHE_BY_PATH[key]
+
+    tagged = doc.get("dataset")
+    if tagged is None:
+        raise WrongNullTable(
+            f"{path} carries no dataset tag, so there is no way to tell what "
+            "process it was measured on. Re-tabulate it."
+        )
+    if dataset is not None and null_key(dataset) != null_key(tagged):
+        raise WrongNullTable(
+            f"the null at {path} was measured on {tagged!r}, and you asked about "
+            f"{dataset!r}. A threshold from one return-generating process says "
+            "nothing about another."
+        )
+    return doc
 
 
 def _interp_n(entries: dict[str, dict], key: str, n: int) -> float:
@@ -268,14 +541,18 @@ def _interp_n(entries: dict[str, dict], key: str, n: int) -> float:
 
 def threshold_for(
     far: float, n_sessions: int, *, metric: str = "sortino_per_session",
-    path: Path = NULL_PATH,
+    dataset: str | None = None, path: Path | None = None,
 ) -> float:
     """The score a candidate must reach for a stated false-acceptance rate.
 
     `far` is chosen by whoever sets accept policy. This only reports what the
     null says that choice costs.
+
+    `dataset` names the process the question is about, and the table has to have
+    been measured on it. Leaving it out means synthetic, which is right for a
+    synthetic run and wrong for every other kind -- pass it.
     """
-    doc = load(path)
+    doc = load(path or null_path_for(dataset), dataset=dataset)
     entries = doc["table"].get(metric)
     if entries is None:
         raise ValueError(f"no null tabulated for {metric!r}; have {doc['metrics']}")
@@ -298,14 +575,15 @@ def threshold_for(
 
 def far_for(
     score: float, n_sessions: int, *, metric: str = "sortino_per_session",
-    path: Path = NULL_PATH,
+    dataset: str | None = None, path: Path | None = None,
 ) -> float:
     """The false-acceptance rate implied by a score. The inverse of `threshold_for`.
 
     Clamped at the edges of the table: a score past the last tabulated quantile
     is reported as `<= that far`, not extrapolated into a number nobody measured.
     """
-    doc = load(path)
+    path = path or null_path_for(dataset)
+    doc = load(path, dataset=dataset)
     keys = sorted((float(k) for k in doc["far_grid"]), reverse=True)
     thresholds = [
         (k, threshold_for(k, n_sessions, metric=metric, path=path)) for k in keys
@@ -323,14 +601,15 @@ def far_for(
 
 def expected_max(
     n_trials: int, n_sessions: int, *, metric: str = "sortino_per_session",
-    path: Path = NULL_PATH, draws: int = 2000, seed: int = 7,
+    dataset: str | None = None, path: Path | None = None,
+    draws: int = 2000, seed: int = 7,
 ) -> float:
     """E[max of `n_trials` draws from the null] -- what DSR deflates by.
 
     The closed form for that expectation exists only for Sharpe. With an
     empirical null it is a simulation, for any metric.
     """
-    doc = load(path)
+    doc = load(path or null_path_for(dataset), dataset=dataset)
     entry = doc["table"][metric][str(_nearest(int(n_sessions), doc["n_grid"]))]
     mean, sd = entry["mean"], entry["sd"]
     if mean is None or sd is None:
@@ -360,8 +639,9 @@ class NullSummary:
 
 
 def summary(n_sessions: int, *, metric: str = "sortino_per_session",
-            path: Path = NULL_PATH) -> NullSummary:
-    doc = load(path)
+            dataset: str | None = None, path: Path | None = None) -> NullSummary:
+    path = path or null_path_for(dataset)
+    doc = load(path, dataset=dataset)
     return NullSummary(
         metric=metric,
         n_sessions=n_sessions,
@@ -370,3 +650,66 @@ def summary(n_sessions: int, *, metric: str = "sortino_per_session",
             for f in doc["far_grid"]
         },
     )
+
+
+# --------------------------------------------------------------------------- #
+# does the table deliver what it promises, on data it was not built from
+# --------------------------------------------------------------------------- #
+def verify_held_out(
+    pool: Sequence[float],
+    *,
+    block_length: int = 1,
+    trials: int = 50_000,
+    check_trials: int = 50_000,
+    n_grid: Sequence[int] = (30, 50, 86, 100),
+    far_grid: Sequence[float] = (0.05, 0.01, 0.001),
+    seed: int = 4_242,
+    split_at: float = 0.5,
+) -> dict:
+    """Tabulate on one contiguous half of the pool, measure on the other.
+
+    Contiguous rather than interleaved, deliberately: an interleaved split shares
+    every block between the two halves, so a block bootstrap would be verified
+    against its own training data and would look perfect however wrong the block
+    length was. Splitting by period keeps the halves as independent as the series
+    allows, and if the two periods differ in character then the measured rate
+    will say so -- which is information, not a defect in the check.
+    """
+    arr = np.asarray(pool, dtype=float)
+    cut = int(len(arr) * split_at)
+    build, check = arr[:cut], arr[cut:]
+    if min(build.size, check.size) < 30:
+        raise ValueError(
+            f"pool of {arr.size} splits into {build.size}/{check.size}; too small "
+            "to verify against"
+        )
+
+    doc = tabulate(build, trials=trials, n_grid=n_grid, far_grid=far_grid,
+                   seed=seed, block_length=block_length, dataset="held-out-build")
+    rng = np.random.default_rng(seed + 1)
+    rows = []
+    for n in n_grid:
+        draws = check[_draw_indices(rng, check.size, n, check_trials, block_length)]
+        scores = _sortino(draws)
+        losers = _downside_count(draws)
+        eligible = scores[(losers >= 5) & np.isfinite(scores)]
+        for far in far_grid:
+            promised = doc["table"]["sortino_per_session"][str(n)]["quantiles"][str(far)]
+            if promised is None or eligible.size == 0:
+                rows.append({"n": n, "far": far, "threshold": promised,
+                             "measured": None})
+                continue
+            rows.append({
+                "n": n,
+                "far": far,
+                "threshold": float(promised),
+                "measured": float((eligible >= promised).mean()),
+                "ratio": float((eligible >= promised).mean() / far),
+            })
+    return {
+        "build_sessions": int(build.size),
+        "check_sessions": int(check.size),
+        "block_length": int(block_length),
+        "check_trials": check_trials,
+        "rows": rows,
+    }

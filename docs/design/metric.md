@@ -437,20 +437,54 @@ strategy is flat at every boundary so no position links one to the next.
 
 **Real futures sessions are not obviously exchangeable.** Volatility clusters
 across days, a trend persists over weeks, and a strategy's session returns
-inherit both. An i.i.d. bootstrap over such a pool understates the variance of
-the N-session statistic and therefore sets thresholds too low — the failure is in
-the unsafe direction.
+inherit both. So the null is now measured on each dataset's own training
+sessions, with a **stationary block bootstrap** (Politis & Romano) whose block
+length is measured rather than chosen. Both halves of that turned out to matter,
+and by very different amounts.
 
-The fix is a **block bootstrap**: resample contiguous blocks of sessions longer
-than the autocorrelation horizon rather than single sessions, in the stationary
-or circular variants (Politis & Romano). Block length is then a parameter that
-has to be chosen from the measured autocorrelation of the session-return series,
-and it belongs in the tabulation provenance beside the seed and trial count.
+**The dataset was the large error.** Synthetic sessions have far less dispersion
+than real NQ ones, so the synthetic table sets thresholds a strategy with no edge
+can clear. At N=86, `threshold_for(0.001)` is **0.0336 synthetic against 0.4636
+on real NQ training sessions — 13.8×**. Task 15's first real run scored a Sortino
+of +0.0076 with a significance of 0.07, which is nothing; against the synthetic
+table that read as a false-acceptance rate of **0.18%**, almost an accept at a
+0.1% policy, and against the real one it is **32%**. The run completed, the
+number was plausible, and it meant nothing.
 
-**The method transfers; this particular table does not.** `threshold_for` and
-`far_for` are agnostic to how the draws were produced — only
-`null.tabulate` changes. Stated plainly here because a table built on the
-synthetic generator must not be carried across to the NQ adapter unexamined.
+**The block length was a smaller error, in the opposite direction from the one
+predicted.** The session returns themselves are near-uncorrelated — lag-1
+autocorrelation +0.0067 against a ±0.1034 significance band — but their absolute
+values are not: +0.2212, decisively outside the band. Volatility clustering is
+real and drift dependence is not, which is why the block length is measured over
+both series and taken from whichever persists longer. The decorrelation lag is
+**7 sessions**.
+
+The prediction was that an i.i.d. resample would understate the variance and set
+thresholds too low. Measured on the real pool it does the opposite: i.i.d.
+thresholds run **1.25–1.52× higher** than block-7 thresholds across every N and
+FAR. For a *ratio* statistic that makes sense once seen — independent resampling
+can assemble a run of favourable sessions that never occurred contiguously, which
+fattens the upper tail; block resampling draws chunks of history that actually
+happened. Held out on sessions the table was not built from, the block-7
+thresholds deliver between 0.34× and 1.64× their promised rate while the i.i.d.
+ones deliver 0.02× to 0.30× — badly conservative. The block bootstrap is better
+calibrated; it is just not conservative in the direction the argument assumed.
+
+**One null per dataset, enforced rather than remembered.** Every table carries a
+`dataset` tag and `threshold_for` / `far_for` raise `WrongNullTable` when asked
+about a dataset the table was not measured on, and `FileNotFoundError` naming the
+script when no table exists for it. The synthetic table is kept — it is still
+correct for synthetic runs, and the contrast is the evidence.
+
+**The method transfers; a particular table does not.** `threshold_for` and
+`far_for` are agnostic to how the draws were produced — only `null.tabulate`
+changes, and block length 1 reproduces the i.i.d. resample exactly, to the same
+integers from the same generator state, so the old behaviour is a special case of
+the new code path rather than a parallel one.
+
+*Cost:* 190 seconds end to end for the NQ table — 141.5M ticks over 384 training
+sessions to build the pool, and the bootstrap itself is seconds. It reruns
+whenever the data extends.
 
 ### `far_for` returns a p-value, and that is worth saying out loud
 

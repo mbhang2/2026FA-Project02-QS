@@ -24,13 +24,34 @@ of the five worst losses in the run was an overnight hold. Carrying overnight
 measures the generator's discontinuity, not the metric. A dataset whose price
 process is continuous across sessions would not need this.
 
-The session length is learned rather than assumed: the strategy counts bars
-between session opens, so it works on any dataset without being told.
+The session length is learned rather than assumed, and **learned as a duration
+rather than as a bar count**. Counting bars was wrong in a way only real data
+showed. Empty intervals are skipped unless `emit_empty` is set, so a bar count is
+a measure of *activity*, not of length: over the 384 NQ training sessions the
+running minimum collapsed from 276 bars to 102, because one quiet holiday session
+produced few non-empty bars. The strategy then stopped trading roughly two thirds
+of the way through every subsequent session, for the rest of the run, and on the
+synthetic generator -- where every interval has ticks and every session is the
+same length -- nothing could have shown it.
+
+A duration is a property of the session. It does not move with how busy the
+session was.
+
+**What this still cannot do.** A strategy cannot know that *this* session ends
+early until it has ended, and the engine does not tell it when the session
+closes. So the first session shorter than anything seen before can still strand a
+position, and one did: 2025-11-28, the half day after Thanksgiving. The
+tabulation excludes the sessions affected by a carry rather than pretending the
+apparatus is flat when it is not -- see `null.py`. Closing this properly needs the
+context to expose the session's end, which is an engine change and a separate
+task.
 """
 
 from __future__ import annotations
 
 from collections import deque
+
+from ...types import NS_PER_SECOND
 
 
 class ReferenceStrategy:
@@ -52,7 +73,11 @@ class ReferenceStrategy:
         target_atr: float = 1.5,
         size: int = 1,
         min_bracket: float = 0.25,
-        exit_margin_bars: int = 2,
+        # A duration, not a bar count: the point at which the strategy stops
+        # opening and flattens, measured back from the shortest session it has
+        # seen. Ten minutes is two 5m bars, which is what the bar-count version
+        # meant on a dataset where every interval had ticks.
+        exit_margin_ns: int = 10 * 60 * NS_PER_SECOND,
     ):
         self.interval = interval
         self.atr_window = atr_window
@@ -60,18 +85,22 @@ class ReferenceStrategy:
         self.target_atr = target_atr
         self.size = size
         self.min_bracket = min_bracket
-        self.exit_margin_bars = exit_margin_bars
+        self.exit_margin_ns = exit_margin_ns
         self._ranges: deque[float] = deque(maxlen=atr_window)
         self._session: int | None = None
-        self._bars_this_session = 0
-        self._session_bars: int | None = None   # learned from the first full session
+        self._session_open_ts: int | None = None
+        self._last_ts: int | None = None
+        self._min_duration_ns: int | None = None  # shortest session seen, learned
+        self.sessions_left_open = 0               # residual, reported by the rig
 
     def setup(self, ctx) -> None:
         ctx.subscribe(self.interval)
         self._ranges.clear()
         self._session = None
-        self._bars_this_session = 0
-        self._session_bars = None
+        self._session_open_ts = None
+        self._last_ts = None
+        self._min_duration_ns = None
+        self.sessions_left_open = 0
 
     def on_bars(self, ctx) -> None:
         history = ctx.history(self.interval)
@@ -81,20 +110,35 @@ class ReferenceStrategy:
         self._ranges.append(last.high - last.low)
 
         if ctx.session != self._session:
-            if self._session is not None and self._bars_this_session:
-                # the shortest session seen; a half day must not strand a position
-                self._session_bars = (
-                    self._bars_this_session
-                    if self._session_bars is None
-                    else min(self._session_bars, self._bars_this_session)
-                )
+            if self._session is not None and self._session_open_ts is not None:
+                duration = self._last_ts - self._session_open_ts
+                if duration > 0:
+                    self._min_duration_ns = (
+                        duration
+                        if self._min_duration_ns is None
+                        else min(self._min_duration_ns, duration)
+                    )
             self._session = ctx.session
-            self._bars_this_session = 0
-        self._bars_this_session += 1
+            self._session_open_ts = last.open_ts
+            # A position that survived the boundary is a session shorter than
+            # anything seen before. Flatten it at the first opportunity in the
+            # new session so the contamination stops at one carry, and count it
+            # so the tabulation can exclude what it touched.
+            if ctx.position or ctx.working_order_ids:
+                self.sessions_left_open += 1
+                if ctx.working_order_ids:
+                    ctx.cancel_all()
+                if ctx.position:
+                    ctx.close()
+                self._last_ts = ctx.ts
+                return
+        self._last_ts = ctx.ts
 
         late = (
-            self._session_bars is not None
-            and self._bars_this_session >= self._session_bars - self.exit_margin_bars
+            self._min_duration_ns is not None
+            and self._session_open_ts is not None
+            and (ctx.ts - self._session_open_ts)
+            >= self._min_duration_ns - self.exit_margin_ns
         )
         if late:
             # Flat before the boundary. Cancel first: a bracket leg left working
@@ -107,7 +151,7 @@ class ReferenceStrategy:
 
         if ctx.position or ctx.working_order_ids:
             return  # one position at a time; the bracket does the exits
-        if self._session_bars is None:
+        if self._min_duration_ns is None:
             return  # session length not learned yet; warmup covers this
         if len(self._ranges) < self.atr_window:
             return  # the volatility estimate is not ready

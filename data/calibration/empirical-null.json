@@ -1,6 +1,9 @@
 {
+  "block_length": 1,
+  "bootstrap": "iid",
   "bootstrap_seed": 20260909,
   "bootstrap_trials_per_n": 50000,
+  "dataset": "synthetic",
   "far_grid": [
     0.5,
     0.2,
@@ -29,7 +32,7 @@
     150,
     200
   ],
-  "note": "Empirical null: the sampling distribution of the score with no signal present. Built by simulating no-signal runs of the immutable reference strategy, pooling their per-session returns, and bootstrapping N of them per draw. threshold_for()/far_for() read this table.",
+  "note": "Empirical null: the sampling distribution of the score with no signal present. Built by running the immutable reference strategy with no edge, pooling its per-session returns, and resampling N of them per draw. threshold_for()/far_for() read this table.",
   "pool": [
     -1.076250000000003,
     -1.568750000000003,
@@ -4234,13 +4237,14 @@
   ],
   "pool_size": 4200,
   "provenance": {
+    "block_length_rationale": "1: the synthetic generator seeds each session independently, so the sessions are exchangeable by construction rather than by assumption",
     "fill_model": "unfavorable",
     "runs": 120,
     "seed0": 10000,
     "sessions_per_run": 175,
-    "strategy": "src/core/calibration/reference.py::ReferenceStrategy",
+    "strategy": "src/core/scoring/calibration/reference.py::ReferenceStrategy",
     "ticks_per_session": 390,
-    "wall_clock_s": 137.1
+    "wall_clock_s": 14.4
   },
   "table": {
     "sharpe_per_session": {

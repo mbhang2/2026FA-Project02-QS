@@ -511,3 +511,46 @@ def test_the_generated_api_reference_is_current():
         capture_output=True, text=True, cwd=REPO_ROOT,
     )
     assert r.returncode == 0, r.stderr
+
+
+# --------------------------------------------------------------------------- #
+# purpose: classify a run rather than delete it afterwards
+# --------------------------------------------------------------------------- #
+def test_every_row_carries_a_purpose_and_it_defaults_to_trial(tmp_path):
+    led = tmp_path / "ledger.jsonl"
+    assert run_py("--quiet", ledger=led).returncode == 0
+    row = ledger_lines(led)[0]
+    assert row["purpose"] == "trial"
+
+
+def test_a_non_trial_run_is_labelled_not_removed(tmp_path):
+    """The reason this field exists. A smoke run is still an invocation and still
+    lands in the ledger; what changes is that it is classified, so nobody has to
+    decide later whether to delete it. A record edited by the party being
+    measured against it is not a record, and the first deletion is always the
+    defensible one."""
+    led = tmp_path / "ledger.jsonl"
+    assert run_py("--quiet", "--purpose", "smoke", ledger=led).returncode == 0
+    assert run_py("--quiet", ledger=led).returncode == 0
+    rows = ledger_lines(led)
+    assert [r["purpose"] for r in rows] == ["smoke", "trial"]
+    assert len(rows) == 2, "a classified run is still a row"
+    # N is a filter over the ledger, never a shorter ledger
+    assert sum(1 for r in rows if r["purpose"] == "trial") == 1
+
+
+def test_an_agent_run_cannot_relabel_its_own_trial(tmp_path):
+    """Otherwise N is decided by the party with the incentive: run fifty, label
+    forty-nine 'smoke', present the best as one trial."""
+    led = tmp_path / "ledger.jsonl"
+    r = run_py("--trigger", "agent", "--purpose", "smoke", ledger=led)
+    assert r.returncode != 0
+    assert "--purpose" in r.stderr
+    assert not led.exists() or not ledger_lines(led)
+
+
+def test_an_agent_run_is_recorded_as_a_trial(tmp_path):
+    led = tmp_path / "ledger.jsonl"
+    assert run_py("--trigger", "agent", "--quiet", ledger=led).returncode == 0
+    row = ledger_lines(led)[0]
+    assert row["purpose"] == "trial" and row["trigger"] == "agent"

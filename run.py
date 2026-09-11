@@ -19,7 +19,15 @@ it writes ships syntax errors into the loop, so it gets to run -- but if it coul
 run fifty exploratory backtests, pick the best and present it as one candidate,
 then N is fiction and the multiple-testing argument collapses silently, in the
 one place nobody would look. **Every invocation appends exactly one ledger
-record**, crashes included, tagged with what triggered it.
+record**, crashes included, tagged with what triggered it and what it was for.
+
+**`--purpose` classifies a run; it does not hide one.** N is the count of rows
+with `purpose == "trial"`, and every other row stays in the ledger where it can
+be seen and argued with. The alternative -- deleting a smoke run afterwards
+because it "was not really a trial" -- is a rewrite of the record made by
+whoever is being measured by it, and the first one is always defensible. An
+agent-triggered run cannot set it: a trial an agent could relabel is a trial that
+does not count, decided by the party with the incentive.
 """
 
 from __future__ import annotations
@@ -48,7 +56,18 @@ class _Abandoned(Exception):
 
 # Arguments the agent profile refuses, by name. Each is a way to change the
 # answer without changing the strategy.
-AGENT_FORBIDDEN = ("split", "fill_model", "seed", "unlock_holdout", "profile")
+AGENT_FORBIDDEN = ("split", "fill_model", "seed", "unlock_holdout", "profile",
+                   "purpose")
+
+# What a run was for. Only `trial` counts toward N; the others are recorded so
+# they are classified rather than removed.
+#
+#   trial   an evaluation of a candidate. The unit N counts.
+#   smoke   checking the harness runs at all -- a wiring change, a new adapter,
+#           a demonstration. Not a candidate, not evidence about one.
+#   replay  re-running a recorded trial to confirm it reproduces. Its result is
+#           a statement about the first run, not a second observation.
+PURPOSES = ("trial", "smoke", "replay")
 
 
 def load_config(path: Path = CONFIG_PATH) -> dict:
@@ -174,6 +193,11 @@ def main(argv: list[str] | None = None) -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--trigger", choices=("harness", "agent"), default="harness",
                     help="who asked for this run; recorded in the ledger")
+    # Default resolved after parsing rather than here, so the agent check below
+    # can tell "did not pass it" from "passed the default".
+    ap.add_argument("--purpose", choices=PURPOSES, default=None,
+                    help="what the run is for; only 'trial' counts toward N "
+                         "(harness only -- an agent run is always a trial)")
     ap.add_argument("--profile", help="profile from config/run.yaml (harness only)")
     ap.add_argument("--dataset", help="dataset from config/run.yaml")
     ap.add_argument("--split", choices=[s.value for s in Split],
@@ -188,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     cfg = load_config()
+    purpose = args.purpose or "trial"
 
     if args.trigger == "agent":
         supplied = [n for n in AGENT_FORBIDDEN if getattr(args, n, None)]
@@ -258,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
     except HoldoutLocked as exc:
         record = _failure_record(cfg, profile_name, split, seed, args,
                                  dataset, "refused", str(exc), started)
-        append_ledger(ledger_path, _row(record, args.trigger, profile_name, ledger_path))
+        append_ledger(ledger_path, _row(record, args.trigger, profile_name, ledger_path, purpose))
         print(f"refused: {exc}", file=sys.stderr)
         return 2
     except Exception as exc:  # a crash is a ledger row, not a lost trial
@@ -266,11 +291,11 @@ def main(argv: list[str] | None = None) -> int:
         record = rec.as_dict() if rec else _failure_record(
             cfg, profile_name, split, seed, args, dataset, "crashed", repr(exc), started
         )
-        append_ledger(ledger_path, _row(record, args.trigger, profile_name, ledger_path))
+        append_ledger(ledger_path, _row(record, args.trigger, profile_name, ledger_path, purpose))
         raise
     finally:
         if record and record.get("outcome") in ("completed", "abandoned_on_budget"):
-            append_ledger(ledger_path, _row(record, args.trigger, profile_name, ledger_path))
+            append_ledger(ledger_path, _row(record, args.trigger, profile_name, ledger_path, purpose))
 
     if engine.record.outcome == "abandoned_on_budget":
         print(f"abandoned: {engine.record.error}", file=sys.stderr)
@@ -313,11 +338,13 @@ def _fill_model_spread(cfg, args, profile, seed, strategy, split, engine) -> flo
     return (a - b) if other == "favorable" else (b - a)
 
 
-def _row(record: dict, trigger: str, profile: str, ledger_path: Path) -> dict:
+def _row(record: dict, trigger: str, profile: str, ledger_path: Path,
+         purpose: str = "trial") -> dict:
     digest = strategy_digest()
     return {
         **record,
         "trigger": trigger,
+        "purpose": purpose,
         "profile": profile,
         "strategy": "src/strategies/current.py",
         "strategy_digest": digest,

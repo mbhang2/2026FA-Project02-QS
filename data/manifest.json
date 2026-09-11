@@ -1,24 +1,24 @@
 {
   "anomalies": [
     {
-      "detail": "104 object(s) added since the committed manifest: raw/trades/ES/glbx-mdp3-20260712.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260713.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260714.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260715.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260716.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260717.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260719.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260720.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260721.trades.dbn.zst, raw/trades/ES/glbx-mdp3-20260722.trades.dbn.zst ...",
+      "detail": "108 object(s) added since the committed manifest: raw/opra_cbbo1m/opra-pillar-20260721.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260722.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260723.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260724.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260727.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260728.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260729.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260730.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260731.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260803.cbbo-1m.dbn.zst ...",
       "kind": "object_added",
       "prefix": "bucket",
       "severity": "warning"
     },
     {
-      "detail": "compression depth is not uniform across this prefix: 11 file(s) at 1 layer(s) (2026-07-06 \u2192 2026-07-20); 501 file(s) at 2 layer(s) (2024-07-03 \u2192 2026-07-02). A reader that decompresses a fixed number of times fails on one group or the other; unwrap until the DBN magic appears.",
+      "detail": "compression depth is not uniform across this prefix: 47 file(s) at 1 layer(s) (2026-07-06 \u2192 2026-09-09); 501 file(s) at 2 layer(s) (2024-07-03 \u2192 2026-07-02). A reader that decompresses a fixed number of times fails on one group or the other; unwrap until the DBN magic appears.",
       "first_date": "2024-07-03",
       "kind": "inconsistent_zstd_layering",
-      "last_date": "2026-07-20",
+      "last_date": "2026-09-09",
       "prefix": "raw/opra_definition",
       "severity": "warning"
     },
     {
-      "detail": "raw/opra_definition/condition.json documents data condition only to 2026-07-03, but the prefix holds files through 2026-07-20. The later files come from a separate vendor job and have no condition record; note this lines up with the change in compression depth.",
+      "detail": "raw/opra_definition/condition.json documents data condition only to 2026-07-03, but the prefix holds files through 2026-09-09. The later files come from a separate vendor job and have no condition record; note this lines up with the change in compression depth.",
       "first_date": "2026-07-03",
       "kind": "sidecar_coverage_short",
-      "last_date": "2026-07-20",
+      "last_date": "2026-09-09",
       "prefix": "raw/opra_definition",
       "severity": "warning"
     },
@@ -31,10 +31,10 @@
       "severity": "warning"
     },
     {
-      "detail": "compression depth is not uniform across this prefix: 11 file(s) at 1 layer(s) (2026-07-06 \u2192 2026-07-20); 501 file(s) at 2 layer(s) (2024-07-03 \u2192 2026-07-02). A reader that decompresses a fixed number of times fails on one group or the other; unwrap until the DBN magic appears.",
+      "detail": "compression depth is not uniform across this prefix: 47 file(s) at 1 layer(s) (2026-07-06 \u2192 2026-09-09); 501 file(s) at 2 layer(s) (2024-07-03 \u2192 2026-07-02). A reader that decompresses a fixed number of times fails on one group or the other; unwrap until the DBN magic appears.",
       "first_date": "2024-07-03",
       "kind": "inconsistent_zstd_layering",
-      "last_date": "2026-07-20",
+      "last_date": "2026-09-09",
       "prefix": "raw/opra_statistics",
       "severity": "warning"
     },
@@ -287,50 +287,14 @@
           "2026-05-25",
           "2026-06-19",
           "2026-07-03",
-          "2026-07-21",
-          "2026-07-22",
-          "2026-07-23",
-          "2026-07-24",
-          "2026-07-27",
-          "2026-07-28",
-          "2026-07-29",
-          "2026-07-30",
-          "2026-07-31",
-          "2026-08-03",
-          "2026-08-04",
-          "2026-08-05",
-          "2026-08-06",
-          "2026-08-07",
-          "2026-08-10",
-          "2026-08-11",
-          "2026-08-12",
-          "2026-08-13",
-          "2026-08-14",
-          "2026-08-17",
-          "2026-08-18",
-          "2026-08-19",
-          "2026-08-20",
-          "2026-08-21",
-          "2026-08-24",
-          "2026-08-25",
-          "2026-08-26",
-          "2026-08-27",
-          "2026-08-28",
-          "2026-08-31",
-          "2026-09-01",
-          "2026-09-02",
-          "2026-09-03",
-          "2026-09-04",
-          "2026-09-07",
-          "2026-09-08",
-          "2026-09-09"
+          "2026-09-07"
         ],
-        "last": "2026-07-20",
+        "last": "2026-09-09",
         "note": "futures sessions the options data cannot support; these are days CME equity futures trade but US equity options are closed",
-        "sessions_with_same_day_options": 261
+        "sessions_with_same_day_options": 297
       },
       "file_date_range": {
-        "end": "2026-07-20",
+        "end": "2026-09-09",
         "nonempty": true,
         "start": "2025-07-03"
       }
@@ -355,50 +319,14 @@
           "2026-05-25",
           "2026-06-19",
           "2026-07-03",
-          "2026-07-21",
-          "2026-07-22",
-          "2026-07-23",
-          "2026-07-24",
-          "2026-07-27",
-          "2026-07-28",
-          "2026-07-29",
-          "2026-07-30",
-          "2026-07-31",
-          "2026-08-03",
-          "2026-08-04",
-          "2026-08-05",
-          "2026-08-06",
-          "2026-08-07",
-          "2026-08-10",
-          "2026-08-11",
-          "2026-08-12",
-          "2026-08-13",
-          "2026-08-14",
-          "2026-08-17",
-          "2026-08-18",
-          "2026-08-19",
-          "2026-08-20",
-          "2026-08-21",
-          "2026-08-24",
-          "2026-08-25",
-          "2026-08-26",
-          "2026-08-27",
-          "2026-08-28",
-          "2026-08-31",
-          "2026-09-01",
-          "2026-09-02",
-          "2026-09-03",
-          "2026-09-04",
-          "2026-09-07",
-          "2026-09-08",
-          "2026-09-09"
+          "2026-09-07"
         ],
-        "last": "2026-07-20",
+        "last": "2026-09-09",
         "note": "futures sessions the options data cannot support; these are days CME equity futures trade but US equity options are closed",
-        "sessions_with_same_day_options": 511
+        "sessions_with_same_day_options": 547
       },
       "file_date_range": {
-        "end": "2026-07-20",
+        "end": "2026-09-09",
         "nonempty": true,
         "start": "2024-07-03"
       }
@@ -4500,6 +4428,294 @@
       "QQQ.OPT",
       "eca67667c9c6975c0aee974681a8d078",
       "2026-09-08T15:17:24.429000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260721.cbbo-1m.dbn.zst": [
+      63225233,
+      1,
+      1,
+      "QQQ.OPT",
+      "e4b11d53cafbc0272f369753dd3cfd23",
+      "2026-09-11T03:50:24.932000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260722.cbbo-1m.dbn.zst": [
+      63436673,
+      1,
+      1,
+      "QQQ.OPT",
+      "589110bbdd58726eef1775780a72ae37",
+      "2026-09-11T03:50:24.631000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260723.cbbo-1m.dbn.zst": [
+      68944110,
+      1,
+      1,
+      "QQQ.OPT",
+      "dd62c4ec4182d426d7a058ba7efa4daf",
+      "2026-09-11T03:50:24.250000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260724.cbbo-1m.dbn.zst": [
+      76147079,
+      1,
+      1,
+      "QQQ.OPT",
+      "f17fb00045c9ae449c47b786fcb6a4ce",
+      "2026-09-11T03:50:24.762000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260727.cbbo-1m.dbn.zst": [
+      75463310,
+      1,
+      1,
+      "QQQ.OPT",
+      "77483061467109a387fbc44be302500f",
+      "2026-09-11T03:50:28.734000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260728.cbbo-1m.dbn.zst": [
+      74511006,
+      1,
+      1,
+      "QQQ.OPT",
+      "87a50b82638f94c4155b918af3b27fcd",
+      "2026-09-11T03:50:28.218000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260729.cbbo-1m.dbn.zst": [
+      77573011,
+      1,
+      1,
+      "QQQ.OPT",
+      "41b372bb77d07b14e3fe6501151957f9",
+      "2026-09-11T03:50:29.579000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260730.cbbo-1m.dbn.zst": [
+      72343055,
+      1,
+      1,
+      "QQQ.OPT",
+      "34d7268536286118bf63dbab50505e9d",
+      "2026-09-11T03:50:28.554000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260731.cbbo-1m.dbn.zst": [
+      74764333,
+      1,
+      1,
+      "QQQ.OPT",
+      "69dec02f63cab578c3b9d0b0bfb48e62",
+      "2026-09-11T03:50:32.101000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260803.cbbo-1m.dbn.zst": [
+      65143091,
+      1,
+      1,
+      "QQQ.OPT",
+      "9fa610af25871856e077237e1d76f469",
+      "2026-09-11T03:50:31.914000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260804.cbbo-1m.dbn.zst": [
+      69237744,
+      1,
+      1,
+      "QQQ.OPT",
+      "bd17a3810e239348616b42fb5ba7a785",
+      "2026-09-11T03:50:32.109000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260805.cbbo-1m.dbn.zst": [
+      70265767,
+      1,
+      1,
+      "QQQ.OPT",
+      "2c87b3a1a03e969764d79196822fceab",
+      "2026-09-11T03:50:33.605000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260806.cbbo-1m.dbn.zst": [
+      72310655,
+      1,
+      1,
+      "QQQ.OPT",
+      "3952c0a6d380d2fb8c3560da614d9bfb",
+      "2026-09-11T03:50:35.457000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260807.cbbo-1m.dbn.zst": [
+      71175139,
+      1,
+      1,
+      "QQQ.OPT",
+      "ab03387ac1240f7b3401178af3e0d630",
+      "2026-09-11T03:50:35.475000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260810.cbbo-1m.dbn.zst": [
+      63398984,
+      1,
+      1,
+      "QQQ.OPT",
+      "080182f8d976b1730a7a92bcbf541d3d",
+      "2026-09-11T03:50:34.800000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260811.cbbo-1m.dbn.zst": [
+      61642548,
+      1,
+      1,
+      "QQQ.OPT",
+      "91a86d287c14e07953979e9d96a2276b",
+      "2026-09-11T03:50:37.564000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260812.cbbo-1m.dbn.zst": [
+      59636002,
+      1,
+      1,
+      "QQQ.OPT",
+      "f67eff6a88782e78545f047e063b4889",
+      "2026-09-11T03:50:37.103000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260813.cbbo-1m.dbn.zst": [
+      61498468,
+      1,
+      1,
+      "QQQ.OPT",
+      "43e042c7e4c390e214da10130ee08c89",
+      "2026-09-11T03:50:38.761000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260814.cbbo-1m.dbn.zst": [
+      58841435,
+      1,
+      1,
+      "QQQ.OPT",
+      "2d13b6910db94a2747e31351f819da32",
+      "2026-09-11T03:50:38.342000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260817.cbbo-1m.dbn.zst": [
+      59203675,
+      1,
+      1,
+      "QQQ.OPT",
+      "e68e6fb6c7a4a748cf643ea97a26df73",
+      "2026-09-11T03:50:39.389000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260818.cbbo-1m.dbn.zst": [
+      60367494,
+      1,
+      1,
+      "QQQ.OPT",
+      "f68ceeb31d34f06a4d20fed17f8ea5ec",
+      "2026-09-11T03:50:42.012000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260819.cbbo-1m.dbn.zst": [
+      62127733,
+      1,
+      1,
+      "QQQ.OPT",
+      "028896059b47fc23e78828b263c76ac5",
+      "2026-09-11T03:50:41.397000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260820.cbbo-1m.dbn.zst": [
+      61717764,
+      1,
+      1,
+      "QQQ.OPT",
+      "dbb28c55b12fb24591aba7ca3b77a1a9",
+      "2026-09-11T03:50:41.756000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260821.cbbo-1m.dbn.zst": [
+      57371648,
+      1,
+      1,
+      "QQQ.OPT",
+      "ba0834cf0cc46185ce4739f1b99bc127",
+      "2026-09-11T03:50:42.916000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260824.cbbo-1m.dbn.zst": [
+      60700869,
+      1,
+      1,
+      "QQQ.OPT",
+      "8962389b0412dd049e8bd0140d27faf8",
+      "2026-09-11T03:50:44.379000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260825.cbbo-1m.dbn.zst": [
+      60443914,
+      1,
+      1,
+      "QQQ.OPT",
+      "73cdf5575af84b9b2d2077d09ea8e33b",
+      "2026-09-11T03:50:45.063000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260826.cbbo-1m.dbn.zst": [
+      60349821,
+      1,
+      1,
+      "QQQ.OPT",
+      "ebfb19e186b9fce20b7aee33af59e673",
+      "2026-09-11T03:50:45.211000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260827.cbbo-1m.dbn.zst": [
+      62033959,
+      1,
+      1,
+      "QQQ.OPT",
+      "ac89e33485686782d416886af6861515",
+      "2026-09-11T03:50:46.135000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260828.cbbo-1m.dbn.zst": [
+      61480876,
+      1,
+      1,
+      "QQQ.OPT",
+      "667bd09cb24ebdca533facaa2d245c38",
+      "2026-09-11T03:50:49.518000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260831.cbbo-1m.dbn.zst": [
+      53456637,
+      1,
+      1,
+      "QQQ.OPT",
+      "75cd4ca0689042bcf2dfdf3f02a776ab",
+      "2026-09-11T03:50:48.017000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260901.cbbo-1m.dbn.zst": [
+      56214538,
+      1,
+      1,
+      "QQQ.OPT",
+      "95447d65b17a124bf4a5d463335c3518",
+      "2026-09-11T03:50:48.020000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260902.cbbo-1m.dbn.zst": [
+      53792191,
+      1,
+      1,
+      "QQQ.OPT",
+      "c8ce18347d5ab7df791b046d5f8ca28d",
+      "2026-09-11T03:50:49.156000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260903.cbbo-1m.dbn.zst": [
+      52903652,
+      1,
+      1,
+      "QQQ.OPT",
+      "9d3ab0ae8fe22a3717cce891149f82be",
+      "2026-09-11T03:50:50.800000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260904.cbbo-1m.dbn.zst": [
+      52702743,
+      1,
+      1,
+      "QQQ.OPT",
+      "2ebb4dc7374402649a832c9533ce9a09",
+      "2026-09-11T03:50:51.753000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260908.cbbo-1m.dbn.zst": [
+      50859886,
+      1,
+      1,
+      "QQQ.OPT",
+      "12c569ca6f8552aaafc89e7153d00842",
+      "2026-09-11T03:50:52.696000Z"
+    ],
+    "raw/opra_cbbo1m/opra-pillar-20260909.cbbo-1m.dbn.zst": [
+      49743853,
+      1,
+      1,
+      "QQQ.OPT",
+      "8baee09e523d8739071cbdfa5b7f92c6",
+      "2026-09-11T03:50:52.174000Z"
     ],
     "raw/opra_definition/condition.json": [
       62881,
@@ -8621,6 +8837,294 @@
       "0a59e1c6a91243ad6ebbddb1286412d8",
       "2026-09-08T15:13:04.612000Z"
     ],
+    "raw/opra_definition/opra-pillar-20260721.definition.dbn.zst": [
+      374588,
+      1,
+      1,
+      "QQQ.OPT",
+      "399ccf0cd78e2a19457d96ae88540492",
+      "2026-09-11T03:51:01.350000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260722.definition.dbn.zst": [
+      372982,
+      1,
+      1,
+      "QQQ.OPT",
+      "e841b887a2aa40b5022211f746c230ea",
+      "2026-09-11T03:51:01.497000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260723.definition.dbn.zst": [
+      371295,
+      1,
+      1,
+      "QQQ.OPT",
+      "7a615b6c3f05c53c095b3a9dacfc349d",
+      "2026-09-11T03:51:01.429000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260724.definition.dbn.zst": [
+      405069,
+      1,
+      1,
+      "QQQ.OPT",
+      "5398f5eef9eb4d0caca548de1b696501",
+      "2026-09-11T03:51:01.653000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260727.definition.dbn.zst": [
+      402445,
+      1,
+      1,
+      "QQQ.OPT",
+      "8341a84ba8278757969a7d4f84faea9a",
+      "2026-09-11T03:51:02.259000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260728.definition.dbn.zst": [
+      396389,
+      1,
+      1,
+      "QQQ.OPT",
+      "54e0003ef258ef138013553e1ff97e87",
+      "2026-09-11T03:51:01.957000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260729.definition.dbn.zst": [
+      400862,
+      1,
+      1,
+      "QQQ.OPT",
+      "d0b9b8daaeb2c7b6e33ab785999657e0",
+      "2026-09-11T03:51:02.145000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260730.definition.dbn.zst": [
+      399174,
+      1,
+      1,
+      "QQQ.OPT",
+      "787e7f95f421ebb6ad1c27b9e6c88cb4",
+      "2026-09-11T03:51:02.322000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260731.definition.dbn.zst": [
+      409832,
+      1,
+      1,
+      "QQQ.OPT",
+      "c7b2d60748a6b0fa9603f07e8607e34d",
+      "2026-09-11T03:51:02.802000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260803.definition.dbn.zst": [
+      379872,
+      1,
+      1,
+      "QQQ.OPT",
+      "ac3f1fd77fba8e295b4b084bb868509d",
+      "2026-09-11T03:51:02.992000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260804.definition.dbn.zst": [
+      389313,
+      1,
+      1,
+      "QQQ.OPT",
+      "76cbcbacf5e86d14013c14982fb98015",
+      "2026-09-11T03:51:02.890000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260805.definition.dbn.zst": [
+      388246,
+      1,
+      1,
+      "QQQ.OPT",
+      "89867cd4325c9e9cd8f07eb11e861830",
+      "2026-09-11T03:51:03.094000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260806.definition.dbn.zst": [
+      398191,
+      1,
+      1,
+      "QQQ.OPT",
+      "f0b6fe2be65b8d65003cf5ea179adee5",
+      "2026-09-11T03:51:03.529000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260807.definition.dbn.zst": [
+      412882,
+      1,
+      1,
+      "QQQ.OPT",
+      "80d043ea12b0c94b674cc1b01ec97b81",
+      "2026-09-11T03:51:03.601000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260810.definition.dbn.zst": [
+      399438,
+      1,
+      1,
+      "QQQ.OPT",
+      "511c42768239a1456a4d22d1c06d9e6e",
+      "2026-09-11T03:51:03.675000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260811.definition.dbn.zst": [
+      390323,
+      1,
+      1,
+      "QQQ.OPT",
+      "99836101df84d59f8c468029ab245641",
+      "2026-09-11T03:51:04.043000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260812.definition.dbn.zst": [
+      391401,
+      1,
+      1,
+      "QQQ.OPT",
+      "6dec58d372fe9c071fff6ea467c6fda2",
+      "2026-09-11T03:51:04.145000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260813.definition.dbn.zst": [
+      392126,
+      1,
+      1,
+      "QQQ.OPT",
+      "dcd0c7c19062537562317be60cef2c89",
+      "2026-09-11T03:51:04.443000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260814.definition.dbn.zst": [
+      394571,
+      1,
+      1,
+      "QQQ.OPT",
+      "445dd4efa890f310c73b58ad8aa790bb",
+      "2026-09-11T03:51:04.434000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260817.definition.dbn.zst": [
+      391943,
+      1,
+      1,
+      "QQQ.OPT",
+      "0cd1269bc0f9c37829c46121299b2032",
+      "2026-09-11T03:51:04.843000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260818.definition.dbn.zst": [
+      382888,
+      1,
+      1,
+      "QQQ.OPT",
+      "65f3ba2f2e77e7af3b4bbb491e102df2",
+      "2026-09-11T03:51:04.922000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260819.definition.dbn.zst": [
+      382903,
+      1,
+      1,
+      "QQQ.OPT",
+      "f09d3f79009d370db879132c60fcb5a4",
+      "2026-09-11T03:51:04.994000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260820.definition.dbn.zst": [
+      375260,
+      1,
+      1,
+      "QQQ.OPT",
+      "38b15ed0a676193e70242b452eb006c8",
+      "2026-09-11T03:51:05.131000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260821.definition.dbn.zst": [
+      375566,
+      1,
+      1,
+      "QQQ.OPT",
+      "170a5187c7d4753bce7ccc576761fdf0",
+      "2026-09-11T03:51:05.466000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260824.definition.dbn.zst": [
+      364214,
+      1,
+      1,
+      "QQQ.OPT",
+      "737cb6afbe8495bb7bfea63521910ca9",
+      "2026-09-11T03:51:05.595000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260825.definition.dbn.zst": [
+      359649,
+      1,
+      1,
+      "QQQ.OPT",
+      "8c48fd71beb4a7f6e70f87de6cd55210",
+      "2026-09-11T03:51:05.581000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260826.definition.dbn.zst": [
+      366425,
+      1,
+      1,
+      "QQQ.OPT",
+      "0741e799762f681048880c50e8827d3c",
+      "2026-09-11T03:51:05.913000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260827.definition.dbn.zst": [
+      367192,
+      1,
+      1,
+      "QQQ.OPT",
+      "863db6b5114accdef2a52b1ea00a733f",
+      "2026-09-11T03:51:06.241000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260828.definition.dbn.zst": [
+      376209,
+      1,
+      1,
+      "QQQ.OPT",
+      "1d1276c9e8742aaf0a541d88c33db84d",
+      "2026-09-11T03:51:06.181000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260831.definition.dbn.zst": [
+      371156,
+      1,
+      1,
+      "QQQ.OPT",
+      "bca701f4571eb30cd18a0196c3e35657",
+      "2026-09-11T03:51:06.118000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260901.definition.dbn.zst": [
+      345165,
+      1,
+      1,
+      "QQQ.OPT",
+      "927e59a6c288ebf052b91656f9b6024f",
+      "2026-09-11T03:51:06.528000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260902.definition.dbn.zst": [
+      341155,
+      1,
+      1,
+      "QQQ.OPT",
+      "418298fd7f3e9cd6765985c966fcae47",
+      "2026-09-11T03:51:06.947000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260903.definition.dbn.zst": [
+      334454,
+      1,
+      1,
+      "QQQ.OPT",
+      "ab38bbab6a19d43e3cc1603315103879",
+      "2026-09-11T03:51:06.954000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260904.definition.dbn.zst": [
+      340354,
+      1,
+      1,
+      "QQQ.OPT",
+      "5acd6decf7c44b05a2970b53429ded23",
+      "2026-09-11T03:51:06.735000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260908.definition.dbn.zst": [
+      326091,
+      1,
+      1,
+      "QQQ.OPT",
+      "c3750504edc39c261c42537dfb081a90",
+      "2026-09-11T03:51:07.117000Z"
+    ],
+    "raw/opra_definition/opra-pillar-20260909.definition.dbn.zst": [
+      316495,
+      1,
+      1,
+      "QQQ.OPT",
+      "4e02fad936cc944424f31adec8e40c6c",
+      "2026-09-11T03:51:07.278000Z"
+    ],
     "raw/opra_statistics/opra-pillar-20240703.statistics.dbn.zst": [
       1975718,
       1,
@@ -12716,6 +13220,294 @@
       "QQQ.OPT",
       "86055a6cb2cfa409a58244328c957c08",
       "2026-09-08T15:19:08.056000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260721.statistics.dbn.zst": [
+      4466342,
+      1,
+      1,
+      "QQQ.OPT",
+      "748cfbb08f851448c656f334eb196a32",
+      "2026-09-11T03:51:19.413000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260722.statistics.dbn.zst": [
+      4412777,
+      1,
+      1,
+      "QQQ.OPT",
+      "45b09402f890aba20bbeffa14e8806ee",
+      "2026-09-11T03:51:18.671000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260723.statistics.dbn.zst": [
+      4597127,
+      1,
+      1,
+      "QQQ.OPT",
+      "732cd9ac203e9231028679d682e085c6",
+      "2026-09-11T03:51:18.468000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260724.statistics.dbn.zst": [
+      5215324,
+      1,
+      1,
+      "QQQ.OPT",
+      "356675b176cdf6b56f5398f0a43e409e",
+      "2026-09-11T03:51:18.784000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260727.statistics.dbn.zst": [
+      4845987,
+      1,
+      1,
+      "QQQ.OPT",
+      "ba9d58b33485c9413c44335993665ebc",
+      "2026-09-11T03:51:19.265000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260728.statistics.dbn.zst": [
+      4876532,
+      1,
+      1,
+      "QQQ.OPT",
+      "06246f44fd9feb7b2d6710a27cbdadbf",
+      "2026-09-11T03:51:19.641000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260729.statistics.dbn.zst": [
+      4896961,
+      1,
+      1,
+      "QQQ.OPT",
+      "e9f47fd2d75360ca5369cb96fe7b7176",
+      "2026-09-11T03:51:19.668000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260730.statistics.dbn.zst": [
+      4819297,
+      1,
+      1,
+      "QQQ.OPT",
+      "c7747c7c3f9c5cdf2dde3b2abab93f63",
+      "2026-09-11T03:51:20.191000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260731.statistics.dbn.zst": [
+      4789763,
+      1,
+      1,
+      "QQQ.OPT",
+      "83056dd71666015f0d3bff7168d08b5f",
+      "2026-09-11T03:51:20.048000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260803.statistics.dbn.zst": [
+      4749347,
+      1,
+      1,
+      "QQQ.OPT",
+      "4a92d0b8b7d62ca998953025b5f88a80",
+      "2026-09-11T03:51:20.613000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260804.statistics.dbn.zst": [
+      4857212,
+      1,
+      1,
+      "QQQ.OPT",
+      "a49e639ddeb9d5593a8835a6c2869076",
+      "2026-09-11T03:51:20.969000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260805.statistics.dbn.zst": [
+      4810693,
+      1,
+      1,
+      "QQQ.OPT",
+      "be66a20e7ef697f0144e0583dc306f2f",
+      "2026-09-11T03:51:21.063000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260806.statistics.dbn.zst": [
+      4765838,
+      1,
+      1,
+      "QQQ.OPT",
+      "2971444f090c469dfae564fa7134a1ef",
+      "2026-09-11T03:51:21.012000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260807.statistics.dbn.zst": [
+      4861734,
+      1,
+      1,
+      "QQQ.OPT",
+      "6696c2d9801484773c9723a7ca27ace8",
+      "2026-09-11T03:51:21.847000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260810.statistics.dbn.zst": [
+      4732790,
+      1,
+      1,
+      "QQQ.OPT",
+      "0e062af32234de261502d9c31affb284",
+      "2026-09-11T03:51:21.795000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260811.statistics.dbn.zst": [
+      4574255,
+      1,
+      1,
+      "QQQ.OPT",
+      "1bf49e70577a679ce4bcd27b8ab78cee",
+      "2026-09-11T03:51:21.839000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260812.statistics.dbn.zst": [
+      4643714,
+      1,
+      1,
+      "QQQ.OPT",
+      "284ee5810acd822bdb36d878b7806f92",
+      "2026-09-11T03:51:21.900000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260813.statistics.dbn.zst": [
+      4763850,
+      1,
+      1,
+      "QQQ.OPT",
+      "076b6dcb61bca722654577d81e06acce",
+      "2026-09-11T03:51:22.511000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260814.statistics.dbn.zst": [
+      4616792,
+      1,
+      1,
+      "QQQ.OPT",
+      "309d2c17626d354cca9ef97617ac79b9",
+      "2026-09-11T03:51:23.047000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260817.statistics.dbn.zst": [
+      4569175,
+      1,
+      1,
+      "QQQ.OPT",
+      "9277e2cbf1f1c2b6b0c1722e90de6596",
+      "2026-09-11T03:51:23.191000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260818.statistics.dbn.zst": [
+      4597528,
+      1,
+      1,
+      "QQQ.OPT",
+      "fb2bbeabf38480e350667e771e26248e",
+      "2026-09-11T03:51:22.686000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260819.statistics.dbn.zst": [
+      4481472,
+      1,
+      1,
+      "QQQ.OPT",
+      "bc2e71cc2e8140310729422f44808ed7",
+      "2026-09-11T03:51:23.245000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260820.statistics.dbn.zst": [
+      4495175,
+      1,
+      1,
+      "QQQ.OPT",
+      "62e8d6b619530c75fcfca290d95507f5",
+      "2026-09-11T03:51:23.572000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260821.statistics.dbn.zst": [
+      4376495,
+      1,
+      1,
+      "QQQ.OPT",
+      "3b3c71920d33445ace94fdaa031782c4",
+      "2026-09-11T03:51:23.951000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260824.statistics.dbn.zst": [
+      4303073,
+      1,
+      1,
+      "QQQ.OPT",
+      "d7c43d95ccd130ddd5e0b3f3d3dc813a",
+      "2026-09-11T03:51:24.220000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260825.statistics.dbn.zst": [
+      4254614,
+      1,
+      1,
+      "QQQ.OPT",
+      "5b3c8ff1af1c2948c8cf3cf89d64d413",
+      "2026-09-11T03:51:24.237000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260826.statistics.dbn.zst": [
+      4196579,
+      1,
+      1,
+      "QQQ.OPT",
+      "2c014075afc990dc7bcc00a82ec3de3b",
+      "2026-09-11T03:51:24.500000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260827.statistics.dbn.zst": [
+      4263971,
+      1,
+      1,
+      "QQQ.OPT",
+      "c1ec3d454d36ea2fdeb60100e65783c1",
+      "2026-09-11T03:51:25.084000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260828.statistics.dbn.zst": [
+      4364617,
+      1,
+      1,
+      "QQQ.OPT",
+      "c643750db54a6509af3f4a654181ceed",
+      "2026-09-11T03:51:25.576000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260831.statistics.dbn.zst": [
+      4157303,
+      1,
+      1,
+      "QQQ.OPT",
+      "7c144894b8307541c4a2543dff05ffc0",
+      "2026-09-11T03:51:25.240000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260901.statistics.dbn.zst": [
+      4229690,
+      1,
+      1,
+      "QQQ.OPT",
+      "c3638e5ed536cefb508e0e560c87111c",
+      "2026-09-11T03:51:25.309000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260902.statistics.dbn.zst": [
+      3815517,
+      1,
+      1,
+      "QQQ.OPT",
+      "1242e32e121af43fd8b7c1460fcf9f50",
+      "2026-09-11T03:51:25.916000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260903.statistics.dbn.zst": [
+      4044290,
+      1,
+      1,
+      "QQQ.OPT",
+      "78db54a6d2ffb4eb1495acef1e5c923f",
+      "2026-09-11T03:51:25.955000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260904.statistics.dbn.zst": [
+      3985173,
+      1,
+      1,
+      "QQQ.OPT",
+      "6aba9038e1a3a81ccbfeb1f228f89aba",
+      "2026-09-11T03:51:26.205000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260908.statistics.dbn.zst": [
+      3893186,
+      1,
+      1,
+      "QQQ.OPT",
+      "21cee961225324c9591bb87d12ca8b77",
+      "2026-09-11T03:51:26.456000Z"
+    ],
+    "raw/opra_statistics/opra-pillar-20260909.statistics.dbn.zst": [
+      3690469,
+      1,
+      1,
+      "QQQ.OPT",
+      "3bc58bdfa572f61b50f8b979543ba6a6",
+      "2026-09-11T03:51:26.762000Z"
     ],
     "raw/trades/ES/glbx-mdp3-20250703.trades.dbn.zst": [
       2862822,
@@ -22268,30 +23060,30 @@
       },
       "corrected_objects": {},
       "dbn_versions": {
-        "1": 512
+        "1": 548
       },
-      "expected_file_dates": 512,
-      "file_dates_present": 512,
+      "expected_file_dates": 548,
+      "file_dates_present": 548,
       "first_date": "2024-07-03",
       "half_session_dates_in_range": 4,
       "half_session_dates_present": 4,
       "historically_corrected_dates": [],
-      "last_date": "2026-07-20",
+      "last_date": "2026-09-09",
       "missing_count": 0,
       "missing_file_dates": [],
       "missing_file_dates_classified": {},
-      "one_line_coverage": "**QQQ.OPT**: 512 assemblable sessions (2024-07-03 to 2026-07-20) from 512 usable file-dates, 0 expected file-date(s) with no usable data",
+      "one_line_coverage": "**QQQ.OPT**: 548 assemblable sessions (2024-07-03 to 2026-09-09) from 548 usable file-dates, 0 expected file-date(s) with no usable data",
       "present_but_unusable_dates": [],
       "row_counts": {
-        "estimated_total_rows": 346963486,
-        "rows_per_compressed_byte": 0.207076,
-        "sampled_bytes": 19459718,
+        "estimated_total_rows": 377900315,
+        "rows_per_compressed_byte": 0.205654,
+        "sampled_bytes": 20185659,
         "sampled_files": 6,
-        "sampled_rows_exact": 4029644
+        "sampled_rows_exact": 4151270
       },
       "sessions": {
-        "assemblable": 512,
-        "candidate_sessions_in_span": 512,
+        "assemblable": 548,
+        "candidate_sessions_in_span": 548,
         "dates": [
           "2024-07-03",
           "2024-07-05",
@@ -22804,129 +23596,169 @@
           "2026-07-15",
           "2026-07-16",
           "2026-07-17",
-          "2026-07-20"
+          "2026-07-20",
+          "2026-07-21",
+          "2026-07-22",
+          "2026-07-23",
+          "2026-07-24",
+          "2026-07-27",
+          "2026-07-28",
+          "2026-07-29",
+          "2026-07-30",
+          "2026-07-31",
+          "2026-08-03",
+          "2026-08-04",
+          "2026-08-05",
+          "2026-08-06",
+          "2026-08-07",
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-17",
+          "2026-08-18",
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21",
+          "2026-08-24",
+          "2026-08-25",
+          "2026-08-26",
+          "2026-08-27",
+          "2026-08-28",
+          "2026-08-31",
+          "2026-09-01",
+          "2026-09-02",
+          "2026-09-03",
+          "2026-09-04",
+          "2026-09-08",
+          "2026-09-09"
         ],
         "definition": "a CME session D is assemblable when both UTC objects it spans are present: the D-1 file holding the 17:00 CT evening open and the D file holding the rest. File-date counts are NOT session counts.",
         "evening_only_file_dates": 0,
         "first": "2024-07-03",
-        "last": "2026-07-20",
+        "last": "2026-09-09",
         "missing_own_file": [],
         "missing_prior_evening_file": []
       },
       "sources": {
-        "raw/opra_statistics": 512
+        "raw/opra_statistics": 548
       },
-      "total_bytes": 1675535507,
+      "total_bytes": 1837550169,
       "unexpected_file_dates": [],
-      "usable_file_dates": 512
+      "usable_file_dates": 548
     }
   },
   "integrity": {
     "added": [
-      "raw/trades/ES/glbx-mdp3-20260712.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260713.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260714.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260715.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260716.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260717.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260719.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260720.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260721.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260722.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260723.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260724.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260726.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260727.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260728.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260729.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260730.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260731.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260802.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260803.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260804.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260805.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260806.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260807.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260809.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260810.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260811.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260812.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260813.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260814.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260816.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260817.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260818.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260819.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260820.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260821.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260823.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260824.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260825.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260826.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260827.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260828.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260830.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260831.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260901.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260902.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260903.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260904.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260906.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260907.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260908.trades.dbn.zst",
-      "raw/trades/ES/glbx-mdp3-20260909.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260712.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260713.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260714.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260715.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260716.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260717.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260719.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260720.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260721.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260722.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260723.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260724.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260726.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260727.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260728.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260729.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260730.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260731.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260802.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260803.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260804.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260805.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260806.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260807.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260809.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260810.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260811.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260812.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260813.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260814.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260816.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260817.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260818.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260819.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260820.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260821.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260823.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260824.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260825.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260826.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260827.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260828.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260830.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260831.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260901.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260902.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260903.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260904.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260906.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260907.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260908.trades.dbn.zst",
-      "raw/trades/NQ/glbx-mdp3-20260909.trades.dbn.zst"
+      "raw/opra_cbbo1m/opra-pillar-20260721.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260722.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260723.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260724.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260727.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260728.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260729.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260730.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260731.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260803.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260804.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260805.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260806.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260807.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260810.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260811.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260812.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260813.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260814.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260817.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260818.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260819.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260820.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260821.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260824.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260825.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260826.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260827.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260828.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260831.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260901.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260902.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260903.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260904.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260908.cbbo-1m.dbn.zst",
+      "raw/opra_cbbo1m/opra-pillar-20260909.cbbo-1m.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260721.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260722.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260723.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260724.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260727.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260728.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260729.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260730.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260731.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260803.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260804.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260805.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260806.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260807.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260810.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260811.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260812.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260813.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260814.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260817.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260818.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260819.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260820.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260821.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260824.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260825.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260826.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260827.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260828.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260831.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260901.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260902.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260903.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260904.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260908.definition.dbn.zst",
+      "raw/opra_definition/opra-pillar-20260909.definition.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260721.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260722.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260723.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260724.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260727.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260728.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260729.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260730.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260731.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260803.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260804.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260805.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260806.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260807.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260810.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260811.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260812.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260813.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260814.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260817.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260818.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260819.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260820.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260821.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260824.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260825.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260826.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260827.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260828.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260831.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260901.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260902.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260903.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260904.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260908.statistics.dbn.zst",
+      "raw/opra_statistics/opra-pillar-20260909.statistics.dbn.zst"
     ],
     "baseline": "data/manifest.json (previous revision)",
     "baseline_had_etags": true,
@@ -22934,7 +23766,7 @@
     "comparable_baseline": true,
     "composite_etags": [],
     "method": "size and ETag from ListObjectsV2, compared against the previous data/manifest.json. R2 returns the plain MD5 as the ETag for single-part uploads, so this fingerprints every object at zero egress.",
-    "objects_fingerprinted": 2595,
+    "objects_fingerprinted": 2703,
     "removed": [],
     "status": "drift"
   },
@@ -22945,7 +23777,7 @@
     "row_count_caveat": "Prefix row totals are extrapolations from exactly counted sampled files. Only sampled_rows_exact is a measured number.",
     "session_convention": "CME Globex session opens 17:00 America/Chicago and the session date rolls there; files are split on UTC day, so one session spans two files."
   },
-  "object_count": 2595,
+  "object_count": 2703,
   "prefixes": {
     "raw/opra_cbbo1m": {
       "calendar": {
@@ -22960,9 +23792,9 @@
       },
       "compression_layer_spans": {
         "1": {
-          "files": 512,
+          "files": 548,
           "first_date": "2024-07-03",
-          "last_date": "2026-07-20"
+          "last_date": "2026-09-09"
         }
       },
       "compression_layers": [
@@ -22980,10 +23812,10 @@
       "file_format": "Databento DBN, zstd-compressed",
       "instrument_count_per_file": {
         "max": 13327,
-        "median": 8452,
+        "median": 8573,
         "min": 6894
       },
-      "objects": 512,
+      "objects": 548,
       "partition": {
         "date_basis": "UTC calendar day (from the DBN metadata start/end, which are UTC midnight boundaries) -- NOT the CME session date",
         "distinct_header_variants": 1,
@@ -22997,44 +23829,44 @@
         80
       ],
       "row_counts": {
-        "estimated_total_rows": 1791809477,
+        "estimated_total_rows": 1895539313,
         "method": "exact count on a strided sample, extrapolated by compressed bytes; no prefix is scanned in full",
-        "rows_per_compressed_byte": 0.043756,
-        "sampled_bytes": 134873011,
+        "rows_per_compressed_byte": 0.043853,
+        "sampled_bytes": 143208826,
         "sampled_files": 2,
         "sampled_keys": [
-          "raw/opra_cbbo1m/opra-pillar-20250106.cbbo-1m.dbn.zst",
-          "raw/opra_cbbo1m/opra-pillar-20260114.cbbo-1m.dbn.zst"
+          "raw/opra_cbbo1m/opra-pillar-20250121.cbbo-1m.dbn.zst",
+          "raw/opra_cbbo1m/opra-pillar-20260224.cbbo-1m.dbn.zst"
         ],
-        "sampled_rows_exact": 5901524
+        "sampled_rows_exact": 6280127
       },
       "sampled_profiles": {
-        "raw/opra_cbbo1m/opra-pillar-20250714.cbbo-1m.dbn.zst": {
-          "_size": 78304272,
+        "raw/opra_cbbo1m/opra-pillar-20250807.cbbo-1m.dbn.zst": {
+          "_size": 87350294,
           "_v": 3,
           "contract_symbols": {
-            "QQQ   250715C00540000": 46,
-            "QQQ   250717C00568000": 46,
-            "QQQ   250721C00520000": 46,
-            "QQQ   250721C00525000": 46,
-            "QQQ   250723C00498000": 46,
-            "QQQ   250725C00440000": 46,
-            "QQQ   250725C00573000": 46,
-            "QQQ   250731C00437000": 46,
-            "QQQ   250731C00481000": 46,
-            "QQQ   250731C00555000": 46,
-            "QQQ   250801C00450000": 46,
-            "QQQ   250815C00320000": 46,
-            "QQQ   250815C00645000": 46,
-            "QQQ   250829C00561000": 46,
-            "QQQ   250829C00625000": 46,
-            "QQQ   250919C00545000": 46,
-            "QQQ   251231C00477000": 46,
-            "QQQ   251231C00541000": 46,
-            "QQQ   260331C00600000": 46,
-            "QQQ   270617C00655000": 46
+            "QQQ   250818P00493000": 43,
+            "QQQ   250818P00535000": 43,
+            "QQQ   250820P00553000": 43,
+            "QQQ   250822P00571000": 43,
+            "QQQ   250912P00553000": 43,
+            "QQQ   250926P00561000": 43,
+            "QQQ   250930P00310000": 43,
+            "QQQ   250930P00481000": 43,
+            "QQQ   250930P00565000": 43,
+            "QQQ   260320P00330000": 43,
+            "QQQ   260618P00184780": 43,
+            "QQQ   260618P00254780": 43,
+            "QQQ   260618P00354780": 43,
+            "QQQ   260618P00409780": 43,
+            "QQQ   260618P00440000": 43,
+            "QQQ   260630P00555000": 43,
+            "QQQ   260630P00558000": 43,
+            "QQQ   260918P00565000": 43,
+            "QQQ   261218P00310000": 43,
+            "QQQ   261218P00665000": 43
           },
-          "distinct_contract_symbols": 8364,
+          "distinct_contract_symbols": 8224,
           "partial_read": true,
           "schema": {
             "columns": [
@@ -23113,13 +23945,13 @@
       },
       "size_bytes": {
         "max": 132880648,
-        "mean": 79980247,
-        "median": 84070992,
+        "mean": 78877583,
+        "median": 82706633,
         "min": 27349392,
-        "p05": 52303090,
-        "p25": 57867056,
-        "p75": 93100120,
-        "p95": 111086152
+        "p05": 52291641,
+        "p25": 58030634,
+        "p75": 92306100,
+        "p95": 110402056
       },
       "stype_in": [
         "parent"
@@ -23131,50 +23963,50 @@
         "QQQ.OPT": {
           "dbn_query_symbols": {
             "QQQ.OPT": {
-              "files": 512,
+              "files": 548,
               "first_date": "2024-07-03",
-              "last_date": "2026-07-20"
+              "last_date": "2026-09-09"
             }
           },
           "dbn_versions": {
             "1": {
-              "files": 512,
+              "files": 548,
               "first_date": "2024-07-03",
-              "last_date": "2026-07-20"
+              "last_date": "2026-09-09"
             }
           },
-          "distinct_file_dates": 512,
+          "distinct_file_dates": 548,
           "first_file_date": "2024-07-03",
           "header_symbol_mismatches": {
             "count": 0,
             "dates": [],
             "keys": []
           },
-          "last_file_date": "2026-07-20",
-          "objects": 512,
+          "last_file_date": "2026-09-09",
+          "objects": 548,
           "row_counts": {
-            "estimated_total_rows": 1791809477,
+            "estimated_total_rows": 1895539313,
             "method": "exact count on a strided sample, extrapolated by compressed bytes",
-            "rows_per_compressed_byte": 0.043756,
-            "sampled_bytes": 134873011,
+            "rows_per_compressed_byte": 0.043853,
+            "sampled_bytes": 143208826,
             "sampled_files": 2,
-            "sampled_rows_exact": 5901524
+            "sampled_rows_exact": 6280127
           },
           "size_bytes": {
             "max": 132880648,
-            "mean": 79980247,
-            "median": 84070992,
+            "mean": 78877583,
+            "median": 82706633,
             "min": 27349392,
-            "p05": 52303090,
-            "p25": 57867056,
-            "p75": 93100120,
-            "p95": 111086152
+            "p05": 52291641,
+            "p25": 58030634,
+            "p75": 92306100,
+            "p95": 110402056
           },
           "size_outliers": [],
-          "total_bytes": 40949886725
+          "total_bytes": 43224915621
         }
       },
-      "total_bytes": 40949886725,
+      "total_bytes": 43224915621,
       "ts_out": [
         false
       ]
@@ -23192,9 +24024,9 @@
       },
       "compression_layer_spans": {
         "1": {
-          "files": 11,
+          "files": 47,
           "first_date": "2026-07-06",
-          "last_date": "2026-07-20"
+          "last_date": "2026-09-09"
         },
         "2": {
           "files": 501,
@@ -23218,10 +24050,10 @@
       "file_format": "Databento DBN, zstd-compressed",
       "instrument_count_per_file": {
         "max": 13327,
-        "median": 8452,
+        "median": 8573,
         "min": 6894
       },
-      "objects": 512,
+      "objects": 548,
       "partition": {
         "date_basis": "UTC calendar day (from the DBN metadata start/end, which are UTC midnight boundaries) -- NOT the CME session date",
         "distinct_header_variants": 2,
@@ -23235,57 +24067,57 @@
         360
       ],
       "row_counts": {
-        "estimated_total_rows": 4422059,
+        "estimated_total_rows": 4857027,
         "method": "exact count on a strided sample, extrapolated by compressed bytes; no prefix is scanned in full",
-        "rows_per_compressed_byte": 0.027388,
-        "sampled_bytes": 1861471,
+        "rows_per_compressed_byte": 0.027747,
+        "sampled_bytes": 1903256,
         "sampled_files": 6,
         "sampled_keys": [
-          "raw/opra_definition/opra-pillar-20240903.definition.dbn.zst",
-          "raw/opra_definition/opra-pillar-20250106.definition.dbn.zst",
-          "raw/opra_definition/opra-pillar-20250509.definition.dbn.zst",
-          "raw/opra_definition/opra-pillar-20250911.definition.dbn.zst",
-          "raw/opra_definition/opra-pillar-20260114.definition.dbn.zst",
-          "raw/opra_definition/opra-pillar-20260518.definition.dbn.zst"
+          "raw/opra_definition/opra-pillar-20240906.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20250121.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20250602.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20251010.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20260224.definition.dbn.zst",
+          "raw/opra_definition/opra-pillar-20260707.definition.dbn.zst"
         ],
-        "sampled_rows_exact": 50982
+        "sampled_rows_exact": 52810
       },
       "sampled_profiles": {
-        "raw/opra_definition/opra-pillar-20250714.definition.dbn.zst": {
-          "_size": 311010,
+        "raw/opra_definition/opra-pillar-20250807.definition.dbn.zst": {
+          "_size": 293076,
           "_v": 3,
           "contract_symbols": {
-            "QQQ   251219P00274780": 1,
-            "QQQ   251219P00339780": 1,
-            "QQQ   251219P00439780": 1,
-            "QQQ   251219P00524780": 1,
-            "QQQ   251219P00615000": 1,
-            "QQQ   260116P00189780": 1,
-            "QQQ   260116P00209780": 1,
-            "QQQ   260116P00259780": 1,
-            "QQQ   260116P00294780": 1,
-            "QQQ   260116P00324780": 1,
-            "QQQ   260116P00379780": 1,
-            "QQQ   260116P00424780": 1,
-            "QQQ   260618P00184780": 1,
-            "QQQ   261218P00214780": 1,
-            "QQQ   261218P00234780": 1,
-            "QQQ   261218P00249780": 1,
-            "QQQ   261218P00279780": 1,
-            "QQQ   261218P00354780": 1,
-            "QQQ   261218P00399780": 1,
-            "QQQ   270115P00540000": 1
+            "QQQ   251219C00304780": 1,
+            "QQQ   251219C00604780": 1,
+            "QQQ   251219C00645000": 1,
+            "QQQ   251219P00184780": 1,
+            "QQQ   251219P00234780": 1,
+            "QQQ   251219P00264780": 1,
+            "QQQ   251219P00324780": 1,
+            "QQQ   251219P00329780": 1,
+            "QQQ   251219P00429780": 1,
+            "QQQ   251219P00459780": 1,
+            "QQQ   251219P00514780": 1,
+            "QQQ   251219P00519780": 1,
+            "QQQ   251219P00579780": 1,
+            "QQQ   260116C00244780": 1,
+            "QQQ   260116P00249780": 1,
+            "QQQ   260618P00179780": 1,
+            "QQQ   260618P00199780": 1,
+            "QQQ   261218C00214780": 1,
+            "QQQ   261218P00204780": 1,
+            "QQQ   270115C00540000": 1
           },
           "covers_globex_open_1700ct": false,
           "covers_rth_0830_1500ct": false,
           "ct_hour_histogram": {
-            "5": 8294,
-            "7": 70
+            "5": 7990,
+            "7": 234
           },
-          "distinct_contract_symbols": 8364,
+          "distinct_contract_symbols": 8224,
           "distinct_ct_hours": 2,
           "partial_read": false,
-          "rows": 8364,
+          "rows": 8224,
           "schema": {
             "columns": [
               {
@@ -23559,21 +24391,21 @@
             }
           },
           "spread_rows": 0,
-          "ts_first_ct": "2025-07-14T05:30:00.464023115-05:00",
-          "ts_first_utc": "2025-07-14T10:30:00.464023115+00:00",
-          "ts_last_ct": "2025-07-14T07:00:01.088868527-05:00",
-          "ts_last_utc": "2025-07-14T12:00:01.088868527+00:00"
+          "ts_first_ct": "2025-08-07T05:30:00.481065117-05:00",
+          "ts_first_utc": "2025-08-07T10:30:00.481065117+00:00",
+          "ts_last_ct": "2025-08-07T07:00:00.010584542-05:00",
+          "ts_last_utc": "2025-08-07T12:00:00.010584542+00:00"
         }
       },
       "size_bytes": {
         "max": 491917,
-        "mean": 315350,
-        "median": 307808,
+        "mean": 319426,
+        "median": 311362,
         "min": 237466,
-        "p05": 256527,
-        "p25": 278848,
-        "p75": 336558,
-        "p95": 413196
+        "p05": 256722,
+        "p25": 281147,
+        "p75": 342266,
+        "p95": 413044
       },
       "stype_in": [
         "parent"
@@ -23585,50 +24417,50 @@
         "QQQ.OPT": {
           "dbn_query_symbols": {
             "QQQ.OPT": {
-              "files": 512,
+              "files": 548,
               "first_date": "2024-07-03",
-              "last_date": "2026-07-20"
+              "last_date": "2026-09-09"
             }
           },
           "dbn_versions": {
             "1": {
-              "files": 512,
+              "files": 548,
               "first_date": "2024-07-03",
-              "last_date": "2026-07-20"
+              "last_date": "2026-09-09"
             }
           },
-          "distinct_file_dates": 512,
+          "distinct_file_dates": 548,
           "first_file_date": "2024-07-03",
           "header_symbol_mismatches": {
             "count": 0,
             "dates": [],
             "keys": []
           },
-          "last_file_date": "2026-07-20",
-          "objects": 512,
+          "last_file_date": "2026-09-09",
+          "objects": 548,
           "row_counts": {
-            "estimated_total_rows": 4422059,
+            "estimated_total_rows": 4857027,
             "method": "exact count on a strided sample, extrapolated by compressed bytes",
-            "rows_per_compressed_byte": 0.027388,
-            "sampled_bytes": 1861471,
+            "rows_per_compressed_byte": 0.027747,
+            "sampled_bytes": 1903256,
             "sampled_files": 6,
-            "sampled_rows_exact": 50982
+            "sampled_rows_exact": 52810
           },
           "size_bytes": {
             "max": 491917,
-            "mean": 315350,
-            "median": 307808,
+            "mean": 319426,
+            "median": 311362,
             "min": 237466,
-            "p05": 256527,
-            "p25": 278848,
-            "p75": 336558,
-            "p95": 413196
+            "p05": 256722,
+            "p25": 281147,
+            "p75": 342266,
+            "p95": 413044
           },
           "size_outliers": [],
-          "total_bytes": 161459632
+          "total_bytes": 175045750
         }
       },
-      "total_bytes": 161459632,
+      "total_bytes": 175045750,
       "ts_out": [
         false
       ]
@@ -23646,9 +24478,9 @@
       },
       "compression_layer_spans": {
         "1": {
-          "files": 11,
+          "files": 47,
           "first_date": "2026-07-06",
-          "last_date": "2026-07-20"
+          "last_date": "2026-09-09"
         },
         "2": {
           "files": 501,
@@ -23672,10 +24504,10 @@
       "file_format": "Databento DBN, zstd-compressed",
       "instrument_count_per_file": {
         "max": 13327,
-        "median": 8452,
+        "median": 8573,
         "min": 6894
       },
-      "objects": 512,
+      "objects": 548,
       "partition": {
         "date_basis": "UTC calendar day (from the DBN metadata start/end, which are UTC midnight boundaries) -- NOT the CME session date",
         "distinct_header_variants": 2,
@@ -23689,58 +24521,58 @@
         64
       ],
       "row_counts": {
-        "estimated_total_rows": 346963486,
+        "estimated_total_rows": 377900315,
         "method": "exact count on a strided sample, extrapolated by compressed bytes; no prefix is scanned in full",
-        "rows_per_compressed_byte": 0.207076,
-        "sampled_bytes": 19459718,
+        "rows_per_compressed_byte": 0.205654,
+        "sampled_bytes": 20185659,
         "sampled_files": 6,
         "sampled_keys": [
-          "raw/opra_statistics/opra-pillar-20240903.statistics.dbn.zst",
-          "raw/opra_statistics/opra-pillar-20250106.statistics.dbn.zst",
-          "raw/opra_statistics/opra-pillar-20250509.statistics.dbn.zst",
-          "raw/opra_statistics/opra-pillar-20250911.statistics.dbn.zst",
-          "raw/opra_statistics/opra-pillar-20260114.statistics.dbn.zst",
-          "raw/opra_statistics/opra-pillar-20260518.statistics.dbn.zst"
+          "raw/opra_statistics/opra-pillar-20240906.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20250121.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20250602.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20251010.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20260224.statistics.dbn.zst",
+          "raw/opra_statistics/opra-pillar-20260707.statistics.dbn.zst"
         ],
-        "sampled_rows_exact": 4029644
+        "sampled_rows_exact": 4151270
       },
       "sampled_profiles": {
-        "raw/opra_statistics/opra-pillar-20250714.statistics.dbn.zst": {
-          "_size": 3049398,
+        "raw/opra_statistics/opra-pillar-20250807.statistics.dbn.zst": {
+          "_size": 3112160,
           "_v": 3,
           "contract_symbols": {
-            "QQQ   250714C00553000": 106,
-            "QQQ   250714C00556000": 106,
-            "QQQ   250714C00564000": 106,
-            "QQQ   250718C00552000": 106,
-            "QQQ   250718C00570000": 106,
-            "QQQ   250718P00515000": 106,
-            "QQQ   250718P00530000": 106,
-            "QQQ   250718P00537000": 106,
-            "QQQ   250718P00544000": 106,
-            "QQQ   250718P00545000": 106,
-            "QQQ   250718P00550000": 106,
-            "QQQ   250731C00560000": 106,
-            "QQQ   250815P00520000": 106,
-            "QQQ   250815P00545000": 106,
-            "QQQ   250829P00515000": 106,
-            "QQQ   250919P00535000": 106,
-            "QQQ   250919P00540000": 106,
-            "QQQ   250919P00550000": 106,
-            "QQQ   250930P00460000": 106,
-            "QQQ   260116P00500000": 106
+            "QQQ   250808P00500000": 106,
+            "QQQ   250808P00546000": 106,
+            "QQQ   250808P00548000": 106,
+            "QQQ   250815C00545000": 106,
+            "QQQ   250815P00510000": 106,
+            "QQQ   250815P00570000": 106,
+            "QQQ   250829C00560000": 106,
+            "QQQ   250829P00540000": 106,
+            "QQQ   250919C00555000": 106,
+            "QQQ   250919C00585000": 106,
+            "QQQ   250919C00615000": 106,
+            "QQQ   250919P00485000": 106,
+            "QQQ   250919P00525000": 106,
+            "QQQ   250919P00560000": 106,
+            "QQQ   250919P00570000": 106,
+            "QQQ   250930P00510000": 106,
+            "QQQ   250930P00532000": 106,
+            "QQQ   250930P00550000": 106,
+            "QQQ   250930P00555000": 106,
+            "QQQ   250930P00570000": 106
           },
           "covers_globex_open_1700ct": false,
           "covers_rth_0830_1500ct": false,
           "ct_hour_histogram": {
-            "15": 66912,
-            "16": 439048,
-            "5": 149292
+            "15": 65792,
+            "16": 447048,
+            "5": 143820
           },
-          "distinct_contract_symbols": 8364,
+          "distinct_contract_symbols": 8224,
           "distinct_ct_hours": 3,
           "partial_read": false,
-          "rows": 655252,
+          "rows": 656660,
           "schema": {
             "columns": [
               {
@@ -23812,21 +24644,21 @@
             }
           },
           "spread_rows": 0,
-          "ts_first_ct": "2025-07-14T05:30:00.464023115-05:00",
-          "ts_first_utc": "2025-07-14T10:30:00.464023115+00:00",
-          "ts_last_ct": "2025-07-14T16:31:07.510954648-05:00",
-          "ts_last_utc": "2025-07-14T21:31:07.510954648+00:00"
+          "ts_first_ct": "2025-08-07T05:30:00.481065117-05:00",
+          "ts_first_utc": "2025-08-07T10:30:00.481065117+00:00",
+          "ts_last_ct": "2025-08-07T16:45:09.602875227-05:00",
+          "ts_last_utc": "2025-08-07T21:45:09.602875227+00:00"
         }
       },
       "size_bytes": {
-        "max": 5143105,
-        "mean": 3272530,
-        "median": 3149015,
+        "max": 5215324,
+        "mean": 3353193,
+        "median": 3205497,
         "min": 1975718,
-        "p05": 2622588,
-        "p25": 2851803,
-        "p75": 3525833,
-        "p95": 4394533
+        "p05": 2624844,
+        "p25": 2865072,
+        "p75": 3652139,
+        "p95": 4616792
       },
       "stype_in": [
         "parent"
@@ -23838,50 +24670,50 @@
         "QQQ.OPT": {
           "dbn_query_symbols": {
             "QQQ.OPT": {
-              "files": 512,
+              "files": 548,
               "first_date": "2024-07-03",
-              "last_date": "2026-07-20"
+              "last_date": "2026-09-09"
             }
           },
           "dbn_versions": {
             "1": {
-              "files": 512,
+              "files": 548,
               "first_date": "2024-07-03",
-              "last_date": "2026-07-20"
+              "last_date": "2026-09-09"
             }
           },
-          "distinct_file_dates": 512,
+          "distinct_file_dates": 548,
           "first_file_date": "2024-07-03",
           "header_symbol_mismatches": {
             "count": 0,
             "dates": [],
             "keys": []
           },
-          "last_file_date": "2026-07-20",
-          "objects": 512,
+          "last_file_date": "2026-09-09",
+          "objects": 548,
           "row_counts": {
-            "estimated_total_rows": 346963486,
+            "estimated_total_rows": 377900315,
             "method": "exact count on a strided sample, extrapolated by compressed bytes",
-            "rows_per_compressed_byte": 0.207076,
-            "sampled_bytes": 19459718,
+            "rows_per_compressed_byte": 0.205654,
+            "sampled_bytes": 20185659,
             "sampled_files": 6,
-            "sampled_rows_exact": 4029644
+            "sampled_rows_exact": 4151270
           },
           "size_bytes": {
-            "max": 5143105,
-            "mean": 3272530,
-            "median": 3149015,
+            "max": 5215324,
+            "mean": 3353193,
+            "median": 3205497,
             "min": 1975718,
-            "p05": 2622588,
-            "p25": 2851803,
-            "p75": 3525833,
-            "p95": 4394533
+            "p05": 2624844,
+            "p25": 2865072,
+            "p75": 3652139,
+            "p95": 4616792
           },
           "size_outliers": [],
-          "total_bytes": 1675535507
+          "total_bytes": 1837550169
         }
       },
-      "total_bytes": 1675535507,
+      "total_bytes": 1837550169,
       "ts_out": [
         false
       ]
@@ -27089,5 +27921,5 @@
       "size": 694
     }
   ],
-  "total_bytes": 48840531813
+  "total_bytes": 51291161489
 }

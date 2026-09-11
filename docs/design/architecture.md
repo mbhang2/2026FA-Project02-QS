@@ -332,6 +332,10 @@ What it owns:
   completed, `abandoned_on_budget`, `refused` (holdout locked), or `crashed`. An
   agent that could run fifty exploratory backtests and present the best as one
   candidate makes N fiction, in the one place nobody would look.
+- **`purpose`** — `trial`, `smoke` or `replay`. N is a *filter over the ledger*,
+  never a shorter ledger: a run that was not a candidate gets classified rather
+  than deleted afterwards, because a record edited by the party being measured
+  against it is not a record. An agent-triggered run cannot set it.
 - **Reproducibility.** `git_sha` alone does not identify a trial, because the
   agent edits and runs before anything is committed. The ledger row carries a
   content hash of the strategy source, and `store_source()` copies the source to

@@ -128,22 +128,26 @@ broken key — see section 5 for the error that is.
 ## 5. What's in the bucket
 
 Databento DBN under zstd — **not parquet**, so `read_parquet` won't open it. Use the
-`databento` package. One prefix, `raw/`, 2,595 objects, roughly 45 GiB. Object counts
-below are stable; sizes are approximate and `docs/data-inventory.md` is the live
-source.
+`databento` package. One prefix, `raw/`, 2,703 objects, roughly 48 GiB. These counts
+move as the series are extended; `docs/data-inventory.md` is generated and is the live
+source. Don't match on a total in a script.
 
-| Prefix | Objects | Notes |
+| Prefix | Data files | Notes |
 |---|---|---|
 | `raw/trades` | 1,056 | tick trades, NQ + ES — our primary price source |
-| `raw/opra_cbbo1m` | 512 | QQQ options quotes, per-minute; feeds GEX only |
-| `raw/opra_definition` | 512 | options instrument definitions |
-| `raw/opra_statistics` | 512 | options statistics |
+| `raw/opra_cbbo1m` | 548 | QQQ options quotes, per-minute; feeds GEX only |
+| `raw/opra_definition` | 548 | options instrument definitions |
+| `raw/opra_statistics` | 548 | options statistics |
 
-Plus 3 sidecar objects, for 2,595 in total.
+**Plus 3 sidecar objects under `raw/opra_definition/`** — `condition.json`,
+`manifest.json`, `metadata.json`. They are vendor bookkeeping, not data, which is why
+that prefix lists 551 keys while holding 548 data files. Counting the sidecars as data
+is what made an earlier version of this table say 515; if a number here is three larger
+than you expect, that is why.
 
-Coverage: NQ 684 dates with one gap (2025-04-18), ES 372 dates from 2025-07-03, QQQ
-options 2024-07-03 → 2026-07-20. Futures run to 2026-09-09 and options do not — don't
-assume the two series end together.
+Coverage: NQ 684 file-dates with one gap (2025-04-18), ES 372 from 2025-07-03, QQQ
+options 548. **All three series now run to 2026-09-09** — the futures/options gap that
+opened in July 2026 is closed.
 
 Things to know before you query:
 

@@ -10,7 +10,7 @@ This is the reference for writing a strategy: what you can subscribe to, what fi
 |---|---|---|---|---|
 | ES | **no adapter yet** | 307 | 2025-07-04 | 2026-09-09 |
 | NQ | `nq-trades:NQ` | 564 | 2024-07-04 | 2026-09-09 |
-| QQQ.OPT | **no adapter yet** | 512 | 2024-07-03 | 2026-07-20 |
+| QQQ.OPT | **no adapter yet** | 548 | 2024-07-03 | 2026-09-09 |
 
 Sessions are **assemblable CME sessions**, not files. A session runs 17:00 CT on the previous day to 16:00 CT, so it straddles exactly two UTC-day objects and a session exists only when both are present. File counts are larger and using one as N is wrong.
 
@@ -128,4 +128,4 @@ Each row carries `session`, `instrument_id`, `raw_symbol`, `volume`, `trades`, `
 
 ---
 
-Generated from `data/manifest.json` (2,595 objects, schema 3).
+Generated from `data/manifest.json` (2,703 objects, schema 3).

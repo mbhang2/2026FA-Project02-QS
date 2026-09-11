@@ -274,7 +274,7 @@ def test_assemblable_session_counts(manifest):
     cov = manifest["instrument_coverage"]
     assert cov["NQ"]["sessions"]["assemblable"] == 564
     assert cov["ES"]["sessions"]["assemblable"] == 307
-    assert cov["QQQ.OPT"]["sessions"]["assemblable"] == 512
+    assert cov["QQQ.OPT"]["sessions"]["assemblable"] == 548
 
 
 def test_session_counts_are_not_file_date_counts(manifest):
@@ -297,19 +297,28 @@ def test_only_two_sessions_are_genuinely_lost(manifest):
 
 
 def test_gex_eligible_session_counts(manifest):
-    """511, not 512 and not 564.
+    """547, not 548 and not 564.
 
-    Two different reasons a futures session has no same-day options, and they must
-    not be collapsed: 16 are structural (CME equity futures trade while US equity
-    options are closed) and recur every year; 37 are simply past the end of OPRA
-    coverage, because `trades` was extended to 2026-09-09 and OPRA was not.
-    Extending OPRA recovers the second set and nothing recovers the first.
+    Both series now run to 2026-09-09, so the only futures sessions without
+    same-day options are the structural ones: days CME equity futures trade while
+    US equity options are closed -- Independence Day, Labor Day, Thanksgiving,
+    MLK, Presidents' Day, Memorial Day, Juneteenth, Good Friday. They recur every
+    year and nothing recovers them.
+
+    The second category the previous version of this test pinned -- sessions past
+    the end of OPRA coverage, because `trades` had been extended and OPRA had not
+    -- is now **empty**, and the assertion that it is empty is the point. A
+    non-zero count here means the two series have drifted apart again, which is
+    what cost 37 GEX-eligible sessions last time and would cost them silently.
     """
     ov = manifest["coverage_overlap_trades_vs_opra"]
     last_opra = manifest["instrument_coverage"]["QQQ.OPT"]["last_date"]
-    assert ov["NQ"]["QQQ.OPT"]["sessions_with_same_day_options"] == 511
-    assert ov["ES"]["QQQ.OPT"]["sessions_with_same_day_options"] == 261
-    for sym, structural in (("NQ", 16), ("ES", 9)):
+    assert ov["NQ"]["QQQ.OPT"]["sessions_with_same_day_options"] == 547
+    assert ov["ES"]["QQQ.OPT"]["sessions_with_same_day_options"] == 297
+    for sym, structural in (("NQ", 17), ("ES", 10)):
         missing = ov[sym]["QQQ.OPT"]["futures_sessions_without_options"]
         assert len([d for d in missing if d <= last_opra]) == structural
-        assert len([d for d in missing if d > last_opra]) == 37
+        assert [d for d in missing if d > last_opra] == [], (
+            "futures sessions past the end of OPRA coverage: the two series have "
+            "drifted apart again"
+        )

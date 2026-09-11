@@ -489,10 +489,27 @@ class ScoreTuple:
 
 
 class Strategy(Protocol):
-    """`on_tick` is optional: a strategy that never subscribes to ticks does not
-    need to define it, and the engine does not call what is not there."""
+    """The shape of `src/strategies/current.py`. See `docs/agent/strategy-api.md`.
 
-    def setup(self, ctx: Any) -> Sequence[Subscription]: ...
-    def on_bars(self, ev: BarEvent, ctx: Any) -> Sequence[Action]: ...
-    def on_fill(self, ev: FillEvent, ctx: Any) -> Sequence[Action]: ...
-    def on_lifecycle(self, ev: LifecycleEvent, ctx: Any) -> Sequence[Action]: ...
+    Every callback takes the context and returns nothing. Actions are *queued*
+    through the context -- `ctx.buy(...)` records an intent and the engine applies
+    it after the callback returns -- so there is no return value to collect, and
+    the event is reached through the context too (`ctx.closed`, `ctx.fill`,
+    `ctx.tick`, `ctx.event`) rather than passed alongside it.
+
+    This declaration carried the pre-Task-5 shape until Task 12 -- `(ev, ctx)`
+    arguments and a returned `Sequence[Action]` -- which nothing imported and so
+    nothing caught. It was the only statement of the contract in the code, and it
+    described an interface that had not existed for four tasks. The engine
+    refuses the old shape at run time (`setup()` returning subscriptions raises),
+    but a stale type is still the wrong thing for a reader to find.
+
+    `on_tick` is optional: a strategy that never subscribes to ticks does not need
+    to define it, and the engine only looks for it when one did. The other three
+    are always called.
+    """
+
+    def setup(self, ctx: Any) -> None: ...
+    def on_bars(self, ctx: Any) -> None: ...
+    def on_fill(self, ctx: Any) -> None: ...
+    def on_lifecycle(self, ctx: Any) -> None: ...

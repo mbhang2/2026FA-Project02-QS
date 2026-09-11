@@ -36,7 +36,7 @@ from src.core.types import (  # noqa: E402
     SUBSCRIPTION_KINDS,
     Bar,
     Side,
-    Tick,
+    TickEvent,
 )
 
 MANIFEST = REPO_ROOT / "data" / "manifest.json"
@@ -78,15 +78,19 @@ BAR_NOTES = {
                "span a session boundary.",
 }
 
+# `TickEvent`, not the internal `Tick`: this table describes what `on_tick(ctx)`
+# actually hands you as `ctx.tick`. The two carry the same fields with the same
+# meanings, and documenting the one the strategy never sees would be a small lie
+# that costs someone an afternoon.
 TICK_NOTES = {
     "ts": "Nanoseconds UTC of the trade.",
-    "price": "Trade price.",
-    "size": "Contracts traded.",
-    "session": "Session index within the dataset, counting from 0.",
     "seq": "Position in the walk, assigned by the engine. Ticks with equal `ts` "
            "keep their feed order through it.",
+    "price": "Trade price.",
+    "size": "Contracts traded.",
     "side": "Aggressor. See below — this is the field that gets silently "
             "mishandled.",
+    "session": "Session index within the dataset, counting from 0.",
 }
 
 
@@ -254,8 +258,10 @@ def render() -> str:
         "",
         "## Tick fields",
         "",
+        "What `on_tick(ctx)` hands you as `ctx.tick`:",
+        "",
     ]
-    L += _field_table(Tick, TICK_NOTES)
+    L += _field_table(TickEvent, TICK_NOTES)
     L += [
         "",
         "### `side` — the one to get right",

@@ -51,6 +51,15 @@ jobs:
       - name: Agent data reference is current
         run: python scripts/gen_agent_data.py --check
 
+      # Already covered by `pytest -q` above; run again as a named step so a
+      # stale document fails with a legible name rather than as one dot in 260.
+      # Cheap -- these three files take about a second.
+      - name: Docs match the code (architecture map, agent docs, worked examples)
+        run: |
+          pytest -q tests/test_architecture_doc.py
+          pytest -q tests/test_agent_docs.py
+          pytest -q tests/test_examples.py
+
       - name: Check the entry points import cleanly
         run: |
           python -c "import sys; sys.path.insert(0, 'scripts'); import inventory, probe_dbn"

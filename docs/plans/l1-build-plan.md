@@ -200,8 +200,11 @@ src/strategies/current.py        THE ONLY THING THE AGENT WRITES
 runs/                            trial ledger, append-only JSONL, committed
 data/                            committed artifacts;  data/cache/ gitignored
 tests/                           offline in CI; live tests skip without credentials
-docs/agent/data.md               generated; what the RESEARCH agent may subscribe to
-docs/design/                     simulator interface, metric, generated context API
+docs/agent/                      the RESEARCH agent's context
+  data.md                          generated; what it may subscribe to
+  strategy-api.md                  how to write a strategy; examples run in CI
+docs/design/                     architecture, simulator interface, metric,
+                                 generated context API
 docs/plans/                      this document
 docs/datasets/                   one file per adapter
 docs/setup/                      onboarding

@@ -62,14 +62,16 @@ Subscribing to the same interval twice returns the same subscription. When sever
 
 ## Tick fields
 
+What `on_tick(ctx)` hands you as `ctx.tick`:
+
 | field | type | meaning |
 |---|---|---|
 | `ts` | `int (ns UTC)` | Nanoseconds UTC of the trade. |
+| `seq` | `int` | Position in the walk, assigned by the engine. Ticks with equal `ts` keep their feed order through it. |
 | `price` | `float` | Trade price. |
 | `size` | `int` | Contracts traded. |
-| `session` | `int` | Session index within the dataset, counting from 0. |
-| `seq` | `int` | Position in the walk, assigned by the engine. Ticks with equal `ts` keep their feed order through it. |
 | `side` | `Side \| None` | Aggressor. See below — this is the field that gets silently mishandled. |
+| `session` | `int` | Session index within the dataset, counting from 0. |
 
 ### `side` — the one to get right
 

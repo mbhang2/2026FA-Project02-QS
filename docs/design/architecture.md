@@ -201,6 +201,24 @@ eligible strictly after *S*. Without it a strategy fills at the close of the bar
 it just saw, which is a clean one-bar lookahead producing beautiful and entirely
 fake results.
 
+**Nothing mutable crosses the context boundary.** Every accessor returns a
+primitive, a tuple, a frozen dataclass or a read-only view — `ctx.working_orders`
+hands back frozen `OrderView` copies, never the engine's `Order` objects, because
+assigning to one of those used to work and skipped the queue, the cap, the T+1
+rule and the run record. `tests/test_boundary.py` asserts it over the whole
+surface by introspection rather than accessor by accessor.
+
+**One resolver for subscription ids.** `"5m"`, `"300s"`, the `Subscription` and
+the canonical `time:300000000000` all name the same thing, and an id that was
+never subscribed raises rather than reading as absent. `ctx.bars` holds the bars
+that closed *in this callback*, so `if "5m" in ctx.bars:` is both the obvious
+expression and the correct one.
+
+**The strategy is validated against `types.Strategy` before the walk.** One error
+listing every missing or malformed callback, at wiring time. The protocol is
+load-bearing: a test reads the engine's source and asserts the methods it
+declares are exactly the ones the engine calls.
+
 **The intent queue** (`context.py`). A callback's `ctx.buy(...)` records intent
 and returns the id the order *will* have; the engine applies the queue after the
 callback returns. The action cap — 64 per callback — is checked at queue time, so
@@ -323,6 +341,11 @@ What it owns:
 - **The optional fill-model spread.** A second full run under the opposite fill
   model, opt-in per profile, because a candidate that collapses between the two
   is telling you where its edge comes from.
+- **`warmup_sessions` against the calendar embargo.** Warmup reaches backward
+  from the first session of the split and the embargo is the gap in front of it,
+  so warmup within the embargo reaches only into embargoed sessions. Checked once
+  the dataset is built — the earliest point both numbers exist — and stood down
+  for a dataset whose calendar is not pre-registered yet.
 
 ---
 
@@ -367,6 +390,7 @@ the bucket and skip when `R2_*` is absent.
 | `tests/test_nq_adapter.py` | The NQ adapter against the committed manifest |
 | `tests/test_data_integrity.py` | Coverage counts, corrections, anomalies |
 | `tests/test_layout.py` | The build-time / run-time boundary |
+| `tests/test_boundary.py` | The context boundary: immutability by introspection, subscription-id resolution, the protocol against the engine, warmup against the embargo |
 | `tests/test_architecture_doc.py` | That this document names every module |
 | `tests/test_examples.py` | That every worked example in `docs/agent/strategy-api.md` is byte-identical to a file in `tests/examples/` and actually runs |
 | `tests/test_live_bucket.py` | The bucket itself, when credentials are present |

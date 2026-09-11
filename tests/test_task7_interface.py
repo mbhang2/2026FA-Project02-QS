@@ -158,7 +158,7 @@ def test_subscribing_to_ticks_without_an_on_tick_callback_is_an_error():
     class Silent(Base):
         subs = ("tick",)
 
-    with pytest.raises(TypeError, match="no on_tick"):
+    with pytest.raises(TypeError, match=r"on_tick\(ctx\) is missing"):
         Engine(ds(), Silent(), split=Split.VALIDATION).run()
 
 

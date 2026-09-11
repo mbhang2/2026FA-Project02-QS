@@ -87,7 +87,11 @@ class Recorder:
 # --------------------------------------------------------------------------- #
 def test_history_view_refuses_to_reach_forward():
     v = HistoryView([10, 20, 30])
-    assert v[-1] == 30 and v[0] == 10 and v[:3] == [10, 20, 30]
+    # Slices come back as tuples, not lists: nothing handed to a strategy is
+    # mutable, and a returned list invites the habit even where the particular
+    # list is a harmless copy.
+    assert v[-1] == 30 and v[0] == 10 and v[:3] == (10, 20, 30)
+    assert v.last(2) == (20, 30)
     with pytest.raises(LookaheadError):
         v[3]            # the element that does not exist yet
     with pytest.raises(LookaheadError):

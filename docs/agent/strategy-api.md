@@ -118,7 +118,7 @@ Declared in `setup()`, once each.
 
 ```python
 def setup(self, ctx):
-    self.fast = ctx.subscribe("5m")          # keep what it returns
+    ctx.subscribe("5m")
     ctx.subscribe("30s")
     ctx.subscribe("1h", emit_empty=True)
     ctx.subscribe("tick")
@@ -143,16 +143,12 @@ slower** than the same strategy on bars alone. That cost lands on the wall-clock
 budget, where it is visible. Subscribe to ticks when you need them, not by
 default.
 
-**Subscription ids are canonical**, not the string you typed: `"5m"` becomes
-`time:300000000000`, and `"tick"` stays `"tick"`. `ctx.history()` and
-`ctx.bars[...]` accept either the human string or the `Subscription` object, but
-`ctx.closed_ids()` returns canonical ids — so to ask "did my 5m bar close?",
-compare against the `sub_id` of the subscription you kept:
-
-```python
-if self.fast.sub_id in ctx.closed_ids():
-    ...
-```
+**Name a subscription however you subscribed to it.** `"5m"`, the equivalent
+`"300s"`, the `Subscription` object, or the canonical id `time:300000000000` —
+every entry point that takes a subscription resolves all four to the same thing.
+An id you never subscribed to **raises** with a message listing the ones that
+exist; it does not quietly read as absent. `ctx.sub_id("5m")` returns the
+canonical form for the rare code that wants it.
 
 Subscribing to the same interval twice returns the same subscription. Subscribing
 to it twice with different `emit_empty` raises.
@@ -161,6 +157,16 @@ to it twice with different `emit_empty` raises.
 1m bar both close at 09:35 you get a single `on_bars` with both in `ctx.closed`.
 This is deliberate: separate callbacks would make the ordering between them a
 hidden variable that changes your results and is recorded nowhere.
+
+So "did *my* bar close?" is a real question, and `ctx.bars` answers it:
+
+```python
+def on_bars(self, ctx):
+    if "5m" not in ctx.bars:
+        return                    # the 1m bar closed, not the 5m one
+    bar = ctx.bars["5m"]          # the bar that closed just now
+    history = ctx.history("5m")   # every 5m bar that has closed, ever
+```
 
 ---
 
@@ -175,14 +181,20 @@ hidden variable that changes your results and is recorded nowhere.
 | `ctx.session` | session index within the dataset, counting from 0 |
 | `ctx.actionable` | `False` during warmup: bars are real, orders are ignored |
 | `ctx.last_price` | the most recent trade price |
-| `ctx.history(sub)` | closed bars for a subscription, oldest first |
-| `ctx.bars[sub]` | the most recent closed bar — shorthand for `ctx.history(sub)[-1]` |
+| `ctx.history(sub)` | every closed bar for a subscription, oldest first |
+| `ctx.bars` | the bars that closed **in this callback**; `"5m" in ctx.bars`, `ctx.bars["5m"]` |
+| `ctx.closed` | the same bars as a tuple; `ctx.closed_ids()` for their canonical ids |
+| `ctx.sub_id(sub)` | the canonical id of a subscription you declared |
 | `ctx.ticks()` | every trade event so far — **only populated if you subscribed to ticks** |
 
 `ctx.history(...)` returns a `HistoryView`. It supports `len()`, iteration,
 indexing (`view[0]`, `view[-1]`), slicing, and `view.last(k)` for the `k` most
-recent oldest-first. Short history is a legitimate state — check `len()` rather
-than catching an exception.
+recent oldest-first. Slices and `last()` come back as tuples. Short history is a
+legitimate state — check `len()` rather than catching an exception.
+
+`ctx.bars` is empty outside `on_bars`: nothing closed at the instant of a fill,
+a tick or a session open. For the most recent close whenever it happened, use
+`ctx.history("5m")[-1]`.
 
 Bar and tick field names and meanings are in `docs/agent/data.md`. The short
 version: a bar carries `open_ts` and `close_ts` and you are called at `close_ts`;
@@ -199,7 +211,8 @@ unknown arrives as `None`.
 | `ctx.unrealized_pnl` | mark-to-market on the open position, `0.0` when flat |
 | `ctx.equity` | `realized_pnl + unrealized_pnl` |
 | `ctx.working_order_ids` | ids of every order that can still do something, sorted |
-| `ctx.working_orders` | the `Order` objects themselves |
+| `ctx.working_orders` | read-only `OrderView` copies of those orders |
+| `ctx.find_orders(...)` | the working orders matching `tag=`, `order_type=`, `side=`, `parent_id=` |
 | `ctx.fills` | fills since the previous callback |
 
 You are allowed to know how you are doing — you need it for risk logic and you
@@ -207,17 +220,23 @@ would have it live. You are not allowed to know how you are being *judged*: ther
 is no score, no metric, no split identity and no seed on `ctx`, and
 `src.core.scoring` refuses to be imported from a strategy.
 
-`ctx.working_orders` gives you the live order objects; read `order_id`,
-`order_type`, `side`, `size`, `filled_size`, `remaining`, `limit_price`,
-`stop_price`, `tif`, `status`, `reduce_only`, `parent_id`, `oco_group`.
+An `OrderView` is a frozen copy, never the engine's own object, and carries
+`id`, `tag`, `side`, `size`, `filled`, `remaining`, `order_type`, `limit_price`,
+`stop_price`, `tif`, `parent_id` and `status`. Assigning to one raises. Change an
+order with `ctx.modify()` — the only route that goes through the queue, the
+action cap and the T+1 rule, and the only one the run record sees.
 
-**Change an order with `ctx.modify()`, never by assigning to its attributes.**
-These are the engine's own objects and assigning to one *works* — which is
-precisely the problem. It skips the intent queue, the action cap and the T+1
-rule, and nothing about it reaches the run record, so the trial is no longer the
-trial that was logged. This is the one rule in this document that the simulator
-does not enforce for you; treat what comes back from `ctx.working_orders` as read
-only.
+**Find your own orders by tag rather than by an id you stored.** A stored id goes
+stale the moment the order expires — a DAY order dies at the session close — and
+acting on a stale id raises:
+
+```python
+stops = ctx.find_orders(tag="protective-stop")
+if stops:
+    ctx.modify(stops[0].id, trigger=new_level)
+
+legs = ctx.find_orders(parent_id=entry_id)   # both halves of a bracket
+```
 
 ---
 
@@ -235,6 +254,8 @@ ctx.close(**kw)            # flatten with a market order; raises if flat
 ctx.modify(order_id, limit=None, trigger=None, size=None)
 ctx.cancel(order_id)
 ctx.cancel_all()
+
+ctx.find_orders(tag=..., order_type=..., side=..., parent_id=...)   # read
 ```
 
 `buy` and `sell` take the same keywords:
@@ -405,9 +426,9 @@ no-op is a trial that looks like a result.
 
 | Message | Cause |
 |---|---|
+| `MyStrategy does not match the strategy contract:` followed by one line per problem — `on_fill(ctx) is missing`, `on_bars(self) does not take exactly one argument (the context)` | a callback is absent or has the wrong signature. Checked once before the walk, so all four fail the same legible way; `on_tick(ctx) is missing` is the same error when you subscribed to ticks |
 | `setup() declared no subscriptions; call ctx.subscribe('5m')` | `setup()` subscribed to nothing |
 | `setup() returns nothing now; declare subscriptions with ctx.subscribe('5m') instead of returning them` | you returned a list of subscriptions |
-| `the strategy subscribed to ticks but has no on_tick(ctx) callback` | `subscribe("tick")` without `on_tick` |
 | `cannot read '5min' as an interval; use e.g. '30s', '5m', '1h', '1d'` | unparseable interval |
 | `interval must be positive, got -1` | a non-positive integer interval |
 | `time:300000000000 already subscribed with emit_empty=False` | same interval, two different `emit_empty` |
@@ -421,8 +442,9 @@ no-op is a trial that looks like a result.
 |---|---|
 | `this context belonged to an earlier callback. Read what you need while the callback is running, or keep it on self.` | you stored `ctx` and used it later |
 | `the setup context is only valid during setup(); subscribe there, and keep anything you fitted on self.` | same, for the setup context |
-| `no subscription 'time:60000000000'; declare it in setup() (have: [...])` | `ctx.history()` or `ctx.bars[...]` for something you never subscribed to — a **`KeyError`**, because you asked for a key that does not exist |
-| `no bar has closed yet for 'time:300000000000'; check len(ctx.history(...))` | `ctx.bars[...]` before the first close — reachable from `on_fill`, `on_tick` and `on_lifecycle` (the session open fires before any bar), never from `on_bars` |
+| `no subscription 'time:60000000000' (from '1m'); declare it in setup(). Subscribed: [...]` | any id you never subscribed to, through `ctx.history()`, `ctx.bars[...]`, `ctx.sub_id()` or `in ctx.bars` |
+| `'time:300000000000' did not close in this callback; test with \`if '5m' in ctx.bars:\` first, or use ctx.history(...) for the most recent close whenever it happened` | `ctx.bars[...]` for a subscription that did not close at this instant |
+| `subscriptions are not declared until setup() runs` | resolving an id before `setup()` has finished |
 
 ### Reaching forward — `LookaheadError`
 
@@ -622,18 +644,20 @@ class Strategy:
 ### 3. Multi-timeframe
 
 Five-minute entries filtered by the previous session's daily bar. Two
-subscriptions, so "did *my* bar close?" becomes a real question — and the answer
-is to keep what `ctx.subscribe()` returned and compare `sub_id` against
-`ctx.closed_ids()`.
+subscriptions, so "did *my* bar close?" becomes a real question — and
+`if "5m" in ctx.bars:` is the answer.
 
 ```python
 # tests/examples/03_multi_timeframe.py
 """Five-minute entries, filtered by the previous session's daily bar.
 
 Two subscriptions. When both close at the same instant they arrive in **one**
-callback, so "did my fast bar close?" is a real question -- and the way to ask
-it is to keep what `ctx.subscribe()` returned. Subscription ids are canonical
-strings (`time:300000000000`), not the text you typed.
+callback, so "did my fast bar close?" is a real question -- and `ctx.bars` is
+the answer: it holds exactly the bars that closed in this callback, addressed by
+whatever you subscribed with.
+
+`ctx.history(...)` is the other half: the closed bars for a subscription
+whenever they closed, which is what a decision reads.
 """
 
 
@@ -646,27 +670,23 @@ class Strategy:
         self.size = size
         self.stop_offset = stop_offset
         self.target_offset = target_offset
-        self.fast_sub = None
-        self.slow_sub = None
 
     def setup(self, ctx):
-        # Keep the Subscription objects: they carry the canonical id, and every
-        # read method accepts one directly.
-        self.fast_sub = ctx.subscribe(self.fast)
+        ctx.subscribe(self.fast)
         # A daily subscription on this data closes once per session -- a session
         # is shorter than a day, and any bar still open at the session close is
         # flushed there.
-        self.slow_sub = ctx.subscribe(self.slow)
+        ctx.subscribe(self.slow)
 
     def on_bars(self, ctx):
         # Act only when the fast bar closed. The slow one closing is a session
         # boundary, not a decision point.
-        if self.fast_sub.sub_id not in ctx.closed_ids():
+        if self.fast not in ctx.bars:
             return
         if not ctx.actionable or ctx.position or ctx.working_order_ids:
             return
 
-        daily = ctx.history(self.slow_sub)
+        daily = ctx.history(self.slow)
         if not len(daily):
             return                      # no completed session yet
         prev = daily[-1]
@@ -674,7 +694,7 @@ class Strategy:
         if bias == 0:
             return
 
-        fast = ctx.history(self.fast_sub)
+        fast = ctx.history(self.fast)
         if len(fast) < self.lookback:
             return
         window = fast.last(self.lookback)
@@ -699,8 +719,9 @@ class Strategy:
 
 A resting limit entry with hand-rolled protection: cancel the entry if it goes
 stale, arm a stop the moment it fills, trail it, and flatten on time. Note where
-each decision lives, and note the gap the bracket in examples 1–3 was closing for
-you.
+each decision lives, note the gap the bracket in examples 1–3 was closing for
+you, and note that it keeps no order ids — every order is found by tag, so a DAY
+expiry at the session close cannot leave it holding a stale one.
 
 ```python
 # tests/examples/04_manage_from_on_fill.py
@@ -714,7 +735,15 @@ the exit is a bar decision again.
 The gap this example is really about: between placing an entry and its fill you
 are unprotected, and `on_fill` is the first instant you can do anything. A
 bracket closes that gap inside the engine; managing it yourself does not.
+
+Orders are found by **tag** rather than by an id kept on `self`. A stored id goes
+stale the moment the order expires -- a DAY order dies at the session close --
+and acting on a stale id raises. `ctx.find_orders(tag=...)` asks the engine what
+is working right now, so there is no stale state to get wrong.
 """
+
+ENTRY = "limit-entry"
+STOP = "protective-stop"
 
 
 class Strategy:
@@ -727,9 +756,6 @@ class Strategy:
         self.trail = trail          # tighten the stop by this much per bar held
         self.patience = patience    # bars to wait for the entry before pulling it
         self.max_hold = max_hold    # bars to hold before flattening
-        self.entry_id = None
-        self.stop_id = None
-        self.entry_price = None
         self.age = 0
 
     def setup(self, ctx):
@@ -744,72 +770,59 @@ class Strategy:
             self._manage_open_position(ctx)
             return
 
-        if self.entry_id is not None:
-            # Still waiting on the resting entry. Pull it if it has gone stale:
-            # a limit that never fills is not free, it is an exposure to a
-            # move you no longer have a view on.
+        resting = ctx.find_orders(tag=ENTRY)
+        if resting:
+            # Still waiting on the entry. Pull it if it has gone stale: a limit
+            # that never fills is not free, it is an exposure to a move you no
+            # longer have a view on.
             if self.age > self.patience:
-                ctx.cancel(self.entry_id)
-                self.entry_id = None
+                ctx.cancel(resting[0].id)
             return
 
         # Flat, nothing working: rest a new bid under the market.
-        self.entry_id = ctx.buy(
+        ctx.buy(
             size=self.size,
             type="limit",
             limit=ctx.last_price - self.offset,
             tif="DAY",            # cancelled at the session close, not carried
-            tag="limit-entry",
+            tag=ENTRY,
         )
-        # buy() returns None when the action cap dropped the call. Treat that as
-        # "no order exists" rather than assuming an id.
         self.age = 0
 
     def _manage_open_position(self, ctx):
+        stops = ctx.find_orders(tag=STOP)
         if self.age >= self.max_hold:
-            if self.stop_id is not None:
-                ctx.cancel(self.stop_id)   # cancel before flattening
-                self.stop_id = None
-            ctx.close()                    # market, reduce_only, tagged "close"
+            for order in stops:
+                ctx.cancel(order.id)     # cancel before flattening
+            ctx.close()                  # market, reduce_only, tagged "close"
             return
-        if self.stop_id is not None:
+        if stops:
             # Trail the protective stop upward, never down.
             new_stop = ctx.last_price - self.stop + self.trail * self.age
-            ctx.modify(self.stop_id, trigger=min(new_stop, ctx.last_price - 0.25))
+            ctx.modify(stops[0].id, trigger=min(new_stop, ctx.last_price - 0.25))
 
     def on_fill(self, ctx):
         fill = ctx.fill
-        if fill.order_id == self.entry_id:
-            # The first instant protection can exist. reduce_only so it can
-            # only ever close this position, never open a new one.
-            self.entry_id = None
-            self.entry_price = fill.price
+        if fill.position == 0:
             self.age = 0
-            self.stop_id = ctx.sell(
-                size=fill.size,
+            return
+        if not ctx.find_orders(tag=STOP):
+            # The first instant protection can exist. reduce_only so it can only
+            # ever close this position, never open a new one.
+            self.age = 0
+            ctx.sell(
+                size=abs(fill.position),
                 type="stop",
                 trigger=fill.price - self.stop,
                 tif="GTC",         # survives the session close, like the position
                 reduce_only=True,
-                tag="protective-stop",
+                tag=STOP,
             )
-        elif fill.order_id == self.stop_id or fill.position == 0:
-            self.stop_id = None
-            self.entry_price = None
-            self.age = 0
 
     def on_lifecycle(self, ctx):
-        ev = ctx.event
-        # A DAY order dies at the session close. If the entry went with it, the
-        # id is stale and reusing it would raise on the next cancel().
-        if ev.order_id is not None and ev.order_id == self.entry_id:
-            if str(ev.kind) in ("day_expired", "gtd_expired", "cancel_confirmed",
-                                "oco_cancelled", "order_rejected"):
-                self.entry_id = None
-        if ev.order_id is not None and ev.order_id == self.stop_id:
-            if str(ev.kind) in ("day_expired", "gtd_expired", "cancel_confirmed",
-                                "oco_cancelled", "order_rejected"):
-                self.stop_id = None
+        # Nothing to clean up: no order id is kept across callbacks, so a DAY
+        # expiry at the session close cannot leave this strategy holding one.
+        pass
 ```
 
 ### 5. A tick-subscribed strategy
@@ -907,6 +920,7 @@ class Strategy:
 - Every `ctx.history(...)` read checks `len()` first.
 - `ctx.actionable` is checked before every order.
 - Order ids from `buy()`/`sell()` are checked for `None`.
-- Stale order ids are cleared in `on_lifecycle`.
+- Orders are found with `ctx.find_orders(tag=...)` rather than by an id kept
+  across callbacks, which goes stale at the first expiry.
 - If you touch `tick.side`, the `None` branch is written and says what it means.
 - Nothing recomputes the whole history on every callback.

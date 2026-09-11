@@ -114,6 +114,39 @@ def strategy_digest() -> str:
     )
 
 
+def check_warmup_against_embargo(profile_name: str, warmup: int, dataset) -> None:
+    """`warmup_sessions` may not exceed the calendar's embargo.
+
+    Warmup reaches backward from the first session of the served split. The
+    embargo is the gap the calendar leaves in front of that split. So as long as
+    warmup does not exceed the embargo, warmup reaches only into embargoed
+    sessions and never into the previous split's scored data -- the embargo is
+    enforced by construction rather than by anyone remembering the relationship.
+    Exceed it and features are fitted on sessions the split was supposed to be
+    separated from, which is leakage that nothing else in the harness would
+    catch.
+
+    Checked here rather than at YAML load because the embargo belongs to the
+    dataset's calendar, and the earliest point both numbers exist is after the
+    dataset is built. A dataset with no pre-registered calendar yet -- the NQ
+    adapter, until `config/calendars/` is written -- has no embargo to check
+    against, and the check stands down rather than inventing one.
+    """
+    try:
+        calendar = dataset.calendar()
+    except NotImplementedError:
+        return
+    if warmup > calendar.embargo_sessions:
+        sys.exit(
+            f"profile {profile_name!r} sets warmup_sessions={warmup}, but the "
+            f"calendar embargo is {calendar.embargo_sessions} session(s). Warmup "
+            "reaches backward from the start of the split, so a warmup longer "
+            "than the embargo fits features on data the split was separated "
+            "from. Lower the warmup or raise the embargo -- deliberately, in the "
+            "pre-registered calendar."
+        )
+
+
 def load_strategy():
     """Imported by name, never handed in: the entry point decides what runs."""
     import importlib
@@ -181,6 +214,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.unlock_holdout:
         dataset.unlock_holdout(args.unlock_holdout)
 
+    warmup_sessions = profile.get("warmup_sessions", 0)
+    check_warmup_against_embargo(profile_name, warmup_sessions, dataset)
+
     strategy = load_strategy()
     ledger_path = args.ledger or (REPO_ROOT / cfg.get("ledger", "runs/ledger.jsonl"))
 
@@ -190,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
         strategy,
         split=split,
         fill_model=fill_model,
-        warmup_sessions=profile.get("warmup_sessions", 0),
+        warmup_sessions=warmup_sessions,
         seed=seed,
         wall_clock_budget_s=profile.get("wall_clock_budget_s"),
     )

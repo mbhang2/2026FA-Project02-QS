@@ -14,6 +14,7 @@ from .context import (
     LifecycleContext,
     SetupContext,
     TickContext,
+    canonical_sub_id,
     parse_interval,
 )
 from .engine import (
@@ -22,6 +23,7 @@ from .engine import (
     RunRecord,
     aggregate,
     git_sha,
+    validate_strategy,
 )
 from .fills import FavorableFill, FillModel, UnfavorableFill, get_fill_model
 from .view import BarHistory, HistoryView
@@ -45,7 +47,9 @@ __all__ = [
     "TickContext",
     "UnfavorableFill",
     "aggregate",
+    "canonical_sub_id",
     "get_fill_model",
     "git_sha",
     "parse_interval",
+    "validate_strategy",
 ]

@@ -23,6 +23,7 @@ clean one-bar lookahead producing beautiful and entirely fake results.
 
 from __future__ import annotations
 
+import inspect
 import time
 
 import numpy as np
@@ -32,11 +33,13 @@ from typing import Any, Iterable, Sequence
 from .bars import BarBuilder
 from .context import (
     BarContext,
+    ContextError,
     FillContext,
     IntentQueue,
     LifecycleContext,
     SetupContext,
     TickContext,
+    canonical_sub_id,
 )
 from ..data.dataset import Dataset
 from .fills import FillModel, check_capabilities, get_fill_model
@@ -56,12 +59,15 @@ from ..types import (
     Order,
     OrderStatus,
     OrderType,
+    OrderView,
     Side,
     Split,
+    Strategy,
     Submit,
     Subscription,
     Tick,
     TickEvent,
+    TickStrategy,
     TimeInForce,
     Ts,
 )
@@ -140,6 +146,65 @@ def git_sha() -> str:
         return r.stdout.strip() or "unknown"
     except Exception:  # pragma: no cover - git absent is not a run failure
         return "unknown"
+
+
+def _callbacks_of(proto) -> tuple[str, ...]:
+    """The callback names a Protocol declares itself, in declaration order.
+
+    `vars()` rather than `dir()`, so `TickStrategy` reports only `on_tick` and
+    not the four it inherits -- the two sets are used separately.
+    """
+    return tuple(
+        name for name, obj in vars(proto).items()
+        if not name.startswith("_") and callable(obj)
+    )
+
+
+REQUIRED_CALLBACKS = _callbacks_of(Strategy)
+TICK_CALLBACKS = _callbacks_of(TickStrategy)
+
+
+def validate_strategy(strategy: Any, *, needs_ticks: bool = False) -> None:
+    """Check the loaded strategy against `types.Strategy` before the walk starts.
+
+    One error listing everything wrong, raised at wiring time. Previously
+    `on_tick` was checked with `hasattr` and produced a clear message, while
+    `on_fill` and `on_lifecycle` were reached by attribute access mid-run and
+    produced an `AttributeError` at the first session open -- three callbacks,
+    two failure modes, one of them unreadable. The protocol is the declaration
+    and this is what makes it load-bearing rather than decorative.
+
+    Signatures are checked too, because the shape changed once already: the
+    protocol still declared the pre-Task-5 `(ev, ctx)` form four tasks after the
+    engine stopped calling it that way.
+    """
+    wanted = list(REQUIRED_CALLBACKS)
+    if needs_ticks:
+        wanted += [n for n in TICK_CALLBACKS if n not in wanted]
+
+    problems: list[str] = []
+    for name in wanted:
+        fn = getattr(strategy, name, None)
+        if fn is None:
+            problems.append(f"  {name}(ctx) is missing")
+            continue
+        if not callable(fn):
+            problems.append(f"  {name} is {type(fn).__name__}, not a method")
+            continue
+        try:
+            inspect.signature(fn).bind(object())
+        except TypeError as exc:
+            problems.append(
+                f"  {name}{inspect.signature(fn)} does not take exactly one "
+                f"argument (the context): {exc}"
+            )
+    if problems:
+        raise TypeError(
+            f"{type(strategy).__name__} does not match the strategy contract:\n"
+            + "\n".join(problems)
+            + "\n\nEvery callback takes the context and returns nothing. See "
+            "docs/agent/strategy-api.md."
+        )
 
 
 def aggregate(ticks: Iterable[Tick], sub: Subscription, dataset: Any) -> list[Bar]:
@@ -262,6 +327,36 @@ class Engine:
             )
         return self.record
 
+    # ---- what the context resolves through --------------------------------- #
+    def resolve_sub(self, sub) -> str:
+        """Canonical id for a subscription the strategy declared.
+
+        Every strategy-facing entry point that takes a subscription comes through
+        here, so there is exactly one place that decides what an id means and
+        exactly one error for an id that means nothing. An unknown id used to
+        read as absent -- `"5m" in ctx.bars` was `False`, `ctx.history("1m")`
+        raised a bare `KeyError` -- and a strategy that silently never trades is
+        a trial spent learning nothing.
+        """
+        sid = canonical_sub_id(sub)
+        known = getattr(self, "_sub_ids", None)
+        if known is None:
+            raise ContextError("subscriptions are not declared until setup() runs")
+        if sid not in known:
+            raise ContextError(
+                f"no subscription {sid!r}"
+                + (f" (from {sub!r})" if str(sub) != sid else "")
+                + f"; declare it in setup(). Subscribed: {sorted(known)}"
+            )
+        return sid
+
+    def order_views(self) -> tuple[OrderView, ...]:
+        """Read-only copies of the working orders, in the engine's own order."""
+        return tuple(
+            OrderView.of(o, self._order_tags.get(oid, ""))
+            for oid, o in self._working.items()
+        )
+
     def _run_inner(self) -> None:
         warm = set(self.dataset.warmup_sessions(self.split, self.warmup_sessions))
 
@@ -270,6 +365,11 @@ class Engine:
             if self.split is not Split.TRAIN
             else []
         )
+        # Before setup() runs, so a missing on_fill is a wiring error rather than
+        # an AttributeError at the first session open. The tick callback is
+        # checked again below, once the subscriptions are known.
+        validate_strategy(self.strategy)
+
         setup_ctx = SetupContext(self.dataset, train)
         declared = self.strategy.setup(setup_ctx)
         setup_ctx._expire()
@@ -292,10 +392,12 @@ class Engine:
         self.subs = subs
         bar_subs = [s for s in subs if s.is_bars]
         self._tick_subscribed = any(not s.is_bars for s in subs)
-        if self._tick_subscribed and not hasattr(self.strategy, "on_tick"):
-            raise TypeError(
-                "the strategy subscribed to ticks but has no on_tick(ctx) callback"
-            )
+        if self._tick_subscribed:
+            # "the strategy subscribed to ticks but has no on_tick(ctx) callback"
+            # was the only legible callback error; it is now one case of the
+            # general check rather than a special one.
+            validate_strategy(self.strategy, needs_ticks=True)
+        self._sub_ids = frozenset(s.sub_id for s in subs)
         self.builders = {s.sub_id: BarBuilder(s) for s in bar_subs}
         self.history = BarHistory([s.sub_id for s in bar_subs])
 

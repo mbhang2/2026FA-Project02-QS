@@ -314,11 +314,15 @@ def test_close_with_no_position_says_so():
 
 
 def test_an_unknown_subscription_names_the_ones_that_exist():
+    """A ContextError, not a KeyError: every way of naming a subscription now
+    routes through one resolver, so there is one exception type for one mistake.
+    It used to depend on which entry point you happened to use -- `ctx.history`
+    raised a bare KeyError while `"15m" in ctx.bars` was silently False."""
     class Wrong(Base):
         def on_bars(self, ctx):
             ctx.history("15m")
 
-    with pytest.raises(KeyError, match="no subscription"):
+    with pytest.raises(ContextError, match="no subscription"):
         Engine(ds(), Wrong(), split=Split.VALIDATION).run()
 
 

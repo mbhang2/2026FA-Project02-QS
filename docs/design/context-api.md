@@ -66,7 +66,7 @@ expensive -- hundreds of thousands of callbacks a session -- and the
 wall-clock budget is what makes that an honest cost rather than a hidden
 one.
 
-#### `ctx.subscriptions() -> 'list[Subscription]'`
+#### `ctx.subscriptions() -> 'tuple[Subscription, ...]'`
 
 _(no docstring)_
 
@@ -74,7 +74,7 @@ _(no docstring)_
 
 Every train tick, in order.
 
-#### `ctx.train_bars(interval: 'str | int | Subscription') -> 'list[Bar]'`
+#### `ctx.train_bars(interval: 'str | int | Subscription') -> 'tuple[Bar, ...]'`
 
 Aggregate the train split at an arbitrary interval, through the same
 code path the live walk uses.
@@ -89,7 +89,18 @@ Reads and writes shared by the three run-time callbacks.
 
 - **`ctx.actionable`** — False during warmup: the bars are real, the orders would not be.
 - **`ctx.average_entry_price`**
-- **`ctx.bars`** — `ctx.bars["5m"]` -- the most recent closed bar for a subscription.
+- **`ctx.bars`** — The bars that closed **in this callback**, addressed by subscription.
+  `if "5m" in ctx.bars:` is the question a multi-timeframe strategy
+  actually has, and it is now the expression that answers it. It used to
+  mean "the most recent closed bar", which made the obvious membership test
+  true whenever any 5m bar had ever closed -- and made the obvious
+  `"5m" in ctx.closed_ids()` silently false, because ids are canonical.
+  A strategy that never trades and says nothing about why is the worst
+  failure mode there is.
+  For the most recent closed bar, whenever it closed, use
+  `ctx.history("5m")[-1]`.
+- **`ctx.closed`** — Every bar that closed at this instant, in one callback.
+  Empty in every callback but `on_bars`.
 - **`ctx.equity`**
 - **`ctx.fills`** — Fills since the previous callback.
 - **`ctx.last_price`**
@@ -100,7 +111,10 @@ Reads and writes shared by the three run-time callbacks.
 - **`ctx.ts`** — Nanoseconds since the epoch, UTC.
 - **`ctx.unrealized_pnl`**
 - **`ctx.working_order_ids`**
-- **`ctx.working_orders`**
+- **`ctx.working_orders`** — Read-only copies, in the order the engine holds them.
+  Copies rather than the engine's own `Order` objects: assigning to one of
+  those worked, and bypassed the queue, the cap, the T+1 rule and the run
+  record.
 
 ### Calls
 
@@ -120,9 +134,27 @@ _(no docstring)_
 
 Flatten the current position with a market order.
 
+#### `ctx.closed_ids() -> 'tuple[str, ...]'`
+
+_(no docstring)_
+
+#### `ctx.find_orders(*, tag: 'str | None' = None, order_type: 'str | OrderType | None' = None, side: 'str | Side | None' = None, parent_id: 'int | None' = None) -> 'tuple[OrderView, ...]'`
+
+Working orders matching every filter given. Empty tuple if none do.
+
+`ctx.find_orders(tag="protective-stop")` is the intended way to get hold
+of an order you placed earlier, and `parent_id=` is how you reach the two
+legs of a bracket the engine armed for you. Tracking ids by hand across
+lifecycle events also works, and is exactly where a strategy holding an
+id through a DAY expiry crashes.
+
 #### `ctx.history(sub: 'str | Subscription') -> 'HistoryView[Bar]'`
 
 Closed bars for a subscription, oldest first.
+
+Takes whatever you subscribed with (`"5m"`), the canonical id, an
+equivalent spelling (`"300s"`), or the `Subscription` itself. An id you
+never subscribed to raises `ContextError`.
 
 Reaching at or beyond the current instant raises `LookaheadError` -- the
 newest readable element is the bar that just closed.
@@ -134,6 +166,15 @@ _(no docstring)_
 #### `ctx.sell(size: 'int' = 1, **kw) -> 'int | None'`
 
 _(no docstring)_
+
+#### `ctx.sub_id(sub: 'str | Subscription') -> 'str'`
+
+The canonical id of a subscription you declared.
+
+`ctx.sub_id("5m")` -> `"time:300000000000"`. Ids are canonical, not the
+text you typed, and an unknown one raises rather than quietly not
+matching -- so this is here for the rare code that needs the canonical
+form, not as something every strategy has to remember to call.
 
 #### `ctx.ticks() -> 'HistoryView[TickEvent]'`
 
@@ -149,15 +190,9 @@ raises, exactly as for bars.
 
 Delivered when one or more subscribed bars close at this timestamp.
 
-### Reads
-
-- **`ctx.closed`** — Every bar that closed at this timestamp, in one callback.
-
-### Calls
-
-#### `ctx.closed_ids() -> 'tuple[str, ...]'`
-
-_(no docstring)_
+`ctx.closed`, `ctx.closed_ids()` and `ctx.bars` are on the base context and
+are empty everywhere else, so the same expression reads correctly in every
+callback rather than existing in one of them.
 
 ## `FillContext`
 

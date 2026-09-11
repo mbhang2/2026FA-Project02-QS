@@ -51,7 +51,7 @@ class HistoryView(Generic[T]):
                     f"slice stop {stop} reaches past the current instant "
                     f"({n} closed observations)"
                 )
-            return self._items[key]
+            return tuple(self._items[key])
         if key < 0:
             if -key > n:
                 raise LookaheadError(
@@ -65,13 +65,17 @@ class HistoryView(Generic[T]):
             )
         return self._items[key]
 
-    def last(self, k: int = 1) -> list[T]:
+    def last(self, k: int = 1) -> tuple[T, ...]:
         """The k most recent closed observations, oldest first. Short history
         returns what exists rather than raising -- a warmup shortfall is a
-        legitimate state, unlike a reach forward."""
+        legitimate state, unlike a reach forward.
+
+        A tuple, like every slice of this view: nothing a strategy is handed
+        should be mutable, and a returned list invites the habit even when the
+        particular list is a harmless copy."""
         if k <= 0:
-            return []
-        return self._items[-k:]
+            return ()
+        return tuple(self._items[-k:])
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid
         return f"HistoryView(n={len(self._items)})"

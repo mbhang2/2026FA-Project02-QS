@@ -344,6 +344,57 @@ class Order:
         return self.status in (OrderStatus.PENDING, OrderStatus.WORKING)
 
 
+@dataclass(frozen=True, slots=True)
+class OrderView:
+    """What a strategy sees of an order. A copy, never the engine's object.
+
+    `ctx.working_orders` used to hand back the live `Order` instances. Assigning
+    to one worked: `order.size = 99` took effect immediately, skipping the intent
+    queue, the action cap and the T+1 rule, and reaching the run record nowhere.
+    The trial that ran was then not the trial that was logged, which is the one
+    thing the ledger exists to prevent.
+
+    Every field is a primitive, an enum or `None`. `frozen=True` protects only
+    the top level -- a frozen dataclass holding a list is still mutable through
+    that list -- so there are deliberately no containers here.
+
+    `tag` is carried because a strategy could not otherwise recognise its own
+    orders: the tag reached the blotter but lived in an engine-private map, so
+    "which of these is my protective stop?" had to be answered by inspecting
+    order types and prices, or by tracking ids by hand across lifecycle events.
+    """
+
+    id: int
+    tag: str
+    side: Side
+    size: int
+    filled: int
+    remaining: int
+    order_type: OrderType
+    limit_price: float | None
+    stop_price: float | None
+    tif: TimeInForce
+    parent_id: int | None
+    status: OrderStatus
+
+    @classmethod
+    def of(cls, order: "Order", tag: str = "") -> "OrderView":
+        return cls(
+            id=order.order_id,
+            tag=tag,
+            side=order.side,
+            size=order.size,
+            filled=order.filled_size,
+            remaining=order.remaining,
+            order_type=order.order_type,
+            limit_price=order.limit_price,
+            stop_price=order.stop_price,
+            tif=order.tif,
+            parent_id=order.parent_id,
+            status=order.status,
+        )
+
+
 # --------------------------------------------------------------------------- #
 # actions
 # --------------------------------------------------------------------------- #
@@ -504,12 +555,26 @@ class Strategy(Protocol):
     refuses the old shape at run time (`setup()` returning subscriptions raises),
     but a stale type is still the wrong thing for a reader to find.
 
-    `on_tick` is optional: a strategy that never subscribes to ticks does not need
-    to define it, and the engine only looks for it when one did. The other three
-    are always called.
+    `on_tick` is not here: it is required only of a strategy that subscribes to
+    ticks, and `TickStrategy` below is that shape. Splitting them is what lets
+    the engine state the requirement precisely instead of checking `hasattr` for
+    one callback and reaching for the others mid-run.
+
+    This declaration is **load-bearing**: `engine.validate_strategy()` checks the
+    loaded strategy against it before the walk starts, and a test asserts the
+    methods declared here are exactly the ones the engine calls. It carried the
+    pre-Task-5 shape until Task 12 -- `(ev, ctx)` arguments returning a
+    `Sequence[Action]` -- which nothing imported and so nothing caught, for four
+    tasks.
     """
 
     def setup(self, ctx: Any) -> None: ...
     def on_bars(self, ctx: Any) -> None: ...
     def on_fill(self, ctx: Any) -> None: ...
     def on_lifecycle(self, ctx: Any) -> None: ...
+
+
+class TickStrategy(Strategy, Protocol):
+    """A strategy that declared `ctx.subscribe("tick")`, and so must handle them."""
+
+    def on_tick(self, ctx: Any) -> None: ...

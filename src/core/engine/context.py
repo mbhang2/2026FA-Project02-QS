@@ -38,6 +38,7 @@ from ..types import (
     Modify,
     Order,
     OrderType,
+    OrderView,
     Side,
     Submit,
     Subscription,
@@ -148,10 +149,12 @@ class BaseContext:
         "_session",
         "_fills",
         "_actionable",
+        "_closed",
     )
 
     def __init__(self, engine, queue: IntentQueue, *, ts: Ts, seq: int,
-                 session: int, fills: Sequence[FillEvent], actionable: bool):
+                 session: int, fills: Sequence[FillEvent], actionable: bool,
+                 closed: Sequence[Bar] = ()):
         self._engine = engine
         self._queue = queue
         self._active = True
@@ -160,6 +163,10 @@ class BaseContext:
         self._session = session
         self._fills = tuple(fills)
         self._actionable = actionable
+        # Empty outside on_bars: nothing closed at this instant. Carried on the
+        # base so `ctx.bars` means the same thing in every callback rather than
+        # existing in one of them.
+        self._closed = tuple(closed)
 
     # ---- lifetime ---------------------------------------------------------- #
     def _expire(self) -> None:
@@ -207,9 +214,42 @@ class BaseContext:
         return self._engine.last_price
 
     @property
-    def working_orders(self) -> tuple[Order, ...]:
+    def working_orders(self) -> tuple[OrderView, ...]:
+        """Read-only copies, in the order the engine holds them.
+
+        Copies rather than the engine's own `Order` objects: assigning to one of
+        those worked, and bypassed the queue, the cap, the T+1 rule and the run
+        record.
+        """
         self._check()
-        return tuple(self._engine._working.values())
+        return self._engine.order_views()
+
+    def find_orders(
+        self,
+        *,
+        tag: str | None = None,
+        order_type: str | OrderType | None = None,
+        side: str | Side | None = None,
+        parent_id: int | None = None,
+    ) -> tuple[OrderView, ...]:
+        """Working orders matching every filter given. Empty tuple if none do.
+
+        `ctx.find_orders(tag="protective-stop")` is the intended way to get hold
+        of an order you placed earlier, and `parent_id=` is how you reach the two
+        legs of a bracket the engine armed for you. Tracking ids by hand across
+        lifecycle events also works, and is exactly where a strategy holding an
+        id through a DAY expiry crashes.
+        """
+        self._check()
+        want_type = OrderType(order_type) if isinstance(order_type, str) else order_type
+        want_side = Side(side) if isinstance(side, str) else side
+        return tuple(
+            o for o in self._engine.order_views()
+            if (tag is None or o.tag == tag)
+            and (want_type is None or o.order_type is want_type)
+            and (want_side is None or o.side is want_side)
+            and (parent_id is None or o.parent_id == parent_id)
+        )
 
     @property
     def working_order_ids(self) -> tuple[int, ...]:
@@ -255,20 +295,60 @@ class BaseContext:
         self._check()
         return self._engine.tick_history
 
+    def sub_id(self, sub: str | Subscription) -> str:
+        """The canonical id of a subscription you declared.
+
+        `ctx.sub_id("5m")` -> `"time:300000000000"`. Ids are canonical, not the
+        text you typed, and an unknown one raises rather than quietly not
+        matching -- so this is here for the rare code that needs the canonical
+        form, not as something every strategy has to remember to call.
+        """
+        self._check()
+        return self._engine.resolve_sub(sub)
+
     def history(self, sub: str | Subscription) -> HistoryView[Bar]:
         """Closed bars for a subscription, oldest first.
+
+        Takes whatever you subscribed with (`"5m"`), the canonical id, an
+        equivalent spelling (`"300s"`), or the `Subscription` itself. An id you
+        never subscribed to raises `ContextError`.
 
         Reaching at or beyond the current instant raises `LookaheadError` -- the
         newest readable element is the bar that just closed.
         """
         self._check()
-        return self._engine.history[_sub_id(sub)]
+        return self._engine.history[self._engine.resolve_sub(sub)]
 
     @property
-    def bars(self) -> "_LatestBars":
-        """`ctx.bars["5m"]` -- the most recent closed bar for a subscription."""
+    def closed(self) -> tuple[Bar, ...]:
+        """Every bar that closed at this instant, in one callback.
+
+        Empty in every callback but `on_bars`.
+        """
         self._check()
-        return _LatestBars(self)
+        return self._closed
+
+    def closed_ids(self) -> tuple[str, ...]:
+        self._check()
+        return tuple(b.sub_id for b in self._closed)
+
+    @property
+    def bars(self) -> "_ClosedBars":
+        """The bars that closed **in this callback**, addressed by subscription.
+
+        `if "5m" in ctx.bars:` is the question a multi-timeframe strategy
+        actually has, and it is now the expression that answers it. It used to
+        mean "the most recent closed bar", which made the obvious membership test
+        true whenever any 5m bar had ever closed -- and made the obvious
+        `"5m" in ctx.closed_ids()` silently false, because ids are canonical.
+        A strategy that never trades and says nothing about why is the worst
+        failure mode there is.
+
+        For the most recent closed bar, whenever it closed, use
+        `ctx.history("5m")[-1]`.
+        """
+        self._check()
+        return _ClosedBars(self)
 
     # ---- writes ------------------------------------------------------------ #
     def buy(self, size: int = 1, **kw) -> int | None:
@@ -419,8 +499,14 @@ class BaseContext:
             self._queue.add(Cancel(order_id=oid))
 
 
-class _LatestBars:
-    """`ctx.bars["5m"]`. Separate from `ctx.history` so the common case is short."""
+class _ClosedBars:
+    """`ctx.bars` -- the bars that closed in this callback, by subscription.
+
+    A read-only mapping. Membership and lookup both resolve the id through the
+    engine, so an id that was never subscribed raises instead of reading as
+    absent: a never-subscribed id is a bug, and a bug that presents as "no bar"
+    costs trials before anyone works out why nothing traded.
+    """
 
     __slots__ = ("_ctx",)
 
@@ -428,21 +514,37 @@ class _LatestBars:
         self._ctx = ctx
 
     def __getitem__(self, sub: str | Subscription) -> Bar:
-        h = self._ctx.history(sub)
-        if not len(h):
-            raise ContextError(
-                f"no bar has closed yet for {_sub_id(sub)!r}; check len(ctx.history(...))"
-            )
-        return h[-1]
+        sid = self._ctx.sub_id(sub)
+        for bar in self._ctx.closed:
+            if bar.sub_id == sid:
+                return bar
+        raise ContextError(
+            f"{sid!r} did not close in this callback; test with "
+            f"`if {sub!r} in ctx.bars:` first, or use ctx.history(...) for the "
+            "most recent close whenever it happened"
+        )
 
     def __contains__(self, sub: str | Subscription) -> bool:
-        try:
-            return len(self._ctx.history(sub)) > 0
-        except KeyError:
-            return False
+        sid = self._ctx.sub_id(sub)
+        return any(bar.sub_id == sid for bar in self._ctx.closed)
+
+    def __len__(self) -> int:
+        return len(self._ctx.closed)
+
+    def __iter__(self):
+        return iter(self._ctx.closed_ids())
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging aid
+        return f"ClosedBars({list(self._ctx.closed_ids())})"
 
 
-def _sub_id(sub: str | Subscription) -> str:
+def canonical_sub_id(sub: str | Subscription) -> str:
+    """Spelling to canonical id. Does **not** check the id was subscribed.
+
+    Engine-side only: every strategy-facing entry point goes through
+    `Engine.resolve_sub`, which canonicalises here and then refuses anything that
+    was not declared.
+    """
     if isinstance(sub, Subscription):
         return sub.sub_id
     s = str(sub).strip()
@@ -470,23 +572,18 @@ class TickContext(BaseContext):
 
 
 class BarContext(BaseContext):
-    """Delivered when one or more subscribed bars close at this timestamp."""
+    """Delivered when one or more subscribed bars close at this timestamp.
+
+    `ctx.closed`, `ctx.closed_ids()` and `ctx.bars` are on the base context and
+    are empty everywhere else, so the same expression reads correctly in every
+    callback rather than existing in one of them.
+    """
 
     __slots__ = ("_event",)
 
     def __init__(self, engine, queue, *, event: BarEvent, **kw):
-        super().__init__(engine, queue, **kw)
+        super().__init__(engine, queue, closed=event.bars, **kw)
         self._event = event
-
-    @property
-    def closed(self) -> tuple[Bar, ...]:
-        """Every bar that closed at this timestamp, in one callback."""
-        self._check()
-        return self._event.bars
-
-    def closed_ids(self) -> tuple[str, ...]:
-        self._check()
-        return tuple(b.sub_id for b in self._event.bars)
 
 
 class FillContext(BaseContext):
@@ -578,15 +675,15 @@ class SetupContext:
         self._subs.append(sub)
         return sub
 
-    def subscriptions(self) -> list[Subscription]:
-        return list(self._subs)
+    def subscriptions(self) -> tuple[Subscription, ...]:
+        return tuple(self._subs)
 
     def ticks(self):
         """Every train tick, in order."""
         self._check()
         return tuple(self._train_ticks)
 
-    def train_bars(self, interval: str | int | Subscription) -> list[Bar]:
+    def train_bars(self, interval: str | int | Subscription) -> tuple[Bar, ...]:
         """Aggregate the train split at an arbitrary interval, through the same
         code path the live walk uses."""
         self._check()
@@ -601,4 +698,4 @@ class SetupContext:
             raise ContextError(
                 "train_bars() aggregates; for raw train events use ctx.ticks()"
             )
-        return aggregate(self._train_ticks, sub, self._dataset)
+        return tuple(aggregate(self._train_ticks, sub, self._dataset))

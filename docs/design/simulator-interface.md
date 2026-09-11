@@ -197,6 +197,8 @@ class Strategy:
         self.model = fit(ctx.train_bars("5m"))
 
     def on_bars(self, ctx: BarContext) -> None:
+        if "5m" not in ctx.bars:
+            return
         bar = ctx.bars["5m"]
         if self.signal(bar) > 0 and not ctx.position:
             self.oid = ctx.buy(size=1, stop=bar.low - 25, target=bar.close + 100)
@@ -205,10 +207,25 @@ class Strategy:
     def on_lifecycle(self, ctx: LifecycleContext) -> None: ...
 ```
 
-**Reads.** `ctx.bars[sub]` (the bar that just closed), `ctx.history(sub)` (a
-`HistoryView` that raises on reaching forward), `ctx.position`, `ctx.working_orders`,
-`ctx.fills` (since the previous callback), `ctx.last_price`, `ctx.ts` / `ctx.now`,
-`ctx.session`, `ctx.realized_pnl`, `ctx.unrealized_pnl`, `ctx.equity`.
+**Reads.** `ctx.bars` (the bars that closed *in this callback*, by subscription —
+empty in every other callback), `ctx.history(sub)` (a `HistoryView` that raises on
+reaching forward), `ctx.position`, `ctx.working_orders` (frozen `OrderView` copies,
+never the engine's own objects), `ctx.find_orders(tag=...)`, `ctx.fills` (since the
+previous callback), `ctx.last_price`, `ctx.ts` / `ctx.now`, `ctx.session`,
+`ctx.realized_pnl`, `ctx.unrealized_pnl`, `ctx.equity`.
+
+Every accessor returns a primitive, a tuple, a frozen dataclass or a read-only
+view; `tests/test_boundary.py` walks the whole context surface by introspection
+and asserts it, so the next accessor added is covered without anyone remembering.
+`ctx.working_orders` used to hand back the engine's live `Order` objects, and
+assigning to one took effect — skipping the queue, the cap and the T+1 rule, and
+reaching the run record nowhere.
+
+**Naming a subscription.** `"5m"`, `"300s"`, the `Subscription`, or the canonical
+`time:300000000000` all resolve to the same thing, through one resolver. An id
+that was never subscribed raises and names the ones that exist, rather than
+reading as absent — a strategy that silently never trades is the worst failure
+mode available.
 
 **Writes.** `ctx.buy(...)`, `ctx.sell(...)`, `ctx.close()`, `ctx.modify(oid, ...)`,
 `ctx.cancel(oid)`. Order methods **return the order id** so modify and cancel have

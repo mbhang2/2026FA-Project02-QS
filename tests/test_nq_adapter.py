@@ -182,13 +182,27 @@ def test_the_digest_pins_the_bytes_not_the_clock(nq):
 
 
 @pytest.mark.live
-def test_the_split_calendar_is_not_invented_here(nq):
-    """It is pre-registered by a human before any outcome is observed, and it is
-    not written yet."""
-    with pytest.raises(NotImplementedError, match="pre-registered"):
-        nq.calendar()
-    with pytest.raises(NotImplementedError):
-        list(nq.ticks(Split.VALIDATION))
+def test_the_split_calendar_is_read_and_never_invented(nq):
+    """It is pre-registered by a human before any outcome is observed.
+
+    It was not written when this test was first put here, so the assertion was
+    that the adapter refuses. It is written now (Task 15), so the assertion is
+    that the adapter serves exactly what the file says and nothing else -- and
+    that removing the file returns it to refusing, with an exception type that
+    says "the human has not decided" rather than "this is broken".
+    """
+    from src.core.data.dataset import CalendarNotWritten
+
+    calendar = nq.calendar()
+    assert len(calendar.train) == SPLIT_SESSIONS["train"]
+    assert calendar.embargo_sessions == EMBARGO
+
+    from src.core.data.dataset import load_calendar
+
+    with pytest.raises(CalendarNotWritten, match="pre-registered"):
+        load_calendar(REPO_ROOT / "config" / "calendars" / "not-written.yaml",
+                      [dt.date.fromisoformat(d) for d in COVERAGE["dates"]])
+    assert issubclass(CalendarNotWritten, NotImplementedError)
 
 
 @pytest.mark.live

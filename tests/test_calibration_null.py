@@ -224,17 +224,27 @@ def test_the_null_holds_out_of_sample():
     half = len(pool) // 2
     a, b = pool[:half], pool[half:]
 
-    table = N.tabulate(a, trials=40_000, n_grid=(30, 50), seed=99)
+    block = N.measure_block_length(pool)["block_length"]
+    table = N.tabulate(a, trials=40_000, n_grid=(30, 50), seed=99,
+                       block_length=block)
     rng = np.random.default_rng(31337)
     for n in (30, 50):
-        draws = rng.choice(b, size=(120_000, n), replace=True)
+        draws = b[N._draw_indices(rng, b.size, n, 120_000, block)]
         scores = N._sortino(draws)
         for far in (0.05, 0.01, 0.001):
             t = table["table"]["sortino_per_session"][str(n)]["quantiles"][str(far)]
             measured = float((scores >= t).mean())
-            assert measured == pytest.approx(far, rel=0.6), (
+            # One-sided, and deliberately. The promise a threshold makes is an
+            # upper bound on false acceptance; delivering fewer false accepts
+            # than promised is conservatism, not failure. Requiring the rate to
+            # land *on* the promise would make the test fail whenever the two
+            # halves of the pool differ in character -- which, since Task 17 made
+            # the generator irregular, they do. What must never happen is the
+            # other direction.
+            assert measured <= far * 1.6, (
                 f"N={n}: threshold from one half of the pool promises far={far}, "
-                f"the held-out half measured {measured:.5f}"
+                f"the held-out half measured {measured:.5f} -- more false "
+                "acceptance than promised, which is the unsafe direction"
             )
 
 
@@ -306,9 +316,15 @@ def test_the_real_null_is_much_stricter_than_the_synthetic_one():
         pytest.skip("the real-data null has not been tabulated here")
     synthetic = N.threshold_for(0.001, 86, dataset="synthetic")
     real = N.threshold_for(0.001, 86, dataset="nq-trades:NQ")
-    assert synthetic == pytest.approx(0.0336, abs=0.02)
+    # Task 17 closed most of this gap from the synthetic side by making the
+    # generator irregular: the synthetic threshold rose from 0.0336 to about
+    # 0.18, which is most of the distance to the real one. The remaining
+    # difference is what a generator still cannot imitate, and it is why the
+    # null is measured per dataset rather than approximated by a better
+    # simulator.
+    assert 0.1 < synthetic < 0.3
     assert real > 0.4
-    assert real > 5 * max(synthetic, 0.01)
+    assert real > 2 * synthetic
 
 
 def test_the_task_15_score_reads_as_nothing_against_the_right_null():
@@ -318,8 +334,11 @@ def test_the_task_15_score_reads_as_nothing_against_the_right_null():
     if not NQ_NULL.exists():
         pytest.skip("the real-data null has not been tabulated here")
     score, n = 0.0076030169676602425, 86
-    assert N.far_for(score, n, dataset="synthetic") < 0.01
-    assert N.far_for(score, n, dataset="nq-trades:NQ") > 0.1
+    synthetic = N.far_for(score, n, dataset="synthetic")
+    real = N.far_for(score, n, dataset="nq-trades:NQ")
+    assert synthetic < 0.05, "the synthetic table still reads this as near-significant"
+    assert real > 0.1, "the real null should read it as nothing"
+    assert real > 10 * synthetic
 
 
 # --------------------------------------------------------------------------- #
@@ -389,3 +408,178 @@ def test_tabulating_the_null_on_anything_but_train_is_refused():
     for split in (Split.VALIDATION, Split.HOLDOUT):
         with pytest.raises(ValueError, match="training sessions only"):
             N.real_session_returns(Fake(), split=split)
+
+
+# --------------------------------------------------------------------------- #
+# the generator's irregularity, and what it is for
+# --------------------------------------------------------------------------- #
+class BarCountExit(ReferenceStrategy):
+    """The Task 16 bug, reintroduced deliberately.
+
+    Learns the session's length as the smallest *bar count* it has seen and
+    flattens two bars before that. On a dataset where every session is the same
+    length and every interval has ticks, this is indistinguishable from reading
+    the session's end. On anything else it is not, and the difference is the
+    whole argument for making the generator irregular.
+    """
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self._bars_this_session = 0
+        self._session_bars = None
+        self.min_session_bars_seen = None
+
+    def on_bars(self, ctx) -> None:
+        history = ctx.history(self.interval)
+        if not len(history):
+            return
+        last = history[-1]
+        self._ranges.append(last.high - last.low)
+
+        if ctx.session != self._session:
+            if self._session is not None and self._bars_this_session:
+                self._session_bars = (
+                    self._bars_this_session
+                    if self._session_bars is None
+                    else min(self._session_bars, self._bars_this_session)
+                )
+                self.min_session_bars_seen = self._session_bars
+            self._session = ctx.session
+            self._bars_this_session = 0
+        self._bars_this_session += 1
+
+        if (
+            self._session_bars is not None
+            and self._bars_this_session >= self._session_bars - 2
+        ):
+            if ctx.working_order_ids:
+                ctx.cancel_all()
+            if ctx.position:
+                ctx.close()
+            return
+        if ctx.position or ctx.working_order_ids or self._session_bars is None:
+            return
+        if len(self._ranges) < self.atr_window or last.close == last.open:
+            return
+        atr = sum(self._ranges) / len(self._ranges)
+        if atr <= 0:
+            return
+        stop = max(self.min_bracket, self.stop_atr * atr)
+        target = max(self.min_bracket, self.target_atr * atr)
+        (ctx.buy if last.close > last.open else ctx.sell)(
+            size=self.size, stop_offset=stop, target_offset=target, tag="entry"
+        )
+
+
+def _run_bar_count_exit(**spec):
+    strategy = BarCountExit()
+    dataset = SyntheticDataset(SyntheticSpec(
+        n_sessions=120, ticks_per_session=780, vol_per_tick=0.15, seed=5, **spec))
+    record = Engine(dataset, strategy, split=Split.VALIDATION,
+                    warmup_sessions=1).run()
+    walked = len(record.end_of_session_positions)
+    return strategy, record, walked
+
+
+def test_the_uniform_generator_cannot_see_the_bar_count_bug():
+    """The historical control. On the old generator the broken rule looks
+    perfect: the learned bar count never moves, because every session has the
+    same number of bars."""
+    strategy, record, _ = _run_bar_count_exit(uniform=True)
+    counts = strategy.min_session_bars_seen
+    assert counts is not None
+    left_open = [v for v in record.end_of_session_positions.values() if v != 0]
+    assert not left_open, "the uniform generator should strand nothing"
+
+
+def test_the_irregular_generator_catches_the_bar_count_bug():
+    """The acceptance test for making the generator irregular.
+
+    Two symptoms, both of which cost a task to find on real data:
+
+    * the learned bar count collapses, because a quiet session has few non-empty
+      bars and the rule takes a minimum -- so the strategy stops trading long
+      before the session ends, for the rest of the run;
+    * a session shorter than anything seen before strands a position, because the
+      trigger it is waiting for never arrives.
+
+    On the uniform generator neither happens. That is what made the bug invisible
+    for three tasks.
+    """
+    broken, broken_record, walked = _run_bar_count_exit()
+    correct, correct_record, _ = (
+        ReferenceStrategy(),
+        Engine(
+            SyntheticDataset(SyntheticSpec(n_sessions=120, ticks_per_session=780,
+                                           vol_per_tick=0.15, seed=5)),
+            ReferenceStrategy(), split=Split.VALIDATION, warmup_sessions=1,
+        ),
+        None,
+    )
+    correct_record = correct_record.run()
+
+    uniform_strategy, _, _ = _run_bar_count_exit(uniform=True)
+    assert broken.min_session_bars_seen < uniform_strategy.min_session_bars_seen, (
+        "the learned bar count did not collapse on irregular data; the empty "
+        "intervals are not thin enough to make bar count differ from length"
+    )
+
+    stranded = [v for v in broken_record.end_of_session_positions.values() if v != 0]
+    assert stranded, (
+        "the bar-count rule stranded nothing; either no session is shorter than "
+        "the running minimum or the exit margin is hiding it"
+    )
+    correct_stranded = [
+        v for v in correct_record.end_of_session_positions.values() if v != 0
+    ]
+    assert len(correct_stranded) < len(stranded) or (
+        len(correct_stranded) <= 1 and broken.min_session_bars_seen
+        < uniform_strategy.min_session_bars_seen
+    ), (
+        "reading ctx.session_end should do better than guessing at the session "
+        f"length: {len(correct_stranded)} vs {len(stranded)} stranded"
+    )
+
+
+def test_the_reference_strategy_is_flat_at_every_boundary_it_can_be():
+    """What `ctx.session_end` bought, and the one thing it cannot buy.
+
+    Reading the exchange's published close replaces three tasks of workarounds --
+    a bar count, a learned duration, and excluding early closes from the null
+    pool. Shortened sessions are no longer a special case: at a 30% early-close
+    rate nothing is stranded at all.
+
+    **The residual is not a defect.** A strategy can only exit if a trade follows
+    its decision, and the engine is tick-driven: a session whose last fourteen
+    minutes hold a single trade gives the exit rule one callback, on the final
+    tick, with nothing left to fill against. Nothing could have closed that
+    position -- there was no counterparty. So the assertion is that any session
+    left open had no opportunity, not that none is ever left open.
+    """
+    for spec in ({"uniform": True}, {"early_close_rate": 0.3}):
+        strategy = ReferenceStrategy()
+        record = Engine(
+            SyntheticDataset(SyntheticSpec(n_sessions=80, ticks_per_session=780,
+                                           vol_per_tick=0.15, seed=11, **spec)),
+            strategy, split=Split.VALIDATION, warmup_sessions=1,
+        ).run()
+        open_at_close = [v for v in record.end_of_session_positions.values() if v != 0]
+        assert not open_at_close, f"{spec}: {len(open_at_close)} sessions left open"
+        assert strategy.sessions_left_open == 0
+
+    dataset = SyntheticDataset(SyntheticSpec(
+        n_sessions=80, ticks_per_session=780, vol_per_tick=0.15, seed=11))
+    strategy = ReferenceStrategy()
+    record = Engine(dataset, strategy, split=Split.VALIDATION,
+                    warmup_sessions=1).run()
+    stranded = [int(k) for k, v in record.end_of_session_positions.items() if v != 0]
+    assert len(stranded) <= 2, f"{len(stranded)} of 80 sessions left open"
+    for session in stranded:
+        _, end = dataset.session_bounds(session)
+        margin = strategy.exit_margin_ns
+        tradeable = [t for t in dataset._session_ticks(session) if end - t.ts <= margin]
+        assert len(tradeable) <= 1, (
+            f"session {session} had {len(tradeable)} trades in its last "
+            "minutes and the position was still left open -- that is a defect, "
+            "not an absent counterparty"
+        )

@@ -24,27 +24,25 @@ of the five worst losses in the run was an overnight hold. Carrying overnight
 measures the generator's discontinuity, not the metric. A dataset whose price
 process is continuous across sessions would not need this.
 
-The session length is learned rather than assumed, and **learned as a duration
-rather than as a bar count**. Counting bars was wrong in a way only real data
-showed. Empty intervals are skipped unless `emit_empty` is set, so a bar count is
-a measure of *activity*, not of length: over the 384 NQ training sessions the
-running minimum collapsed from 276 bars to 102, because one quiet holiday session
-produced few non-empty bars. The strategy then stopped trading roughly two thirds
-of the way through every subsequent session, for the rest of the run, and on the
-synthetic generator -- where every interval has ticks and every session is the
-same length -- nothing could have shown it.
+**The session end is read, not guessed.** `ctx.session_end` is the exchange's
+published close for the session in progress, so the exit rule is one comparison:
+flatten when less than `exit_margin_ns` of the session remains. Everything else
+is gone.
 
-A duration is a property of the session. It does not move with how busy the
-session was.
+Two guesses preceded it, and both were wrong in ways only real data showed. The
+first counted bars between session opens -- but empty intervals are skipped, so a
+bar count measures *activity*, not length: over 384 NQ training sessions the
+running minimum collapsed from 276 bars to 102 because one quiet holiday session
+produced few non-empty bars, and the strategy then stopped trading two thirds of
+the way through every subsequent session for the rest of the run. The second
+learned the shortest *duration* seen, which is a real property of a session and
+still cannot help: every full CME session is 23 hours, so a shortened one never
+reaches the trigger, and 12 of 384 training sessions ended with a position open.
+Every one of them was an early close.
 
-**What this still cannot do.** A strategy cannot know that *this* session ends
-early until it has ended, and the engine does not tell it when the session
-closes. So the first session shorter than anything seen before can still strand a
-position, and one did: 2025-11-28, the half day after Thanksgiving. The
-tabulation excludes the sessions affected by a carry rather than pretending the
-apparatus is flat when it is not -- see `null.py`. Closing this properly needs the
-context to expose the session's end, which is an engine change and a separate
-task.
+No amount of learning fixes this, because the information is not in the past. A
+half day arrives without warning and is exactly when being caught long overnight
+matters.
 """
 
 from __future__ import annotations
@@ -73,10 +71,9 @@ class ReferenceStrategy:
         target_atr: float = 1.5,
         size: int = 1,
         min_bracket: float = 0.25,
-        # A duration, not a bar count: the point at which the strategy stops
-        # opening and flattens, measured back from the shortest session it has
-        # seen. Ten minutes is two 5m bars, which is what the bar-count version
-        # meant on a dataset where every interval had ticks.
+        # How much of the session to leave for the exit to fill in. Ten minutes
+        # is two 5m bars; it needs to be long enough that a market order queued
+        # on a bar close still has ticks to fill against.
         exit_margin_ns: int = 10 * 60 * NS_PER_SECOND,
     ):
         self.interval = interval
@@ -88,18 +85,20 @@ class ReferenceStrategy:
         self.exit_margin_ns = exit_margin_ns
         self._ranges: deque[float] = deque(maxlen=atr_window)
         self._session: int | None = None
-        self._session_open_ts: int | None = None
-        self._last_ts: int | None = None
-        self._min_duration_ns: int | None = None  # shortest session seen, learned
-        self.sessions_left_open = 0               # residual, reported by the rig
+        self._prev_close: float | None = None
+        self.sessions_left_open = 0   # should stay 0; the rig asserts it
 
     def setup(self, ctx) -> None:
-        ctx.subscribe(self.interval)
+        # `emit_empty` so the exit rule cannot be starved. Reading
+        # `ctx.session_end` tells the strategy when the session closes, but a
+        # callback is still needed to act on it, and a quiet tail to a session
+        # produces no bars at all -- so a position survived the boundary anyway,
+        # once in 120 sessions. An empty bar is the heartbeat: every interval
+        # arrives, whether or not anything traded in it.
+        ctx.subscribe(self.interval, emit_empty=True)
         self._ranges.clear()
         self._session = None
-        self._session_open_ts = None
-        self._last_ts = None
-        self._min_duration_ns = None
+        self._prev_close = None
         self.sessions_left_open = 0
 
     def on_bars(self, ctx) -> None:
@@ -107,39 +106,39 @@ class ReferenceStrategy:
         if not len(history):
             return
         last = history[-1]
-        self._ranges.append(last.high - last.low)
+        if last.tick_count:
+            # True range, not the bar's own high-low: a bar that opened away from
+            # the previous close, or a thin one whose range understates what the
+            # price actually did, would otherwise shrink the volatility estimate
+            # and tighten the bracket exactly when it should widen.
+            #
+            # Empty bars contribute nothing. They carry the previous close
+            # forward, so their range is zero and counting them would drag the
+            # estimate toward zero in precisely the quiet stretches that precede
+            # a volatile one.
+            prev_close = self._prev_close
+            self._prev_close = last.close
+            if prev_close is None:
+                self._ranges.append(last.high - last.low)
+            else:
+                self._ranges.append(
+                    max(last.high, prev_close) - min(last.low, prev_close)
+                )
 
         if ctx.session != self._session:
-            if self._session is not None and self._session_open_ts is not None:
-                duration = self._last_ts - self._session_open_ts
-                if duration > 0:
-                    self._min_duration_ns = (
-                        duration
-                        if self._min_duration_ns is None
-                        else min(self._min_duration_ns, duration)
-                    )
             self._session = ctx.session
-            self._session_open_ts = last.open_ts
-            # A position that survived the boundary is a session shorter than
-            # anything seen before. Flatten it at the first opportunity in the
-            # new session so the contamination stops at one carry, and count it
-            # so the tabulation can exclude what it touched.
+            # Nothing should ever survive a boundary now. Counted rather than
+            # assumed: the rig asserts this stays zero, and if it does not the
+            # exit margin is too short for the session's tick density.
             if ctx.position or ctx.working_order_ids:
                 self.sessions_left_open += 1
                 if ctx.working_order_ids:
                     ctx.cancel_all()
                 if ctx.position:
                     ctx.close()
-                self._last_ts = ctx.ts
                 return
-        self._last_ts = ctx.ts
 
-        late = (
-            self._min_duration_ns is not None
-            and self._session_open_ts is not None
-            and (ctx.ts - self._session_open_ts)
-            >= self._min_duration_ns - self.exit_margin_ns
-        )
+        late = ctx.session_end - ctx.ts <= self.exit_margin_ns
         if late:
             # Flat before the boundary. Cancel first: a bracket leg left working
             # after the position closes would open a new one.
@@ -151,8 +150,6 @@ class ReferenceStrategy:
 
         if ctx.position or ctx.working_order_ids:
             return  # one position at a time; the bracket does the exits
-        if self._min_duration_ns is None:
-            return  # session length not learned yet; warmup covers this
         if len(self._ranges) < self.atr_window:
             return  # the volatility estimate is not ready
         if last.close == last.open:

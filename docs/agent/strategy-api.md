@@ -179,6 +179,8 @@ def on_bars(self, ctx):
 | `ctx.ts` | nanoseconds since the epoch, UTC |
 | `ctx.now` | the same instant as a timezone-aware `datetime` |
 | `ctx.session` | session index within the dataset, counting from 0 |
+| `ctx.session_start` | when this session opened, nanoseconds UTC |
+| `ctx.session_end` | when this session **closes**, nanoseconds UTC — `ctx.session_end - ctx.ts` is the time you have left |
 | `ctx.actionable` | `False` during warmup: bars are real, orders are ignored |
 | `ctx.last_price` | the most recent trade price |
 | `ctx.history(sub)` | every closed bar for a subscription, oldest first |
@@ -361,6 +363,20 @@ closed observations, and reaching at or beyond the cursor raises
 `LookaheadError`. There is no API that returns a future bar, and that is the
 point: a prompt telling you to avoid lookahead does not prevent lookahead, an
 interface that cannot express it does.
+
+**Knowing when the session ends is not lookahead.** An exchange publishes its
+calendar in advance, so `ctx.session_end` is a fact about the schedule, not about
+the data — it says nothing about what happens between now and then. Use it: a
+strategy that guesses the session's length from what it has already seen is wrong
+on the first short session it meets, which is a half day, which is exactly when
+being caught long overnight costs something.
+
+Two things it cannot do for you. You still need a callback to act on — a session
+whose last twenty minutes hold no trades gives you nothing to exit on, and
+nothing to exit *against*. And an order queued on a bar close is eligible from
+the next tick, so leave a margin: `ctx.subscribe(interval, emit_empty=True)` gives
+you a callback every interval whether or not anything traded, which is the
+difference between exiting late and not exiting.
 
 **4. Warmup reaches backward; decisions never reach forward.** The harness may
 serve some sessions before the split's first scored session so your features can

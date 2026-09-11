@@ -214,6 +214,7 @@ def real_session_returns(
     fill_model: str = "unfavorable",
     warmup_sessions: int = 0,
     seed: int = 1,
+    exclude_early_closes: bool = True,
 ) -> tuple[list[float], dict]:
     """Per-session returns of the reference strategy on a real dataset.
 
@@ -246,7 +247,22 @@ def real_session_returns(
     record = engine.run()
 
     scored = engine.scored_sessions()
-    dropped = excluded_sessions(dataset, scored)
+    # Still on, and Task 17 established exactly why. The reference strategy now
+    # reads `ctx.session_end` and is flat at every boundary it has a counterparty
+    # for -- on the synthetic generator, including at a 30% early-close rate,
+    # nothing is stranded at all. On NQ the same 12 sessions are still stranded,
+    # because `NQDataset.session_bounds` computes 17:00 CT to 16:00 CT from the
+    # session date and does not know which dates close early. The strategy is
+    # told the session ends at 16:00, waits until 15:50, and the data stopped at
+    # noon.
+    #
+    # So this is not a workaround for a strategy that cannot read a clock; it is
+    # a workaround for a calendar that does not carry early-close *times*. The
+    # manifest publishes which dates close early but not when, and teaching the
+    # adapter the times is an adapter change. Until then the exclusion stands,
+    # and it stays structural -- from the exchange calendar, never from which
+    # sessions happened to strand a position.
+    dropped = excluded_sessions(dataset, scored) if exclude_early_closes else set()
     kept = [s for s in scored if s not in dropped]
     calendar = session_calendar(dataset, kept)
     pool = session_returns(engine.blotter, calendar)
@@ -269,9 +285,11 @@ def real_session_returns(
         "sessions_excluded": len(dropped),
         "sessions_in_pool": len(kept),
         "exclusion_rule": (
-            "early-close sessions and the session immediately after one. "
-            "Structural, from the exchange calendar in data/manifest.json, not "
-            "from which sessions stranded a position."
+            "early-close sessions and the session immediately after one; "
+            "structural, from the exchange calendar in data/manifest.json"
+            if exclude_early_closes
+            else "none: the reference strategy reads ctx.session_end and is flat "
+                 "at every boundary it has a counterparty for"
         ),
         "sessions_ending_with_a_position_open": len(left_open),
         "contaminated_sessions_remaining_in_pool": still_contaminated,

@@ -76,3 +76,25 @@ def test_the_generated_doc_lists_every_field_of_what_the_agent_receives():
                 f"{cls.__name__}.{f.name} is not in docs/agent/data.md; "
                 "run scripts/gen_agent_data.py"
             )
+
+
+def test_the_generated_data_reference_is_current():
+    """`gen_agent_data.py --check` was a CI step and not a test, so a stale
+    generated document failed the build but not `pytest` -- and pytest is where
+    people actually look. Same class of gap as everything else Task 17 closed: a
+    guard that does not guard where the work happens.
+
+    The context API reference has been checked this way since Task 5; this is the
+    other generator catching up.
+    """
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "scripts/gen_agent_data.py", "--check"],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    )
+    assert result.returncode == 0, (
+        result.stderr.strip()
+        or "docs/agent/data.md is stale; run scripts/gen_agent_data.py"
+    )

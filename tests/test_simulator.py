@@ -22,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
 from src.core.scoring.calibration import AcceptRule, acceptance_rate  # noqa: E402
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
+from src.core.scoring.calibration import ReferenceStrategy  # noqa: E402
 from src.core.types import (  # noqa: E402
     NS_PER_SECOND,
     Action,
@@ -61,6 +62,10 @@ class Recorder:
         self.subs = list(subs)
         self.submit_on_first_bar = submit_on_first_bar
         self.bar_events: list[BarEvent] = []
+        # When each event was *delivered*, which is not when the bars closed: an
+        # interval with no ticks in it closes when the next tick arrives, and on
+        # irregular data that can be several intervals later.
+        self.delivered_at: list[int] = []
         self.fills = []
         self.lifecycle = []
         self._submitted = False
@@ -70,7 +75,10 @@ class Recorder:
             ctx.subscribe(s)
 
     def on_bars(self, ctx) -> None:
-        self.bar_events.append(BarEvent(ts=ctx.ts, seq=ctx._seq, bars=ctx.closed))
+        self.bar_events.append(
+            BarEvent(ts=ctx.closed[0].close_ts, seq=ctx._seq, bars=ctx.closed)
+        )
+        self.delivered_at.append(ctx.ts)
         if self.submit_on_first_bar and not self._submitted and ctx.actionable:
             self._submitted = True
             ctx.buy(size=1, tag="probe")
@@ -157,19 +165,34 @@ def test_simultaneous_closes_arrive_in_one_callback():
         assert len({b.sub_id for b in ev.bars}) == len(ev.bars)
         assert [b.close_ts for b in ev.bars] == [ev.bars[0].close_ts] * len(ev.bars)
 
-    # and never two callbacks at the same timestamp
-    stamps = [ev.ts for ev in strat.bar_events]
-    assert len(stamps) == len(set(stamps)), "more than one BarEvent at a timestamp"
+    # One event per close, never two. The rule is about *closes*, not about
+    # callbacks: one tick arriving after a quiet stretch closes several intervals
+    # at once, and they closed at different instants, so they are delivered as
+    # separate events in the order they happened. What must never happen is two
+    # events claiming the same close, because then the ordering between the
+    # subscriptions inside them is a hidden variable -- which is the thing this
+    # rule exists to remove.
+    closes = [ev.ts for ev in strat.bar_events]
+    assert len(closes) == len(set(closes)), "two events claim the same close"
+    assert closes == sorted(closes), "closes delivered out of order"
+    for ev in strat.bar_events:
+        assert ev.ts == ev.bars[0].close_ts
 
 
 def test_bars_are_stamped_by_open_and_delivered_on_close():
     strat = Recorder(subs=("5m",))
     Engine(dataset(), strat, split=Split.VALIDATION).run()
-    for ev in strat.bar_events:
+    for ev, delivered in zip(strat.bar_events, strat.delivered_at):
         for b in ev.bars:
             assert b.close_ts > b.open_ts
-            assert b.close_ts - b.open_ts == M5.interval_ns
-            assert ev.ts >= b.close_ts, "delivered before it closed"
+            # A full interval, or less when the session ended inside one. The
+            # tail bar used to be stamped at the boundary it never reached, so it
+            # was delivered at the session close claiming to close later -- true
+            # of the one bar per session where a position is most likely open,
+            # and invisible while every synthetic session was an exact multiple
+            # of the bar interval.
+            assert b.close_ts - b.open_ts <= M5.interval_ns
+            assert delivered >= b.close_ts, "delivered before it closed"
 
 
 # --------------------------------------------------------------------------- #
@@ -378,27 +401,52 @@ def test_the_loss_tail_no_longer_widens_with_signal_strength():
     """
     import statistics as st
 
-    stats = {}
-    for sig in (0.0, 0.5, 1.0):
-        wins, losses = [], []
-        for seed in (1, 2):
-            eng = Engine(
-                SyntheticDataset(SyntheticSpec(n_sessions=175, ticks_per_session=390,
-                                               vol_per_tick=0.15, signal_strength=sig,
-                                               seed=seed)),
-                MomentumStrategy(), split=Split.VALIDATION, warmup_sessions=1,
-            )
-            eng.run()
-            closes = [r.realized_pnl - r.commission for r in eng.blotter.rows
-                      if r.realized_pnl != 0.0]
-            wins += [c for c in closes if c > 0]
-            losses += [c for c in closes if c <= 0]
-        stats[sig] = (st.mean(wins), st.mean(losses))
+    def shape(strategy, **spec):
+        stats = {}
+        for sig in (0.0, 0.5, 1.0):
+            wins, losses = [], []
+            for seed in (1, 2):
+                eng = Engine(
+                    SyntheticDataset(SyntheticSpec(
+                        n_sessions=175, ticks_per_session=390, vol_per_tick=0.15,
+                        signal_strength=sig, seed=seed, **spec)),
+                    strategy(), split=Split.VALIDATION, warmup_sessions=1,
+                )
+                eng.run()
+                closes = [r.realized_pnl - r.commission for r in eng.blotter.rows
+                          if r.realized_pnl != 0.0]
+                wins += [c for c in closes if c > 0]
+                losses += [c for c in closes if c <= 0]
+            stats[sig] = (st.mean(wins), st.mean(losses))
+        ratios = [w / abs(l) for w, l in stats.values()]
+        return stats, max(ratios) / min(ratios)
 
-    ratios = [w / abs(l) for w, l in stats.values()]
-    assert max(ratios) / min(ratios) < 1.1, (
+    stats, spread = shape(MomentumStrategy, uniform=True)
+    assert spread < 1.1, (
         f"the payoff shape moves with signal strength again: {stats}. "
         "If the generator stopped carrying price across sessions, that is why."
+    )
+
+    # And the part Task 17 added, because it changes the conclusion. Once the
+    # generator's volatility clusters the way NQ's does, the fixed bracket's loss
+    # tail widens with signal strength again -- mean win pinned by the bracket at
+    # 0.74 while the mean loss grows by about a third. Task 7's flattening was
+    # real but it was a property of a stationary world, not of the strategy.
+    #
+    # The vol-scaled reference is measurably less affected on the same data,
+    # which is the evidence for keeping it as the apparatus rather than a matter
+    # of taste.
+    irregular_stats, irregular_spread = shape(MomentumStrategy)
+    assert irregular_spread > 1.2, (
+        "the fixed bracket's loss tail no longer widens on irregular data. "
+        "Either the generator stopped clustering volatility or the bracket "
+        f"stopped being fixed: {irregular_stats}"
+    )
+    _, reference_spread = shape(ReferenceStrategy)
+    assert reference_spread < irregular_spread, (
+        f"the vol-scaled reference ({reference_spread:.2f}) is no better than the "
+        f"fixed bracket ({irregular_spread:.2f}) on irregular data, which is the "
+        "only reason it is the calibration apparatus"
     )
     losses = [abs(l) for _, l in stats.values()]
     assert max(losses) / min(losses) < 1.1, (

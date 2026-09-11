@@ -215,7 +215,7 @@ def aggregate(ticks: Iterable[Tick], sub: Subscription, dataset: Any) -> list[Ba
     for t in ticks:
         if t.session != session:
             if session is not None:
-                tail = builder.flush_session()
+                tail = builder.flush_session(dataset.session_bounds(session)[1])
                 if tail is not None:
                     out.append(tail)
             session = t.session
@@ -223,7 +223,7 @@ def aggregate(ticks: Iterable[Tick], sub: Subscription, dataset: Any) -> list[Ba
         out.extend(builder.bars_closed_by(t))
         builder.add(t)
     if session is not None:
-        tail = builder.flush_session()
+        tail = builder.flush_session(dataset.session_bounds(session)[1])
         if tail is not None:
             out.append(tail)
     return out
@@ -286,6 +286,13 @@ class Engine:
         self._avg_price = 0.0
         self.last_price = 0.0
         self._pending_events: list[LifecycleEvent] = []
+        # The current session's bounds, so a strategy can be flat before the
+        # close. An exchange calendar is published in advance, so knowing when
+        # today ends is not lookahead -- and without it a strategy cannot be
+        # reliably flat at a boundary, which cost the calibration apparatus a
+        # working exit rule for three tasks running.
+        self._session_start: Ts = 0
+        self._session_end: Ts = 0
         self._order_tags: dict[int, str] = {}
 
         self.action_cap_hits = 0
@@ -596,8 +603,26 @@ class Engine:
             for b in closed:
                 self.history._append(b)
             self.n_bars += len(closed)
-            ev = BarEvent(ts=tick.ts, seq=tick.seq, bars=tuple(closed))
-            self._dispatch("bars", ev, tick, actionable)
+            # One event per *close*, not per tick. A single tick after a quiet
+            # stretch closes several intervals at once, and they did not close
+            # together -- a 1m bar ending at 09:31 and another ending at 09:32
+            # are two instants, delivered in the order they happened. Lumping
+            # them into one event labelled with the tick's timestamp made
+            # `ctx.bars` claim two closes at the same moment and put a bar in
+            # history alongside one that closed a minute later.
+            #
+            # Bars that really do close together still arrive together, which is
+            # the property the single-callback rule exists to protect: the
+            # ordering between a 5m and a 1m close at the same instant stays out
+            # of the strategy's hands.
+            for bar_close in sorted({b.close_ts for b in closed}):
+                group = tuple(b for b in closed if b.close_ts == bar_close)
+                self._dispatch(
+                    "bars",
+                    BarEvent(ts=bar_close, seq=tick.seq, bars=group),
+                    tick,
+                    actionable,
+                )
 
         # the triggering tick belongs to the next bar
         for builder in self.builders.values():
@@ -609,25 +634,36 @@ class Engine:
 
     # ---- sessions ---------------------------------------------------------- #
     def _open_session(self, session: int, tick: Tick) -> None:
-        start, _ = self.dataset.session_bounds(session)
+        start, end = self.dataset.session_bounds(session)
+        self._session_start, self._session_end = start, end
         for builder in self.builders.values():
             builder.start_session(session, start)
         self._emit(LifecycleKind.SESSION_OPEN, tick.ts, tick.seq)
 
     def _close_session(self, session: int, seq: int, *, actionable: bool) -> None:
         _, close_ts = self.dataset.session_bounds(session)
-        tail = [b for bl in self.builders.values() if (b := bl.flush_session())]
+        tail = [b for bl in self.builders.values() if (b := bl.flush_session(close_ts))]
         if tail:
             tail.sort(key=lambda b: (b.close_ts, b.sub_id))
             for b in tail:
                 self.history._append(b)
             self.n_bars += len(tail)
-            self._dispatch(
-                "bars",
-                BarEvent(ts=close_ts, seq=seq, bars=tuple(tail)),
-                Tick(close_ts, self.last_price, 0, session, seq),
-                actionable,
-            )
+            # Grouped by close, not lumped together. A session flush can produce
+            # bars that closed at genuinely different instants -- a 1m interval
+            # that completed before the last tick arrived, and a 5m interval
+            # truncated by the session end -- and the whole point of one event
+            # per timestamp is that the bars inside it closed together. Putting
+            # two different closes in one event makes the same ordering a hidden
+            # variable that the rule exists to remove. Invisible while every
+            # session was an exact multiple of every interval.
+            for bar_close in sorted({b.close_ts for b in tail}):
+                group = tuple(b for b in tail if b.close_ts == bar_close)
+                self._dispatch(
+                    "bars",
+                    BarEvent(ts=bar_close, seq=seq, bars=group),
+                    Tick(bar_close, self.last_price, 0, session, seq),
+                    actionable,
+                )
 
         # DAY cancels; GTD cancels if it expires at or before the close; GTC and
         # unexpired GTD survive, brackets included, and so does the position. A

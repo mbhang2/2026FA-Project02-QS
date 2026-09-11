@@ -8,6 +8,24 @@ the loop calls. Neither is importable from `src.strategies` — a strategy that 
 compute its own objective can optimize a number it controls, so both refuse the
 import at import time and a static check over the strategy tree backs it up.
 
+## What is true now
+
+**This document is layered by task, and later sections supersede earlier ones.**
+It is kept that way on purpose — the reasoning that was wrong is evidence about
+how the gate was arrived at, and deleting it would leave conclusions with no
+argument behind them. But a reader needs to know which layer is current, so:
+
+| | current | superseded |
+|---|---|---|
+| **Metric** | Sortino on per-session returns, MAR 0, downside deviation over all N | a t-statistic on per-trade P&L (Task 3) |
+| **Accept rule** | a threshold read off the tabulated null for a stated false-acceptance rate | `ratio × √N ≥ 3.0`, kept only as a committed ablation |
+| **The null** | measured per dataset, on that dataset's own training sessions, with a stationary block bootstrap whose block length is measured | assumed parametric; then measured but only on synthetic data |
+| **The `inf` case** | closed — `MIN_DOWNSIDE_SESSIONS` with a Sharpe fallback that carries its own name and its own null | listed as an open question |
+| **Does the gate have a known error rate?** | **yes**, per dataset, held out and verified | no |
+
+Everything below the first horizontal rule is the record of how each of those
+was arrived at, in the order it happened.
+
 ## Why the placeholder was replaced
 
 Task 3 shipped a t-statistic on per-trade P&L, and the calibration sweep proved
@@ -69,13 +87,20 @@ distortion visible. Mark-to-market attribution needs a per-session close price
 the `Dataset` protocol does not yet expose; that is the right fix and it is not
 this task.
 
-### The accept rule
+### The accept rule *as it stood at Task 4* — superseded
+
+> **Superseded by the empirical rule.** `AcceptRule` now thresholds the score
+> against the tabulated null for a stated false-acceptance rate; the parametric
+> form below survives only as the committed ablation
+> `ablation-vol-scaled-parametric-rule.json`, which is what makes the comparison
+> possible. See *Calibration* below.
 
 `AcceptRule` thresholds `ScoreTuple.significance` — the ratio times `sqrt(N)` —
 at **3.0**, carried over from Task 3 unchanged. What changed is the statistic,
 not the threshold: moving the threshold to make a curve look monotone would hide
 a broken metric rather than fix one. `significance` is exact for Sharpe and an
-approximation for Sortino, and is labelled as such.
+approximation for Sortino, and is labelled as such — and measuring exactly what
+that approximation costs is what motivated the empirical null.
 
 ## Diagnostics — recorded, never in the objective
 
@@ -209,7 +234,10 @@ correction, and this is the size of the problem it has to solve.
   selective strategy is where it will show. `sessions_with_exposure` is recorded
   precisely so that comparison can be made rather than assumed.
 - **Mark-to-market attribution**, once `Dataset` exposes a per-session close.
-- **The `inf` case**, above.
+- ~~**The `inf` case**, above.~~ **Closed in Task 6** — see *The infinite-Sortino
+  guard*. Below `MIN_DOWNSIDE_SESSIONS` losing sessions the score falls back to
+  Sharpe, which is always defined, and the fallback carries its own name so it is
+  calibrated against its own null rather than Sortino's.
 
 ---
 
@@ -481,6 +509,36 @@ correct for synthetic runs, and the contrast is the evidence.
 changes, and block length 1 reproduces the i.i.d. resample exactly, to the same
 integers from the same generator state, so the old behaviour is a special case of
 the new code path rather than a parallel one.
+
+**Task 17: the generator was itself an assumption.** Every real-data defect found
+so far was invisible here for the same reason — the synthetic generator was
+uniform in exactly the ways markets are not. It is now irregular by default:
+variable session lengths with early closes, runs of intervals with no trade,
+and volatility clustering across sessions. The effect on the numbers above is
+large and in the expected direction:
+
+| `threshold_for(0.001, 86)` | uniform | irregular |
+|---|---|---|
+| synthetic | 0.0336 | **0.1506** |
+
+Most of the synthetic-versus-real gap was the generator's regularity, not
+something irreducible about simulation: 0.0336 → 0.1506 against a real 0.51 closes
+roughly two thirds of it. The rest is what a generator still cannot imitate, and
+it is why the null is measured per dataset rather than approximated by a better
+simulator.
+
+The generator's own sessions now cluster too — lag-1 |r| of +0.1315 against a
+±0.0302 band — so the synthetic null is no longer exempt from the block
+bootstrap. Its measured block length is 3. The previous exemption was justified
+in a comment ("the generator seeds each session independently"), which stopped
+being true the moment clustering was added; a null exempt from its own method
+because of a comment is the shape of every defect this project keeps finding.
+
+The acceptance curve moved with it. At a planted signal of 0.20 acceptance fell
+from 0.75 to 0.35 and at 0.35 from 1.00 to 0.90 — the harness needs roughly twice
+the edge to see the same thing, because the easier world was flattering it. False
+acceptance on a known null stayed at 0.00% and acceptance stayed monotone in
+signal strength.
 
 *Cost:* 190 seconds end to end for the NQ table — 141.5M ticks over 384 training
 sessions to build the pool, and the bootstrap itself is seconds. It reruns

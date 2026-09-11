@@ -124,6 +124,22 @@ Reads and writes shared by the three run-time callbacks.
 - **`ctx.position`**
 - **`ctx.realized_pnl`**
 - **`ctx.session`**
+- **`ctx.session_end`** — When this session closes, in nanoseconds UTC.
+  **Not lookahead.** An exchange publishes its calendar in advance, so the
+  close is known at the open; it is a fact about the schedule, not about
+  the data. Nothing here says anything about what happens between now and
+  then.
+  It exists because without it a strategy cannot be reliably flat at a
+  boundary. Every alternative is a guess at the session's length from what
+  it has already seen, and every such guess is wrong on the first session
+  shorter than anything before it -- a half day, which arrives without
+  warning and is exactly when being caught long overnight matters. The
+  calibration apparatus guessed from a bar count, which on real data
+  measured activity rather than length and collapsed its trading window to
+  a third of the session for most of a 384-session run.
+  `ctx.session_end - ctx.ts` is the time left. Deciding what margin to
+  leave is yours; knowing the deadline should not have been.
+- **`ctx.session_start`** — When this session opened, in nanoseconds UTC.
 - **`ctx.ts`** — Nanoseconds since the epoch, UTC.
 - **`ctx.unrealized_pnl`**
 - **`ctx.working_order_ids`**

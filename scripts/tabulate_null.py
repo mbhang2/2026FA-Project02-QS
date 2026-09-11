@@ -164,13 +164,23 @@ def main() -> int:
         print(f"  pooled {len(pool):,} null session returns "
               f"in {time.monotonic() - t0:.0f}s", flush=True)
 
-    # The synthetic generator seeds every session independently, so its sessions
-    # really are exchangeable and block length 1 is not an assumption there --
-    # it is the truth about that process. Overridable, so the equivalence with
-    # the block bootstrap at length 1 can be checked.
-    block = args.block_length or 1
+    # Measured, not assumed -- and it used to be assumed. The rationale for
+    # block length 1 here was that the generator seeds every session
+    # independently, which stopped being true the moment Task 17 gave it
+    # volatility clustering. A null that is exempt from its own method because
+    # of a comment is the shape of every defect this project keeps finding.
+    measured = nullmod.measure_block_length(pool)
+    block = args.block_length or measured["block_length"]
+    print(f"  acf(1) returns {measured['lag1_returns']:+.4f}  "
+          f"|returns| {measured['lag1_abs_returns']:+.4f}  "
+          f"band +/-{measured['significance_band']:.4f}")
+    print(f"  block length {block} "
+          f"({'measured' if not args.block_length else 'overridden'})", flush=True)
     doc = nullmod.tabulate(pool, trials=args.trials, block_length=block,
                            dataset="synthetic")
+    if args.verify:
+        verify(pool, block, args.out)
+
     doc["provenance"] = {
         "runs": args.runs,
         "sessions_per_run": args.sessions,
@@ -178,10 +188,8 @@ def main() -> int:
         "seed0": args.seed0,
         "strategy": "src/core/scoring/calibration/reference.py::ReferenceStrategy",
         "fill_model": "unfavorable",
-        "block_length_rationale": (
-            "1: the synthetic generator seeds each session independently, so the "
-            "sessions are exchangeable by construction rather than by assumption"
-        ),
+        "block_length_measurement": measured,
+        "block_length_source": "measured" if not args.block_length else "overridden",
         "wall_clock_s": round(time.monotonic() - t0, 1),
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -116,8 +116,8 @@ class BarBuilder:
         self._vol += volume
         self._n += count
 
-    def _close_current(self) -> Bar | None:
-        close_ts = self.current_boundary
+    def _close_current(self, close_ts: Ts | None = None) -> Bar | None:
+        close_ts = self.current_boundary if close_ts is None else close_ts
         if self._n == 0:
             # No ticks in the interval. Skipped by default; emit_empty carries
             # the previous close forward at zero volume for strategies that want
@@ -152,15 +152,31 @@ class BarBuilder:
             session=self._session,
         )
 
-    def flush_session(self) -> Bar | None:
+    def flush_session(self, close_ts: Ts | None = None) -> Bar | None:
         """The partial bar at a session close.
 
         Emitted so a session's last interval is not silently discarded; it is a
         real bar with fewer ticks, and dropping it would quietly shorten every
         session by up to one interval.
+
+        **Stamped with the session's close, not the interval's.** A tail bar is
+        truncated by definition, and stamping it at the boundary it never reached
+        put a `close_ts` in the future on it: the bar was delivered at the
+        session close and claimed to close up to a full interval later. Anything
+        joining on `close_ts` would order it after data that genuinely came
+        first, and a strategy told it is called at `close_ts` was being told
+        something untrue -- about the one bar of the session where a position is
+        most likely still open.
+
+        Invisible until Task 17 because every synthetic session was an exact
+        multiple of the bar interval, so there was no tail bar to mis-stamp.
         """
         if self._anchor is None or self._n == 0:
             return None
-        bar = self._close_current()
+        if close_ts is not None and close_ts > self.current_boundary:
+            # The session outlasts the interval, so the interval closed normally
+            # and this is not a truncated bar.
+            close_ts = self.current_boundary
+        bar = self._close_current(close_ts)
         self._reset_accumulators()
         return bar

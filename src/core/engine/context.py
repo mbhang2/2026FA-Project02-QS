@@ -202,6 +202,36 @@ class BaseContext:
         self._check()
         return self._actionable
 
+    @property
+    def session_start(self) -> Ts:
+        """When this session opened, in nanoseconds UTC."""
+        self._check()
+        return self._engine._session_start
+
+    @property
+    def session_end(self) -> Ts:
+        """When this session closes, in nanoseconds UTC.
+
+        **Not lookahead.** An exchange publishes its calendar in advance, so the
+        close is known at the open; it is a fact about the schedule, not about
+        the data. Nothing here says anything about what happens between now and
+        then.
+
+        It exists because without it a strategy cannot be reliably flat at a
+        boundary. Every alternative is a guess at the session's length from what
+        it has already seen, and every such guess is wrong on the first session
+        shorter than anything before it -- a half day, which arrives without
+        warning and is exactly when being caught long overnight matters. The
+        calibration apparatus guessed from a bar count, which on real data
+        measured activity rather than length and collapsed its trading window to
+        a third of the session for most of a 384-session run.
+
+        `ctx.session_end - ctx.ts` is the time left. Deciding what margin to
+        leave is yours; knowing the deadline should not have been.
+        """
+        self._check()
+        return self._engine._session_end
+
     # ---- state ------------------------------------------------------------- #
     @property
     def position(self) -> int:

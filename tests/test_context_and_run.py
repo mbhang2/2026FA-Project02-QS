@@ -22,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from src.core.engine.context import ContextError, ContextExpired, parse_interval  # noqa: E402
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
+import run  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
 from src.core.types import OrderStatus, Split  # noqa: E402
 from src.strategies.current import MomentumStrategy  # noqa: E402
@@ -554,3 +555,24 @@ def test_an_agent_run_is_recorded_as_a_trial(tmp_path):
     assert run_py("--trigger", "agent", "--quiet", ledger=led).returncode == 0
     row = ledger_lines(led)[0]
     assert row["purpose"] == "trial" and row["trigger"] == "agent"
+
+
+def test_the_ledger_stores_the_source_of_whatever_actually_ran(tmp_path):
+    """The first real run produced a row naming the calibration reference in
+    `strategy` while digesting and storing `src/strategies/current.py` -- so
+    replaying it would have replayed code that never ran. The harness runs
+    immutable apparatus as well as the agent's file, and the row has to say
+    which."""
+    other = REPO_ROOT / "src" / "core" / "scoring" / "calibration" / "reference.py"
+    led = tmp_path / "ledger.jsonl"
+
+    row = run._row({}, "harness", "nq-smoke", led, purpose="smoke",
+                                strategy_path=other)
+    assert row["strategy"] == "src/core/scoring/calibration/reference.py"
+    assert row["strategy_digest"] == run.strategy_digest(other)
+    stored = (led.parent / "sources" / f"{row['strategy_digest']}.py").read_text()
+    assert stored == other.read_text()
+
+    default = run._row({}, "harness", "harness", led)
+    assert default["strategy"] == "src/strategies/current.py"
+    assert default["strategy_digest"] != row["strategy_digest"]

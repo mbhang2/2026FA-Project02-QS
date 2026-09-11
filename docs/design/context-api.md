@@ -45,6 +45,15 @@ Bulk is the point -- a strategy fitting parameters needs the whole training
 period at once, and there is no lookahead risk in data that is, by
 construction, entirely before the split it will be scored on.
 
+**Bulk, but not materialised.** `train_ticks` is a factory returning a fresh
+iterator, not a list. The engine used to build the list eagerly and this
+class copied it again, which cost nothing on the synthetic generator's 68,000
+training ticks and was fatal on the first real run: the NQ training split is
+384 sessions of roughly 321,000 trades, so a run that never looked at a
+training tick still tried to hold about 247 million of them twice, on the
+order of 22 GiB, before `setup()` was called. A strategy that wants the ticks
+still gets them and still pays for them; one that does not pays nothing.
+
 ### Reads
 
 - **`ctx.dataset_name`**
@@ -73,6 +82,13 @@ _(no docstring)_
 #### `ctx.ticks()`
 
 Every train tick, in order.
+
+Materialises the whole training split, which on a real dataset is
+hundreds of millions of events -- 384 NQ sessions at roughly 321,000
+trades each. Nothing stops you; it is your memory and your wall-clock
+budget. `train_bars()` streams the same data through the aggregator
+instead, and is what you want unless you are building something the bar
+builder cannot express.
 
 #### `ctx.train_bars(interval: 'str | int | Subscription') -> 'tuple[Bar, ...]'`
 

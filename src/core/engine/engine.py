@@ -360,10 +360,13 @@ class Engine:
     def _run_inner(self) -> None:
         warm = set(self.dataset.warmup_sessions(self.split, self.warmup_sessions))
 
+        # A factory, not a list. See SetupContext: eagerly materialising the
+        # training split costs nothing on synthetic data and is on the order of
+        # 22 GiB on the real one, for a strategy that may never read a tick of it.
         train = (
-            list(self.dataset.ticks(Split.TRAIN))
+            (lambda: self.dataset.ticks(Split.TRAIN))
             if self.split is not Split.TRAIN
-            else []
+            else (lambda: iter(()))
         )
         # Before setup() runs, so a missing on_fill is a wiring error rather than
         # an AttributeError at the first session open. The tick callback is

@@ -18,11 +18,9 @@ Coverage is full Globex, not RTH.
 
 ## Which split this run serves
 
-- **NQ** — `config/calendars/nq-trades.yaml` **is not written**, so no split is served at all. All 564 assemblable sessions exist, and the adapter raises rather than serving a default.
+- **NQ** — `config/calendars/nq-trades.yaml` (committed). 564 sessions total.
 
-The train / validation / holdout boundaries are **pre-registered by a human before any outcome is observed**. A split chosen after looking at results is not a pre-registration, so the adapter refuses to invent one — a plausible-looking default would be worse than the error, because every number computed from it would look fine.
-
-Until a calendar is committed, a run either iterates sessions explicitly or uses the smoke path, and nothing it produces is scored.
+You are given one split per run and cannot ask for another. The holdout requires an explicit unlock whose reason lands in the run record.
 
 ## Subscriptions
 

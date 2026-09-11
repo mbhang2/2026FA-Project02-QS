@@ -119,7 +119,8 @@ def build_dataset(cfg: dict, name: str, seed: int):
 STRATEGY_PATH = REPO_ROOT / "src" / "strategies" / "current.py"
 
 
-def store_source(ledger_path: Path, digest: str) -> str:
+def store_source(ledger_path: Path, digest: str,
+                 strategy_path: Path | None = None) -> str:
     """Keep the strategy source beside the ledger, addressed by its digest.
 
     A digest identifies a trial; it does not reproduce one. To re-run trial 47
@@ -129,12 +130,13 @@ def store_source(ledger_path: Path, digest: str) -> str:
     for the accepted ones that survived to a commit, and the rejected ones are
     exactly what N counts.
     """
-    if not STRATEGY_PATH.exists():
+    strategy_path = strategy_path or STRATEGY_PATH
+    if not strategy_path.exists():
         return ""
     out = ledger_path.parent / "sources" / f"{digest}.py"
     out.parent.mkdir(parents=True, exist_ok=True)
     if not out.exists():
-        out.write_text(STRATEGY_PATH.read_text())
+        out.write_text(strategy_path.read_text())
     try:
         return str(out.relative_to(REPO_ROOT))
     except ValueError:
@@ -142,7 +144,7 @@ def store_source(ledger_path: Path, digest: str) -> str:
         return str(out)
 
 
-def strategy_digest() -> str:
+def strategy_digest(strategy_path: Path | None = None) -> str:
     """Content hash of the strategy source.
 
     git_sha alone does not identify a trial: the agent edits
@@ -152,9 +154,10 @@ def strategy_digest() -> str:
     """
     import hashlib
 
+    strategy_path = strategy_path or STRATEGY_PATH
     return (
-        hashlib.sha256(STRATEGY_PATH.read_bytes()).hexdigest()[:16]
-        if STRATEGY_PATH.exists()
+        hashlib.sha256(strategy_path.read_bytes()).hexdigest()[:16]
+        if strategy_path.exists()
         else "missing"
     )
 
@@ -365,16 +368,30 @@ def _fill_model_spread(cfg, args, profile, seed, strategy, split, engine) -> flo
 
 
 def _row(record: dict, trigger: str, profile: str, ledger_path: Path,
-         purpose: str = "trial") -> dict:
-    digest = strategy_digest()
+         purpose: str = "trial", strategy_path: Path | None = None) -> dict:
+    """One ledger row.
+
+    `strategy_path` is the file that actually ran. It defaults to the agent's
+    file because that is what `run.py` executes, but the harness also runs
+    immutable apparatus -- the calibration reference strategy -- and a row that
+    named the reference in `strategy` while digesting and storing
+    `src/strategies/current.py` would replay something that never ran. The first
+    real run produced exactly that row.
+    """
+    strategy_path = strategy_path or STRATEGY_PATH
+    digest = strategy_digest(strategy_path)
+    try:
+        named = str(strategy_path.relative_to(REPO_ROOT))
+    except ValueError:
+        named = str(strategy_path)
     return {
         **record,
         "trigger": trigger,
         "purpose": purpose,
         "profile": profile,
-        "strategy": "src/strategies/current.py",
+        "strategy": named,
         "strategy_digest": digest,
-        "strategy_source": store_source(ledger_path, digest),
+        "strategy_source": store_source(ledger_path, digest, strategy_path),
     }
 
 

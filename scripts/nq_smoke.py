@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Plumbing check: run the reference strategy over a handful of real NQ sessions.
+"""Plumbing check: run the reference strategy over real NQ sessions.
 
-    python scripts/nq_smoke.py --sessions 5
-    python scripts/nq_smoke.py --sessions 5 --cold
+    python scripts/nq_smoke.py --sessions 5            # a prefix, no split meaning
+    python scripts/nq_smoke.py --split validation      # the pre-registered split
+    python scripts/nq_smoke.py --split validation --fill-spread --cold
 
 **This is not a result.** It confirms that ticks arrive, orders fill, a blotter
 is produced and a ledger row is written. It deliberately computes no score
@@ -12,17 +13,27 @@ a real-data null needs a block bootstrap. That is a later task.
 
 It also reports cold- and warm-cache timings, which is the number that decides
 how many trials a night the loop can afford.
+
+With `--split` it serves a pre-registered split from `config/calendars/` and
+scores it. The score is reported because the plumbing that produces it is what is
+being checked; **the FAR beside it is the method working with the wrong table**
+and is labelled as such wherever it is printed. The holdout is not reachable from
+here.
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import os
 import sys
 import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+REFERENCE_PATH = (
+    REPO_ROOT / "src" / "core" / "scoring" / "calibration" / "reference.py"
+)
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
@@ -35,24 +46,119 @@ from src.core.engine import Engine  # noqa: E402
 from src.core.types import Split  # noqa: E402
 
 
+def report_score(engine, record, ds) -> str:
+    """Score the split, and say plainly what the FAR beside it is worth.
+
+    The score is here because the plumbing that produces it is what is being
+    checked: a calendar, per-session returns, a metric and a ScoreTuple have
+    never met real data. The FAR is here for the same reason and no other.
+
+    **It is the method working with the wrong table.** The empirical null was
+    tabulated on synthetic sessions resampled i.i.d., which assumes
+    exchangeability. Real futures sessions cluster in volatility and trend, so
+    the assumption fails in the unsafe direction: an i.i.d. bootstrap understates
+    the variance of an N-session statistic and therefore sets thresholds too low
+    and reports false-acceptance rates that are too small. A real-data null needs
+    a block bootstrap and is its own task.
+    """
+    from src.core.scoring.calibration import null as nullmod
+    from src.core.scoring.scorer import score, score_diagnostics
+
+    period = engine.session_calendar()
+    result = score(engine.blotter, period=period, notional_base=1.0)
+    diag = score_diagnostics(engine.blotter, period, notional_base=1.0)
+    engine.record.score = result.as_dict()
+    engine.record.diagnostics = diag.as_dict()
+
+    print()
+    print(f"metric        {result.metric}")
+    print(f"primary       {result.primary:+.4f}   significance {result.significance:+.3f}")
+    print(f"sharpe        {result.sharpe:+.4f}   skew {result.skew:+.3f}  "
+          f"kurtosis {result.kurtosis:+.3f}")
+    print(f"n_sessions    {result.n_sessions}   trades {result.trade_count}   "
+          f"net {result.net_pnl:+.2f}")
+    if result.rejected:
+        print(f"REJECTED      {result.reject_reason}")
+
+    try:
+        far = nullmod.far_for(result.primary, result.n_sessions,
+                              metric=result.metric)
+        print(f"far_for       {far:.4g}   <-- SYNTHETIC TABLE, DOES NOT TRANSFER")
+    except Exception as exc:  # pragma: no cover - reported, not swallowed
+        far = None
+        print(f"far_for       unavailable: {type(exc).__name__}: {exc}")
+    print("              the null was tabulated on synthetic sessions resampled")
+    print("              i.i.d.; real sessions cluster, so this understates the")
+    print("              variance and reads too favourably. Not a p-value for")
+    print("              this dataset.")
+    return (
+        "plumbing check on the pre-registered split; the score is real and the "
+        "FAR beside it is computed against a synthetic i.i.d. null that does not "
+        "transfer to clustered real sessions"
+    )
+
+
+def report_fill_spread(engine, ds, split, warmup, args) -> float:
+    """The same run under the optimistic model. On synthetic data at low signal
+    the entire apparent edge lived in the optimism; what it does here is not
+    known until it is run."""
+    twin_ds = NQDataset(ds._s3, os.environ["R2_BUCKET"],
+                        NQSpec(cache=not args.cold))
+    twin = Engine(twin_ds, ReferenceStrategy(), split=split,
+                  fill_model="favorable", warmup_sessions=warmup, seed=1)
+    twin.run()
+    a = twin.blotter.realized_pnl - twin.blotter.commission
+    b = engine.blotter.realized_pnl - engine.blotter.commission
+    print()
+    print(f"favorable     net {a:+.2f}   fills {twin.n_fills:,}   "
+          f"rows {len(twin.blotter.rows):,}")
+    print(f"unfavorable   net {b:+.2f}   fills {engine.n_fills:,}   "
+          f"rows {len(engine.blotter.rows):,}")
+    print(f"spread        {a - b:+.2f}   (favorable minus unfavorable)")
+    return a - b
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--sessions", type=int, default=5)
+    ap.add_argument("--sessions", type=int, default=5,
+                    help="run a prefix of N sessions; no split meaning")
+    ap.add_argument("--split", choices=("train", "validation"),
+                    help="serve a pre-registered split from config/calendars/ "
+                         "and score it. The holdout is not offered here.")
+    ap.add_argument("--warmup", type=int, default=1,
+                    help="sessions served before the split, not actionable")
+    ap.add_argument("--fill-spread", action="store_true",
+                    help="run the favorable model too and report the spread")
     ap.add_argument("--cold", action="store_true", help="ignore the local cache")
     ap.add_argument("--ledger", type=Path, default=REPO_ROOT / "runs" / "ledger.jsonl")
     args = ap.parse_args()
 
     s3 = inv.s3_client(12)
-    ds = NQDataset(s3, os.environ["R2_BUCKET"],
-                   NQSpec(smoke_sessions=args.sessions, cache=not args.cold))
-    sessions = ds.sessions()[: args.sessions]
-    print(f"dataset   {ds.name}  digest {ds.digest()}")
-    print(f"sessions  {len(ds.sessions())} available, running {sessions[0]} .. {sessions[-1]}")
+    spec = (
+        NQSpec(cache=not args.cold)
+        if args.split
+        else NQSpec(smoke_sessions=args.sessions, cache=not args.cold)
+    )
+    ds = NQDataset(s3, os.environ["R2_BUCKET"], spec)
+    split = Split(args.split) if args.split else Split.VALIDATION
+    warmup = args.warmup if args.split else 0
+
+    if args.split:
+        scored = ds.scored_sessions(split, warmup)
+        sessions = [dt.date.fromordinal(o) for o in scored]
+        print(f"dataset   {ds.name}  digest {ds.digest()}")
+        print(f"split     {split}  {len(sessions)} scored sessions  "
+              f"{sessions[0]} .. {sessions[-1]}  (+{warmup} warmup)")
+    else:
+        sessions = ds.sessions()[: args.sessions]
+        print(f"dataset   {ds.name}  digest {ds.digest()}")
+        print(f"sessions  {len(ds.sessions())} available, running "
+              f"{sessions[0]} .. {sessions[-1]}")
 
     t0 = time.monotonic()
-    engine = Engine(ds, ReferenceStrategy(), split=Split.VALIDATION,
-                    fill_model="unfavorable", warmup_sessions=0, seed=1)
+    engine = Engine(ds, ReferenceStrategy(), split=split,
+                    fill_model="unfavorable", warmup_sessions=warmup, seed=1)
     record = engine.run()
     elapsed = time.monotonic() - t0
 
@@ -70,9 +176,18 @@ def main() -> int:
     print(f"projection: {per_session:.1f}s per session -> "
           f"{per_session * full / 60:.0f} min for all {full} sessions")
 
-    row = runner._row(record.as_dict(), "smoke", "nq-smoke", args.ledger)
-    row["strategy"] = "src/core/scoring/calibration/reference.py::ReferenceStrategy"
-    row["note"] = "plumbing check on real data; not scored, not a result"
+    note = "plumbing check on real data; not scored, not a result"
+    if args.split:
+        note = report_score(engine, record, ds)
+    if args.fill_spread:
+        spread = report_fill_spread(engine, ds, split, warmup, args)
+        if engine.record.diagnostics is not None:
+            # The field existed and nothing ever computed it.
+            engine.record.diagnostics["fill_model_spread"] = spread
+
+    row = runner._row(record.as_dict(), "harness", "nq-smoke", args.ledger,
+                      purpose="smoke", strategy_path=REFERENCE_PATH)
+    row["note"] = note
     runner.append_ledger(args.ledger, row)
     print(f"ledger    {args.ledger}")
     if args.cold:

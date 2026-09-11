@@ -83,11 +83,37 @@ def build_dataset(cfg: dict, name: str, seed: int):
     if spec is None:
         sys.exit(f"unknown dataset {name!r}; have {sorted(cfg['datasets'])}")
     spec = dict(spec)
-    spec["seed"] = seed
     kind = spec.pop("kind")
-    if kind != "synthetic":
-        sys.exit(f"no adapter for dataset kind {kind!r} yet")
-    return SyntheticDataset(SyntheticSpec(**spec))
+    if kind == "synthetic":
+        spec["seed"] = seed
+        return SyntheticDataset(SyntheticSpec(**spec))
+    if kind == "nq":
+        # The seed does not reach a real adapter: there is nothing to generate.
+        # It still goes in the ledger, because the profile that set it is what
+        # the run was configured by.
+        import os
+
+        import boto3
+
+        from src.core.data.nq import NQDataset, NQSpec
+
+        missing = [v for v in ("R2_ENDPOINT", "R2_ACCESS_KEY_ID",
+                               "R2_SECRET_ACCESS_KEY", "R2_BUCKET")
+                   if not os.environ.get(v)]
+        if missing:
+            sys.exit(
+                "the NQ adapter needs read-only bucket credentials in the "
+                f"environment; missing {', '.join(missing)}. See docs/setup/R2_ACCESS.md."
+            )
+        client = boto3.client(
+            "s3",
+            endpoint_url=os.environ["R2_ENDPOINT"],
+            aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
+            aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
+            region_name="auto",
+        )
+        return NQDataset(client, os.environ["R2_BUCKET"], NQSpec(**spec))
+    sys.exit(f"no adapter for dataset kind {kind!r} yet")
 
 
 STRATEGY_PATH = REPO_ROOT / "src" / "strategies" / "current.py"

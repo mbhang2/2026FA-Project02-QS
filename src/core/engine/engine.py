@@ -1013,9 +1013,25 @@ class Engine:
                 self._dispatch("lifecycle", ev, tick, actionable)
 
     def scored_sessions(self) -> list[int]:
-        """The actionable sessions of the served split -- the observation unit
-        the metric scores on. Warmup sessions are excluded: the strategy saw
-        their bars but could not act, so they are not observations."""
+        """The actionable sessions of the served split, in the dataset's own
+        session-id space -- the observation unit the metric scores on.
+
+        Warmup sessions are excluded: the strategy saw their bars but could not
+        act, so they are not observations.
+
+        A dataset that numbers its sessions by something other than position says
+        so by defining `scored_sessions`. The NQ adapter does: `Tick.session`
+        there is a Gregorian ordinal, deliberately, because a position means
+        something different depending on how many sessions the spec trimmed to.
+        Handing positions to `session_bounds()` would have produced dates in the
+        year 2 AD and per-session returns keyed to sessions that do not exist --
+        wrong in a way that nothing downstream could notice. The synthetic
+        dataset numbers by position and needs no such method.
+        """
+        own = getattr(self.dataset, "scored_sessions", None)
+        if own is not None:
+            return list(own(self.split, self.warmup_sessions))
+
         from ..data.dataset import sessions_for
 
         _, live = sessions_for(self.dataset.calendar(), self.split, self.warmup_sessions)

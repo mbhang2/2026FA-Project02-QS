@@ -9,10 +9,12 @@ makes a ledger row mean something.
 
 from .dataset import (
     Calendar,
+    CalendarNotWritten,
     Dataset,
     HoldoutLock,
     SplitBounds,
     calendar_path,
+    load_calendar,
     sessions_for,
 )
 from .synthetic import SyntheticDataset, SyntheticSpec
@@ -24,6 +26,8 @@ __all__ = [
     "SplitBounds",
     "SyntheticDataset",
     "SyntheticSpec",
+    "CalendarNotWritten",
     "calendar_path",
+    "load_calendar",
     "sessions_for",
 ]

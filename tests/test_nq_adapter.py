@@ -32,7 +32,7 @@ from src.core.data.nq import (  # noqa: E402
     NQSpec,
     session_bounds_utc,
 )
-from src.core.types import Side, Split  # noqa: E402
+from src.core.types import HoldoutLocked, Side, Split  # noqa: E402
 
 MANIFEST = json.loads((REPO_ROOT / "data" / "manifest.json").read_text())
 COVERAGE = MANIFEST["instrument_coverage"]["NQ"]["sessions"]
@@ -389,3 +389,121 @@ def test_ambiguity_is_confined_to_roll_weeks(selection):
                     if min(abs((dt.date.fromisoformat(k) - r).days) for r in rolls) > 7)
     assert shares[len(shares) // 2] > 0.99, shares[len(shares) // 2]
     assert min(shares) > 0.9, min(shares)
+
+
+# --------------------------------------------------------------------------- #
+# the pre-registered split
+# --------------------------------------------------------------------------- #
+# These assert the calendar the human committed, read the way the adapter reads
+# it. No bucket: the boundaries are dates, the session list is published in the
+# manifest, and the mapping between them is the whole of what is being checked.
+CALENDAR_PATH = REPO_ROOT / "config" / "calendars" / "nq-trades.yaml"
+
+# From config/calendars/nq-trades.yaml and the proposal it came from.
+SPLIT_SESSIONS = {"train": 384, "validation": 86, "holdout": 73}
+SPLIT_DATES = {
+    "train": ("2024-07-05", "2025-12-31"),
+    "validation": ("2026-01-16", "2026-05-15"),
+    "holdout": ("2026-06-01", "2026-09-09"),
+}
+EMBARGO = 10
+
+
+def offline_dataset() -> NQDataset:
+    """Metadata only. Everything below reads the manifest and the calendar."""
+    return NQDataset(None, "", NQSpec())
+
+
+def test_the_calendar_is_committed():
+    """It is a pre-registration. Its absence is a different failure from a bug,
+    and the adapter says so with its own exception type."""
+    assert CALENDAR_PATH.exists(), (
+        "config/calendars/nq-trades.yaml is missing; the split is a human "
+        "pre-registration and the adapter refuses to invent one"
+    )
+
+
+def test_the_split_matches_what_was_pre_registered():
+    calendar = offline_dataset().calendar()
+    dates = [dt.date.fromisoformat(d) for d in COVERAGE["dates"]]
+    for name, expected in SPLIT_SESSIONS.items():
+        bounds = getattr(calendar, name)
+        first, last = dates[bounds.start], dates[bounds.stop - 1]
+        assert len(bounds) == expected, f"{name}: {len(bounds)} sessions, not {expected}"
+        assert (first.isoformat(), last.isoformat()) == SPLIT_DATES[name], name
+    assert calendar.n_sessions == EXPECTED_SESSIONS
+
+
+def test_the_embargo_is_exactly_ten_sessions_with_no_slack():
+    """The boundary dates are derived from the embargo, not chosen for tidiness.
+    2026-01-16 is the tenth session after 2025-12-31 and 2026-06-01 the tenth
+    after 2026-05-15 -- so this is not a check that the gap is *at least* ten,
+    it is a check that the dates mean what the file says they mean."""
+    calendar = offline_dataset().calendar()
+    assert calendar.embargo_sessions == EMBARGO
+    assert calendar.validation.start - calendar.train.stop == EMBARGO
+    assert calendar.holdout.start - calendar.validation.stop == EMBARGO
+
+
+def test_moving_a_boundary_one_session_breaks_the_calendar(tmp_path):
+    """The claim that there is no slack, asserted rather than asserted about."""
+    import yaml
+
+    from src.core.data.dataset import load_calendar
+
+    doc = yaml.safe_load(CALENDAR_PATH.read_text())
+    dates = [dt.date.fromisoformat(d) for d in COVERAGE["dates"]]
+    index = dates.index(dt.date(2026, 1, 16))
+    doc["splits"]["validation"]["start"] = dates[index - 1].isoformat()
+    moved = tmp_path / "moved.yaml"
+    moved.write_text(yaml.safe_dump(doc))
+
+    with pytest.raises(ValueError, match="embargo"):
+        load_calendar(moved, dates)
+
+
+def test_the_sessions_a_split_serves_are_dataset_session_ids_not_positions():
+    """`Calendar` counts by position; `Tick.session` here is a Gregorian ordinal.
+    Handing a position to `session_bounds()` yields a date in the year 2 AD and
+    per-session returns keyed to sessions that do not exist -- wrong in a way
+    nothing downstream could notice, which is why this asserts the round trip."""
+    ds = offline_dataset()
+    scored = ds.scored_sessions(Split.VALIDATION, warmup=1)
+    assert len(scored) == SPLIT_SESSIONS["validation"]
+    assert all(isinstance(s, int) for s in scored)
+
+    first, last = dt.date.fromordinal(scored[0]), dt.date.fromordinal(scored[-1])
+    assert (first.isoformat(), last.isoformat()) == SPLIT_DATES["validation"]
+
+    start_ts, end_ts = ds.session_bounds(scored[0])
+    assert end_ts > start_ts
+    assert dt.datetime.fromtimestamp(end_ts / 1e9, dt.timezone.utc).year == 2026
+
+
+def test_warmup_reaches_backward_into_the_embargo_and_no_further():
+    """A warmup of k serves the k sessions before the split. With an embargo of
+    10 and a warmup of 1 those are embargoed sessions, never training ones --
+    which is the whole reason the check refuses warmup > embargo."""
+    ds = offline_dataset()
+    dates = [dt.date.fromisoformat(d) for d in COVERAGE["dates"]]
+    warm = ds.warmup_sessions(Split.VALIDATION, 1)
+    assert len(warm) == 1
+    warm_date = dt.date.fromordinal(next(iter(warm)))
+
+    calendar = ds.calendar()
+    assert warm_date == dates[calendar.validation.start - 1]
+    assert warm_date > dates[calendar.train.stop - 1], (
+        "warmup reached back past the embargo into training data"
+    )
+    assert warm_date.isoformat() < SPLIT_DATES["validation"][0]
+    assert ds.warmup_sessions(Split.VALIDATION, 0) == set()
+
+
+def test_the_holdout_still_refuses_to_be_served():
+    """Committing the calendar gives the holdout a definition. It does not open
+    it."""
+    ds = offline_dataset()
+    with pytest.raises(HoldoutLocked):
+        next(ds.ticks(Split.HOLDOUT))
+    ds.unlock_holdout("a test, and the reason is recorded")
+    assert ds.holdout_lock.unlocked

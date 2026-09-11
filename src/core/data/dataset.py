@@ -9,6 +9,8 @@ implementations of this.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date as dt_date
+from pathlib import Path
 from typing import Iterator, Protocol, Sequence
 
 from ..types import DataCapabilities, HoldoutLocked, Split, Tick, Ts
@@ -150,6 +152,81 @@ def warmup_start(bounds: SplitBounds, warmup: int) -> int:
     if warmup < 0:
         raise ValueError("warmup must be non-negative")
     return max(0, bounds.start - warmup)
+
+
+class CalendarNotWritten(NotImplementedError):
+    """No pre-registered split exists for this dataset yet.
+
+    Its own class so a caller can tell "the human has not decided" from "the
+    adapter cannot do this", which are different problems with different fixes.
+    """
+
+
+def load_calendar(path, sessions: Sequence[dt_date]) -> Calendar:
+    """Read a pre-registered split and map its **dates** onto session positions.
+
+    The file declares dates, not counts, so each dataset derives its own session
+    list from the same boundaries: the NQ trades dataset gets 564 sessions and a
+    GEX-using dataset would get 547 over the same periods, aligned rather than
+    one dataset's coverage constraining another's.
+
+    `start` resolves to the first session on or after it and `end` to the last
+    session on or before it, so a boundary landing on a weekend or a holiday is
+    not an error -- and a boundary landing outside coverage entirely is, because
+    a split that silently serves nothing is worse than one that refuses.
+
+    The embargo is checked by `Calendar` itself, in sessions. That is the reason
+    this mapping happens here rather than in the YAML: ten *sessions* between two
+    dates is not ten days, and only the session list knows the difference.
+    """
+    import yaml
+
+    path = Path(path)
+    if not path.exists():
+        raise CalendarNotWritten(
+            f"{path} is not written. The split is pre-registered by a human "
+            "before any outcome is observed, and this adapter must not invent one."
+        )
+    doc = yaml.safe_load(path.read_text())
+    try:
+        embargo = int(doc["embargo_sessions"])
+        declared = doc["splits"]
+    except (KeyError, TypeError) as exc:
+        raise ValueError(f"{path} is missing {exc}") from None
+
+    index = {d: i for i, d in enumerate(sessions)}
+    ordered = list(sessions)
+    bounds = {}
+    for name in ("train", "validation", "holdout"):
+        if name not in declared:
+            raise ValueError(f"{path} declares no {name} split")
+        spec = declared[name]
+        start, end = _as_date(spec["start"]), _as_date(spec["end"])
+        if end < start:
+            raise ValueError(f"{path}: {name} ends ({end}) before it starts ({start})")
+        first = next((i for i, d in enumerate(ordered) if d >= start), None)
+        last = next((i for i in range(len(ordered) - 1, -1, -1)
+                     if ordered[i] <= end), None)
+        if first is None or last is None or first > last:
+            raise ValueError(
+                f"{path}: the {name} split {start}..{end} contains no session of "
+                f"this dataset, which covers {ordered[0]}..{ordered[-1]}"
+            )
+        bounds[name] = SplitBounds(first, last + 1)
+    del index
+    return Calendar(
+        train=bounds["train"],
+        validation=bounds["validation"],
+        holdout=bounds["holdout"],
+        embargo_sessions=embargo,
+        n_sessions=len(ordered),
+    )
+
+
+def _as_date(value) -> dt_date:
+    if isinstance(value, dt_date):
+        return value
+    return dt_date.fromisoformat(str(value))
 
 
 def sessions_for(

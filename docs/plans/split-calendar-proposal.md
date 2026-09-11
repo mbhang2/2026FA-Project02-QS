@@ -1,5 +1,10 @@
 # Split Calendar — Proposal for Decision (v2)
 
+> **Decided and enacted.** The split below was approved as proposed — the main split,
+> not the alternative — and is committed as `config/calendars/nq-trades.yaml`. That file
+> is now the authority; this document is the reasoning behind it and the record that the
+> reasoning came first. The pre-registration date is the commit date of the YAML.
+
 Supersedes the earlier draft, which was written against 521 sessions before the data
 extension. Numbers here are from `c5eafcd`.
 
@@ -84,6 +89,15 @@ which falls before the train start. Starting train on 2024-07-04 instead would r
 it for the NQ trades dataset; 2024-07-05 is where the options intersection begins, which
 is presumably why the draft chose it.
 
+**Roll balance is a reason these boundaries were chosen, not a property discovered
+afterwards.** Every split contains at least one complete quarterly roll — train six,
+validation one (2026-03-16), holdout one (2026-06-15) — no boundary date falls inside a
+roll window, and the 39 `near_roll` sessions distribute 30 / 5 / 4. A roll-free
+validation scored against a roll-heavy holdout would show a degradation that looks
+exactly like overfitting and is nothing of the kind: it would be the front-month
+convention, measured. Since that convention is ours rather than the market's, a split
+that confounds it with strategy quality would be measuring our own bookkeeping.
+
 The holdout sits **entirely after May 2026**, satisfying the cutoff constraint without a
 separate carve-out, and the calendar-quarter boundaries make it easy to state and hard
 to misremember.
@@ -116,6 +130,19 @@ an embargo of 10 leaves nine sessions of headroom.
 
 - `run.py` refuses the holdout unless explicitly unlocked. This already works.
 - **Opened once**, at the end, by a deliberate act recorded in the ledger.
+- **Refit before the holdout evaluation, and pre-registered here so it is not
+  improvised at the end:**
+  1. Candidates are selected on `validation`. **Selection ends there.**
+  2. The selected candidate is refit **once** on `train + validation` combined, by the
+     same fitting procedure it used on `train` alone, with no hyper-parameter chosen or
+     changed at this step.
+  3. That refit model — and only it — is evaluated on `holdout`.
+
+  More data for the final model with no contamination, because a refit that involves no
+  selection cannot leak the holdout backward. The condition is load-bearing: if anything
+  is chosen after step 2, the holdout has been used for selection and is no longer a
+  holdout. Written down now because at the end there will be a reason to adjust one more
+  thing, and it will be a good reason.
 - **Known caveat:** vendor `condition.json` coverage stops at 2026-07-03, so **48 of
   the 73 holdout sessions** — two thirds of it — have no vendor data-condition record.
   (47 is the count of OPRA *files* in the uncovered range, not of holdout sessions; the
@@ -157,7 +184,11 @@ decided in advance.
 
 ```yaml
 dataset: nq-trades
-pre_registered: 2026-09-11    # must be the date this is actually committed
+# No pre_registered field. A date written into a file can disagree with the
+# commit that introduced it -- the draft carried 2026-09-11, a day that had not
+# happened -- and a pre-registration whose date can be wrong is not one. The
+# commit date of this file is the pre-registration date:
+#     git log --follow --diff-filter=A config/calendars/nq-trades.yaml
 embargo_sessions: 10
 
 splits:
@@ -210,7 +241,12 @@ another carries all of the roll convention's noise, which would otherwise be a
 difference between splits that has nothing to do with strategy quality. `near_roll`
 sessions land 30 / 5 / 4.
 
-**The calendar is not written.** This document is a proposal with four open questions;
-`config/calendars/nq-trades.yaml` does not exist and was deliberately not created. The
-split is a human pre-registration and the sequence — decide, then commit, then run — is
-the entire source of its value.
+**The calendar is now written.** `config/calendars/nq-trades.yaml` holds the split
+above, approved as proposed. The file's own commit date is the pre-registration date,
+and the boundary counts there — 384 / 86 / 73 with an embargo of exactly 10 at each
+edge — are asserted by `tests/test_nq_adapter.py` against the published session list, so
+a later edit to either the calendar or the data is a test failure rather than a silent
+change to what was pre-registered.
+
+The four questions for Peterson remain open. None of them changes the boundaries; they
+are about how the holdout is spent and how the result is argued.

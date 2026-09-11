@@ -1,0 +1,91 @@
+# Pre-registered train / validation / holdout split for the NQ trades dataset.
+#
+# THE PRE-REGISTRATION DATE IS THE COMMIT DATE OF THIS FILE.
+#
+# There is deliberately no `pre_registered:` field. A date written into a file can
+# disagree with the commit that introduced it -- the draft of this split carried
+# 2026-09-11, a day that had not happened yet -- and a pre-registration whose date
+# can be wrong is not one. `git log --follow --diff-filter=A config/calendars/nq-trades.yaml`
+# is the date, and it cannot disagree with itself.
+#
+# Chosen before any outcome was observed, from the proposal in
+# `docs/plans/split-calendar-proposal.md`. Boundaries are DATES; each dataset derives
+# its own session list from them, so the NQ trades dataset gets 564 sessions and a
+# future GEX-using dataset gets 547 over the same periods -- aligned splits, neither
+# dataset's coverage constraining the other's.
+#
+# Counts at the time of writing, from data/manifest.json (2,703 objects):
+#   train       384 sessions   (375 with same-day options)
+#   validation   86 sessions   ( 83)
+#   holdout      73 sessions   ( 70)
+# 71 / 16 / 13 of the sessions used. Twenty embargo sessions plus 2024-07-04 are in
+# no split.
+
+dataset: nq-trades
+
+# Ten sessions at each boundary, so training and validation observations do not
+# share the data they touch.
+#
+# THE BOUNDARY DATES BELOW ARE DERIVED FROM THIS NUMBER, NOT CHOSEN FOR TIDINESS.
+# 2026-01-16 is exactly the tenth session after 2025-12-31; 2026-06-01 is exactly the
+# tenth after 2026-05-15. There is no slack: move either by one session and the
+# `Calendar` constructor refuses the calendar. They look like round dates and are not.
+embargo_sessions: 10
+
+splits:
+
+  train:
+    start: 2024-07-05
+    end: 2025-12-31
+    reason: >
+      Earliest session with same-day options through calendar year end. Served to
+      setup() in bulk, which is where a strategy fits parameters. Contains six
+      complete quarterly rolls.
+
+  validation:
+    start: 2026-01-16
+    end: 2026-05-15
+    reason: >
+      Ends before the backbone model's cutoff (end of May 2026) so the holdout can lie
+      entirely after it. The loop scores here repeatedly and this split is expected to
+      be overfit by selection -- that is what the holdout is for. Contains one complete
+      roll, 2026-03-16.
+
+  holdout:
+    start: 2026-06-01
+    end: 2026-09-09
+    reason: >
+      Entirely post-cutoff, so a memorization result is distinguishable from a real
+      one. Opened once, at the end, by deliberate unlock, with the reason recorded in
+      the ledger. Contains one complete roll, 2026-06-15.
+
+      Confirmatory, not primary: 73 sessions cannot carry the statistical argument
+      wherever the boundaries go. CPCV on train + validation carries the inference;
+      this split answers "did the selection procedure fool itself".
+
+      CAVEAT, known before opening: vendor condition.json coverage stops at 2026-07-03,
+      so 48 of these 73 sessions have no data-condition record. Condition there is
+      unknown, not good. Scan the window for anomalies before opening rather than
+      assuming it is clean.
+
+# Why every split contains at least one complete roll -- train six, validation one,
+# holdout one -- and why no boundary date falls inside a roll window (the closest is
+# the holdout start, 14 days out):
+#
+# The front-month rule is a research convention, and the 39 `near_roll` sessions are
+# where it is genuinely ambiguous. They distribute 30 / 5 / 4. A roll-free validation
+# scored against a roll-heavy holdout would show a degradation that looks exactly like
+# overfitting and is nothing of the kind -- it would be the roll convention, measured.
+# Balancing them is a reason these boundaries were chosen, not an accident of them.
+
+# Refit procedure, pre-registered here so it is not improvised at the end:
+#
+#   1. Candidates are selected on `validation`. Selection ends there.
+#   2. The selected candidate is refit once on `train + validation` combined,
+#      using the same fitting procedure it used on `train` alone, with no
+#      hyper-parameter chosen or changed at this step.
+#   3. That refit model -- and only it -- is evaluated on `holdout`.
+#
+# More data for the final model with no contamination, because the refit involves no
+# selection. If anything is chosen after step 2, the holdout has been used for
+# selection and stops being a holdout.

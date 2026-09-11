@@ -37,7 +37,14 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from .dataset import Calendar, HoldoutLock, SplitBounds, calendar_path
+from .dataset import (
+    Calendar,
+    HoldoutLock,
+    SplitBounds,
+    calendar_path,
+    load_calendar,
+    sessions_for,
+)
 from ..types import NS_PER_SECOND, DataCapabilities, Side, Split, Tick, Ts
 from . import dbn
 
@@ -154,6 +161,7 @@ class NQDataset:
         self._bucket = bucket or os.environ.get("R2_BUCKET", "")
         self._manifest = json.loads(Path(manifest_path).read_text())
         self._lock = HoldoutLock()
+        self._calendar: Calendar | None = None
         self._contracts: dict[str, ContractSelection] = {}
 
         files = self._manifest["files"]
@@ -222,11 +230,37 @@ class NQDataset:
         return tuple(self._sessions)
 
     def calendar(self) -> Calendar:
-        raise NotImplementedError(
-            f"{calendar_path(self.name)} is not written. The split is "
-            "pre-registered by a human before any outcome is observed, and this "
-            "adapter must not invent one."
-        )
+        """The pre-registered split, read from disk. Never invented here.
+
+        Cached per instance: the file is a pre-registration and cannot change
+        under a running trial, and re-reading it per callback would put a stat()
+        in the walk.
+        """
+        if self._calendar is None:
+            self._calendar = load_calendar(
+                REPO_ROOT / calendar_path(self.name), self._sessions
+            )
+        return self._calendar
+
+    # ---- session identity --------------------------------------------------
+    # `Calendar` counts sessions by position; `Tick.session` carries a Gregorian
+    # ordinal, because a position means something different depending on how many
+    # sessions the spec trimmed to. Both are right in their own place, and this
+    # is the one seam between them. Translating here rather than anywhere else
+    # keeps the two id spaces from meeting in code that cannot tell them apart --
+    # a position read as an ordinal is a date in the year 2 AD, and nothing about
+    # the resulting numbers would look wrong.
+    def _split_positions(self, split: Split, warmup: int):
+        warm, live = sessions_for(self.calendar(), split, warmup)
+        return list(warm), list(live)
+
+    def _ordinal(self, position: int) -> int:
+        return self._sessions[position].toordinal()
+
+    def scored_sessions(self, split: Split, warmup: int = 0) -> list[int]:
+        """The actionable sessions of a split, as `Tick.session` ids."""
+        _, live = self._split_positions(split, warmup)
+        return [self._ordinal(i) for i in live]
 
     def unlock_holdout(self, reason: str) -> None:
         self._lock.unlock(reason)
@@ -379,21 +413,34 @@ class NQDataset:
         """
         if split is not None:
             self._lock.check(split)
-            if self.spec.smoke_sessions is None:
-                raise NotImplementedError(
-                    "no split calendar exists for this dataset yet; iterate "
-                    f"sessions explicitly, or write {calendar_path(self.name)}"
-                )
-            if split is Split.HOLDOUT:
-                raise NotImplementedError("the smoke path never serves the holdout")
-            for d in self._sessions[: self.spec.smoke_sessions]:
-                yield from self.load(d)
+            if self.spec.smoke_sessions is not None:
+                # Plumbing only: a fixed prefix of sessions with no split meaning,
+                # kept so the adapter can be smoke-tested without a calendar.
+                if split is Split.HOLDOUT:
+                    raise NotImplementedError(
+                        "the smoke path never serves the holdout"
+                    )
+                for d in self._sessions[: self.spec.smoke_sessions]:
+                    yield from self.load(d)
+                return
+            warm, live = self._split_positions(split, warmup)
+            for i in list(warm) + list(live):
+                yield from self.load(self._sessions[i])
             return
         for d in self._sessions:
             yield from self.load(d)
 
     def warmup_sessions(self, split, warmup: int) -> set:
-        return set()
+        """Sessions served but not actionable, as `Tick.session` ids.
+
+        Returned empty until this task, because there was no calendar to derive
+        them from. A run with warmup would have treated every session as
+        actionable and scored the warmup ones.
+        """
+        if split is None:
+            return set()
+        warm, _ = self._split_positions(split, warmup)
+        return {self._ordinal(i) for i in warm}
 
     # ---- cache ------------------------------------------------------------- #
     def _cache_path(self, session: dt.date) -> Path:

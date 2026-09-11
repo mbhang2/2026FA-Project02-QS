@@ -31,6 +31,19 @@ profiles:
     wall_clock_budget_s: 120
     notional_base: 1.0
 
+  # The first real end-to-end run: reference strategy, real NQ data, the
+  # pre-registered validation split. A plumbing check at full scale, not a
+  # result -- run it with `--purpose smoke`.
+  nq-validation:
+    dataset: nq
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 3600
+    notional_base: 1.0
+    record_fill_spread: false
+
 # Dataset definitions the profiles name.
 datasets:
   synthetic:
@@ -46,5 +59,12 @@ datasets:
     ticks_per_session: 390
     vol_per_tick: 0.15
     signal_strength: 0.5
+
+  # Real data. `commission_per_contract` is deliberately absent: the engine's
+  # default is scaled for the synthetic generator's price units and a real NQ
+  # cost model is its own decision, not something to slip in here.
+  nq:
+    kind: nq
+    symbol: NQ
 
 ledger: runs/ledger.jsonl

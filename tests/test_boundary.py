@@ -610,18 +610,49 @@ def test_warmup_longer_than_the_embargo_is_refused():
 
 def test_the_shipped_profiles_satisfy_it():
     """The check is worth nothing if the configuration it guards already fails,
-    and worth nothing either if it is inert -- so assert it is live here."""
+    and worth nothing either if it is inert -- so assert it is live here.
+
+    Profiles on a generated dataset are built and checked directly. A profile on
+    a real adapter needs bucket credentials to construct, which CI does not have,
+    so its calendar is loaded from the committed pre-registration and the
+    published session list instead -- the same file the adapter would read, and
+    the same arithmetic, without the network.
+    """
+    import json
+
     import run
+    from src.core.data.dataset import load_calendar
 
     cfg = run.load_config()
+    checked = 0
     for name, profile in cfg["profiles"].items():
-        dataset = run.build_dataset(cfg, profile["dataset"], profile["seed"])
-        run.check_warmup_against_embargo(name, profile.get("warmup_sessions", 0),
-                                         dataset)
-        assert dataset.calendar().embargo_sessions > 0, (
+        warmup = profile.get("warmup_sessions", 0)
+        spec = cfg["datasets"][profile["dataset"]]
+        if spec["kind"] == "synthetic":
+            dataset = run.build_dataset(cfg, profile["dataset"], profile["seed"])
+            run.check_warmup_against_embargo(name, warmup, dataset)
+            embargo = dataset.calendar().embargo_sessions
+        else:
+            manifest = json.loads((REPO_ROOT / "data" / "manifest.json").read_text())
+            dates = [
+                dt.date.fromisoformat(d)
+                for d in manifest["instrument_coverage"][spec["symbol"]]["sessions"]["dates"]
+            ]
+            calendar = load_calendar(
+                REPO_ROOT / "config" / "calendars" / f"{spec['kind']}-trades.yaml",
+                dates,
+            )
+            embargo = calendar.embargo_sessions
+            assert warmup <= embargo, (
+                f"profile {name}: warmup_sessions={warmup} exceeds the "
+                f"pre-registered embargo of {embargo}"
+            )
+        assert embargo > 0, (
             f"profile {name} runs on a dataset with no embargo, so the check "
             "above proved nothing"
         )
+        checked += 1
+    assert checked == len(cfg["profiles"]) >= 3, checked
 
 
 def test_a_dataset_with_no_pre_registered_calendar_stands_the_check_down():

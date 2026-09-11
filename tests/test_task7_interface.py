@@ -321,7 +321,7 @@ def test_gtd_expires_mid_session_not_only_at_the_boundary():
 # --------------------------------------------------------------------------- #
 def run_py(*args, ledger: Path, cwd: Path = REPO_ROOT):
     return subprocess.run(
-        [sys.executable, "run.py", "--ledger", str(ledger), *args],
+        [sys.executable, "run.py", "--human", "--ledger", str(ledger), *args],
         capture_output=True, text=True, cwd=cwd,
     )
 
@@ -428,3 +428,76 @@ def test_serving_one_split_gives_the_same_prices_as_a_full_walk():
 def test_the_generator_can_still_reset_sessions_if_asked():
     d = ds(continuous_sessions=False)
     assert d._session_ticks(3)[0].price == pytest.approx(100.0, abs=0.26)
+
+
+# --------------------------------------------------------------------------- #
+# adversarial review, Task 20: replay on a real row
+# --------------------------------------------------------------------------- #
+def _replay_module():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "replay_script", REPO_ROOT / "scripts" / "replay.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.live
+def test_a_real_data_ledger_row_replays_byte_identically():
+    """The review's finding: "any trial can be replayed from its stored source"
+    was true on synthetic and false for the one real row that existed.
+
+    `replay.py` reconstructed a *synthetic* dataset from whatever profile the row
+    mentioned, so the `nq-smoke` row died with `KeyError: 'nq-smoke'` -- the
+    machinery was built and verified where the dataset was reconstructable and
+    never exercised where it is not. The row is the authority now: `dataset`
+    names the adapter, `dataset_digest` pins the bytes.
+    """
+    ledger = REPO_ROOT / "runs" / "ledger.jsonl"
+    rows = [json.loads(line) for line in ledger.read_text().splitlines() if line.strip()]
+    real = [r for r in rows if not r["dataset"].startswith("synthetic")]
+    if not real:
+        pytest.skip("no real-data row in the committed ledger")
+
+    module = _replay_module()
+    for row in real:
+        engine = module.replay(row)
+        assert engine.blotter.digest() == row["blotter_digest"], row["dataset"]
+
+
+def test_replay_refuses_when_the_data_has_changed_since_the_trial():
+    """A digest that no longer matches is a refusal, loudly. Replaying against
+    data that has since changed is worse than not replaying, because it produces
+    a number."""
+    module = _replay_module()
+    cfg = {"datasets": {"synthetic": {"kind": "synthetic", "n_sessions": 40,
+                                      "ticks_per_session": 390,
+                                      "vol_per_tick": 0.15,
+                                      "signal_strength": 0.0}}}
+    row = {"dataset": "synthetic:s=0:seed=1", "seed": 1,
+           "dataset_digest": "not-the-digest-it-has-now"}
+    with pytest.raises(SystemExit, match="no longer hashes"):
+        module.rebuild_dataset(row, cfg)
+
+
+def test_replay_rebuilds_the_dataset_the_row_names_not_the_profiles():
+    """The second half of the same finding: a dataset override replayed against
+    the profile's current choice, producing a digest mismatch that looked like
+    non-determinism."""
+    module = _replay_module()
+    cfg = {"datasets": {
+        "a": {"kind": "synthetic", "n_sessions": 40, "ticks_per_session": 390,
+              "vol_per_tick": 0.15, "signal_strength": 0.0},
+        "b": {"kind": "synthetic", "n_sessions": 40, "ticks_per_session": 390,
+              "vol_per_tick": 0.15, "signal_strength": 0.5},
+    }}
+    from src.core.data.synthetic import SyntheticDataset, SyntheticSpec
+
+    spec = {k: v for k, v in cfg["datasets"]["b"].items() if k != "kind"}
+    wanted = SyntheticDataset(SyntheticSpec(**spec, seed=3))
+    row = {"dataset": wanted.name, "seed": 3, "dataset_digest": wanted.digest()}
+    rebuilt = module.rebuild_dataset(row, cfg)
+    assert rebuilt.name == wanted.name
+    assert rebuilt.digest() == wanted.digest()

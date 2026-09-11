@@ -34,6 +34,7 @@ from .bars import BarBuilder
 from .context import (
     BarContext,
     ContextError,
+    EnginePort,
     FillContext,
     IntentQueue,
     LifecycleContext,
@@ -81,6 +82,139 @@ DEFAULT_ACTION_CAP = 64
 # its budget several times over before anyone looks.
 BUDGET_CHECK_EVERY_TICKS = 4096
 BUDGET_CHECK_EVERY_CALLBACKS = 32
+
+
+@dataclass(slots=True)
+class _RunState:
+    """The handful of live numbers a strategy may read, in one small record.
+
+    It exists so the context's port can close over *this* rather than over the
+    engine. A caller that walks `__closure__` looking for a way out finds six
+    numbers.
+
+    `realized_pnl` is accumulated rather than summed from the blotter on demand,
+    for the same reason: reaching the blotter would reach a mutable list of rows,
+    and a strategy that can append to the blotter can write its own result.
+    """
+
+    position: int = 0
+    avg_price: float = 0.0
+    last_price: float = 0.0
+    realized_pnl: float = 0.0
+    session_start: Ts = 0
+    session_end: Ts = 0
+
+
+class _OrderBook:
+    """The working orders, and the two questions a context may ask about them.
+
+    Narrow on purpose: the context's port binds `views` and `state_of`, so the
+    closure reaches this rather than the engine. It still holds live `Order`
+    objects, which is the one thing a determined caller could reach by walking
+    `__self__` -- recorded in `docs/design/architecture.md` as a known residual,
+    because in-process isolation is not achievable in Python and pretending
+    otherwise is worse than saying so.
+    """
+
+    __slots__ = ("working", "all", "tags", "next_id")
+
+    def __init__(self) -> None:
+        self.working: dict[int, Order] = {}
+        self.all: dict[int, Order] = {}
+        self.tags: dict[int, str] = {}
+        self.next_id = 1
+
+    def allocate(self) -> int:
+        """The id the next order will get.
+
+        Here rather than on the engine because `IntentQueue` holds the allocator
+        and the queue is reachable from the context: binding the engine's method
+        put the engine one `__self__` away from strategy code. The reachability
+        walk in `tests/test_boundary.py` found exactly that, after the rest of
+        this refactor was done -- which is the argument for walking rather than
+        reasoning.
+        """
+        oid = self.next_id
+        self.next_id += 1
+        return oid
+
+    def ids(self) -> tuple[int, ...]:
+        return tuple(sorted(self.working))
+
+    def views(self) -> tuple[OrderView, ...]:
+        return tuple(
+            OrderView.of(o, self.tags.get(oid, ""))
+            for oid, o in self.working.items()
+        )
+
+    def state_of(self, order_id: int) -> tuple[bool, str] | None:
+        order = self.all.get(order_id)
+        if order is None:
+            return None
+        return order.is_working, str(order.status)
+
+
+class _SubResolver:
+    """Canonicalises a subscription id and refuses one that was not declared."""
+
+    __slots__ = ("ids",)
+
+    def __init__(self) -> None:
+        self.ids: frozenset[str] | None = None
+
+    def resolve(self, sub) -> str:
+        sid = canonical_sub_id(sub)
+        if self.ids is None:
+            raise ContextError("subscriptions are not declared until setup() runs")
+        if sid not in self.ids:
+            raise ContextError(
+                f"no subscription {sid!r}"
+                + (f" (from {sub!r})" if str(sub) != sid else "")
+                + f"; declare it in setup(). Subscribed: {sorted(self.ids)}"
+            )
+        return sid
+
+
+class _SealedDataset:
+    """The dataset with the holdout door taken off.
+
+    The engine wraps whatever it is given, so the object it holds for the
+    duration of a run has no `unlock_holdout` and no `holdout_lock` on it at all.
+    Opening the holdout is then something only the caller that constructed the
+    dataset can do, before the engine ever sees it -- a separate, audited path
+    rather than a method sitting one attribute away from the walk.
+
+    Belt and braces since Task 20 also removed the dataset from the context
+    entirely. Kept because the two failures are different: one is a strategy
+    reaching the dataset, the other is anything inside the engine calling the
+    method by accident, and only the second survives the first fix.
+    """
+
+    __slots__ = ("_inner", "name", "holdout_unlock_reason")
+
+    _FORWARD = (
+        "capabilities", "calendar", "ticks", "session_bounds", "digest",
+        "warmup_sessions", "scored_sessions", "early_close_dates", "load",
+        "sessions", "periods", "spec", "contract_for",
+    )
+
+    def __init__(self, dataset) -> None:
+        object.__setattr__(self, "_inner", dataset)
+        self.name = dataset.name
+        lock = getattr(dataset, "holdout_lock", None)
+        self.holdout_unlock_reason = (lock.reason or None) if lock else None
+
+    def __getattr__(self, name: str):
+        if name in ("unlock_holdout", "holdout_lock", "_lock"):
+            raise AttributeError(
+                f"{name} is not available on the dataset the engine holds. "
+                "Opening the holdout is a deliberate act by whoever constructs "
+                "the dataset, recorded in the run record, and not something "
+                "reachable from inside a run."
+            )
+        if name in self._FORWARD:
+            return getattr(self._inner, name)
+        raise AttributeError(name)
 
 
 class BudgetExceeded(RuntimeError):
@@ -207,23 +341,30 @@ def validate_strategy(strategy: Any, *, needs_ticks: bool = False) -> None:
         )
 
 
-def aggregate(ticks: Iterable[Tick], sub: Subscription, dataset: Any) -> list[Bar]:
-    """Bars for a tick stream, session-anchored, using the live builder."""
+def aggregate(ticks: Iterable[Tick], sub: Subscription, bounds: Any) -> list[Bar]:
+    """Bars for a tick stream, session-anchored, using the live builder.
+
+    `bounds` is `session -> (open_ts, close_ts)`. A callable rather than the
+    dataset, because `SetupContext` may not hold a dataset: a strategy that could
+    reach it could open the holdout.
+    """
+    if hasattr(bounds, "session_bounds"):
+        bounds = bounds.session_bounds
     builder = BarBuilder(sub)
     out: list[Bar] = []
     session = None
     for t in ticks:
         if t.session != session:
             if session is not None:
-                tail = builder.flush_session(dataset.session_bounds(session)[1])
+                tail = builder.flush_session(bounds(session)[1])
                 if tail is not None:
                     out.append(tail)
             session = t.session
-            builder.start_session(session, dataset.session_bounds(session)[0])
+            builder.start_session(session, bounds(session)[0])
         out.extend(builder.bars_closed_by(t))
         builder.add(t)
     if session is not None:
-        tail = builder.flush_session(dataset.session_bounds(session)[1])
+        tail = builder.flush_session(bounds(session)[1])
         if tail is not None:
             out.append(tail)
     return out
@@ -253,7 +394,7 @@ class Engine:
         # knob: the fast path is not an approximation.
         event_walk: bool = True,
     ):
-        self.dataset = dataset
+        self.dataset = _SealedDataset(dataset)
         self.strategy = strategy
         self.split = split
         self.model = (
@@ -272,28 +413,26 @@ class Engine:
         self._session_seq0 = 0
 
         self.blotter = Blotter()
-        self.orders: dict[int, Order] = {}
+        self._state = _RunState()
+        self._book = _OrderBook()
+        self._resolver = _SubResolver()
+        self.orders = self._book.all
         # Only the orders that can still do something, in creation order. The
         # resolver used to scan `orders` and test `is_working` on each, which
         # made every tick cost O(orders ever placed) -- quadratic in session
         # length, and on a real NQ session that was 35 million `is_working` calls
         # for 388,000 ticks. Insertion order matches `orders`, so the sequence
         # the resolver sees is unchanged.
-        self._working: dict[int, Order] = {}
-        self._next_order_id = 1
+        self._working = self._book.working
         self._next_oco_group = 1
-        self.position = 0
-        self._avg_price = 0.0
-        self.last_price = 0.0
         self._pending_events: list[LifecycleEvent] = []
         # The current session's bounds, so a strategy can be flat before the
         # close. An exchange calendar is published in advance, so knowing when
         # today ends is not lookahead -- and without it a strategy cannot be
         # reliably flat at a boundary, which cost the calibration apparatus a
         # working exit rule for three tasks running.
-        self._session_start: Ts = 0
-        self._session_end: Ts = 0
-        self._order_tags: dict[int, str] = {}
+
+        self._order_tags = self._book.tags
 
         self.action_cap_hits = 0
         self.actions_dropped = 0
@@ -310,6 +449,64 @@ class Engine:
         self.n_bars = 0
         self.n_fills = 0
         self.end_of_session_positions: dict[str, int] = {}
+
+    # `position`, `last_price` and `_avg_price` live on `_RunState` so the
+    # context's port can close over that record rather than over the engine.
+    # Properties keep every existing call site working.
+    @property
+    def position(self) -> int:
+        return self._state.position
+
+    @position.setter
+    def position(self, value: int) -> None:
+        self._state.position = value
+
+    @property
+    def last_price(self) -> float:
+        return self._state.last_price
+
+    @last_price.setter
+    def last_price(self, value: float) -> None:
+        self._state.last_price = value
+
+    @property
+    def _avg_price(self) -> float:
+        return self._state.avg_price
+
+    @_avg_price.setter
+    def _avg_price(self, value: float) -> None:
+        self._state.avg_price = value
+
+    @property
+    def _session_start(self) -> Ts:
+        return self._state.session_start
+
+    @property
+    def _session_end(self) -> Ts:
+        return self._state.session_end
+
+    def _make_port(self) -> "EnginePort":
+        """Bind each operation to the narrowest object that can answer it.
+
+        Nothing here closes over `self`. That is the whole point: a context holds
+        this record of callables and no engine, so there is no engine at the end
+        of any attribute path from a strategy.
+        """
+        state, book, resolver = self._state, self._book, self._resolver
+        history, ticks = self.history, self.tick_history
+        return EnginePort(
+            position=lambda: state.position,
+            last_price=lambda: state.last_price,
+            average_entry_price=lambda: state.avg_price,
+            realized_pnl=lambda: state.realized_pnl,
+            session_bounds=lambda: (state.session_start, state.session_end),
+            working_ids=book.ids,
+            order_views=book.views,
+            order_state=book.state_of,
+            resolve_sub=resolver.resolve,
+            history=history.__getitem__,
+            tick_history=lambda: ticks,
+        )
 
     # ---- run --------------------------------------------------------------- #
     def run(self) -> RunRecord:
@@ -336,33 +533,13 @@ class Engine:
 
     # ---- what the context resolves through --------------------------------- #
     def resolve_sub(self, sub) -> str:
-        """Canonical id for a subscription the strategy declared.
-
-        Every strategy-facing entry point that takes a subscription comes through
-        here, so there is exactly one place that decides what an id means and
-        exactly one error for an id that means nothing. An unknown id used to
-        read as absent -- `"5m" in ctx.bars` was `False`, `ctx.history("1m")`
-        raised a bare `KeyError` -- and a strategy that silently never trades is
-        a trial spent learning nothing.
-        """
-        sid = canonical_sub_id(sub)
-        known = getattr(self, "_sub_ids", None)
-        if known is None:
-            raise ContextError("subscriptions are not declared until setup() runs")
-        if sid not in known:
-            raise ContextError(
-                f"no subscription {sid!r}"
-                + (f" (from {sub!r})" if str(sub) != sid else "")
-                + f"; declare it in setup(). Subscribed: {sorted(known)}"
-            )
-        return sid
+        """Canonical id for a subscription the strategy declared. See
+        `_SubResolver`: the logic lives there so the context's port can bind it
+        without binding the engine."""
+        return self._resolver.resolve(sub)
 
     def order_views(self) -> tuple[OrderView, ...]:
-        """Read-only copies of the working orders, in the engine's own order."""
-        return tuple(
-            OrderView.of(o, self._order_tags.get(oid, ""))
-            for oid, o in self._working.items()
-        )
+        return self._book.views()
 
     def _run_inner(self) -> None:
         warm = set(self.dataset.warmup_sessions(self.split, self.warmup_sessions))
@@ -370,8 +547,14 @@ class Engine:
         # A factory, not a list. See SetupContext: eagerly materialising the
         # training split costs nothing on synthetic data and is on the order of
         # 22 GiB on the real one, for a strategy that may never read a tick of it.
+        #
+        # Bound to the *sealed* dataset in a local, not to `self`. A lambda over
+        # `self` would have put the engine in its closure cell, which is exactly
+        # what the reachability walk in tests/test_boundary.py found after the
+        # rest of this refactor was done.
+        sealed = self.dataset
         train = (
-            (lambda: self.dataset.ticks(Split.TRAIN))
+            (lambda: sealed.ticks(Split.TRAIN))
             if self.split is not Split.TRAIN
             else (lambda: iter(()))
         )
@@ -380,7 +563,10 @@ class Engine:
         # checked again below, once the subscriptions are known.
         validate_strategy(self.strategy)
 
-        setup_ctx = SetupContext(self.dataset, train)
+        # The dataset's name and one bound accessor, never the dataset.
+        setup_ctx = SetupContext(
+            self.dataset.name, self.dataset.session_bounds, train
+        )
         declared = self.strategy.setup(setup_ctx)
         setup_ctx._expire()
         subs = list(setup_ctx.subscriptions())
@@ -407,9 +593,10 @@ class Engine:
             # was the only legible callback error; it is now one case of the
             # general check rather than a special one.
             validate_strategy(self.strategy, needs_ticks=True)
-        self._sub_ids = frozenset(s.sub_id for s in subs)
+        self._resolver.ids = frozenset(s.sub_id for s in subs)
         self.builders = {s.sub_id: BarBuilder(s) for s in bar_subs}
         self.history = BarHistory([s.sub_id for s in bar_subs])
+        self._port = self._make_port()
 
         session = None
         seq = -1
@@ -635,7 +822,7 @@ class Engine:
     # ---- sessions ---------------------------------------------------------- #
     def _open_session(self, session: int, tick: Tick) -> None:
         start, end = self.dataset.session_bounds(session)
-        self._session_start, self._session_end = start, end
+        self._state.session_start, self._state.session_end = start, end
         for builder in self.builders.values():
             builder.start_session(session, start)
         self._emit(LifecycleKind.SESSION_OPEN, tick.ts, tick.seq)
@@ -711,12 +898,42 @@ class Engine:
                 self._cancel(order, LifecycleKind.CANCEL_CONFIRMED, tick.ts, tick.seq)
                 continue
 
-            out.append(self._apply_fill(order, fill, tick))
+            event = self._apply_fill(order, fill, tick)
+            if event is None:
+                continue
+            out.append(event)
             if order.tif is TimeInForce.IOC and order.remaining > 0:
                 self._cancel(order, LifecycleKind.CANCEL_CONFIRMED, tick.ts, tick.seq)
         return out
 
     def _apply_fill(self, order: Order, fill: Fill, tick: Tick) -> FillEvent:
+        # Revalidated here, not only at submit. `reduce_only` was checked when
+        # the order was queued and never again, so two `ctx.close()` calls
+        # against a long went +1 -> 0 -> -1 with both orders marked reduce-only:
+        # the second was legitimate when it was written and had become an
+        # opening order by the time it filled. Clamp to what is left, cancel the
+        # remainder, and emit the clamp so it is visible rather than silent.
+        if order.reduce_only:
+            room = abs(self.position) if (
+                self.position != 0
+                and (self.position > 0) != (order.side is Side.BUY)
+            ) else 0
+            if room <= 0:
+                self._cancel(order, LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq)
+                self._emit(
+                    LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, order.order_id,
+                    f"reduce_only {order.side} would open against a position of "
+                    f"{self.position} by the time it filled",
+                )
+                return None
+            if fill.size > room:
+                self._emit(
+                    LifecycleKind.ORDER_ACCEPTED, tick.ts, tick.seq, order.order_id,
+                    f"reduce_only fill clamped from {fill.size} to {room} at fill "
+                    "time; the position had already shrunk",
+                )
+                fill = Fill(price=fill.price, size=room)
+
         signed = fill.size * order.side.sign
         realized = 0.0
         if self.position != 0 and (self.position > 0) != (signed > 0):
@@ -740,6 +957,10 @@ class Engine:
             self.position += signed
 
         commission = self.commission * fill.size
+        # Accumulated here rather than summed from the blotter on demand, so the
+        # context can read it without the blotter being reachable -- a mutable
+        # list of rows is a place a strategy could write its own result.
+        self._state.realized_pnl += realized - commission
         order.filled_size += fill.size
         if order.remaining == 0:
             order.status = OrderStatus.FILLED
@@ -765,7 +986,13 @@ class Engine:
         # resolvable against this same tick.
         if order.oco_group is not None:
             self._cancel_oco_siblings(order, tick)
-        if order.bracket is not None and order.status is OrderStatus.FILLED:
+        # Armed on the **first** fill and resized as more arrive, not on full
+        # fill. A 10-lot entry filling 4+1+2+3 used to get a 3-lot stop and a
+        # 3-lot target -- the last fragment -- leaving seven contracts naked for
+        # the whole sequence, and the bracket did not exist at all until the
+        # final fragment landed. Protected quantity now equals filled quantity at
+        # every point, which is the property the bracket is for.
+        if order.bracket is not None and order.filled_size > 0:
             self._arm_bracket(order, fill, tick)
 
         return FillEvent(
@@ -790,6 +1017,20 @@ class Engine:
         """
         b: BracketSpec = parent.bracket
         exit_side = parent.side.opposite
+        existing = [
+            o for o in self._book.working.values()
+            if o.parent_id == parent.order_id
+        ]
+        if existing:
+            # Already armed on an earlier fragment: widen the legs to the
+            # cumulative filled quantity rather than adding a second bracket.
+            # Prices stay where the first fill put them -- re-pricing on every
+            # fragment would let the protection drift with the fill sequence,
+            # which is a different strategy, not a bigger one.
+            for leg in existing:
+                leg.size = parent.filled_size
+                leg.eligible_from_seq = tick.seq + 1
+            return
         group = self._next_oco_group
         self._next_oco_group += 1
         if b.stop_price is not None or b.stop_offset is not None:
@@ -805,7 +1046,7 @@ class Engine:
             self._new_order(
                 Submit(
                     side=exit_side,
-                    size=fill.size,
+                    size=parent.filled_size,
                     order_type=OrderType.STOP,
                     tif=TimeInForce.GTC,
                     stop_price=stop_px,
@@ -829,7 +1070,7 @@ class Engine:
             self._new_order(
                 Submit(
                     side=exit_side,
-                    size=fill.size,
+                    size=parent.filled_size,
                     order_type=OrderType.LIMIT,
                     tif=TimeInForce.GTC,
                     limit_price=tgt_px,
@@ -850,9 +1091,7 @@ class Engine:
                 self._cancel(other, LifecycleKind.OCO_CANCELLED, tick.ts, tick.seq)
 
     def _alloc_order_id(self) -> int:
-        oid = self._next_order_id
-        self._next_order_id += 1
-        return oid
+        return self._book.allocate()
 
     def _new_order(
         self,
@@ -930,7 +1169,7 @@ class Engine:
         self._emit(kind, ts, seq, order.order_id)
 
     def _working_ids(self) -> tuple[int, ...]:
-        return tuple(sorted(self._working))
+        return self._book.ids()
 
     # ---- callbacks and actions ---------------------------------------------- #
     def _check_budget(self) -> None:
@@ -949,7 +1188,8 @@ class Engine:
         stashes it and reaches for it later would be reading state from an
         instant it is not standing in.
         """
-        queue = IntentQueue(self.action_cap, self._alloc_order_id, live=actionable)
+        queue = IntentQueue(self.action_cap, self._book.allocate, live=actionable)
+        port = self._port
         common = dict(
             ts=tick.ts,
             seq=tick.seq,
@@ -958,16 +1198,16 @@ class Engine:
             actionable=actionable,
         )
         if kind == "bars":
-            ctx = BarContext(self, queue, event=event, **common)
+            ctx = BarContext(port, queue, event=event, **common)
             handler = self.strategy.on_bars
         elif kind == "tick":
-            ctx = TickContext(self, queue, tick=event, **common)
+            ctx = TickContext(port, queue, tick=event, **common)
             handler = self.strategy.on_tick
         elif kind == "fill":
-            ctx = FillContext(self, queue, fill=event, **common)
+            ctx = FillContext(port, queue, fill=event, **common)
             handler = self.strategy.on_fill
         else:
-            ctx = LifecycleContext(self, queue, event=event, **common)
+            ctx = LifecycleContext(port, queue, event=event, **common)
             handler = self.strategy.on_lifecycle
 
         self._callbacks += 1
@@ -1083,7 +1323,6 @@ class Engine:
 
     # ---- record -------------------------------------------------------------- #
     def _make_record(self, outcome: str, error: str | None, wall: float) -> RunRecord:
-        lock = getattr(self.dataset, "holdout_lock", None)
         return RunRecord(
             dataset=self.dataset.name,
             dataset_digest=self.dataset.digest(),
@@ -1108,6 +1347,6 @@ class Engine:
             warmup_sessions=self.warmup_sessions,
             wall_clock_budget_s=self.wall_clock_budget_s,
             end_of_session_positions=dict(self.end_of_session_positions),
-            holdout_unlock_reason=(lock.reason or None) if lock else None,
+            holdout_unlock_reason=self.dataset.holdout_unlock_reason,
             blotter_digest=self.blotter.digest(),
         )

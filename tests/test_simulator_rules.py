@@ -297,3 +297,88 @@ def test_a_fill_model_requiring_absent_capabilities_fails_at_wiring_time():
     model.requires = DataCapabilities(has_trades=True, has_quotes=True)
     with pytest.raises(ValueError, match="requires"):
         Engine(ds(), Noop(["1m"]), fill_model=model)
+
+
+# --------------------------------------------------------------------------- #
+# adversarial review, Task 20
+# --------------------------------------------------------------------------- #
+def test_reduce_only_cannot_open_an_opposite_position(tmp_path):
+    """The review's reproduction. `reduce_only` was checked when the order was
+    queued and never again, so two `ctx.close()` calls against a long went
+    +1 -> 0 -> -1 with both orders marked reduce-only: the second was legitimate
+    when it was written and had become an opening order by the time it filled."""
+    seen = {"positions": []}
+
+    class DoubleClose:
+        def setup(self, ctx):
+            ctx.subscribe("1m")
+
+        def on_bars(self, ctx):
+            seen["positions"].append(ctx.position)
+            if not ctx.actionable:
+                return
+            if not ctx.position and not ctx.working_order_ids and "opened" not in seen:
+                seen["opened"] = ctx.buy(1, tag="entry")
+                return
+            if ctx.position > 0 and "closed" not in seen:
+                seen["closed"] = True
+                ctx.close()
+                ctx.close()          # the second one is the attack
+
+        def on_fill(self, ctx):
+            seen["positions"].append(ctx.fill.position)
+
+        def on_lifecycle(self, ctx):
+            pass
+
+    engine = Engine(ds(), DoubleClose(), split=Split.VALIDATION)
+    engine.run()
+    assert seen.get("closed"), "the probe never got a position to close twice"
+    assert min(seen["positions"]) >= 0, (
+        f"a reduce-only order opened a short: {seen['positions']}"
+    )
+    assert engine.blotter.final_position >= 0
+
+
+def test_a_fragmented_bracket_entry_is_protected_at_every_point():
+    """The review's second reproduction. Brackets armed only when the parent was
+    *fully* filled and sized the children from the final fragment, so a 10-lot
+    entry filling 4+1+2+3 got a 3-lot stop and a 3-lot target -- seven contracts
+    naked, for the whole sequence.
+
+    The invariant is protected == filled at every point, not only at the end,
+    which is why this walks the sequence rather than checking the result.
+    """
+    from src.core.types import Fill, Order, OrderStatus, OrderType, TimeInForce
+
+    engine = Engine(ds(), Noop(subs=("1m",)), split=Split.VALIDATION)
+    engine.run()
+
+    parent = Order(
+        order_id=9_000, side=Side.BUY, size=10, order_type=OrderType.MARKET,
+        tif=TimeInForce.DAY, bracket=BracketSpec(stop_offset=1.0, target_offset=1.0),
+        status=OrderStatus.WORKING,
+    )
+    engine.orders[parent.order_id] = parent
+    engine._book.working[parent.order_id] = parent
+    engine.position = 0
+
+    protected = []
+    for size in (4, 1, 2, 3):
+        tick = Tick(ts=1, price=100.0, size=size, session=0, seq=len(protected) + 1)
+        engine._apply_fill(parent, Fill(price=100.0, size=size), tick)
+        legs = [o for o in engine._book.working.values()
+                if o.parent_id == parent.order_id]
+        by_type = {o.order_type: o.size for o in legs}
+        protected.append((parent.filled_size, dict(by_type)))
+
+    for filled, legs in protected:
+        assert legs, f"no bracket after {filled} contracts filled"
+        assert set(legs) == {OrderType.STOP, OrderType.LIMIT}, legs
+        assert all(size == filled for size in legs.values()), (
+            f"{filled} contracts filled but the bracket protects {legs}"
+        )
+    assert len({id(o) for o in engine._book.working.values()
+                if o.parent_id == parent.order_id}) == 2, (
+        "each fragment armed its own bracket instead of resizing the first"
+    )

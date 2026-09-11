@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
 """The immutable entry point. `src/strategies/current.py` is a library; this runs it.
 
-    python run.py                       # harness profile, from config/run.yaml
-    python run.py --trigger agent       # what the agent may run itself
-    python run.py --dataset synthetic-signal
-    python run.py --profile harness --split holdout --unlock-holdout "mentor sign-off"
+    python run.py                       # the harness profile, from config/run.yaml
+    python run.py --profile nq-validation
+    python run.py --human --purpose smoke
 
-**Run configuration is immutable, for the same reason the scorer is.** Whoever
-chooses the split, the fill model and the seed can point a run at the holdout,
-select favorable fills, or retry until a lucky seed lands -- none of which
-require touching the scorer, and all of which are cheaper ways to fake a result.
-Everything comes from `config/run.yaml`; nothing comes from the strategy.
+**This is the scored path, and the agent does not invoke it.** The agent's entry
+point is `scripts/agent_check.py`, which returns pass or fail and no number.
 
-**The agent may run evaluations, and every one counts.** `--trigger agent` uses a
-fixed profile: validation split, no argument that changes the split, the fill
-model or the seed, and the holdout unreachable. An agent that cannot execute what
-it writes ships syntax errors into the loop, so it gets to run -- but if it could
-run fifty exploratory backtests, pick the best and present it as one candidate,
-then N is fiction and the multiple-testing argument collapses silently, in the
-one place nobody would look. **Every invocation appends exactly one ledger
-record**, crashes included, tagged with what triggered it and what it was for.
+**Every evaluation condition comes from a committed profile.** There is no
+argument that selects a dataset, a split, a seed or a fill model, and that is the
+fix rather than an omission. Those used to be overridable with an
+agent-forbidden-list in front of them, and adversarial review showed what that is
+worth: two of the flags were missing from the list, the supplied-argument check
+tested truthiness so `--seed 0` read as "not supplied", and the trigger was a
+string the caller chose. A strategy could evaluate itself against the
+planted-signal dataset, retry on seeds, and write the result to a ledger nobody
+counts -- not a loophole in honest N, a deletion of it. Adding names to a list is
+a race against whoever adds the next flag; taking the values off the command line
+is not.
+
+**Every invocation appends exactly one ledger record**, crashes included, tagged
+with which entry point ran and what it was for.
 
 **`--purpose` classifies a run; it does not hide one.** N is the count of rows
 with `purpose == "trial"`, and every other row stays in the ledger where it can
@@ -45,10 +47,24 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
+from src.core.scoring import integrity  # noqa: E402
+# Bound here, at import, so a later `sys.modules[...].score = evil` does not
+# reach this reference. That closes the cheapest version of the attack and not
+# the general one -- these functions call into `metrics` by attribute, so the
+# fingerprint below is what actually covers it.
 from src.core.scoring.scorer import score, score_diagnostics  # noqa: E402
 from src.core.types import HoldoutLocked, Split  # noqa: E402
 
 CONFIG_PATH = REPO_ROOT / "config" / "run.yaml"
+
+# The scoring code as committed, fingerprinted at import -- before any strategy
+# module has been imported and therefore before any strategy has had a chance to
+# touch it. Taking the baseline inside `main()` was the first attempt and it was
+# worthless: `load_strategy()` runs before it, so a strategy that rebound a
+# metric constant at import time was already in the baseline. The reproduction
+# passed against that version, which is the argument for running the
+# reproduction rather than reasoning about the fix.
+SCORING_AT_IMPORT = integrity.fingerprint()
 
 
 class _Abandoned(Exception):
@@ -67,7 +83,7 @@ AGENT_FORBIDDEN = ("split", "fill_model", "seed", "unlock_holdout", "profile",
 #           a demonstration. Not a candidate, not evidence about one.
 #   replay  re-running a recorded trial to confirm it reproduces. Its result is
 #           a statement about the first run, not a second observation.
-PURPOSES = ("trial", "smoke", "replay")
+PURPOSES = ("trial", "smoke", "replay", "check")
 
 # **Purpose is derived from who ran it, not accepted from the caller.**
 #
@@ -88,7 +104,7 @@ PURPOSES = ("trial", "smoke", "replay")
 # `smoke` there -- a hand-run harness invocation is a smoke run unless the person
 # says otherwise, which is the safe default in the direction that matters: it
 # undercounts nothing, because a human claiming a trial can still say so.
-TRIGGER_PURPOSE = {"agent": "trial", "loop": "trial", "harness": "trial"}
+TRIGGER_PURPOSE = {"agent": "check", "loop": "trial", "harness": "trial"}
 PURPOSE_MAY_BE_SET_BY = ("human",)
 
 
@@ -263,54 +279,52 @@ def append_ledger(path: Path, record: dict) -> None:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--trigger", choices=("harness", "agent", "loop", "human"),
-                    default="harness",
-                    help="who asked for this run; recorded in the ledger, and "
-                         "what its purpose is derived from")
-    # Resolved after parsing, so "did not pass it" is distinguishable from
-    # "passed the default".
+    ap.add_argument("--profile", default="harness",
+                    help="which committed profile in config/run.yaml to run")
+    ap.add_argument("--human", action="store_true",
+                    help="a person is running this by hand. The only mode that "
+                         "may set --purpose, --ledger or --unlock-holdout.")
     ap.add_argument("--purpose", choices=PURPOSES, default=None,
-                    help="what the run is for; only 'trial' counts toward N. "
-                         "Accepted from --trigger human alone: every other "
-                         "caller's purpose is derived from the trigger.")
-    ap.add_argument("--profile", help="profile from config/run.yaml (harness only)")
-    ap.add_argument("--dataset", help="dataset from config/run.yaml")
-    ap.add_argument("--split", choices=[s.value for s in Split],
-                    help="override the profile's split (harness only)")
-    ap.add_argument("--fill-model", dest="fill_model",
-                    help="override the profile's fill model (harness only)")
-    ap.add_argument("--seed", type=int, help="override the profile's seed (harness only)")
+                    help="--human only; defaults to 'smoke' there")
     ap.add_argument("--unlock-holdout", dest="unlock_holdout", metavar="REASON",
-                    help="one-way, recorded in the run record (harness only)")
-    ap.add_argument("--ledger", type=Path, help="override the ledger path")
+                    help="--human only; one-way, recorded in the run record")
+    ap.add_argument("--ledger", type=Path, help="--human only")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args(argv)
 
-    cfg = load_config()
-    purpose = resolve_purpose(args.trigger, args.purpose)
-
-    if args.trigger == "agent":
-        supplied = [n for n in AGENT_FORBIDDEN if getattr(args, n, None)]
-        if supplied:
+    # There is no --dataset, --split, --seed, --fill-model or --trigger, and
+    # that is the fix rather than an omission. They were overridable and the
+    # agent-forbidden list did not cover all of them, so a strategy could
+    # evaluate itself against the planted-signal dataset, retry on seeds and
+    # write the results to a ledger nobody counts. Adding names to a
+    # forbidden-list is a race against whoever adds the next flag; taking the
+    # values out of the command line is not.
+    #
+    # Every evaluation condition now comes from the committed profile, and
+    # provenance comes from which entry point ran rather than from a string the
+    # caller supplies: `run.py` is the loop driver's scored path, and
+    # `scripts/agent_check.py` is the agent's, which returns no number at all.
+    human = bool(args.human)
+    for flag in ("purpose", "unlock_holdout", "ledger"):
+        if getattr(args, flag) is not None and not human:
             sys.exit(
-                "an agent-triggered run takes a fixed configuration; it cannot set "
-                + ", ".join(f"--{n.replace('_', '-')}" for n in supplied)
-                + ". Change the strategy, not the conditions it is measured under."
+                f"--{flag.replace('_', '-')} is for a person running the harness "
+                "by hand; pass --human as well. An automated run takes its "
+                "configuration from the committed profile and nothing else."
             )
-        profile_name = "agent"
-    else:
-        profile_name = args.profile or "harness"
+
+    cfg = load_config()
+    trigger = "human" if human else "loop"
+    purpose = resolve_purpose(trigger, args.purpose)
+    profile_name = args.profile
 
     profile = cfg["profiles"].get(profile_name)
     if profile is None:
         sys.exit(f"unknown profile {profile_name!r}; have {sorted(cfg['profiles'])}")
 
-    split = Split(args.split or profile["split"])
-    if args.trigger == "agent" and split is not Split.VALIDATION:
-        sys.exit("an agent-triggered run is validation only")
-
-    seed = args.seed if args.seed is not None else profile["seed"]
-    dataset = build_dataset(cfg, args.dataset or profile["dataset"], seed)
+    split = Split(profile["split"])
+    seed = profile["seed"]
+    dataset = build_dataset(cfg, profile["dataset"], seed)
     if args.unlock_holdout:
         dataset.unlock_holdout(args.unlock_holdout)
 
@@ -320,7 +334,7 @@ def main(argv: list[str] | None = None) -> int:
     strategy = load_strategy()
     ledger_path = args.ledger or (REPO_ROOT / cfg.get("ledger", "runs/ledger.jsonl"))
 
-    fill_model = args.fill_model or profile["fill_model"]
+    fill_model = profile["fill_model"]
     engine = Engine(
         dataset,
         strategy,
@@ -342,12 +356,13 @@ def main(argv: list[str] | None = None) -> int:
         result = score(engine.blotter, period=period,
                        notional_base=profile.get("notional_base", 1.0))
         engine.record.score = result.as_dict()
+        integrity.check(SCORING_AT_IMPORT, integrity.fingerprint())
         engine.record.diagnostics = score_diagnostics(
             engine.blotter,
             period,
             notional_base=profile.get("notional_base", 1.0),
             fill_model_spread=(
-                _fill_model_spread(cfg, args, profile, seed, strategy, split, engine)
+                _fill_model_spread(cfg, profile, seed, strategy, split, engine)
                 if profile.get("record_fill_spread")
                 else None
             ),
@@ -355,10 +370,19 @@ def main(argv: list[str] | None = None) -> int:
         record = engine.record.as_dict()
     except _Abandoned:
         pass
+    except integrity.ScoringMutated as exc:
+        rec = getattr(engine, "record", None)
+        record = rec.as_dict() if rec else {}
+        record.update(outcome="invalidated_scoring_mutated", error=str(exc),
+                      score=None, diagnostics=None)
+        append_ledger(ledger_path, _row(record, trigger, profile_name,
+                                        ledger_path, purpose))
+        print(f"INVALIDATED: {exc}", file=sys.stderr)
+        return 4
     except HoldoutLocked as exc:
         record = _failure_record(cfg, profile_name, split, seed, args,
                                  dataset, "refused", str(exc), started)
-        append_ledger(ledger_path, _row(record, args.trigger, profile_name, ledger_path, purpose))
+        append_ledger(ledger_path, _row(record, trigger, profile_name, ledger_path, purpose))
         print(f"refused: {exc}", file=sys.stderr)
         return 2
     except Exception as exc:  # a crash is a ledger row, not a lost trial
@@ -366,11 +390,11 @@ def main(argv: list[str] | None = None) -> int:
         record = rec.as_dict() if rec else _failure_record(
             cfg, profile_name, split, seed, args, dataset, "crashed", repr(exc), started
         )
-        append_ledger(ledger_path, _row(record, args.trigger, profile_name, ledger_path, purpose))
+        append_ledger(ledger_path, _row(record, trigger, profile_name, ledger_path, purpose))
         raise
     finally:
         if record and record.get("outcome") in ("completed", "abandoned_on_budget"):
-            append_ledger(ledger_path, _row(record, args.trigger, profile_name, ledger_path, purpose))
+            append_ledger(ledger_path, _row(record, trigger, profile_name, ledger_path, purpose))
 
     if engine.record.outcome == "abandoned_on_budget":
         print(f"abandoned: {engine.record.error}", file=sys.stderr)
@@ -390,7 +414,7 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _fill_model_spread(cfg, args, profile, seed, strategy, split, engine) -> float:
+def _fill_model_spread(cfg, profile, seed, strategy, split, engine) -> float:
     """Net P&L under `favorable` minus under `unfavorable`, on the same data.
 
     A candidate that collapses between the two modes is telling you its edge
@@ -400,7 +424,7 @@ def _fill_model_spread(cfg, args, profile, seed, strategy, split, engine) -> flo
     """
     other = "favorable" if engine.model.name == "unfavorable" else "unfavorable"
     twin = Engine(
-        build_dataset(cfg, args.dataset or profile["dataset"], seed),
+        build_dataset(cfg, profile["dataset"], seed),
         load_strategy(),
         split=split,
         fill_model=other,
@@ -438,6 +462,7 @@ def _row(record: dict, trigger: str, profile: str, ledger_path: Path,
         "strategy": named,
         "strategy_digest": digest,
         "strategy_source": store_source(ledger_path, digest, strategy_path),
+        "scoring_fingerprint": integrity.fingerprint(),
     }
 
 

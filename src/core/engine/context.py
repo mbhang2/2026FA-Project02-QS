@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from dataclasses import dataclass
 from typing import Any, Sequence
 
 from ..types import (
@@ -91,6 +92,43 @@ def parse_interval(spec: str | int) -> int:
     return int(m.group(1)) * _UNITS[m.group(2)]
 
 
+@dataclass(frozen=True, slots=True)
+class EnginePort:
+    """The operations a context may perform, bound one by one.
+
+    **A context does not hold the engine.** It used to, as `self._engine`, and
+    `ctx._dataset` sat beside it -- so a strategy could read the split and the
+    seed, call `unlock_holdout`, pull a holdout tick and mutate engine state,
+    all through two underscore-prefixed attributes. `tests/test_boundary.py`
+    walked only public names and so never saw it: the test encoded the same
+    assumption the code did, which is how a guard passes for seven tasks while
+    guarding nothing.
+
+    Hiding the attribute would not have helped. The fix is not to hold the
+    reference: every entry below is a callable bound to the narrowest object that
+    can answer it, so there is no engine at the end of any attribute path.
+
+    **This is defence in depth, not a boundary.** Python has no in-process
+    isolation: a determined caller can walk `__closure__` and `__self__`, and
+    what stops it there is that those cells hold small state records rather than
+    the engine. The boundary is the module-hash check on the scoring code and,
+    eventually, a separate process. Said plainly here because the previous
+    version of this file implied otherwise by omission.
+    """
+
+    position: Any
+    last_price: Any
+    average_entry_price: Any
+    realized_pnl: Any
+    session_bounds: Any
+    working_ids: Any
+    order_views: Any
+    order_state: Any
+    resolve_sub: Any
+    history: Any
+    tick_history: Any
+
+
 class IntentQueue:
     """Holds what a callback asked for until the engine applies it.
 
@@ -141,7 +179,7 @@ class BaseContext:
     """Reads and writes shared by the three run-time callbacks."""
 
     __slots__ = (
-        "_engine",
+        "_port",
         "_queue",
         "_active",
         "_ts",
@@ -152,10 +190,10 @@ class BaseContext:
         "_closed",
     )
 
-    def __init__(self, engine, queue: IntentQueue, *, ts: Ts, seq: int,
+    def __init__(self, port: EnginePort, queue: IntentQueue, *, ts: Ts, seq: int,
                  session: int, fills: Sequence[FillEvent], actionable: bool,
                  closed: Sequence[Bar] = ()):
-        self._engine = engine
+        self._port = port
         self._queue = queue
         self._active = True
         self._ts = ts
@@ -206,7 +244,7 @@ class BaseContext:
     def session_start(self) -> Ts:
         """When this session opened, in nanoseconds UTC."""
         self._check()
-        return self._engine._session_start
+        return self._port.session_bounds()[0]
 
     @property
     def session_end(self) -> Ts:
@@ -230,18 +268,18 @@ class BaseContext:
         leave is yours; knowing the deadline should not have been.
         """
         self._check()
-        return self._engine._session_end
+        return self._port.session_bounds()[1]
 
     # ---- state ------------------------------------------------------------- #
     @property
     def position(self) -> int:
         self._check()
-        return self._engine.position
+        return self._port.position()
 
     @property
     def last_price(self) -> float:
         self._check()
-        return self._engine.last_price
+        return self._port.last_price()
 
     @property
     def working_orders(self) -> tuple[OrderView, ...]:
@@ -252,7 +290,7 @@ class BaseContext:
         record.
         """
         self._check()
-        return self._engine.order_views()
+        return self._port.order_views()
 
     def find_orders(
         self,
@@ -274,7 +312,7 @@ class BaseContext:
         want_type = OrderType(order_type) if isinstance(order_type, str) else order_type
         want_side = Side(side) if isinstance(side, str) else side
         return tuple(
-            o for o in self._engine.order_views()
+            o for o in self._port.order_views()
             if (tag is None or o.tag == tag)
             and (want_type is None or o.order_type is want_type)
             and (want_side is None or o.side is want_side)
@@ -284,7 +322,7 @@ class BaseContext:
     @property
     def working_order_ids(self) -> tuple[int, ...]:
         self._check()
-        return self._engine._working_ids()
+        return self._port.working_ids()
 
     @property
     def fills(self) -> tuple[FillEvent, ...]:
@@ -295,15 +333,15 @@ class BaseContext:
     @property
     def realized_pnl(self) -> float:
         self._check()
-        return self._engine.blotter.realized_pnl - self._engine.blotter.commission
+        return self._port.realized_pnl()
 
     @property
     def unrealized_pnl(self) -> float:
         self._check()
-        e = self._engine
-        if not e.position:
+        p = self._port
+        if not p.position():
             return 0.0
-        return (e.last_price - e._avg_price) * e.position
+        return (p.last_price() - p.average_entry_price()) * p.position()
 
     @property
     def equity(self) -> float:
@@ -313,7 +351,7 @@ class BaseContext:
     @property
     def average_entry_price(self) -> float:
         self._check()
-        return self._engine._avg_price
+        return self._port.average_entry_price()
 
     def ticks(self) -> HistoryView[TickEvent]:
         """Every trade event seen so far, oldest first.
@@ -323,7 +361,7 @@ class BaseContext:
         raises, exactly as for bars.
         """
         self._check()
-        return self._engine.tick_history
+        return self._port.tick_history()
 
     def sub_id(self, sub: str | Subscription) -> str:
         """The canonical id of a subscription you declared.
@@ -334,7 +372,7 @@ class BaseContext:
         form, not as something every strategy has to remember to call.
         """
         self._check()
-        return self._engine.resolve_sub(sub)
+        return self._port.resolve_sub(sub)
 
     def history(self, sub: str | Subscription) -> HistoryView[Bar]:
         """Closed bars for a subscription, oldest first.
@@ -347,7 +385,7 @@ class BaseContext:
         newest readable element is the bar that just closed.
         """
         self._check()
-        return self._engine.history[self._engine.resolve_sub(sub)]
+        return self._port.history(self._port.resolve_sub(sub))
 
     @property
     def closed(self) -> tuple[Bar, ...]:
@@ -391,7 +429,7 @@ class BaseContext:
     def close(self, **kw) -> int | None:
         """Flatten the current position with a market order."""
         self._check()
-        pos = self._engine.position
+        pos = self._port.position()
         if pos == 0:
             raise ContextError("close() with no position open")
         side = Side.SELL if pos > 0 else Side.BUY
@@ -443,7 +481,7 @@ class BaseContext:
 
         bracket = None
         if absolute:
-            ref = limit if limit is not None else self._engine.last_price
+            ref = limit if limit is not None else self._port.last_price()
             if stop is not None:
                 if side is Side.BUY and stop >= ref:
                     raise ContextError(
@@ -498,12 +536,13 @@ class BaseContext:
         size: int | None = None,
     ) -> None:
         self._check()
-        order = self._engine.orders.get(order_id)
-        if order is None:
+        state = self._port.order_state(order_id)
+        if state is None:
             raise ContextError(f"no order {order_id}")
-        if not order.is_working:
+        working, status = state
+        if not working:
             raise ContextError(
-                f"cannot modify order {order_id}: it is {order.status}"
+                f"cannot modify order {order_id}: it is {status}"
             )
         if limit is None and trigger is None and size is None:
             raise ContextError("modify() with nothing to change")
@@ -514,18 +553,19 @@ class BaseContext:
 
     def cancel(self, order_id: int) -> None:
         self._check()
-        order = self._engine.orders.get(order_id)
-        if order is None:
+        state = self._port.order_state(order_id)
+        if state is None:
             raise ContextError(f"no order {order_id}")
-        if not order.is_working:
+        working, status = state
+        if not working:
             raise ContextError(
-                f"cannot cancel order {order_id}: it is already {order.status}"
+                f"cannot cancel order {order_id}: it is already {status}"
             )
         self._queue.add(Cancel(order_id=order_id))
 
     def cancel_all(self) -> None:
         self._check()
-        for oid in self._engine._working_ids():
+        for oid in self._port.working_ids():
             self._queue.add(Cancel(order_id=oid))
 
 
@@ -591,8 +631,8 @@ class TickContext(BaseContext):
 
     __slots__ = ("_tick",)
 
-    def __init__(self, engine, queue, *, tick: TickEvent, **kw):
-        super().__init__(engine, queue, **kw)
+    def __init__(self, port, queue, *, tick: TickEvent, **kw):
+        super().__init__(port, queue, **kw)
         self._tick = tick
 
     @property
@@ -611,8 +651,8 @@ class BarContext(BaseContext):
 
     __slots__ = ("_event",)
 
-    def __init__(self, engine, queue, *, event: BarEvent, **kw):
-        super().__init__(engine, queue, closed=event.bars, **kw)
+    def __init__(self, port, queue, *, event: BarEvent, **kw):
+        super().__init__(port, queue, closed=event.bars, **kw)
         self._event = event
 
 
@@ -621,8 +661,8 @@ class FillContext(BaseContext):
 
     __slots__ = ("_fill",)
 
-    def __init__(self, engine, queue, *, fill: FillEvent, **kw):
-        super().__init__(engine, queue, **kw)
+    def __init__(self, port, queue, *, fill: FillEvent, **kw):
+        super().__init__(port, queue, **kw)
         self._fill = fill
 
     @property
@@ -634,8 +674,8 @@ class FillContext(BaseContext):
 class LifecycleContext(BaseContext):
     __slots__ = ("_event",)
 
-    def __init__(self, engine, queue, *, event: LifecycleEvent, **kw):
-        super().__init__(engine, queue, **kw)
+    def __init__(self, port, queue, *, event: LifecycleEvent, **kw):
+        super().__init__(port, queue, **kw)
         self._event = event
 
     @property
@@ -661,10 +701,16 @@ class SetupContext:
     still gets them and still pays for them; one that does not pays nothing.
     """
 
-    __slots__ = ("_dataset", "_train_ticks", "_subs", "_active")
+    __slots__ = ("_name", "_session_bounds", "_train_ticks", "_subs", "_active")
 
-    def __init__(self, dataset, train_ticks):
-        self._dataset = dataset
+    def __init__(self, dataset_name: str, session_bounds, train_ticks):
+        # The dataset's *name* and one bound accessor, not the dataset. It was
+        # `self._dataset`, which put `unlock_holdout` and the whole tick stream
+        # one underscore from strategy code -- a validation strategy could open
+        # the holdout and read a tick from it, and the adversarial review did
+        # exactly that.
+        self._name = dataset_name
+        self._session_bounds = session_bounds
         # A callable is the contract. An iterable is accepted so a caller with a
         # list in hand -- a test, usually -- still works, and is wrapped so it
         # can be walked more than once.
@@ -689,7 +735,7 @@ class SetupContext:
     @property
     def dataset_name(self) -> str:
         self._check()
-        return self._dataset.name
+        return self._name
 
     def subscribe(self, interval: str | int, *, emit_empty: bool = False) -> Subscription:
         """Declare a subscription.
@@ -753,4 +799,4 @@ class SetupContext:
                 "train_bars() aggregates; for raw train events use ctx.ticks()"
             )
         # Streams: `aggregate` iterates once and keeps only the closed bars.
-        return tuple(aggregate(self._train_ticks(), sub, self._dataset))
+        return tuple(aggregate(self._train_ticks(), sub, self._session_bounds))

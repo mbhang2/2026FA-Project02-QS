@@ -71,5 +71,7 @@ jobs:
           python scripts/nq_contracts.py --help > /dev/null
           python scripts/nq_smoke.py --help > /dev/null
           python scripts/gen_agent_data.py --help > /dev/null
+          python scripts/agent_check.py --help > /dev/null
+          python scripts/session_closes.py --help > /dev/null
           python scripts/check_agent_paths.py --paths src/strategies/current.py
           python run.py --help > /dev/null

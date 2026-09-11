@@ -296,14 +296,15 @@ def test_cannot_modify_or_cancel_a_finished_order():
             if not hasattr(self, "oid"):
                 self.oid = ctx.buy(1, tag="probe")
                 return
-            if ctx.position and self.oid in ctx._engine.orders:
-                order = ctx._engine.orders[self.oid]
-                if order.status is OrderStatus.FILLED:
-                    with pytest.raises(ContextError, match="already"):
-                        ctx.cancel(self.oid)
-                    with pytest.raises(ContextError, match="cannot modify"):
-                        ctx.modify(self.oid, limit=1.0)
-                    self.checked = True
+            # The context no longer holds the engine (Task 20), so the test
+            # asks the way a strategy would: the order is gone from the working
+            # set once it has filled.
+            if ctx.position and self.oid not in ctx.working_order_ids:
+                with pytest.raises(ContextError, match="already"):
+                    ctx.cancel(self.oid)
+                with pytest.raises(ContextError, match="cannot modify"):
+                    ctx.modify(self.oid, limit=1.0)
+                self.checked = True
 
     strat = Late()
     Engine(ds(), strat, split=Split.VALIDATION).run()
@@ -403,8 +404,21 @@ def test_strategies_still_cannot_import_the_scorer_or_the_metric():
 # run.py
 # --------------------------------------------------------------------------- #
 def run_py(*args, ledger: Path):
+    """`--human` because a test is a person running the harness by hand.
+
+    Since Task 20 `--ledger`, `--purpose` and `--unlock-holdout` are accepted
+    only in that mode: every automated caller takes its configuration from the
+    committed profile, so there is nothing to override and nowhere else to write.
+    """
     return subprocess.run(
-        [sys.executable, "run.py", "--ledger", str(ledger), *args],
+        [sys.executable, "run.py", "--human", "--ledger", str(ledger), *args],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    )
+
+
+def agent_check(*args, ledger: Path):
+    return subprocess.run(
+        [sys.executable, "scripts/agent_check.py", "--ledger", str(ledger), *args],
         capture_output=True, text=True, cwd=REPO_ROOT,
     )
 
@@ -419,7 +433,7 @@ def test_a_run_emits_exactly_one_ledger_record_with_its_trigger(tmp_path):
     rows = ledger_lines(led)
     assert len(rows) == 1
     row = rows[0]
-    assert row["trigger"] == "harness" and row["profile"] == "harness"
+    assert row["trigger"] == "human" and row["profile"] == "harness"
     assert row["outcome"] == "completed"
     for field in ("dataset", "dataset_digest", "split", "fill_model", "seed",
                   "git_sha", "wall_clock_s", "subscriptions", "score", "diagnostics",
@@ -449,15 +463,17 @@ def test_the_ledger_is_append_only_and_counts_every_invocation(tmp_path):
     led = tmp_path / "ledger.jsonl"
     for _ in range(3):
         run_py("--quiet", ledger=led)
-    run_py("--trigger", "agent", "--quiet", ledger=led)
+    agent_check(ledger=led)
     rows = ledger_lines(led)
     assert len(rows) == 4, "N is only honest if every run lands in the ledger"
-    assert [r["trigger"] for r in rows] == ["harness"] * 3 + ["agent"]
+    assert [r["trigger"] for r in rows] == ["human"] * 3 + ["agent"]
 
 
 def test_run_refuses_the_holdout_without_an_explicit_unlock_and_still_records(tmp_path):
     led = tmp_path / "ledger.jsonl"
-    r = run_py("--split", "holdout", ledger=led)
+    # A profile, not a flag: the split is not on the command line any more, so
+    # aiming a run at the holdout is an edit to a committed file.
+    r = run_py("--profile", "holdout", ledger=led)
     assert r.returncode == 2 and "not served until it is explicitly unlocked" in r.stderr
     rows = ledger_lines(led)
     assert len(rows) == 1 and rows[0]["outcome"] == "refused"
@@ -465,7 +481,7 @@ def test_run_refuses_the_holdout_without_an_explicit_unlock_and_still_records(tm
 
 def test_the_holdout_opens_only_with_a_reason_that_reaches_the_record(tmp_path):
     led = tmp_path / "ledger.jsonl"
-    r = run_py("--split", "holdout", "--unlock-holdout", "mentor sign-off",
+    r = run_py("--profile", "holdout", "--unlock-holdout", "mentor sign-off",
                "--quiet", ledger=led)
     assert r.returncode == 0, r.stderr
     row = ledger_lines(led)[0]
@@ -473,16 +489,73 @@ def test_the_holdout_opens_only_with_a_reason_that_reaches_the_record(tmp_path):
     assert row["holdout_unlock_reason"] == "mentor sign-off"
 
 
-@pytest.mark.parametrize(
-    "flag", [("--split", "holdout"), ("--fill-model", "favorable"),
-             ("--seed", "42"), ("--profile", "harness")]
-)
-def test_an_agent_triggered_run_cannot_choose_its_own_conditions(flag, tmp_path):
-    led = tmp_path / "ledger.jsonl"
-    r = run_py("--trigger", "agent", *flag, ledger=led)
+def test_the_evaluation_conditions_are_not_on_the_command_line_at_all():
+    """The review's finding, closed structurally rather than by a longer
+    forbidden-list.
+
+    `--dataset` and `--ledger` were missing from AGENT_FORBIDDEN and the
+    supplied-argument check tested truthiness, so `--seed 0` read as "not
+    supplied". A strategy could evaluate itself against the planted-signal
+    dataset, retry on seeds and write the results somewhere that never counts --
+    not a loophole in honest N, a deletion of it.
+
+    Adding names to the list is a race against whoever adds the next flag. These
+    arguments do not exist now: every evaluation condition comes from the
+    committed profile.
+    """
+    import argparse
+
+    # The options section, not the prose: the docstring explains what used to be
+    # here and why it is not, which is worth keeping and would otherwise fail
+    # this check.
+    help_text = subprocess.run(
+        [sys.executable, "run.py", "--help"],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    ).stdout
+    options = help_text[help_text.index("options:"):]
+    for gone in ("--dataset", "--split", "--seed", "--fill-model", "--trigger"):
+        assert gone not in options, f"{gone} is still a run.py argument"
+    del argparse
+
+
+@pytest.mark.parametrize("flag", ["--purpose", "--ledger", "--unlock-holdout"])
+def test_the_hand_run_only_flags_are_refused_without_human(flag, tmp_path):
+    r = subprocess.run(
+        [sys.executable, "run.py", flag, "smoke" if flag == "--purpose" else "x"],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    )
     assert r.returncode != 0
-    assert "fixed configuration" in r.stderr
-    assert not led.exists() or ledger_lines(led) == []
+    assert "running the harness by hand" in r.stderr
+
+
+def test_the_agent_entry_point_reports_no_number(tmp_path):
+    """The agent's only entry point. A check that yields no score cannot be used
+    for selection: nothing to optimise against, nothing to retry for, nothing to
+    forge."""
+    led = tmp_path / "ledger.jsonl"
+    r = agent_check(ledger=led)
+    assert r.returncode == 0, r.stderr
+    for forbidden in ("sortino", "sharpe", "significance", "far", "pnl", "net"):
+        assert forbidden not in r.stdout.lower(), r.stdout
+
+    row = ledger_lines(led)[0]
+    assert row["purpose"] == "check" and row["trigger"] == "agent"
+    assert row["score"] is None and row["diagnostics"] is None
+    assert row["outcome"].startswith("check_")
+
+
+def test_the_agent_entry_point_cannot_reach_the_scored_path():
+    """It takes one optional argument, for tests, and nothing that selects a
+    dataset, a split, a seed or a fill model."""
+    help_text = subprocess.run(
+        [sys.executable, "scripts/agent_check.py", "--help"],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    ).stdout
+    options = help_text[help_text.index("options:"):]
+    for gone in ("--dataset", "--split", "--seed", "--fill-model", "--purpose",
+                 "--profile", "--trigger", "--unlock-holdout"):
+        assert gone not in options, f"{gone} is reachable from the agent's entry point"
+
 
 
 def test_a_crashing_strategy_still_lands_in_the_ledger(tmp_path):
@@ -518,10 +591,12 @@ def test_the_generated_api_reference_is_current():
 # purpose: classify a run rather than delete it afterwards
 # --------------------------------------------------------------------------- #
 def test_every_row_carries_a_purpose_and_it_defaults_to_trial(tmp_path):
+    """A hand-run harness invocation defaults to `smoke`; an automated one is a
+    trial by construction and cannot say otherwise."""
     led = tmp_path / "ledger.jsonl"
     assert run_py("--quiet", ledger=led).returncode == 0
-    row = ledger_lines(led)[0]
-    assert row["purpose"] == "trial"
+    assert ledger_lines(led)[0]["purpose"] == "smoke"
+    assert run.resolve_purpose("loop", None) == "trial"
 
 
 def test_purpose_is_derived_from_the_trigger_not_accepted_from_it():
@@ -529,10 +604,14 @@ def test_purpose_is_derived_from_the_trigger_not_accepted_from_it():
     can choose not to be counted. Only a human running the harness by hand can be
     telling the truth about a run not being a candidate, so only a human may
     say."""
-    for trigger in ("harness", "agent", "loop"):
+    for trigger in ("harness", "loop"):
         assert run.resolve_purpose(trigger, None) == "trial"
         with pytest.raises(SystemExit, match="always a"):
             run.resolve_purpose(trigger, "smoke")
+    # the agent's entry point is a check, and it cannot call itself a trial
+    assert run.resolve_purpose("agent", None) == "check"
+    with pytest.raises(SystemExit, match="always a"):
+        run.resolve_purpose("agent", "trial")
     # and the default for a hand-run harness is the safe direction: a smoke run
     # unless the person says otherwise, because a human claiming a trial can say
     # so and a script quietly claiming a smoke run cannot be caught.
@@ -547,31 +626,26 @@ def test_a_non_trial_run_is_labelled_not_removed(tmp_path):
     measured against it is not a record, and the first deletion is always the
     defensible one."""
     led = tmp_path / "ledger.jsonl"
-    assert run_py("--trigger", "human", "--quiet", "--purpose", "smoke",
-                  ledger=led).returncode == 0
-    assert run_py("--quiet", ledger=led).returncode == 0
+    assert run_py("--quiet", "--purpose", "smoke", ledger=led).returncode == 0
+    assert run_py("--quiet", "--purpose", "trial", ledger=led).returncode == 0
+    assert agent_check(ledger=led).returncode == 0
     rows = ledger_lines(led)
-    assert [r["purpose"] for r in rows] == ["smoke", "trial"]
-    assert len(rows) == 2, "a classified run is still a row"
+    assert [r["purpose"] for r in rows] == ["smoke", "trial", "check"]
+    assert len(rows) == 3, "a classified run is still a row"
     # N is a filter over the ledger, never a shorter ledger
     assert sum(1 for r in rows if r["purpose"] == "trial") == 1
 
 
-def test_an_agent_run_cannot_relabel_its_own_trial(tmp_path):
-    """Otherwise N is decided by the party with the incentive: run fifty, label
-    forty-nine 'smoke', present the best as one trial."""
-    led = tmp_path / "ledger.jsonl"
-    r = run_py("--trigger", "agent", "--purpose", "smoke", ledger=led)
-    assert r.returncode != 0
-    assert "--purpose" in r.stderr or "always a" in r.stderr
-    assert not led.exists() or not ledger_lines(led)
+def test_the_agent_cannot_relabel_what_it_ran():
+    """Otherwise N is decided by the party with the incentive. The agent's runs
+    are checks by construction and it has no flag to say otherwise."""
+    with pytest.raises(SystemExit, match="always a"):
+        run.resolve_purpose("agent", "trial")
+    with pytest.raises(SystemExit, match="always a"):
+        run.resolve_purpose("agent", "smoke")
 
 
-def test_an_agent_run_is_recorded_as_a_trial(tmp_path):
-    led = tmp_path / "ledger.jsonl"
-    assert run_py("--trigger", "agent", "--quiet", ledger=led).returncode == 0
-    row = ledger_lines(led)[0]
-    assert row["purpose"] == "trial" and row["trigger"] == "agent"
+
 
 
 def test_the_ledger_stores_the_source_of_whatever_actually_ran(tmp_path):

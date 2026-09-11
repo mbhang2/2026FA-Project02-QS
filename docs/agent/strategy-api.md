@@ -419,12 +419,14 @@ You will reach for these. They do not exist.
   train, validation or holdout.
 - **No data beyond the current instant**, including no future bar, no full
   session you are in the middle of, and no next tick.
-- **No evaluation outside the logged path.** Every invocation of `run.py`
-  appends exactly one ledger row, crashes included. An agent-triggered run is
-  validation-only with a fixed profile; `--split`, `--fill-model`, `--seed`,
-  `--unlock-holdout` and `--profile` are refused. Running fifty backtests and
-  presenting the best as one candidate is the failure this design exists to
-  prevent, so the count is kept where you cannot reach it.
+- **No evaluation outside the logged path, and no score from the one you can
+  run.** Your entry point is `python scripts/agent_check.py`. It compiles your
+  strategy, walks a small committed dataset, and tells you **pass or fail**.
+  There is no Sortino, no FAR, no P&L: a check that yields no number cannot be
+  used for selection, which is the point. Scoring happens on the loop driver's
+  path, which you do not invoke, with the dataset, split, seed and fill model
+  read from a committed profile rather than from any argument. Every invocation
+  of either path appends exactly one ledger row, crashes included.
 
 Import what you need from `src.core.types` — `Side`, `OrderType`,
 `TimeInForce`, `NS_PER_SECOND` and the rest are all available and are the right

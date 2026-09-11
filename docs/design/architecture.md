@@ -251,6 +251,31 @@ eligible strictly after *S*. Without it a strategy fills at the close of the bar
 it just saw, which is a clean one-bar lookahead producing beautiful and entirely
 fake results.
 
+**Nothing reaches the engine or the dataset from a context.** A context holds an
+`EnginePort` — a frozen record of callables, each bound to the narrowest object
+that can answer it — and no engine, no dataset, no blotter. It used to hold both
+as `ctx._engine` and `ctx._dataset`, and adversarial review used them to read the
+split and the seed, call `unlock_holdout`, pull a holdout tick and mutate engine
+state. `tests/test_boundary.py` had been told to skip underscore names, so it
+never looked: the test encoded the same assumption the code did.
+
+The replacement test walks everything — private attributes, the `__self__` of
+bound methods, `__closure__` cells — and it found two more paths after the
+refactor was written, which is the argument for walking rather than reasoning.
+One exemption remains and is named: `setup()` streams the training split lazily,
+so something in it must be able to produce those ticks, and in-process that means
+holding a reference. It holds the *sealed* dataset, which has no `unlock_holdout`
+and no `holdout_lock`, and the lock still refuses any split but the one served.
+
+**Import guards are defence in depth, not a boundary.** `run.py` imports the
+scorer before it loads the strategy, so the module is cached and the
+module-level stack guard never runs again; the static source check is bypassable
+with `__import__` or `sys.modules`. The threat was never reading — the metric is
+public, it is in `metric.md` — it is *writing*: a strategy that reaches the
+module can replace a function in it. So the scoring code is fingerprinted at
+import and again after scoring, and any difference invalidates the trial.
+`src/core/scoring/integrity.py`. The real boundary is a separate process.
+
 **Nothing mutable crosses the context boundary.** Every accessor returns a
 primitive, a tuple, a frozen dataclass or a read-only view — `ctx.working_orders`
 hands back frozen `OrderView` copies, never the engine's `Order` objects, because
@@ -321,6 +346,7 @@ surface: `docs/agent/strategy-api.md`.
 | `src/core/scoring/calibration/reference.py` | `ReferenceStrategy` — the strategy the rig measures with |
 | `src/core/scoring/calibration/null.py` | The empirical null, `threshold_for()` / `far_for()` |
 | `src/core/scoring/calibration/_sweep.py` | Trial running and the planted-signal power sweep |
+| `src/core/scoring/integrity.py` | Fingerprints the scoring code, so a trial whose metric changed underneath it is invalidated rather than believed |
 
 **The metric is Sortino on per-session returns**, MAR = 0, downside deviation
 over all N observations, every session in the split counted including flat ones,
@@ -415,7 +441,21 @@ What it owns:
   completed, `abandoned_on_budget`, `refused` (holdout locked), or `crashed`. An
   agent that could run fifty exploratory backtests and present the best as one
   candidate makes N fiction, in the one place nobody would look.
-- **`purpose`** — `trial`, `smoke` or `replay`. N is a *filter over the ledger*,
+- **No evaluation condition is a command-line argument.** No `--dataset`,
+  `--split`, `--seed`, `--fill-model` or `--trigger`: they were overridable with
+  an agent-forbidden-list in front of them, two names were missing from the list,
+  and the supplied-argument check tested truthiness so `--seed 0` read as "not
+  supplied". A strategy could evaluate itself against the planted-signal dataset,
+  retry on seeds, and write the result to a ledger nobody counts. Adding names to
+  a list is a race against whoever adds the next flag. Everything comes from a
+  committed profile; `--purpose`, `--ledger` and `--unlock-holdout` need
+  `--human`, and provenance comes from which entry point ran.
+- **The agent never invokes a scored run.** `scripts/agent_check.py` is its only
+  entry point: it compiles the strategy, walks a small committed dataset, and
+  returns pass or fail and **no number**. A check that yields no score cannot be
+  used for selection — nothing to optimise against, nothing to retry for, nothing
+  to forge.
+- **`purpose`** — `trial`, `smoke`, `replay` or `check`. N is a *filter over the ledger*,
   never a shorter ledger: a run that was not a candidate gets classified rather
   than deleted afterwards, because a record edited by the party being measured
   against it is not a record. An agent-triggered run cannot set it.
@@ -445,6 +485,7 @@ Each produces something committed. None is importable from `src/core/`.
 | `scripts/inventory.py` | `data/manifest.json`, `docs/data-inventory.md` | `src/core/data/nq.py`, `tests/test_data_integrity.py`, `scripts/gen_agent_data.py` |
 | `scripts/nq_contracts.py` | `data/nq-contract-selection.json` | `src/core/data/nq.py`, `tests/test_nq_adapter.py` |
 | `scripts/session_closes.py` | `data/nq-session-closes.json` — when each early-closing session actually ends | `src/core/data/nq.py`, `tests/test_nq_adapter.py` |
+| `scripts/agent_check.py` | nothing — the research agent's only entry point; pass/fail and **no number** | the research agent |
 | `scripts/tabulate_null.py` | `data/calibration/empirical-null*.json` — one per dataset, plus its held-out verification | `src/core/scoring/calibration/null.py` |
 | `scripts/calibrate.py` | the two-sided calibration curves (`--json` writes them under `data/calibration/`) | `docs/design/metric.md` |
 | `scripts/gen_context_api.py` | `docs/design/context-api.md` | the research agent |

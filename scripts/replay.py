@@ -34,19 +34,105 @@ def load_strategy_from(path: Path):
         obj = getattr(module, attr, None)
         if obj is not None:
             return obj() if isinstance(obj, type) else obj
-    raise SystemExit(f"{path} defines no strategy class")
+    # The harness runs immutable apparatus as well as the agent's file, and the
+    # calibration reference is not called `Strategy`. Anything in the module that
+    # looks like one will do: replay's job is to re-run what ran, and the row
+    # already says which file that was.
+    candidates = [
+        obj for name, obj in vars(module).items()
+        if isinstance(obj, type) and not name.startswith("_")
+        and callable(getattr(obj, "setup", None))
+        and callable(getattr(obj, "on_bars", None))
+    ]
+    if len(candidates) == 1:
+        return candidates[0]()
+    raise SystemExit(
+        f"{path} defines {len(candidates)} strategy classes; replay needs exactly "
+        "one to know what ran"
+    )
+
+
+def rebuild_dataset(row: dict, cfg: dict):
+    """The dataset the row names, at the digest the row records.
+
+    It used to reconstruct a synthetic dataset from whatever profile the row
+    mentioned, which worked for every row that existed when it was written and
+    for none that did not: the `nq-smoke` row died with `KeyError: 'nq-smoke'`,
+    and a row whose profile pointed at a different dataset replayed against the
+    wrong data and produced a digest mismatch that looked like non-determinism.
+    "Any trial can be replayed from its stored source" was true on synthetic and
+    false for the one real row in the ledger.
+
+    So the row is the authority, not the config: `dataset` names the adapter and
+    `dataset_digest` pins the bytes. A digest that no longer matches is a
+    refusal, loudly -- replaying against data that has since changed is worse
+    than not replaying, because it produces a number.
+    """
+    import os
+
+    name = row["dataset"]
+    family = name.split(":", 1)[0]
+
+    if family == "synthetic":
+        # `synthetic:s=0:seed=1` carries its own parameters in the name, but not
+        # all of them; the committed dataset entry supplies the rest. Match by
+        # what the name says rather than by the profile's current choice.
+        spec = None
+        for candidate in cfg["datasets"].values():
+            if candidate.get("kind") != "synthetic":
+                continue
+            trial = dict(candidate)
+            trial.pop("kind")
+            trial["seed"] = row["seed"]
+            if SyntheticDataset(SyntheticSpec(**trial)).name == name:
+                spec = trial
+                break
+        if spec is None:
+            raise SystemExit(
+                f"no committed dataset in config/run.yaml reconstructs {name!r}. "
+                "The row names data this repository can no longer build."
+            )
+        dataset = SyntheticDataset(SyntheticSpec(**spec))
+    elif family == "nq-trades":
+        import boto3
+
+        from src.core.data.nq import NQDataset, NQSpec
+
+        missing = [v for v in ("R2_ENDPOINT", "R2_ACCESS_KEY_ID",
+                               "R2_SECRET_ACCESS_KEY", "R2_BUCKET")
+                   if not os.environ.get(v)]
+        if missing:
+            raise SystemExit(
+                f"replaying {name!r} needs read-only bucket credentials; missing "
+                + ", ".join(missing)
+            )
+        client = boto3.client(
+            "s3", endpoint_url=os.environ["R2_ENDPOINT"],
+            aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
+            aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
+            region_name="auto",
+        )
+        symbol = name.split(":", 1)[1] if ":" in name else "NQ"
+        dataset = NQDataset(client, os.environ["R2_BUCKET"], NQSpec(symbol=symbol))
+    else:
+        raise SystemExit(f"no adapter can rebuild dataset {name!r}")
+
+    recorded = row.get("dataset_digest")
+    if recorded and dataset.digest() != recorded:
+        raise SystemExit(
+            f"{name} no longer hashes to what the row recorded: "
+            f"{recorded} then, {dataset.digest()} now. The data has changed, so "
+            "this trial cannot be reproduced -- which is the answer, not an error "
+            "to work around."
+        )
+    return dataset
 
 
 def replay(row: dict, cfg_path: Path = REPO_ROOT / "config" / "run.yaml"):
     import yaml
 
     cfg = yaml.safe_load(cfg_path.read_text())
-    profile = cfg["profiles"][row["profile"]]
-    name = profile["dataset"]
-    spec = dict(cfg["datasets"][name])
-    spec.pop("kind")
-    spec["seed"] = row["seed"]
-    dataset = SyntheticDataset(SyntheticSpec(**spec))
+    dataset = rebuild_dataset(row, cfg)
     if row.get("holdout_unlock_reason"):
         dataset.unlock_holdout(row["holdout_unlock_reason"])
 

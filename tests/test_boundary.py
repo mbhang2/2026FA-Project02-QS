@@ -666,3 +666,169 @@ def test_a_dataset_with_no_pre_registered_calendar_stands_the_check_down():
             raise NotImplementedError("config/calendars/nq-trades.yaml is not written")
 
     run.check_warmup_against_embargo("harness", 999, NoCalendar())
+
+
+# --------------------------------------------------------------------------- #
+# adversarial review, Task 20: reachability, not visibility
+# --------------------------------------------------------------------------- #
+# The immutability walk above skips underscore-prefixed names. That was the Task
+# 13 specification -- "every public attribute and method return" -- and it was
+# flagged and accepted at the time. Adversarial review showed what it cost:
+# `ctx._engine` and `ctx._dataset` held the live objects, so a validation
+# strategy read the split and the seed, called `unlock_holdout`, pulled a holdout
+# tick and mutated engine state, through two attributes the test had been told
+# not to look at.
+#
+# This walks everything: private names, the `__self__` of bound methods, and
+# `__closure__` cells. Hiding an attribute is not a defence and neither is a test
+# that agrees not to look.
+FORBIDDEN_TYPES = ("Engine", "SyntheticDataset", "NQDataset", "Blotter",
+                   "HoldoutLock")
+
+# `_SealedDataset` is reachable from `SetupContext`, and deliberately.
+#
+# `setup()` streams the training split lazily -- materialising it is 22 GiB on
+# the real adapter -- so something in the context must be able to produce those
+# ticks, and in-process that means holding a reference that can. There is no
+# arrangement of closures that avoids it: a closure cell holds what it closes
+# over and a bound method holds its `__self__`.
+#
+# So the reference it holds is the sealed one, which has no `unlock_holdout`, no
+# `holdout_lock` and no `_lock`, and the lock still refuses any split but the one
+# being served. What a strategy gets by reaching it is the training data it was
+# already handed. `test_the_reachable_dataset_cannot_open_the_holdout` is the
+# assertion that this exemption is safe rather than convenient.
+#
+# Real isolation is a separate process. This is the honest distance to it.
+# The exemption is a *path*, not a type: only the two accessors `setup()` needs.
+# Anything else reaching a dataset is a finding.
+SETUP_CAPABILITY_PATHS = ("ctx._train_ticks", "ctx._session_bounds")
+
+
+def reachable_from(root, budget: int = 80_000) -> list[str]:
+    """Every path from `root` to an object of a forbidden type."""
+    seen: set[int] = set()
+    stack = [("ctx", root)]
+    hits: list[str] = []
+    while stack and len(seen) < budget:
+        path, obj = stack.pop()
+        if id(obj) in seen:
+            continue
+        seen.add(id(obj))
+        if type(obj).__name__ in FORBIDDEN_TYPES:
+            hits.append(f"{path} -> {type(obj).__name__}")
+            continue
+        if isinstance(obj, (str, bytes, int, float, bool, type(None))):
+            continue
+        for name in dir(obj):
+            if name.startswith("__") and name not in ("__self__", "__wrapped__"):
+                continue
+            try:
+                stack.append((f"{path}.{name}", getattr(obj, name)))
+            except Exception:
+                continue
+        for cell in getattr(obj, "__closure__", None) or ():
+            try:
+                stack.append((f"{path}.<closure>", cell.cell_contents))
+            except ValueError:
+                pass
+        if isinstance(obj, (list, tuple, set, frozenset)):
+            for i, item in enumerate(list(obj)[:64]):
+                stack.append((f"{path}[{i}]", item))
+        if isinstance(obj, dict):
+            for key, value in list(obj.items())[:64]:
+                stack.append((f"{path}[{key!r}]", value))
+    return hits
+
+
+class _Reacher:
+    """Walks each context it is handed, the way the review's reproduction did."""
+
+    def __init__(self):
+        self.hits: dict[str, list[str]] = {}
+        self.attributes: dict[str, bool] = {}
+
+    def _walk(self, ctx):
+        cls = type(ctx).__name__
+        if cls in self.hits:
+            return
+        self.attributes[f"{cls}._engine"] = hasattr(ctx, "_engine")
+        self.attributes[f"{cls}._dataset"] = hasattr(ctx, "_dataset")
+        self.hits[cls] = reachable_from(ctx)
+
+    def setup(self, ctx):
+        ctx.subscribe(INTERVAL)
+        self._walk(ctx)
+
+    def on_bars(self, ctx):
+        self._walk(ctx)
+        if ctx.actionable and not ctx.position and not ctx.working_order_ids:
+            ctx.buy(1, stop_offset=1.0, target_offset=1.0, tag="probe")
+
+    def on_fill(self, ctx):
+        self._walk(ctx)
+
+    def on_lifecycle(self, ctx):
+        self._walk(ctx)
+
+
+REACHER = _Reacher()
+Engine(ds(), REACHER, split=Split.VALIDATION, warmup_sessions=1).run()
+
+
+def test_the_reachability_walk_actually_ran():
+    assert set(REACHER.hits) >= {
+        "SetupContext", "BarContext", "FillContext", "LifecycleContext"
+    }, sorted(REACHER.hits)
+
+
+def test_no_context_reaches_the_engine_or_the_dataset_by_any_path():
+    found = {}
+    for cls, paths in REACHER.hits.items():
+        unexpected = [
+            path for path in paths
+            if not (cls == "SetupContext"
+                    and path.startswith(SETUP_CAPABILITY_PATHS))
+        ]
+        if unexpected:
+            found[cls] = unexpected
+    assert not found, (
+        "strategy code can reach engine or dataset objects:\n  "
+        + "\n  ".join(f"{cls}: {paths}" for cls, paths in found.items())
+    )
+
+
+def test_the_only_reachable_dataset_is_the_one_setup_must_stream_from():
+    """And it is reachable through those two accessors and nothing else. If a
+    third path appears, something was added that did not need the dataset."""
+    setup_paths = REACHER.hits.get("SetupContext", [])
+    assert all(p.startswith(SETUP_CAPABILITY_PATHS) for p in setup_paths), setup_paths
+    for cls in ("BarContext", "FillContext", "LifecycleContext"):
+        assert not REACHER.hits.get(cls), (cls, REACHER.hits.get(cls))
+
+
+def test_the_two_attributes_the_review_used_are_gone():
+    """The reproduction itself, kept as a regression test."""
+    assert not any(REACHER.attributes.values()), REACHER.attributes
+
+
+def test_the_reachable_dataset_cannot_open_the_holdout():
+    """The exemption above, asserted rather than assumed."""
+    engine = Engine(ds(), _Reacher(), split=Split.VALIDATION)
+    from src.core.types import HoldoutLocked
+
+    for name in ("unlock_holdout", "holdout_lock", "_lock"):
+        with pytest.raises(AttributeError):
+            getattr(engine.dataset, name)
+    with pytest.raises(HoldoutLocked):
+        next(engine.dataset.ticks(Split.HOLDOUT))
+
+
+def test_the_engine_holds_a_dataset_with_no_holdout_door():
+    """Belt and braces: even something inside the engine cannot open the holdout
+    by accident, because the method is not on the object it holds."""
+    engine = Engine(ds(), _Reacher(), split=Split.VALIDATION)
+    for name in ("unlock_holdout", "holdout_lock", "_lock"):
+        with pytest.raises(AttributeError, match="deliberate act|not available"):
+            getattr(engine.dataset, name)
+    assert engine.dataset.name.startswith("synthetic")

@@ -387,7 +387,13 @@ def test_the_real_null_was_built_on_training_sessions_only():
         pytest.skip("the real-data null has not been tabulated here")
     prov = json.loads(NQ_NULL.read_text())["provenance"]
     assert prov["split"] == "train"
-    assert prov["sessions_in_pool"] < prov["sessions_scored"]
+    # Every training session is in the pool since Task 18. The exclusion existed
+    # because the adapter computed every session as running to 16:00 CT, so the
+    # reference strategy was told a half day had four hours it did not have; it
+    # reads the committed early-close times now and all 384 end flat.
+    assert prov["sessions_in_pool"] == prov["sessions_scored"] == 384
+    assert prov["sessions_excluded"] == 0
+    assert prov["sessions_ending_with_a_position_open"] == 0
     assert prov["contaminated_sessions_remaining_in_pool"] == []
     for field in ("dataset_digest", "fill_model", "seed", "contract_selection",
                   "exclusion_rule", "blotter_digest"):

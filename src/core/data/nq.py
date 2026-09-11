@@ -89,6 +89,39 @@ def _date(ymd: str) -> dt.date:
     return dt.date(int(ymd[:4]), int(ymd[4:6]), int(ymd[6:]))
 
 
+SESSION_CLOSES_PATH = REPO_ROOT / "data" / "nq-session-closes.json"
+
+
+def _early_closes() -> dict[dt.date, dt.time]:
+    """Committed early-close times, read once.
+
+    Built by `scripts/session_closes.py` from the exchange calendar and
+    cross-checked against the observed last trade. Absent file means no early
+    closes are known, and every session then runs to the normal close -- which is
+    what the adapter did before Task 18 and is wrong on 22 of 564 sessions.
+    """
+    if not SESSION_CLOSES_PATH.exists():
+        return {}
+    doc = json.loads(SESSION_CLOSES_PATH.read_text())
+    out = {}
+    for date, row in doc.get("sessions", {}).items():
+        hh, mm = row["resolved_close_ct"].split(":")
+        out[dt.date.fromisoformat(date)] = dt.time(int(hh), int(mm))
+    return out
+
+
+_EARLY_CLOSES: dict[dt.date, dt.time] | None = None
+
+
+def session_close_time(session: dt.date) -> dt.time:
+    """The session's close in CME local time. 16:00 unless the exchange said
+    otherwise, in which case it said so in advance."""
+    global _EARLY_CLOSES
+    if _EARLY_CLOSES is None:
+        _EARLY_CLOSES = _early_closes()
+    return _EARLY_CLOSES.get(session, SESSION_CLOSE)
+
+
 def session_bounds_utc(session: dt.date) -> tuple[Ts, Ts]:
     """(open, close) in UTC nanoseconds for a CME session date.
 
@@ -99,7 +132,7 @@ def session_bounds_utc(session: dt.date) -> tuple[Ts, Ts]:
     open_local = dt.datetime.combine(
         session - dt.timedelta(days=1), SESSION_OPEN, tzinfo=CME_TZ
     )
-    close_local = dt.datetime.combine(session, SESSION_CLOSE, tzinfo=CME_TZ)
+    close_local = dt.datetime.combine(session, session_close_time(session), tzinfo=CME_TZ)
     to_ns = lambda x: int(x.astimezone(UTC).timestamp()) * NS_PER_SECOND  # noqa: E731
     return to_ns(open_local), to_ns(close_local)
 

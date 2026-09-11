@@ -2,185 +2,185 @@
   "runs": {
     "1": {
       "block_length": 1,
-      "build_sessions": 179,
-      "check_sessions": 180,
+      "build_sessions": 192,
+      "check_sessions": 192,
       "check_trials": 50000,
       "rows": [
         {
           "far": 0.05,
-          "measured": 0.01842,
+          "measured": 0.015220608824352975,
           "n": 30,
-          "ratio": 0.36839999999999995,
-          "threshold": 0.7679022834787879
+          "ratio": 0.3044121764870595,
+          "threshold": 0.8220564000491795
         },
         {
           "far": 0.01,
-          "measured": 0.00256,
+          "measured": 0.0024000960038401535,
           "n": 30,
-          "ratio": 0.256,
-          "threshold": 1.3538045680334363
+          "ratio": 0.24000960038401534,
+          "threshold": 1.416136866733355
         },
         {
           "far": 0.001,
-          "measured": 4e-05,
+          "measured": 0.00012000480019200768,
           "n": 30,
-          "ratio": 0.04,
-          "threshold": 2.563665232683104
+          "ratio": 0.12000480019200768,
+          "threshold": 2.6916780728278207
         },
         {
           "far": 0.05,
-          "measured": 0.0126,
+          "measured": 0.0114,
           "n": 50,
-          "ratio": 0.252,
-          "threshold": 0.5283835717460523
+          "ratio": 0.228,
+          "threshold": 0.5546516889034215
         },
         {
           "far": 0.01,
-          "measured": 0.00178,
+          "measured": 0.00138,
           "n": 50,
-          "ratio": 0.178,
-          "threshold": 0.8359841568475362
+          "ratio": 0.13799999999999998,
+          "threshold": 0.8807029047937658
         },
         {
           "far": 0.001,
-          "measured": 0.00014,
+          "measured": 2e-05,
           "n": 50,
-          "ratio": 0.13999999999999999,
-          "threshold": 1.336867205409974
+          "ratio": 0.02,
+          "threshold": 1.4632751242775461
         },
         {
           "far": 0.05,
-          "measured": 0.00756,
+          "measured": 0.0063,
           "n": 86,
-          "ratio": 0.1512,
-          "threshold": 0.3816914334035365
+          "ratio": 0.126,
+          "threshold": 0.39346359865544145
         },
         {
           "far": 0.01,
-          "measured": 0.00108,
+          "measured": 0.00098,
           "n": 86,
-          "ratio": 0.108,
-          "threshold": 0.5749424377224063
+          "ratio": 0.09799999999999999,
+          "threshold": 0.5915530539749554
         },
         {
           "far": 0.001,
-          "measured": 0.0001,
+          "measured": 2e-05,
           "n": 86,
-          "ratio": 0.1,
-          "threshold": 0.8500850270863232
+          "ratio": 0.02,
+          "threshold": 0.8604138686822805
         },
         {
           "far": 0.05,
-          "measured": 0.005,
+          "measured": 0.00406,
           "n": 100,
-          "ratio": 0.09999999999999999,
-          "threshold": 0.34828364708840964
+          "ratio": 0.0812,
+          "threshold": 0.36357063387693866
         },
         {
           "far": 0.01,
-          "measured": 0.00094,
+          "measured": 0.00044,
           "n": 100,
-          "ratio": 0.094,
-          "threshold": 0.5250914149847733
+          "ratio": 0.044,
+          "threshold": 0.5373612380052532
         },
         {
           "far": 0.001,
-          "measured": 8e-05,
+          "measured": 6e-05,
           "n": 100,
-          "ratio": 0.08,
-          "threshold": 0.738567705396454
+          "ratio": 0.06,
+          "threshold": 0.7770200995019103
         }
       ]
     },
     "7": {
       "block_length": 7,
-      "build_sessions": 179,
-      "check_sessions": 180,
+      "build_sessions": 192,
+      "check_sessions": 192,
       "check_trials": 50000,
       "rows": [
         {
           "far": 0.05,
-          "measured": 0.04556,
+          "measured": 0.03822,
           "n": 30,
-          "ratio": 0.9112,
-          "threshold": 0.5032281369589249
+          "ratio": 0.7643999999999999,
+          "threshold": 0.5470703489917916
         },
         {
           "far": 0.01,
-          "measured": 0.01124,
+          "measured": 0.0071,
           "n": 30,
-          "ratio": 1.1239999999999999,
-          "threshold": 0.7958735407301438
+          "ratio": 0.7100000000000001,
+          "threshold": 0.8872504794495722
         },
         {
           "far": 0.001,
-          "measured": 0.0016,
+          "measured": 0.00082,
           "n": 30,
-          "ratio": 1.6,
-          "threshold": 1.2337634846529977
+          "ratio": 0.82,
+          "threshold": 1.433827486986068
         },
         {
           "far": 0.05,
-          "measured": 0.03568,
+          "measured": 0.03324,
           "n": 50,
-          "ratio": 0.7136,
-          "threshold": 0.3540216639484417
+          "ratio": 0.6648,
+          "threshold": 0.38300738773458476
         },
         {
           "far": 0.01,
-          "measured": 0.00824,
+          "measured": 0.00722,
           "n": 50,
-          "ratio": 0.8240000000000001,
-          "threshold": 0.5482559388583245
+          "ratio": 0.722,
+          "threshold": 0.5970690004669512
         },
         {
           "far": 0.001,
-          "measured": 0.00092,
+          "measured": 0.00062,
           "n": 50,
-          "ratio": 0.92,
-          "threshold": 0.8156729898717384
+          "ratio": 0.62,
+          "threshold": 0.894001429575206
         },
         {
           "far": 0.05,
-          "measured": 0.02316,
+          "measured": 0.02068,
           "n": 86,
-          "ratio": 0.4632,
-          "threshold": 0.2600494056975749
+          "ratio": 0.41359999999999997,
+          "threshold": 0.281587563441433
         },
         {
           "far": 0.01,
-          "measured": 0.006,
+          "measured": 0.004,
           "n": 86,
-          "ratio": 0.6,
-          "threshold": 0.3771739062597352
+          "ratio": 0.4,
+          "threshold": 0.41613607659933277
         },
         {
           "far": 0.001,
-          "measured": 0.0008,
+          "measured": 0.0004,
           "n": 86,
-          "ratio": 0.8,
-          "threshold": 0.5361204991723738
+          "ratio": 0.4,
+          "threshold": 0.5935502358294599
         },
         {
           "far": 0.05,
-          "measured": 0.01812,
+          "measured": 0.0167,
           "n": 100,
-          "ratio": 0.3624,
-          "threshold": 0.24421239635838748
+          "ratio": 0.33399999999999996,
+          "threshold": 0.26136339609510273
         },
         {
           "far": 0.01,
-          "measured": 0.00426,
+          "measured": 0.0039,
           "n": 100,
-          "ratio": 0.426,
-          "threshold": 0.34654642465961766
+          "ratio": 0.38999999999999996,
+          "threshold": 0.37301203397544247
         },
         {
           "far": 0.001,
-          "measured": 0.00048,
+          "measured": 0.00064,
           "n": 100,
-          "ratio": 0.48,
-          "threshold": 0.4982351750110627
+          "ratio": 0.64,
+          "threshold": 0.5212304781951735
         }
       ]
     }

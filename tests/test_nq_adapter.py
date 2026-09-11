@@ -521,3 +521,57 @@ def test_the_holdout_still_refuses_to_be_served():
         next(ds.ticks(Split.HOLDOUT))
     ds.unlock_holdout("a test, and the reason is recorded")
     assert ds.holdout_lock.unlocked
+
+
+# --------------------------------------------------------------------------- #
+# early closes
+# --------------------------------------------------------------------------- #
+CLOSES_PATH = REPO_ROOT / "data" / "nq-session-closes.json"
+
+
+def test_a_half_day_ends_when_the_exchange_says_it_does():
+    """`session_bounds` computed 17:00 CT to 16:00 CT from the date alone, so on
+    a half day a strategy reading `ctx.session_end` was told it had four hours it
+    did not have. That is why 12 of 384 training sessions stranded a position and
+    why the null pool excluded 25 of them."""
+    import json
+
+    from src.core.data.nq import session_close_time
+
+    closes = json.loads(CLOSES_PATH.read_text())["sessions"]
+    assert closes, "no early closes recorded; run scripts/session_closes.py"
+
+    for date, row in closes.items():
+        session = dt.date.fromisoformat(date)
+        stated = session_close_time(session)
+        assert stated.strftime("%H:%M") == row["resolved_close_ct"], date
+        open_ts, close_ts = session_bounds_utc(session)
+        assert close_ts - open_ts < 23 * 3600 * 1_000_000_000, (
+            f"{date} is an early close but spans a full session"
+        )
+
+    ordinary = dt.date(2026, 5, 1)
+    assert ordinary.isoformat() not in closes
+    open_ts, close_ts = session_bounds_utc(ordinary)
+    assert close_ts - open_ts == 23 * 3600 * 1_000_000_000
+
+
+def test_where_the_calendar_and_the_data_disagree_it_is_recorded_not_silently_resolved():
+    """Five half days trade to 12:15 CT while `pandas_market_calendars` says
+    12:00 -- the day after Thanksgiving, Christmas Eve, and one July 3. The
+    resolved close is the later of the two so no observed trade is discarded by
+    the session window, and the disagreement is named rather than smoothed."""
+    import json
+
+    doc = json.loads(CLOSES_PATH.read_text())
+    disagreements = doc["disagreements"]
+    assert len(disagreements) == 5, disagreements
+    assert doc["disagreement_note"]
+    for date in disagreements:
+        row = doc["sessions"][date]
+        assert row["resolved_close_ct"] > row["calendar_close_ct"]
+        assert row["observed_last_trade_ct"] > row["calendar_close_ct"]
+        assert row["disagreement_minutes"] == 15.0, date
+    for date, row in doc["sessions"].items():
+        if date not in disagreements:
+            assert row["resolved_close_ct"] == row["calendar_close_ct"], date

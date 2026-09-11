@@ -149,10 +149,43 @@ unrepresentable*.
    mismatch set is **empty**.
 4. **Never seek past a DBN header by fixed offset.** Use the length field. v1 files
    have a 2,438-byte metadata block, v3 files 3,272. Both exist in `raw/` permanently.
-5. **DBN version heterogeneity is permanent.** The mirror is v1; corrections and all
-   future downloads are v3+. Both decode to the same 13-column pandas schema, so it is
-   invisible above the reader — but the larger v3 metadata block is exactly why
-   invariant 4 exists. `dbn_version` is recorded per object; normalize explicitly.
+5. **DBN version heterogeneity is permanent, and the versions decode to identical
+   contents.** The mirror is v1 through 2026-07-10; corrections and later downloads are
+   v3. The larger v3 metadata block is exactly why invariant 4 exists. `dbn_version` is
+   recorded per object; normalize explicitly.
+
+   **Verified on contents, not schema** (Task 18). Earlier comparisons were schema-only
+   and across *different* dates — same columns, same dtypes, different data. The bucket
+   holds v1 for 2026-07-09 and 2026-07-10, and Databento job
+   `GLBX-20260910-NVFE9V4TL4` delivered v3 for the same two dates, same instrument,
+   same `stype_in=parent` request. Decoded with `DBNStore.to_df()` and compared with
+   `DataFrame.equals` — index, dtypes and **every value** — over 332,792 and 303,256
+   rows: **identical**. `side` takes exactly `{A, B, N}` in both.
+
+   This could not be deferred again because the version boundary (2026-07-10 → 07-12)
+   falls about a third of the way through the pre-registered holdout, 2026-06-01 →
+   2026-09-09, and **the holdout is opened once**. A field that had changed meaning
+   across it would have put a step change in the middle of the one measurement that
+   cannot be repeated, and it would have read as a regime shift and been attributed to
+   the market. The record is `data/dbn-version-equivalence.json`, pinned to the ETags of
+   the objects it was verified on, so a correction in place makes it stale rather than
+   leaving it vouching for different bytes.
+
+5b. **Sessions do not all run to 16:00 CT.** Twenty-two of 564 close early, and
+   `data/nq-session-closes.json` records *when* — from the exchange calendar,
+   cross-checked against the observed last trade. On **five** the calendar says 12:00 CT
+   and trading demonstrably continued to 12:15: the day after Thanksgiving, Christmas
+   Eve, and 2025-07-03. CME equity index futures close at 12:15 CT on those half days
+   and `pandas_market_calendars`' `CME_Equity` reports 12:00. The resolved close is the
+   later of the two, so the session window never discards an observed trade; the
+   disagreement is recorded rather than smoothed, and a CME-specific calendar is the
+   real fix.
+
+   Before this, `session_bounds` computed every session as 17:00 CT to 16:00 CT from the
+   date alone, so a strategy reading `ctx.session_end` on a half day was told it had four
+   hours it did not have — which stranded a position on 12 of 384 training sessions and
+   cost the null pool 25 sessions to a workaround. All 384 now end flat and the pool is
+   whole.
 6. **Files split on UTC day, not CME session.** One Globex session spans two files;
    Sunday files hold only the weekly 17:00 CT open; Friday files stop at the 16:00 CT
    close. Coverage is full Globex, not RTH. Never anchor a session to a file boundary:

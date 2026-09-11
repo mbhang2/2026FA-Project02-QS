@@ -1,0 +1,73 @@
+{
+  "dates": {
+    "2026-07-09": {
+      "action_values": [
+        "T"
+      ],
+      "columns": [
+        "ts_event",
+        "rtype",
+        "publisher_id",
+        "instrument_id",
+        "action",
+        "side",
+        "depth",
+        "price",
+        "size",
+        "flags",
+        "ts_in_delta",
+        "sequence",
+        "symbol"
+      ],
+      "decoded_frame_sha256": "e34f0baeb0be88d5370471c1186a5016f1b17481767e291ddda3ab5f06598537",
+      "identical": true,
+      "key": "raw/trades/NQ/glbx-mdp3-20260709.trades.dbn.zst",
+      "rows": 332792,
+      "side_values": [
+        "A",
+        "B",
+        "N"
+      ],
+      "v1_dbn_version": 1,
+      "v1_object_etag": "38b7f52273dd29140d5198039f576950",
+      "v3_dbn_version": 3
+    },
+    "2026-07-10": {
+      "action_values": [
+        "T"
+      ],
+      "columns": [
+        "ts_event",
+        "rtype",
+        "publisher_id",
+        "instrument_id",
+        "action",
+        "side",
+        "depth",
+        "price",
+        "size",
+        "flags",
+        "ts_in_delta",
+        "sequence",
+        "symbol"
+      ],
+      "decoded_frame_sha256": "6c111fedd3b3c62e8e2b34602f32aa5abbf1a6f4209b06a0a9eaa5f0f99535da",
+      "identical": true,
+      "key": "raw/trades/NQ/glbx-mdp3-20260710.trades.dbn.zst",
+      "rows": 303256,
+      "side_values": [
+        "A",
+        "B",
+        "N"
+      ],
+      "v1_dbn_version": 1,
+      "v1_object_etag": "aebae82923ad53b4b45a7f2ecd2c5ca1",
+      "v3_dbn_version": 3
+    }
+  },
+  "method": "databento.DBNStore.to_df() on both, then DataFrame.equals",
+  "note": "Do DBN v1 and v3 decode to the same contents? Checked on the same date, the same instrument and the same request -- the bucket holds v1 for these two dates and Databento batch job GLBX-20260910-NVFE9V4TL4 delivered v3 for them. Compared with pandas DataFrame.equals on the decoded frames: index, dtypes and every value, not the schema.",
+  "v3_source": "Databento batch job GLBX-20260910-NVFE9V4TL4 (NQ.FUT, parent, trades)",
+  "verdict": "identical",
+  "why_it_matters": "The version boundary is 2026-07-10/2026-07-12 and the pre-registered holdout is 2026-06-01..2026-09-09, so the boundary sits about a third of the way through the holdout. A field that changed meaning across it would put a step change in the middle of the one measurement that is taken once, and it would read as a regime shift."
+}

@@ -214,7 +214,7 @@ def real_session_returns(
     fill_model: str = "unfavorable",
     warmup_sessions: int = 0,
     seed: int = 1,
-    exclude_early_closes: bool = True,
+    exclude_early_closes: bool = False,
 ) -> tuple[list[float], dict]:
     """Per-session returns of the reference strategy on a real dataset.
 
@@ -247,21 +247,18 @@ def real_session_returns(
     record = engine.run()
 
     scored = engine.scored_sessions()
-    # Still on, and Task 17 established exactly why. The reference strategy now
-    # reads `ctx.session_end` and is flat at every boundary it has a counterparty
-    # for -- on the synthetic generator, including at a 30% early-close rate,
-    # nothing is stranded at all. On NQ the same 12 sessions are still stranded,
-    # because `NQDataset.session_bounds` computes 17:00 CT to 16:00 CT from the
-    # session date and does not know which dates close early. The strategy is
-    # told the session ends at 16:00, waits until 15:50, and the data stopped at
-    # noon.
+    # Off since Task 18. The exclusion existed because the reference strategy
+    # could not be flat on an early close, and the reason was never the strategy:
+    # `NQDataset.session_bounds` computed every session as running to 16:00 CT,
+    # so on a half day it was told it had four hours it did not have. The
+    # adapter reads the committed early-close times now and all 384 training
+    # sessions end flat, so there is nothing structural left to exclude.
     #
-    # So this is not a workaround for a strategy that cannot read a clock; it is
-    # a workaround for a calendar that does not carry early-close *times*. The
-    # manifest publishes which dates close early but not when, and teaching the
-    # adapter the times is an adapter change. Until then the exclusion stands,
-    # and it stays structural -- from the exchange calendar, never from which
-    # sessions happened to strand a position.
+    # Kept as a switch rather than deleted. If a future adapter has a session
+    # type the strategy cannot exit before, this is the honest response -- and it
+    # stays a structural rule, from the exchange calendar, never from which
+    # sessions happened to strand a position. Excluding by outcome conditions the
+    # null on the thing it is measuring.
     dropped = excluded_sessions(dataset, scored) if exclude_early_closes else set()
     kept = [s for s in scored if s not in dropped]
     calendar = session_calendar(dataset, kept)

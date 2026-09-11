@@ -16,6 +16,7 @@ a silent revert fails the build.
 from __future__ import annotations
 
 import datetime as dt
+import json
 import re
 from pathlib import Path
 
@@ -322,3 +323,72 @@ def test_gex_eligible_session_counts(manifest):
             "futures sessions past the end of OPRA coverage: the two series have "
             "drifted apart again"
         )
+
+
+# --------------------------------------------------------------------------- #
+# 8. DBN v1 and v3 decode to the same contents
+# --------------------------------------------------------------------------- #
+EQUIVALENCE = REPO_ROOT / "data" / "dbn-version-equivalence.json"
+
+
+def test_the_dbn_version_boundary_was_checked_on_contents_not_schema():
+    """The check that had been deferred three times, and could not be deferred
+    again: the version boundary sits inside the pre-registered holdout.
+
+    NQ trades are v1 through 2026-07-10 and v3 from 2026-07-12. The holdout runs
+    2026-06-01 to 2026-09-09, so the boundary falls about a third of the way
+    through it -- and the holdout is opened once. A field that changed meaning
+    across the boundary would put a step change in the middle of the one
+    measurement that cannot be repeated, and it would read as a regime shift and
+    be attributed to the market.
+
+    Earlier comparisons were schema-only and across *different* dates: same
+    columns, same dtypes, different data. This one is the same date, the same
+    instrument and the same request, compared with `DataFrame.equals` -- index,
+    dtypes and every value.
+    """
+    record = json.loads(EQUIVALENCE.read_text())
+    assert record["verdict"] == "identical", record["verdict"]
+    assert len(record["dates"]) >= 2
+    for date, entry in record["dates"].items():
+        assert entry["v1_dbn_version"] == 1 and entry["v3_dbn_version"] == 3
+        assert entry["identical"] is True, date
+        assert entry["rows"] > 100_000
+        # the three-valued aggressor flag the research agent is told about
+        assert set(entry["side_values"]) == {"A", "B", "N"}, date
+
+
+def test_the_equivalence_record_is_about_the_objects_still_in_the_bucket(manifest):
+    """A verified property is only verified for the bytes it was verified on. If
+    one of those objects is ever corrected in place, this record is stale and
+    says so rather than continuing to vouch for something else."""
+    record = json.loads(EQUIVALENCE.read_text())
+    fields = {name: i for i, name in enumerate(manifest["files_fields"])}
+    for date, entry in record["dates"].items():
+        row = manifest["files"].get(entry["key"])
+        assert row is not None, f"{entry['key']} is no longer in the manifest"
+        assert row[fields["etag"]] == entry["v1_object_etag"], (
+            f"{date}: the v1 object has changed since the version comparison was "
+            "run; re-run scripts/check_dbn_versions.py"
+        )
+        assert row[fields["dbn_version"]] == 1
+
+
+def test_the_version_boundary_is_where_the_record_says_it_is(manifest):
+    """If a future extension lands v3 earlier, or a correction rewrites a v1 file
+    as v3, the boundary moves and the comparison above is about the wrong seam."""
+    fields = {name: i for i, name in enumerate(manifest["files_fields"])}
+    by_date = {}
+    for key, row in manifest["files"].items():
+        if "/trades/NQ/" not in key:
+            continue
+        stamp = key.rsplit("-", 1)[1][:8]
+        by_date[stamp] = row[fields["dbn_version"]]
+    # The six corrected July 2025 dates are v3 inside a v1 stretch; they are the
+    # documented exception and are not the boundary.
+    corrected = {"20250703", "20250704", "20250706", "20250707", "20250708", "20250709"}
+    ordinary = {d: v for d, v in by_date.items() if d not in corrected}
+    last_v1 = max(d for d, v in ordinary.items() if v == 1)
+    first_v3 = min(d for d, v in ordinary.items() if v == 3)
+    assert last_v1 == "20260710", last_v1
+    assert first_v3 == "20260712", first_v3

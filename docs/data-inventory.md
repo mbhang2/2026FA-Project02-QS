@@ -369,36 +369,12 @@ The in-place overwrite gave up `rclone check` against the source lake as a mirro
 
 - 2,703 objects carry size, ETag and last-modified in `data/manifest.json`. R2 returns the plain MD5 as the ETag for a single-part upload, so this is a full fingerprint taken from `ListObjectsV2` at **zero egress** — no object is downloaded to compute it.
 - multipart (composite) ETags found: **0**, so every ETag here is a directly comparable MD5
-- every run compares the live listing against the committed manifest. Status this run: **drift**
+- every run compares the live listing against the committed manifest. Status this run: **clean**
 
-| Key | Change | Classification |
-|---|---|---|
-| `raw/opra_cbbo1m/opra-pillar-20260721.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260722.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260723.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260724.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260727.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260728.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260729.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260730.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260731.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260803.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260804.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260805.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260806.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260807.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260810.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260811.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260812.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260813.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260814.cbbo-1m.dbn.zst` | added | — |
-| `raw/opra_cbbo1m/opra-pillar-20260817.cbbo-1m.dbn.zst` | added | — |
-
-A change on an object recorded in the corrections file is the divergence described in §9. Anything else is a critical anomaly: either the bucket was modified without a record, or the record is missing an entry.
+No object changed since the committed manifest.
 
 ## Anomalies and design inputs
 
-- **warning** `bucket` *object_added* — 108 object(s) added since the committed manifest: raw/opra_cbbo1m/opra-pillar-20260721.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260722.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260723.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260724.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260727.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260728.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260729.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260730.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260731.cbbo-1m.dbn.zst, raw/opra_cbbo1m/opra-pillar-20260803.cbbo-1m.dbn.zst ...
 - **warning** `raw/opra_definition` *inconsistent_zstd_layering* — compression depth is not uniform across this prefix: 47 file(s) at 1 layer(s) (2026-07-06 → 2026-09-09); 501 file(s) at 2 layer(s) (2024-07-03 → 2026-07-02). A reader that decompresses a fixed number of times fails on one group or the other; unwrap until the DBN magic appears. [2024-07-03 → 2026-09-09]
 - **warning** `raw/opra_definition` *sidecar_coverage_short* — raw/opra_definition/condition.json documents data condition only to 2026-07-03, but the prefix holds files through 2026-09-09. The later files come from a separate vendor job and have no condition record; note this lines up with the change in compression depth. [2026-07-03 → 2026-09-09]
 - **warning** `raw/opra_definition` *vendor_condition* — Databento reports 2025-10-22 as 'degraded' [2025-10-22 → 2025-10-22]

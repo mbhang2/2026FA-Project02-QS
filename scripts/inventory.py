@@ -299,12 +299,22 @@ def trading_days(calendar: str, start: dt.date, end: dt.date) -> tuple[list[dt.d
     closes = sched["market_close"].dt.tz_convert(CME_TZ)
     by_time = Counter(closes.dt.strftime("%H:%M"))
     normal = by_time.most_common(1)[0][0] if len(by_time) else None
-    early = sorted(
-        d.date().isoformat()
+    early_times = {
+        d.date().isoformat(): t
         for d, t in zip(sched.index, closes.dt.strftime("%H:%M"))
         if t != normal
-    )
-    return days, {"normal_close_ct": normal, "early_close_days": early}
+    }
+    early = sorted(early_times)
+    # The *times*, not only the dates. Recording which days close early and not
+    # when they close left the adapter computing every session as running to the
+    # normal close, so on a half day a strategy is told the session runs four
+    # hours longer than the data does -- which is why 12 of 384 NQ training
+    # sessions stranded a position and why the null pool excluded 25 of them.
+    return days, {
+        "normal_close_ct": normal,
+        "early_close_days": early,
+        "early_close_times_ct": early_times,
+    }
 
 
 def assemblable_sessions(sessions: Iterable[dt.date], present: set[dt.date]) -> dict:

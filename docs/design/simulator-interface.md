@@ -127,10 +127,28 @@ report it out of order.
 Bar closure is triggered by the first tick with `ts >= boundary`; bar contents are ticks
 in `[start, boundary)`. The triggering tick belongs to the *next* bar.
 
-**One callback per timestamp, never one per timeframe.** If a 5m and a 1m bar both close
+**One callback per bar close, never one per timeframe.** If a 5m and a 1m bar both close
 at 09:35 and they arrive as two callbacks, the ordering between them becomes a hidden
 variable that affects results and is recorded nowhere. `BarEvent.bars` is ordered by
 interval ascending, then by subscription id, so iteration order is stable.
+
+The rule is about *closes*, not about ticks, and the distinction is not academic. One
+tick arriving after a quiet stretch closes several intervals at once, and those
+intervals did not close at the same instant — they arrive as separate events, oldest
+close first, each stamped with its own `close_ts`. Lumping them into one event labelled
+with the tick's timestamp made `ctx.bars` claim two closes at one moment and put a bar
+in history alongside one that closed a minute later. Invisible until Task 17 gave the
+synthetic generator empty intervals.
+
+So `BarEvent.ts` is the bars' close and `ctx.ts` is when you were told, and on thin data
+those differ: **you learn about a bar when the next trade arrives**, because the engine
+is tick-driven and cannot call you when nothing happens. A strategy that needs a
+heartbeat regardless subscribes with `emit_empty=True`.
+
+**A session's tail bar is stamped with the session close, not the interval boundary it
+never reached.** It is truncated by definition. Stamping it at the boundary put a
+`close_ts` in the future on the one bar per session where a position is most likely
+still open — delivered at the close, claiming to close up to a full interval later.
 
 ## Timing rules — the ones that prevent fake alpha
 
@@ -212,7 +230,21 @@ empty in every other callback), `ctx.history(sub)` (a `HistoryView` that raises 
 reaching forward), `ctx.position`, `ctx.working_orders` (frozen `OrderView` copies,
 never the engine's own objects), `ctx.find_orders(tag=...)`, `ctx.fills` (since the
 previous callback), `ctx.last_price`, `ctx.ts` / `ctx.now`, `ctx.session`,
-`ctx.realized_pnl`, `ctx.unrealized_pnl`, `ctx.equity`.
+`ctx.session_start` / `ctx.session_end`, `ctx.realized_pnl`, `ctx.unrealized_pnl`,
+`ctx.equity`.
+
+**`ctx.session_end` is not lookahead.** An exchange publishes its calendar in advance,
+so the close is known at the open; it says nothing about what happens between now and
+then. It exists because without it a strategy cannot be reliably flat at a boundary —
+every alternative guesses the session's length from what it has already seen, and every
+such guess is wrong on the first session shorter than anything before it. That is a half
+day, which arrives without warning and is exactly when being caught long overnight
+matters. The calibration apparatus guessed twice, from a bar count and then from a
+learned duration, and both were wrong on real data.
+
+Two things it cannot do. You still need a callback to act on, and a session whose last
+minutes hold no trades gives you nothing to exit on and nothing to exit *against*. And
+an order queued on a bar close is eligible from the next tick, so leave a margin.
 
 Every accessor returns a primitive, a tuple, a frozen dataclass or a read-only
 view; `tests/test_boundary.py` walks the whole context surface by introspection

@@ -473,7 +473,8 @@ and by very different amounts.
 **The dataset was the large error.** Synthetic sessions have far less dispersion
 than real NQ ones, so the synthetic table sets thresholds a strategy with no edge
 can clear. At N=86, `threshold_for(0.001)` is **0.0336 synthetic against 0.4636
-on real NQ training sessions — 13.8×**. Task 15's first real run scored a Sortino
+on real NQ training sessions — 13.8×**. (Both numbers have since moved: see the
+Task 17 and Task 18 entries below. The ratio is the point, not the digits.) Task 15's first real run scored a Sortino
 of +0.0076 with a significance of 0.07, which is nothing; against the synthetic
 table that read as a false-acceptance rate of **0.18%**, almost an accept at a
 0.1% policy, and against the real one it is **32%**. The run completed, the
@@ -539,6 +540,30 @@ from 0.75 to 0.35 and at 0.35 from 1.00 to 0.90 — the harness needs roughly tw
 the edge to see the same thing, because the easier world was flattering it. False
 acceptance on a known null stayed at 0.00% and acceptance stayed monotone in
 signal strength.
+
+**Task 18: the pool is whole.** The real-data null excluded 25 sessions — early
+closes and the session after one — because the reference strategy could not be
+flat on a half day. The cause was never the strategy: `NQDataset.session_bounds`
+computed every session as running to 16:00 CT, so on a half day it was told it
+had four hours it did not have. The adapter reads committed early-close times
+now, all 384 training sessions end flat, and the exclusion is gone.
+
+| `threshold_for(0.001, 86)` on NQ | pool | value |
+|---|---|---|
+| Task 16 | 359 sessions, 25 excluded | 0.4636 |
+| Task 17 (reference strategy rewritten) | 359 | 0.5143 |
+| Task 18 (exclusion removed) | **384** | **0.5282** |
+
+The block length did not move: still 7, with lag-1 |r| at +0.2041 against a
+±0.100 band. The recovered sessions are half days and the sessions after them, so
+the pool gained its thinnest and most irregular observations and the threshold
+rose slightly — the direction it should move when the easy sessions stop being
+the only ones measured.
+
+The exclusion switch is kept rather than deleted, and stays **structural**: if a
+future adapter has a session type the strategy cannot exit before, excluding it
+by exchange calendar is the honest response. Excluding by outcome conditions the
+null on the thing it is measuring.
 
 *Cost:* 190 seconds end to end for the NQ table — 141.5M ticks over 384 training
 sessions to build the pool, and the bootstrap itself is seconds. It reruns

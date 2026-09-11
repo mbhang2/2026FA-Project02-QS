@@ -64,6 +64,25 @@ def test_architecture_doc_names_every_module():
     )
 
 
+def test_architecture_doc_names_every_script():
+    """Scripts drifted out of the map before the modules did: `session_closes.py`
+    was added in Task 18 and the build-time table did not grow with it. The table
+    is the only place that says what a script produces and who consumes it, so a
+    script missing from it is a committed artifact nobody can trace."""
+    text = DOC.read_text()
+    scripts = sorted(
+        str(p.relative_to(REPO_ROOT))
+        for p in (REPO_ROOT / "scripts").glob("*.py")
+    )
+    assert len(scripts) >= 8, scripts
+    missing = [s for s in scripts if s not in text]
+    assert not missing, (
+        "docs/design/architecture.md does not mention:\n  " + "\n  ".join(missing)
+        + "\n\nAdd it to the build-time table with what it produces and what "
+        "consumes it."
+    )
+
+
 def test_architecture_doc_names_every_package():
     text = DOC.read_text()
     missing = [p for p in packages() if p not in text]

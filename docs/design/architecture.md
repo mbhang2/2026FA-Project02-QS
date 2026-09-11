@@ -123,9 +123,11 @@ In order:
 5. **The scorer** turns the blotter plus the split's session calendar into a
    `ScoreTuple`. Sessions the strategy sat out still count.
 6. **`run.py` appends exactly one ledger row per invocation**, crashes and
-   abandoned runs included, tagged with what triggered it, and copies the
-   strategy source to `runs/sources/<digest>.py` so the trial can actually be
-   re-run later.
+   abandoned runs included, tagged with what triggered it and what it was *for*
+   (`purpose`: trial, smoke or replay), and copies the source of whatever
+   actually ran to `runs/sources/<digest>.py` so the trial can be re-run later.
+   N is the count of rows with `purpose == "trial"` — a filter over the ledger,
+   never a shorter ledger.
 
 ---
 
@@ -137,9 +139,9 @@ the chronological split, the embargo and the holdout lock, so those are
 
 | File | Responsibility |
 |---|---|
-| `src/core/data/dataset.py` | The `Dataset` protocol, `SplitBounds`, `Calendar`, `HoldoutLock`, `sessions_for()`, `warmup_start()`, `calendar_path()` |
-| `src/core/data/synthetic.py` | `SyntheticDataset` — tick generator with a planted-signal switch |
-| `src/core/data/nq.py` | `NQDataset` — the R2/Databento NQ adapter, session assembly, front-month selection, local cache |
+| `src/core/data/dataset.py` | The `Dataset` protocol, `SplitBounds`, `Calendar`, `HoldoutLock`, `sessions_for()`, `warmup_start()`, `calendar_path()`, `load_calendar()`, `CalendarNotWritten` |
+| `src/core/data/synthetic.py` | `SyntheticDataset` — irregular tick generator with a planted-signal switch |
+| `src/core/data/nq.py` | `NQDataset` — the R2/Databento NQ adapter, session assembly, early closes, front-month selection, local cache |
 | `src/core/data/dbn.py` | DBN-under-zstd reading rules, in one place |
 
 **`dataset.py`.** `Calendar.__post_init__` refuses splits that are not
@@ -149,7 +151,18 @@ and cannot be re-locked — a flag that can be toggled back is a flag someone
 toggles back — and `unlock_holdout()` requires a reason for the record.
 `calendar_path(name)` derives `config/calendars/<dataset>.yaml` from
 `Dataset.name` so the adapter, its error message and the file a human is meant to
-write cannot drift to different names.
+write cannot drift to different names. `load_calendar()` maps that file's
+**dates** onto session positions against whichever session list the dataset
+publishes — dates rather than counts is what lets a future GEX-using dataset take
+547 sessions over the same periods the NQ trades dataset takes 564 over, aligned
+rather than one constraining the other. A missing file raises `CalendarNotWritten`,
+its own exception type so a caller can tell "the human has not decided" from "this
+is broken".
+
+NQ's calendar is committed: `config/calendars/nq-trades.yaml`, 384 / 86 / 73 with
+an embargo of 10, and **the file's commit date is the pre-registration date** —
+there is deliberately no date field inside it, because a date written into a file
+can disagree with the commit that introduced it.
 
 **`synthetic.py`.** Built before the first real adapter deliberately: two
 implementations from day one is what keeps the `Dataset` interface honest, and it
@@ -158,6 +171,20 @@ makes null and power calibration ordinary runs instead of special cases.
 `signal_strength > 0` plants an edge of known size. It generates *ticks*, not
 bars, so synthetic data exercises the same aggregation path as a real feed.
 
+**It is irregular by default, and that is the point.** Three real-data defects
+were invisible here for the same reason: the generator was uniform in exactly the
+ways markets are not. Sessions all the same length hid a strategy that could not
+handle a half day; every interval having ticks hid a session length learned as a
+bar count; sessions starting at the same price hid overnight holds realising the
+previous day's drift. Each cost a task to find on real data. It now has variable
+session lengths with early closes, runs of intervals with no trade (thinness tied
+to volatility, so the calm days are the thin ones), volatility clustering across
+sessions, and continuous prices across boundaries. Each is independently
+toggleable — which earned its keep immediately, since the payoff-shape defect
+Task 17 found was produced by no single irregularity but by their interaction.
+`uniform=True` opts back into the old world, and the golden blotter digests pin it
+so they move only when behaviour does.
+
 **`nq.py`.** Everything specific to this bucket: sessions assembled from the two
 UTC-day objects each one straddles, front-month selection among outrights by
 session volume, and a local `.npz` session cache. It reads the committed
@@ -165,6 +192,22 @@ session volume, and a local `.npz` session cache. It reads the committed
 manifest is ground truth and the adapter cross-checks against it. `digest()`
 pins the actual bytes from the manifest's per-object ETags, so a ledger row names
 the data it ran on.
+
+**Early closes reach the session bounds.** `session_bounds` computed 17:00 CT to
+16:00 CT from the date alone, so on a half day a strategy reading
+`ctx.session_end` was told it had four hours it did not have — which stranded a
+position on 12 of 384 training sessions and cost the null pool 25 sessions to a
+workaround. It reads `data/nq-session-closes.json` now, built by
+`scripts/session_closes.py` from the exchange calendar and cross-checked against
+the observed last trade. All 384 end flat.
+
+**`Tick.session` here is a Gregorian ordinal, not a position**, deliberately: a
+position means something different depending on how many sessions the spec
+trimmed to. `Calendar` counts by position, so `scored_sessions()` and
+`warmup_sessions()` translate, and that is the one seam between the two id
+spaces. A position handed to `session_bounds()` yields a date in the year 2 AD
+and per-session returns keyed to sessions that do not exist — wrong in a way
+nothing downstream could notice.
 
 **`dbn.py`.** The rules that bite: no footer, two prefixes are zstd-compressed
 twice, never seek past a header by fixed offset (v1 metadata is 2,438 bytes and
@@ -191,10 +234,17 @@ The immutable side of the split. What a strategy can see and do, and when.
 
 **Ordering within a tick** is fixed and is the thing most worth knowing: resolve
 resting orders → deliver fill callbacks → deliver the tick event if subscribed →
-deliver **one** bar callback carrying every bar that closed at this timestamp →
-drain lifecycle events. One bar callback rather than one per timeframe, because
-otherwise the ordering between a 5m and a 1m close is a hidden variable that
-changes results and is recorded nowhere.
+deliver **one bar callback per close**, each carrying every bar that closed at
+that instant → drain lifecycle events. One callback rather than one per
+timeframe, because otherwise the ordering between a 5m and a 1m close at the same
+moment is a hidden variable that changes results and is recorded nowhere.
+
+The rule is about closes, not ticks: one tick after a quiet stretch closes
+several intervals at once, and those did not close together, so they arrive as
+separate events in close order. On thin data `ctx.ts` therefore runs ahead of
+`close_ts` — you learn about a bar when the next trade arrives, because the
+engine cannot call you when nothing happens. A session's tail bar is stamped with
+the session close rather than the interval boundary it never reached.
 
 **T+1.** Anything submitted while handling the callback at sequence *S* is
 eligible strictly after *S*. Without it a strategy fills at the close of the bar
@@ -283,9 +333,33 @@ name so it is calibrated against its own null.
 Sharpe and an approximation for Sortino, and at the 30-session floor the
 parametric rule fired on 6% of pure noise against the ~0.1% a *t* of 3.0 implies.
 So the null is simulated: no-signal data, reference strategy, metric, repeat —
-and the tail is afforded by pooling per-session returns across runs and
-bootstrapping N of them, because the expensive part is what a session looks like
-and the cheap part is the sampling distribution over N of them.
+and the tail is afforded by pooling per-session returns and resampling N of them,
+because the expensive part is what a session looks like and the cheap part is the
+sampling distribution over N of them.
+
+**One null per dataset, and the table says which.** A threshold measured on one
+return-generating process says nothing about another, and the first real run
+proved it: a Sortino of +0.0076 over 86 sessions — a significance of 0.07, which
+is nothing — read as a 0.18% false-acceptance rate against the synthetic table
+and is 41% against the null measured on NQ's own training sessions. The run
+completed, the number was plausible, and it meant nothing. Every table now
+carries a `dataset` tag; `threshold_for` / `far_for` raise `WrongNullTable` when
+asked about a dataset the table was not measured on, and `FileNotFoundError`
+naming the script when no table exists for it.
+
+**Real sessions are not exchangeable, so the resample is a block bootstrap** —
+stationary, Politis & Romano, with the block length *measured* from the pool
+rather than chosen. The returns themselves are near-uncorrelated; their absolute
+values are not, so the length is measured over both series and taken from
+whichever persists longer. NQ's is 7 sessions, the synthetic generator's is 3.
+Block length 1 reproduces the i.i.d. resample exactly, to the same integers from
+the same generator state, so the old behaviour is a special case of the new code
+path rather than a parallel one.
+
+Tables live at `data/calibration/empirical-null.json` (synthetic) and
+`empirical-null-nq-trades.json`, each beside a `-verification.json` recording
+promised-versus-measured false acceptance on sessions the table was not built
+from.
 
 **The reference strategy lives here, not in `src/strategies/`.** It used to be
 the agent's file, which meant the power curve measured the metric, the threshold
@@ -299,11 +373,20 @@ Reasoning: `docs/design/metric.md`.
 
 **`src/core/types.py`** holds every shared value type: `Ts`, `Side`, `Split`,
 `OrderType`, `TimeInForce`, `OrderStatus`, `LifecycleKind`, `Tick`, `Bar`,
-`BarEvent`, `TickEvent`, `FillEvent`, `LifecycleEvent`, `Order`, `BracketSpec`,
-`Submit`/`Modify`/`Cancel`, `Blotter`/`BlotterRow`, `ScoreTuple`,
-`DataCapabilities`, `Subscription`, and the `LookaheadError` / `HoldoutLocked`
-exceptions. Immutable and dataset-agnostic. It sits at the top of `src/core/`
-rather than inside one subpackage because all three import it and none owns it.
+`BarEvent`, `TickEvent`, `FillEvent`, `LifecycleEvent`, `Order`, `OrderView`,
+`BracketSpec`, `Submit`/`Modify`/`Cancel`, `Blotter`/`BlotterRow`, `ScoreTuple`,
+`DataCapabilities`, `Subscription`, the `Strategy` / `TickStrategy` protocols, and
+the `LookaheadError` / `HoldoutLocked` exceptions. Immutable and dataset-agnostic.
+It sits at the top of `src/core/` rather than inside one subpackage because all
+three import it and none owns it.
+
+`Order` is the engine's own mutable record; `OrderView` is the frozen copy a
+strategy is handed, and the two are separate because handing out the former let a
+strategy change an order without going through the queue, the cap or the record.
+The `Strategy` protocol is load-bearing rather than decorative: the engine
+validates against it before the walk and a test asserts the methods it declares
+are exactly the ones the engine calls — it carried a signature that had been
+wrong for four tasks because nothing imported it.
 
 **`src/strategies/current.py`** is the only writable tree — the agent's file.
 `run.py` imports it by name and looks for `STRATEGY`, `Strategy` or
@@ -361,7 +444,8 @@ Each produces something committed. None is importable from `src/core/`.
 |---|---|---|
 | `scripts/inventory.py` | `data/manifest.json`, `docs/data-inventory.md` | `src/core/data/nq.py`, `tests/test_data_integrity.py`, `scripts/gen_agent_data.py` |
 | `scripts/nq_contracts.py` | `data/nq-contract-selection.json` | `src/core/data/nq.py`, `tests/test_nq_adapter.py` |
-| `scripts/tabulate_null.py` | `data/calibration/empirical-null.json` — the pooled null and its bootstrap tail | `src/core/scoring/calibration/null.py` |
+| `scripts/session_closes.py` | `data/nq-session-closes.json` — when each early-closing session actually ends | `src/core/data/nq.py`, `tests/test_nq_adapter.py` |
+| `scripts/tabulate_null.py` | `data/calibration/empirical-null*.json` — one per dataset, plus its held-out verification | `src/core/scoring/calibration/null.py` |
 | `scripts/calibrate.py` | the two-sided calibration curves (`--json` writes them under `data/calibration/`) | `docs/design/metric.md` |
 | `scripts/gen_context_api.py` | `docs/design/context-api.md` | the research agent |
 | `scripts/gen_agent_data.py` | `docs/agent/data.md` | the research agent |
@@ -397,6 +481,7 @@ the bucket and skip when `R2_*` is absent.
 | `tests/test_boundary.py` | The context boundary: immutability by introspection, subscription-id resolution, the protocol against the engine, warmup against the embargo |
 | `tests/test_architecture_doc.py` | That this document names every module |
 | `tests/test_examples.py` | That every worked example in `docs/agent/strategy-api.md` is byte-identical to a file in `tests/examples/` and actually runs |
+| `tests/test_agent_docs.py` | That the two documents the research agent reads agree with each other, and that the generated one is current |
 | `tests/test_live_bucket.py` | The bucket itself, when credentials are present |
 
 `tests/golden/pre_context_refactor.json` is the acceptance artefact for

@@ -179,8 +179,13 @@ def main() -> int:
             # The field existed and nothing ever computed it.
             engine.record.diagnostics["fill_model_spread"] = spread
 
-    row = runner._row(record.as_dict(), "harness", "nq-smoke", args.ledger,
-                      purpose="smoke", strategy_path=REFERENCE_PATH)
+    # `human`, because that is what this is: a person running the harness by
+    # hand to check the plumbing. The trigger is what decides the purpose now,
+    # so saying "smoke" is only permitted to the caller that can be telling the
+    # truth about it.
+    row = runner._row(record.as_dict(), "human", "nq-smoke", args.ledger,
+                      purpose=runner.resolve_purpose("human", "smoke"),
+                      strategy_path=REFERENCE_PATH)
     row["note"] = note
     runner.append_ledger(args.ledger, row)
     print(f"ledger    {args.ledger}")

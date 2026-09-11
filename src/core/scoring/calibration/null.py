@@ -103,7 +103,12 @@ FAR_GRID = (0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005)
 # Session counts the table is built at. Between them, thresholds interpolate in
 # 1/sqrt(N), which is the shape a ratio-times-root-N relation would have -- used
 # only as an interpolation basis, never as the estimate itself.
-N_GRID = (10, 20, 30, 40, 50, 75, 100, 150, 200)
+# 73 and 86 are the holdout and validation session counts of the pre-registered
+# NQ calendar. They are tabulated rather than interpolated not because the
+# interpolation is bad -- measured, it is within 0.2% at both -- but because the
+# two numbers every real decision is made at should be measured rather than
+# inferred, and it costs nothing.
+N_GRID = (10, 20, 30, 40, 50, 73, 75, 86, 100, 150, 200)
 
 METRICS = ("sortino_per_session", "sharpe_per_session")
 
@@ -401,7 +406,7 @@ def _draw_indices(rng, pool_size: int, n: int, trials: int, block_length: int):
 def tabulate(
     pool: Sequence[float],
     *,
-    trials: int = 50_000,
+    trials: int = 500_000,
     n_grid: Sequence[int] = N_GRID,
     far_grid: Sequence[float] = FAR_GRID,
     min_downside_sessions: int = 5,
@@ -670,16 +675,82 @@ def summary(n_sessions: int, *, metric: str = "sortino_per_session",
 # --------------------------------------------------------------------------- #
 # does the table deliver what it promises, on data it was not built from
 # --------------------------------------------------------------------------- #
+def far_column_validity(
+    scores: np.ndarray, build_doc: dict, n: int, *, far_grid: Sequence[float],
+    path,
+) -> dict:
+    """Is the FAR column a p-value column?
+
+    The ledger's FAR column is the input to false-discovery control, and
+    Benjamini-Hochberg needs **validity**, not exact uniformity: P(p <= a) <= a
+    for every a. Conservative costs power and stays valid; anti-conservative
+    makes the reported FDR precise and wrong.
+
+    So two things are reported. The validity table is the one that matters --
+    the realised rate at each tabulated alpha. The KS statistic against
+    Uniform(0,1) is reported for the bulk as a sanity check and is deliberately
+    secondary: every accept decision happens in the tail, and a column can be
+    beautifully uniform in the bulk while being wrong exactly where it is used.
+
+    The table clamps outside its own grid, so p-values pile up at 0.5 and
+    0.0005. The KS is computed on the interior only, against the uniform
+    conditioned on that interval, because comparing censored values to an
+    uncensored uniform would measure the censoring rather than the calibration.
+    """
+    p = np.array([
+        far_for(float(s), n, path=path, dataset=build_doc.get("dataset"))
+        for s in scores
+    ])
+    lo, hi = min(far_grid), max(far_grid)
+    interior = p[(p > lo) & (p < hi)]
+    ks = None
+    if interior.size > 100:
+        u = np.sort((interior - lo) / (hi - lo))
+        k = np.arange(1, u.size + 1) / u.size
+        ks = float(max(np.max(k - u), np.max(u - (k - 1 / u.size))))
+    return {
+        "n": int(n),
+        "p_values": int(p.size),
+        "clamped_low": int((p <= lo).sum()),
+        "clamped_high": int((p >= hi).sum()),
+        "ks_statistic_interior": ks,
+        "ks_critical_0.01": (
+            float(1.63 / math.sqrt(interior.size)) if interior.size else None
+        ),
+        "realised": {
+            str(far): float((p <= far).mean()) for far in sorted(far_grid)
+        },
+        # The verdict, and the caveat that has to travel with it. `far_for`
+        # clamps at the table's edges, so every score beyond the last tabulated
+        # quantile reports exactly `max(far_grid)` -- which makes P(p <= that)
+        # trivially 1. That is censoring, not a calibration failure, so validity
+        # is asserted strictly inside the grid and the endpoint is reported
+        # rather than scored.
+        "valid_inside_grid": bool(
+            all(
+                float((p <= far).mean()) <= far
+                for far in far_grid if lo < far < hi
+            )
+        ),
+        "endpoint_note": (
+            f"alpha={hi} is the table's upper clamp: every score above the last "
+            "tabulated quantile reports exactly that value, so P(p <= it) is 1 by "
+            "construction. Not evaluated."
+        ),
+    }
+
+
 def verify_held_out(
     pool: Sequence[float],
     *,
     block_length: int = 1,
-    trials: int = 50_000,
-    check_trials: int = 50_000,
-    n_grid: Sequence[int] = (30, 50, 86, 100),
-    far_grid: Sequence[float] = (0.05, 0.01, 0.001),
+    trials: int = 500_000,
+    check_trials: int = 500_000,
+    n_grid: Sequence[int] = (30, 50, 73, 86, 100),
+    far_grid: Sequence[float] = FAR_GRID,
     seed: int = 4_242,
     split_at: float = 0.5,
+    far_column_n: Sequence[int] = (73, 86),
 ) -> dict:
     """Tabulate on one contiguous half of the pool, measure on the other.
 
@@ -701,8 +772,13 @@ def verify_held_out(
 
     doc = tabulate(build, trials=trials, n_grid=n_grid, far_grid=far_grid,
                    seed=seed, block_length=block_length, dataset="held-out-build")
+    import tempfile
+
+    build_path = Path(tempfile.mkdtemp()) / "held-out-build.json"
+    build_path.write_text(json.dumps(doc))
+
     rng = np.random.default_rng(seed + 1)
-    rows = []
+    rows, far_columns = [], []
     for n in n_grid:
         draws = check[_draw_indices(rng, check.size, n, check_trials, block_length)]
         scores = _sortino(draws)
@@ -721,10 +797,26 @@ def verify_held_out(
                 "measured": float((eligible >= promised).mean()),
                 "ratio": float((eligible >= promised).mean() / far),
             })
+        if n in far_column_n:
+            far_columns.append(
+                far_column_validity(eligible[:200_000], doc, n,
+                                    far_grid=far_grid, path=build_path)
+            )
+
+    worst = max(
+        (r["ratio"] for r in rows if r.get("ratio") is not None), default=None
+    )
     return {
         "build_sessions": int(build.size),
         "check_sessions": int(check.size),
         "block_length": int(block_length),
+        "tabulate_trials": trials,
         "check_trials": check_trials,
+        "worst_ratio": worst,
+        "anti_conservative_cells": [
+            {"n": r["n"], "far": r["far"], "ratio": r["ratio"]}
+            for r in rows if r.get("ratio") is not None and r["ratio"] > 1.0
+        ],
+        "far_column": far_columns,
         "rows": rows,
     }

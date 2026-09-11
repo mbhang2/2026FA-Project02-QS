@@ -69,6 +69,49 @@ AGENT_FORBIDDEN = ("split", "fill_model", "seed", "unlock_holdout", "profile",
 #           a statement about the first run, not a second observation.
 PURPOSES = ("trial", "smoke", "replay")
 
+# **Purpose is derived from who ran it, not accepted from the caller.**
+#
+# It was a flag that only agent runs were forbidden to set, which was fine while
+# a human typed it and stops being fine the moment anything else does: "a trial
+# an agent could relabel `smoke` is a trial that does not count" is precisely the
+# loophole the field exists to close, and leaving it open for one caller leaves
+# it open. So the trigger decides:
+#
+#   --trigger agent    always a trial. The agent runs to check its own code; that
+#                      is still an evaluation against validation and it counts.
+#   --trigger loop     always a trial. The loop driver's runs are the trials.
+#   --trigger human    the only caller that may say, because a person running the
+#                      harness by hand is the only one who can be doing something
+#                      that is genuinely not a candidate.
+#
+# `--purpose` is therefore accepted from `--trigger human` alone, and defaults to
+# `smoke` there -- a hand-run harness invocation is a smoke run unless the person
+# says otherwise, which is the safe default in the direction that matters: it
+# undercounts nothing, because a human claiming a trial can still say so.
+TRIGGER_PURPOSE = {"agent": "trial", "loop": "trial", "harness": "trial"}
+PURPOSE_MAY_BE_SET_BY = ("human",)
+
+
+def resolve_purpose(trigger: str, requested: str | None) -> str:
+    """What this run counts as. Derived, except for a human saying so.
+
+    Returning a value rather than trusting one is the whole point: the ledger's
+    N is the count of `trial` rows, so a caller that can choose its own label can
+    choose not to be counted.
+    """
+    if trigger in PURPOSE_MAY_BE_SET_BY:
+        return requested or "smoke"
+    derived = TRIGGER_PURPOSE[trigger]
+    if requested is not None and requested != derived:
+        sys.exit(
+            f"a {trigger}-triggered run is always a {derived!r}; it cannot "
+            f"declare itself {requested!r}. N is the count of trials, so a run "
+            "that could label itself out of the count would not be counted, and "
+            "the multiple-testing argument is exactly that count. Use "
+            "--trigger human if you are running the harness by hand."
+        )
+    return derived
+
 
 def load_config(path: Path = CONFIG_PATH) -> dict:
     if not path.exists():
@@ -220,13 +263,16 @@ def append_ledger(path: Path, record: dict) -> None:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--trigger", choices=("harness", "agent"), default="harness",
-                    help="who asked for this run; recorded in the ledger")
-    # Default resolved after parsing rather than here, so the agent check below
-    # can tell "did not pass it" from "passed the default".
+    ap.add_argument("--trigger", choices=("harness", "agent", "loop", "human"),
+                    default="harness",
+                    help="who asked for this run; recorded in the ledger, and "
+                         "what its purpose is derived from")
+    # Resolved after parsing, so "did not pass it" is distinguishable from
+    # "passed the default".
     ap.add_argument("--purpose", choices=PURPOSES, default=None,
-                    help="what the run is for; only 'trial' counts toward N "
-                         "(harness only -- an agent run is always a trial)")
+                    help="what the run is for; only 'trial' counts toward N. "
+                         "Accepted from --trigger human alone: every other "
+                         "caller's purpose is derived from the trigger.")
     ap.add_argument("--profile", help="profile from config/run.yaml (harness only)")
     ap.add_argument("--dataset", help="dataset from config/run.yaml")
     ap.add_argument("--split", choices=[s.value for s in Split],
@@ -241,7 +287,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     cfg = load_config()
-    purpose = args.purpose or "trial"
+    purpose = resolve_purpose(args.trigger, args.purpose)
 
     if args.trigger == "agent":
         supplied = [n for n in AGENT_FORBIDDEN if getattr(args, n, None)]

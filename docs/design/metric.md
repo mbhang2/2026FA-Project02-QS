@@ -541,6 +541,78 @@ the edge to see the same thing, because the easier world was flattering it. Fals
 acceptance on a known null stayed at 0.00% and acceptance stayed monotone in
 signal strength.
 
+### The null is one strategy's, and that assumption is now visible
+
+Every threshold in the tabulated null is the distribution of
+`ReferenceStrategy`'s per-session returns. A candidate that trades at a different
+frequency, or holds for a different length of time, or has a different return
+dispersion, **has a different null — and the table does not know that.** This was
+implicit until Task 19; it is stated here because it is the assumption a
+statistician will find next, and finding it in a report is better than finding it
+in the code.
+
+The proper fix is a **per-candidate randomization null** at the committee's
+promotion gate: run the candidate's own logic against time-shifted or rotated
+data to get *its* null. Too expensive to do per trial, correct to do on
+promotion. That is a committee deliverable.
+
+What exists now is the visible version of the assumption. Every run records
+`Diagnostics.null_reference_divergence` — trades per session, exposure share,
+holding period and return dispersion, each as a ratio to the reference's, where
+1.0 means "the same". It is a diagnostic and never a term in the score. **A
+candidate far from 1.0 is a candidate whose FAR is least trustworthy**, and the
+committee can see that without recomputing anything.
+
+The reference's own profile, measured on the NQ training pool: 43.5 round trips
+per session, exposure in every session, a mean hold of about half an hour, and a
+pooled session-return standard deviation of 275. A test asserts those still
+describe the committed pool, so changing the apparatus surfaces here rather than
+silently rebasing every divergence number already in the ledger.
+
+### Is the FAR column actually a p-value column? (Task 19)
+
+The ledger's FAR column is the input to false-discovery control, and until Task
+19 nothing had checked it was valid. Benjamini–Hochberg needs **validity** —
+P(p ≤ α) ≤ α for every α — not exact uniformity. Conservative costs power and
+stays valid; anti-conservative makes the reported FDR precise and wrong.
+
+Held out, tabulating on one contiguous half of the pool and measuring on the
+other, over the full 5 × 10 grid of session counts and false-acceptance rates
+including n = 73 (the holdout) and n = 86 (validation):
+
+| | NQ | synthetic |
+|---|---|---|
+| worst measured/promised | **0.83** | **0.86** |
+| anti-conservative cells | **0** | **0** |
+| FAR column valid inside the grid, n = 73 and 86 | yes | yes |
+
+**No anti-conservatism anywhere.** The 1.64 at n=30 that prompted this check was
+measured on the 359-session pool of Task 17 and was tail-estimation noise: at
+50,000 draws the far = 0.001 quantile rests on about 50 exceedances, its sampling
+standard deviation is 0.026, and the held-out ratio moved over a 1.4× range
+across seeds. At 500,000 draws the standard deviation is 0.008 and the range is
+1.1×. **More draws was enough; no extreme-value tail fit was needed**, and the
+bootstrap costs seconds because the expensive part — the pooled session runs —
+is already done.
+
+The remaining conservatism, 0.3 to 0.86, is **not** estimation error and more
+draws will not close it. It is period heterogeneity: the second half of the
+training period has a different return distribution from the first, so thresholds
+built on one are exceeded less often on the other. That is a real property of the
+data, it costs power, and it is in the safe direction.
+
+Two smaller results. The 1/√N interpolation between tabulated session counts is
+accurate to within 0.2% at n = 73 and n = 86 — measured against tabulating them
+directly, which the grid now does anyway, since the two numbers every real
+decision is made at should be measured rather than inferred. And the KS statistic
+against Uniform(0,1) on the interior of the grid rejects exact uniformity
+(0.012 and 0.019 against a 1% critical value near 0.008) in the conservative
+direction: the column is **valid but not uniform**, which is the correct and
+usable state. `far_for` clamps at the table's edges, so the endpoint α = 0.5 is
+censored by construction and is reported rather than scored.
+
+Evidence: `data/calibration/empirical-null*-verification.json`.
+
 **Task 18: the pool is whole.** The real-data null excluded 25 sessions — early
 closes and the session after one — because the reference strategy could not be
 flat on a half day. The cause was never the strategy: `NQDataset.session_bounds`

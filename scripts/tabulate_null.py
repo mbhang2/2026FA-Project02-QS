@@ -44,20 +44,36 @@ def verify(pool, block_length: int, table_path: Path) -> None:
     same way to be a comparison at all.
     """
     out = table_path.with_name(table_path.stem + "-verification.json")
-    doc = {"table": table_path.name, "runs": {}}
+    doc = {
+        "table": table_path.name,
+        "question": (
+            "Is the FAR column a p-value column? Benjamini-Hochberg needs "
+            "validity -- P(p <= a) <= a for every a -- not exact uniformity. "
+            "Conservative costs power and stays valid; anti-conservative makes "
+            "the reported false-discovery rate precise and wrong."
+        ),
+        "runs": {},
+    }
     for bl in sorted({block_length, 1}, reverse=True):
         result = nullmod.verify_held_out(pool, block_length=bl)
         doc["runs"][str(bl)] = result
         label = "measured block" if bl == block_length else "i.i.d. (block 1)"
         print()
         print(f"held out, {label}: build {result['build_sessions']} sessions, "
-              f"check {result['check_sessions']}")
+              f"check {result['check_sessions']}  worst ratio "
+              f"{result['worst_ratio']:.2f}  anti-conservative cells "
+              f"{len(result['anti_conservative_cells'])}")
         print(f"    {'n':>4} {'far':>7} {'threshold':>10} {'measured':>10} {'meas/far':>9}")
         for row in result["rows"]:
             m = "n/a" if row["measured"] is None else f"{row['measured']:.4f}"
             r = "" if row.get("ratio") is None else f"{row['ratio']:.2f}"
             print(f"    {row['n']:>4} {row['far']:>7} {row['threshold']:>10.4f} "
                   f"{m:>10} {r:>9}")
+    for c in doc["runs"][str(block_length)]["far_column"]:
+        print(f"    FAR column n={c['n']}: valid inside the grid: "
+              f"{c['valid_inside_grid']}  |  KS on the interior "
+              f"{c['ks_statistic_interior']:.4f} (1% critical "
+              f"{c['ks_critical_0.01']:.4f})")
     out.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n")
     print(f"\nwrote {out.relative_to(REPO_ROOT)}")
 
@@ -127,8 +143,10 @@ def main() -> int:
                     help="independent no-signal runs feeding the session-return pool")
     ap.add_argument("--sessions", type=int, default=175)
     ap.add_argument("--ticks-per-session", type=int, default=390)
-    ap.add_argument("--trials", type=int, default=50_000,
-                    help="bootstrap draws per session count")
+    ap.add_argument("--trials", type=int, default=500_000,
+                    help="bootstrap draws per session count. At 50,000 the "
+                         "far=0.001 quantile rests on ~50 exceedances and its "
+                         "sampling sd is 0.026; at 500,000 it is 0.008.")
     ap.add_argument("--seed0", type=int, default=10_000)
     ap.add_argument("--out", type=Path, default=nullmod.NULL_PATH)
     ap.add_argument("--pool-from", type=Path,

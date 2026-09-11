@@ -589,3 +589,142 @@ def test_the_reference_strategy_is_flat_at_every_boundary_it_can_be():
             "minutes and the position was still left open -- that is a defect, "
             "not an absent counterparty"
         )
+
+
+# --------------------------------------------------------------------------- #
+# is the FAR column a p-value column?
+# --------------------------------------------------------------------------- #
+VERIFICATIONS = sorted(
+    (REPO_ROOT / "data" / "calibration").glob("empirical-null*-verification.json")
+)
+
+
+@pytest.mark.parametrize("path", VERIFICATIONS, ids=lambda p: p.stem)
+def test_no_cell_of_the_validity_table_is_anti_conservative(path):
+    """The last unverified link. Benjamini-Hochberg needs validity -- P(p <= a)
+    <= a for every a -- not exact uniformity. Conservative costs power and stays
+    valid; anti-conservative makes the reported false-discovery rate precise and
+    wrong, which is the failure this whole project exists to close.
+
+    Held out: tabulated on one contiguous half of the pool, measured on the
+    other, over the full grid of session counts and false-acceptance rates.
+    """
+    doc = json.loads(path.read_text())
+    for block, run in doc["runs"].items():
+        assert run["anti_conservative_cells"] == [], (
+            f"{path.name} block {block}: {run['anti_conservative_cells']}"
+        )
+        assert run["worst_ratio"] <= 1.0, run["worst_ratio"]
+        assert run["tabulate_trials"] >= 200_000, (
+            "at 50,000 draws the far=0.001 quantile rests on ~50 exceedances and "
+            "its sampling sd is 0.026; a cell can land anti-conservative on seed "
+            "noise alone"
+        )
+
+
+@pytest.mark.parametrize("path", VERIFICATIONS, ids=lambda p: p.stem)
+def test_the_far_column_is_valid_at_the_session_counts_that_matter(path):
+    """n=73 is the holdout and n=86 the validation split of the pre-registered
+    calendar. Those are where every real decision is made."""
+    doc = json.loads(path.read_text())
+    for run in doc["runs"].values():
+        checked = {c["n"] for c in run["far_column"]}
+        assert {73, 86} <= checked, checked
+        for column in run["far_column"]:
+            assert column["valid_inside_grid"] is True, column["n"]
+            assert column["p_values"] > 10_000
+            # the clamped endpoint is censored, not miscalibrated, and the
+            # artifact has to say so rather than quietly scoring it
+            assert column["endpoint_note"]
+
+
+@pytest.mark.parametrize("path", VERIFICATIONS, ids=lambda p: p.stem)
+def test_the_validity_table_covers_the_whole_grid(path):
+    """A validity table with the tail left out is the one shape of this evidence
+    that would be worthless: every accept decision happens in the tail."""
+    doc = json.loads(path.read_text())
+    for run in doc["runs"].values():
+        fars = {r["far"] for r in run["rows"]}
+        assert 0.0005 in fars and 0.001 in fars and 0.05 in fars
+        assert len(fars) >= 8, sorted(fars)
+
+
+def test_the_session_counts_that_matter_are_tabulated_not_interpolated():
+    assert 73 in N.N_GRID and 86 in N.N_GRID
+
+
+def test_the_interpolation_basis_is_accurate_where_it_is_still_used():
+    """1/sqrt(N) between tabulated counts. Measured rather than assumed: within
+    0.2% at the two counts that matter, which is why tabulating them directly
+    was a tidiness change and not a correctness one."""
+    doc = json.loads((REPO_ROOT / "data" / "calibration"
+                      / "empirical-null-nq-trades.json").read_text())
+    for n in (73, 86):
+        for far in (0.05, 0.01, 0.001):
+            tabulated = doc["table"]["sortino_per_session"][str(n)]["quantiles"][str(far)]
+            interpolated = N._interp_n(
+                {k: v for k, v in doc["table"]["sortino_per_session"].items()
+                 if int(k) != n},
+                str(far), n,
+            )
+            assert abs(interpolated - tabulated) / abs(tabulated) < 0.05, (n, far)
+
+
+# --------------------------------------------------------------------------- #
+# the null belongs to one strategy, and the run record says how far you are
+# --------------------------------------------------------------------------- #
+def test_the_reference_profile_still_describes_the_committed_pool():
+    """Every divergence ratio in the ledger is read against these numbers. If the
+    apparatus changes and they do not, every ratio already recorded silently
+    means something else."""
+    from src.core.scoring.metrics import REFERENCE_PROFILE
+
+    doc = json.loads((REPO_ROOT / "data" / "calibration"
+                      / "empirical-null-nq-trades.json").read_text())
+    prov = doc["provenance"]
+    trades_per_session = prov["fills"] / 2 / prov["sessions_in_pool"]
+    assert abs(trades_per_session - REFERENCE_PROFILE["trades_per_session"]) < 5
+    sd = float(np.std(doc["pool"]))
+    assert abs(sd - REFERENCE_PROFILE["return_dispersion"]) / sd < 0.25
+
+
+def test_a_candidate_far_from_the_reference_is_visible_in_the_run_record():
+    """The null is one strategy's. A candidate that trades at a different
+    frequency has a different null and the table does not know it -- so the
+    distance is recorded, as a diagnostic and never as a term in the score."""
+    from src.core.scoring.metrics import null_reference_divergence
+
+    same = null_reference_divergence(
+        n_sessions=100, sessions_with_exposure=100, trade_count=4350,
+        avg_holding_period_ns=1.70e12, returns=[1.0, -1.0] * 50,
+        reference={"trades_per_session": 43.5, "exposure_share": 1.0,
+                   "avg_holding_period_ns": 1.70e12, "return_dispersion": 1.0},
+    )
+    assert same["trades_per_session"] == pytest.approx(1.0, abs=0.01)
+    assert same["exposure_share"] == pytest.approx(1.0, abs=0.01)
+    assert same["avg_holding_period"] == pytest.approx(1.0, abs=0.01)
+
+    rare = null_reference_divergence(
+        n_sessions=100, sessions_with_exposure=12, trade_count=20,
+        avg_holding_period_ns=8.0e13, returns=[1.0, -1.0] * 50,
+        reference={"trades_per_session": 43.5, "exposure_share": 1.0,
+                   "avg_holding_period_ns": 1.70e12, "return_dispersion": 1.0},
+    )
+    assert rare["trades_per_session"] < 0.02
+    assert rare["exposure_share"] == pytest.approx(0.12, abs=0.01)
+    assert rare["avg_holding_period"] > 10
+
+
+def test_the_diagnostic_reaches_the_run_record():
+    from src.core.scoring.scorer import score_diagnostics
+
+    ds = SyntheticDataset(SyntheticSpec(n_sessions=60, ticks_per_session=390,
+                                        vol_per_tick=0.15, seed=3))
+    eng = Engine(ds, ReferenceStrategy(), split=Split.VALIDATION, warmup_sessions=1)
+    eng.run()
+    diag = score_diagnostics(eng.blotter, eng.session_calendar()).as_dict()
+    assert set(diag["null_reference_divergence"]) == {
+        "trades_per_session", "exposure_share", "avg_holding_period",
+        "return_dispersion",
+    }
+    assert diag["null_assumption"]

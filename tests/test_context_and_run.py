@@ -524,6 +524,22 @@ def test_every_row_carries_a_purpose_and_it_defaults_to_trial(tmp_path):
     assert row["purpose"] == "trial"
 
 
+def test_purpose_is_derived_from_the_trigger_not_accepted_from_it():
+    """N is the count of `trial` rows, so a caller that can choose its own label
+    can choose not to be counted. Only a human running the harness by hand can be
+    telling the truth about a run not being a candidate, so only a human may
+    say."""
+    for trigger in ("harness", "agent", "loop"):
+        assert run.resolve_purpose(trigger, None) == "trial"
+        with pytest.raises(SystemExit, match="always a"):
+            run.resolve_purpose(trigger, "smoke")
+    # and the default for a hand-run harness is the safe direction: a smoke run
+    # unless the person says otherwise, because a human claiming a trial can say
+    # so and a script quietly claiming a smoke run cannot be caught.
+    assert run.resolve_purpose("human", None) == "smoke"
+    assert run.resolve_purpose("human", "trial") == "trial"
+
+
 def test_a_non_trial_run_is_labelled_not_removed(tmp_path):
     """The reason this field exists. A smoke run is still an invocation and still
     lands in the ledger; what changes is that it is classified, so nobody has to
@@ -531,7 +547,8 @@ def test_a_non_trial_run_is_labelled_not_removed(tmp_path):
     measured against it is not a record, and the first deletion is always the
     defensible one."""
     led = tmp_path / "ledger.jsonl"
-    assert run_py("--quiet", "--purpose", "smoke", ledger=led).returncode == 0
+    assert run_py("--trigger", "human", "--quiet", "--purpose", "smoke",
+                  ledger=led).returncode == 0
     assert run_py("--quiet", ledger=led).returncode == 0
     rows = ledger_lines(led)
     assert [r["purpose"] for r in rows] == ["smoke", "trial"]
@@ -546,7 +563,7 @@ def test_an_agent_run_cannot_relabel_its_own_trial(tmp_path):
     led = tmp_path / "ledger.jsonl"
     r = run_py("--trigger", "agent", "--purpose", "smoke", ledger=led)
     assert r.returncode != 0
-    assert "--purpose" in r.stderr
+    assert "--purpose" in r.stderr or "always a" in r.stderr
     assert not led.exists() or not ledger_lines(led)
 
 
@@ -576,3 +593,50 @@ def test_the_ledger_stores_the_source_of_whatever_actually_ran(tmp_path):
     default = run._row({}, "harness", "harness", led)
     assert default["strategy"] == "src/strategies/current.py"
     assert default["strategy_digest"] != row["strategy_digest"]
+
+
+# --------------------------------------------------------------------------- #
+# the irregular generator's own golden set
+# --------------------------------------------------------------------------- #
+IRREGULAR_GOLDEN = json.loads(
+    (REPO_ROOT / "tests" / "golden" / "irregular_generator.json").read_text()
+)
+
+
+@pytest.mark.parametrize(
+    "case", IRREGULAR_GOLDEN["cases"],
+    ids=lambda c: f"{c['fill_model']}-s{c['spec']['signal_strength']}-seed{c['spec']['seed']}",
+)
+def test_the_irregular_generator_has_its_own_behaviour_reference(case):
+    """The set above pins `uniform=True` and is the long-lived reference carried
+    since Task 5. This one covers the path that actually finds things: Task 17
+    surfaced four defects on the irregular generator and none on the uniform one,
+    so leaving it without a golden set left the more productive half unprotected.
+
+    A digest moving here means behaviour moved. Name which cases and why before
+    regenerating.
+    """
+    engine = Engine(
+        SyntheticDataset(SyntheticSpec(**case["spec"])), MomentumStrategy(),
+        split=Split.VALIDATION, warmup_sessions=1,
+        fill_model=case["fill_model"], seed=case["spec"]["seed"],
+    )
+    record = engine.run()
+    assert engine.blotter.digest() == case["blotter_digest"]
+    assert len(engine.blotter.rows) == case["rows"]
+    assert engine.n_fills == case["fills"] and engine.n_bars == case["bars"]
+    assert engine.blotter.final_position == case["final_position"]
+    left_open = sum(1 for v in record.end_of_session_positions.values() if v)
+    assert left_open == case["sessions_left_open"]
+
+
+def test_the_two_golden_sets_cover_different_worlds():
+    """A guard on the guards: if the irregular set ever ends up pinning
+    `uniform=True` it is a duplicate of the other one and protects nothing."""
+    for case in IRREGULAR_GOLDEN["cases"]:
+        assert not case["spec"].get("uniform"), "the irregular set went uniform"
+    for case in GOLDEN["cases"]:
+        assert case["spec"].get("uniform") is True, "the uniform set went irregular"
+    # and the naive strategy carries positions overnight on irregular data, which
+    # the uniform world could never have shown
+    assert any(c["sessions_left_open"] > 0 for c in IRREGULAR_GOLDEN["cases"])

@@ -276,6 +276,24 @@ class Diagnostics:
     by_weekday: dict[str, float] = field(default_factory=dict)
     by_hour_utc: dict[str, float] = field(default_factory=dict)
     fill_model_spread: float | None = None
+    # How far this candidate's trading profile sits from the reference strategy's.
+    #
+    # Every threshold in the tabulated null is the distribution of
+    # `ReferenceStrategy`'s per-session returns. A candidate that trades at a
+    # different frequency, or holds for a different length of time, or has a
+    # different return dispersion, has a *different* null -- and the table does
+    # not know that. The proper fix is a per-candidate randomization null at the
+    # committee's promotion gate; too expensive per trial, correct on promotion.
+    #
+    # Until then this is the visible version of the assumption: a candidate far
+    # from the reference on these axes is a candidate whose FAR is least
+    # trustworthy, and the committee can see that without recomputing anything.
+    # It is a diagnostic and never a term in the score.
+    null_reference_divergence: dict[str, float] = field(default_factory=dict)
+    null_assumption: str = (
+        "the tabulated null is the reference strategy's; a candidate far from it "
+        "on null_reference_divergence has a null this table does not describe"
+    )
     seasonality_caveat: str = (
         "descriptive, not inferential: at a few hundred sessions the per-cell "
         "counts in these breakdowns are tiny"
@@ -303,6 +321,7 @@ def diagnostics(
     returns: Sequence[float],
     *,
     fill_model_spread: float | None = None,
+    reference_profile: dict | None = None,
 ) -> Diagnostics:
     import datetime as dt
 
@@ -347,7 +366,80 @@ def diagnostics(
         by_weekday=dict(sorted(by_weekday.items())),
         by_hour_utc=dict(sorted(by_hour.items())),
         fill_model_spread=fill_model_spread,
+        null_reference_divergence=null_reference_divergence(
+            n_sessions=len(calendar),
+            sessions_with_exposure=len(per_session_rows),
+            trade_count=len(closes),
+            avg_holding_period_ns=(sum(holds) / len(holds)) if holds else 0.0,
+            returns=returns,
+            reference=reference_profile,
+        ),
     )
+
+
+# The reference strategy's own profile, measured on the pool the null was built
+# from. Written here rather than read from the null table so a run does not have
+# to load it, and updated when the apparatus changes -- which the test asserts.
+REFERENCE_PROFILE = {
+    # Measured on the NQ training pool the null was built from: 384 sessions,
+    # 33,390 fills, so 43.5 round trips a session, and a pooled session-return
+    # standard deviation of 275. The holding period is the reference's mean,
+    # roughly half an hour. These are the *scale* the ratios are read against,
+    # not thresholds -- a test asserts they still describe the committed pool, so
+    # a change in the apparatus shows up here rather than silently rebasing every
+    # divergence number in the ledger.
+    "trades_per_session": 43.5,
+    "exposure_share": 1.0,
+    "avg_holding_period_ns": 1.70e12,
+    "return_dispersion": 275.0,
+}
+
+
+def null_reference_divergence(
+    *,
+    n_sessions: int,
+    sessions_with_exposure: int,
+    trade_count: int,
+    avg_holding_period_ns: float,
+    returns: Sequence[float],
+    reference: dict | None = None,
+) -> dict[str, float]:
+    """How far this candidate's trading profile sits from the reference's.
+
+    Ratios, not differences, and log-ratios would be tidier but harder to read at
+    a glance; 1.0 means "the same as the reference". The point is not the exact
+    number, it is that a candidate trading twice a session against the
+    reference's eighty-eight has a null this table does not describe, and that
+    fact should be visible in the run record rather than inferred later by
+    someone reading the code.
+    """
+    ref = reference or REFERENCE_PROFILE
+    if n_sessions <= 0:
+        return {}
+    sd = _sd(returns)
+
+    def ratio(value: float, base: float) -> float:
+        if base <= 0:
+            return float("inf") if value > 0 else 1.0
+        return round(value / base, 4)
+
+    return {
+        "trades_per_session": ratio(trade_count / n_sessions,
+                                    ref["trades_per_session"]),
+        "exposure_share": ratio(sessions_with_exposure / n_sessions,
+                                ref["exposure_share"]),
+        "avg_holding_period": ratio(avg_holding_period_ns,
+                                    ref["avg_holding_period_ns"]),
+        "return_dispersion": ratio(sd, ref["return_dispersion"]),
+    }
+
+
+def _sd(values: Sequence[float]) -> float:
+    vals = [float(v) for v in values]
+    if len(vals) < 2:
+        return 0.0
+    mean = sum(vals) / len(vals)
+    return math.sqrt(sum((v - mean) ** 2 for v in vals) / (len(vals) - 1))
 
 
 # --------------------------------------------------------------------------- #

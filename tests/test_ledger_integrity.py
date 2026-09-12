@@ -174,3 +174,93 @@ def test_an_absent_artifact_is_recorded_rather_than_skipped(tmp_path):
     assert digests["src/strategies/current.py"] == "absent"
     assert digests["data/manifest.json"] == "absent"
     assert integrity.artifact_fingerprint(digests) != integrity.artifact_fingerprint()
+
+
+# --------------------------------------------------------------------------- #
+# the environment, which no content hash over the repo can reach
+# --------------------------------------------------------------------------- #
+def test_the_lockfile_is_consistent_with_the_declared_dependencies():
+    """The question CI can answer. It cannot ask whether the lockfile matches
+    *its* environment, because CI is not the environment that produces scored
+    runs -- different platform, installed from requirements-dev.txt. What it can
+    ask is whether the lockfile is well formed and contradicts nothing."""
+    r = subprocess.run(
+        [sys.executable, "scripts/lock_env.py", "--verify"],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_the_environment_digest_moves_when_a_version_does():
+    """A guard on the guard: a fingerprint that never changes reports nothing."""
+    base = integrity.resolved_environment()
+    assert "python" in base and "numpy" in base, sorted(base)[:10]
+    moved = dict(base, numpy="0.0.0-not-a-real-version")
+    assert integrity.environment_fingerprint(moved) != integrity.environment_fingerprint(base)
+    assert integrity.environment_fingerprint(base) == integrity.environment_fingerprint()
+
+
+def test_a_row_records_the_environment_it_ran_under_and_the_one_it_declared(tmp_path):
+    """Two digests, because they answer different questions: what was promised
+    and what was used. A machine whose pandas moved without the lockfile being
+    regenerated is the case worth catching."""
+    import run as runner
+
+    led = tmp_path / "ledger.jsonl"
+    r = subprocess.run(
+        [sys.executable, "run.py", "--human", "--quiet", "--ledger", str(led)],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    )
+    assert r.returncode == 0, r.stderr
+    row = ledger_check.load_rows(led)[0]
+    assert row["environment_fingerprint"] == integrity.environment_fingerprint()
+    assert row["lockfile_digest"] == integrity.lockfile_digest()
+    assert row["python_version"] == sys.version.split()[0]
+    assert runner.ENVIRONMENT_AT_IMPORT == row["environment_fingerprint"]
+
+
+def test_environment_drift_is_reported_and_is_not_supersession():
+    """A row from before a dependency upgrade may be perfectly good; it just will
+    not replay bit-identically. Treating that as a failure would mean
+    re-baselining the ledger every time numpy moves."""
+    row = {
+        "purpose": "trial", "git_sha": "", "blotter_digest": "aaa",
+        "environment_fingerprint": "a" * 64,
+    }
+    result = ledger_check.check_row(0, row, replay=False, superseded={})
+    assert result["environment_drifted"] is True
+    assert ledger_check.verdict(result) in ("UNVERIFIABLE", "env-drifted")
+    assert "superseded" not in result
+    # and a row that matches today is not flagged
+    same = dict(row, environment_fingerprint=integrity.environment_fingerprint())
+    assert ledger_check.check_row(0, same, replay=False,
+                                  superseded={})["environment_drifted"] is False
+
+
+def test_a_replay_is_logged_but_not_into_the_ledger(tmp_path):
+    """Every execution is recorded; a replay is not a candidate. Putting replays
+    in the ledger would also make `--replay` grow the file it is checking, once
+    per row per pass."""
+    import replay as replaymod
+
+    assert replaymod.REPLAY_LOG.name == "replays.jsonl"
+
+    led = tmp_path / "ledger.jsonl"
+    r = subprocess.run(
+        [sys.executable, "run.py", "--human", "--quiet", "--ledger", str(led)],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    )
+    assert r.returncode == 0, r.stderr
+    row = ledger_check.load_rows(led)[0]
+
+    replays = tmp_path / "replays.jsonl"
+    engine = replaymod.replay(row, replay_log=replays)
+    assert engine.blotter.digest() == row["blotter_digest"]
+
+    assert len(ledger_check.load_rows(led)) == 1, (
+        "the replay appended to the ledger; that file is the denominator of N"
+    )
+    logged = ledger_check.load_rows(replays)
+    assert len(logged) == 1
+    assert logged[0]["purpose"] == "replay"
+    assert logged[0]["replay_of"]["blotter_digest"] == row["blotter_digest"]

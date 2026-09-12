@@ -51,6 +51,22 @@ jobs:
       - name: Agent data reference is current
         run: python scripts/gen_agent_data.py --check
 
+      # Task 22 found that `scripts/replay.py` had been broken for five tasks
+      # because nothing replayed a row in between. A checker that runs when
+      # someone remembers rebuilds that gap one level up, so it runs here on
+      # every commit. The cheap tier only: `--replay` needs bucket credentials,
+      # which CI does not have by design.
+      - name: Every ledger row is still verifiable
+        run: python scripts/ledger_check.py
+
+      # numpy and pandas versions change numbers, and no digest over the repo's
+      # files can see that. The lockfile records the environment that produces
+      # scored runs -- not this one, which is a different platform installing
+      # from requirements-dev.txt -- so CI asks the question it can answer: is
+      # the lockfile well formed and does it contradict what the repo declares.
+      - name: requirements.lock is consistent with the declared dependencies
+        run: python scripts/lock_env.py --verify
+
       # Already covered by `pytest -q` above; run again as a named step so a
       # stale document fails with a legible name rather than as one dot in 260.
       # Cheap -- these three files take about a second.

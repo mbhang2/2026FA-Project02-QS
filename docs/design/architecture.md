@@ -454,6 +454,66 @@ Reasoning: `docs/design/metric.md`.
 
 ---
 
+## 5b. `src/core/runlog.py` and `src/core/checks/` — accounting, and the free check
+
+Two Task 23 modules. Both exist because a rule that everyone remembers is not a
+rule.
+
+**`src/core/runlog.py` — no engine without a ledger row.** `Engine.__init__`
+requires a `RunTicket`, and there are exactly three ways to mint one:
+`LedgerRun`, a context manager that appends exactly one row on exit whatever
+happened inside it; `RunTicket.for_calibration(reason)`, for the null tabulation,
+which runs tens of thousands of engines against the *immutable reference
+strategy* and gets one row for the tabulation rather than one per engine; and
+`RunTicket.for_test`, which a test asserts is called nowhere under `src/` or
+`scripts/`. `tests/test_accounting.py` walks the tree for `Engine(...)` call
+sites, so a fourth route cannot appear quietly. It also holds the ledger
+helpers — `append_ledger`, `store_source`, `store_fill_log`, `strategy_digest` —
+which used to live in `run.py`: the thing that authorises an engine and the thing
+that writes the row are now one module rather than two habits.
+
+The third ticket kind was not anticipated by the brief and is called out rather
+than folded into one of the other two. Calibration is not an evaluation of a
+candidate, and ledgering each of its engines would drown the record it exists to
+keep.
+
+**This stops accidents, not attackers.** Anything running in this process can
+reach the mint sentinel and forge a ticket, exactly as it can reach anything else
+in the address space. What it stops is the failure that actually happens: a
+legitimate entry point added without a thought for the ledger.
+
+**`src/core/checks/` — the free check executes nothing.** Adversarial review's
+finding 6: `scripts/agent_check.py` reported pass/fail and no number, and
+pass/fail *is* a number if you ask enough times. A strategy that raises when its
+own P&L crosses a threshold turns the exit code into one bit, and a binary search
+over the threshold recovers the rest — 18 probes gave peak realized P&L to
+±0.0002 with **zero trials counted**. It does not forge a trial; it performs
+trials the system has agreed not to look at.
+
+Narrowing the channel does not fix it: any output that depends on market data can
+carry a score. So the check does not execute strategy code, and that rules out
+`import` too, because a module's top level runs on import and a probe would live
+there.
+
+| File | Responsibility |
+|---|---|
+| `src/core/checks/static.py` | `compile()` for syntax; an AST pass for module-level inertness, the strategy class, the callbacks and their signatures, `setup()` returning subscriptions, and tick subscription without `on_tick` |
+| `src/core/checks/typecheck.py` | mypy against `src.core.types.Strategy`, through a generated conformance file. Static: mypy parses and infers, it does not import what it analyses |
+
+The two layers catch different things and neither alone is the check. The AST
+layer sees a missing callback; the type checker sees a return type the Protocol
+forbids and a constructor `load_strategy()` cannot call. `tests/test_accounting.py`
+asserts that neither module contains a call that could execute the file.
+
+**What the agent loses, stated plainly.** A runtime error is no longer free. A
+`TypeError` on the first bar, an unsubscribed id, an order the engine rejects —
+these surface in a scored run, which is a trial with `outcome: crashed`,
+`score: null`, and a row that counts toward N. That is intended. The project's
+claim is that N includes crashed and abandoned runs, and a free crash check is a
+mechanism for making crashes not count: the same hole in a friendlier shape.
+
+---
+
 ## 6. `src/core/types.py` and `src/strategies/`
 
 **`src/core/types.py`** holds every shared value type: `Ts`, `Side`, `Split`,
@@ -526,6 +586,14 @@ What it owns:
   one, and the rejected trials are exactly what N counts. The fill log goes
   beside it at `runs/fills/<digest>.jsonl.gz`, so replay recomputes the P&L
   instead of re-observing it.
+- **Five fingerprints now, five questions.** The three below, plus
+  `environment_fingerprint` (what was actually importable when the run happened,
+  from `importlib.metadata`) and `lockfile_digest` (what `requirements.lock`
+  declares). numpy and pandas versions change numbers and no digest over the
+  repo's own files can see that; the pair says which environment was promised and
+  which was used. `scripts/ledger_check.py` reports a row whose environment
+  differs from today's as **environment-drifted**, which is not superseded — the
+  row may be perfectly good and simply will not replay bit-identically.
 - **Three fingerprints, three questions.** `scoring_fingerprint` is the bytecode
   of the loaded scoring modules and is the only one that can see a monkeypatch.
   `artifacts` is the pre-run digest of every file a result depends on — null
@@ -611,7 +679,8 @@ Each produces something committed. None is importable from `src/core/`.
 | `scripts/probe_dbn.py` | nothing — a metadata/hash/compare CLI | a human debugging the bucket |
 | `scripts/nq_smoke.py` | nothing — an end-to-end adapter smoke run | a human |
 | `scripts/replay.py` | nothing — replays a ledger row from its stored source and **recomputes** its P&L from the stored fill log | a human auditing a trial |
-| `scripts/ledger_check.py` | nothing — per-row verdict on whether a ledger row is reproducible, and honest N with supersessions applied | a human, before a campaign |
+| `scripts/ledger_check.py` | nothing — per-row verdict on whether a ledger row is reproducible, and honest N with supersessions applied | a human, before a campaign; CI |
+| `scripts/lock_env.py` | `requirements.lock` — the full transitive set, pinned | `integrity.lockfile_digest()`, CI (`--check`) |
 | `scripts/check_agent_paths.py` | nothing — the CI write-path allowlist | CI |
 
 The two generators both take `--check` and both run in CI, so a doc that has
@@ -674,7 +743,12 @@ Open findings from the second adversarial pass, none of them closed by Task 21:
 |---|---|---|
 | 2 | critical | `_SealedDataset.__getattr__` forwards a **bound method of the inner dataset**, so `ctx._session_bounds.__self__` — and `gc.get_referents` straight through the seal — is the raw dataset: seed, calendar, `unlock_holdout` and a holdout tick, all reachable from `setup()`. The reachability walk records it as the single entry in `KNOWN_LIVE_ESCAPES` rather than exempting it. |
 | 3 | critical | `ctx._queue.cap` and `ctx._queue.actions` are mutable. 200 injected submits past a cap of 64, `action_cap_hits: 0`, a 50,000-contract position, and no validation fired. |
-| 6 | high | `scripts/agent_check.py` is an oracle. It reports no number, but 18 probes recovered peak realized P&L to ±0.0002 with **0 trials counted** — the agent-facing path leaks the objective through timing and control flow. |
+
+Finding 6 is **closed**. The check no longer executes strategy code, so its
+answer is a property of the source text. `docs/reviews/task23/oracle_after.py`
+runs the original binary search against it on two strategies whose peak realized
+P&L differs by 4.39: both searches return the same 18 answers and converge to the
+same interval, because the channel carries nothing.
 
 Finding 7 is **closed** as far as detection goes — the artifact fingerprint above
 covers the null tables, `config/` and the strategy source, and a mid-run write to

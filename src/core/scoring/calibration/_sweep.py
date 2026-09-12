@@ -19,6 +19,13 @@ from ...engine import Engine
 from ..metrics import placeholder_score
 from ..scorer import score, score_diagnostics
 from ...types import ScoreTuple, Split
+from ...runlog import RunTicket
+
+# Calibration measures the apparatus with the immutable reference strategy: tens
+# of thousands of engines, none of them an evaluation of a candidate. One ledger
+# row per tabulation is written by `scripts/tabulate_null.py`; one per engine
+# would drown the record it exists to keep. See `src/core/runlog.py`.
+_TICKET = RunTicket.for_calibration("calibration sweep")
 
 
 @dataclass(frozen=True)
@@ -110,6 +117,7 @@ def run_trial(
     eng = Engine(
         ds,
         (strategy_factory or ReferenceStrategy)(),
+        ticket=_TICKET,
         split=split,
         fill_model=fill_model,
         warmup_sessions=warmup_sessions,

@@ -131,7 +131,7 @@ def test_day_orders_are_cancelled_at_the_session_close_and_gtc_survives():
         ("day", lambda c: c.buy(1, type="limit", limit=1.0, tif="DAY", tag="day")),
         ("gtc", lambda c: c.buy(1, type="limit", limit=1.0, tif="GTC", tag="gtc")),
     ])
-    eng = Engine(ds(), strat, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), strat, split=Split.VALIDATION)
     eng.run()
 
     day, gtc = eng.orders[strat.order_ids["day"]], eng.orders[strat.order_ids["gtc"]]
@@ -144,7 +144,7 @@ def test_positions_are_not_flattened_at_a_session_boundary_but_are_recorded():
     """A strategy that wants to be flat overnight has to say so; the record makes
     an unintended hold visible rather than silent."""
     strat = Noop(["1m"], calls=[("entry", lambda c: c.buy(1, tag="entry"))])
-    eng = Engine(ds(), strat, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), strat, split=Split.VALIDATION)
     rec = eng.run()
 
     assert eng.position == 1, "the position did not survive to the end of the run"
@@ -159,7 +159,7 @@ def test_a_bracket_is_armed_at_fill_time_and_its_legs_are_oco():
     strat = Noop(["1m"], calls=[
         ("entry", lambda c: c.buy(1, stop_offset=0.5, target_offset=0.5, tag="entry"))
     ])
-    eng = Engine(ds(signal_strength=0.5), strat, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(signal_strength=0.5), strat, split=Split.VALIDATION)
     eng.run()
 
     legs = [o for o in eng.orders.values() if o.parent_id is not None]
@@ -181,7 +181,7 @@ def test_a_bracket_leg_cannot_fill_on_the_tick_that_armed_it():
     strat = Noop(["1m"], calls=[
         ("e", lambda c: c.buy(1, stop_offset=0.25, target_offset=0.25, tag="e"))
     ])
-    eng = Engine(ds(signal_strength=0.5), strat, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(signal_strength=0.5), strat, split=Split.VALIDATION)
     eng.run()
     entry_row = eng.blotter.rows[0]
     for row in eng.blotter.rows[1:]:
@@ -205,7 +205,7 @@ def test_holdout_is_refused_until_explicitly_unlocked():
 def test_the_holdout_unlock_reason_reaches_the_run_record():
     d = ds()
     d.unlock_holdout("mentor sign-off")
-    eng = Engine(d, Noop(["1m"]), split=Split.HOLDOUT)
+    eng = Engine.for_test(d, Noop(["1m"]), split=Split.HOLDOUT)
     rec = eng.run()
     assert rec.holdout_unlock_reason == "mentor sign-off"
     assert rec.split == "holdout"
@@ -236,7 +236,7 @@ def test_warmup_reaches_backward_but_is_not_actionable():
 
     d = ds()
     w = Watcher()
-    Engine(d, w, split=Split.VALIDATION, warmup_sessions=2).run()
+    Engine.for_test(d, w, split=Split.VALIDATION, warmup_sessions=2).run()
     val = d.calendar().validation
     assert min(w.sessions_seen) < val.start, "warmup did not reach back across the boundary"
     assert min(w.actionable_sessions) == val.start, "a warmup session was actionable"
@@ -256,7 +256,7 @@ def test_actions_beyond_the_cap_are_dropped_counted_and_reported():
             for _ in range(10):
                 ctx.buy(1, type="limit", limit=1.0)
 
-    eng = Engine(ds(), Spammer(), split=Split.VALIDATION, action_cap=4)
+    eng = Engine.for_test(ds(), Spammer(), split=Split.VALIDATION, action_cap=4)
     rec = eng.run()
     assert rec.action_cap_hits > 0
     assert rec.actions_dropped == rec.action_cap_hits * 6
@@ -268,7 +268,7 @@ def test_actions_beyond_the_cap_are_dropped_counted_and_reported():
 # --------------------------------------------------------------------------- #
 def test_the_run_record_pins_what_the_trial_actually_ran_on():
     d = ds(signal_strength=0.5)
-    eng = Engine(d, Noop(["1m"]), split=Split.VALIDATION,
+    eng = Engine.for_test(d, Noop(["1m"]), split=Split.VALIDATION,
                  fill_model="unfavorable", seed=11)
     rec = eng.run()
     got = rec.as_dict()
@@ -296,7 +296,7 @@ def test_a_fill_model_requiring_absent_capabilities_fails_at_wiring_time():
     model = UnfavorableFill()
     model.requires = DataCapabilities(has_trades=True, has_quotes=True)
     with pytest.raises(ValueError, match="requires"):
-        Engine(ds(), Noop(["1m"]), fill_model=model)
+        Engine.for_test(ds(), Noop(["1m"]), fill_model=model)
 
 
 # --------------------------------------------------------------------------- #
@@ -331,7 +331,7 @@ def test_reduce_only_cannot_open_an_opposite_position(tmp_path):
         def on_lifecycle(self, ctx):
             pass
 
-    engine = Engine(ds(), DoubleClose(), split=Split.VALIDATION)
+    engine = Engine.for_test(ds(), DoubleClose(), split=Split.VALIDATION)
     engine.run()
     assert seen.get("closed"), "the probe never got a position to close twice"
     assert min(seen["positions"]) >= 0, (
@@ -351,7 +351,7 @@ def test_a_fragmented_bracket_entry_is_protected_at_every_point():
     """
     from src.core.types import Fill, Order, OrderStatus, OrderType, TimeInForce
 
-    engine = Engine(ds(), Noop(subs=("1m",)), split=Split.VALIDATION)
+    engine = Engine.for_test(ds(), Noop(subs=("1m",)), split=Split.VALIDATION)
     engine.run()
 
     parent = Order(

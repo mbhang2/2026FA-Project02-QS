@@ -46,6 +46,13 @@ from pathlib import Path
 from typing import Sequence
 
 import numpy as np
+from ...runlog import RunTicket
+
+# Calibration measures the apparatus with the immutable reference strategy: tens
+# of thousands of engines, none of them an evaluation of a candidate. One ledger
+# row per tabulation is written by `scripts/tabulate_null.py`; one per engine
+# would drown the record it exists to keep. See `src/core/runlog.py`.
+_TICKET = RunTicket.for_calibration("empirical null tabulation")
 
 def _repo_root() -> Path:
     """Walk up to the marker rather than counting directories.
@@ -173,7 +180,8 @@ def null_session_returns(
                 seed=seed0 + i,
             )
         )
-        eng = Engine(ds, ReferenceStrategy(), split=Split.VALIDATION, warmup_sessions=1)
+        eng = Engine(ds, ReferenceStrategy(), ticket=_TICKET,
+                     split=Split.VALIDATION, warmup_sessions=1)
         eng.run()
         pool.extend(session_returns(eng.blotter, eng.session_calendar()))
     return pool
@@ -247,7 +255,8 @@ def real_session_returns(
         )
 
     strategy = ReferenceStrategy()
-    engine = Engine(dataset, strategy, split=split, fill_model=fill_model,
+    engine = Engine(dataset, strategy, ticket=_TICKET, split=split,
+                    fill_model=fill_model,
                     warmup_sessions=warmup_sessions, seed=seed)
     record = engine.run()
 

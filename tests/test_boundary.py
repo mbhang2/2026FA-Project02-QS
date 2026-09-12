@@ -175,7 +175,7 @@ class _Probe:
 
 def _probe_run() -> _Probe:
     probe = _Probe()
-    Engine(ds(), probe, split=Split.VALIDATION, warmup_sessions=1).run()
+    Engine.for_test(ds(), probe, split=Split.VALIDATION, warmup_sessions=1).run()
     return probe
 
 
@@ -237,7 +237,7 @@ def test_order_methods_return_an_id_or_none():
         def on_lifecycle(self, ctx):
             pass
 
-    Engine(ds(), S(), split=Split.VALIDATION).run()
+    Engine.for_test(ds(), S(), split=Split.VALIDATION).run()
     assert isinstance(seen["buy"], int)
     assert seen["cancel_all"] is None
     assert isinstance(seen.get("close"), (int, type(None)))
@@ -287,7 +287,7 @@ def test_a_strategy_cannot_change_an_order_through_what_it_is_given():
         def on_lifecycle(self, ctx):
             pass
 
-    Engine(ds(), Mutator(), split=Split.VALIDATION).run()
+    Engine.for_test(ds(), Mutator(), split=Split.VALIDATION).run()
     assert outcome.get("size_after") == 1, outcome
 
 
@@ -327,7 +327,7 @@ def _collect(fn):
         def on_lifecycle(self, ctx):
             pass
 
-    Engine(ds(), S(), split=Split.VALIDATION).run()
+    Engine.for_test(ds(), S(), split=Split.VALIDATION).run()
     return out
 
 
@@ -412,7 +412,7 @@ def test_closed_bars_means_closed_in_this_callback():
             if ctx.actionable and not ctx.position and not ctx.working_order_ids:
                 ctx.buy(1, stop_offset=1.0, target_offset=1.0)
 
-    Engine(ds(), T(), split=Split.VALIDATION).run()
+    Engine.for_test(ds(), T(), split=Split.VALIDATION).run()
     # a 1m-only close happens far more often than a simultaneous 1m+5m close
     assert (True, False) in seen["in_bars"], seen["in_bars"]
     assert (True, True) in seen["in_bars"], seen["in_bars"]
@@ -505,7 +505,7 @@ def test_a_missing_callback_is_one_clear_wiring_error(missing):
     Broken = type("Broken", (), ns)
 
     with pytest.raises(TypeError, match=f"{missing}\\(ctx\\) is missing"):
-        Engine(ds(), Broken(), split=Split.VALIDATION).run()
+        Engine.for_test(ds(), Broken(), split=Split.VALIDATION).run()
 
 
 def test_a_wrong_signature_is_the_same_wiring_error():
@@ -523,7 +523,7 @@ def test_a_wrong_signature_is_the_same_wiring_error():
             pass
 
     with pytest.raises(TypeError, match="does not take exactly one argument"):
-        Engine(ds(), OldShape(), split=Split.VALIDATION).run()
+        Engine.for_test(ds(), OldShape(), split=Split.VALIDATION).run()
 
 
 def test_the_wiring_error_lists_every_problem_at_once():
@@ -534,7 +534,7 @@ def test_the_wiring_error_lists_every_problem_at_once():
             ctx.subscribe(INTERVAL)
 
     with pytest.raises(TypeError) as exc:
-        Engine(ds(), Bad(), split=Split.VALIDATION).run()
+        Engine.for_test(ds(), Bad(), split=Split.VALIDATION).run()
     message = str(exc.value)
     for name in ("on_bars", "on_fill", "on_lifecycle"):
         assert f"{name}(ctx) is missing" in message
@@ -580,7 +580,7 @@ def test_find_orders_recovers_an_order_by_its_tag():
         def on_lifecycle(self, ctx):
             pass
 
-    Engine(ds(), S(), split=Split.VALIDATION).run()
+    Engine.for_test(ds(), S(), split=Split.VALIDATION).run()
     assert seen.get("found") == (2, 1), seen
     assert seen["is_stop"] is True
     assert seen["side"] is Side.SELL
@@ -869,7 +869,7 @@ class _Trader:
 
 
 REACHER = _Reacher()
-Engine(ds(), REACHER, split=Split.VALIDATION, warmup_sessions=1).run()
+Engine.for_test(ds(), REACHER, split=Split.VALIDATION, warmup_sessions=1).run()
 
 
 def test_the_reachability_walk_actually_ran():
@@ -948,7 +948,7 @@ def test_the_fill_log_walk_would_have_found_a_log_if_there_were_one():
     """A guard on the guard above, which passes vacuously if `FILL_LOG_TYPES` is
     misspelled or the walk stops early. Plant a log on the context and require
     the same walk to find it."""
-    engine = Engine(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
+    engine = Engine.for_test(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
     engine.run()
     assert engine.fill_log, "the run produced no fills, so this proves nothing"
 
@@ -966,7 +966,7 @@ def test_the_two_attributes_the_review_used_are_gone():
 
 def test_the_reachable_dataset_cannot_open_the_holdout():
     """The exemption above, asserted rather than assumed."""
-    engine = Engine(ds(), _Reacher(), split=Split.VALIDATION)
+    engine = Engine.for_test(ds(), _Reacher(), split=Split.VALIDATION)
     from src.core.types import HoldoutLocked
 
     for name in ("unlock_holdout", "holdout_lock", "_lock"):
@@ -979,7 +979,7 @@ def test_the_reachable_dataset_cannot_open_the_holdout():
 def test_the_engine_holds_a_dataset_with_no_holdout_door():
     """Belt and braces: even something inside the engine cannot open the holdout
     by accident, because the method is not on the object it holds."""
-    engine = Engine(ds(), _Reacher(), split=Split.VALIDATION)
+    engine = Engine.for_test(ds(), _Reacher(), split=Split.VALIDATION)
     for name in ("unlock_holdout", "holdout_lock", "_lock"):
         with pytest.raises(AttributeError, match="deliberate act|not available"):
             getattr(engine.dataset, name)
@@ -1037,7 +1037,7 @@ def _cheat_run(cheat: bool):
     from src.core.scoring.scorer import score
 
     strategy = _AvgPriceCheat(cheat)
-    engine = Engine(
+    engine = Engine.for_test(
         SyntheticDataset(SyntheticSpec(n_sessions=200, ticks_per_session=390,
                                        vol_per_tick=0.15, seed=3)),
         strategy, split=Split.VALIDATION, warmup_sessions=1,
@@ -1123,7 +1123,7 @@ def test_the_fill_log_bound_raises_rather_than_truncating(monkeypatch):
             pass
 
     with pytest.raises(FillLogFull, match="not truncated"):
-        Engine(ds(), Churn(), split=Split.VALIDATION, warmup_sessions=1).run()
+        Engine.for_test(ds(), Churn(), split=Split.VALIDATION, warmup_sessions=1).run()
 
 
 def test_reconstruction_is_a_pure_function_of_the_fills():
@@ -1137,7 +1137,7 @@ def test_reconstruction_is_a_pure_function_of_the_fills():
     params = list(inspect.signature(rec.reconstruct).parameters)
     assert params == ["fills", "commission_per_contract"], params
 
-    engine = Engine(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
+    engine = Engine.for_test(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
     engine.run()
     fills = list(engine.fill_log)
     assert fills
@@ -1156,7 +1156,7 @@ def test_the_fill_log_is_a_snapshot_not_the_list_itself():
     """`engine.fill_log` hands out a tuple. Handing out the list would put the
     thing the score is computed from back within reach of anything holding the
     engine -- which is not a strategy today, and is one refactor away."""
-    engine = Engine(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
+    engine = Engine.for_test(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
     engine.run()
     log = engine.fill_log
     assert isinstance(log, tuple)

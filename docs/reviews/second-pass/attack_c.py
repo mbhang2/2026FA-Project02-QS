@@ -21,7 +21,7 @@ def run(cheat):
         def on_lifecycle(self, ctx): pass
     ds = SyntheticDataset(SyntheticSpec(n_sessions=200, ticks_per_session=390,
                                         vol_per_tick=.15, seed=3))
-    e = Engine(ds, S(), split=Split.VALIDATION, warmup_sessions=1)
+    e = Engine.for_test(ds, S(), split=Split.VALIDATION, warmup_sessions=1)
     e.run()
     s = score(e.blotter, period=e.session_calendar())
     return (e.blotter.realized_pnl - e.blotter.commission, len(e.blotter.rows),

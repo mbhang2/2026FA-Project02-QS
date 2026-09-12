@@ -24,7 +24,15 @@ Three questions per row, cheapest first:
 3. **Does it reproduce?** `--replay` only, because it re-walks the data. The row
    reproduces if the replayed blotter digest equals the recorded one, and where
    the row carries a fill log the P&L is *recomputed* from the fills rather than
-   re-observed.
+   re-observed. Each replay writes its own record to `runs/replays.jsonl` --
+   every execution is logged, but a replay is not a candidate and does not belong
+   in the file that is the denominator of N.
+
+A row produced under a different environment is reported as **environment-
+drifted**, which is not the same as superseded. numpy and pandas versions change
+numbers, so a row from before an upgrade may be perfectly good and still not
+replay bit-identically. Saying so is the point; treating it as a failure would
+mean re-baselining the ledger every time a dependency moves.
 
 **Superseded rows are marked, never deleted.** Deleting a row loses the fact that
 a trial happened, which is the one thing the ledger cannot afford to lose; a row
@@ -74,6 +82,16 @@ def load_supersessions(path: Path = SUPERSESSIONS) -> dict[int, dict]:
     return out
 
 
+_ENVIRONMENT: str | None = None
+
+
+def _current_environment() -> str:
+    global _ENVIRONMENT
+    if _ENVIRONMENT is None:
+        _ENVIRONMENT = integrity.environment_fingerprint()
+    return _ENVIRONMENT
+
+
 def sha_is_in_history(sha: str) -> bool:
     if not sha:
         return False
@@ -103,7 +121,7 @@ def code_fingerprint_at(sha: str) -> str | None:
 
 
 def check_row(index: int, row: dict, *, replay: bool,
-              superseded: dict[int, dict]) -> dict:
+              superseded: dict[int, dict], replay_log: Path | None = None) -> dict:
     sha = row.get("git_sha", "")
     result = {
         "row": index,
@@ -115,6 +133,7 @@ def check_row(index: int, row: dict, *, replay: bool,
         "has_code_fingerprint": bool(row.get("code_fingerprint")),
         "has_artifacts": bool(row.get("artifacts")),
         "has_fill_log": bool(row.get("fill_log_source")),
+        "environment_drifted": None,
         "strategy_source_stored": bool(row.get("strategy_source")),
         "code_fingerprint_matches": None,
         "reproduces": None,
@@ -134,6 +153,21 @@ def check_row(index: int, row: dict, *, replay: bool,
     if not result["has_artifacts"]:
         result["notes"].append("row predates the artifact digest set (Task 22)")
 
+    # Distinct from superseded, and deliberately so: the row may be perfectly
+    # good. It was not produced under this environment, and nobody should expect
+    # bit-identical replay across the gap.
+    recorded_env = row.get("environment_fingerprint")
+    if recorded_env:
+        result["environment_drifted"] = recorded_env != _current_environment()
+        if result["environment_drifted"]:
+            result["notes"].append(
+                f"environment differs from today's "
+                f"({recorded_env[:12]} then, {_current_environment()[:12]} now); "
+                f"replay may not be bit-identical"
+            )
+    else:
+        result["notes"].append("row predates the environment digest (Task 23)")
+
     if index in superseded:
         entry = superseded[index]
         result["superseded"] = entry.get("reason", "")
@@ -143,16 +177,17 @@ def check_row(index: int, row: dict, *, replay: bool,
                 "under it and the entry must be re-checked by hand"
             )
 
-    if replay and row.get("blotter_digest"):
-        result["reproduces"] = _replay_reproduces(row, result)
+    if replay and row.get("blotter_digest") and row.get("purpose") != "replay":
+        result["reproduces"] = _replay_reproduces(row, result, replay_log)
     return result
 
 
-def _replay_reproduces(row: dict, result: dict) -> bool | None:
+def _replay_reproduces(row: dict, result: dict,
+                       replay_log: Path | None = None) -> bool | None:
     from replay import replay as do_replay
 
     try:
-        engine = do_replay(row)
+        engine = do_replay(row, replay_log=replay_log)
     except Exception as exc:                                # noqa: BLE001
         result["notes"].append(f"replay refused: {type(exc).__name__}: {exc}")
         return None
@@ -178,6 +213,11 @@ def verdict(result: dict) -> str:
         return "UNVERIFIABLE"
     if result["code_fingerprint_matches"] is False:
         return "unpinned"
+    if result.get("environment_drifted"):
+        # Not a failure. The row is checkable and may reproduce exactly; it was
+        # produced under a different environment and says so.
+        return ("env-drifted+reproduces" if result["reproduces"] is True
+                else "env-drifted")
     if result["reproduces"] is True:
         return "reproduces"
     return "checkable"
@@ -192,12 +232,16 @@ def main(argv: list[str] | None = None) -> int:
                     help="re-run every row and compare digests. Slow, and the "
                          "only check that actually answers the question.")
     ap.add_argument("--supersessions", type=Path, default=SUPERSESSIONS)
+    ap.add_argument("--replay-log", type=Path, default=None,
+                    help="where each replay's own record goes; "
+                         "runs/replays.jsonl by default, never the ledger")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
 
     rows = load_rows(args.ledger)
     superseded = load_supersessions(args.supersessions)
-    results = [check_row(i, r, replay=args.replay, superseded=superseded)
+    results = [check_row(i, r, replay=args.replay, superseded=superseded,
+                         replay_log=args.replay_log)
                for i, r in enumerate(rows)]
 
     if args.json:
@@ -218,6 +262,9 @@ def main(argv: list[str] | None = None) -> int:
         print()
         print(f"N (purpose=trial, not superseded): {len(counted)}")
         print(f"superseded: {sum(1 for r in results if 'superseded' in r)}")
+        print(f"environment-drifted: "
+              f"{sum(1 for r in results if r.get('environment_drifted'))}"
+              f"  (current environment {_current_environment()[:12]})")
         if args.replay:
             print(f"reproduces: {sum(1 for r in results if r['reproduces'] is True)}"
                   f" / {sum(1 for r in results if r['reproduces'] is not None)} attempted")

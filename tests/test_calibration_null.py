@@ -75,7 +75,7 @@ def test_the_reference_strategy_payoff_shape_is_invariant_to_signal_strength():
     for sig in (0.0, 0.5, 1.0):
         wins, losses = [], []
         for seed in (1, 2):
-            eng = Engine(
+            eng = Engine.for_test(
                 SyntheticDataset(SyntheticSpec(n_sessions=175, ticks_per_session=390,
                                                vol_per_tick=0.15, signal_strength=sig,
                                                seed=seed)),
@@ -98,7 +98,7 @@ def test_the_reference_strategy_payoff_shape_is_invariant_to_signal_strength():
 def test_the_reference_strategy_is_flat_at_every_session_boundary():
     """Holding across the synthetic generator's session reset measures the
     generator, not the metric."""
-    eng = Engine(
+    eng = Engine.for_test(
         SyntheticDataset(SyntheticSpec(n_sessions=175, ticks_per_session=390,
                                        vol_per_tick=0.15, signal_strength=1.0, seed=1)),
         ReferenceStrategy(), split=Split.VALIDATION, warmup_sessions=1,
@@ -481,7 +481,7 @@ def _run_bar_count_exit(**spec):
     strategy = BarCountExit()
     dataset = SyntheticDataset(SyntheticSpec(
         n_sessions=120, ticks_per_session=780, vol_per_tick=0.15, seed=5, **spec))
-    record = Engine(dataset, strategy, split=Split.VALIDATION,
+    record = Engine.for_test(dataset, strategy, split=Split.VALIDATION,
                     warmup_sessions=1).run()
     walked = len(record.end_of_session_positions)
     return strategy, record, walked
@@ -515,7 +515,7 @@ def test_the_irregular_generator_catches_the_bar_count_bug():
     broken, broken_record, walked = _run_bar_count_exit()
     correct, correct_record, _ = (
         ReferenceStrategy(),
-        Engine(
+        Engine.for_test(
             SyntheticDataset(SyntheticSpec(n_sessions=120, ticks_per_session=780,
                                            vol_per_tick=0.15, seed=5)),
             ReferenceStrategy(), split=Split.VALIDATION, warmup_sessions=1,
@@ -564,7 +564,7 @@ def test_the_reference_strategy_is_flat_at_every_boundary_it_can_be():
     """
     for spec in ({"uniform": True}, {"early_close_rate": 0.3}):
         strategy = ReferenceStrategy()
-        record = Engine(
+        record = Engine.for_test(
             SyntheticDataset(SyntheticSpec(n_sessions=80, ticks_per_session=780,
                                            vol_per_tick=0.15, seed=11, **spec)),
             strategy, split=Split.VALIDATION, warmup_sessions=1,
@@ -576,7 +576,7 @@ def test_the_reference_strategy_is_flat_at_every_boundary_it_can_be():
     dataset = SyntheticDataset(SyntheticSpec(
         n_sessions=80, ticks_per_session=780, vol_per_tick=0.15, seed=11))
     strategy = ReferenceStrategy()
-    record = Engine(dataset, strategy, split=Split.VALIDATION,
+    record = Engine.for_test(dataset, strategy, split=Split.VALIDATION,
                     warmup_sessions=1).run()
     stranded = [int(k) for k, v in record.end_of_session_positions.items() if v != 0]
     assert len(stranded) <= 2, f"{len(stranded)} of 80 sessions left open"
@@ -720,7 +720,7 @@ def test_the_diagnostic_reaches_the_run_record():
 
     ds = SyntheticDataset(SyntheticSpec(n_sessions=60, ticks_per_session=390,
                                         vol_per_tick=0.15, seed=3))
-    eng = Engine(ds, ReferenceStrategy(), split=Split.VALIDATION, warmup_sessions=1)
+    eng = Engine.for_test(ds, ReferenceStrategy(), split=Split.VALIDATION, warmup_sessions=1)
     eng.run()
     diag = score_diagnostics(eng.blotter, eng.session_calendar()).as_dict()
     assert set(diag["null_reference_divergence"]) == {

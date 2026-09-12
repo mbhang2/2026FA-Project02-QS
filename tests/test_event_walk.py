@@ -41,7 +41,7 @@ def both_ways(strategy_factory, *, spec=None, **engine_kw):
     """Run the same thing with and without the jump. Returns (fast, slow)."""
     out = []
     for event_walk in (True, False):
-        eng = Engine(
+        eng = Engine.for_test(
             SyntheticDataset(spec) if spec else ds(),
             strategy_factory(),
             split=Split.VALIDATION,

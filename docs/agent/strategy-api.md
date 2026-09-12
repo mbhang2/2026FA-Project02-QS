@@ -419,18 +419,67 @@ You will reach for these. They do not exist.
   train, validation or holdout.
 - **No data beyond the current instant**, including no future bar, no full
   session you are in the middle of, and no next tick.
-- **No evaluation outside the logged path, and no score from the one you can
-  run.** Your entry point is `python scripts/agent_check.py`. It compiles your
-  strategy, walks a small committed dataset, and tells you **pass or fail**.
-  There is no Sortino, no FAR, no P&L: a check that yields no number cannot be
-  used for selection, which is the point. Scoring happens on the loop driver's
-  path, which you do not invoke, with the dataset, split, seed and fill model
-  read from a committed profile rather than from any argument. Every invocation
-  of either path appends exactly one ledger row, crashes included.
+- **No execution outside the logged path.** `python scripts/agent_check.py` is
+  your entry point and it **does not run your strategy**. It reads the file:
+  `compile()` for syntax, an AST pass for structure, and mypy against the
+  `Strategy` protocol. It tells you pass or fail on properties of the source
+  text.
+
+  This is stricter than it used to be, and the reason is worth knowing rather
+  than working around. The check used to walk a small dataset and report pass or
+  fail with no number, on the reasoning that a check yielding no score could not
+  be used for selection. It could: pass/fail is one bit, and a strategy that
+  raises when its own P&L crosses a threshold turns the exit code into that bit.
+  Eighteen probes binary-searching the threshold recovered peak realized P&L to
+  ±0.0002 with **zero trials counted**. Narrowing the channel does not fix that —
+  any answer that depends on market data can carry a score — so the answer no
+  longer depends on market data at all.
+
+  Scoring happens on the loop driver's path, which you do not invoke, with the
+  dataset, split, seed and fill model read from a committed profile rather than
+  from any argument. Every invocation of either path appends exactly one ledger
+  row, crashes included.
 
 Import what you need from `src.core.types` — `Side`, `OrderType`,
 `TimeInForce`, `NS_PER_SECOND` and the rest are all available and are the right
 way to compare enum values.
+
+---
+
+## 7b. Your iteration loop, and what it costs
+
+**A runtime error now costs a trial.** The static check catches a syntax error, a
+missing or misspelled callback, a wrong signature, an async callback, `setup()`
+returning subscriptions, a subscription to ticks with no `on_tick`, work done at
+module level, and anything mypy can see against the protocol — a return type the
+protocol forbids, a constructor the harness cannot call with no arguments.
+
+It cannot catch anything that only happens while the data is moving:
+
+- a `TypeError` or `AttributeError` on the first bar
+- `ContextError` from an unsubscribed subscription id
+- a malformed order the engine rejects
+- `LookaheadError`
+- a strategy that runs but never trades
+- exceeding the action cap or the wall-clock budget
+
+Those surface in a scored run. A scored run that crashes is a trial:
+`outcome: crashed`, `score: null`, and a row that counts toward N exactly like a
+completed one.
+
+**That is intended, not a regression.** The project's whole claim is that N
+includes crashed and abandoned runs, because a false-discovery rate computed over
+only the runs that finished is a false-discovery rate over a filtered sample. A
+free crash check is a mechanism for making crashes not count — the same hole in a
+friendlier shape.
+
+So the economics of your loop changed. Reading the interface carefully is now
+cheaper than trying something and seeing. Worked examples in section 9 are run in
+CI, so they are known to work against the current engine; starting from one and
+changing it is the cheapest path to a strategy that runs. `docs/design/context-api.md`
+is the generated per-attribute reference and it is exhaustive — if an attribute is
+not there, it does not exist, and finding that out from the reference is free
+while finding it out from a `ContextError` is not.
 
 ---
 

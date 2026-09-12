@@ -33,6 +33,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
 from src.core.engine.reconstruct import log_digest, reconstruct  # noqa: E402
+from src.core.runlog import LedgerRun  # noqa: E402
 from src.core.types import FillRecord, Side, Split  # noqa: E402
 
 
@@ -186,7 +187,25 @@ def rebuild_dataset(row: dict, cfg: dict):
     return dataset
 
 
-def replay(row: dict, cfg_path: Path = REPO_ROOT / "config" / "run.yaml"):
+REPLAY_LOG = REPO_ROOT / "runs" / "replays.jsonl"
+
+
+def replay(row: dict, cfg_path: Path = REPO_ROOT / "config" / "run.yaml",
+           *, replay_log: Path | None = None):
+    """Re-run the row. Logged, like every execution -- but not into the ledger.
+
+    A replay executes strategy code, so Task 23's rule applies: no engine without
+    a row. It does not belong in `runs/ledger.jsonl`, though. That file is the
+    denominator of every false-discovery statement here, and a replay is not a
+    candidate: the source is byte-fixed, the dataset, split, seed and fill model
+    all come from the row, and there is no free parameter, so no selection can
+    happen through it. Putting replays there would also make
+    `scripts/ledger_check.py --replay` grow the file it is checking, once per row
+    per pass.
+
+    So they land in `runs/replays.jsonl`, append-only, same shape. Every
+    execution is recorded; the two records answer different questions.
+    """
     import yaml
 
     cfg = yaml.safe_load(cfg_path.read_text())
@@ -202,15 +221,32 @@ def replay(row: dict, cfg_path: Path = REPO_ROOT / "config" / "run.yaml"):
             f"the source for this trial is gone: {row['strategy_source']}. "
             "A digest identifies a trial; only the stored source reproduces it."
         )
-    engine = Engine(
-        dataset,
-        load_strategy_from(source, row.get("strategy", "")),
-        split=Split(row["split"]),
-        fill_model=row["fill_model"],
-        warmup_sessions=row.get("warmup_sessions", 0),
-        seed=row["seed"],
-    )
-    engine.run()
+    log_path = replay_log or REPLAY_LOG
+
+    def build_row(record: dict) -> dict:
+        return {
+            **record,
+            "purpose": "replay",
+            "trigger": "human",
+            "replay_of": {
+                "blotter_digest": row.get("blotter_digest"),
+                "strategy_digest": row.get("strategy_digest"),
+                "git_sha": row.get("git_sha"),
+            },
+        }
+
+    with LedgerRun(log_path, row_builder=build_row) as run_log:
+        engine = Engine(
+            dataset,
+            load_strategy_from(source, row.get("strategy", "")),
+            ticket=run_log.ticket,
+            split=Split(row["split"]),
+            fill_model=row["fill_model"],
+            warmup_sessions=row.get("warmup_sessions", 0),
+            seed=row["seed"],
+        )
+        engine.run()
+        run_log.update(engine.record.as_dict())
     return engine
 
 

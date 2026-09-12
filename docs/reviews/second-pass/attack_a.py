@@ -25,5 +25,5 @@ class Attack:
 
 ds = SyntheticDataset(SyntheticSpec(n_sessions=40, ticks_per_session=120,
                                     vol_per_tick=.15, seed=7))
-Engine(ds, Attack(), split=Split.VALIDATION, warmup_sessions=1).run()
+Engine.for_test(ds, Attack(), split=Split.VALIDATION, warmup_sessions=1).run()
 for k, v in got.items(): print(f"  {k}: {v}")

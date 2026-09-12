@@ -91,7 +91,7 @@ def test_example_is_in_the_doc_byte_for_byte(path: Path):
 @pytest.mark.parametrize("path", example_paths(), ids=lambda p: p.stem)
 def test_example_runs_and_trades(path: Path):
     strategy = load_strategy_class(path)()
-    engine = Engine(
+    engine = Engine.for_test(
         SyntheticDataset(SPEC), strategy, split=Split.VALIDATION, warmup_sessions=1
     )
     record = engine.run()
@@ -116,7 +116,7 @@ def test_example_is_deterministic(path: Path):
     example is not reproducible it is teaching the wrong thing."""
     digests = []
     for _ in range(2):
-        engine = Engine(
+        engine = Engine.for_test(
             SyntheticDataset(SPEC), load_strategy_class(path)(),
             split=Split.VALIDATION, warmup_sessions=1,
         )

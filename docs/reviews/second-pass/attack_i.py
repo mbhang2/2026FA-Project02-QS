@@ -25,7 +25,7 @@ class S:
 
 ds = SyntheticDataset(SyntheticSpec(n_sessions=200, ticks_per_session=390,
                                     vol_per_tick=.15, seed=3))
-e = Engine(ds, S(), split=Split.VALIDATION, warmup_sessions=1)
+e = Engine.for_test(ds, S(), split=Split.VALIDATION, warmup_sessions=1)
 r = e.run()
 print(f"  action cap was {seen['cap_before']}, raised in place; {seen['queued']} actions queued")
 print(f"  cap hits recorded: {r.action_cap_hits}   actions dropped: {r.actions_dropped}")

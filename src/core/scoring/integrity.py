@@ -267,3 +267,56 @@ def check_artifacts(before: dict[str, str], after: dict[str, str]) -> None:
         f"{detail}. The score this run produced was not produced by the "
         "artifacts the row names. The trial is recorded and invalidated."
     )
+
+
+# --------------------------------------------------------------------------- #
+# the environment
+# --------------------------------------------------------------------------- #
+# The gap Task 22 named and could not close with a hash. numpy and pandas
+# versions change numbers, and no digest over the repo's own files can see that.
+#
+# Two digests rather than one, because they answer different questions:
+#
+#   lockfile   what the repo *declares* the environment to be. Committed, so a
+#              row naming a lockfile digest can be matched against history the
+#              way `code_fingerprint` can.
+#   resolved   what was actually importable when the run happened, from
+#              `importlib.metadata`. This is the one that catches a machine whose
+#              pandas was upgraded without the lockfile being regenerated.
+#
+# A row carrying both says which environment was promised and which was used, and
+# `scripts/ledger_check.py` reports a row whose resolved digest differs from
+# today's as **environment-drifted** -- which is not superseded. The row may be
+# perfectly good; it just was not produced under this environment and nobody
+# should expect bit-identical replay across the gap.
+LOCKFILE = REPO_ROOT / "requirements.lock"
+
+
+def lockfile_digest(root: Path | None = None) -> str:
+    path = (root or REPO_ROOT) / "requirements.lock"
+    return _digest_file(path) if path.exists() else "absent"
+
+
+def resolved_environment() -> dict[str, str]:
+    """`{distribution: version}` for everything importable, plus the interpreter.
+
+    Distribution names are lower-cased and normalised the way the packaging
+    ecosystem does, so `PyYAML` and `pyyaml` are one entry and not two.
+    """
+    import platform
+    from importlib.metadata import distributions
+
+    out: dict[str, str] = {}
+    for dist in distributions():
+        name = (dist.metadata["Name"] or "").strip().lower().replace("_", "-")
+        if name:
+            out[name] = dist.version
+    out["python"] = platform.python_version()
+    out["python_implementation"] = platform.python_implementation()
+    return dict(sorted(out.items()))
+
+
+def environment_fingerprint(resolved: dict[str, str] | None = None) -> str:
+    resolved = resolved_environment() if resolved is None else resolved
+    payload = "\n".join(f"{k}=={v}" for k, v in sorted(resolved.items()))
+    return hashlib.sha256(payload.encode()).hexdigest()

@@ -3,3 +3,7 @@
 -r requirements.txt
 
 pytest==9.1.1
+
+# The type layer of the agent's static check. `scripts/agent_check.py` fails
+# loudly if it is missing rather than quietly doing less than it says.
+mypy==2.3.1

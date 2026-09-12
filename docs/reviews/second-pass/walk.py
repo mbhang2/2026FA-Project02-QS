@@ -51,7 +51,7 @@ class W:
 ds = SyntheticDataset(SyntheticSpec(n_sessions=20, ticks_per_session=120,
                                     vol_per_tick=.15, seed=1, train_frac=.5,
                                     validation_frac=.2))
-Engine(ds, W(), split=Split.VALIDATION, warmup_sessions=1).run()
+Engine.for_test(ds, W(), split=Split.VALIDATION, warmup_sessions=1).run()
 for cls, (hits, n) in out.items():
     print(f"== {cls}  ({n:,} objects visited)")
     for t, path in sorted(hits.items()):

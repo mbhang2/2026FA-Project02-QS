@@ -16,7 +16,7 @@ docs/reviews/second-pass/attack_c.py`.
 | `attack_i.py` | **3.** `ctx._queue.cap` and `.actions` are mutable; 200 submits past a cap of 64 | critical | open |
 | `attack_h.py` | **4.** Task 19's "no anti-conservatism" is split-direction dependent; worst ratio 2.64 | high | open |
 | `attack_fg.py` | **5.** the null is 9–24× anti-conservative for selective strategies (25% exposure → 24.40× at far=0.001) | high | open |
-| `attack_e.py` | **6.** `scripts/agent_check.py` is an oracle: 18 probes recovered peak realized P&L to ±0.0002 with 0 trials counted | high | open |
+| `attack_e.py` | **6.** `scripts/agent_check.py` is an oracle: 18 probes recovered peak realized P&L to ±0.0002 with 0 trials counted | high | **closed in Task 23.** The check no longer executes strategy code -- `compile()`, an AST pass and mypy, all properties of the source text. `docs/reviews/task23/oracle_after.py` runs the same search against two strategies whose peak P&L differs by 4.39 and gets identical answers from both. |
 | `attack_d.py` | **7.** null tables, config, ledger and strategy source are writable, and the scoring fingerprint does not change when `data/calibration/empirical-null.json` is rewritten | medium-high | **detection closed in Task 22.** `integrity.artifact_digests()` hashes the tables, calendars, profiles, manifest and strategy source before the run and again after scoring; a mid-run write invalidates the trial as `invalidated_artifacts_mutated`. The *writability* is unchanged and deliberately so — nothing in-process can take the write away. |
 | `attack_b.py` | T+1 eligibility | — | **could not break it.** Recorded because a boundary nobody managed to cross is evidence, and only if the attempt is written down. |
 

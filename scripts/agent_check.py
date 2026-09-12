@@ -1,35 +1,52 @@
 #!/usr/bin/env python3
-"""The research agent's only entry point. It returns pass or fail and no number.
+"""The research agent's only entry point. It reads the file; it does not run it.
 
-    python scripts/agent_check.py          # does src/strategies/current.py work?
+    python scripts/agent_check.py          # is src/strategies/current.py well formed?
 
-An agent that cannot execute what it writes ships syntax errors into the loop, so
-it needs to be able to run something. What it must not be able to do is *score*
-something, and the previous arrangement -- `run.py --trigger agent` -- got that
-wrong in a way adversarial review demonstrated: `--dataset` and `--ledger` were
-missing from the forbidden list, the supplied-argument check tested truthiness so
-`--seed 0` read as "not supplied", and `--trigger` was a string the caller chose.
-A strategy could evaluate itself against the planted-signal dataset, retry on
-seeds, and write the results to a ledger that never counts.
+An agent that cannot check what it writes ships syntax errors into the loop. What
+it must not be able to do is *evaluate* what it writes, and two attempts at that
+line have now failed in ways adversarial review demonstrated.
 
-That is not a loophole in honest N. It is a deletion of it.
+The first was `run.py --trigger agent`, with a forbidden-argument list in front
+of it. Two names were missing from the list, the supplied-argument check tested
+truthiness so `--seed 0` read as "not supplied", and the trigger was a string the
+caller chose.
 
-**So this check produces no score.** It compiles the strategy, wires it to the
-harness, walks a small committed dataset, and reports whether that worked. There
-is no
-Sortino, no FAR, no P&L and no blotter summary in the output, because a check
-that yields no number cannot be used for selection -- there is nothing to
-optimise against, nothing to retry for, and nothing to forge. Scoring happens on
-the loop driver's path, which the agent does not invoke.
+The second was this script executing the strategy against a small dataset and
+reporting pass or fail and **no number** -- on the reasoning that a check
+yielding no score cannot be used for selection. It can. Pass/fail is one bit, and
+a strategy that raises when its own P&L crosses a threshold turns the exit code
+into that bit:
 
-A deliberately small dataset, not the full validation split: enough to prove the
-callbacks fire and the orders are well formed, not enough to be a result even if
-someone squinted at the exit code. The size is in the committed profile, not here.
+    def on_fill(self, ctx):
+        if ctx.realized_pnl > THRESHOLD:
+            raise RuntimeError()
 
-Every invocation still appends a ledger row, with `purpose: check`. It is not a
-trial and does not count toward N, and it is recorded for the same reason
-everything else is -- a run that happened and left no trace is the thing the
-ledger exists to prevent.
+Eighteen probes binary-searching THRESHOLD recovered peak realized P&L to
++/-0.0002, with **zero trials counted**. It does not forge a trial; it performs
+trials the system has agreed not to look at, which is the cleanest attack on
+honest N there is.
+
+Narrowing the channel does not fix it -- any output that depends on market data
+can carry a score, so rate-limiting reduces bandwidth and leaves the mechanism.
+So this check does not execute strategy code at all, and that rules out `import`
+too: a module's top level runs on import, and a probe would simply live there.
+
+**What runs instead** is `src.core.checks`: `compile()` for syntax, an AST pass
+for structure, module-level inertness and the callback signatures, and mypy
+against `src.core.types.Strategy`. Every one of those is a property of the source
+text, and no amount of cleverness makes the source text a function of NQ prices.
+
+**What the agent loses.** A runtime error is no longer free. A `TypeError` on the
+first bar, an unsubscribed subscription id, an order the engine rejects -- these
+now surface in a scored run, which is a trial with `outcome: crashed`,
+`score: null`, and a row that counts toward N. That is intended. The project's
+claim is that N includes crashed and abandoned runs, and a free crash check is a
+mechanism for making crashes not count: the same hole in a friendlier shape.
+
+Every invocation still appends a ledger row with `purpose: check`. It is not a
+trial and does not count toward N, and it is recorded for the reason everything
+is -- a run that happened and left no trace is what the ledger exists to prevent.
 """
 
 from __future__ import annotations
@@ -37,7 +54,6 @@ from __future__ import annotations
 import argparse
 import sys
 import time
-import traceback
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -45,10 +61,24 @@ sys.path.insert(0, str(REPO_ROOT))
 
 import run as runner  # noqa: E402
 
-from src.core.engine import Engine  # noqa: E402
-from src.core.types import Split  # noqa: E402
+from src.core.checks import static_check, type_check  # noqa: E402
 
-CHECK_PROFILE = "agent"
+STRATEGY_PATH = REPO_ROOT / "src" / "strategies" / "current.py"
+
+
+def check(path: Path = STRATEGY_PATH) -> tuple[bool, list[str], list[str]]:
+    """`(passed, errors, notes)`. Nothing in here executes `path`."""
+    report = static_check(path)
+    errors = [str(f) for f in report.findings if f.code.startswith("E")]
+    notes = [str(f) for f in report.findings if not f.code.startswith("E")]
+
+    if report.strategy_class and not errors:
+        # Only worth running once the file parses and names something loadable;
+        # mypy on a file with a missing callback repeats what the AST already
+        # said, at ten times the cost.
+        result = type_check(path, report.strategy_class)
+        errors.extend(result.errors)
+    return not errors, errors, notes
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -59,51 +89,38 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     cfg = runner.load_config()
-    profile = cfg["profiles"][CHECK_PROFILE]
     ledger_path = args.ledger or (REPO_ROOT / cfg.get("ledger", "runs/ledger.jsonl"))
 
     started = time.monotonic()
-    outcome, error, sessions = "passed", None, 0
-    record: dict = {}
-    try:
-        dataset = runner.build_dataset(cfg, profile["dataset"], profile["seed"])
-        strategy = runner.load_strategy()
-        engine = Engine(
-            dataset, strategy,
-            split=Split(profile["split"]),
-            fill_model=profile["fill_model"],
-            warmup_sessions=profile.get("warmup_sessions", 0),
-            seed=profile["seed"],
-            wall_clock_budget_s=profile.get("wall_clock_budget_s"),
-        )
-        engine.run()
-        record = engine.record.as_dict()
-        sessions = len(engine.record.end_of_session_positions)
-    except SystemExit as exc:
-        outcome, error = "failed", f"configuration: {exc}"
-    except Exception as exc:
-        outcome = "failed"
-        error = f"{type(exc).__name__}: {exc}"
-        traceback.print_exc(limit=6)
+    passed, errors, notes = check()
 
-    # Whatever the engine recorded, the score never reaches the row and never
-    # reaches the caller. The ledger keeps the run; the agent gets a verdict.
-    record.update(
-        outcome=f"check_{outcome}", error=error, score=None, diagnostics=None,
-        wall_clock_s=round(time.monotonic() - started, 6),
-    )
+    record = {
+        "outcome": "check_passed" if passed else "check_failed",
+        "error": errors[0] if errors else None,
+        "findings": errors,
+        "notes": notes,
+        "score": None,
+        "diagnostics": None,
+        "executed_strategy_code": False,
+        "wall_clock_s": round(time.monotonic() - started, 6),
+    }
     runner.append_ledger(
         ledger_path,
-        runner._row(record, "agent", CHECK_PROFILE, ledger_path, purpose="check"),
+        runner._row(record, "agent", "static", ledger_path, purpose="check"),
     )
 
-    print(f"strategy   src/strategies/current.py")
-    print(f"check      {outcome.upper()}   sessions walked {sessions}")
-    if error:
-        print(f"reason     {error}")
-    print("no score is reported by this path, by design")
+    print("strategy   src/strategies/current.py")
+    print(f"check      {'PASSED' if passed else 'FAILED'}   "
+          f"static analysis only; the strategy was not executed")
+    for line in errors:
+        print(f"  error    {line}")
+    for line in notes:
+        print(f"  note     {line}")
+    if passed:
+        print("this path reports no score and runs no data, by design. A runtime")
+        print("error costs a trial -- see docs/agent/strategy-api.md.")
     print(f"ledger     {ledger_path}")
-    return 0 if outcome == "passed" else 1
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":

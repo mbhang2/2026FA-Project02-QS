@@ -45,6 +45,7 @@ from .context import (
 from ..data.dataset import Dataset
 from .fills import FillModel, check_capabilities, get_fill_model
 from .reconstruct import FillLogFull, log_digest, reconstruct
+from ..runlog import RunNotAccounted, RunTicket
 from ..types import (
     Action,
     Bar,
@@ -382,11 +383,29 @@ def aggregate(ticks: Iterable[Tick], sub: Subscription, bounds: Any) -> list[Bar
 
 
 class Engine:
+    """The walk. Construction requires a `RunTicket`.
+
+    Until Task 23 "every execution is logged" was a convention that held because
+    everyone remembered. The ledger is the denominator of every false-discovery
+    statement the project makes, so a new entry point that forgot to append a row
+    would have made N quietly wrong. `RunTicket` is minted by `LedgerRun` (which
+    appends a row on exit, whatever happened), by `RunTicket.for_calibration`
+    (measuring the apparatus with the immutable reference strategy -- one row per
+    tabulation, not per engine), or by `RunTicket.for_test`, which is asserted
+    absent from `src/` and `scripts/`.
+
+    It stops accidents rather than attackers -- anything in this process can
+    forge a ticket, as it can reach anything else in the address space. Use
+    `Engine.for_test(...)` in fixtures; `tests/test_boundary.py` walks the tree
+    for construction sites so a fourth route cannot appear quietly.
+    """
+
     def __init__(
         self,
         dataset: Any,
         strategy: Any,
         *,
+        ticket: RunTicket,
         split: Split = Split.VALIDATION,
         fill_model: FillModel | str = "unfavorable",
         warmup_sessions: int = 0,
@@ -405,6 +424,14 @@ class Engine:
         # knob: the fast path is not an approximation.
         event_walk: bool = True,
     ):
+        if not isinstance(ticket, RunTicket):
+            raise RunNotAccounted(
+                "Engine(...) needs a RunTicket, so that no run can happen without "
+                "being accounted for. Use `with LedgerRun(...) as ticket:` on a "
+                "scored path, `RunTicket.for_calibration(reason)` when measuring "
+                "the apparatus, or `Engine.for_test(...)` in a fixture."
+            )
+        self.ticket = ticket
         self.dataset = _SealedDataset(dataset)
         self.strategy = strategy
         self.split = split
@@ -465,6 +492,17 @@ class Engine:
         self.n_bars = 0
         self.n_fills = 0
         self.end_of_session_positions: dict[str, int] = {}
+
+    @classmethod
+    def for_test(cls, dataset: Any, strategy: Any, **kw) -> "Engine":
+        """A fixture's route to an engine, and the only one that logs nothing.
+
+        Separate from an optional ticket on purpose: an optional argument is one
+        a production caller can also omit, and then the guarantee is back to
+        being a habit. A test asserts this name appears nowhere under `src/` or
+        `scripts/`.
+        """
+        return cls(dataset, strategy, ticket=RunTicket.for_test(), **kw)
 
     # `position`, `last_price` and `_avg_price` live on `_RunState` so the
     # context's port can close over that record rather than over the engine.

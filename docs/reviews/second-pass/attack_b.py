@@ -23,7 +23,7 @@ def run(cheat):
                 o.eligible_from_seq = 0                    # T+1 gone
     ds = SyntheticDataset(SyntheticSpec(n_sessions=60, ticks_per_session=390,
                                         vol_per_tick=.15, seed=3, signal_strength=0.0))
-    e = Engine(ds, S(), split=Split.VALIDATION, warmup_sessions=1)
+    e = Engine.for_test(ds, S(), split=Split.VALIDATION, warmup_sessions=1)
     e.run()
     net = e.blotter.realized_pnl - e.blotter.commission
     return net, len(e.blotter.rows), e.record.blotter_digest[:12]

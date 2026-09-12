@@ -118,7 +118,7 @@ def test_strategy_reaching_past_the_cursor_raises_during_a_run():
                 h[len(h)]   # the element that does not exist yet
 
     with pytest.raises(LookaheadError):
-        Engine(dataset(), Peeker(), split=Split.VALIDATION).run()
+        Engine.for_test(dataset(), Peeker(), split=Split.VALIDATION).run()
 
 
 # --------------------------------------------------------------------------- #
@@ -126,7 +126,7 @@ def test_strategy_reaching_past_the_cursor_raises_during_a_run():
 # --------------------------------------------------------------------------- #
 def test_order_cannot_fill_on_the_tick_that_triggered_its_submission():
     strat = Recorder(submit_on_first_bar=True)
-    eng = Engine(dataset(), strat, split=Split.VALIDATION)
+    eng = Engine.for_test(dataset(), strat, split=Split.VALIDATION)
     eng.run()
 
     assert strat.fills, "the probe order never filled"
@@ -144,7 +144,7 @@ def test_order_cannot_fill_on_the_tick_that_triggered_its_submission():
 
 def test_every_fill_respects_its_order_eligibility():
     strat = MomentumStrategy()
-    eng = Engine(dataset(signal_strength=0.5), strat, split=Split.VALIDATION)
+    eng = Engine.for_test(dataset(signal_strength=0.5), strat, split=Split.VALIDATION)
     eng.run()
     assert eng.blotter.rows
     for row in eng.blotter.rows:
@@ -157,7 +157,7 @@ def test_every_fill_respects_its_order_eligibility():
 # --------------------------------------------------------------------------- #
 def test_simultaneous_closes_arrive_in_one_callback():
     strat = Recorder(subs=("1m", "5m"))
-    Engine(dataset(), strat, split=Split.VALIDATION).run()
+    Engine.for_test(dataset(), strat, split=Split.VALIDATION).run()
 
     multi = [ev for ev in strat.bar_events if len(ev.bars) > 1]
     assert multi, "no timestamp closed both subscriptions"
@@ -181,7 +181,7 @@ def test_simultaneous_closes_arrive_in_one_callback():
 
 def test_bars_are_stamped_by_open_and_delivered_on_close():
     strat = Recorder(subs=("5m",))
-    Engine(dataset(), strat, split=Split.VALIDATION).run()
+    Engine.for_test(dataset(), strat, split=Split.VALIDATION).run()
     for ev, delivered in zip(strat.bar_events, strat.delivered_at):
         for b in ev.bars:
             assert b.close_ts > b.open_ts
@@ -200,7 +200,7 @@ def test_bars_are_stamped_by_open_and_delivered_on_close():
 # --------------------------------------------------------------------------- #
 def test_same_seed_gives_a_byte_identical_blotter():
     def run(seed):
-        eng = Engine(
+        eng = Engine.for_test(
             dataset(seed=seed, signal_strength=0.5), MomentumStrategy(),
             split=Split.VALIDATION, seed=seed,
         )
@@ -367,7 +367,7 @@ def test_the_spread_between_fill_models_has_the_right_sign_at_scale():
     for s in (0.0, 0.25, 0.5):
         out = {}
         for model in ("favorable", "unfavorable"):
-            eng = Engine(
+            eng = Engine.for_test(
                 SyntheticDataset(SyntheticSpec(n_sessions=200, vol_per_tick=0.15,
                                                signal_strength=s, seed=1)),
                 MomentumStrategy(), split=Split.VALIDATION, fill_model=model,
@@ -406,7 +406,7 @@ def test_the_loss_tail_no_longer_widens_with_signal_strength():
         for sig in (0.0, 0.5, 1.0):
             wins, losses = [], []
             for seed in (1, 2):
-                eng = Engine(
+                eng = Engine.for_test(
                     SyntheticDataset(SyntheticSpec(
                         n_sessions=175, ticks_per_session=390, vol_per_tick=0.15,
                         signal_strength=sig, seed=seed, **spec)),

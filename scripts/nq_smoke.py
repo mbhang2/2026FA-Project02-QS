@@ -40,7 +40,8 @@ import inventory as inv  # noqa: E402
 import run as runner  # noqa: E402
 from src.core.scoring.calibration import ReferenceStrategy  # noqa: E402
 from src.core.data.nq import CACHE_ROOT, NQDataset, NQSpec  # noqa: E402
-from src.core.engine import Engine  # noqa: E402
+from src.core.engine import Engine
+from src.core.runlog import LedgerRun  # noqa: E402
 from src.core.types import Split  # noqa: E402
 
 
@@ -102,7 +103,9 @@ def report_fill_spread(engine, ds, split, warmup, args) -> float:
     known until it is run."""
     twin_ds = NQDataset(ds._s3, os.environ["R2_BUCKET"],
                         NQSpec(cache=not args.cold))
-    twin = Engine(twin_ds, ReferenceStrategy(), split=split,
+    # The same ticket: a second walk of the same run under the opposite fill
+    # model, recorded as a diagnostic inside the one row that covers it.
+    twin = Engine(twin_ds, ReferenceStrategy(), ticket=engine.ticket, split=split,
                   fill_model="favorable", warmup_sessions=warmup, seed=1)
     twin.run()
     a = twin.blotter.realized_pnl - twin.blotter.commission
@@ -155,46 +158,53 @@ def main() -> int:
               f"{sessions[0]} .. {sessions[-1]}")
 
     t0 = time.monotonic()
-    engine = Engine(ds, ReferenceStrategy(), split=split,
-                    fill_model="unfavorable", warmup_sessions=warmup, seed=1)
-    record = engine.run()
-    elapsed = time.monotonic() - t0
+    # The row is written on exit from this block whatever happens inside it, and
+    # the engine cannot be built outside it -- see `src/core/runlog.py`. `human`,
+    # because that is what this is: a person running the harness by hand to check
+    # the plumbing. The trigger decides the purpose, so saying "smoke" is only
+    # permitted to the caller that can be telling the truth about it.
+    def build_row(record: dict) -> dict:
+        row = runner._row(record, "human", "nq-smoke", args.ledger,
+                          purpose=runner.resolve_purpose("human", "smoke"),
+                          strategy_path=REFERENCE_PATH)
+        row["note"] = note_holder[0]
+        return row
 
-    ticks = record.ticks
-    print()
-    print(f"ticks     {ticks:,}  ({ticks / len(sessions):,.0f} per session)")
-    print(f"bars      {record.bars_delivered:,}   fills {record.fills:,}")
-    print(f"blotter   {len(engine.blotter.rows):,} rows   digest {record.blotter_digest[:16]}")
-    print(f"fill log  {record.fills_logged:,} records   digest "
-          f"{record.fill_log_digest[:16]}   agrees {record.reconciliation['agree']}")
-    print(f"contracts {sorted({ds.contract_for(d).raw_symbol for d in sessions})}")
-    print(f"wall      {elapsed:.1f}s   {ticks / max(elapsed, 1e-9):,.0f} ticks/s")
+    note_holder = ["plumbing check on real data; not scored, not a result"]
+    with LedgerRun(args.ledger, row_builder=build_row) as run_log:
+        engine = Engine(ds, ReferenceStrategy(), ticket=run_log.ticket, split=split,
+                        fill_model="unfavorable", warmup_sessions=warmup, seed=1)
+        record = engine.run()
+        elapsed = time.monotonic() - t0
 
-    full = len(ds.sessions())
-    per_session = elapsed / len(sessions)
-    print()
-    print(f"projection: {per_session:.1f}s per session -> "
-          f"{per_session * full / 60:.0f} min for all {full} sessions")
+        ticks = record.ticks
+        print()
+        print(f"ticks     {ticks:,}  ({ticks / len(sessions):,.0f} per session)")
+        print(f"bars      {record.bars_delivered:,}   fills {record.fills:,}")
+        print(f"blotter   {len(engine.blotter.rows):,} rows   "
+              f"digest {record.blotter_digest[:16]}")
+        print(f"fill log  {record.fills_logged:,} records   digest "
+              f"{record.fill_log_digest[:16]}   agrees {record.reconciliation['agree']}")
+        print(f"contracts {sorted({ds.contract_for(d).raw_symbol for d in sessions})}")
+        print(f"wall      {elapsed:.1f}s   {ticks / max(elapsed, 1e-9):,.0f} ticks/s")
 
-    note = "plumbing check on real data; not scored, not a result"
-    if args.split:
-        note = report_score(engine, record, ds)
-    if args.fill_spread:
-        spread = report_fill_spread(engine, ds, split, warmup, args)
-        if engine.record.diagnostics is not None:
-            # The field existed and nothing ever computed it.
-            engine.record.diagnostics["fill_model_spread"] = spread
+        full = len(ds.sessions())
+        per_session = elapsed / len(sessions)
+        print()
+        print(f"projection: {per_session:.1f}s per session -> "
+              f"{per_session * full / 60:.0f} min for all {full} sessions")
 
-    # `human`, because that is what this is: a person running the harness by
-    # hand to check the plumbing. The trigger is what decides the purpose now,
-    # so saying "smoke" is only permitted to the caller that can be telling the
-    # truth about it.
-    row = runner._row(record.as_dict(), "human", "nq-smoke", args.ledger,
-                      purpose=runner.resolve_purpose("human", "smoke"),
-                      strategy_path=REFERENCE_PATH)
-    row["note"] = note
-    runner.attach_fill_log(row, engine, args.ledger)
-    runner.append_ledger(args.ledger, row)
+        if args.split:
+            note_holder[0] = report_score(engine, record, ds)
+        if args.fill_spread:
+            spread = report_fill_spread(engine, ds, split, warmup, args)
+            if engine.record.diagnostics is not None:
+                # The field existed and nothing ever computed it.
+                engine.record.diagnostics["fill_model_spread"] = spread
+
+        row = record.as_dict()
+        runner.attach_fill_log(row, engine, args.ledger)
+        run_log.update(row)
     print(f"ledger    {args.ledger}")
     if args.cold:
         print(f"cache     bypassed (--cold); warm cache lives under {CACHE_ROOT}")

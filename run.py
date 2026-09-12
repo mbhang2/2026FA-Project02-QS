@@ -35,8 +35,8 @@ does not count, decided by the party with the incentive.
 from __future__ import annotations
 
 import argparse
-import gzip
 import json
+import platform
 import sys
 import time
 from pathlib import Path
@@ -48,6 +48,9 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
+from src.core.runlog import (  # noqa: E402
+    LedgerRun, append_ledger, store_fill_log, store_source, strategy_digest,
+)
 from src.core.scoring import integrity  # noqa: E402
 # Bound here, at import, so a later `sys.modules[...].score = evil` does not
 # reach this reference. That closes the cheapest version of the attack and not
@@ -78,6 +81,12 @@ SCORING_AT_IMPORT = integrity.fingerprint()
 # after `load_strategy()` would be a set the strategy had a turn at.
 ARTIFACTS_AT_IMPORT = integrity.artifact_digests()
 CODE_AT_IMPORT = integrity.code_fingerprint()
+
+# And the environment, which no digest over the repo's files can reach. Taken
+# once at import rather than per row: enumerating installed distributions costs
+# about 50 ms and cannot change inside a process.
+ENVIRONMENT_AT_IMPORT = integrity.environment_fingerprint()
+LOCKFILE_AT_IMPORT = integrity.lockfile_digest()
 
 
 def _invalidation_outcome(exc: Exception) -> str:
@@ -216,60 +225,6 @@ def build_dataset(cfg: dict, name: str, seed: int):
 STRATEGY_PATH = REPO_ROOT / "src" / "strategies" / "current.py"
 
 
-def store_source(ledger_path: Path, digest: str,
-                 strategy_path: Path | None = None) -> str:
-    """Keep the strategy source beside the ledger, addressed by its digest.
-
-    A digest identifies a trial; it does not reproduce one. To re-run trial 47
-    you need its source, and at that moment the source was uncommitted and is now
-    gone. Content-addressed rather than inline so a hundred runs of the same
-    strategy cost one copy -- "every trial is reproducible" otherwise holds only
-    for the accepted ones that survived to a commit, and the rejected ones are
-    exactly what N counts.
-    """
-    strategy_path = strategy_path or STRATEGY_PATH
-    if not strategy_path.exists():
-        return ""
-    out = ledger_path.parent / "sources" / f"{digest}.py"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    if not out.exists():
-        out.write_text(strategy_path.read_text())
-    try:
-        return str(out.relative_to(REPO_ROOT))
-    except ValueError:
-        # a ledger outside the repo, as in tests; keep the absolute path
-        return str(out)
-
-
-# The log is carried in the trial artifact so replay can *verify* the P&L rather
-# than trust it, and this is the point where "where size permits" gets a number.
-# A 564-session NQ trial logs a few thousand fills; a strategy sitting on the
-# action cap for the whole split logs millions, and writing those to disk on
-# every trial turns the ledger directory into the largest thing in the repo. Over
-# the bound the row records the digest and no file: the digest still says whether
-# a replay produced the same fills, which is the part that matters.
-MAX_STORED_FILLS = 250_000
-
-
-def store_fill_log(ledger_path: Path, digest: str, fills) -> str:
-    """Keep the run's fills beside the ledger, addressed by their digest.
-
-    Content-addressed for the same reason the sources are: a hundred replays of
-    one trial cost one copy. Gzipped JSONL rather than JSON, because the file is
-    append-shaped, streams, and stays readable with `zcat`.
-    """
-    if not fills or len(fills) > MAX_STORED_FILLS:
-        return ""
-    out = ledger_path.parent / "fills" / f"{digest}.jsonl.gz"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    if not out.exists():
-        with gzip.open(out, "wt") as fh:
-            for fill in fills:
-                fh.write(json.dumps(fill.as_row()) + "\n")
-    try:
-        return str(out.relative_to(REPO_ROOT))
-    except ValueError:
-        return str(out)
 
 
 def attach_fill_log(record: dict, engine, ledger_path: Path) -> dict:
@@ -285,23 +240,6 @@ def attach_fill_log(record: dict, engine, ledger_path: Path) -> dict:
         )
     return record
 
-
-def strategy_digest(strategy_path: Path | None = None) -> str:
-    """Content hash of the strategy source.
-
-    git_sha alone does not identify a trial: the agent edits
-    src/strategies/current.py and runs it before anything is committed, so two
-    runs can share a SHA and be different code. Without this the ledger cannot
-    tell two trials apart, which is the one thing it exists to do.
-    """
-    import hashlib
-
-    strategy_path = strategy_path or STRATEGY_PATH
-    return (
-        hashlib.sha256(strategy_path.read_bytes()).hexdigest()[:16]
-        if strategy_path.exists()
-        else "missing"
-    )
 
 
 def check_warmup_against_embargo(profile_name: str, warmup: int, dataset) -> None:
@@ -351,12 +289,6 @@ def load_strategy():
         "(or expose an instance as STRATEGY)"
     )
 
-
-def append_ledger(path: Path, record: dict) -> None:
-    """Append-only. One line per invocation, whatever the outcome."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a") as fh:
-        fh.write(json.dumps(record, sort_keys=True) + "\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -418,16 +350,36 @@ def main(argv: list[str] | None = None) -> int:
     ledger_path = args.ledger or (REPO_ROOT / cfg.get("ledger", "runs/ledger.jsonl"))
 
     fill_model = profile["fill_model"]
-    engine = Engine(
-        dataset,
-        strategy,
-        split=split,
-        fill_model=fill_model,
-        warmup_sessions=warmup_sessions,
-        seed=seed,
-        wall_clock_budget_s=profile.get("wall_clock_budget_s"),
-    )
 
+    # Every path out of this block appends exactly one row, including the ones
+    # that raise. Before Task 23 that was five `append_ledger` calls in five
+    # branches and a `finally` that appended for two outcomes and not the others
+    # -- correct, and correct by everybody remembering. The engine cannot be
+    # built outside it, because building one needs the ticket the block hands
+    # out.
+    with LedgerRun(
+        ledger_path,
+        row_builder=lambda record: _row(record, trigger, profile_name,
+                                        ledger_path, purpose),
+    ) as run_log:
+        engine = Engine(
+            dataset,
+            strategy,
+            ticket=run_log.ticket,
+            split=split,
+            fill_model=fill_model,
+            warmup_sessions=warmup_sessions,
+            seed=seed,
+            wall_clock_budget_s=profile.get("wall_clock_budget_s"),
+        )
+        return _walk(args, cfg, profile, profile_name, engine, dataset, strategy,
+                     split, seed, ledger_path, run_log)
+
+
+def _walk(args, cfg, profile, profile_name, engine, dataset, strategy, split,
+          seed, ledger_path, run_log) -> int:
+    """The run itself. Split out of `main()` so the ledger block above reads as
+    one thing: acquire the ticket, run, write the row."""
     started = time.monotonic()
     record: dict = {}
     try:
@@ -478,14 +430,13 @@ def main(argv: list[str] | None = None) -> int:
             error=str(exc), score=None, diagnostics=None,
         )
         attach_fill_log(record, engine, ledger_path)
-        append_ledger(ledger_path, _row(record, trigger, profile_name,
-                                        ledger_path, purpose))
+        run_log.update(record)
         print(f"INVALIDATED: {exc}", file=sys.stderr)
         return 4
     except HoldoutLocked as exc:
         record = _failure_record(cfg, profile_name, split, seed, args,
                                  dataset, "refused", str(exc), started)
-        append_ledger(ledger_path, _row(record, trigger, profile_name, ledger_path, purpose))
+        run_log.update(record)
         print(f"refused: {exc}", file=sys.stderr)
         return 2
     except Exception as exc:  # a crash is a ledger row, not a lost trial
@@ -495,11 +446,11 @@ def main(argv: list[str] | None = None) -> int:
         )
         if rec:
             attach_fill_log(record, engine, ledger_path)
-        append_ledger(ledger_path, _row(record, trigger, profile_name, ledger_path, purpose))
+        run_log.update(record)
         raise
     finally:
         if record and record.get("outcome") in ("completed", "abandoned_on_budget"):
-            append_ledger(ledger_path, _row(record, trigger, profile_name, ledger_path, purpose))
+            run_log.update(record)
 
     if engine.record.outcome == "abandoned_on_budget":
         print(f"abandoned: {engine.record.error}", file=sys.stderr)
@@ -528,9 +479,13 @@ def _fill_model_spread(cfg, profile, seed, strategy, split, engine) -> float:
     field nothing ever computed.
     """
     other = "favorable" if engine.model.name == "unfavorable" else "unfavorable"
+    # The same ticket: this is a second walk of the same candidate under the
+    # opposite fill model, recorded as a diagnostic inside the one row that
+    # covers the trial. A second row would double-count it.
     twin = Engine(
         build_dataset(cfg, profile["dataset"], seed),
         load_strategy(),
+        ticket=engine.ticket,
         split=split,
         fill_model=other,
         warmup_sessions=profile.get("warmup_sessions", 0),
@@ -578,6 +533,12 @@ def _row(record: dict, trigger: str, profile: str, ledger_path: Path,
         "artifact_fingerprint": integrity.artifact_fingerprint(ARTIFACTS_AT_IMPORT),
         "artifacts": ARTIFACTS_AT_IMPORT,
         "code_fingerprint": CODE_AT_IMPORT,
+        # What the environment actually was, and what the repo declared it to
+        # be. A difference between the two is the interesting case: a machine
+        # whose pandas moved without the lockfile being regenerated.
+        "environment_fingerprint": ENVIRONMENT_AT_IMPORT,
+        "lockfile_digest": LOCKFILE_AT_IMPORT,
+        "python_version": platform.python_version(),
     }
 
 

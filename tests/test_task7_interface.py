@@ -86,7 +86,7 @@ def test_ticks_are_delivered_with_price_size_side_and_timestamp():
             self.seen.append(ctx.tick)
 
     s = T()
-    rec = Engine(ds(), s, split=Split.VALIDATION).run()
+    rec = Engine.for_test(ds(), s, split=Split.VALIDATION).run()
     assert s.seen and rec.tick_events_delivered == len(s.seen)
     ev = s.seen[5]
     assert ev.price > 0 and ev.size > 0 and ev.ts > 0
@@ -115,7 +115,7 @@ def test_a_tick_precedes_the_bar_it_closes():
             self.order.append(("fill", ctx.ts))
 
     s = Both()
-    Engine(ds(), s, split=Split.VALIDATION).run()
+    Engine.for_test(ds(), s, split=Split.VALIDATION).run()
     by_ts = defaultdict(list)
     for kind, ts in s.order:
         by_ts[ts].append(kind)
@@ -145,7 +145,7 @@ def test_a_fill_is_delivered_before_the_tick_that_caused_it():
             self.order.append(("fill", ctx.ts))
 
     s = Trader()
-    Engine(ds(), s, split=Split.VALIDATION).run()
+    Engine.for_test(ds(), s, split=Split.VALIDATION).run()
     fills = [i for i, (k, _) in enumerate(s.order) if k == "fill"]
     assert fills
     for i in fills:
@@ -159,7 +159,7 @@ def test_subscribing_to_ticks_without_an_on_tick_callback_is_an_error():
         subs = ("tick",)
 
     with pytest.raises(TypeError, match=r"on_tick\(ctx\) is missing"):
-        Engine(ds(), Silent(), split=Split.VALIDATION).run()
+        Engine.for_test(ds(), Silent(), split=Split.VALIDATION).run()
 
 
 def test_train_bars_refuses_a_tick_subscription_and_says_what_to_use():
@@ -169,7 +169,7 @@ def test_train_bars_refuses_a_tick_subscription_and_says_what_to_use():
             ctx.train_bars(Subscription(kind="tick"))
 
     with pytest.raises(ContextError, match="ctx.ticks"):
-        Engine(ds(), S(), split=Split.VALIDATION).run()
+        Engine.for_test(ds(), S(), split=Split.VALIDATION).run()
 
 
 # --------------------------------------------------------------------------- #
@@ -191,7 +191,7 @@ def test_offsets_resolve_against_the_fill_price_not_last_price():
                 ctx.buy(1, stop_offset=0.5, target_offset=0.5, tag="e")
 
     s = Bracketed()
-    eng = Engine(ds(signal_strength=0.5), s, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(signal_strength=0.5), s, split=Split.VALIDATION)
     eng.run()
     entry = eng.blotter.rows[0]
     legs = [o for o in eng.orders.values() if o.parent_id == entry.order_id]
@@ -216,7 +216,7 @@ def test_absolute_levels_are_still_available_where_the_entry_is_known():
                                target=px + 1.0, tag="lim")
 
     s = Limit()
-    eng = Engine(ds(), s, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), s, split=Split.VALIDATION)
     eng.run()
     assert s.oid in eng.orders
 
@@ -232,7 +232,7 @@ def test_reduce_only_is_rejected_when_flat():
                 ctx.sell(1, reduce_only=True, tag="ro")
 
     s = Flat()
-    eng = Engine(ds(), s, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), s, split=Split.VALIDATION)
     eng.run()
     assert not eng.blotter.rows, "a reduce-only order opened a position"
     assert any(
@@ -253,7 +253,7 @@ def test_reduce_only_refuses_to_increase_exposure():
                 ctx.buy(5, reduce_only=True, tag="more")
 
     s = Adder()
-    eng = Engine(ds(), s, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), s, split=Split.VALIDATION)
     eng.run()
     assert getattr(s, "tried", False)
     assert max(abs(r.position_after) for r in eng.blotter.rows) == 1
@@ -275,7 +275,7 @@ def test_reduce_only_clamps_an_oversized_order_to_the_position():
                 ctx.sell(9, reduce_only=True, tag="close")
 
     s = Over()
-    eng = Engine(ds(), s, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), s, split=Split.VALIDATION)
     eng.run()
     assert getattr(s, "tried", False)
     closing = [r for r in eng.blotter.rows if r.side is Side.SELL]
@@ -297,7 +297,7 @@ def test_gtd_expires_mid_session_not_only_at_the_boundary():
                                    expire_ts=self.expiry, tag="gtd")
 
     s = Timed()
-    eng = Engine(ds(), s, split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), s, split=Split.VALIDATION)
     eng.run()
     order = eng.orders[s.oid]
     assert order.status is OrderStatus.EXPIRED
@@ -359,7 +359,7 @@ def test_a_slow_strategy_is_abandoned_and_the_trial_is_counted(tmp_path):
 
 
 def test_the_budget_is_not_enforced_when_none_is_set():
-    eng = Engine(ds(), Base(), split=Split.VALIDATION, wall_clock_budget_s=None)
+    eng = Engine.for_test(ds(), Base(), split=Split.VALIDATION, wall_clock_budget_s=None)
     rec = eng.run()
     assert rec.outcome == "completed" and rec.wall_clock_budget_s is None
 

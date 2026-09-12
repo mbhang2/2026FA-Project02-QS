@@ -59,7 +59,7 @@ class Base:
 @pytest.mark.parametrize("case", GOLDEN["cases"], ids=lambda c: f"{c['fill_model']}-s{c['spec']['signal_strength']}-seed{c['spec']['seed']}")
 def test_blotter_is_byte_identical_to_the_pre_refactor_implementation(case):
     """The acceptance criterion for Task 5: a refactor, not a behaviour change."""
-    eng = Engine(
+    eng = Engine.for_test(
         SyntheticDataset(SyntheticSpec(**case["spec"])), MomentumStrategy(),
         split=Split.VALIDATION, warmup_sessions=1,
         fill_model=case["fill_model"], seed=case["spec"]["seed"],
@@ -91,7 +91,7 @@ def test_a_queued_call_takes_effect_after_the_callback_returns_never_during():
             after = ctx.working_order_ids
             seen.append((before, oid, after))
 
-    eng = Engine(ds(), Watcher(), split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), Watcher(), split=Split.VALIDATION)
     eng.run()
     assert seen, "the probe never ran"
     before, oid, after = seen[0]
@@ -112,7 +112,7 @@ def test_order_ids_are_allocated_at_the_call_and_honoured_on_apply():
             ids.append(ctx.buy(1, type="limit", limit=1.0, tif="GTC"))
             ids.append(ctx.buy(1, type="limit", limit=1.0, tif="GTC"))
 
-    eng = Engine(ds(), Two(), split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), Two(), split=Split.VALIDATION)
     eng.run()
     assert ids == sorted(ids) and len(set(ids)) == 2
     for oid in ids:
@@ -131,7 +131,7 @@ def test_t_plus_one_still_holds_through_the_context_path():
         def on_fill(self, ctx):
             marks.append(("fill", ctx._seq))
 
-    eng = Engine(ds(), Probe(), split=Split.VALIDATION)
+    eng = Engine.for_test(ds(), Probe(), split=Split.VALIDATION)
     eng.run()
     kinds = dict(marks)
     assert "fill" in kinds, "the probe never filled"
@@ -151,7 +151,7 @@ def test_the_action_cap_counts_queued_calls_and_drops_the_rest():
             self.returned = [ctx.buy(1, type="limit", limit=1.0) for _ in range(10)]
 
     strat = Spammer()
-    eng = Engine(ds(), strat, split=Split.VALIDATION, action_cap=4)
+    eng = Engine.for_test(ds(), strat, split=Split.VALIDATION, action_cap=4)
     rec = eng.run()
     assert rec.action_cap_hits > 0
     assert rec.actions_dropped == rec.action_cap_hits * 6
@@ -169,7 +169,7 @@ def test_a_dropped_call_does_not_consume_an_order_id():
             self.ids = [ctx.buy(1, type="limit", limit=1.0) for _ in range(10)]
 
     strat = Spammer()
-    eng = Engine(ds(), strat, split=Split.VALIDATION, action_cap=3)
+    eng = Engine.for_test(ds(), strat, split=Split.VALIDATION, action_cap=3)
     eng.run()
     issued = [i for i in strat.ids if i is not None]
     assert issued == list(range(issued[0], issued[0] + 3)), (
@@ -183,7 +183,7 @@ def test_warmup_calls_are_inert_and_counted_rather_than_silently_dropped():
             self.last = ctx.buy(1, tag="always")
 
     strat = Eager()
-    eng = Engine(ds(), strat, split=Split.VALIDATION, warmup_sessions=2)
+    eng = Engine.for_test(ds(), strat, split=Split.VALIDATION, warmup_sessions=2)
     rec = eng.run()
     assert rec.warmup_actions_ignored > 0
     assert rec.action_cap_hits == 0, "warmup calls were charged to the action cap"
@@ -207,7 +207,7 @@ def test_a_stashed_context_raises_when_used_later():
             self.checked = True
 
     strat = Hoarder()
-    Engine(ds(), strat, split=Split.VALIDATION).run()
+    Engine.for_test(ds(), strat, split=Split.VALIDATION).run()
     assert getattr(strat, "checked", False), "the stale context was never exercised"
 
 
@@ -223,7 +223,7 @@ def test_the_setup_context_expires_too():
             self.checked = True
 
     strat = Late()
-    Engine(ds(), strat, split=Split.VALIDATION).run()
+    Engine.for_test(ds(), strat, split=Split.VALIDATION).run()
     assert strat.checked
 
 
@@ -238,7 +238,7 @@ def _raises_on(call, match):
                 call(ctx)
 
     with pytest.raises(ContextError, match=match):
-        Engine(ds(), Bad(), split=Split.VALIDATION).run()
+        Engine.for_test(ds(), Bad(), split=Split.VALIDATION).run()
 
 
 def test_size_must_be_a_positive_whole_number():
@@ -312,7 +312,7 @@ def test_cannot_modify_or_cancel_a_finished_order():
                 self.checked = True
 
     strat = Late()
-    Engine(ds(), strat, split=Split.VALIDATION).run()
+    Engine.for_test(ds(), strat, split=Split.VALIDATION).run()
     assert getattr(strat, "checked", False)
 
 
@@ -330,7 +330,7 @@ def test_an_unknown_subscription_names_the_ones_that_exist():
             ctx.history("15m")
 
     with pytest.raises(ContextError, match="no subscription"):
-        Engine(ds(), Wrong(), split=Split.VALIDATION).run()
+        Engine.for_test(ds(), Wrong(), split=Split.VALIDATION).run()
 
 
 def test_setup_must_declare_a_subscription():
@@ -339,7 +339,7 @@ def test_setup_must_declare_a_subscription():
             pass
 
     with pytest.raises(ValueError, match="ctx.subscribe"):
-        Engine(ds(), Silent(), split=Split.VALIDATION).run()
+        Engine.for_test(ds(), Silent(), split=Split.VALIDATION).run()
 
 
 def test_returning_subscriptions_from_setup_is_an_error_not_a_silent_no_op():
@@ -348,7 +348,7 @@ def test_returning_subscriptions_from_setup_is_an_error_not_a_silent_no_op():
             return [ctx.subscribe("1m")]
 
     with pytest.raises(TypeError, match="setup\\(\\) returns nothing now"):
-        Engine(ds(), OldShape(), split=Split.VALIDATION).run()
+        Engine.for_test(ds(), OldShape(), split=Split.VALIDATION).run()
 
 
 def test_interval_strings_parse_and_bad_ones_say_what_is_accepted():
@@ -375,7 +375,7 @@ def test_the_context_exposes_pnl_but_nothing_the_scorer_computes():
                 seen["equity"] = ctx.equity
                 seen["surface"] = {a for a in dir(ctx) if not a.startswith("_")}
 
-    Engine(ds(), Peek(), split=Split.VALIDATION).run()
+    Engine.for_test(ds(), Peek(), split=Split.VALIDATION).run()
     assert "equity" in seen, "the probe never held a position"
     assert seen["equity"] == pytest.approx(seen["realized"] + seen["unrealized"])
     forbidden = {"score", "scorer", "metric", "metrics", "sortino", "sharpe",
@@ -695,7 +695,7 @@ def test_the_irregular_generator_has_its_own_behaviour_reference(case):
     A digest moving here means behaviour moved. Name which cases and why before
     regenerating.
     """
-    engine = Engine(
+    engine = Engine.for_test(
         SyntheticDataset(SyntheticSpec(**case["spec"])), MomentumStrategy(),
         split=Split.VALIDATION, warmup_sessions=1,
         fill_model=case["fill_model"], seed=case["spec"]["seed"],

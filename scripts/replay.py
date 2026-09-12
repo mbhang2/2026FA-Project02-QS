@@ -7,11 +7,21 @@
 `--check` asserts the replayed blotter digest matches the one recorded, which is
 what makes "every trial is reproducible" a claim rather than an aspiration. A
 digest identifies a trial; the stored source is what reproduces it.
+
+**Reproducing is not verifying, and the second adversarial pass made the
+difference concrete.** A strategy that rewrote the engine's average price mid-run
+replayed perfectly: replay re-ran the same mutation and got the same wrong
+number, and the matching digest was evidence of determinism and nothing else. So
+where the row carries a fill log, this also recomputes the P&L from that log with
+`reconstruct` -- a pure function of the fills -- and checks the replayed run
+produced the same fills. The fills are facts; the P&L is a derivation over them,
+and a derivation you can redo independently is one you do not have to trust.
 """
 
 from __future__ import annotations
 
 import argparse
+import gzip
 import importlib.util
 import json
 import sys
@@ -22,7 +32,34 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
-from src.core.types import Split  # noqa: E402
+from src.core.engine.reconstruct import log_digest, reconstruct  # noqa: E402
+from src.core.types import FillRecord, Side, Split  # noqa: E402
+
+
+def load_fill_log(row: dict) -> list[FillRecord] | None:
+    """The fills the recorded run logged, if the row carried them.
+
+    `None` rather than an empty list when there is no file: "no fills stored" and
+    "the run made no trades" are different claims and only one of them can be
+    checked.
+    """
+    source = row.get("fill_log_source")
+    if not source:
+        return None
+    path = Path(source)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    if not path.exists():
+        return None
+    fills = []
+    with gzip.open(path, "rt") as fh:
+        for line in fh:
+            seq, ts, session, oid, side, size, price, liquidity, tag = json.loads(line)
+            fills.append(FillRecord(
+                seq=seq, ts=ts, session=session, order_id=oid, side=Side(side),
+                size=size, price=price, liquidity=liquidity, tag=tag,
+            ))
+    return fills
 
 
 def load_strategy_from(path: Path):
@@ -172,7 +209,25 @@ def main() -> int:
     print(f"dataset    {row['dataset']}  ({row['dataset_digest']})")
     print(f"recorded   {want}")
     print(f"replayed   {got}")
-    if got != want:
+    failed = got != want
+
+    # the verification half: recompute, do not re-observe
+    stored = load_fill_log(row)
+    if stored is None:
+        print("fills      not stored with this row; P&L is reproduced, not verified")
+    else:
+        replayed_digest = engine.fill_log_digest()
+        recorded_digest = row.get("fill_log_digest", "")
+        same_fills = log_digest(stored) == recorded_digest == replayed_digest
+        rebuilt = reconstruct(stored, commission_per_contract=engine.commission)
+        net = rebuilt.realized_pnl - rebuilt.commission
+        print(f"fills      {len(stored):,}  digest {recorded_digest[:16]}  "
+              f"{'same as replayed' if same_fills else 'DIFFERENT from replayed'}")
+        print(f"P&L        {net:+.6f} recomputed from the log alone")
+        if not same_fills:
+            failed = True
+
+    if failed:
         print("MISMATCH", file=sys.stderr)
         return 1
     print("identical")

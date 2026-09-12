@@ -60,8 +60,12 @@ def report_score(engine, record, ds) -> str:
     from src.core.scoring.scorer import score, score_diagnostics
 
     period = engine.session_calendar()
-    result = score(engine.blotter, period=period, notional_base=1.0)
-    diag = score_diagnostics(engine.blotter, period, notional_base=1.0)
+    # From the fill log, like the harness. Scoring the accumulator here and the
+    # reconstruction there would make this script agree with a number nothing
+    # else computes.
+    blotter = engine.reconstructed()
+    result = score(blotter, period=period, notional_base=1.0)
+    diag = score_diagnostics(blotter, period, notional_base=1.0)
     engine.record.score = result.as_dict()
     engine.record.diagnostics = diag.as_dict()
 
@@ -161,6 +165,8 @@ def main() -> int:
     print(f"ticks     {ticks:,}  ({ticks / len(sessions):,.0f} per session)")
     print(f"bars      {record.bars_delivered:,}   fills {record.fills:,}")
     print(f"blotter   {len(engine.blotter.rows):,} rows   digest {record.blotter_digest[:16]}")
+    print(f"fill log  {record.fills_logged:,} records   digest "
+          f"{record.fill_log_digest[:16]}   agrees {record.reconciliation['agree']}")
     print(f"contracts {sorted({ds.contract_for(d).raw_symbol for d in sessions})}")
     print(f"wall      {elapsed:.1f}s   {ticks / max(elapsed, 1e-9):,.0f} ticks/s")
 
@@ -187,6 +193,7 @@ def main() -> int:
                       purpose=runner.resolve_purpose("human", "smoke"),
                       strategy_path=REFERENCE_PATH)
     row["note"] = note
+    runner.attach_fill_log(row, engine, args.ledger)
     runner.append_ledger(args.ledger, row)
     print(f"ledger    {args.ledger}")
     if args.cold:

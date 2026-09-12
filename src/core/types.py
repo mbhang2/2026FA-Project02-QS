@@ -345,6 +345,46 @@ class Order:
 
 
 @dataclass(frozen=True, slots=True)
+class FillRecord:
+    """One fill, as it happened. The only thing the score is computed from.
+
+    Facts, not derivations: what traded, when, at what price, on whose order. No
+    position, no average price, no P&L -- those are *reconstructed* from the log
+    by a pure function, because the moment the score reads accumulated state, the
+    score is only as trustworthy as that state.
+
+    Adversarial review made the point concretely. `_RunState.avg_price` is one
+    `__closure__` hop from strategy code, and three lines rewriting it took a
+    Sortino of -0.25 to +4.21 with a genuine 1,255-row blotter, a stable dataset
+    digest, a reproducing replay and an untouched scoring fingerprint. Nothing in
+    the system disagreed with the number. The blotter carried `realized_pnl` per
+    row, and that field had been computed from the mutated accumulator.
+
+    Hiding the accumulator better was not the fix -- the graph walk found
+    `__self__` in one pass and `__closure__` in the next, and each patched path
+    grew another. Changing what the score is computed from is.
+    """
+
+    seq: int
+    ts: Ts
+    session: int
+    order_id: int
+    side: Side
+    size: int
+    price: float
+    liquidity: str          # "taker" -- crossed the book; "maker" -- rested
+    tag: str = ""
+
+    def as_row(self) -> tuple:
+        """Stable tuple for the log digest. Rounded like `BlotterRow.as_row`, so
+        a byte comparison means the same thing in both places."""
+        return (
+            self.seq, self.ts, self.session, self.order_id, str(self.side),
+            self.size, round(self.price, 10), self.liquidity, self.tag,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class OrderView:
     """What a strategy sees of an order. A copy, never the engine's object.
 

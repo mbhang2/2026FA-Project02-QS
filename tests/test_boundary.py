@@ -26,10 +26,12 @@ from __future__ import annotations
 import ast
 import datetime as dt
 import enum
+import gc
 import inspect
 import sys
 from dataclasses import fields, is_dataclass
 from pathlib import Path
+from types import CodeType, ModuleType
 
 import pytest
 
@@ -682,8 +684,21 @@ def test_a_dataset_with_no_pre_registered_calendar_stands_the_check_down():
 # This walks everything: private names, the `__self__` of bound methods, and
 # `__closure__` cells. Hiding an attribute is not a defence and neither is a test
 # that agrees not to look.
+#
+# Task 21 widened it again. The second adversarial pass reached mutable run state
+# through `ctx._port.session_bounds.__closure__[0]` -- a path the Task 20 version
+# of this walk did find, and reported as a dataset hit rather than as the
+# arbitrary-P&L hole it was. So the walk now also follows `__func__`,
+# `__defaults__`, `__kwdefaults__`, the attributes of an object's *class*, and
+# `gc.get_referents`, which is the only one of those that cannot be evaded by
+# choosing a different container.
 FORBIDDEN_TYPES = ("Engine", "SyntheticDataset", "NQDataset", "Blotter",
                    "HoldoutLock")
+
+# The fill log is the score's source of truth, so reaching it is reaching the
+# score. `FillRecord` is frozen, but the *list* is not: append one row and the
+# reconstruction books a trade that never happened.
+FILL_LOG_TYPES = ("FillRecord",)
 
 # `_SealedDataset` is reachable from `SetupContext`, and deliberately.
 #
@@ -704,33 +719,90 @@ FORBIDDEN_TYPES = ("Engine", "SyntheticDataset", "NQDataset", "Blotter",
 # Anything else reaching a dataset is a finding.
 SETUP_CAPABILITY_PATHS = ("ctx._train_ticks", "ctx._session_bounds")
 
+# Widening the walk in Task 21 surfaced one hit that was invisible to the
+# narrower version, and it is a *known live finding*, not a new one:
+#
+#   ctx -> <the _train_ticks closure> -> cell -> _SealedDataset -> SyntheticDataset
+#
+# `_SealedDataset` forwards by `__getattr__`, so `dir()` never listed the inner
+# dataset and the Task 20 walk stopped at the seal. `gc.get_referents` does not
+# ask the object how it would like to be presented, and goes straight through.
+# This is the second adversarial pass's finding 2, which Task 21 is explicitly
+# scoped out of fixing -- the fix is either a forwarding seal that rebinds rather
+# than delegates, or a separate process.
+#
+# It is listed rather than exempted. An exemption disappears into a prefix tuple;
+# a list with a test asserting its exact contents fails both ways -- if a second
+# escape appears, and if this one is fixed and the entry is left behind.
+KNOWN_LIVE_ESCAPES = {
+    "SetupContext": [
+        "ctx.<referent function>.<referent tuple>.<referent cell>"
+        ".<referent _SealedDataset>.<referent SyntheticDataset> -> SyntheticDataset"
+    ],
+}
 
-def reachable_from(root, budget: int = 80_000) -> list[str]:
+
+DUNDERS_WORTH_FOLLOWING = (
+    "__self__", "__func__", "__wrapped__", "__defaults__", "__kwdefaults__",
+)
+
+# `gc.get_referents` on a function returns its `__globals__`, which is a module
+# dict, which reaches every class in the repo. That is not a finding: a strategy
+# can `import src.core.engine` by name and get the same classes. What matters is
+# whether it can reach the *live instances* of this run, and those are not in
+# module globals. So the walk skips modules and module dicts, and reaches class
+# objects the honest way instead -- through `vars(type(obj))`, below.
+def module_dicts() -> set[int]:
+    """Recomputed per walk rather than snapshotted at import.
+
+    A snapshot taken when this file is imported misses everything imported
+    afterwards, and a walk that then wanders into pandas' module dict allocates
+    until the kernel kills the process -- which is exactly what happened the
+    first time the whole suite ran together, and not when this file ran alone.
+    """
+    return {id(m.__dict__) for m in list(sys.modules.values())
+            if isinstance(m, ModuleType) and hasattr(m, "__dict__")}
+
+
+def reachable_from(root, forbidden=FORBIDDEN_TYPES, budget: int = 400_000) -> list[str]:
     """Every path from `root` to an object of a forbidden type."""
+    _MODULE_DICTS = module_dicts()
     seen: set[int] = set()
     stack = [("ctx", root)]
     hits: list[str] = []
     while stack and len(seen) < budget:
         path, obj = stack.pop()
-        if id(obj) in seen:
+        if id(obj) in seen or id(obj) in _MODULE_DICTS:
             continue
         seen.add(id(obj))
-        if type(obj).__name__ in FORBIDDEN_TYPES:
+        if type(obj).__name__ in forbidden:
             hits.append(f"{path} -> {type(obj).__name__}")
             continue
         if isinstance(obj, (str, bytes, int, float, bool, type(None))):
             continue
+        if isinstance(obj, (ModuleType, CodeType)):
+            continue
         for name in dir(obj):
-            if name.startswith("__") and name not in ("__self__", "__wrapped__"):
+            if name.startswith("__") and name not in DUNDERS_WORTH_FOLLOWING:
                 continue
             try:
                 stack.append((f"{path}.{name}", getattr(obj, name)))
             except Exception:
                 continue
-        for cell in getattr(obj, "__closure__", None) or ():
+        # class attributes: a mutable default or a registry hung off the class
+        # is reachable from every instance of it and belongs to none of them
+        for cls in type(obj).__mro__ if isinstance(type(obj), type) else ():
+            if cls is object:
+                continue
+            for name, value in list(vars(cls).items()):
+                if name.startswith("__") and name not in DUNDERS_WORTH_FOLLOWING:
+                    continue
+                stack.append((f"{path}.<class {cls.__name__}>.{name}", value))
+        closure = getattr(obj, "__closure__", None)
+        for cell in closure if isinstance(closure, tuple) else ():
             try:
                 stack.append((f"{path}.<closure>", cell.cell_contents))
-            except ValueError:
+            except (ValueError, AttributeError):
                 pass
         if isinstance(obj, (list, tuple, set, frozenset)):
             for i, item in enumerate(list(obj)[:64]):
@@ -738,6 +810,10 @@ def reachable_from(root, budget: int = 80_000) -> list[str]:
         if isinstance(obj, dict):
             for key, value in list(obj.items())[:64]:
                 stack.append((f"{path}[{key!r}]", value))
+        # the backstop: whatever the interpreter says this object points at,
+        # regardless of how the object chose to present itself
+        for ref in gc.get_referents(obj):
+            stack.append((f"{path}.<referent {type(ref).__name__}>", ref))
     return hits
 
 
@@ -746,6 +822,7 @@ class _Reacher:
 
     def __init__(self):
         self.hits: dict[str, list[str]] = {}
+        self.fill_log_hits: dict[str, list[str]] = {}
         self.attributes: dict[str, bool] = {}
 
     def _walk(self, ctx):
@@ -755,6 +832,7 @@ class _Reacher:
         self.attributes[f"{cls}._engine"] = hasattr(ctx, "_engine")
         self.attributes[f"{cls}._dataset"] = hasattr(ctx, "_dataset")
         self.hits[cls] = reachable_from(ctx)
+        self.fill_log_hits[cls] = reachable_from(ctx, FILL_LOG_TYPES)
 
     def setup(self, ctx):
         ctx.subscribe(INTERVAL)
@@ -772,6 +850,24 @@ class _Reacher:
         self._walk(ctx)
 
 
+class _Trader:
+    """Trades, and does not walk. The walking probe is expensive and these tests
+    only need fills."""
+
+    def setup(self, ctx):
+        ctx.subscribe(INTERVAL)
+
+    def on_bars(self, ctx):
+        if ctx.actionable and not ctx.position and not ctx.working_order_ids:
+            ctx.buy(1, stop_offset=1.0, target_offset=1.0, tag="probe")
+
+    def on_fill(self, ctx):
+        pass
+
+    def on_lifecycle(self, ctx):
+        pass
+
+
 REACHER = _Reacher()
 Engine(ds(), REACHER, split=Split.VALIDATION, warmup_sessions=1).run()
 
@@ -782,29 +878,85 @@ def test_the_reachability_walk_actually_ran():
     }, sorted(REACHER.hits)
 
 
-def test_no_context_reaches_the_engine_or_the_dataset_by_any_path():
+def unexpected_escapes() -> dict[str, list[str]]:
+    """Hits that are neither the setup capability nor a named live finding."""
     found = {}
     for cls, paths in REACHER.hits.items():
-        unexpected = [
+        known = KNOWN_LIVE_ESCAPES.get(cls, [])
+        rest = [
             path for path in paths
-            if not (cls == "SetupContext"
-                    and path.startswith(SETUP_CAPABILITY_PATHS))
+            if path not in known
+            and not (cls == "SetupContext"
+                     and path.startswith(SETUP_CAPABILITY_PATHS))
         ]
-        if unexpected:
-            found[cls] = unexpected
+        if rest:
+            found[cls] = rest
+    return found
+
+
+def test_no_context_reaches_the_engine_or_the_dataset_by_any_path():
+    found = unexpected_escapes()
     assert not found, (
         "strategy code can reach engine or dataset objects:\n  "
         + "\n  ".join(f"{cls}: {paths}" for cls, paths in found.items())
     )
 
 
+def test_the_named_live_escape_is_still_exactly_one_path():
+    """The other half of the list. If finding 2 is fixed this fails and asks for
+    the entry to be deleted -- a stale exemption is how a closed hole gets
+    reported as open forever, and how an open one gets reported as closed."""
+    for cls, paths in KNOWN_LIVE_ESCAPES.items():
+        still_there = [p for p in paths if p in REACHER.hits.get(cls, [])]
+        assert still_there == paths, (
+            f"{cls}: a known live escape no longer reproduces. If it was fixed, "
+            f"delete it from KNOWN_LIVE_ESCAPES:\n  " + "\n  ".join(paths)
+        )
+    assert sum(len(v) for v in KNOWN_LIVE_ESCAPES.values()) == 1
+
+
 def test_the_only_reachable_dataset_is_the_one_setup_must_stream_from():
     """And it is reachable through those two accessors and nothing else. If a
     third path appears, something was added that did not need the dataset."""
-    setup_paths = REACHER.hits.get("SetupContext", [])
+    setup_paths = [p for p in REACHER.hits.get("SetupContext", [])
+                   if p not in KNOWN_LIVE_ESCAPES["SetupContext"]]
     assert all(p.startswith(SETUP_CAPABILITY_PATHS) for p in setup_paths), setup_paths
     for cls in ("BarContext", "FillContext", "LifecycleContext"):
         assert not REACHER.hits.get(cls), (cls, REACHER.hits.get(cls))
+
+
+def test_no_context_can_reach_the_fill_log(cls_and_paths=None):
+    """The Task 21 acceptance criterion.
+
+    The score is now computed from the fill log, so the log is the thing worth
+    protecting and this is the assertion that says so. It uses the widened walk
+    -- `gc.get_referents` included -- because the log is a plain `list`, and a
+    plain list is exactly the sort of object that leaks through a container that
+    presents itself politely.
+
+    A hit here is not a subtle problem. One appended `FillRecord` is a trade the
+    reconstruction will book, at a price of the strategy's choosing.
+    """
+    found = {cls: paths for cls, paths in REACHER.fill_log_hits.items() if paths}
+    assert not found, (
+        "strategy code can reach the fill log:\n  "
+        + "\n  ".join(f"{cls}: {paths}" for cls, paths in found.items())
+    )
+
+
+def test_the_fill_log_walk_would_have_found_a_log_if_there_were_one():
+    """A guard on the guard above, which passes vacuously if `FILL_LOG_TYPES` is
+    misspelled or the walk stops early. Plant a log on the context and require
+    the same walk to find it."""
+    engine = Engine(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
+    engine.run()
+    assert engine.fill_log, "the run produced no fills, so this proves nothing"
+
+    class _Leaky:
+        def __init__(self, log):
+            self._log = log
+
+    assert reachable_from(_Leaky(list(engine.fill_log)), FILL_LOG_TYPES)
 
 
 def test_the_two_attributes_the_review_used_are_gone():
@@ -832,3 +984,180 @@ def test_the_engine_holds_a_dataset_with_no_holdout_door():
         with pytest.raises(AttributeError, match="deliberate act|not available"):
             getattr(engine.dataset, name)
     assert engine.dataset.name.startswith("synthetic")
+
+
+# --------------------------------------------------------------------------- #
+# adversarial review, second pass, finding 1: the score was a running total
+# --------------------------------------------------------------------------- #
+# The reproduction, kept verbatim. A strategy reached `_RunState` through the
+# closure cell of a bound port callable and wrote `avg_price` before flattening:
+#
+#     st = ctx._port.session_bounds.__closure__[0].cell_contents
+#     st.avg_price = ctx.last_price - 5.0        # "I bought five lower"
+#
+# It took Sortino from -0.2547 to +4.2089 and significance from -1.611 to
+# +26.619, with a genuine 1,255-row blotter, a stable digest, a replay that
+# reproduced it exactly and an untouched scoring fingerprint. Nothing downstream
+# could tell.
+#
+# **The assertion is that the score does not move, not that the write fails.**
+# The write still succeeds and `avg_price` is still wrong afterwards; that is
+# fine, because the accumulator is no longer what anything is scored on. Trying
+# to block the write is the losing game -- there is always another attribute --
+# and the whole point of the fill log is that it does not matter which one.
+class _AvgPriceCheat:
+    def __init__(self, cheat: bool):
+        self.cheat = cheat
+        self.wrote = False
+
+    def setup(self, ctx):
+        ctx.subscribe("5m")
+
+    def on_bars(self, ctx):
+        if not ctx.actionable:
+            return
+        if not ctx.position and not ctx.working_order_ids:
+            ctx.buy(1, tag="e")
+            return
+        if ctx.position > 0:
+            if self.cheat:
+                st = ctx._port.session_bounds.__closure__[0].cell_contents
+                st.avg_price = ctx.last_price - 5.0
+                self.wrote = True
+            ctx.close()
+
+    def on_fill(self, ctx):
+        pass
+
+    def on_lifecycle(self, ctx):
+        pass
+
+
+def _cheat_run(cheat: bool):
+    from src.core.scoring.scorer import score
+
+    strategy = _AvgPriceCheat(cheat)
+    engine = Engine(
+        SyntheticDataset(SyntheticSpec(n_sessions=200, ticks_per_session=390,
+                                       vol_per_tick=0.15, seed=3)),
+        strategy, split=Split.VALIDATION, warmup_sessions=1,
+    )
+    engine.run()
+    blotter = engine.reconstructed()
+    return strategy, engine, blotter, score(blotter, period=engine.session_calendar())
+
+
+CLEAN = _cheat_run(False)
+CHEAT = _cheat_run(True)
+
+
+def test_the_reproduction_still_writes_what_it_wrote():
+    """Otherwise the test below passes because the attack stopped running, which
+    is the most common way a regression test for an exploit goes quietly dead."""
+    assert CHEAT[0].wrote and not CLEAN[0].wrote
+    assert len(CLEAN[2].rows) == 1255, "the reproduction no longer trades"
+
+
+def test_rewriting_the_accumulator_does_not_move_the_score():
+    """Finding 1, closed. Same fills, same score, whatever was done to the
+    running total in between."""
+    clean_score, cheat_score = CLEAN[3], CHEAT[3]
+    assert cheat_score.primary == clean_score.primary
+    assert cheat_score.significance == clean_score.significance
+    assert CHEAT[2].digest() == CLEAN[2].digest()
+    assert CHEAT[1].fill_log_digest() == CLEAN[1].fill_log_digest()
+
+
+def test_the_accumulator_really_was_corrupted():
+    """The other half. If the mutation had silently stopped working, the test
+    above would be asserting that nothing equals nothing."""
+    clean_net = CLEAN[1].blotter.realized_pnl - CLEAN[1].blotter.commission
+    cheat_net = CHEAT[1].blotter.realized_pnl - CHEAT[1].blotter.commission
+    assert cheat_net > clean_net + 1000, (clean_net, cheat_net)
+
+
+def test_the_disagreement_check_notices_even_though_it_did_not_have_to():
+    """The bonus, working. It is not the protection -- anything that can reach
+    the accumulator can reach both sides of it -- but a run where the two
+    derivations disagree is a run nobody should read a number off, and the
+    harness invalidates it rather than quietly preferring the right one."""
+    assert CLEAN[1].reconciliation()["agree"]
+    assert not CHEAT[1].reconciliation()["agree"]
+
+
+def test_the_fill_log_is_append_only_in_one_place():
+    """The property that makes the reconstruction worth anything. If a second
+    writer appears, the log stops being a record of what the matching engine did
+    and becomes another accumulator."""
+    source = (Path(__file__).resolve().parents[1]
+              / "src" / "core" / "engine" / "engine.py").read_text()
+    assert source.count("self._fill_log.append(") == 1, (
+        "the fill log is appended to in more than one place"
+    )
+    for forbidden in ("_fill_log.pop", "_fill_log.clear", "_fill_log[", "_fill_log ="):
+        assert source.count(forbidden) <= (1 if forbidden == "_fill_log =" else 0), (
+            f"the fill log is modified by {forbidden!r}"
+        )
+
+
+def test_the_fill_log_bound_raises_rather_than_truncating(monkeypatch):
+    """A truncated log is a wrong score with no error, which is the whole class
+    of defect the log exists to remove. So the bound is loud."""
+    from src.core.engine import engine as engmod
+    from src.core.engine.reconstruct import FillLogFull
+
+    monkeypatch.setattr(engmod, "MAX_FILL_LOG", 5)
+
+    class Churn:
+        def setup(self, ctx):
+            ctx.subscribe("1m")
+
+        def on_bars(self, ctx):
+            if ctx.actionable and not ctx.working_order_ids:
+                ctx.buy(1) if not ctx.position else ctx.close()
+
+        def on_fill(self, ctx):
+            pass
+
+        def on_lifecycle(self, ctx):
+            pass
+
+    with pytest.raises(FillLogFull, match="not truncated"):
+        Engine(ds(), Churn(), split=Split.VALIDATION, warmup_sessions=1).run()
+
+
+def test_reconstruction_is_a_pure_function_of_the_fills():
+    """No engine, no dataset, no accumulator -- the argument that the score's
+    input cannot have been reached is that the computation takes nothing that
+    could have been."""
+    import inspect
+
+    from src.core.engine import reconstruct as rec
+
+    params = list(inspect.signature(rec.reconstruct).parameters)
+    assert params == ["fills", "commission_per_contract"], params
+
+    engine = Engine(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
+    engine.run()
+    fills = list(engine.fill_log)
+    assert fills
+    # same input, same output, and shuffling the list changes nothing because
+    # the function orders by seq rather than trusting append order
+    import random
+
+    shuffled = fills[:]
+    random.Random(0).shuffle(shuffled)
+    assert (rec.reconstruct(fills, commission_per_contract=engine.commission).digest()
+            == rec.reconstruct(shuffled, commission_per_contract=engine.commission).digest()
+            == engine.reconstructed().digest())
+
+
+def test_the_fill_log_is_a_snapshot_not_the_list_itself():
+    """`engine.fill_log` hands out a tuple. Handing out the list would put the
+    thing the score is computed from back within reach of anything holding the
+    engine -- which is not a strategy today, and is one refactor away."""
+    engine = Engine(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
+    engine.run()
+    log = engine.fill_log
+    assert isinstance(log, tuple)
+    assert not hasattr(log, "append")

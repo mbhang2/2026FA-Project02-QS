@@ -44,6 +44,7 @@ from .context import (
 )
 from ..data.dataset import Dataset
 from .fills import FillModel, check_capabilities, get_fill_model
+from .reconstruct import FillLogFull, log_digest, reconstruct
 from ..types import (
     Action,
     Bar,
@@ -54,6 +55,7 @@ from ..types import (
     Cancel,
     Fill,
     FillEvent,
+    FillRecord,
     LifecycleEvent,
     LifecycleKind,
     Modify,
@@ -75,6 +77,12 @@ from ..types import (
 from .view import BarHistory, HistoryView
 
 DEFAULT_ACTION_CAP = 64
+
+# The fill log is bounded, and the bound raises. 564 sessions of the reference
+# strategy is about 34,000 fills; a strategy pinned to the action cap for all of
+# them could queue far more, and the answer to that has to be an exception rather
+# than a shorter log -- a truncated log is a wrong score with no error.
+MAX_FILL_LOG = 5_000_000
 
 # How often the walk looks at the clock. Every tick would be a syscall per tick.
 # Counted in ticks *and* in callbacks, because a slow strategy is slow in
@@ -263,6 +271,9 @@ class RunRecord:
     end_of_session_positions: dict[str, int]
     holdout_unlock_reason: str | None
     blotter_digest: str
+    fill_log_digest: str = ""
+    fills_logged: int = 0
+    reconciliation: dict | None = None
     score: dict | None = None
     diagnostics: dict | None = None
 
@@ -413,6 +424,11 @@ class Engine:
         self._session_seq0 = 0
 
         self.blotter = Blotter()
+        # The score's source of truth. On the engine and nowhere else: not on
+        # `_RunState`, not on `_OrderBook`, not closed over by anything in
+        # `EnginePort`. The engine is not reachable from a context, so neither is
+        # this, and the reachability walk asserts it.
+        self._fill_log: list[FillRecord] = []
         self._state = _RunState()
         self._book = _OrderBook()
         self._resolver = _SubResolver()
@@ -967,6 +983,31 @@ class Engine:
             self._working.pop(order.order_id, None)
 
         self.n_fills += 1
+        if len(self._fill_log) >= MAX_FILL_LOG:
+            raise FillLogFull(
+                f"more than {MAX_FILL_LOG:,} fills in one run. The log is what the "
+                "score is computed from, so it is not truncated: fix the strategy "
+                "or raise the bound deliberately."
+            )
+        self._fill_log.append(
+            FillRecord(
+                seq=tick.seq,
+                ts=tick.ts,
+                session=tick.session,
+                order_id=order.order_id,
+                side=order.side,
+                size=fill.size,
+                price=fill.price,
+                # What the order did to the book, from its type: a market or a
+                # triggered stop crossed; a resting limit was crossed into.
+                liquidity=(
+                    "maker"
+                    if order.order_type in (OrderType.LIMIT, OrderType.STOP_LIMIT)
+                    else "taker"
+                ),
+                tag=self._order_tags.get(order.order_id, ""),
+            )
+        )
         self.blotter.add(
             BlotterRow(
                 seq=tick.seq,
@@ -1291,6 +1332,45 @@ class Engine:
             for ev in batch:
                 self._dispatch("lifecycle", ev, tick, actionable)
 
+    # ---- the log, and what is derived from it ------------------------------ #
+    @property
+    def fill_log(self) -> tuple[FillRecord, ...]:
+        """Every fill, frozen, in the order they happened."""
+        return tuple(self._fill_log)
+
+    def reconstructed(self) -> Blotter:
+        """The blotter the fills imply, computed from the log and nothing else.
+
+        This is what the scorer reads. `self.blotter` is the accumulator's
+        version and is now a diagnostic: identical in every honest run, and the
+        two disagreeing is a finding.
+        """
+        return reconstruct(
+            self._fill_log, commission_per_contract=self.commission
+        )
+
+    def fill_log_digest(self) -> str:
+        return log_digest(self._fill_log)
+
+    def reconciliation(self) -> dict:
+        """Accumulated against reconstructed.
+
+        A bonus, not the protection. Anything that can reach the accumulator can
+        reach both sides of this comparison, so it does not defend against a
+        determined caller -- the defence is that the score is computed from a log
+        nothing can reach. This catches the other thing: the two derivations
+        drifting apart because one of them was changed and the other was not.
+        """
+        rebuilt = self.reconstructed()
+        return {
+            "accumulated_net_pnl": self.blotter.realized_pnl - self.blotter.commission,
+            "reconstructed_net_pnl": rebuilt.realized_pnl - rebuilt.commission,
+            "accumulated_digest": self.blotter.digest(),
+            "reconstructed_digest": rebuilt.digest(),
+            "fills": len(self._fill_log),
+            "agree": rebuilt.digest() == self.blotter.digest(),
+        }
+
     def scored_sessions(self) -> list[int]:
         """The actionable sessions of the served split, in the dataset's own
         session-id space -- the observation unit the metric scores on.
@@ -1349,4 +1429,7 @@ class Engine:
             end_of_session_positions=dict(self.end_of_session_positions),
             holdout_unlock_reason=self.dataset.holdout_unlock_reason,
             blotter_digest=self.blotter.digest(),
+            fill_log_digest=self.fill_log_digest(),
+            fills_logged=len(self._fill_log),
+            reconciliation=self.reconciliation(),
         )

@@ -35,6 +35,7 @@ does not count, decided by the party with the incentive.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import sys
 import time
@@ -65,6 +66,16 @@ CONFIG_PATH = REPO_ROOT / "config" / "run.yaml"
 # passed against that version, which is the argument for running the
 # reproduction rather than reasoning about the fix.
 SCORING_AT_IMPORT = integrity.fingerprint()
+
+
+class ScoringMismatch(RuntimeError):
+    """The fill log and the running accumulator do not agree.
+
+    A bonus check rather than the protection -- anything that can reach the
+    accumulator can reach both sides of it. It is here to catch the other
+    failure: the two derivations drifting apart because one was changed and the
+    other was not.
+    """
 
 
 class _Abandoned(Exception):
@@ -201,6 +212,51 @@ def store_source(ledger_path: Path, digest: str,
     except ValueError:
         # a ledger outside the repo, as in tests; keep the absolute path
         return str(out)
+
+
+# The log is carried in the trial artifact so replay can *verify* the P&L rather
+# than trust it, and this is the point where "where size permits" gets a number.
+# A 564-session NQ trial logs a few thousand fills; a strategy sitting on the
+# action cap for the whole split logs millions, and writing those to disk on
+# every trial turns the ledger directory into the largest thing in the repo. Over
+# the bound the row records the digest and no file: the digest still says whether
+# a replay produced the same fills, which is the part that matters.
+MAX_STORED_FILLS = 250_000
+
+
+def store_fill_log(ledger_path: Path, digest: str, fills) -> str:
+    """Keep the run's fills beside the ledger, addressed by their digest.
+
+    Content-addressed for the same reason the sources are: a hundred replays of
+    one trial cost one copy. Gzipped JSONL rather than JSON, because the file is
+    append-shaped, streams, and stays readable with `zcat`.
+    """
+    if not fills or len(fills) > MAX_STORED_FILLS:
+        return ""
+    out = ledger_path.parent / "fills" / f"{digest}.jsonl.gz"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    if not out.exists():
+        with gzip.open(out, "wt") as fh:
+            for fill in fills:
+                fh.write(json.dumps(fill.as_row()) + "\n")
+    try:
+        return str(out.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(out)
+
+
+def attach_fill_log(record: dict, engine, ledger_path: Path) -> dict:
+    """Put the run's fills where a replay can find them.
+
+    Called on every path that produced an engine, crashes and invalidated trials
+    included: a run that went wrong is the one whose fills you most want to look
+    at, and the digest without the file only tells you that two runs differed.
+    """
+    if record.get("fill_log_digest"):
+        record["fill_log_source"] = store_fill_log(
+            ledger_path, record["fill_log_digest"], engine.fill_log
+        )
+    return record
 
 
 def strategy_digest(strategy_path: Path | None = None) -> str:
@@ -351,14 +407,28 @@ def main(argv: list[str] | None = None) -> int:
         engine.run()
         if engine.record.outcome == "abandoned_on_budget":
             record = engine.record.as_dict()
+            attach_fill_log(record, engine, ledger_path)
             raise _Abandoned
         period = engine.session_calendar()
-        result = score(engine.blotter, period=period,
+        # The reconstruction, not the accumulator. `engine.blotter` is the
+        # accumulator's version and is kept as a diagnostic; the number the loop
+        # acts on comes from the fill log, which nothing reachable from a
+        # strategy can touch.
+        scored_blotter = engine.reconstructed()
+        reconciliation = engine.reconciliation()
+        if not reconciliation["agree"]:
+            raise ScoringMismatch(
+                "the fill log and the accumulator disagree: "
+                f"{reconciliation['accumulated_digest'][:12]} vs "
+                f"{reconciliation['reconstructed_digest'][:12]}. One of the two "
+                "derivations is wrong and the trial cannot say which."
+            )
+        integrity.check(SCORING_AT_IMPORT, integrity.fingerprint())
+        result = score(scored_blotter, period=period,
                        notional_base=profile.get("notional_base", 1.0))
         engine.record.score = result.as_dict()
-        integrity.check(SCORING_AT_IMPORT, integrity.fingerprint())
         engine.record.diagnostics = score_diagnostics(
-            engine.blotter,
+            scored_blotter,
             period,
             notional_base=profile.get("notional_base", 1.0),
             fill_model_spread=(
@@ -368,13 +438,19 @@ def main(argv: list[str] | None = None) -> int:
             ),
         ).as_dict()
         record = engine.record.as_dict()
+        attach_fill_log(record, engine, ledger_path)
     except _Abandoned:
         pass
-    except integrity.ScoringMutated as exc:
+    except (integrity.ScoringMutated, ScoringMismatch) as exc:
         rec = getattr(engine, "record", None)
         record = rec.as_dict() if rec else {}
-        record.update(outcome="invalidated_scoring_mutated", error=str(exc),
-                      score=None, diagnostics=None)
+        record.update(
+            outcome=("invalidated_fill_log_mismatch"
+                     if isinstance(exc, ScoringMismatch)
+                     else "invalidated_scoring_mutated"),
+            error=str(exc), score=None, diagnostics=None,
+        )
+        attach_fill_log(record, engine, ledger_path)
         append_ledger(ledger_path, _row(record, trigger, profile_name,
                                         ledger_path, purpose))
         print(f"INVALIDATED: {exc}", file=sys.stderr)
@@ -390,6 +466,8 @@ def main(argv: list[str] | None = None) -> int:
         record = rec.as_dict() if rec else _failure_record(
             cfg, profile_name, split, seed, args, dataset, "crashed", repr(exc), started
         )
+        if rec:
+            attach_fill_log(record, engine, ledger_path)
         append_ledger(ledger_path, _row(record, trigger, profile_name, ledger_path, purpose))
         raise
     finally:

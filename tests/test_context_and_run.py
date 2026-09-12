@@ -69,6 +69,11 @@ def test_blotter_is_byte_identical_to_the_pre_refactor_implementation(case):
     assert len(eng.blotter.rows) == case["rows"]
     assert eng.n_fills == case["fills"] and eng.n_bars == case["bars"]
     assert eng.blotter.final_position == case["final_position"]
+    # Task 21 moved the score's input from the accumulator to the fill log. The
+    # golden digests are the assertion that it moved *where the number comes
+    # from* and not the number: the reconstruction has to land on the same
+    # digest, not merely a close one.
+    assert eng.reconstructed().digest() == case["blotter_digest"]
 
 
 # --------------------------------------------------------------------------- #
@@ -697,6 +702,7 @@ def test_the_irregular_generator_has_its_own_behaviour_reference(case):
     )
     record = engine.run()
     assert engine.blotter.digest() == case["blotter_digest"]
+    assert engine.reconstructed().digest() == case["blotter_digest"]
     assert len(engine.blotter.rows) == case["rows"]
     assert engine.n_fills == case["fills"] and engine.n_bars == case["bars"]
     assert engine.blotter.final_position == case["final_position"]

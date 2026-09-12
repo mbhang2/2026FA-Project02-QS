@@ -96,6 +96,9 @@ data/manifest.json┘
         src/core/engine/*     resolve resting orders -> fills -> tick event
                               -> bar closes -> lifecycle; queued intents
                               applied after each callback
+                        │  fill log (append-only, one record per fill)
+                        v
+        engine/reconstruct.py reconstruct(fills) -> blotter, as a pure function
                         │  blotter (one row per fill)
                         v
         src/core/scoring/*    per-session returns -> Sortino -> ScoreTuple
@@ -103,6 +106,7 @@ data/manifest.json┘
                         v
         run.py: RunRecord + score + diagnostics -> runs/ledger.jsonl (append)
                                                 -> runs/sources/<digest>.py
+                                                -> runs/fills/<digest>.jsonl.gz
 ```
 
 In order:
@@ -117,11 +121,16 @@ In order:
 3. **`Engine.run()`** calls `setup(ctx)` with the training split in bulk, reads
    back the declared subscriptions, then walks the served split — warmup sessions
    first, where callbacks fire but orders are inert and counted.
-4. **Every fill** becomes a `BlotterRow`. The blotter's `digest()` is a SHA-256
-   over rounded row tuples: same data, same strategy, same seed → byte-identical
-   blotter.
-5. **The scorer** turns the blotter plus the split's session calendar into a
-   `ScoreTuple`. Sessions the strategy sat out still count.
+4. **Every fill is appended to the run's fill log**, in one place, as a frozen
+   `FillRecord`. The log lives on the run and nothing reachable from a strategy
+   holds a reference to it. `reconstruct(fills)` then rebuilds the blotter from
+   the log alone — a pure function of the fills, taking no engine state. The
+   blotter's `digest()` is a SHA-256 over rounded row tuples: same data, same
+   strategy, same seed → byte-identical blotter.
+5. **The scorer** turns *the reconstructed* blotter plus the split's session
+   calendar into a `ScoreTuple`. Sessions the strategy sat out still count. The
+   engine's running accumulator is kept, compared against the reconstruction, and
+   used for nothing else; a disagreement invalidates the trial.
 6. **`run.py` appends exactly one ledger row per invocation**, crashes and
    abandoned runs included, tagged with what triggered it and what it was *for*
    (`purpose`: trial, smoke or replay), and copies the source of whatever
@@ -231,6 +240,7 @@ The immutable side of the split. What a strategy can see and do, and when.
 | `src/core/engine/bars.py` | `BarBuilder` — session-anchored time-bar aggregation |
 | `src/core/engine/fills.py` | `FavorableFill` / `UnfavorableFill`, capability checking |
 | `src/core/engine/view.py` | `HistoryView` / `BarHistory` — the read surface that cannot reach forward |
+| `src/core/engine/reconstruct.py` | `reconstruct(fills)` — the blotter the fill log implies, as a pure function; `log_digest` |
 
 **Ordering within a tick** is fixed and is the thing most worth knowing: resolve
 resting orders → deliver fill callbacks → deliver the tick event if subscribed →
@@ -266,6 +276,55 @@ One exemption remains and is named: `setup()` streams the training split lazily,
 so something in it must be able to produce those ticks, and in-process that means
 holding a reference. It holds the *sealed* dataset, which has no `unlock_holdout`
 and no `holdout_lock`, and the lock still refuses any split but the one served.
+
+**The score is computed from a fill log, not from a running total.** The second
+adversarial pass reached `_RunState` through the closure cell of a bound port
+callable and set `avg_price` before flattening. Sortino went from −0.2547 to
++4.2089 and significance from −1.611 to +26.619, with a genuine 1,255-row
+blotter, a stable digest, a replay that reproduced it exactly, and an untouched
+scoring fingerprint. Every downstream check passed, because every downstream
+check was reading a number the strategy had already written to.
+
+The fix is not another guard on `avg_price`. It is that the score no longer reads
+anything a strategy can write:
+
+- every fill is appended, in **one** place, to an append-only log of frozen
+  `FillRecord`s — `(seq, ts, session, order_id, side, size, price, liquidity,
+  tag)`, facts rather than derivations;
+- `reconstruct(fills, commission_per_contract=…)` rebuilds position, average
+  price and realized P&L from that log as a **pure function**, taking no engine
+  state, and returns a `Blotter` so nothing downstream changes shape;
+- the scorer consumes that reconstruction. The engine's accumulator survives as a
+  diagnostic and is compared against it on every run; a disagreement raises and
+  the row is written as `invalidated_fill_log_mismatch`, with both numbers;
+- the log's digest goes in the ledger row and the log itself is stored at
+  `runs/fills/<digest>.jsonl.gz`, so `scripts/replay.py` **recomputes** the P&L
+  from the fills instead of re-running the mutation and agreeing with itself.
+
+The mutation still succeeds. `avg_price` is still wrong afterwards. That is the
+point: blocking one attribute is a race against whoever finds the next one, and
+the reconstruction does not care which one they find.
+`tests/test_boundary.py` runs the reproduction unmodified and asserts the score
+is **unchanged**.
+
+**Where the engine still reads mutable state to make a decision.** Enumerated,
+not fixed — these decide behaviour, not the score, and changing them is an engine
+semantics change that Task 21 was scoped out of:
+
+| Site | What it reads | What it decides |
+|---|---|---|
+| `engine.py` `_clamp_reduce_only` | `self.position` | rejects a reduce-only order with no position, rejects one that would increase exposure, clamps size to `abs(pos)` |
+| `engine.py` `_apply_fill` (revalidation) | `self.position` | re-checks a resting reduce-only order at fill time and cancels it if the position has since shrunk or flipped |
+| `engine.py` `_apply_fill` (arithmetic) | `self.position`, `self._avg_price` | the realized amount booked on the closing portion, and the new average price |
+| `engine.py` `_end_session` | `self.position` | the `end_of_session_positions` entry, which is how an unintended overnight hold becomes visible |
+| `engine.py` `_close_out` / `RunRecord` | `self.position`, `self.last_price` | `blotter.final_position` and `final_price` |
+| `context.py` `close()` | `_port.position()` | the side and size of the flattening order, and the `ContextError` when flat |
+| `context.py` `position`, `average_entry_price`, `realized_pnl`, `unrealized_pnl`, `equity` | `_RunState` | what the strategy is told about itself |
+
+A strategy that corrupts `_RunState` can therefore still change *what the engine
+does* — reject an order it should have accepted, clamp a size, mis-report its own
+equity to itself. It can no longer change *what it is scored*. Those are different
+problems and only the second one is a false discovery.
 
 **Import guards are defence in depth, not a boundary.** `run.py` imports the
 scorer before it loads the strategy, so the module is cached and the
@@ -519,7 +578,7 @@ the bucket and skip when `R2_*` is absent.
 | `tests/test_nq_adapter.py` | The NQ adapter against the committed manifest |
 | `tests/test_data_integrity.py` | Coverage counts, corrections, anomalies |
 | `tests/test_layout.py` | The build-time / run-time boundary |
-| `tests/test_boundary.py` | The context boundary: immutability by introspection, subscription-id resolution, the protocol against the engine, warmup against the embargo |
+| `tests/test_boundary.py` | The context boundary: immutability by introspection, subscription-id resolution, the protocol against the engine, warmup against the embargo, the reachability walk, and the finding-1 reproduction asserting the score does not move |
 | `tests/test_architecture_doc.py` | That this document names every module |
 | `tests/test_examples.py` | That every worked example in `docs/agent/strategy-api.md` is byte-identical to a file in `tests/examples/` and actually runs |
 | `tests/test_agent_docs.py` | That the two documents the research agent reads agree with each other, and that the generated one is current |
@@ -528,3 +587,36 @@ the bucket and skip when `R2_*` is absent.
 `tests/golden/pre_context_refactor.json` is the acceptance artefact for
 behaviour-neutral refactors: eight cases, each pinning a blotter digest, row
 count, fill count, bar count and final position.
+
+`tests/golden/irregular_generator.json` is the same artefact for the irregular
+generator, which is the half that actually finds things. Both sets are now
+asserted twice: once against `engine.blotter` and once against
+`engine.reconstructed()`, which is what says Task 21 changed where the number
+comes from and not the number.
+
+---
+
+## 10. What is not fixed
+
+Written down because the alternative is a document that reads like a finished
+system. Each of these has been demonstrated, not hypothesised.
+
+**In-process containment is not won, and the fill log does not win it.** The log
+removes the *score* from a strategy's reach. It does not remove the interpreter.
+A strategy still shares an address space with the engine, and the honest boundary
+is a separate process with the fills crossing it as data. Everything here is the
+distance to that, measured.
+
+Open findings from the second adversarial pass, none of them closed by Task 21:
+
+| # | Severity | What |
+|---|---|---|
+| 2 | critical | `_SealedDataset.__getattr__` forwards a **bound method of the inner dataset**, so `ctx._session_bounds.__self__` — and `gc.get_referents` straight through the seal — is the raw dataset: seed, calendar, `unlock_holdout` and a holdout tick, all reachable from `setup()`. The reachability walk records it as the single entry in `KNOWN_LIVE_ESCAPES` rather than exempting it. |
+| 3 | critical | `ctx._queue.cap` and `ctx._queue.actions` are mutable. 200 injected submits past a cap of 64, `action_cap_hits: 0`, a 50,000-contract position, and no validation fired. |
+| 6 | high | `scripts/agent_check.py` is an oracle. It reports no number, but 18 probes recovered peak realized P&L to ±0.0002 with **0 trials counted** — the agent-facing path leaks the objective through timing and control flow. |
+| 7 | medium-high | The null tables, `config/`, the ledger and the strategy source are all writable, and the scoring fingerprint does **not** change when `data/calibration/empirical-null.json` is rewritten. |
+
+Findings 4 and 5 are calibration, not containment, and are open too: the
+"no anti-conservatism" claim from Task 19 is split-direction dependent (worst
+ratio 2.64 the other way round), and the null is 9–24× anti-conservative for
+selective strategies, where exposure is a free choice the strategy makes.

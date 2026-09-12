@@ -523,7 +523,18 @@ What it owns:
   content hash of the strategy source, and `store_source()` copies the source to
   `runs/sources/<digest>.py` — content-addressed, so a hundred runs of the same
   strategy cost one copy. A digest identifies a trial; only the source reproduces
-  one, and the rejected trials are exactly what N counts.
+  one, and the rejected trials are exactly what N counts. The fill log goes
+  beside it at `runs/fills/<digest>.jsonl.gz`, so replay recomputes the P&L
+  instead of re-observing it.
+- **Three fingerprints, three questions.** `scoring_fingerprint` is the bytecode
+  of the loaded scoring modules and is the only one that can see a monkeypatch.
+  `artifacts` is the pre-run digest of every file a result depends on — null
+  tables, calendars, profiles, the manifest, the strategy source — so the row
+  states which versions produced it, and it is re-taken after scoring and
+  compared. `code_fingerprint` hashes the engine, data and scoring sources on
+  disk and is the one that can be recomputed at an arbitrary commit, which is how
+  `scripts/ledger_check.py` asks whether a row's code is still in history. None
+  substitutes for another.
 - **The optional fill-model spread.** A second full run under the opposite fill
   model, opt-in per profile, because a candidate that collapses between the two
   is telling you where its edge comes from.
@@ -532,6 +543,54 @@ What it owns:
   so warmup within the embargo reaches only into embargoed sessions. Checked once
   the dataset is built — the earliest point both numbers exist — and stood down
   for a dataset whose calendar is not pre-registered yet.
+
+### The fingerprint covers the files, not only the modules
+
+Adversarial review's finding 7: `integrity.fingerprint()` hashes scoring
+*modules*, and rewriting `data/calibration/empirical-null.json` moves every
+accept/reject decision in the harness without changing one byte of bytecode. The
+fingerprint reported everything as unchanged, which is worse than not having one,
+because the row then carries an assurance it did not earn.
+
+`integrity.artifact_digests()` closes that. It hashes `config/*.yaml`,
+`config/calendars/*.yaml`, `data/calibration/*.json`, the manifest, the contract
+selection, the session closes, the DBN equivalence record and
+`src/strategies/current.py` — taken at `run.py` import, before `load_strategy()`,
+and taken again after scoring. Any difference raises `ArtifactsMutated` and the
+row is written as `invalidated_artifacts_mutated` with both digests. The path
+list is a tuple constant inside the scoring package, which a strategy cannot
+import: a set assembled by the caller is a set the caller can shorten, and the
+caller closest to the incentive is the one running the strategy.
+
+**This is detection, not prevention.** A strategy can still write to any of those
+paths — they are ordinary files on a shared filesystem. What it cannot do is
+write to them and have the result stand. Prevention is a separate process with a
+read-only mount, and that is a later task.
+
+Deliberately outside the set, each for a reason rather than by omission: `raw/`
+in the bucket (immutable by policy, read-only by credential, and the manifest is
+its fingerprint); `data/cache/` (derived and content-keyed, and rewriting it
+moves `dataset_digest`, which is already in the row); `runs/` (output, not input
+— `scripts/ledger_check.py` is its integrity check); `docs/` (a result does not
+depend on prose); and **the environment**, which is a real gap — numpy and pandas
+versions change numbers and the honest fix is a lockfile, not a hash.
+
+### The ledger has its own integrity requirements
+
+It is the p-value column. False-discovery control over it assumes every row is a
+calibrated number from a run someone could re-run, so a row nobody can reproduce
+is not a p-value and carrying it silently overcounts N.
+`scripts/ledger_check.py` asks three questions per row — is its `git_sha` still
+reachable from HEAD, does it say what produced it, and (with `--replay`) does it
+reproduce its recorded blotter digest — and prints honest N with supersessions
+applied.
+
+**A row that fails is superseded, never deleted.** Deleting it loses the fact
+that a trial happened, which is the one thing the ledger cannot afford to lose;
+leaving it unmarked corrupts the column. So supersessions live in their own
+append-only file, `runs/supersessions.jsonl`, one entry per row naming it by
+index *and* blotter digest, with a reason. The ledger itself is never rewritten.
+Nothing is superseded today: all four committed rows reproduce.
 
 ---
 
@@ -551,7 +610,8 @@ Each produces something committed. None is importable from `src/core/`.
 | `scripts/gen_agent_data.py` | `docs/agent/data.md` | the research agent |
 | `scripts/probe_dbn.py` | nothing — a metadata/hash/compare CLI | a human debugging the bucket |
 | `scripts/nq_smoke.py` | nothing — an end-to-end adapter smoke run | a human |
-| `scripts/replay.py` | nothing — replays a ledger row from its stored source | a human auditing a trial |
+| `scripts/replay.py` | nothing — replays a ledger row from its stored source and **recomputes** its P&L from the stored fill log | a human auditing a trial |
+| `scripts/ledger_check.py` | nothing — per-row verdict on whether a ledger row is reproducible, and honest N with supersessions applied | a human, before a campaign |
 | `scripts/check_agent_paths.py` | nothing — the CI write-path allowlist | CI |
 
 The two generators both take `--check` and both run in CI, so a doc that has
@@ -580,6 +640,7 @@ the bucket and skip when `R2_*` is absent.
 | `tests/test_layout.py` | The build-time / run-time boundary |
 | `tests/test_boundary.py` | The context boundary: immutability by introspection, subscription-id resolution, the protocol against the engine, warmup against the embargo, the reachability walk, and the finding-1 reproduction asserting the score does not move |
 | `tests/test_architecture_doc.py` | That this document names every module |
+| `tests/test_ledger_integrity.py` | That every committed row names a commit still in history and reproduces, that supersession narrows N without deleting anything, and that a stored source with a relative import still loads |
 | `tests/test_examples.py` | That every worked example in `docs/agent/strategy-api.md` is byte-identical to a file in `tests/examples/` and actually runs |
 | `tests/test_agent_docs.py` | That the two documents the research agent reads agree with each other, and that the generated one is current |
 | `tests/test_live_bucket.py` | The bucket itself, when credentials are present |
@@ -614,7 +675,11 @@ Open findings from the second adversarial pass, none of them closed by Task 21:
 | 2 | critical | `_SealedDataset.__getattr__` forwards a **bound method of the inner dataset**, so `ctx._session_bounds.__self__` — and `gc.get_referents` straight through the seal — is the raw dataset: seed, calendar, `unlock_holdout` and a holdout tick, all reachable from `setup()`. The reachability walk records it as the single entry in `KNOWN_LIVE_ESCAPES` rather than exempting it. |
 | 3 | critical | `ctx._queue.cap` and `ctx._queue.actions` are mutable. 200 injected submits past a cap of 64, `action_cap_hits: 0`, a 50,000-contract position, and no validation fired. |
 | 6 | high | `scripts/agent_check.py` is an oracle. It reports no number, but 18 probes recovered peak realized P&L to ±0.0002 with **0 trials counted** — the agent-facing path leaks the objective through timing and control flow. |
-| 7 | medium-high | The null tables, `config/`, the ledger and the strategy source are all writable, and the scoring fingerprint does **not** change when `data/calibration/empirical-null.json` is rewritten. |
+
+Finding 7 is **closed** as far as detection goes — the artifact fingerprint above
+covers the null tables, `config/` and the strategy source, and a mid-run write to
+a calibration table now invalidates the trial. The *writability* is unchanged and
+deliberately so: nothing in-process can take the write away.
 
 Findings 4 and 5 are calibration, not containment, and are open too: the
 "no anti-conservatism" claim from Task 19 is split-direction dependent (worst

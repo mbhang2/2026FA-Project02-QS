@@ -720,3 +720,113 @@ def test_the_two_golden_sets_cover_different_worlds():
     # and the naive strategy carries positions overnight on irregular data, which
     # the uniform world could never have shown
     assert any(c["sessions_left_open"] > 0 for c in IRREGULAR_GOLDEN["cases"])
+
+
+# --------------------------------------------------------------------------- #
+# adversarial review, second pass, finding 7: the fingerprint covered the
+# wrong set
+# --------------------------------------------------------------------------- #
+def test_the_scoring_fingerprint_does_not_see_a_rewritten_null_table():
+    """The finding, kept as an assertion rather than a memory.
+
+    `integrity.fingerprint()` hashes scoring *modules*. A null table is a file,
+    so moving a threshold moves every accept/reject decision in the harness and
+    the fingerprint reports everything as unchanged. This test pins the gap so
+    that nobody later reads `scoring_fingerprint` as covering more than it does.
+    """
+    from src.core.scoring import integrity
+
+    table = REPO_ROOT / "data" / "calibration" / "empirical-null.json"
+    original = table.read_bytes()
+    before_code = integrity.fingerprint()
+    before_files = integrity.artifact_digests()
+    try:
+        table.write_bytes(original + b"\n")
+        assert integrity.fingerprint() == before_code, (
+            "the scoring fingerprint moved; this test no longer pins the gap it "
+            "was written for"
+        )
+        # and the artifact fingerprint is the thing that does see it
+        after_files = integrity.artifact_digests()
+        assert after_files != before_files
+        with pytest.raises(integrity.ArtifactsMutated, match="empirical-null.json"):
+            integrity.check_artifacts(before_files, after_files)
+    finally:
+        table.write_bytes(original)
+    assert table.read_bytes() == original
+    assert integrity.artifact_digests() == before_files
+
+
+def test_a_mid_run_write_to_a_calibration_table_invalidates_the_trial(tmp_path):
+    """The demonstration, end to end through `run.py`.
+
+    The strategy rewrites a null table from `setup()` -- after the baseline was
+    taken at import, which is the window that matters -- and the run has to come
+    back invalidated rather than scored. The table is restored whatever happens,
+    and the test asserts the restoration rather than trusting the `finally`.
+    """
+    led = tmp_path / "ledger.jsonl"
+    table = REPO_ROOT / "data" / "calibration" / "empirical-null.json"
+    strategy = REPO_ROOT / "src" / "strategies" / "current.py"
+    original_table = table.read_bytes()
+    original_strategy = strategy.read_text()
+    strategy.write_text(original_strategy + '''
+
+class Strategy(MomentumStrategy):
+    def setup(self, ctx):
+        import pathlib
+        p = (pathlib.Path(__file__).resolve().parents[2]
+             / "data" / "calibration" / "empirical-null.json")
+        p.write_bytes(p.read_bytes() + b"\\n")
+        return super().setup(ctx)
+''')
+    try:
+        r = run_py("--quiet", ledger=led)
+        assert r.returncode == 4, (r.returncode, r.stdout, r.stderr)
+        rows = ledger_lines(led)
+        assert len(rows) == 1, "an invalidated trial is still a row"
+        row = rows[0]
+        assert row["outcome"] == "invalidated_artifacts_mutated"
+        assert "empirical-null.json" in row["error"]
+        assert row["score"] is None
+        # both numbers, so the row says what changed and not only that something did
+        assert row["artifacts"]["data/calibration/empirical-null.json"] != ""
+    finally:
+        table.write_bytes(original_table)
+        strategy.write_text(original_strategy)
+    assert table.read_bytes() == original_table
+
+
+def test_every_row_states_the_artifact_versions_that_produced_it(tmp_path):
+    """The point of recording the set rather than only the hash. A row whose
+    fingerprint differs from today's is useless if it cannot say *which* file
+    moved."""
+    from src.core.scoring import integrity
+
+    led = tmp_path / "ledger.jsonl"
+    assert run_py("--quiet", ledger=led).returncode == 0
+    row = ledger_lines(led)[0]
+
+    assert row["artifacts"] == integrity.artifact_digests()
+    assert row["artifact_fingerprint"] == integrity.artifact_fingerprint()
+    assert row["code_fingerprint"] == integrity.code_fingerprint()
+    for expected in ("config/run.yaml", "config/calendars/nq-trades.yaml",
+                     "data/calibration/empirical-null.json", "data/manifest.json",
+                     "src/strategies/current.py"):
+        assert expected in row["artifacts"], expected
+
+
+def test_the_artifact_path_list_is_not_something_a_caller_supplies():
+    """`ARTIFACT_GLOBS` is a module constant inside the scoring package, which a
+    strategy cannot import. A set assembled by the caller is a set the caller can
+    shorten, and the caller closest to the incentive is the one running the
+    strategy."""
+    import inspect
+
+    from src.core.scoring import integrity
+
+    src = inspect.getsource(integrity.artifact_digests)
+    assert "ARTIFACT_GLOBS" in src
+    assert "root" in inspect.signature(integrity.artifact_digests).parameters
+    # `root` exists for tests; there is no parameter that changes *which* globs
+    assert list(inspect.signature(integrity.artifact_digests).parameters) == ["root"]

@@ -62,10 +62,31 @@ def load_fill_log(row: dict) -> list[FillRecord] | None:
     return fills
 
 
-def load_strategy_from(path: Path):
-    spec = importlib.util.spec_from_file_location("replayed_strategy", path)
+def load_strategy_from(path: Path, origin: str = ""):
+    """Import the stored source as the module it was, not as a loose file.
+
+    `origin` is the row's `strategy` field -- the repo-relative path of the file
+    that actually ran -- and it is here because loading without it silently
+    stopped working. Task 17 gave the calibration reference a relative import
+    (`from ...types import NS_PER_SECOND`); a module executed under the bare name
+    `replayed_strategy` has no package, so the import raises and the row becomes
+    unreplayable. Nothing noticed for five tasks, because nothing replayed a row
+    in between. `scripts/ledger_check.py` is what noticed.
+
+    So the module is given the package it lived in. A relative import then
+    resolves exactly as it did during the run, which is the only way a replay can
+    claim to be re-running the same code.
+    """
+    package = ""
+    if origin.endswith(".py"):
+        package = origin[:-3].replace("/", ".").rsplit(".", 1)[0]
+    name = f"{package}._replayed" if package else "replayed_strategy"
+
+    spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
-    sys.modules["replayed_strategy"] = module
+    if package:
+        module.__package__ = package
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     for attr in ("STRATEGY", "Strategy", "MomentumStrategy"):
         obj = getattr(module, attr, None)
@@ -183,7 +204,7 @@ def replay(row: dict, cfg_path: Path = REPO_ROOT / "config" / "run.yaml"):
         )
     engine = Engine(
         dataset,
-        load_strategy_from(source),
+        load_strategy_from(source, row.get("strategy", "")),
         split=Split(row["split"]),
         fill_model=row["fill_model"],
         warmup_sessions=row.get("warmup_sessions", 0),

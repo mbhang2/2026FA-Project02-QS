@@ -120,3 +120,150 @@ def check(before: str, after: str) -> None:
             "produced by the committed metric. The trial is recorded and "
             "invalidated; nothing about it should be believed."
         )
+
+
+# --------------------------------------------------------------------------- #
+# the artifacts a result depends on
+# --------------------------------------------------------------------------- #
+# `fingerprint()` above watches scoring *modules*. Adversarial review's finding 7
+# is that this is the wrong set: rewriting `data/calibration/empirical-null.json`
+# moves every accept/reject decision in the harness and does not change a single
+# byte of bytecode. The fingerprint reported everything as unchanged, which is
+# worse than not having one, because the run record then carries an assurance it
+# did not earn.
+#
+# So there is a second fingerprint over the *files* a number depends on. Two
+# fingerprints rather than one extended fingerprint, because they answer
+# different questions and fail for different reasons: one says the code running
+# in this process is the committed code, the other says the tables and calendars
+# on disk are the ones the row claims.
+#
+# **This is detection, not prevention.** A strategy can still write to any of
+# these paths -- they are ordinary files and it shares a filesystem. What it
+# cannot do is write to them and have the result stand. Prevention is a separate
+# process with a read-only mount, and that is a later task.
+from pathlib import Path  # noqa: E402
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# Fixed here rather than assembled by a caller. A list passed in is a list a
+# caller can shorten, and the caller closest to the incentive is the one running
+# the strategy.
+ARTIFACT_GLOBS = (
+    "config/*.yaml",                 # run profiles, corrections
+    "config/calendars/*.yaml",       # the pre-registered splits
+    "data/calibration/*.json",       # every null table, tagged or not
+    "data/manifest.json",            # the bucket fingerprint
+    "data/nq-contract-selection.json",
+    "data/nq-session-closes.json",
+    "data/dbn-version-equivalence.json",
+    "src/strategies/current.py",     # the strategy's own source, at load and after
+)
+
+# Deliberately not in the set, each for a reason rather than by omission:
+#
+#   raw/ in the bucket   immutable by policy and read-only by credential; the
+#                        manifest is its fingerprint and the manifest is in.
+#   data/cache/          a derived local cache of bucket objects, 1.1 GiB, and
+#                        keyed by content. Rewriting it to change a result would
+#                        change `dataset_digest`, which is already in the row.
+#   runs/                the ledger is output, not input. Its integrity is a
+#                        different problem and `scripts/ledger_check.py` is it.
+#   docs/                a result does not depend on prose. The tests that pin
+#                        docs to code are in CI, which is where that belongs.
+#   the environment      numpy and pandas versions change numbers and are not
+#                        covered here. Named because it is a real gap and the
+#                        honest place for it is a lockfile, not a hash.
+#
+# The engine and scoring *sources* are not here either -- they are
+# `code_fingerprint()` below, which is a separate field because it answers "was
+# this row produced by code still in history" rather than "did the tables move
+# under the run".
+SOURCE_GLOBS = (
+    "src/core/**/*.py",
+    "run.py",
+)
+
+
+class ArtifactsMutated(RuntimeError):
+    """A file the result depends on changed while the trial was running.
+
+    Raised rather than reported, for the same reason `ScoringMutated` is: a run
+    that completes quietly with a number nobody can attribute to a set of inputs
+    is the failure this is meant to make impossible. The row is written either
+    way -- an invalidated trial still happened and still counts toward N.
+    """
+
+
+def _digest_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _resolve(globs: tuple[str, ...], root: Path | None = None) -> list[Path]:
+    root = root or REPO_ROOT
+    out: set[Path] = set()
+    for pattern in globs:
+        out.update(p for p in root.glob(pattern) if p.is_file())
+    return sorted(out)
+
+
+def artifact_digests(root: Path | None = None) -> dict[str, str]:
+    """`{repo-relative path: sha256}` for every artifact a result depends on.
+
+    A missing file is recorded as `"absent"` rather than skipped. Deleting a null
+    table and creating it again with different contents would otherwise look
+    exactly like a table that was always there.
+    """
+    root = root or REPO_ROOT
+    found = {str(p.relative_to(root)): _digest_file(p) for p in _resolve(ARTIFACT_GLOBS, root)}
+    for pattern in ARTIFACT_GLOBS:
+        if "*" not in pattern and pattern not in found:
+            found[pattern] = "absent"
+    return dict(sorted(found.items()))
+
+
+def artifact_fingerprint(digests: dict[str, str] | None = None,
+                         root: Path | None = None) -> str:
+    """One hash over the whole set, for a compact field and a cheap comparison."""
+    digests = artifact_digests(root) if digests is None else digests
+    payload = "\n".join(f"{name}|{digest}" for name, digest in sorted(digests.items()))
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def code_fingerprint(root: Path | None = None) -> str:
+    """A hash over the engine, data and scoring *sources* as they are on disk.
+
+    Source rather than bytecode, and files rather than modules, because this one
+    has to be recomputable at an arbitrary commit: `scripts/ledger_check.py` asks
+    whether a row's fingerprint is reachable in history, and the only way to
+    answer that is to recompute it from what history holds. `fingerprint()`
+    remains the one that catches monkeypatching, which no file hash can see.
+    """
+    root = root or REPO_ROOT
+    payload = "\n".join(
+        f"{p.relative_to(root)}|{_digest_file(p)}" for p in _resolve(SOURCE_GLOBS, root)
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def check_artifacts(before: dict[str, str], after: dict[str, str]) -> None:
+    if before == after:
+        return
+    changed = sorted(
+        set(before) | set(after),
+        key=lambda k: (before.get(k) == after.get(k), k),
+    )
+    moved = [k for k in changed if before.get(k) != after.get(k)]
+    detail = "; ".join(
+        f"{k}: {before.get(k, 'absent')[:12]} -> {after.get(k, 'absent')[:12]}"
+        for k in moved
+    )
+    raise ArtifactsMutated(
+        "a file the result depends on changed while the trial was running: "
+        f"{detail}. The score this run produced was not produced by the "
+        "artifacts the row names. The trial is recorded and invalidated."
+    )

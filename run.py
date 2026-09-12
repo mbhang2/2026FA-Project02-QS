@@ -67,6 +67,33 @@ CONFIG_PATH = REPO_ROOT / "config" / "run.yaml"
 # reproduction rather than reasoning about the fix.
 SCORING_AT_IMPORT = integrity.fingerprint()
 
+# And the files. `fingerprint()` watches scoring modules, which is the wrong set:
+# rewriting `data/calibration/empirical-null.json` moves every accept/reject
+# decision and changes no bytecode at all. Adversarial review demonstrated
+# exactly that and the fingerprint stayed put.
+#
+# Captured here, at import, for the same reason and with one more: the *paths*
+# are resolved before any strategy module exists, from a glob tuple inside the
+# scoring package, so there is no list for a strategy to shorten. A set assembled
+# after `load_strategy()` would be a set the strategy had a turn at.
+ARTIFACTS_AT_IMPORT = integrity.artifact_digests()
+CODE_AT_IMPORT = integrity.code_fingerprint()
+
+
+def _invalidation_outcome(exc: Exception) -> str:
+    """Which of the three integrity checks refused the trial.
+
+    Separate outcomes rather than one `invalidated`, because the three are
+    different failures with different responses: mutated scoring code is an
+    attack, a fill-log disagreement is two derivations that have drifted apart,
+    and a moved artifact is usually a build script that ran during a trial.
+    """
+    if isinstance(exc, ScoringMismatch):
+        return "invalidated_fill_log_mismatch"
+    if isinstance(exc, integrity.ArtifactsMutated):
+        return "invalidated_artifacts_mutated"
+    return "invalidated_scoring_mutated"
+
 
 class ScoringMismatch(RuntimeError):
     """The fill log and the running accumulator do not agree.
@@ -424,6 +451,7 @@ def main(argv: list[str] | None = None) -> int:
                 "derivations is wrong and the trial cannot say which."
             )
         integrity.check(SCORING_AT_IMPORT, integrity.fingerprint())
+        integrity.check_artifacts(ARTIFACTS_AT_IMPORT, integrity.artifact_digests())
         result = score(scored_blotter, period=period,
                        notional_base=profile.get("notional_base", 1.0))
         engine.record.score = result.as_dict()
@@ -441,13 +469,12 @@ def main(argv: list[str] | None = None) -> int:
         attach_fill_log(record, engine, ledger_path)
     except _Abandoned:
         pass
-    except (integrity.ScoringMutated, ScoringMismatch) as exc:
+    except (integrity.ScoringMutated, integrity.ArtifactsMutated,
+            ScoringMismatch) as exc:
         rec = getattr(engine, "record", None)
         record = rec.as_dict() if rec else {}
         record.update(
-            outcome=("invalidated_fill_log_mismatch"
-                     if isinstance(exc, ScoringMismatch)
-                     else "invalidated_scoring_mutated"),
+            outcome=_invalidation_outcome(exc),
             error=str(exc), score=None, diagnostics=None,
         )
         attach_fill_log(record, engine, ledger_path)
@@ -540,7 +567,17 @@ def _row(record: dict, trigger: str, profile: str, ledger_path: Path,
         "strategy": named,
         "strategy_digest": digest,
         "strategy_source": store_source(ledger_path, digest, strategy_path),
+        # Three fingerprints, three questions. `scoring_fingerprint` is the
+        # bytecode of the scoring modules as they are running *now*, which is the
+        # only one that can see a monkeypatch. `artifacts` is the pre-run digest
+        # set, so the row states which tables and calendars produced it.
+        # `code_fingerprint` hashes the engine and scoring sources on disk, and
+        # is the one `scripts/ledger_check.py` can recompute at an arbitrary
+        # commit to ask whether this row's code is still reachable in history.
         "scoring_fingerprint": integrity.fingerprint(),
+        "artifact_fingerprint": integrity.artifact_fingerprint(ARTIFACTS_AT_IMPORT),
+        "artifacts": ARTIFACTS_AT_IMPORT,
+        "code_fingerprint": CODE_AT_IMPORT,
     }
 
 

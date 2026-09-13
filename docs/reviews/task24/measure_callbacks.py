@@ -250,7 +250,16 @@ def main() -> int:
             "project_to": args.project_to, "scale": scale,
             "callbacks": callbacks, "total_callbacks": total_callbacks,
             "history_calls": history_calls, "bars_pulled": bars_pulled,
-            "window_histogram": {str(k): v for k, v in HISTORY_LEN.items()},
+            # A summary, not a trace: the view grows by one bar per callback, so
+            # one entry per distinct length is 23,823 entries on the NQ run and
+            # says nothing the range does not.
+            "window_histogram": (
+                {str(k): v for k, v in HISTORY_LEN.items()}
+                if len(HISTORY_LEN) <= 32 else
+                {"distinct_lengths": len(HISTORY_LEN),
+                 "min": min(HISTORY_LEN), "max": max(HISTORY_LEN),
+                 "total_bars_returned": bars_pulled}
+            ),
             "reads": reads, "calls": calls,
             "bars_read": COUNTS["hist:bars_read"],
             "history_index_reads": COUNTS["hist:index"],

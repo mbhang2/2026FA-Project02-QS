@@ -80,9 +80,46 @@ class HarnessFailed(RemoteFailure):
     kind = "harness_failed"
 
 
+# The harness modules the strategy process is allowed to have loaded. Twice now
+# an `__init__` re-export has quietly widened the boundary -- Task 24 found the
+# child holding the whole simulator, Task 25 found it again after the fix -- and
+# both times a graph walk caught it because someone happened to run one. This is
+# the version that fails by name on the next import instead of waiting for a
+# review pass.
+#
+# `src.core.types` is the whole of it: frozen value types, enums and constants.
+# The child loads its own `protocol` and `_surface` by file path under `_remote_`
+# names precisely so they do not appear here as packages that drag `__init__`
+# files with them.
+CHILD_MODULE_ALLOWLIST = frozenset({
+    "src",
+    "src.core",
+    "src.core.types",
+    "src.strategies",
+})
+
+# Prefixes that must never appear, listed separately from the allowlist so the
+# failure message can say *what* leaked rather than only that something did.
+CHILD_MODULE_FORBIDDEN = (
+    "src.core.engine.engine",
+    "src.core.engine.context",
+    "src.core.data",
+    "src.core.scoring.scorer",
+    "src.core.scoring.metrics",
+    "src.core.scoring.calibration",
+    "src.core.runlog",
+)
+
+
 @dataclass
 class Isolation:
-    """What was actually achieved, per platform. Recorded in every run record."""
+    """What was actually achieved, per platform. Recorded in every run record.
+
+    Each restriction is a `(state, mechanism)` pair rather than prose, so a row
+    can be filtered on `isolation.network.active` without parsing English. The
+    prose survives as `mechanism`, because "denied" without saying by what is the
+    kind of claim that is true until someone changes a config file.
+    """
 
     level: str                    # "isolated" | "best-effort" | "none"
     platform: str
@@ -91,15 +128,45 @@ class Isolation:
     memory_ceiling: str
     cpu_ceiling: str
     detail: str = ""
+    wall_clock: str = "the engine's own budget, enforced by the parent"
+
+    def _restriction(self, mechanism: str) -> dict:
+        inactive = ("unrestricted", "unavailable", "none", "unknown")
+        active = not any(mechanism.startswith(word) for word in inactive)
+        return {"active": active, "mechanism": mechanism}
 
     def as_dict(self) -> dict:
-        return dict(level=self.level, platform=self.platform,
-                    filesystem=self.filesystem, network=self.network,
-                    memory_ceiling=self.memory_ceiling,
-                    cpu_ceiling=self.cpu_ceiling, detail=self.detail)
+        return {
+            "level": self.level,
+            "platform": self.platform,
+            "detail": self.detail,
+            "filesystem": self._restriction(self.filesystem),
+            "network": self._restriction(self.network),
+            "address_space": self._restriction(self.memory_ceiling),
+            "cpu": self._restriction(self.cpu_ceiling),
+            "wall_clock": self._restriction(self.wall_clock),
+        }
 
 
-def isolation_for(system: str | None = None) -> Isolation:
+def linux_mechanism() -> str:
+    """Which sandbox tool this machine actually has.
+
+    Probed rather than remembered, and probed by `isolation_for` as well as by
+    the adapter: a reporting function that only knows what it was told reports
+    `none` on a machine where the mechanism works, which is how a correct system
+    ends up with rows that understate it.
+    """
+    import shutil
+
+    if shutil.which("bwrap"):
+        return "bubblewrap: --ro-bind / /, --unshare-net"
+    if shutil.which("unshare"):
+        return "unshare: user+mount+net namespace, remount ro (weaker)"
+    return ""
+
+
+def isolation_for(system: str | None = None, *, disabled: bool = False,
+                  mechanism: str = "") -> Isolation:
     """The honest description, not a single claim meaning two things.
 
     macOS cannot set `RLIMIT_AS`, `RLIMIT_DATA` or `RLIMIT_RSS` at all -- Task 24
@@ -109,11 +176,44 @@ def isolation_for(system: str | None = None) -> Isolation:
     campaigns should run on Linux.
     """
     system = system or platform.system()
-    if system == "Linux":
+    if disabled:
         return Isolation(
-            level="isolated", platform=system,
-            filesystem="read-only bind mount in an unprivileged user namespace",
-            network="denied", memory_ceiling="RLIMIT_AS", cpu_ceiling="RLIMIT_CPU",
+            level="none", platform=system, filesystem="unrestricted",
+            network="unrestricted", memory_ceiling="none", cpu_ceiling="none",
+            detail="isolation was switched off with HARNESS_NO_SANDBOX; this row "
+                   "is not evidence of anything",
+        )
+    if system == "Linux":
+        # Probe only when the caller did not say. `mechanism="none"` is how a
+        # caller asks about a machine with no sandbox tool without pretending to
+        # be on one.
+        if not mechanism:
+            mechanism = linux_mechanism() if platform.system() == "Linux" else ""
+        if mechanism == "none":
+            mechanism = ""
+        if mechanism.startswith("bubblewrap"):
+            return Isolation(
+                level="isolated", platform=system,
+                filesystem="read-only bind mount, unprivileged user namespace "
+                           "(bubblewrap)",
+                network="empty network namespace (bubblewrap --unshare-net)",
+                memory_ceiling="RLIMIT_AS", cpu_ceiling="RLIMIT_CPU",
+            )
+        if mechanism.startswith("unshare"):
+            return Isolation(
+                level="best-effort", platform=system,
+                filesystem="unshare + remount ro (weaker: a shell command, not "
+                           "one syscall)",
+                network="empty network namespace (unshare --net)",
+                memory_ceiling="RLIMIT_AS", cpu_ceiling="RLIMIT_CPU",
+                detail="bubblewrap is not installed; see docs/setup/LINUX_RUNNER.md",
+            )
+        return Isolation(
+            level="none", platform=system,
+            filesystem="unrestricted: no bubblewrap and no unshare on PATH",
+            network="unrestricted", memory_ceiling="RLIMIT_AS",
+            cpu_ceiling="RLIMIT_CPU",
+            detail="install bubblewrap; see docs/setup/LINUX_RUNNER.md",
         )
     if system == "Darwin":
         return Isolation(
@@ -158,10 +258,24 @@ class RemoteStrategy:
     _next_id: int = field(default=1, init=False, repr=False)
     _setup_ctx: object = field(default=None, init=False, repr=False)
     _setup_bytes: int = field(default=0, init=False, repr=False)
+    _mechanism: str = field(default="", init=False, repr=False)
 
     # -- lifecycle --------------------------------------------------------- #
     def start(self) -> None:
-        self.isolation = isolation_for()
+        # `HARNESS_NO_SANDBOX` is the control arm, and it is deliberately not a
+        # flag on the scored path: a switch a caller can pass is a switch the
+        # loop driver can pass by mistake. It exists so the probes in
+        # `docs/reviews/task26/` can show the network is reachable *without*
+        # isolation -- three refusals prove nothing if the machine is offline --
+        # and the run record says `level: none` when it is set, so a row produced
+        # this way declares itself.
+        if os.environ.get("HARNESS_NO_SANDBOX"):
+            self.sandbox = False
+        argv = [sys.executable, str(CHILD)]
+        if self.sandbox:
+            argv = self._wrap(argv)
+        self.isolation = isolation_for(disabled=not self.sandbox,
+                                       mechanism=self._mechanism)
         to_child_r, to_child_w = os.pipe()
         to_parent_r, to_parent_w = os.pipe()
         os.set_inheritable(to_child_r, True)
@@ -169,9 +283,6 @@ class RemoteStrategy:
 
         env = dict(os.environ, REMOTE_READ_FD=str(to_child_r),
                    REMOTE_WRITE_FD=str(to_parent_w), PYTHONHASHSEED="0")
-        argv = [sys.executable, str(CHILD)]
-        if self.sandbox:
-            argv = self._wrap(argv)
         try:
             self._proc = subprocess.Popen(
                 argv, close_fds=False, env=env, cwd=str(REPO_ROOT),
@@ -212,6 +323,8 @@ class RemoteStrategy:
                     continue
 
     def _wrap(self, argv: list[str]) -> list[str]:
+        if platform.system() == "Linux":
+            return self._wrap_linux(argv)
         if platform.system() != "Darwin":
             return argv
         import tempfile
@@ -232,6 +345,60 @@ class RemoteStrategy:
         handle.write(text)
         handle.close()
         return ["sandbox-exec", "-f", handle.name, *argv]
+
+    def _wrap_linux(self, argv: list[str]) -> list[str]:
+        """Unprivileged user namespace, read-only bind mount, no network.
+
+        `bubblewrap` first: it is the standard unprivileged sandbox on Linux, it
+        needs no root, and `--ro-bind / /` plus `--unshare-net` is exactly the
+        recommendation the Task 24 spike made. `--die-with-parent` matters more
+        than it looks -- a child that outlives a crashed engine is a strategy
+        still running with nothing collecting its output.
+
+        `unshare` is the fallback, and it is weaker: it gets the namespaces but
+        the remount has to happen inside, so the read-only guarantee depends on a
+        shell command rather than on one syscall the kernel either allowed or
+        did not. `isolation_for` reports which one was used, because a row that
+        says "isolated" without saying by what is a claim nobody can check.
+        """
+        import shutil
+
+        writable = REPO_ROOT / "runs"
+        if shutil.which("bwrap"):
+            self._mechanism = "bubblewrap: --ro-bind / /, --unshare-net"
+            return [
+                "bwrap",
+                "--ro-bind", "/", "/",
+                "--dev", "/dev",
+                "--proc", "/proc",
+                # No `--tmpfs /tmp`. A writable scratch is one the child does not
+                # need, and mounting one *shadows the real /tmp* -- which cost an
+                # afternoon: probe strategies written to a temporary directory
+                # vanished inside the sandbox and every probe "passed" with
+                # FileNotFoundError. Read-only everywhere is both stricter and
+                # simpler to reason about.
+                "--unshare-net",
+                "--unshare-pid",
+                "--unshare-ipc",
+                "--unshare-uts",
+                "--die-with-parent",
+                "--new-session",
+                "--chdir", str(REPO_ROOT),
+                "--", *argv,
+            ]
+        if shutil.which("unshare"):
+            self._mechanism = ("unshare: user+mount+net namespace, remount ro "
+                               "(weaker than bubblewrap)")
+            inner = (
+                "mount --make-rprivate / 2>/dev/null; "
+                f"mount -o remount,ro,bind {REPO_ROOT} {REPO_ROOT} 2>/dev/null; "
+                'exec "$@"'
+            )
+            return ["unshare", "--user", "--map-root-user", "--mount", "--net",
+                    "--ipc", "--uts", "--fork",
+                    "/bin/sh", "-c", inner, "sh", *argv]
+        self._mechanism = ""
+        return argv
 
     def stop(self) -> None:
         if self._proc is None:

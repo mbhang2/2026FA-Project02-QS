@@ -808,8 +808,13 @@ class Strategy(MomentumStrategy):
             assert row["outcome"] == "crashed"
             assert row["failure_kind"] == "strategy_raised"
             assert "empirical-null.json" in row["error"]
-            assert "PermissionError" in row["error"], (
-                "the sandbox reported something other than a refused write"
+            # Two kernels, two errnos for the same refusal: macOS `sandbox-exec`
+            # returns EPERM, a Linux read-only bind mount returns EROFS.
+            # Matching on one makes this a platform test.
+            assert ("PermissionError" in row["error"]
+                    or "Read-only file system" in row["error"]), (
+                "the sandbox reported something other than a refused write: "
+                + row["error"]
             )
             assert table.read_bytes() == original_table, (
                 "the write went through despite the sandbox"

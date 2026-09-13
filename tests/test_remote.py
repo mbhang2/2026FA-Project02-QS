@@ -333,17 +333,49 @@ def test_a_strategy_that_reaches_past_the_window_is_told_so(tmp_path):
 # 5. isolation is reported, not assumed
 # --------------------------------------------------------------------------- #
 def test_isolation_is_described_per_platform_not_claimed_once():
-    linux, mac = isolation_for("Linux"), isolation_for("Darwin")
-    assert linux.level == "isolated" and mac.level == "best-effort"
+    linux = isolation_for("Linux", mechanism="bubblewrap: --ro-bind / /")
+    weaker = isolation_for("Linux", mechanism="unshare: user+mount+net")
+    # `mechanism="none"` rather than omitting it: on a Linux host `isolation_for`
+    # probes for the tool and would report what that machine actually has, which
+    # is the right behaviour and the wrong thing for this assertion. Omitting the
+    # argument made this test pass on macOS and fail on Linux -- a test that
+    # measures the machine instead of the code.
+    bare = isolation_for("Linux", mechanism="none")
+    mac = isolation_for("Darwin")
+
+    assert linux.level == "isolated"
+    assert weaker.level == "best-effort", (
+        "unshare + a remount is weaker than one syscall and must not claim "
+        "the same level as bubblewrap"
+    )
+    assert bare.level == "none", "no sandbox tool is not isolation"
+    assert mac.level == "best-effort"
     assert "cannot be set" in mac.memory_ceiling, (
         "macOS cannot set RLIMIT_AS/DATA/RSS; the record must say so"
     )
     assert isolation_for("Plan9").level == "none"
-    for iso in (linux, mac):
+    for iso in (linux, weaker, bare, mac):
         assert set(iso.as_dict()) == {
-            "level", "platform", "filesystem", "network", "memory_ceiling",
-            "cpu_ceiling", "detail"
+            "level", "platform", "detail", "filesystem", "network",
+            "address_space", "cpu", "wall_clock"
         }
+
+
+def test_the_isolation_record_says_active_per_restriction_not_prose():
+    """A row should be filterable on `isolation.network.active` without parsing
+    English, and still say by what mechanism -- "denied" with no mechanism is a
+    claim that stays true after someone edits a config file."""
+    mac = isolation_for("Darwin").as_dict()
+    assert mac["network"]["active"] is True
+    assert mac["address_space"]["active"] is False, (
+        "macOS has no memory ceiling and the row must not imply one"
+    )
+    assert mac["filesystem"]["mechanism"].startswith("sandbox-exec")
+
+    off = isolation_for("Darwin", disabled=True).as_dict()
+    assert off["level"] == "none"
+    assert not off["network"]["active"] and not off["filesystem"]["active"]
+    assert "not evidence" in off["detail"]
 
 
 def test_every_run_record_says_which_isolation_it_had(tmp_path):
@@ -487,3 +519,151 @@ def test_nothing_in_the_child_reaches_an_engine_or_a_dataset(tmp_path):
     for forbidden in ("src.core.engine.engine", "src.core.data",
                       "src.core.scoring.scorer", "src.core.scoring.metrics"):
         assert forbidden not in reply["src_modules"], forbidden
+
+
+# --------------------------------------------------------------------------- #
+# 7. network egress -- the hole neither adversarial pass looked at
+# --------------------------------------------------------------------------- #
+# A strategy that fetches real NQ prices for the evaluation dates from any public
+# source, and trades on them, produces a spectacular result with a genuine
+# blotter, a stable dataset digest, a clean scoring fingerprint and a replay that
+# reproduces -- because the replay fetches them again. It never touches the
+# engine, the dataset or the scorer, so every defence in Tasks 21 through 25 is
+# orthogonal to it.
+#
+# Both passes reasoned about the object graph, because both briefs framed the
+# boundary as an in-process one. The reachability walk is a good tool that
+# answers exactly one question.
+#
+# This is a **data** boundary, not only a process boundary. The whole point of
+# the pre-registered split is that a strategy cannot see certain prices, and an
+# open socket makes the calendar decorative.
+NETWORK_PROBES = {
+    "dns": "socket.getaddrinfo('example.com', 80)",
+    "tcp": "socket.create_connection(('1.1.1.1', 80), timeout=5).close()",
+    "http": "urllib.request.urlopen('http://1.1.1.1/', timeout=5).read(16)",
+}
+
+
+def _network_strategy(tmp_path, probe: str) -> Path:
+    path = tmp_path / "netprobe.py"
+    path.write_text(
+        "import socket, urllib.request\n"
+        "class Strategy:\n"
+        "    def setup(self, ctx): ctx.subscribe('5m')\n"
+        "    def on_bars(self, ctx):\n"
+        f"        {probe}\n"
+        "    def on_fill(self, ctx): pass\n"
+        "    def on_lifecycle(self, ctx): pass\n"
+    )
+    return path
+
+
+@pytest.mark.parametrize("name", sorted(NETWORK_PROBES))
+def test_the_strategy_process_cannot_reach_the_network(name, tmp_path):
+    """Three probes, because they fail in different places: the resolver, the
+    connect, and the library a strategy would actually use. A configuration that
+    denies one and not the others is worse than none, because it reads as
+    protection."""
+    from src.core.engine.remote import isolation_for
+
+    if not isolation_for().as_dict()["network"]["active"]:
+        pytest.skip("this platform does not claim network denial")
+
+    path = _network_strategy(tmp_path, NETWORK_PROBES[name])
+    with pytest.raises(StrategyRaised) as caught:
+        with RemoteStrategy(path, "Strategy") as remote:
+            Engine.for_test(ds(n_sessions=40, ticks_per_session=120), remote,
+                            split=Split.VALIDATION, warmup_sessions=1,
+                            seed=1).run()
+    message = str(caught.value)
+    assert any(sign in message for sign in (
+        "Operation not permitted",       # macOS sandbox-exec
+        "Network is unreachable",        # Linux empty netns
+        "nodename nor servname",         # macOS resolver with no route
+        "Temporary failure in name resolution",   # Linux resolver, same
+    )), message
+    assert caught.value.kind == "strategy_raised"
+
+
+def test_network_denial_is_recorded_on_the_row_not_remembered():
+    """A row produced without network denial is a row a reader should discount,
+    and it has to say so itself rather than relying on someone remembering which
+    week it was run."""
+    from src.core.engine.remote import isolation_for
+
+    for system in ("Linux", "Darwin"):
+        block = isolation_for(system).as_dict()
+        assert "network" in block and set(block["network"]) == {"active", "mechanism"}
+    off = isolation_for(disabled=True).as_dict()
+    assert off["network"]["active"] is False
+    assert off["network"]["mechanism"] == "unrestricted"
+
+
+def test_nothing_legitimate_in_the_child_needs_the_network():
+    """Checked rather than assumed. The child receives everything over the pipe;
+    if some part of it reached out, denying network would break a real run and
+    that would be a finding in itself."""
+    import ast
+
+    for name in ("child.py", "protocol.py", "_surface.py"):
+        source = (REPO_ROOT / "src" / "core" / "engine" / "remote" / name).read_text()
+        tree = ast.parse(source)
+        imported = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported |= {a.name.split(".")[0] for a in node.names}
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported.add(node.module.split(".")[0])
+        assert not imported & {"socket", "urllib", "http", "requests", "boto3",
+                               "ssl", "asyncio"}, (name, sorted(imported))
+
+
+# --------------------------------------------------------------------------- #
+# 8. the module allowlist
+# --------------------------------------------------------------------------- #
+def test_the_child_loads_only_the_allowlisted_harness_modules(tmp_path):
+    """Twice an `__init__` re-export has quietly widened the boundary, and both
+    times a graph walk caught it because someone ran one. This fails by name on
+    the next import instead."""
+    import os
+
+    from src.core.engine.remote.adapter import (
+        CHILD_MODULE_ALLOWLIST, CHILD_MODULE_FORBIDDEN,
+    )
+    from src.core.engine.remote.protocol import recv
+
+    walk = REPO_ROOT / "docs" / "reviews" / "task26" / "_walk_in_child.py"
+    to_child_r, to_child_w = os.pipe()
+    to_parent_r, to_parent_w = os.pipe()
+    os.set_inheritable(to_child_r, True)
+    os.set_inheritable(to_parent_w, True)
+    proc = subprocess.Popen(
+        [sys.executable, str(walk), str(REPO_ROOT),
+         str(REPO_ROOT / "src" / "strategies" / "current.py")],
+        close_fds=False, cwd=str(REPO_ROOT),
+        env=dict(os.environ, REMOTE_READ_FD=str(to_child_r),
+                 REMOTE_WRITE_FD=str(to_parent_w)),
+    )
+    os.close(to_child_r)
+    os.close(to_parent_w)
+    reply = recv(to_parent_r)
+    os.close(to_child_w)
+    os.close(to_parent_r)
+    proc.wait(timeout=30)
+
+    loaded = set(reply["src_modules"])
+    # the strategy's own module is named after where it lived
+    strategy_modules = {m for m in loaded if m.endswith("._remote_strategy")}
+    unexpected = loaded - CHILD_MODULE_ALLOWLIST - strategy_modules
+    assert not unexpected, (
+        "the strategy process loaded harness modules outside the allowlist:\n  "
+        + "\n  ".join(sorted(unexpected))
+        + "\n\nEither the import is needed -- add it to CHILD_MODULE_ALLOWLIST "
+          "with a reason -- or an __init__ re-export widened the boundary again."
+    )
+    for forbidden in CHILD_MODULE_FORBIDDEN:
+        assert not any(m == forbidden or m.startswith(forbidden + ".")
+                       for m in loaded), forbidden
+    assert reply["walked"] > 1000
+    assert not reply["hits"], reply["hits"]

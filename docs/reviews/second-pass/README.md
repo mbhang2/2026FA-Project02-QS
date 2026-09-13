@@ -21,3 +21,21 @@ docs/reviews/second-pass/attack_c.py`.
 | `attack_b.py` | T+1 eligibility | — | **could not break it.** Recorded because a boundary nobody managed to cross is evidence, and only if the attempt is written down. |
 
 `docs/design/architecture.md` §10 is the authority on what is still open.
+
+## What both passes missed
+
+**Network egress.** The strategy process could open a socket, and a strategy that
+fetched real prices for the evaluation dates would have produced a false
+discovery that every defence in Tasks 21 through 25 is orthogonal to: genuine
+blotter, stable dataset digest, clean fingerprint, and a replay that reproduces
+because it fetches them again.
+
+Neither pass reported it. Both briefs framed the boundary as an in-process one,
+and both passes duly reasoned about the object graph -- `__self__`,
+`__closure__`, `gc.get_referents`. The reachability walk is a good tool and it
+answers exactly one question. It cannot ask where the data came from.
+
+Worth keeping as the shape of the miss rather than the miss itself: a review
+inherits the threat model of its brief. Closed in Task 26
+(`docs/reviews/task26/network_probe.py`), and the boundary is now described in
+`architecture.md` as a data boundary rather than a process boundary.

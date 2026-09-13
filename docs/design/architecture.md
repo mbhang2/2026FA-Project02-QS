@@ -525,6 +525,34 @@ be the same row. The traceback matters for the same kind of reason: an agent
 debugging against a truncated traceback is debugging against fiction, and every
 error message in `docs/agent/strategy-api.md` would become a lie.
 
+### The boundary is a data boundary, not only a process boundary
+
+Neither adversarial pass reported this, and it has been reachable since the first
+line of strategy code. The strategy child is ordinary Python; unless something
+stops it, it can open a socket. A strategy that fetches real NQ prices for the
+evaluation dates from any public source and trades on them produces a spectacular
+result with a genuine blotter, a stable `dataset_digest`, a clean scoring
+fingerprint and a **replay that reproduces**, because the replay fetches them
+again. It never touches the engine, the dataset or the scorer, so everything
+built in Tasks 21 through 25 is orthogonal to it.
+
+Both passes reasoned about the object graph, because both briefs framed the
+boundary as an in-process one. The reachability walk is a good tool that answers
+exactly one question, and the question it does not answer is where the data came
+from. **The entire point of the pre-registered split is that a strategy cannot
+see certain prices; an open socket makes the calendar decorative.**
+
+Network is denied in the child on both platforms — an empty network namespace on
+Linux, the `sandbox-exec` profile on macOS — and verified by probe rather than by
+configuration. Three probes, because they fail in different places: DNS, a raw
+TCP connect to a literal IP with no name resolution involved, and `urllib` the
+way a strategy would actually write it. A configuration that denies one and not
+the others is worse than none, because it reads as protection.
+
+Nothing legitimate in the child needs the network — it receives everything over
+the pipe — and a test asserts the child's modules import no socket library, so
+that stays true rather than being remembered.
+
 ### Isolated on Linux, best-effort on macOS
 
 Not one claim meaning two things. Every run record carries `isolation` — level,
@@ -545,6 +573,75 @@ Task 24 measured the macOS gaps rather than inferring them: `setrlimit` raises
 either hard value, and the sandbox needs three interpreter paths whitelisted by
 literal because the profile applies before the exec that starts the child.
 **Scored campaigns should run on Linux.** macOS stays supported for development.
+
+Task 26 stood a Linux runner up and verified it rather than asserting it —
+`docs/setup/LINUX_RUNNER.md` is how to reproduce one, and
+`docs/reviews/task26/verify_isolation.py` is the check. Every item holds on
+Linux under bubblewrap: goldens byte-identical (both sets, windows 1 and 512),
+the escape walk clean over 21,198 objects inside the child, writes to `config/`,
+`runs/`, `data/calibration/` and the strategy's own source all refused with
+`EROFS`, all three network probes unreachable, and **`RLIMIT_AS` actually binds**
+— a strategy allocating without bound gets `MemoryError`, which is the one thing
+macOS cannot do.
+
+One correction to the spike, which said the mechanism needs no privileges: the
+*run* needs none, but on Ubuntu 24.04 *getting there* needs one root step.
+Unprivileged user namespaces are restricted by AppArmor and `bubblewrap` ships
+without a profile, so `bwrap` fails with `loopback: Failed RTM_NEWADDR` or
+`setting up uid map: Permission denied` — neither of which mentions AppArmor.
+The profile is three lines and is in the setup doc.
+
+Cost, same real NQ validation split and the same blotter digest on both:
+
+| | in process | isolated | overhead |
+|---|---:|---:|---:|
+| macOS 15.0, M1 Pro | 45.3 s | 49.3 s | +8.8% |
+| Linux VM, 4 vCPU, bubblewrap | 61.0 s | 68.2 s | +11.8% |
+
+Per callback the boundary costs 82 µs on macOS and 152 µs on Linux — bubblewrap's
+namespace setup plus a virtualised pipe — and next to tick decoding on real data
+it is invisible either way.
+
+### Digests are platform-stable. Scores are not.
+
+Running the same trial on both platforms turned up something neither this brief
+nor Task 23's environment work anticipated. Same profile, same seed, same data:
+
+| | Linux, py 3.12.3, numpy 2.5.3 | macOS, py 3.11.5, numpy 2.4.6 |
+|---|---|---|
+| `blotter_digest` | `e20fe3a4eb59f920…` | **identical** |
+| `fill_log_digest` | `bda5db2c289e8e35…` | **identical** |
+| `sharpe`, `skew`, `kurtosis` | | **identical** |
+| `net_pnl` | −48.86 | −48.85999999999994 |
+| `primary` (Sortino) | −0.45305964538078264 | −0.45305964538078275 |
+| `significance` | −2.6803370085755294 | −2.6803370085755303 |
+
+The blotter survives because `digest()` rounds; the metric does not, because
+`net_pnl` is a float summation and the summation order differs between numpy
+builds. One ULP, and it propagates into the primary metric and the significance.
+
+Task 23 measured bit-identical replay across a numpy and pandas change **on one
+platform** and reported it as such. Across platforms it does not hold, and the
+difference matters in two concrete ways:
+
+- **A campaign must not mix environments.** Two rows scored 1 ULP apart are two
+  rows nobody can rank against each other at that precision. `ledger_check.py`
+  already reports the mismatch as environment-drifted; that flag is doing real
+  work rather than being defensive.
+- **Pin digests, never scores.** The golden sets pin blotter digests and are
+  platform-stable for exactly that reason. A golden *score* would fail on the
+  other platform and look like a behaviour change.
+
+### The child's modules are an allowlist
+
+Twice an `__init__` re-export has quietly widened this boundary, and both times a
+graph walk caught it because someone happened to run one.
+`CHILD_MODULE_ALLOWLIST` is the version that fails by name on the next import:
+the strategy process may have `src`, `src.core`, `src.core.types` and
+`src.strategies` loaded, and nothing else. `src.core.engine.engine`,
+`src.core.engine.context`, `src.core.data`, `src.core.scoring.*` and
+`src.core.runlog` are named as forbidden separately, so the failure says *what*
+leaked rather than only that something did.
 
 ### One in-process exception, bound to a digest
 

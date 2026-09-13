@@ -43,6 +43,7 @@ from ..types import (
     Side,
     Submit,
     Subscription,
+    Tick,
     TickEvent,
     TimeInForce,
     Ts,
@@ -770,7 +771,7 @@ class SetupContext:
     def subscriptions(self) -> tuple[Subscription, ...]:
         return tuple(self._subs)
 
-    def ticks(self):
+    def ticks(self) -> tuple[Tick, ...]:
         """Every train tick, in order.
 
         Materialises the whole training split, which on a real dataset is

@@ -757,13 +757,25 @@ def test_the_scoring_fingerprint_does_not_see_a_rewritten_null_table():
     assert integrity.artifact_digests() == before_files
 
 
-def test_a_mid_run_write_to_a_calibration_table_invalidates_the_trial(tmp_path):
+def test_a_mid_run_write_to_a_calibration_table_never_produces_a_score(tmp_path):
     """The demonstration, end to end through `run.py`.
 
     The strategy rewrites a null table from `setup()` -- after the baseline was
-    taken at import, which is the window that matters -- and the run has to come
-    back invalidated rather than scored. The table is restored whatever happens,
-    and the test asserts the restoration rather than trusting the `finally`.
+    taken at import, which is the window that matters -- and the run must not
+    come back scored. **Which way it fails now depends on the platform**, and
+    both are correct:
+
+    - where the sandbox holds (macOS `sandbox-exec`, Linux read-only mount) the
+      write never happens: `PermissionError` in the child, `outcome: crashed`,
+      `failure_kind: strategy_raised`, exit 5. That is Task 25's prevention half
+      of finding 7, and the Task 22 detection never gets a chance to fire.
+    - with no isolation the write succeeds and Task 22's artifact fingerprint
+      catches it: `invalidated_artifacts_mutated`, exit 4.
+
+    Asserting only the first would make the test a platform check; asserting only
+    the second would have it fail on the platform where the fix works. It asserts
+    the property both share -- no score, a row either way -- and then checks each
+    mechanism where that mechanism applies.
     """
     led = tmp_path / "ledger.jsonl"
     table = REPO_ROOT / "data" / "calibration" / "empirical-null.json"
@@ -780,17 +792,33 @@ class Strategy(MomentumStrategy):
         p.write_bytes(p.read_bytes() + b"\\n")
         return super().setup(ctx)
 ''')
+    from src.core.engine.remote import isolation_for
+
+    prevented = isolation_for().level in ("isolated", "best-effort")
     try:
         r = run_py("--quiet", ledger=led)
-        assert r.returncode == 4, (r.returncode, r.stdout, r.stderr)
         rows = ledger_lines(led)
         assert len(rows) == 1, "an invalidated trial is still a row"
         row = rows[0]
-        assert row["outcome"] == "invalidated_artifacts_mutated"
-        assert "empirical-null.json" in row["error"]
-        assert row["score"] is None
-        # both numbers, so the row says what changed and not only that something did
-        assert row["artifacts"]["data/calibration/empirical-null.json"] != ""
+        assert row["score"] is None, "a run that wrote to a null table was scored"
+        assert r.returncode != 0
+
+        if prevented:
+            assert r.returncode == 5, (r.returncode, r.stdout, r.stderr)
+            assert row["outcome"] == "crashed"
+            assert row["failure_kind"] == "strategy_raised"
+            assert "empirical-null.json" in row["error"]
+            assert "PermissionError" in row["error"], (
+                "the sandbox reported something other than a refused write"
+            )
+            assert table.read_bytes() == original_table, (
+                "the write went through despite the sandbox"
+            )
+        else:
+            assert r.returncode == 4, (r.returncode, r.stdout, r.stderr)
+            assert row["outcome"] == "invalidated_artifacts_mutated"
+            assert "empirical-null.json" in row["error"]
+            assert row["artifacts"]["data/calibration/empirical-null.json"] != ""
     finally:
         table.write_bytes(original_table)
         strategy.write_text(original_strategy)

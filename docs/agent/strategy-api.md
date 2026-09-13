@@ -446,6 +446,45 @@ way to compare enum values.
 
 ---
 
+## 7a. Your code runs in its own process
+
+Since Task 25 the harness starts a separate process, hands it your file, and
+talks to it over a pipe. Everything in section 4 and section 5 still works and
+the callbacks are unchanged — the engine cannot tell the difference, and the
+golden digests are byte-identical either way. Four things follow that you can
+observe:
+
+**History is a window, and reaching past it raises.** Each callback carries the
+last N bars per subscription, N declared by the profile (512 by default).
+`len(ctx.history("5m"))` is still the true total — the count is exact — but
+`ctx.history("5m")[0]` on a run that has seen 4,000 bars raises
+`WindowTooShort` rather than returning something. If you need more than the
+window, keep it on `self` as it arrives; that is cheaper than the window anyway,
+because you keep the one number you wanted instead of every bar.
+
+**`setup()` bulk data is capped at 256 MB.** `ctx.train_bars("5m")` over the full
+NQ training split is 12.7 MB and `ctx.train_bars("1m")` is 62 MB, so bar
+intervals are fine. `ctx.ticks()` in `setup()` is 8.0 GB on that split and will
+be refused with the number. Fitting on training *bars* works; fitting on raw
+training *ticks* does not, and that is a real loss — volume bars, dollar bars and
+tick-imbalance features cannot be fitted in-sample. You can still subscribe to
+ticks for the live walk.
+
+**Your traceback survives.** A `ValueError` in `on_bars` arrives in the run
+record with the child's traceback intact, naming your file and your line. This is
+deliberate: a truncated traceback would make every error in section 8 a lie.
+
+**Order ids still come back from `ctx.buy()`.** They are pre-allocated per
+callback from a block the size of the action cap, so the call returns
+synchronously as it always did. Running out of the block *is* hitting the action
+cap — the same event, not a second one.
+
+You cannot reach the engine, the dataset or the scorer from your process, because
+they are not in it. The only harness modules loaded beside your file are
+`src.core` and `src.core.types`.
+
+---
+
 ## 7b. Your iteration loop, and what it costs
 
 **A runtime error now costs a trial.** The static check catches a syntax error, a
@@ -566,6 +605,19 @@ unnoticed.
 The usual causes, in order of likelihood: recomputing a feature over the whole
 history on every bar instead of updating it incrementally; subscribing to ticks
 without needing them; an unbounded structure that grows across sessions.
+
+### Sent something the protocol does not allow — `strategy_violated_protocol`
+
+Actions cross the process boundary as data and are checked against a whitelist of
+operations and their keywords. `ctx.buy(1, unlock_holdout=True)` comes back as
+`buy does not take ['unlock_holdout']`, the run is `outcome: crashed` with
+`failure_kind: strategy_violated_protocol`, and it counts toward N like any other
+crash. The whitelist is in `src/core/engine/remote/protocol.py`.
+
+### Reached past the pushed window — `WindowTooShort`
+
+`ctx.history(...)` carries the last N bars, N from the profile. `len()` is the
+true total; an index older than the window raises. Keep what you need on `self`.
 
 ### The holdout
 

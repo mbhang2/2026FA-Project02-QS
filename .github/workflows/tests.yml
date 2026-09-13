@@ -45,6 +45,12 @@ jobs:
       - name: Context API reference is current
         run: python scripts/gen_context_api.py --check
 
+      # The remote adapter's view of the context surface is generated from the
+      # same source the context reference is. A context member added without
+      # regenerating is a member the boundary silently does not carry.
+      - name: Remote context surface is current
+        run: python scripts/gen_remote_surface.py --check
+
       # The research agent's data reference is generated from data/manifest.json,
       # so extending the series without regenerating it fails here rather than
       # showing an agent session counts that stopped being true.

@@ -1,0 +1,16 @@
+{
+  "bar_wall_s": 15.852728124707937,
+  "bars": 1840,
+  "bars_bytes": 222132,
+  "bars_full_bytes": 4264934.399999999,
+  "dataset": "nq-trades:NQ",
+  "interval": "15m",
+  "ratio": 1883.0456967136658,
+  "scale": 19.2,
+  "sessions_walked": 20,
+  "tick_bytes_each": 44.4827,
+  "tick_wall_s": 12.749343749601394,
+  "ticks": 9403312,
+  "ticks_full_bytes": 8031066368.68608,
+  "train_sessions": 384
+}

@@ -48,6 +48,9 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
+from src.core.engine.remote import (  # noqa: E402
+    HarnessFailed, RemoteFailure, RemoteStrategy, isolation_for,
+)
 from src.core.runlog import (  # noqa: E402
     LedgerRun, append_ledger, store_fill_log, store_source, strategy_digest,
 )
@@ -276,7 +279,15 @@ def check_warmup_against_embargo(profile_name: str, warmup: int, dataset) -> Non
 
 
 def load_strategy():
-    """Imported by name, never handed in: the entry point decides what runs."""
+    """Import the agent's file into *this* process.
+
+    **No longer used by the scored path**, and kept only because the static check
+    and its documentation refer to the names it looks for. Since Task 25 the
+    strategy runs in its own process and `run.py` never imports it: this function
+    was the last place on the scored path that put agent code in the harness's
+    address space, which is what findings 2 and 3 of the second adversarial pass
+    were both about.
+    """
     import importlib
 
     module = importlib.import_module("src.strategies.current")
@@ -346,7 +357,6 @@ def main(argv: list[str] | None = None) -> int:
     warmup_sessions = profile.get("warmup_sessions", 0)
     check_warmup_against_embargo(profile_name, warmup_sessions, dataset)
 
-    strategy = load_strategy()
     ledger_path = args.ledger or (REPO_ROOT / cfg.get("ledger", "runs/ledger.jsonl"))
 
     fill_model = profile["fill_model"]
@@ -362,18 +372,31 @@ def main(argv: list[str] | None = None) -> int:
         row_builder=lambda record: _row(record, trigger, profile_name,
                                         ledger_path, purpose),
     ) as run_log:
-        engine = Engine(
-            dataset,
-            strategy,
-            ticket=run_log.ticket,
-            split=split,
-            fill_model=fill_model,
-            warmup_sessions=warmup_sessions,
-            seed=seed,
-            wall_clock_budget_s=profile.get("wall_clock_budget_s"),
-        )
-        return _walk(args, cfg, profile, profile_name, engine, dataset, strategy,
-                     split, seed, ledger_path, run_log)
+        # The strategy runs in its own process. It is not imported here and
+        # never has been on this path -- `load_strategy()` used to import it,
+        # which put strategy code in the harness's address space before the
+        # engine existed. Findings 2 and 3 of the second adversarial pass were
+        # both that sharing; this is the change that ends it.
+        with RemoteStrategy(
+            STRATEGY_PATH,
+            class_name="Strategy",
+            action_cap=profile.get("action_cap", 64),
+            window=profile.get("history_window", 512),
+            tick_window=profile.get("tick_window", 512),
+            timeout_s=profile.get("wall_clock_budget_s"),
+        ) as strategy:
+            engine = Engine(
+                dataset,
+                strategy,
+                ticket=run_log.ticket,
+                split=split,
+                fill_model=fill_model,
+                warmup_sessions=warmup_sessions,
+                seed=seed,
+                wall_clock_budget_s=profile.get("wall_clock_budget_s"),
+            )
+            return _walk(args, cfg, profile, profile_name, engine, dataset,
+                         strategy, split, seed, ledger_path, run_log)
 
 
 def _walk(args, cfg, profile, profile_name, engine, dataset, strategy, split,
@@ -421,6 +444,27 @@ def _walk(args, cfg, profile, profile_name, engine, dataset, strategy, split,
         attach_fill_log(record, engine, ledger_path)
     except _Abandoned:
         pass
+    except RemoteFailure as exc:
+        # Five distinguishable kinds, and the distinction that matters is the
+        # last one. A harness bug recorded as a crashed trial inflates N, and N
+        # is the denominator of every corrected p-value here -- so "the strategy
+        # broke" and "we broke" must never be the same row.
+        rec = getattr(engine, "record", None)
+        record = rec.as_dict() if rec else {}
+        record.update(
+            outcome=("harness_failed" if isinstance(exc, HarnessFailed)
+                     else "crashed"),
+            failure_kind=exc.kind, error=str(exc),
+            child_traceback=getattr(exc, "child_traceback", ""),
+            score=None, diagnostics=None,
+        )
+        if rec:
+            attach_fill_log(record, engine, ledger_path)
+        run_log.update(record)
+        print(f"{exc.kind}: {exc}", file=sys.stderr)
+        if getattr(exc, "child_traceback", ""):
+            print(exc.child_traceback, file=sys.stderr)
+        return 6 if isinstance(exc, HarnessFailed) else 5
     except (integrity.ScoringMutated, integrity.ArtifactsMutated,
             ScoringMismatch) as exc:
         rec = getattr(engine, "record", None)
@@ -479,19 +523,29 @@ def _fill_model_spread(cfg, profile, seed, strategy, split, engine) -> float:
     field nothing ever computed.
     """
     other = "favorable" if engine.model.name == "unfavorable" else "unfavorable"
-    # The same ticket: this is a second walk of the same candidate under the
-    # opposite fill model, recorded as a diagnostic inside the one row that
-    # covers the trial. A second row would double-count it.
-    twin = Engine(
-        build_dataset(cfg, profile["dataset"], seed),
-        load_strategy(),
-        ticket=engine.ticket,
-        split=split,
-        fill_model=other,
-        warmup_sessions=profile.get("warmup_sessions", 0),
-        seed=seed,
-    )
-    twin.run()
+    # A second isolated process, not a second import. The twin walks the same
+    # candidate under the opposite fill model and shares the ticket, because it
+    # is one trial recorded in one row -- but it must not share the address
+    # space, and `load_strategy()` here was the last place on this path that
+    # would have put strategy code in it.
+    with RemoteStrategy(
+        STRATEGY_PATH,
+        class_name="Strategy",
+        action_cap=profile.get("action_cap", 64),
+        window=profile.get("history_window", 512),
+        tick_window=profile.get("tick_window", 512),
+        timeout_s=profile.get("wall_clock_budget_s"),
+    ) as twin_strategy:
+        twin = Engine(
+            build_dataset(cfg, profile["dataset"], seed),
+            twin_strategy,
+            ticket=engine.ticket,
+            split=split,
+            fill_model=other,
+            warmup_sessions=profile.get("warmup_sessions", 0),
+            seed=seed,
+        )
+        twin.run()
     a = twin.blotter.realized_pnl - twin.blotter.commission
     b = engine.blotter.realized_pnl - engine.blotter.commission
     return (a - b) if other == "favorable" else (b - a)
@@ -539,6 +593,10 @@ def _row(record: dict, trigger: str, profile: str, ledger_path: Path,
         "environment_fingerprint": ENVIRONMENT_AT_IMPORT,
         "lockfile_digest": LOCKFILE_AT_IMPORT,
         "python_version": platform.python_version(),
+        # What isolation the run actually had, not what was intended. A row that
+        # says `best-effort` is a row a reader can discount; a row that does not
+        # say lies by omission.
+        "isolation": isolation_for().as_dict(),
     }
 
 

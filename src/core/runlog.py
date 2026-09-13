@@ -41,9 +41,27 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STRATEGY_PATH = REPO_ROOT / "src" / "strategies" / "current.py"
+# The one strategy the harness may run in its own process. Not because it is
+# trusted in some general sense, but because it is *committed*: its digest is in
+# git, the CI path check refuses edits to it from the agent, and calibration runs
+# tens of thousands of engines against it to measure the apparatus. Paying
+# process spawn on each of those is not sensible and the reference is not the
+# thing this distrusts.
+REFERENCE_PATH = (REPO_ROOT / "src" / "core" / "scoring" / "calibration"
+                  / "reference.py")
 
 # See the docstring: a sentinel, not a secret.
 _MINT = object()
+
+
+class NotTheReferenceStrategy(RuntimeError):
+    """Something other than the committed reference asked to run in process.
+
+    Findings 2 and 3 of the second adversarial pass are both "strategy code and
+    engine code share an address space". A single in-process exception for
+    arbitrary code puts them both back, so the exception is bound to a digest
+    rather than to an intention.
+    """
 
 
 class RunNotAccounted(RuntimeError):
@@ -81,15 +99,32 @@ class RunTicket:
         return cls(kind=kind, reason=reason, key=key)
 
     @classmethod
-    def for_calibration(cls, reason: str) -> RunTicket:
+    def for_calibration(cls, reason: str,
+                        strategy_path: Path | None = None) -> RunTicket:
         """Measuring the apparatus with the immutable reference strategy.
 
         Not an evaluation of a candidate, and deliberately not one row each: the
         null is tens of thousands of engines and the ledger would stop being
         readable. `reason` is required so a caller has to say which calibration.
+
+        **This is also the only in-process route.** Since Task 25 a strategy runs
+        in its own process; the exception is a strategy whose source digest
+        equals the committed reference's, checked here rather than promised in a
+        comment. A calibration ticket for anything else is refused, so the rule
+        cannot be worked around by passing `for_calibration` a different
+        strategy -- which is the shape the loophole would take.
         """
         if not reason:
             raise RunNotAccounted("for_calibration() needs a reason")
+        path = Path(strategy_path) if strategy_path else REFERENCE_PATH
+        if strategy_digest(path) != strategy_digest(REFERENCE_PATH):
+            raise NotTheReferenceStrategy(
+                f"{path} is not the committed reference strategy "
+                f"({strategy_digest(path)} vs {strategy_digest(REFERENCE_PATH)}). "
+                "In-process execution is permitted only for the reference; "
+                "everything else runs in its own process. See "
+                "src/core/engine/remote/."
+            )
         return cls._mint(_MINT, "calibration", reason)
 
     @classmethod

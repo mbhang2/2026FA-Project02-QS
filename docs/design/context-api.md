@@ -79,7 +79,7 @@ one.
 
 _(no docstring)_
 
-#### `ctx.ticks()`
+#### `ctx.ticks() -> 'tuple[Tick, ...]'`
 
 Every train tick, in order.
 

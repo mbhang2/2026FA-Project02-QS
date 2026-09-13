@@ -719,6 +719,18 @@ FILL_LOG_TYPES = ("FillRecord",)
 # Anything else reaching a dataset is a finding.
 SETUP_CAPABILITY_PATHS = ("ctx._train_ticks", "ctx._session_bounds")
 
+# Task 25 moved the strategy into its own process, and the escape below is now a
+# property of the **in-process path only** -- which since Task 25 may run nothing
+# but the committed calibration reference, checked by digest in
+# `RunTicket.for_calibration`. `tests/test_remote.py` re-runs this walk inside the
+# strategy process and finds nothing: there is no dataset in that address space
+# to forward, so finding 2 is absent rather than patched.
+#
+# The entry stays because the path stays. Deleting it would claim the in-process
+# context no longer leaks, which is not true; it is that nothing the project
+# distrusts runs there any more. `KNOWN_LIVE_ESCAPES` is now a statement about
+# calibration, and the docstring below says so.
+#
 # Widening the walk in Task 21 surfaced one hit that was invisible to the
 # narrower version, and it is a *known live finding*, not a new one:
 #
@@ -903,9 +915,15 @@ def test_no_context_reaches_the_engine_or_the_dataset_by_any_path():
 
 
 def test_the_named_live_escape_is_still_exactly_one_path():
-    """The other half of the list. If finding 2 is fixed this fails and asks for
-    the entry to be deleted -- a stale exemption is how a closed hole gets
-    reported as open forever, and how an open one gets reported as closed."""
+    """The other half of the list, and since Task 25 a narrower claim.
+
+    The escape is real on the in-process path and that path now runs only the
+    committed reference strategy -- `RunTicket.for_calibration` refuses anything
+    whose digest differs. So this asserts what is still true rather than what
+    would be reassuring: the leak exists, and nothing the project distrusts is
+    on the far side of it. `tests/test_remote.py` is where the claim about the
+    strategy process lives.
+    """
     for cls, paths in KNOWN_LIVE_ESCAPES.items():
         still_there = [p for p in paths if p in REACHER.hits.get(cls, [])]
         assert still_there == paths, (

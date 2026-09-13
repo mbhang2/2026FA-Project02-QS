@@ -1,0 +1,30 @@
+;; macOS sandbox profile for the strategy subprocess.
+;;
+;; `sandbox-exec(1)` is documented as deprecated and has been for a decade; it
+;; is still present and still enforcing on macOS 15.0 / arm64, which is what the
+;; spike measured. Deprecated-but-working is the honest description, and it is
+;; the reason the recommendation is that scored runs happen on Linux.
+;;
+;; Read is allowed: the child imports Python, the stdlib and src.core.types.
+;; Everything that could exfiltrate or persist is denied.
+(version 1)
+(allow default)
+
+;; finding 7's prevention half: the null tables, the calendar, the ledger and
+;; the strategy's own source all live on this filesystem.
+(deny file-write*)
+
+;; a strategy that can open a socket can publish its score, fetch a future bar,
+;; or ask something else to run for it.
+(deny network*)
+
+;; and it must not be able to step outside the sandbox by exec'ing.
+;;
+;; `(deny process-exec*)` cannot be blanket: sandbox-exec applies the profile
+;; before exec'ing the interpreter, so denying every exec denies the one that
+;; starts the child. The interpreter is allowed by literal path and nothing else
+;; is -- which is stricter than allowing the directory, and it is the shape the
+;; real build should use with the path passed in rather than hard-coded.
+(deny process-exec*)
+(allow process-exec (literal "/PYTHON/"))
+(deny process-fork)

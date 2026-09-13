@@ -731,6 +731,16 @@ comes from and not the number.
 Written down because the alternative is a document that reads like a finished
 system. Each of these has been demonstrated, not hypothesised.
 
+**Process isolation is the answer and it has been costed.**
+`docs/reviews/task24/` is the spike: measurements, a throwaway prototype that
+produced a byte-identical blotter through a pipe, and a go recommendation at
+**6.6% of a full 564-session NQ trial**. It says findings 2 and 3 close
+structurally rather than by patch — in an isolated build there is no dataset and
+no intent queue in the strategy's address space to reach — and that the strategy
+process needs nothing from the harness but `src/core/types.py`. Read it before
+the loop driver: isolation changes "run one trial" from a function call into a
+subprocess with a protocol, and a driver written first gets written twice.
+
 **In-process containment is not won, and the fill log does not win it.** The log
 removes the *score* from a strategy's reach. It does not remove the interpreter.
 A strategy still shares an address space with the engine, and the honest boundary

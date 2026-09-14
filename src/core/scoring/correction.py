@@ -224,12 +224,31 @@ def max_of_n(
     b: int = 10_000,
     seed: int = 17,
     q: float = 0.05,
+    smooth: bool = False,
 ) -> dict:
     """The null distribution of the best-of-N, simulated from per-trial nulls.
 
     `null_samples[i]` is trial `i`'s own null score sample -- from
     `randomization.candidate_null`, or from a profile-indexed table, or from any
     other source that produces draws rather than a quantile grid.
+
+    **`max_of_n` carries a measured liberal bias, and `smooth` is not the fix.**
+    Plain resampling with replacement caps the simulated maximum at the largest
+    draw each null happens to contain, so a finite null truncates its own upper
+    tail and the test over-rejects. Measured on known normal nulls, 4,000
+    campaigns per cell: +0.021 at R = 20, +0.011 at R = 50, and nothing
+    distinguishable from zero past R = 150. `RESAMPLING_BIAS` carries the grid.
+
+    `smooth=True` adds Gaussian jitter at a Silverman bandwidth, which removes
+    the hard cap -- and **was measured and rejected**: at N = 25 it turns a
+    +0.015 bias at R = 50 into a **-0.022 conservative** one, and -0.028 at
+    R = 99 where plain resampling is already unbiased. The bandwidth widens the
+    null and the maximum overshoots. A different error in the other direction,
+    and it costs power. Kept, defaulted off, and documented here so it is not
+    re-invented as an improvement.
+
+    **The adopted remedy is R >= 150**, where the bias is inside measurement
+    noise with no assumption about tail shape.
 
     A trial whose null is empty contributes nothing: it cannot be the campaign's
     best under the null, and giving it a placeholder would put a number nobody
@@ -246,6 +265,13 @@ def max_of_n(
     maxima = np.full(b, -np.inf)
     for sample in usable:
         draws = sample[rng.integers(0, sample.size, size=b)]
+        if smooth and sample.size > 1:
+            sd = float(sample.std(ddof=1))
+            if sd > 0:
+                # Silverman's rule. The jitter is what lets a resampled maximum
+                # exceed the sample maximum, which is the whole defect.
+                h = 0.9 * min(sd, _iqr(sample) / 1.34 or sd) * sample.size ** -0.2
+                draws = draws + rng.normal(0.0, h, size=b)
         np.maximum(maxima, draws, out=maxima)
 
     exceed = int((maxima >= observed_best).sum())
@@ -265,6 +291,13 @@ def max_of_n(
         "null_max_quantiles": quantiles,
         "note": MAX_OF_N_NOTE,
     }
+
+
+def _iqr(sample) -> float:
+    import numpy as np
+
+    q75, q25 = np.percentile(sample, [75, 25])
+    return float(q75 - q25)
 
 
 def step_down_max(
@@ -296,11 +329,47 @@ def step_down_max(
     return out
 
 
-def resolution_cap(r: int, q: float = 0.05) -> int:
-    """The largest N at which a per-trial p-value can clear its BH bar.
+RESAMPLING_BIAS = {20: 0.021, 30: 0.016, 50: 0.011, 75: 0.002, 99: 0.006,
+                   150: 0.002, 250: 0.003, 500: -0.003, 999: 0.003, 2000: -0.000}
+RECOMMENDED_MIN_R = 150
 
-    `N <= q(R+1)`. Reported beside BH and Holm so a campaign that has outgrown
-    them says so rather than quietly returning zero discoveries for a reason
-    nobody notices.
+
+def resampling_bias(r: int) -> float:
+    """The liberal bias `max_of_n` carries at null-sample size `r`.
+
+    Measured on known standard-normal nulls, 4,000 campaigns per cell (se
+    0.0034), averaged over N in {10, 25, 50, 200}; the full grid is in
+    `docs/reviews/task34/bias-grid.json`. Interpolated between grid points and
+    clamped at the ends.
     """
-    return int(q * (r + 1))
+    grid = sorted(RESAMPLING_BIAS)
+    if r <= grid[0]:
+        return RESAMPLING_BIAS[grid[0]]
+    if r >= grid[-1]:
+        return RESAMPLING_BIAS[grid[-1]]
+    for lo, hi in zip(grid, grid[1:]):
+        if lo <= r <= hi:
+            t = (r - lo) / (hi - lo)
+            return RESAMPLING_BIAS[lo] + t * (RESAMPLING_BIAS[hi] - RESAMPLING_BIAS[lo])
+    return 0.0                                              # pragma: no cover
+
+
+def resolution_cap(r: int, q: float = 0.05) -> dict:
+    """What a null of `r` draws can and cannot support, in one place.
+
+    `N <= q(R+1)` is the BH limit. The resampling bias is the other half and used
+    to be invisible: a summary reported a p-value and said nothing about the
+    systematic error attached to it. Both are reported now.
+    """
+    return {
+        "r": r,
+        "bh_max_n": int(q * (r + 1)),
+        "p_floor": 1.0 / (r + 1),
+        "resampling_bias": round(resampling_bias(r), 4),
+        "meets_recommended_r": r >= RECOMMENDED_MIN_R,
+        "recommended_min_r": RECOMMENDED_MIN_R,
+        "note": ("max_of_n resamples each null with replacement, so a small null "
+                 "truncates its own upper tail and the test is liberal by about "
+                 "`resampling_bias`. Measured, not assumed: "
+                 "docs/reviews/task34/bias-grid.json."),
+    }

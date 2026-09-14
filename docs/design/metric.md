@@ -567,6 +567,58 @@ strength 0.15, 48 of 60 campaigns had their best candidate on the rotation
 fallback; at 0.50, all 60 did. Under a profile-only gate every one of those would
 have been auto-rejected at p = 1. The fallback is where the power is.
 
+### What Task 32's 0.045 actually was (recorded in those terms)
+
+Task 32's profile-only gate reported FWER 0.045 and that looked like success. It
+was **largely achieved by being blind to the candidates the gate exists to
+find.**
+
+Task 33's power sweep measured it directly. At planted strength 0.15 the bucket
+path's power was **0.00** against the rotation fallback's 0.67, and **48 of 60
+campaigns routed their best candidate to the fallback** — a path the profile-only
+gate did not have, so those candidates entered at p = 1 and could not be
+discoveries. At strength 0.50 it was 60 of 60.
+
+A candidate that exploits an edge trades differently from an edgeless one, so its
+profile lands in a thin bucket. The coverage gap was not randomly placed: **it sat
+exactly where a real discovery lands.**
+
+This is the clearest instance in the project of a validity number that looks like
+success and is obtained by rejecting everything, and it was live for two tasks.
+It is why the FWER history below is quoted with its coverage beside it, and why
+"controls at q" is never reported without the share of candidates that could have
+been accepted at all.
+
+### How large should a campaign be? (Task 34)
+
+**As large as the budget allows, up to at least N = 400** — and that is where the
+evidence stops, not where the gate's behaviour changes.
+
+Detection rises monotonically with N across every measured (π, s) cell in the
+range where FWER still holds at q. There is **no interior optimum**, and there is
+a reason: BH's penalty is `q/N`, which shrinks linearly and does trade off
+against a linear gain in edge candidates — but `max_of_n`'s penalty is the null's
+maximum over N draws, which grows like √(2 log N). Sublinear penalty against
+linear gain means more trials always help. *The interior optimum was a property
+of the correction Task 31 retired.*
+
+The assumption this rests on has to be stated with it. **At π = 0.01 and
+s = 0.15 — one proposal in a hundred carrying a weak edge — no campaign size
+tested reaches a detection probability of 0.05.** More trials are not the answer
+there; a proposal process with a higher π is. At π = 0.05 and s = 0.30 detection
+is 0.90 at N = 200 and 0.99 at N = 400.
+
+FWER was measured at every N and holds through 400. Past that the measurement's
+own candidate library runs out and the test turns conservative — an artifact of
+the measurement, not of the gate, and detectable only because FWER was checked at
+each N. `docs/reviews/task34/README.md` has the surface and the diagnosis.
+
+**The campaign's cost is not known in advance.** The rotation share rises with
+signal strength — 23.5% at none, 55.2% at 0.50 — because candidates exploiting an
+edge have unusual profiles and take the expensive path. The null budget grows
+precisely when the loop starts working, and `campaign.summarise` reports the
+share so it is visible while it happens.
+
 ### Two decisions not to tune a parameter, recorded so they are not re-opened
 
 Both look like omissions if the reasoning is not written down, and someone will

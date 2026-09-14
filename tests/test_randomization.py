@@ -106,9 +106,9 @@ def test_the_p_value_floor_is_reported_as_a_floor_and_never_substituted():
 def test_the_resolution_cap_is_the_arithmetic_the_brief_states():
     """N <= q(R+1). At q=0.05 and R=1000 that is 50, against an overnight run of
     21,600 trials -- four orders of magnitude, and no null closes it."""
-    assert resolution_cap(99, 0.05) == 5
-    assert resolution_cap(1_000, 0.05) == 50
-    assert resolution_cap(10_000, 0.05) == 500
+    assert resolution_cap(99, 0.05)["bh_max_n"] == 5
+    assert resolution_cap(1_000, 0.05)["bh_max_n"] == 50
+    assert resolution_cap(10_000, 0.05)["bh_max_n"] == 500
 
 
 # --------------------------------------------------------------------------- #
@@ -395,3 +395,87 @@ def test_the_mixing_rule_is_written_where_the_metric_is_documented():
     text = _flat(REPO_ROOT / "docs" / "design" / "metric.md")
     assert ("Mixing two valid procedures is valid when the choice between them "
             "is independent of the outcome") in text
+
+
+# --------------------------------------------------------------------------- #
+# Task 34: the resampling bias is reported, and the smoothed remedy is rejected
+# --------------------------------------------------------------------------- #
+def test_resolution_cap_reports_the_bias_beside_the_floor():
+    """The bias used to be invisible: a summary reported a p-value and said
+    nothing about the systematic error attached to it."""
+    from src.core.scoring.correction import RECOMMENDED_MIN_R, resolution_cap
+
+    small, large = resolution_cap(50), resolution_cap(999)
+    assert small["resampling_bias"] > large["resampling_bias"]
+    assert small["meets_recommended_r"] is False
+    assert resolution_cap(RECOMMENDED_MIN_R)["meets_recommended_r"] is True
+    for key in ("bh_max_n", "p_floor", "resampling_bias", "recommended_min_r"):
+        assert key in small
+
+
+def test_the_bias_interpolates_and_clamps():
+    from src.core.scoring.correction import RESAMPLING_BIAS, resampling_bias
+
+    grid = sorted(RESAMPLING_BIAS)
+    assert resampling_bias(1) == RESAMPLING_BIAS[grid[0]]
+    assert resampling_bias(10_000) == RESAMPLING_BIAS[grid[-1]]
+    mid = resampling_bias(40)
+    assert min(RESAMPLING_BIAS[30], RESAMPLING_BIAS[50]) <= mid <= max(
+        RESAMPLING_BIAS[30], RESAMPLING_BIAS[50])
+
+
+def test_the_smoothed_remedy_is_kept_off_and_documented_as_rejected():
+    """It was measured: at N=25 it turns a +0.015 liberal bias at R=50 into a
+    -0.022 conservative one. Kept so the idea is not re-invented, defaulted off
+    so it is not used."""
+    import inspect
+
+    from src.core.scoring.correction import max_of_n
+
+    assert inspect.signature(max_of_n).parameters["smooth"].default is False
+    doc = " ".join((inspect.getdoc(max_of_n) or "").split())
+    assert "measured and rejected" in doc
+    assert "R >= 150" in doc
+
+
+def test_smoothing_actually_changes_the_answer_in_the_measured_direction():
+    """A guard on the guard: if `smooth` silently did nothing the docstring above
+    would be describing a parameter that is not there."""
+    import numpy as np
+
+    from src.core.scoring.correction import max_of_n
+
+    rng = np.random.default_rng(7)
+    nulls = [rng.normal(0, 1, 50) for _ in range(25)]
+    best = 2.6
+    plain = max_of_n(nulls, best, b=4_000)["p"]
+    smoothed = max_of_n(nulls, best, b=4_000, smooth=True)["p"]
+    assert smoothed > plain, (plain, smoothed)
+
+
+def test_the_campaign_summary_reports_the_rotation_share():
+    """A leading indicator, not an accounting line: candidates exploiting an edge
+    have unusual profiles and take the expensive path."""
+    from src.core.loop.campaign import CampaignRecord, CampaignResult, summarise
+
+    result = CampaignResult(
+        record=CampaignRecord(campaign_id="x", profile="campaign", budget=3,
+                              q=0.05),
+        record_digest="d",
+        rows=[{"outcome": "completed", "score": None, "campaign_index": i}
+              for i in range(3)],
+    )
+    out = summarise(result, dataset="synthetic",
+                    null_routes=[{"route": "bucket"}, {"route": "rotation"}, None])
+    routing = out["null_routing"]
+    assert routing["rotation_share"] == pytest.approx(1 / 3)
+    assert routing["bucket"] == 1 and routing["unrouted"] == 1
+    assert "leading indicator" in routing["note"]
+    # and it is absent rather than zero when nothing was routed
+    assert "null_routing" not in summarise(result, dataset="synthetic")
+
+
+def test_task_32s_number_is_recorded_as_what_it_was():
+    text = _flat(REPO_ROOT / "docs" / "design" / "metric.md")
+    assert "achieved by being blind to the candidates the gate exists to find" in text
+    assert "it sat exactly where a real discovery lands" in text

@@ -902,6 +902,23 @@ fallback, priced at 87 minutes for a 200-candidate campaign at R = 99 on eight
 cores. `docs/design/metric.md` carries the guarantee sentence and
 `docs/reviews/task32/README.md` the measurement.
 
+### The correction's resampling bias, and the campaign-size result
+
+`max_of_n` resamples each trial's null with replacement, so the simulated maximum
+cannot exceed the largest draw that null contains: a finite null truncates its own
+upper tail and the test is **liberal**. Measured over 4,000 campaigns per cell on
+known normal nulls: **+0.021 at R = 20, +0.011 at R = 50, inside noise from
+R = 150.** The adopted remedy is **R ≥ 150** — the only option that costs money
+rather than an assumption. A smoothed-tail variant was implemented and measured to
+**overcorrect** (−0.022 where the bias was +0.015); it is kept, defaulted off, and
+documented as rejected. `resolution_cap()` reports the bias beside the floor.
+
+**Detection is monotone in N** up to the limit of what the measurement can see.
+The interior optimum one would expect is a BH property — `q/N` shrinks linearly —
+and `max_of_n`'s penalty grows like √(2 log N), so more trials always help. The
+recommendation is "as large as affordable, at least 400", with the stated
+assumption that at π = 0.01 and a weak edge no tested N detects anything.
+
 ### The correction changed shape
 
 `N ≤ q(R+1)`. BH rejects the smallest p only if it beats `q/N`, and an empirical

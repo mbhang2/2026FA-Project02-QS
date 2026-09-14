@@ -146,7 +146,7 @@ def main() -> int:
         print(f"  {label:<34} {rate:>8.3f} {verdict:>18}   ({hits}/{C})")
     print()
     print(f"  BH's resolution cap at this table's floor: N <= "
-          f"{resolution_cap(min(t['n'] for t in table.summary() if t['usable']), args.q)}"
+          f"{resolution_cap(min(t['n'] for t in table.summary() if t['usable']), args.q)['bh_max_n']}"
           f"   (campaign N = {args.trials})")
 
     print()

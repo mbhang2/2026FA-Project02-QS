@@ -171,7 +171,8 @@ def run_campaign(agent, record: CampaignRecord, *, ledger: Path,
 
 
 def summarise(result: CampaignResult, *, dataset: str | None = None,
-              null_samples: list | None = None, q: float | None = None) -> dict:
+              null_samples: list | None = None, q: float | None = None,
+              null_routes: list | None = None) -> dict:
     """The correction over the campaign, and the uncorrected view beside it.
 
     **`max_of_n` over per-candidate nulls is the gate; BH and Holm are
@@ -181,6 +182,16 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
     one null score sample per trial, in trial order -- to get the gate. Without
     it only the diagnostics are reported, and the summary says so rather than
     letting BH stand in.
+
+    `null_routes` is the hybrid's per-trial routing, and the **rotation
+    share it implies is a leading indicator rather than an accounting
+    line**. A candidate that exploits an edge trades differently from an
+    edgeless one, so it lands in a thin profile bucket and takes the
+    expensive path: Task 33 measured 23.5% with no signal planted and 55.2%
+    at strength 0.50. A campaign whose rotation share is climbing is
+    producing something atypical, and its bill is going up. **A campaign's
+    cost is therefore not known in advance**, and the null budget grows
+    precisely when the loop starts working.
     """
     from ..scoring.calibration import null as nullmod
     from ..scoring.correction import correct, deflation_view, max_of_n, resolution_cap
@@ -224,6 +235,21 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
         },
         "wall_clock_s": round(result.wall_clock_s, 1),
     }
+    if null_routes:
+        rotation = sum(1 for r in null_routes
+                       if r and r.get("route") == "rotation")
+        out["null_routing"] = {
+            "rotation_share": rotation / len(null_routes),
+            "rotation": rotation,
+            "bucket": sum(1 for r in null_routes
+                          if r and r.get("route") == "bucket"),
+            "unrouted": sum(1 for r in null_routes if not r),
+            "note": ("a leading indicator: candidates exploiting an edge "
+                     "have unusual profiles and take the expensive path. "
+                     "23.5% with no signal, 55.2% at strength 0.50 "
+                     "(Task 33). A rising share means the loop is producing "
+                     "something atypical, and that the bill is going up."),
+        }
     if null_samples:
         gate = max_of_n(null_samples, max(scores) if scores else float("-inf"), q=q)
         gate["is_the_gate"] = True
@@ -234,7 +260,7 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
             "note": ("no per-candidate nulls supplied, so this campaign has no "
                      "accept decision. BH over the tabulated column is not a "
                      "substitute -- see docs/design/metric.md."),
-            "bh_resolution_cap_at_the_tables_floor": resolution_cap(2_000, q),
+            "resolution": resolution_cap(2_000, q),
         }
     if scores:
         best = max(scores)

@@ -1,0 +1,13 @@
+{
+ "campaigns": 400,
+ "n": 10,
+ "fallback_r": 50,
+ "fwer": 0.0575,
+ "ci": [
+  0.038617261729224514,
+  0.08480142520149289
+ ],
+ "bucket_share": 0.77925,
+ "rotation_share": 0.22075,
+ "missing_share": 0.0
+}

@@ -543,6 +543,30 @@ built on the campaign's own data — the null is "other edgeless strategies with
 this profile *on this data*". The committed `profile-null.json` is a screening
 artifact from Task 31, pooled across realizations, and is not the operating null.
 
+### The gate, characterized (Task 33)
+
+**The gate controls FWER at q = 0.05 and detects a planted edge of strength 0.24
+— a best-of-ten Sortino of about +0.68 over 105 training sessions — with 80%
+power at N = 10.** Either half of that statement alone is not a characterization,
+and until Task 33 the project had only ever measured the first half.
+
+| planted strength | power | 95% CI | median best Sortino |
+|---:|---:|---|---:|
+| 0.00 | 0.07 | [0.03, 0.16] | +0.010 |
+| 0.15 | 0.53 | [0.41, 0.65] | +0.095 |
+| 0.30 | 0.97 | [0.89, 0.99] | +1.048 |
+| 0.50 | 1.00 | [0.94, 1.00] | +6.756 |
+
+Hybrid FWER over 400 campaigns: **0.058, CI [0.039, 0.085]**, with **no candidate
+left without a null**. It rose from Task 32's 0.045 because that number was
+conservative *by the size of the coverage gap*, not because anything regressed.
+
+**And the coverage gap was not randomly placed.** A candidate that exploits a
+signal trades differently from an edgeless one, so it lands in a thin bucket: at
+strength 0.15, 48 of 60 campaigns had their best candidate on the rotation
+fallback; at 0.50, all 60 did. Under a profile-only gate every one of those would
+have been auto-rejected at p = 1. The fallback is where the power is.
+
 ### Two decisions not to tune a parameter, recorded so they are not re-opened
 
 Both look like omissions if the reasoning is not written down, and someone will

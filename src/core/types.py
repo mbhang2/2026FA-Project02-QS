@@ -510,13 +510,30 @@ class Blotter:
     def add(self, row: BlotterRow) -> None:
         self.rows.append(row)
 
+    # `math.fsum`, not `sum`. Task 26 saw the same trial produce net P&L
+    # -48.86 on macOS and -48.85999999999994 on Linux and attributed it to numpy
+    # summing in a different order between builds. That was wrong, and the
+    # measurement is in `docs/reviews/task28/`: every input is bit-identical
+    # across the two machines -- all 426 row prices, every per-row realized
+    # amount, every per-session return -- and numpy is not in this path at all.
+    #
+    # **CPython 3.12 changed `sum()` to use Neumaier compensated summation for
+    # floats.** 3.11 adds left to right. So `sum()` over the identical list gave
+    # 4.259999999999954 on one interpreter and 4.26 on the other, and the
+    # difference propagated into every score field.
+    #
+    # `fsum` is exactly rounded, which makes it the same answer on every
+    # interpreter and every platform rather than the same answer on the ones
+    # that happen to compensate. The digest never saw this because `as_row`
+    # rounds to ten places before hashing -- "the digests match" was a weaker
+    # statement than it read as.
     @property
     def realized_pnl(self) -> float:
-        return sum(r.realized_pnl for r in self.rows)
+        return math.fsum(r.realized_pnl for r in self.rows)
 
     @property
     def commission(self) -> float:
-        return sum(r.commission for r in self.rows)
+        return math.fsum(r.commission for r in self.rows)
 
     def digest(self) -> str:
         import hashlib

@@ -602,35 +602,45 @@ Per callback the boundary costs 82 µs on macOS and 152 µs on Linux — bubblew
 namespace setup plus a virtualised pipe — and next to tick decoding on real data
 it is invisible either way.
 
-### Digests are platform-stable. Scores are not.
+### Scores are bit-identical across platforms, since Task 28
 
-Running the same trial on both platforms turned up something neither this brief
-nor Task 23's environment work anticipated. Same profile, same seed, same data:
+Task 26 found the same trial scoring differently on macOS and Linux and blamed
+numpy's pairwise summation. Task 28 measured it instead, and the attribution was
+wrong twice over: numpy is not in that code path at all, and **every input was
+already bit-identical** — all 426 row prices, every per-row realized amount and
+commission, every per-session return.
 
-| | Linux, py 3.12.3, numpy 2.5.3 | macOS, py 3.11.5, numpy 2.4.6 |
-|---|---|---|
-| `blotter_digest` | `e20fe3a4eb59f920…` | **identical** |
-| `fill_log_digest` | `bda5db2c289e8e35…` | **identical** |
-| `sharpe`, `skew`, `kurtosis` | | **identical** |
-| `net_pnl` | −48.86 | −48.85999999999994 |
-| `primary` (Sortino) | −0.45305964538078264 | −0.45305964538078275 |
-| `significance` | −2.6803370085755294 | −2.6803370085755303 |
+The divergence was `sum()`. **CPython 3.12 uses Neumaier compensated summation
+for floats and 3.11 does not**, so the identical list of commissions summed to
+4.259999999999954 on one interpreter and 4.26 on the other, and that propagated
+into `net_pnl`, Sortino, Sharpe, skew, kurtosis and significance. The blotter
+digest never showed it because `BlotterRow.as_row()` rounds to ten places before
+hashing — "the digests match" was a weaker statement than it read as, and that is
+worth remembering about any digest that rounds.
 
-The blotter survives because `digest()` rounds; the metric does not, because
-`net_pnl` is a float summation and the summation order differs between numpy
-builds. One ULP, and it propagates into the primary metric and the significance.
+Money is now summed with `math.fsum` — exactly rounded, so the same answer on
+every interpreter and platform rather than on the ones that happen to compensate
+— in `Blotter.realized_pnl`, `Blotter.commission`, `session_returns`, and every
+statistic in `metrics.py`. Verified rather than argued: `run.py` on the same
+profile on both machines gives an identical blotter digest, an identical fill-log
+digest, and every score and diagnostic field identical to the last bit, with
+`net_pnl` landing on exactly −48.86 where it used to be −48.85999999999994 on one
+of them.
 
-Task 23 measured bit-identical replay across a numpy and pandas change **on one
-platform** and reported it as such. Across platforms it does not hold, and the
-difference matters in two concrete ways:
+**Integer ticks were not needed and are not the fix.** The Task 28 brief proposed
+representing money in integer ticks on the grounds that P&L is exactly
+representable — true, and both datasets do sit on a 0.25 grid — but the measured
+problem was aggregation, not the per-fill arithmetic, and retyping the engine
+would have changed per-row values while leaving `sum()` in place. What integer
+ticks would still buy is *exactness* of intermediate values rather than agreement
+between them: a running average entry price is not exactly representable, so a
+per-row realized amount is off in the last ULP even when both machines agree on
+which ULP. That is a real but separate improvement, priced separately.
 
-- **A campaign must not mix environments.** Two rows scored 1 ULP apart are two
-  rows nobody can rank against each other at that precision. `ledger_check.py`
-  already reports the mismatch as environment-drifted; that flag is doing real
-  work rather than being defensive.
-- **Pin digests, never scores.** The golden sets pin blotter digests and are
-  platform-stable for exactly that reason. A golden *score* would fail on the
-  other platform and look like a behaviour change.
+The null tables were re-tabulated once on Linux afterwards, with the platform and
+arithmetic mode recorded in `provenance.arithmetic`. The pool moved in 361 of 384
+elements by at most 9.1e-13, and **the worst threshold movement was 7.6e-15** —
+rounding, as expected, and nothing beyond it.
 
 ### The child's modules are an allowlist
 

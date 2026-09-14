@@ -134,18 +134,26 @@ comparable. Per callback the boundary costs 82 µs on macOS and 152 µs on Linux
 the difference is bubblewrap's namespace setup plus the virtualised pipe, and it
 is invisible next to tick decoding on real data.
 
-## 5. Do not mix platforms inside a campaign
+## 5. Platforms agree, since Task 28
 
-The same trial on both machines gives an **identical blotter digest and an
-identical fill-log digest**, and a Sortino that differs in the sixteenth digit:
-−0.45305964538078264 on Linux against −0.45305964538078275 on macOS. `net_pnl` is
-a float summation and numpy sums in a different order between builds; the digest
-rounds and survives, the metric does not.
+An earlier version of this document said not to mix platforms inside a campaign,
+because the same trial gave a Sortino differing in the sixteenth digit on macOS
+and Linux. The attribution was wrong -- it was not numpy summing in a different
+order. Every input was bit-identical: all 426 row prices, every per-row realized
+amount, every per-session return. **CPython 3.12 uses Neumaier compensated
+summation in `sum()` for floats and 3.11 does not**, so the same list summed to
+4.259999999999954 on one interpreter and 4.26 on the other.
 
-One ULP is not a correctness problem and it is a ranking problem: two rows scored
-in different environments cannot be compared at that precision.
-`scripts/ledger_check.py` flags the mismatch as **environment-drifted**, which is
-what that flag is for. Pick one environment for a campaign and keep it.
+Money is summed with `math.fsum` now, which is exactly rounded and therefore the
+same answer on every interpreter. The same trial, run through `run.py` on both
+machines, produces an identical blotter digest, an identical fill-log digest, and
+every score and diagnostic field identical to the last bit.
+
+Mixing platforms inside a campaign is still not something to do casually -- the
+adapter's dependencies differ and a changed decoder could change what the data is
+-- but it is no longer an arithmetic problem, and `ledger_check`'s
+environment-drifted flag should be read as provenance rather than as a numerical
+caveat.
 
 ## 6. Where campaigns should actually run
 

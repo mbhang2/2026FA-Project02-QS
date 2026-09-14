@@ -78,6 +78,28 @@ def verify(pool, block_length: int, table_path: Path) -> None:
     print(f"\nwrote {out.relative_to(REPO_ROOT)}")
 
 
+def arithmetic_provenance() -> dict:
+    """Which machine and which arithmetic produced this table.
+
+    Task 28 made scores bit-identical across platforms by summing money with
+    `math.fsum` rather than `sum`: CPython 3.12 compensates float summation and
+    3.11 does not, so the same inputs gave different totals on the two
+    interpreters. A table is now reproducible anywhere -- and a table that does
+    not record where it came from cannot be checked against that claim, so it
+    records it.
+    """
+    import platform
+
+    return {
+        "platform": platform.system(),
+        "machine": platform.machine(),
+        "python": platform.python_version(),
+        "numpy": __import__("numpy").__version__,
+        "money_summation": "math.fsum (exactly rounded; see src/core/types.py)",
+        "session_returns_summation": "math.fsum",
+    }
+
+
 def tabulate_real(args) -> int:
     """The null of a real dataset: real sessions, real clustering, block bootstrap."""
     import os
@@ -117,6 +139,7 @@ def tabulate_real(args) -> int:
         **provenance,
         "block_length_measurement": measured,
         "block_length_source": "measured" if not args.block_length else "overridden",
+        "arithmetic": arithmetic_provenance(),
         "wall_clock_s": round(time.monotonic() - t0, 1),
     }
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -208,6 +231,7 @@ def main() -> int:
         "fill_model": "unfavorable",
         "block_length_measurement": measured,
         "block_length_source": "measured" if not args.block_length else "overridden",
+        "arithmetic": arithmetic_provenance(),
         "wall_clock_s": round(time.monotonic() - t0, 1),
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)

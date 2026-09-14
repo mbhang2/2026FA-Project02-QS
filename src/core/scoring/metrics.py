@@ -106,13 +106,19 @@ def session_returns(
     """
     if notional_base <= 0:
         raise ValueError("notional_base must be positive")
-    per: dict[int, float] = {s.session: 0.0 for s in calendar}
+    # Collected then summed with `math.fsum`, not accumulated with `+=`. A
+    # running float total is order-deterministic and therefore platform-stable,
+    # so this is not the cross-platform fix -- that was `Blotter.realized_pnl`
+    # and the statistics in this module. It is here because a session return is
+    # the number the whole gate is computed from, and an exactly-rounded sum
+    # costs nothing.
+    per: dict[int, list[float]] = {s.session: [] for s in calendar}
     for row in blotter.rows:
         s = _session_of(row.ts, calendar)
         if s is None:
             continue
-        per[s] += row.realized_pnl - row.commission
-    return [per[s.session] / notional_base for s in calendar]
+        per[s].append(row.realized_pnl - row.commission)
+    return [math.fsum(per[s.session]) / notional_base for s in calendar]
 
 
 def _session_of(ts: Ts, calendar: Sequence[SessionSpan]) -> int | None:
@@ -144,7 +150,7 @@ def downside_deviation(returns: Sequence[float], mar: float = MAR) -> float:
     n = len(returns)
     if n == 0:
         return 0.0
-    total = sum(min(0.0, r - mar) ** 2 for r in returns)
+    total = math.fsum(min(0.0, r - mar) ** 2 for r in returns)
     return math.sqrt(total / n)
 
 
@@ -160,9 +166,9 @@ def has_dispersion(returns: Sequence[float], rel_tol: float = 1e-9) -> bool:
     n = len(returns)
     if n < 2:
         return False
-    mean = sum(returns) / n
+    mean = math.fsum(returns) / n
     scale = max(abs(mean), max(abs(r) for r in returns), 1e-12)
-    sd = math.sqrt(sum((r - mean) ** 2 for r in returns) / (n - 1))
+    sd = math.sqrt(math.fsum((r - mean) ** 2 for r in returns) / (n - 1))
     return sd > rel_tol * scale
 
 
@@ -180,7 +186,7 @@ def sortino(returns: Sequence[float], mar: float = MAR) -> float:
     n = len(returns)
     if n == 0:
         return REJECT
-    mean = sum(returns) / n
+    mean = math.fsum(returns) / n
     dd = downside_deviation(returns, mar)
     if dd == 0.0:
         # No session finished below the MAR. Genuine at large N, almost always a
@@ -196,16 +202,16 @@ def sharpe(returns: Sequence[float]) -> float:
     n = len(returns)
     if n < 2:
         return 0.0
-    mean = sum(returns) / n
-    var = sum((r - mean) ** 2 for r in returns) / (n - 1)
+    mean = math.fsum(returns) / n
+    var = math.fsum((r - mean) ** 2 for r in returns) / (n - 1)
     sd = math.sqrt(var)
     return mean / sd if sd > 0 else (float("inf") if mean > 0 else 0.0)
 
 
 def _moment(returns: Sequence[float], k: int) -> float:
     n = len(returns)
-    mean = sum(returns) / n
-    return sum((r - mean) ** k for r in returns) / n
+    mean = math.fsum(returns) / n
+    return math.fsum((r - mean) ** k for r in returns) / n
 
 
 def skewness(returns: Sequence[float]) -> float:
@@ -242,11 +248,11 @@ def profit_concentration(returns: Sequence[float], top_frac: float = 0.05) -> fl
     committee, not a term in the objective.
     """
     gains = sorted((r for r in returns if r > 0), reverse=True)
-    total = sum(gains)
+    total = math.fsum(gains)
     if total <= 0:
         return 0.0
     k = max(1, int(round(len(returns) * top_frac)))
-    return sum(gains[:k]) / total
+    return math.fsum(gains[:k]) / total
 
 
 # --------------------------------------------------------------------------- #
@@ -336,7 +342,7 @@ def diagnostics(
     wins = sum(1 for r in closes if r.realized_pnl - r.commission > 0)
     holds = _holding_periods(rows)
     gains = sorted((r for r in returns if r > 0), reverse=True)
-    total_gain = sum(gains)
+    total_gain = math.fsum(gains)
 
     by_month: dict[str, float] = defaultdict(float)
     by_weekday: dict[str, float] = defaultdict(float)
@@ -438,8 +444,8 @@ def _sd(values: Sequence[float]) -> float:
     vals = [float(v) for v in values]
     if len(vals) < 2:
         return 0.0
-    mean = sum(vals) / len(vals)
-    return math.sqrt(sum((v - mean) ** 2 for v in vals) / (len(vals) - 1))
+    mean = math.fsum(vals) / len(vals)
+    return math.sqrt(math.fsum((v - mean) ** 2 for v in vals) / (len(vals) - 1))
 
 
 # --------------------------------------------------------------------------- #
@@ -462,6 +468,6 @@ def placeholder_score(blotter: Blotter) -> tuple[float, int, float]:
     n = len(trades)
     if n < 2:
         return 0.0, n, net
-    mean = sum(trades) / n
-    sd = math.sqrt(sum((t - mean) ** 2 for t in trades) / (n - 1))
+    mean = math.fsum(trades) / n
+    sd = math.sqrt(math.fsum((t - mean) ** 2 for t in trades) / (n - 1))
     return (mean / sd * math.sqrt(n) if sd > 0 else 0.0), n, net

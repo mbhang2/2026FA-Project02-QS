@@ -29,10 +29,21 @@ Three questions per row, cheapest first:
    in the file that is the denominator of N.
 
 A row produced under a different environment is reported as **environment-
-drifted**, which is not the same as superseded. numpy and pandas versions change
-numbers, so a row from before an upgrade may be perfectly good and still not
-replay bit-identically. Saying so is the point; treating it as a failure would
-mean re-baselining the ledger every time a dependency moves.
+drifted**, which is not the same as superseded and is a weaker warning since
+Task 28 than it was when it was written.
+
+The original reason was Task 26's finding that the same trial scored differently
+on macOS and Linux. That turned out not to be numpy: every input was
+bit-identical and the divergence was `sum()`, which CPython 3.12 compensates and
+3.11 does not. Money is summed with `math.fsum` now, and the same trial produces
+a **bit-identical score on both platforms**, verified field by field.
+
+So the flag no longer means "this row's number is not comparable". It means the
+row was produced under a different set of pinned versions, which is worth knowing
+for reasons that are no longer about arithmetic -- a changed adapter dependency
+can change what the data *is*, and that the digests would catch, but only if
+someone looks. Keep the flag, read it as provenance rather than as a numerical
+caveat.
 
 **Superseded rows are marked, never deleted.** Deleting a row loses the fact that
 a trial happened, which is the one thing the ledger cannot afford to lose; a row

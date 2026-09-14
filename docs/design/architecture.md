@@ -834,6 +834,7 @@ it. The reference gets 0/40; its variants get 10×.
 | `src/core/scoring/randomization/rotation.py` | `RotatedDataset` — circular rotation of each session's price path against the clock |
 | `src/core/scoring/randomization/candidate.py` | `candidate_null` — the candidate against R rotations of its own data, with the resolution floor reported as a floor |
 | `src/core/scoring/randomization/profile_null.py` | The cheap alternative: a null indexed by behavioural profile rather than by one strategy |
+| `src/core/scoring/randomization/hybrid.py` | `choose_null` — bucket when covered, rotation when not, keyed on the profile and never on the score |
 
 **The null hypothesis, stated before the design.** *This candidate, with its
 trading behaviour unchanged, has no edge.* So the randomization must preserve the
@@ -864,6 +865,23 @@ did not price: isolation is 5.7× per run, so R = 99 is 100 s per candidate and 
 200-candidate campaign is 5.5 hours. `RunTicket.for_null_calibration` is the
 route — it runs arbitrary generated strategies so it checks no digest, and in
 exchange it forbids in-process execution, asserted by `tests/test_accounting.py`.
+
+### The hybrid: bucket when covered, rotation when not
+
+Task 32's gate controls and **21.8% of candidates never reach it** — a thin
+bucket means no null, p = 1, and no possibility of discovery. That gap is in the
+tails of profile space, so once an agent is hill-climbing, novel profiles are
+silently unacceptable and **the calibration's coverage becomes an implicit prior
+over strategy space, imposed by nobody and documented nowhere.**
+
+`choose_null` routes on coverage alone. *Mixing two valid procedures is valid
+when the choice between them is independent of the outcome, and invalid the
+moment it is not* — so the rule is enforced by the signature: it takes a return
+series and a table, and has no parameter through which a score could reach it.
+
+Under the conditional guarantee the profile table is a **per-campaign step**
+built on the campaign's own data, not a committed artifact. `profile-null.json`
+remains as a Task 31 screening artifact, pooled across realizations.
 
 ### The guarantee is conditional, and the operating null is the cheap one
 

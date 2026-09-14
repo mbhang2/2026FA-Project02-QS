@@ -87,10 +87,33 @@ conditional calibration, one data realization (seed 4242), q=0.05
 below 0.09, which is exactly the effect the arm was sized to resolve. Under the
 conditional guarantee the profile-indexed null controls.
 
-The rotation arm's side-by-side numbers are in `conditional-fwer.json` when that
-stage completes; it is a **comparison, not a second certification** — at C = 40
-it cannot separate 0.05 from anything below 0.19, and the profile arm is the one
-sized to decide which null operates.
+### The rotation arm, side by side
+
+```
+  null                         C    FWER             95% CI  excludes q   no null
+  profile (conditional)      400   0.045 [0.029, 0.070]        False       21.8%
+  rotation R=30               40   0.125 [0.055, 0.261]         True        0.0%
+```
+
+**That 0.125 is not evidence against rotation, and reading it as such would be
+the mistake this arm was pre-registered to avoid.** At C = 40 the interval spans
+[0.055, 0.261] — the arm was sized to separate 0.05 from 0.19 and nothing finer.
+Two things are known to push it up, and together they account for it:
+
+- **R = 30 makes `max_of_n` liberal.** The simulated maximum resamples each
+  trial's null with replacement, so it can never exceed the largest draw that
+  null happens to contain; a 30-point sample truncates its own upper tail.
+  Measured directly on known standard-normal nulls at 2,000 campaigns
+  (`docs/reviews/task33/r_sensitivity.py`): FWER **0.059 at R = 30** against
+  **0.050 at R = 999**, a +0.009 bias.
+- With a true rate near 0.059, observing 5 of 40 has probability about 0.11 —
+  ordinary sampling noise.
+
+And Task 31 measured rotation's p-values as uniform at R = 99 (KS D = 0.1033
+against a 5% critical 0.1756). The consistent reading is that **rotation is
+sound, R = 30 is too small for a 25-trial campaign, and C = 40 cannot tell the
+difference.** The profile arm is the one sized to decide which null operates, and
+it decided.
 
 | | Task 30 | Task 31 (marginal) | Task 32 (conditional) |
 |---|---:|---:|---:|

@@ -9,7 +9,8 @@ See `rotation` for the design and `candidate` for the null itself.
 """
 
 from .candidate import CandidateNull, candidate_null, profile_of
+from .hybrid import NullChoice, choose_null, expected_rotation_share
 from .rotation import RotatedDataset, rotate_session
 
 __all__ = ["RotatedDataset", "rotate_session", "candidate_null", "CandidateNull",
-           "profile_of"]
+           "profile_of", "choose_null", "NullChoice", "expected_rotation_share"]

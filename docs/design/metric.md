@@ -512,6 +512,37 @@ running it at campaign scale: behind the process boundary it is 100 s per
 candidate at R = 99, or 5.5 hours for 200 candidates.
 `docs/reviews/task31/README.md` has the full measurement.
 
+### The hybrid null, and the rule that keeps it valid (Task 33)
+
+Task 32's gate controls and **21.8% of candidates never reach it**: a candidate
+whose behavioural profile lands in a thin bucket has no null, enters at p = 1,
+and can never be a discovery. The measured 0.045 is conservative *because of that
+gap*, and the gap is in the tails of profile space, where unusual strategies
+live.
+
+That is not only a power loss. Once an agent is hill-climbing, novel profiles are
+silently unacceptable, so the loop drifts toward the region the gate can see, and
+**the calibration's coverage becomes an implicit prior over strategy space,
+imposed by nobody and documented nowhere.**
+
+So: **bucket when the profile's bucket holds at least 200 scores, rotation when
+it does not.**
+
+> *Mixing two valid procedures is valid when the choice between them is
+> independent of the outcome, and invalid the moment it is not.*
+
+**The routing rule keys on the profile and nothing else, and is fixed before the
+campaign runs.** Never on the score, never on which null gives the nicer answer.
+It is enforced by the signature rather than by a convention: `choose_null` takes
+a return series and a table and has no parameter through which a score could
+reach it, and the rule is recorded in the campaign record so it is auditable
+rather than remembered.
+
+Under the conditional guarantee the profile table is a **per-campaign step**,
+built on the campaign's own data — the null is "other edgeless strategies with
+this profile *on this data*". The committed `profile-null.json` is a screening
+artifact from Task 31, pooled across realizations, and is not the operating null.
+
 ### Two decisions not to tune a parameter, recorded so they are not re-opened
 
 Both look like omissions if the reasoning is not written down, and someone will

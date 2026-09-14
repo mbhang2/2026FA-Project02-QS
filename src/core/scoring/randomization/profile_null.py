@@ -57,6 +57,11 @@ DEFAULT_PATH = REPO_ROOT / "data" / "calibration" / "profile-null.json"
 # Bucket edges on each axis. Coarse on purpose: finer buckets hold fewer scores,
 # and the resolution of a bucket's tail is what sets the p-value floor. Reported
 # per bucket so a thinly populated one is visible rather than silently unreliable.
+# A bucket under this many scores is refused rather than answered: its tail is a
+# handful of points and a p-value from it would be a number with no measurement
+# behind it. Named rather than inlined because the hybrid routing rule keys on it.
+MIN_BUCKET_DEFAULT = 200
+
 ACTIVE_EDGES = (0.0, 0.5, 0.8, 0.95, 1.01)
 DOWNSIDE_EDGES = (0.0, 0.35, 0.5, 0.65, 1.01)
 
@@ -98,6 +103,25 @@ class ProfileNull:
             indent=1, sort_keys=True) + "\n")
 
     @classmethod
+    def from_runs(cls, runs, provenance: dict | None = None) -> "ProfileNull":
+        """Build the buckets from `(returns, score)` pairs.
+
+        **Under the conditional guarantee this is a per-campaign step, not a
+        committed artifact.** The null is "other edgeless strategies with this
+        profile *on this data*", so it has to be built on the data the campaign
+        runs against. The committed `profile-null.json` is a screening artifact
+        from Task 31, pooled across realizations, and is not the operating null.
+        """
+        buckets: dict[str, list[float]] = {}
+        for returns, score in runs:
+            if score is None:
+                continue
+            axes = profile_axes(returns)
+            buckets.setdefault(bucket_of(axes["active"], axes["downside"]),
+                               []).append(float(score))
+        return cls(buckets=buckets, provenance=provenance or {})
+
+    @classmethod
     def read(cls, path: Path = DEFAULT_PATH) -> "ProfileNull":
         doc = json.loads(path.read_text())
         if (tuple(doc["active_edges"]) != ACTIVE_EDGES
@@ -119,11 +143,11 @@ class ProfileNull:
         key = bucket_of(axes["active"], axes["downside"])
         sample = self.buckets.get(key, [])
         floor = 1.0 / (len(sample) + 1) if sample else 1.0
-        if len(sample) < 200:
+        if len(sample) < MIN_BUCKET_DEFAULT:
             return {"bucket": key, "axes": axes, "n_in_bucket": len(sample),
                     "p": None, "p_floor": floor, "usable": False,
                     "reason": f"bucket {key} holds {len(sample)} scores; "
-                              "fewer than 200 is not a tail"}
+                              f"fewer than {MIN_BUCKET_DEFAULT} is not a tail"}
         exceed = sum(1 for s in sample if s >= observed)
         return {
             "bucket": key, "axes": axes, "n_in_bucket": len(sample),
@@ -152,6 +176,6 @@ class ProfileNull:
                 # `v` is not sorted in memory, only on the way to disk
                 "q95": sorted(v)[int(len(v) * 0.95)] if v else None,
                 "floor": 1.0 / (len(v) + 1) if v else 1.0,
-                "usable": len(v) >= 200,
+                "usable": len(v) >= MIN_BUCKET_DEFAULT,
             })
         return out

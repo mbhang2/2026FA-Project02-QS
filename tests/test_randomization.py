@@ -307,3 +307,91 @@ def test_the_rotation_null_forbids_amortizing_children():
     assert "with RemoteStrategy(" in run_body, (
         "the child must be created per run, not shared across rotations"
     )
+
+
+# --------------------------------------------------------------------------- #
+# Task 33: the hybrid null, and the rule that keeps mixing two procedures valid
+# --------------------------------------------------------------------------- #
+def test_the_routing_rule_cannot_see_a_score():
+    """*Mixing two valid procedures is valid when the choice between them is
+    independent of the outcome, and invalid the moment it is not.*
+
+    Enforced by the signature rather than by a convention: `choose_null` is given
+    a return series and a table and has no parameter through which a score could
+    reach it. A reviewer can check that in one line.
+    """
+    import inspect
+
+    from src.core.scoring.randomization import choose_null
+
+    params = list(inspect.signature(choose_null).parameters)
+    assert params == ["returns", "table", "min_bucket"], params
+    # the code, not the docstring -- the docstring is where the rule is
+    # explained, so of course it says "score"
+    source = inspect.getsource(choose_null)
+    body = source.split('"""')[-1]
+    for forbidden in ("score", "primary", "sortino", "observed"):
+        assert forbidden not in body, (
+            f"`{forbidden}` appears in the routing rule's body; the choice must "
+            "depend on the profile alone"
+        )
+
+
+def test_routing_is_by_coverage_and_nothing_else():
+    from src.core.scoring.randomization import choose_null
+    from src.core.scoring.randomization.profile_null import (
+        MIN_BUCKET_DEFAULT, ProfileNull, bucket_of, profile_axes,
+    )
+
+    returns = [1.0, -1.0] * 40 + [0.0] * 25
+    axes = profile_axes(returns)
+    key = bucket_of(axes["active"], axes["downside"])
+
+    thin = ProfileNull(buckets={key: [0.0] * (MIN_BUCKET_DEFAULT - 1)})
+    fat = ProfileNull(buckets={key: [0.0] * MIN_BUCKET_DEFAULT})
+    assert choose_null(returns, thin).route == "rotation"
+    assert choose_null(returns, fat).route == "bucket"
+    # and the boundary is the parameter, not a hard-coded number
+    assert choose_null(returns, thin, min_bucket=10).route == "bucket"
+
+
+def test_the_conditional_table_is_built_from_runs_not_read_from_disk():
+    """Under the conditional guarantee the null is 'other edgeless strategies
+    with this profile *on this data*', so it is a per-campaign step. The
+    committed `profile-null.json` is a screening artifact from Task 31, pooled
+    across realizations, and is not the operating null."""
+    import inspect
+
+    from src.core.scoring.randomization.profile_null import ProfileNull
+
+    table = ProfileNull.from_runs([
+        ([1.0, -1.0] * 40 + [0.0] * 25, 0.3),
+        ([1.0, -1.0] * 40 + [0.0] * 25, -0.1),
+        ([1.0, -1.0] * 40 + [0.0] * 25, None),      # rejected, contributes nothing
+    ])
+    assert sum(len(v) for v in table.buckets.values()) == 2
+    doc = inspect.getdoc(ProfileNull.from_runs) or ""
+    assert "per-campaign step" in doc and "not the operating null" in doc
+
+
+def test_the_expected_rotation_share_can_be_priced_before_a_campaign():
+    """A campaign's cost is knowable in advance: the share is a property of the
+    table's coverage and the generator's profile distribution, both known before
+    the first trial."""
+    from src.core.scoring.randomization import expected_rotation_share
+    from src.core.scoring.randomization.profile_null import (
+        MIN_BUCKET_DEFAULT, ProfileNull, bucket_of, profile_axes,
+    )
+
+    covered = [1.0, -1.0] * 40 + [0.0] * 25
+    uncovered = [1.0] * 105
+    key = bucket_of(**{k: v for k, v in profile_axes(covered).items() if k != "n"})
+    table = ProfileNull(buckets={key: [0.0] * MIN_BUCKET_DEFAULT})
+    share = expected_rotation_share(table, [covered] * 3 + [uncovered])
+    assert share == pytest.approx(0.25)
+
+
+def test_the_mixing_rule_is_written_where_the_metric_is_documented():
+    text = _flat(REPO_ROOT / "docs" / "design" / "metric.md")
+    assert ("Mixing two valid procedures is valid when the choice between them "
+            "is independent of the outcome") in text

@@ -71,7 +71,16 @@ def _code_digest(obj, out: list[str], seen: set[int], name: str) -> None:
     elif isinstance(obj, (staticmethod, classmethod)):
         _code_digest(obj.__func__, out, seen, name)
     elif isinstance(obj, (int, float, str, bool, bytes, tuple, frozenset)):
-        out.append(f"{name}|const|{obj!r}"[:400])
+        # Hashed, not truncated. This used to be `f"...{obj!r}"[:400]`, which
+        # meant a constant longer than 400 characters was fingerprinted by its
+        # first 400 -- so the threshold grids, which are exactly the long
+        # constants worth protecting, were covered up to a prefix and no
+        # further. A digest that silently stops looking is the same defect
+        # `Blotter.digest`'s rounding turned out to be, found by auditing for it
+        # rather than by being bitten twice.
+        rendered = repr(obj)
+        out.append(f"{name}|const|{len(rendered)}|"
+                   f"{hashlib.sha256(rendered.encode()).hexdigest()}")
 
 
 def watched_modules() -> list[str]:

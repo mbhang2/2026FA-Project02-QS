@@ -30,6 +30,38 @@ from src.strategies.current import MomentumStrategy  # noqa: E402
 GOLDEN = json.loads((REPO_ROOT / "tests" / "golden" / "pre_context_refactor.json").read_text())
 
 
+def assert_score_bit_identical(engine, case) -> None:
+    """Pin the score at full precision, not to a tolerance.
+
+    Every "no golden digest moved" assurance from Task 21 through Task 28 rested
+    on `Blotter.digest()`, which rounds to ten places -- so it was an agreement
+    claim wearing an identity claim's clothes, and it let macOS and Linux
+    disagree on Sortino while reporting the same digest. Task 28 made the
+    arithmetic exact across platforms, which is what makes this assertion a real
+    pin rather than a flaky one.
+    """
+    from src.core.scoring.scorer import score as score_fn
+
+    got = score_fn(engine.reconstructed(), period=engine.session_calendar())
+    want = case["score_exact"]
+    mismatched = {}
+    for key, value in got.as_dict().items():
+        if key not in want:
+            continue                      # a field added since the pin
+        expected = want[key]
+        actual = float(value).hex() if isinstance(value, float) else value
+        if actual != expected:
+            mismatched[key] = (expected, actual)
+    assert not mismatched, (
+        "the score moved at full precision while the rounded digest did not:\n  "
+        + "\n  ".join(
+            f"{k}: {float.fromhex(a) if a.startswith(('0x','-0x')) else a} -> "
+            f"{float.fromhex(b) if isinstance(b,str) and b.startswith(('0x','-0x')) else b}"
+            for k, (a, b) in mismatched.items()
+        )
+    )
+
+
 def ds(**kw) -> SyntheticDataset:
     base = dict(n_sessions=20, ticks_per_session=120, vol_per_tick=0.15, seed=1,
                 train_frac=0.5, validation_frac=0.2)
@@ -66,9 +98,16 @@ def test_blotter_is_byte_identical_to_the_pre_refactor_implementation(case):
     )
     eng.run()
     assert eng.blotter.digest() == case["blotter_digest"]
+    # `digest()` rounds to ten places, so it establishes agreement rather than
+    # identity -- which is how the platform divergence hid for two tasks. The
+    # exact digest and the full-precision score are the identity claim, and they
+    # are only assertable at all because Task 28 made the arithmetic agree
+    # across platforms.
+    assert eng.blotter.exact_digest() == case["exact_digest"]
     assert len(eng.blotter.rows) == case["rows"]
     assert eng.n_fills == case["fills"] and eng.n_bars == case["bars"]
     assert eng.blotter.final_position == case["final_position"]
+    assert_score_bit_identical(eng, case)
     # Task 21 moved the score's input from the accumulator to the fill log. The
     # golden digests are the assertion that it moved *where the number comes
     # from* and not the number: the reconstruction has to land on the same
@@ -703,6 +742,8 @@ def test_the_irregular_generator_has_its_own_behaviour_reference(case):
     record = engine.run()
     assert engine.blotter.digest() == case["blotter_digest"]
     assert engine.reconstructed().digest() == case["blotter_digest"]
+    assert engine.blotter.exact_digest() == case["exact_digest"]
+    assert_score_bit_identical(engine, case)
     assert len(engine.blotter.rows) == case["rows"]
     assert engine.n_fills == case["fills"] and engine.n_bars == case["bars"]
     assert engine.blotter.final_position == case["final_position"]

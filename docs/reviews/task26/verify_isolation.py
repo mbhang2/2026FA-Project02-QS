@@ -145,6 +145,30 @@ def main() -> int:
     print()
 
     ok = True
+
+    # POSITIVE CONTROLS. Task 26's `--tmpfs /tmp` bug made every filesystem probe
+    # pass with FileNotFoundError -- all-clear because nothing ran. A check where
+    # *everything* fails is indistinguishable from a check that did not execute,
+    # so each group below is preceded by something that must SUCCEED.
+    print("positive controls -- these must succeed, or nothing below means "
+          "anything")
+    exc = hostile("    def on_bars(self, ctx):\n        pass\n")
+    ok &= check("control: an ordinary strategy runs to completion", exc is None,
+                "the harness itself is working" if exc is None
+                else f"NOTHING RAN: {exc}")
+    exc = hostile("    def on_bars(self, ctx):\n"
+                  "        pathlib.Path(ctx.__class__.__name__)\n"
+                  "        raise ValueError('control')\n")
+    ok &= check("control: a raising strategy is reported as raising",
+                isinstance(exc, StrategyRaised) and "control" in str(exc),
+                str(exc).splitlines()[0][:56] if exc else "NOT DETECTED")
+    exc = hostile("    def on_bars(self, ctx):\n"
+                  f"        open({str(REPO / 'pyproject.toml')!r}).read(8)\n")
+    ok &= check("control: reading an allowed file still works", exc is None,
+                "the sandbox permits reads" if exc is None
+                else f"READS ARE BROKEN, not just writes: {exc}")
+    print()
+
     ok &= check("goldens byte-identical through the boundary", goldens())
 
     walked, reply = escape_walk()

@@ -829,3 +829,80 @@ def verify_held_out(
         "far_column": far_columns,
         "rows": rows,
     }
+
+
+# --------------------------------------------------------------------------- #
+# the Sortino -> Sharpe boundary must not be strategy-choosable
+# --------------------------------------------------------------------------- #
+def far_for_score(
+    score, *, dataset: str | None = None, path: Path | None = None,
+) -> dict:
+    """The false-acceptance rate the accept rule should use for a whole trial.
+
+    `far_for` answers "what does this null say about this number". This answers
+    "what should this trial be charged", and the difference is a hole adversarial
+    review would have found sooner or later.
+
+    **The hole.** `scorer.score` falls back from Sortino to Sharpe below
+    `MIN_DOWNSIDE_SESSIONS` below-MAR sessions, and each side was thresholded
+    against its own null. How many sessions finish below the MAR is something a
+    strategy influences, so a candidate could choose which null judged it -- and
+    an agent hill-climbing a score drifts onto a boundary like that without
+    anyone writing the exploit on purpose.
+
+    **The rule.** Every trial is charged `max(far_sortino, far_sharpe)`: the
+    worse of the two readings, always, on both sides of the boundary. Sharpe is
+    always defined; Sortino is defined whenever the series has dispersion, which
+    `score` already requires. So there is no band, no free parameter, and nothing
+    to stand on -- both nulls judge every trial.
+
+    **What this removes and what it does not.** It removes any gain from the
+    *metric switch*: a trial on the Sortino side is already charged at least the
+    Sharpe reading, so crossing to the Sharpe side cannot take the charge below
+    what it was already paying.
+
+    It does not remove the incentive to have fewer losing sessions, and nothing
+    can, because that is also what a real edge looks like. What is left is that a
+    Sortino estimated from three below-MAR sessions is unreliable in the
+    strategy's favour, and the Sharpe leg is what backstops it.
+    `ScoreTuple.downside_sessions` is recorded so a reader can see how close to
+    that region a trial sits, rather than having to infer it.
+
+    The other option in the brief -- pre-registering Sortino and rejecting below
+    the floor -- was implemented and measured first. It rejects a strong planted
+    signal outright: acceptance went to 0% on `test_power_the_gate_finds_a_planted
+    _signal`, because a strategy with a real edge has *few* losing sessions by
+    construction. A rule that rejects exactly what the gate exists to find is not
+    a conservative rule, it is a broken one. The measurement is why this option
+    was taken instead, and it is recorded in `docs/design/metric.md`.
+    """
+    n = score.n_sessions
+    legs = {}
+    if score.rejected or n <= 0:
+        return {"far": 1.0, "charged": "rejected", "legs": {}}
+
+    # Both legs on both sides of the boundary. Charging the Sortino leg only on
+    # the Sortino side was the first attempt and it does not close the hole: a
+    # candidate whose two barely-below-MAR sessions become barely-above escapes
+    # the Sortino reading entirely while its actual Sortino barely moves. With
+    # both legs the two sides are charged almost identically, which is the
+    # property the test constructs and asserts.
+    legs["sharpe_per_session"] = far_for(
+        score.sharpe, n, metric="sharpe_per_session", dataset=dataset, path=path)
+    if math.isfinite(score.sortino):
+        legs["sortino_per_session"] = far_for(
+            score.sortino, n, metric="sortino_per_session", dataset=dataset,
+            path=path)
+
+    charged = max(legs, key=lambda k: legs[k])
+    return {
+        "far": legs[charged],
+        "charged": charged,
+        "legs": legs,
+        "downside_sessions": score.downside_sessions,
+        "note": (
+            "max over both nulls; the metric switch at MIN_DOWNSIDE_SESSIONS "
+            "buys nothing because the Sortino side is already charged at least "
+            "the Sharpe reading"
+        ),
+    }

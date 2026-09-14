@@ -358,6 +358,111 @@ target, because a smaller verification pool contains fewer extreme sessions and
 so measures a thinner tail. Both checks are in `tests/test_calibration_null.py`;
 the held-out one is the two-sided test and the fresh-simulation one is one-sided.
 
+## What the null is, and what it is not (Task 29)
+
+The one section to read before quoting a FAR at anybody. Everything here is
+measured; the measurements are in `docs/reviews/task27/` and
+`docs/reviews/task28/`.
+
+**What a threshold is.** A tail quantile of a stationary block bootstrap (block
+length 7, measured from the pool's |returns| ACF) over **384 pooled session
+returns of one edgeless reference strategy**. Not a distribution-free bound, not
+a parametric tail, and not a statement about any strategy but that one.
+
+**It is marginal over the calibration period, not conditional on the evaluation
+window.** The null is tabulated over 2024-07 → 2025-12, whose two halves have
+measurably different return distributions — downside deviation 179.2 in the first
+half against 259.8 in the second, a factor of 1.45, and Sortino divides by it. A
+FAR is therefore an average over the regimes in that period, not a rate that
+holds in whatever regime the evaluation window turns out to be.
+
+**At far ≤ 0.001 the quantiles are not verifiable held out, by construction.**
+The deployed table consumes the whole pool, so any held-out check necessarily
+validates a *smaller, noisier* estimator than the one in use. Sub-window checks
+show median realized FAR ≈ promised with a very wide tail — p90 ratios of 4 to 61
+even between *adjacent* windows. That is a sample-size property, not a regime
+property, and it is the honest limit of what 384 sessions can support at these
+alphas.
+
+**No regime-transfer adjustment is applied, and none is warranted by the
+evidence.** A distance test at fixed build size found no measurable transfer
+signal: median ratio 1.06, 1.09, 0.97, 1.00, 1.08 at separations of one through
+five windows, slope −0.005 per window. The apparent 3.12 from a single two-fold
+split was estimation noise, not regime change.
+
+**The single-strategy assumption stands**, as recorded in *"The null is one
+strategy's, and that assumption is now visible"* above. A candidate whose return
+profile differs from the reference has a different null and the table does not
+know it.
+
+**A period more extreme than anything in the pool is outside all of this.** No
+statement here bounds the false-acceptance rate in a regime the calibration
+period does not contain.
+
+**The per-candidate randomization null is the intended answer to both the
+tail-estimation weakness and the single-strategy assumption.** It calibrates
+against the candidate's own return series in the window it is being scored on, so
+it is conditional on that regime by construction and does not rest on a tail
+quantile estimated from 384 pooled sessions. It was the fix for the
+single-strategy finding; on the Task 28 evidence it is the fix for the transfer
+question too, and it is what should be built rather than an inflation factor.
+
+### Two decisions not to tune a parameter, recorded so they are not re-opened
+
+Both look like omissions if the reasoning is not written down, and someone will
+helpfully fix them.
+
+**Block length stays at 7.** It is measured from the pool's |returns|
+autocorrelation, not chosen. Longer blocks trade the two split directions against
+each other — worst-over-both-directions bottoms out near block 14 at 2.67 against
+block 7's 3.34 — which moves the anti-conservative cell rather than removing it.
+Selecting 14 on that basis would be tuning a parameter on the diagnostic that
+judges it, which is the rule this project already applies to thresholds. The
+measurement is in `docs/reviews/task27/README.md`.
+
+**No inflation factor was adopted.** Task 28 was asked to measure a transfer
+distribution and pre-register a quantile of it. The same-window control it needs
+does not work on this pool: at build-window size S the control necessarily builds
+on S/2 sessions, so it is always noisier than the thing it calibrates, and the
+resulting "transfer factor" swings from 1.51 at K=4 to 0.22 at K=8. A number that
+moves with a free parameter is not a measurement, and pre-registering a quantile
+of it would be the appearance of rigour rather than rigour. The control cannot be
+made size-matched on 384 sessions: a no-transfer control at build size S needs 2S
+sessions from one regime, and 2S contiguous sessions *are* two adjacent windows,
+which is a cross pair.
+
+## The Sortino → Sharpe boundary is not strategy-choosable (Task 29)
+
+`score` falls back from Sortino to Sharpe below `MIN_DOWNSIDE_SESSIONS` below-MAR
+sessions. How many sessions finish below the MAR is something a strategy
+influences, so while each side was thresholded against its own null a candidate
+could **choose which null judged it** — and an agent hill-climbing a score drifts
+onto a boundary like that without anyone writing the exploit on purpose.
+
+**The rule: every trial is charged `max(far_sortino, far_sharpe)`.** Both legs,
+on both sides, always — `null.far_for_score`. There is no band, no free
+parameter, and nothing to stand on.
+
+Two series that differ by 0.002 in total return but land on opposite sides — four
+clear losses plus two marginal sessions at ±0.001 — used to be charged 0.00050
+and 0.00384, a factor of 7.7 for crossing. They are now charged the same to
+within 3e-6.
+
+**What it removes and what it does not.** It removes any gain from the metric
+switch. It does not remove the incentive to have fewer losing sessions, and
+nothing can, because that is also what a real edge looks like. What remains is
+that a Sortino estimated from three below-MAR sessions is unreliable in the
+strategy's favour, and the Sharpe leg is what backstops it;
+`ScoreTuple.downside_sessions` is recorded so a reader can see how near that
+region a trial sits.
+
+**The other option was implemented first and measured.** Pre-registering Sortino
+and rejecting below the floor rejects a strong planted signal outright —
+acceptance went to 0% on `test_power_the_gate_finds_a_planted_signal`, because a
+strategy with a real edge has *few* losing sessions by construction. A rule that
+rejects exactly what the gate exists to find is not conservative, it is broken.
+That measurement is why the conservative-charge option was taken instead.
+
 ## The infinite-Sortino guard
 
 Sortino needs losses to have a denominator. With no below-MAR session it is

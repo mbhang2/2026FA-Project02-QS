@@ -485,8 +485,20 @@ class BlotterRow:
     tag: str = ""
 
     def as_row(self) -> tuple:
-        """Stable tuple used for the determinism digest. Floats are rounded to a
-        fixed number of places so a byte comparison is meaningful."""
+        """Stable tuple used for the determinism digest.
+
+        **Floats are rounded to ten places, so this establishes agreement to ten
+        places and not identity.** That distinction hid the platform divergence
+        for two tasks: macOS and Linux produced the same blotter digest while
+        their scores differed, because the difference was below the rounding.
+        Every "no golden digest moved" assurance from Task 21 through Task 28 was
+        this weaker claim.
+
+        The rounding stays -- removing it would move every committed golden
+        digest for no gain now that the arithmetic agrees. `exact_row` and
+        `Blotter.exact_digest` are the identity claim, and the golden sets pin
+        both.
+        """
         return (
             self.seq,
             self.ts,
@@ -499,6 +511,27 @@ class BlotterRow:
             round(self.realized_pnl, 10),
             self.tag,
         )
+
+    def exact_row(self) -> tuple:
+        """The same row with nothing rounded. Floats as their exact hex form."""
+        return (
+            self.seq,
+            self.ts,
+            self.order_id,
+            str(self.side),
+            _exact(self.price),
+            self.size,
+            self.position_after,
+            _exact(self.commission),
+            _exact(self.realized_pnl),
+            self.tag,
+        )
+
+
+def _exact(value: float) -> str:
+    """A float as its exact hexadecimal form. `repr` round-trips too, but hex is
+    unambiguously the bits and cannot be misread as a decimal approximation."""
+    return float(value).hex()
 
 
 @dataclass
@@ -536,10 +569,29 @@ class Blotter:
         return math.fsum(r.commission for r in self.rows)
 
     def digest(self) -> str:
+        """Agreement to ten decimal places. See `BlotterRow.as_row`.
+
+        Kept as the long-lived reference because eight golden cases and every
+        ledger row since Task 3 carry it. For identity, use `exact_digest`.
+        """
         import hashlib
         import json
 
         payload = json.dumps([r.as_row() for r in self.rows], sort_keys=True)
+        return hashlib.sha256(payload.encode()).hexdigest()
+
+    def exact_digest(self) -> str:
+        """Bit-for-bit identity, with no rounding anywhere.
+
+        Every float goes in as `float.hex`, which is exact and unambiguous. Two
+        runs with this digest equal produced the same numbers, not numbers that
+        agree to ten places -- which is the claim `digest()` reads as making and
+        does not make.
+        """
+        import hashlib
+        import json
+
+        payload = json.dumps([r.exact_row() for r in self.rows], sort_keys=True)
         return hashlib.sha256(payload.encode()).hexdigest()
 
 
@@ -565,6 +617,14 @@ class ScoreTuple:
     rejected: bool = False
     reject_reason: str = ""
     metric: str = "sortino_per_session"
+    # Both ratios, always, whichever one `primary` was taken from. Recorded
+    # because the accept rule charges the worse of the two nulls and cannot do
+    # that if only one of the two numbers survives the call.
+    sortino: float = 0.0
+    # How many sessions finished below the MAR. Recorded because the accept rule
+    # has a floor on it and a reader cannot otherwise tell a trial that cleared
+    # the floor comfortably from one that cleared it by a session.
+    downside_sessions: int = 0
 
     @property
     def significance(self) -> float:
@@ -586,6 +646,7 @@ class ScoreTuple:
             "primary": self.primary,
             "significance": self.significance,
             "sharpe": self.sharpe,
+            "sortino": self.sortino,
             "skew": self.skew,
             "kurtosis": self.kurtosis,
             "n_sessions": self.n_sessions,
@@ -593,6 +654,7 @@ class ScoreTuple:
             "trade_count": self.trade_count,
             "rejected": self.rejected,
             "reject_reason": self.reject_reason,
+            "downside_sessions": self.downside_sessions,
         }
 
 

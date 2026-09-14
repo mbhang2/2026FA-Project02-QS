@@ -728,3 +728,93 @@ def test_the_diagnostic_reaches_the_run_record():
         "return_dispersion",
     }
     assert diag["null_assumption"]
+
+
+# --------------------------------------------------------------------------- #
+# the Sortino -> Sharpe boundary must not be strategy-choosable (Task 29)
+# --------------------------------------------------------------------------- #
+def _boundary_pair(win: float = 0.45, loss: float = -3.0, n: int = 86):
+    """Two series that differ only in which side of the boundary they land on.
+
+    Four clear losing sessions, plus two marginal ones at -0.001 or +0.001. The
+    marginal pair moves the below-MAR count from 4 to 6 -- across
+    `MIN_DOWNSIDE_SESSIONS` -- while changing the returns by 0.002 in total, so
+    Sortino and Sharpe are the same to four decimal places on both sides.
+
+    Constructing it this way is the point. Comparing a 4-loser strategy against a
+    6-loser strategy in general compares two different strategies: fewer losing
+    sessions is also what a real edge looks like, and no rule should or could
+    remove that advantage. What a rule *can* remove is the advantage that comes
+    from being judged by a different null, and that is what this isolates.
+    """
+    base = [loss] * 4 + [win] * (n - 4)
+    below = base[:4] + [+0.001, +0.001] + base[6:]      # 4 losers -> Sharpe side
+    above = base[:4] + [-0.001, -0.001] + base[6:]      # 6 losers -> Sortino side
+    return below, above
+
+
+def test_the_metric_switch_at_the_boundary_buys_nothing():
+    """A strategy influences how many sessions finish below the MAR, so if the
+    two sides are thresholded against two different nulls it can choose which
+    null judges it -- and an agent hill-climbing a score drifts onto a boundary
+    like that without anyone writing the exploit on purpose.
+
+    `far_for_score` charges the worse of the two nulls, computing both legs on
+    both sides. Two series that differ by 0.002 in total return are charged the
+    same to within that difference, where the old rule charged them 7.7x apart.
+    """
+    from src.core.scoring import scorer
+    from src.core.scoring.calibration import null as N
+
+    below_r, above_r = _boundary_pair()
+    below, above = scorer.score_returns(below_r), scorer.score_returns(above_r)
+    assert below.metric == "sharpe_per_session", "the pair does not straddle"
+    assert above.metric == "sortino_per_session", "the pair does not straddle"
+    assert below.downside_sessions == 4 and above.downside_sessions == 6
+    assert abs(below.sortino - above.sortino) < 1e-3, (
+        "the two sides differ by more than the marginal pair; the construction "
+        "is comparing two strategies rather than two sides"
+    )
+
+    charge_below = N.far_for_score(below, dataset="nq-trades")
+    charge_above = N.far_for_score(above, dataset="nq-trades")
+    assert abs(charge_below["far"] - charge_above["far"]) < 1e-4, (
+        charge_below, charge_above)
+
+    # both legs are computed on both sides -- that is what makes it work
+    for charge in (charge_below, charge_above):
+        assert set(charge["legs"]) == {"sortino_per_session", "sharpe_per_session"}
+        assert charge["far"] == max(charge["legs"].values())
+
+    # and the old rule really did differ here, so this is not a vacuous test
+    old_below = charge_below["legs"]["sharpe_per_session"]
+    old_above = charge_above["legs"]["sortino_per_session"]
+    assert old_above > 4 * old_below, (
+        "the two nulls now agree on this series, so it no longer demonstrates "
+        f"anything: {old_above} vs {old_below}"
+    )
+
+
+@pytest.mark.parametrize("losers", [3, 4, 5, 6, 7])
+def test_the_charge_is_the_worse_of_both_nulls_at_every_distance(losers):
+    """Swept across the boundary, because the property that matters is that both
+    legs are charged everywhere near it rather than at one lucky point."""
+    from src.core.scoring import scorer
+    from src.core.scoring.calibration import null as N
+
+    s = scorer.score_returns([-3.0] * losers + [0.45] * (86 - losers))
+    charge = N.far_for_score(s, dataset="nq-trades")
+    assert charge["far"] >= charge["legs"]["sharpe_per_session"]
+    assert charge["far"] == max(charge["legs"].values())
+    assert charge["downside_sessions"] == losers
+
+
+def test_a_rejected_trial_is_charged_the_top_of_the_grid():
+    """No score, no credit. A rejection that quietly reported a small FAR would
+    be the most valuable bug in the repo."""
+    from src.core.scoring import scorer
+    from src.core.scoring.calibration import null as N
+
+    tiny = scorer.score_returns([0.5] * 10)          # below MIN_SESSIONS
+    assert tiny.rejected
+    assert N.far_for_score(tiny, dataset="nq-trades")["far"] == 1.0

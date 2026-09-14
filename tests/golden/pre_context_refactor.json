@@ -5,6 +5,7 @@
       "action_cap_hits": 0,
       "bars": 1404,
       "blotter_digest": "bbc174da00f32cdc0573432c77b8148347e981d70415deebd2d01bf80ed887cc",
+      "exact_digest": "d9a2074323d1b2c3f00dce3209b2701f63527d406a591b9063f0b6dcf0ce5a48",
       "fill_model": "unfavorable",
       "fills": 563,
       "final_position": 1,
@@ -20,6 +21,21 @@
         "sharpe": -0.4076761677868225,
         "significance": -2.374608709951554,
         "skew": -1.3968990544295725,
+        "trade_count": 281
+      },
+      "score_exact": {
+        "downside_sessions": 21,
+        "kurtosis": "0x1.658e7c007ba3ep+1",
+        "metric": "sortino_per_session",
+        "n_sessions": 35,
+        "net_pnl": "-0x1.250a3d70a3d71p+5",
+        "primary": "-0x1.9b03ead5c3755p-2",
+        "reject_reason": "",
+        "rejected": false,
+        "sharpe": "-0x1.a175dc800315ap-2",
+        "significance": "-0x1.2ff32d9f04f36p+1",
+        "skew": "-0x1.659b2d2a969d1p+0",
+        "sortino": "-0x1.9b03ead5c3755p-2",
         "trade_count": 281
       },
       "spec": {
@@ -38,6 +54,7 @@
       "action_cap_hits": 0,
       "bars": 1404,
       "blotter_digest": "c92ec9594cbf18e240e52a79281d4cf81e468663f7ff733ecd49f9fa30cbebfe",
+      "exact_digest": "8537f0ecc72369d57177c91b06c3820b76ff9b19ca5170ad890f5f935738c6b1",
       "fill_model": "favorable",
       "fills": 923,
       "final_position": 1,
@@ -53,6 +70,21 @@
         "sharpe": -0.16377442641114415,
         "significance": -1.184383335344568,
         "skew": -0.24346962992914273,
+        "trade_count": 461
+      },
+      "score_exact": {
+        "downside_sessions": 18,
+        "kurtosis": "0x1.74587dd754990p-3",
+        "metric": "sortino_per_session",
+        "n_sessions": 35,
+        "net_pnl": "-0x1.e75c28f5c28f6p+3",
+        "primary": "-0x1.9a010dd8e9eecp-3",
+        "reject_reason": "",
+        "rejected": false,
+        "sharpe": "-0x1.4f68f76adb2fbp-3",
+        "significance": "-0x1.2f33bf0b3b7a0p+0",
+        "skew": "-0x1.f2a03490eb4f6p-3",
+        "sortino": "-0x1.9a010dd8e9eecp-3",
         "trade_count": 461
       },
       "spec": {
@@ -71,6 +103,7 @@
       "action_cap_hits": 0,
       "bars": 1404,
       "blotter_digest": "197758da52b65e10ccccae387018cce44da99c23fe3683d2823ea3707a5e91bb",
+      "exact_digest": "0b85a83fdb42ab30848a20d7031d9d7c7405c2aa5ab725eda9bf22e18119aa1a",
       "fill_model": "unfavorable",
       "fills": 1088,
       "final_position": 0,
@@ -86,6 +119,21 @@
         "sharpe": 1.4737679934585668,
         "significance": 8.718929031079515,
         "skew": -0.24166799961595498,
+        "trade_count": 544
+      },
+      "score_exact": {
+        "downside_sessions": 5,
+        "kurtosis": "-0x1.756ba9d65f090p-3",
+        "metric": "sortino_per_session",
+        "n_sessions": 35,
+        "net_pnl": "0x1.713d70a3d70a4p+7",
+        "primary": "0x1.a7e299c4f2d6ep+3",
+        "reject_reason": "",
+        "rejected": false,
+        "sharpe": "0x1.7948dbf5cbcc7p+0",
+        "significance": "0x1.3977a11fe6f86p+6",
+        "skew": "-0x1.eeefa1d6b8e18p-3",
+        "sortino": "0x1.a7e299c4f2d6ep+3",
         "trade_count": 544
       },
       "spec": {
@@ -104,6 +152,7 @@
       "action_cap_hits": 0,
       "bars": 1404,
       "blotter_digest": "e980b1b4ebea7349dd41fb2fbd43b9312bfff1bc9292e84b7932db7262acf524",
+      "exact_digest": "e5875e27eb7297a3cb625df8d8c3947bb9a3ac6e43fc95c179f948cf70b575e8",
       "fill_model": "favorable",
       "fills": 1444,
       "final_position": 0,
@@ -119,6 +168,21 @@
         "sharpe": 2.746235266713333,
         "significance": 16.246946941037933,
         "skew": -0.5204014438378122,
+        "trade_count": 722
+      },
+      "score_exact": {
+        "downside_sessions": 0,
+        "kurtosis": "-0x1.1d8f15cb5ffecp-1",
+        "metric": "sharpe_per_session",
+        "n_sessions": 35,
+        "net_pnl": "0x1.36cf5c28f5c29p+8",
+        "primary": "0x1.5f84a320d3eabp+1",
+        "reject_reason": "0 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+        "rejected": false,
+        "sharpe": "0x1.5f84a320d3eabp+1",
+        "significance": "0x1.03f37ea2b9aeap+4",
+        "skew": "-0x1.0a720edc262f3p-1",
+        "sortino": "inf",
         "trade_count": 722
       },
       "spec": {
@@ -137,6 +201,7 @@
       "action_cap_hits": 0,
       "bars": 1404,
       "blotter_digest": "aa2444310d8cce90e58a708c27fb86b2b0ae7aace4b8ed3fd32694d01b4bd4b2",
+      "exact_digest": "d11b6b249effe7c6624c1c11bb4eb628a2a32f248dc31a9f288008b85921daa6",
       "fill_model": "unfavorable",
       "fills": 1397,
       "final_position": -1,
@@ -152,6 +217,21 @@
         "sharpe": 4.749723160070624,
         "significance": 28.09974116261384,
         "skew": -0.27863621547339756,
+        "trade_count": 698
+      },
+      "score_exact": {
+        "downside_sessions": 0,
+        "kurtosis": "0x1.b12bd156517e0p-4",
+        "metric": "sharpe_per_session",
+        "n_sessions": 35,
+        "net_pnl": "0x1.9ac7ae147ae14p+8",
+        "primary": "0x1.2ffb76d963a76p+2",
+        "reject_reason": "0 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+        "rejected": false,
+        "sharpe": "0x1.2ffb76d963a76p+2",
+        "significance": "0x1.c1988a3077dccp+4",
+        "skew": "-0x1.1d52cfe3c1fc8p-2",
+        "sortino": "inf",
         "trade_count": 698
       },
       "spec": {
@@ -170,6 +250,7 @@
       "action_cap_hits": 0,
       "bars": 1404,
       "blotter_digest": "5bf31f43ebabaa7deb512dd6353725bc68aa73204a67c1c32afeac87c779ceab",
+      "exact_digest": "c45ff8e0d57700a2e8773aa4a026c2cd94e18733d0adfb609265c491fd7b1158",
       "fill_model": "favorable",
       "fills": 1783,
       "final_position": -1,
@@ -185,6 +266,21 @@
         "sharpe": 6.1705737318250184,
         "significance": 36.505606504975546,
         "skew": 0.026230790057112083,
+        "trade_count": 891
+      },
+      "score_exact": {
+        "downside_sessions": 0,
+        "kurtosis": "0x1.2e6dfa82cb870p-3",
+        "metric": "sharpe_per_session",
+        "n_sessions": 35,
+        "net_pnl": "0x1.19b5c28f5c28fp+9",
+        "primary": "0x1.8aeaae15efaefp+2",
+        "reject_reason": "0 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+        "rejected": false,
+        "sharpe": "0x1.8aeaae15efaefp+2",
+        "significance": "0x1.240b7b6c5c1d7p+5",
+        "skew": "0x1.adc3e85c63c00p-6",
+        "sortino": "inf",
         "trade_count": 891
       },
       "spec": {
@@ -203,6 +299,7 @@
       "action_cap_hits": 0,
       "bars": 1014,
       "blotter_digest": "2d01c8c7403e38553033f17bf282777c71a71c6492365c78ff39e58dce439a32",
+      "exact_digest": "9f7eb6eef2095e615b62b12c826378742cb82e3c1f2b975790048e59cb3b9a4b",
       "fill_model": "unfavorable",
       "fills": 776,
       "final_position": 0,
@@ -218,6 +315,21 @@
         "sharpe": 2.212186848505996,
         "significance": -Infinity,
         "skew": 0.38404572255274727,
+        "trade_count": 388
+      },
+      "score_exact": {
+        "downside_sessions": 0,
+        "kurtosis": "-0x1.1b8218b79965fp+0",
+        "metric": "sortino_per_session",
+        "n_sessions": 12,
+        "net_pnl": "0x1.d9f5c28f5c28fp+6",
+        "primary": "-inf",
+        "reject_reason": "12 sessions is below the pre-registered floor of 30",
+        "rejected": true,
+        "sharpe": "0x1.1b28f04b7cbe4p+1",
+        "significance": "-inf",
+        "skew": "0x1.8943482a2186fp-2",
+        "sortino": "0x0.0p+0",
         "trade_count": 388
       },
       "spec": {
@@ -236,6 +348,7 @@
       "action_cap_hits": 0,
       "bars": 1014,
       "blotter_digest": "258a8f728ef0af498d3375f2497db22049680c2bbbd096270829c38ef09cbd52",
+      "exact_digest": "48d9f272c09a1c06ad9b851371e1e6126f362d615ac05c40e19efbf760560ddc",
       "fill_model": "favorable",
       "fills": 998,
       "final_position": 0,
@@ -251,6 +364,21 @@
         "sharpe": 4.711667885307417,
         "significance": -Infinity,
         "skew": 0.1481050869321502,
+        "trade_count": 499
+      },
+      "score_exact": {
+        "downside_sessions": 0,
+        "kurtosis": "-0x1.d7062074e1724p-1",
+        "metric": "sortino_per_session",
+        "n_sessions": 12,
+        "net_pnl": "0x1.a20a3d70a3d71p+7",
+        "primary": "-inf",
+        "reject_reason": "12 sessions is below the pre-registered floor of 30",
+        "rejected": true,
+        "sharpe": "0x1.2d8bf775408f7p+2",
+        "significance": "-inf",
+        "skew": "0x1.2f51b845f5731p-3",
+        "sortino": "0x0.0p+0",
         "trade_count": 499
       },
       "spec": {

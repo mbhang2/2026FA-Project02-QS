@@ -78,9 +78,33 @@ def score(
         )
 
     returns = metrics.session_returns(blotter, period, notional_base=notional_base)
-    n = len(returns)
     net = blotter.realized_pnl - blotter.commission
     trades = sum(1 for r in blotter.rows if r.realized_pnl != 0.0)
+    return score_returns(
+        returns, net_pnl=net, trade_count=trades, min_sessions=min_sessions,
+        min_downside_sessions=min_downside_sessions,
+    )
+
+
+def score_returns(
+    returns: Sequence[float],
+    *,
+    net_pnl: float = 0.0,
+    trade_count: int = 0,
+    min_sessions: int = MIN_SESSIONS,
+    min_downside_sessions: int = MIN_DOWNSIDE_SESSIONS,
+) -> ScoreTuple:
+    """The scoring rule itself, over a return series.
+
+    Split out of `score` so the rule can be exercised on a constructed series --
+    the Sortino/Sharpe boundary test needs two trials that differ only in how
+    many sessions finished below the MAR, and building blotters that do that
+    exactly is harder than it is informative. `score` is the same function with
+    the returns derived from a blotter and a calendar.
+    """
+    n = len(returns)
+    net = net_pnl
+    trades = trade_count
 
     if n < min_sessions:
         return ScoreTuple(
@@ -96,6 +120,9 @@ def score(
         )
 
     sharpe = metrics.sharpe(returns)
+    # Both ratios, always. The accept rule charges the worse of the two nulls
+    # (`null.far_for_score`), which it can only do if both numbers survive.
+    sortino = metrics.sortino(returns)
     losers = metrics.downside_count(returns)
     if not metrics.has_dispersion(returns) or not math.isfinite(sharpe):
         # Zero dispersion: every session returned the same thing. Sortino is
@@ -136,17 +163,21 @@ def score(
                 f"{min_downside_sessions}; scored on Sharpe instead"
             ),
             metric="sharpe_per_session",
+            sortino=sortino,
+            downside_sessions=losers,
         )
 
     return ScoreTuple(
-        primary=metrics.sortino(returns),
+        primary=sortino,
         sharpe=sharpe,
+        sortino=sortino,
         skew=metrics.skewness(returns),
         kurtosis=metrics.excess_kurtosis(returns),
         n_sessions=n,
         net_pnl=net,
         trade_count=trades,
         rejected=False,
+        downside_sessions=losers,
     )
 
 

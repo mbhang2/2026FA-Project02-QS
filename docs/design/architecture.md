@@ -642,6 +642,49 @@ arithmetic mode recorded in `provenance.arithmetic`. The pool moved in 361 of 38
 elements by at most 9.1e-13, and **the worst threshold movement was 7.6e-15** —
 rounding, as expected, and nothing beyond it.
 
+### Every digest, and what it actually establishes
+
+`Blotter.digest()` rounds to ten places before hashing. That is why the platform
+divergence hid for two tasks — and it was the statement carrying every "no golden
+digest moved" assurance from Task 21 through Task 28. Audited in Task 29 rather
+than waiting to be bitten a third time:
+
+| digest | rounds? | establishes | where the claim is made |
+|---|---|---|---|
+| `Blotter.digest()` | **yes, 10 dp** | agreement to ten places | its own docstring, and `BlotterRow.as_row` |
+| `Blotter.exact_digest()` | no — floats as `float.hex` | **identity** | added in Task 29; the golden sets pin it |
+| `engine.fill_log_digest()` / `reconstruct.log_digest` | **yes, 10 dp** on price | agreement to ten places | `FillRecord.as_row` |
+| `SyntheticDataset.digest()` | no (spec fields, `json` repr) | identity of the generator's configuration, truncated to 16 hex | its docstring |
+| `NQDataset.digest()` | no (ETags and dates) | identity of the bytes served, truncated to 16 hex | its docstring |
+| `NQDataset._session_digest` | no (ETags) | cache identity, truncated to 12 hex | its docstring |
+| `integrity.artifact_digests` | no (file bytes) | identity | §"the fingerprint covers the files" |
+| `integrity.code_fingerprint` | no (file bytes) | identity | same |
+| `integrity.environment_fingerprint` / `lockfile_digest` | no | identity | same |
+| `runlog.strategy_digest` | no (file bytes), truncated to 16 hex | identity | its docstring |
+| `integrity.fingerprint()` | **used to truncate constants at 400 chars** | now identity — the constant is hashed rather than clipped | fixed in Task 29 |
+
+Two of these needed changing and both were changed at the claim rather than at
+the value:
+
+- **The rounding digests keep rounding.** Removing it would move every committed
+  golden digest for no gain, now that the arithmetic agrees across platforms.
+  What changed is that they no longer describe themselves as establishing
+  identity, and `exact_digest` exists beside them for callers that need it.
+- **`integrity.fingerprint` stopped truncating.** It rendered each constant with
+  `repr` and clipped to 400 characters, so the threshold grids — precisely the
+  long constants worth protecting — were fingerprinted by their first 400
+  characters and no further. The constant is hashed now.
+
+The truncations to 12 and 16 hex characters are collision space, not precision,
+and are left alone: 16 hex is 64 bits, and these identify artifacts rather than
+authenticate them.
+
+**The golden sets now pin full precision.** Each of the sixteen cases carries
+`exact_digest` and `score_exact` — every score field as its exact hex form —
+alongside the rounded digest it always had. Pinning that is only possible because
+Task 28 made the arithmetic agree; before it, the assertion would have failed on
+whichever platform did not write the file. Verified passing on both.
+
 ### The child's modules are an allowlist
 
 Twice an `__init__` re-export has quietly widened this boundary, and both times a

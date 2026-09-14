@@ -31,6 +31,26 @@ profiles:
     wall_clock_budget_s: 120
     notional_base: 1.0
 
+  # What a campaign searches on. **Training split only**, which is the point:
+  # the loop proposes and discards on train, and validation is a budget spent
+  # later by a promotion rule that does not exist yet (Task 31). A campaign that
+  # searched on validation would consume the split it is eventually judged
+  # against, which is the same mistake as scoring on the holdout with extra
+  # steps.
+  #
+  # 105 synthetic training sessions at signal_strength 0.0 -- no edge to find,
+  # which is exactly what the correction is calibrated against.
+  campaign:
+    dataset: synthetic
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 0
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+
   # The holdout. A profile rather than a flag: since Task 20 the split is not a
   # command-line argument, so pointing a run at the holdout is an edit to a
   # committed file rather than something anyone can type. It still refuses to

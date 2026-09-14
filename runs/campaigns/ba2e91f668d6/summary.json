@@ -1,0 +1,2041 @@
+{
+  "budget": 200,
+  "campaign_id": "ba2e91f668d6",
+  "correction": {
+    "best_far": 0.0005,
+    "best_label": "158:f5fa7303",
+    "bh_discoveries": 2,
+    "decisions": [
+      {
+        "bh_accepted": true,
+        "bh_critical": 0.00025,
+        "far": 0.0005,
+        "holm_accepted": false,
+        "holm_critical": 0.00025,
+        "index": 158,
+        "label": "158:f5fa7303",
+        "rank": 1
+      },
+      {
+        "bh_accepted": true,
+        "bh_critical": 0.0005,
+        "far": 0.0005,
+        "holm_accepted": false,
+        "holm_critical": 0.0002512562814070352,
+        "index": 182,
+        "label": "182:b34ce13f",
+        "rank": 2
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.00075,
+        "far": 0.0008691633757599421,
+        "holm_accepted": false,
+        "holm_critical": 0.0002525252525252525,
+        "index": 181,
+        "label": "181:20b5ce15",
+        "rank": 3
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.001,
+        "far": 0.0013757761775192636,
+        "holm_accepted": false,
+        "holm_critical": 0.0002538071065989848,
+        "index": 85,
+        "label": "85:d45828c4",
+        "rank": 4
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0012500000000000002,
+        "far": 0.0020100451352314873,
+        "holm_accepted": false,
+        "holm_critical": 0.00025510204081632655,
+        "index": 196,
+        "label": "196:7cd42d71",
+        "rank": 5
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0015,
+        "far": 0.0039014139533418498,
+        "holm_accepted": false,
+        "holm_critical": 0.0002564102564102564,
+        "index": 29,
+        "label": "29:c0df0a41",
+        "rank": 6
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0017500000000000003,
+        "far": 0.0042515729381322,
+        "holm_accepted": false,
+        "holm_critical": 0.0002577319587628866,
+        "index": 141,
+        "label": "141:4adb5611",
+        "rank": 7
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.002,
+        "far": 0.005134655012565931,
+        "holm_accepted": false,
+        "holm_critical": 0.00025906735751295336,
+        "index": 6,
+        "label": "6:0c379e21",
+        "rank": 8
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.00225,
+        "far": 0.006388635956123233,
+        "holm_accepted": false,
+        "holm_critical": 0.00026041666666666666,
+        "index": 99,
+        "label": "99:0e9ce6a0",
+        "rank": 9
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0025000000000000005,
+        "far": 0.007832424808303115,
+        "holm_accepted": false,
+        "holm_critical": 0.0002617801047120419,
+        "index": 148,
+        "label": "148:5edc6886",
+        "rank": 10
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0027500000000000003,
+        "far": 0.008663062256009275,
+        "holm_accepted": false,
+        "holm_critical": 0.0002631578947368421,
+        "index": 1,
+        "label": "1:fe172518",
+        "rank": 11
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.003,
+        "far": 0.012596577627155877,
+        "holm_accepted": false,
+        "holm_critical": 0.00026455026455026457,
+        "index": 13,
+        "label": "13:3faa8de2",
+        "rank": 12
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0032500000000000003,
+        "far": 0.01527296907301158,
+        "holm_accepted": false,
+        "holm_critical": 0.00026595744680851064,
+        "index": 135,
+        "label": "135:a46fea6f",
+        "rank": 13
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0035000000000000005,
+        "far": 0.017046532408784655,
+        "holm_accepted": false,
+        "holm_critical": 0.00026737967914438503,
+        "index": 194,
+        "label": "194:cc39ded4",
+        "rank": 14
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.00375,
+        "far": 0.017709290020312407,
+        "holm_accepted": false,
+        "holm_critical": 0.00026881720430107527,
+        "index": 199,
+        "label": "199:fb3dd95f",
+        "rank": 15
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.004,
+        "far": 0.018379632312420676,
+        "holm_accepted": false,
+        "holm_critical": 0.0002702702702702703,
+        "index": 125,
+        "label": "125:f77e7c70",
+        "rank": 16
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.00425,
+        "far": 0.024455210439630254,
+        "holm_accepted": false,
+        "holm_critical": 0.0002717391304347826,
+        "index": 58,
+        "label": "58:cc0201b2",
+        "rank": 17
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0045,
+        "far": 0.027235377774849877,
+        "holm_accepted": false,
+        "holm_critical": 0.000273224043715847,
+        "index": 61,
+        "label": "61:aa3295dc",
+        "rank": 18
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.004750000000000001,
+        "far": 0.027851708188642514,
+        "holm_accepted": false,
+        "holm_critical": 0.0002747252747252747,
+        "index": 138,
+        "label": "138:568a0fcc",
+        "rank": 19
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.005000000000000001,
+        "far": 0.02922025136114198,
+        "holm_accepted": false,
+        "holm_critical": 0.00027624309392265195,
+        "index": 117,
+        "label": "117:f4d47899",
+        "rank": 20
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.00525,
+        "far": 0.03535187231736732,
+        "holm_accepted": false,
+        "holm_critical": 0.0002777777777777778,
+        "index": 116,
+        "label": "116:a51c9bc3",
+        "rank": 21
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0055000000000000005,
+        "far": 0.03587387757855866,
+        "holm_accepted": false,
+        "holm_critical": 0.0002793296089385475,
+        "index": 131,
+        "label": "131:a7cb6ef4",
+        "rank": 22
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.005750000000000001,
+        "far": 0.03782836461944351,
+        "holm_accepted": false,
+        "holm_critical": 0.0002808988764044944,
+        "index": 150,
+        "label": "150:57a28096",
+        "rank": 23
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.006,
+        "far": 0.0402721728994582,
+        "holm_accepted": false,
+        "holm_critical": 0.0002824858757062147,
+        "index": 104,
+        "label": "104:c00645e1",
+        "rank": 24
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.00625,
+        "far": 0.04347745228952598,
+        "holm_accepted": false,
+        "holm_critical": 0.00028409090909090913,
+        "index": 143,
+        "label": "143:4b7bfe98",
+        "rank": 25
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.006500000000000001,
+        "far": 0.044385119035293685,
+        "holm_accepted": false,
+        "holm_critical": 0.00028571428571428574,
+        "index": 5,
+        "label": "5:3987508a",
+        "rank": 26
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.006750000000000001,
+        "far": 0.04742815601616098,
+        "holm_accepted": false,
+        "holm_critical": 0.00028735632183908046,
+        "index": 63,
+        "label": "63:581aa450",
+        "rank": 27
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.007000000000000001,
+        "far": 0.048435366642663825,
+        "holm_accepted": false,
+        "holm_critical": 0.00028901734104046245,
+        "index": 153,
+        "label": "153:b0cc5552",
+        "rank": 28
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0072499999999999995,
+        "far": 0.04879227336845257,
+        "holm_accepted": false,
+        "holm_critical": 0.00029069767441860465,
+        "index": 56,
+        "label": "56:14c14202",
+        "rank": 29
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0075,
+        "far": 0.051959634299853105,
+        "holm_accepted": false,
+        "holm_critical": 0.00029239766081871346,
+        "index": 128,
+        "label": "128:8d652b12",
+        "rank": 30
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.00775,
+        "far": 0.05609534990525253,
+        "holm_accepted": false,
+        "holm_critical": 0.00029411764705882356,
+        "index": 84,
+        "label": "84:6d359ffc",
+        "rank": 31
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.008,
+        "far": 0.07956972730967597,
+        "holm_accepted": false,
+        "holm_critical": 0.0002958579881656805,
+        "index": 113,
+        "label": "113:2eebe243",
+        "rank": 32
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.00825,
+        "far": 0.08530997657363042,
+        "holm_accepted": false,
+        "holm_critical": 0.00029761904761904765,
+        "index": 74,
+        "label": "74:e1e6312c",
+        "rank": 33
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0085,
+        "far": 0.08784423611475183,
+        "holm_accepted": false,
+        "holm_critical": 0.0002994011976047904,
+        "index": 18,
+        "label": "18:cf2c95d1",
+        "rank": 34
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.008749999999999999,
+        "far": 0.09150319187787512,
+        "holm_accepted": false,
+        "holm_critical": 0.00030120481927710846,
+        "index": 180,
+        "label": "180:860bc600",
+        "rank": 35
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.009,
+        "far": 0.09828809298385685,
+        "holm_accepted": false,
+        "holm_critical": 0.00030303030303030303,
+        "index": 20,
+        "label": "20:74723cb9",
+        "rank": 36
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.00925,
+        "far": 0.1011231490406482,
+        "holm_accepted": false,
+        "holm_critical": 0.0003048780487804878,
+        "index": 60,
+        "label": "60:ce8382fb",
+        "rank": 37
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.009500000000000001,
+        "far": 0.10150058311409102,
+        "holm_accepted": false,
+        "holm_critical": 0.00030674846625766873,
+        "index": 7,
+        "label": "7:ae22a711",
+        "rank": 38
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.009750000000000002,
+        "far": 0.1040285328711412,
+        "holm_accepted": false,
+        "holm_critical": 0.00030864197530864197,
+        "index": 11,
+        "label": "11:5e813b7f",
+        "rank": 39
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.010000000000000002,
+        "far": 0.10568095441050618,
+        "holm_accepted": false,
+        "holm_critical": 0.00031055900621118014,
+        "index": 121,
+        "label": "121:819fdbbb",
+        "rank": 40
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01025,
+        "far": 0.10703612243851665,
+        "holm_accepted": false,
+        "holm_critical": 0.0003125,
+        "index": 22,
+        "label": "22:517e4654",
+        "rank": 41
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0105,
+        "far": 0.11436276402378859,
+        "holm_accepted": false,
+        "holm_critical": 0.0003144654088050315,
+        "index": 147,
+        "label": "147:4027b101",
+        "rank": 42
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.010750000000000001,
+        "far": 0.11646320092010372,
+        "holm_accepted": false,
+        "holm_critical": 0.00031645569620253165,
+        "index": 102,
+        "label": "102:59213a8d",
+        "rank": 43
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.011000000000000001,
+        "far": 0.1214506995268763,
+        "holm_accepted": false,
+        "holm_critical": 0.00031847133757961787,
+        "index": 27,
+        "label": "27:41f7c8ca",
+        "rank": 44
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.011250000000000001,
+        "far": 0.12159550768907951,
+        "holm_accepted": false,
+        "holm_critical": 0.0003205128205128205,
+        "index": 179,
+        "label": "179:2991b9c7",
+        "rank": 45
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.011500000000000002,
+        "far": 0.12409279892185725,
+        "holm_accepted": false,
+        "holm_critical": 0.0003225806451612903,
+        "index": 170,
+        "label": "170:56039a64",
+        "rank": 46
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01175,
+        "far": 0.1279929006373614,
+        "holm_accepted": false,
+        "holm_critical": 0.0003246753246753247,
+        "index": 64,
+        "label": "64:6179cf95",
+        "rank": 47
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.012,
+        "far": 0.13283313569294172,
+        "holm_accepted": false,
+        "holm_critical": 0.00032679738562091506,
+        "index": 111,
+        "label": "111:e4ef6284",
+        "rank": 48
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01225,
+        "far": 0.13406047890981457,
+        "holm_accepted": false,
+        "holm_critical": 0.0003289473684210526,
+        "index": 176,
+        "label": "176:e51d5b74",
+        "rank": 49
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0125,
+        "far": 0.13874431608631935,
+        "holm_accepted": false,
+        "holm_critical": 0.00033112582781456954,
+        "index": 159,
+        "label": "159:ddebe688",
+        "rank": 50
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.012750000000000001,
+        "far": 0.1449386267923964,
+        "holm_accepted": false,
+        "holm_critical": 0.0003333333333333334,
+        "index": 46,
+        "label": "46:bdd8bc10",
+        "rank": 51
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.013000000000000001,
+        "far": 0.1465891043432392,
+        "holm_accepted": false,
+        "holm_critical": 0.00033557046979865775,
+        "index": 140,
+        "label": "140:e525f67c",
+        "rank": 52
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.013250000000000001,
+        "far": 0.1473406830267204,
+        "holm_accepted": false,
+        "holm_critical": 0.00033783783783783786,
+        "index": 12,
+        "label": "12:58c3d2f4",
+        "rank": 53
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.013500000000000002,
+        "far": 0.14749534173571863,
+        "holm_accepted": false,
+        "holm_critical": 0.00034013605442176874,
+        "index": 145,
+        "label": "145:53c78161",
+        "rank": 54
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.013750000000000002,
+        "far": 0.16188613148464165,
+        "holm_accepted": false,
+        "holm_critical": 0.00034246575342465754,
+        "index": 107,
+        "label": "107:3cf10b61",
+        "rank": 55
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.014000000000000002,
+        "far": 0.162151710695691,
+        "holm_accepted": false,
+        "holm_critical": 0.0003448275862068966,
+        "index": 127,
+        "label": "127:d6b60a09",
+        "rank": 56
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.014249999999999999,
+        "far": 0.16622937352184472,
+        "holm_accepted": false,
+        "holm_critical": 0.00034722222222222224,
+        "index": 19,
+        "label": "19:bdc682e5",
+        "rank": 57
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.014499999999999999,
+        "far": 0.17782436612334862,
+        "holm_accepted": false,
+        "holm_critical": 0.00034965034965034965,
+        "index": 65,
+        "label": "65:7ce171d4",
+        "rank": 58
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01475,
+        "far": 0.18646956148854346,
+        "holm_accepted": false,
+        "holm_critical": 0.00035211267605633805,
+        "index": 106,
+        "label": "106:ba696cfa",
+        "rank": 59
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.015,
+        "far": 0.20253153549756459,
+        "holm_accepted": false,
+        "holm_critical": 0.0003546099290780142,
+        "index": 188,
+        "label": "188:498e3370",
+        "rank": 60
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01525,
+        "far": 0.20470217753729855,
+        "holm_accepted": false,
+        "holm_critical": 0.00035714285714285714,
+        "index": 142,
+        "label": "142:bb1bb32a",
+        "rank": 61
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0155,
+        "far": 0.207987520655661,
+        "holm_accepted": false,
+        "holm_critical": 0.00035971223021582735,
+        "index": 75,
+        "label": "75:00d7714b",
+        "rank": 62
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01575,
+        "far": 0.20825060746616594,
+        "holm_accepted": false,
+        "holm_critical": 0.00036231884057971015,
+        "index": 115,
+        "label": "115:bce0799b",
+        "rank": 63
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.016,
+        "far": 0.2111747610077543,
+        "holm_accepted": false,
+        "holm_critical": 0.00036496350364963507,
+        "index": 130,
+        "label": "130:e20d5e72",
+        "rank": 64
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01625,
+        "far": 0.21183953897183233,
+        "holm_accepted": false,
+        "holm_critical": 0.0003676470588235294,
+        "index": 126,
+        "label": "126:32841232",
+        "rank": 65
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0165,
+        "far": 0.21384862886129855,
+        "holm_accepted": false,
+        "holm_critical": 0.0003703703703703704,
+        "index": 171,
+        "label": "171:d619f365",
+        "rank": 66
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01675,
+        "far": 0.22859474272982855,
+        "holm_accepted": false,
+        "holm_critical": 0.00037313432835820896,
+        "index": 77,
+        "label": "77:8fa7b791",
+        "rank": 67
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.017,
+        "far": 0.233450747910423,
+        "holm_accepted": false,
+        "holm_critical": 0.00037593984962406017,
+        "index": 100,
+        "label": "100:9c26b20e",
+        "rank": 68
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.017249999999999998,
+        "far": 0.24637716727402595,
+        "holm_accepted": false,
+        "holm_critical": 0.0003787878787878788,
+        "index": 86,
+        "label": "86:8551bc8e",
+        "rank": 69
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.017499999999999998,
+        "far": 0.2590692683993877,
+        "holm_accepted": false,
+        "holm_critical": 0.0003816793893129771,
+        "index": 167,
+        "label": "167:d9fb97e3",
+        "rank": 70
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01775,
+        "far": 0.2601536918532756,
+        "holm_accepted": false,
+        "holm_critical": 0.0003846153846153846,
+        "index": 134,
+        "label": "134:d67eff6e",
+        "rank": 71
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.018,
+        "far": 0.26119103869575205,
+        "holm_accepted": false,
+        "holm_critical": 0.0003875968992248062,
+        "index": 23,
+        "label": "23:8355bd55",
+        "rank": 72
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.01825,
+        "far": 0.26965683647572136,
+        "holm_accepted": false,
+        "holm_critical": 0.000390625,
+        "index": 187,
+        "label": "187:5a259628",
+        "rank": 73
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0185,
+        "far": 0.2885452239033495,
+        "holm_accepted": false,
+        "holm_critical": 0.00039370078740157485,
+        "index": 83,
+        "label": "83:2e5f91e8",
+        "rank": 74
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.018750000000000003,
+        "far": 0.29803076331694267,
+        "holm_accepted": false,
+        "holm_critical": 0.0003968253968253968,
+        "index": 166,
+        "label": "166:18cdfab0",
+        "rank": 75
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.019000000000000003,
+        "far": 0.30177551149159687,
+        "holm_accepted": false,
+        "holm_critical": 0.0004,
+        "index": 136,
+        "label": "136:7984a079",
+        "rank": 76
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.019250000000000003,
+        "far": 0.30478643089188623,
+        "holm_accepted": false,
+        "holm_critical": 0.0004032258064516129,
+        "index": 192,
+        "label": "192:a0570a26",
+        "rank": 77
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.019500000000000003,
+        "far": 0.30868061371887656,
+        "holm_accepted": false,
+        "holm_critical": 0.0004065040650406504,
+        "index": 68,
+        "label": "68:b6bcee57",
+        "rank": 78
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.019750000000000004,
+        "far": 0.31107835850070603,
+        "holm_accepted": false,
+        "holm_critical": 0.0004098360655737705,
+        "index": 123,
+        "label": "123:c5b3b4aa",
+        "rank": 79
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.020000000000000004,
+        "far": 0.3114173812265104,
+        "holm_accepted": false,
+        "holm_critical": 0.0004132231404958678,
+        "index": 76,
+        "label": "76:ce8add63",
+        "rank": 80
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.020250000000000004,
+        "far": 0.31316473662988425,
+        "holm_accepted": false,
+        "holm_critical": 0.0004166666666666667,
+        "index": 3,
+        "label": "3:9b7ffaf7",
+        "rank": 81
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0205,
+        "far": 0.3156167835428332,
+        "holm_accepted": false,
+        "holm_critical": 0.0004201680672268908,
+        "index": 98,
+        "label": "98:e2bfb344",
+        "rank": 82
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.02075,
+        "far": 0.3324962436915991,
+        "holm_accepted": false,
+        "holm_critical": 0.0004237288135593221,
+        "index": 193,
+        "label": "193:261f1c92",
+        "rank": 83
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.021,
+        "far": 0.34967770653167707,
+        "holm_accepted": false,
+        "holm_critical": 0.00042735042735042735,
+        "index": 62,
+        "label": "62:924b206b",
+        "rank": 84
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.02125,
+        "far": 0.35572558486170036,
+        "holm_accepted": false,
+        "holm_critical": 0.00043103448275862074,
+        "index": 14,
+        "label": "14:f2289117",
+        "rank": 85
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.021500000000000002,
+        "far": 0.35706377852447835,
+        "holm_accepted": false,
+        "holm_critical": 0.0004347826086956522,
+        "index": 103,
+        "label": "103:e1106719",
+        "rank": 86
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.021750000000000002,
+        "far": 0.36810268665882767,
+        "holm_accepted": false,
+        "holm_critical": 0.0004385964912280702,
+        "index": 42,
+        "label": "42:36a95d2b",
+        "rank": 87
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.022000000000000002,
+        "far": 0.3691720010883948,
+        "holm_accepted": false,
+        "holm_critical": 0.00044247787610619474,
+        "index": 105,
+        "label": "105:2d47bc7a",
+        "rank": 88
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.022250000000000002,
+        "far": 0.3940594013540558,
+        "holm_accepted": false,
+        "holm_critical": 0.00044642857142857147,
+        "index": 189,
+        "label": "189:610fb8e3",
+        "rank": 89
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.022500000000000003,
+        "far": 0.413461221344929,
+        "holm_accepted": false,
+        "holm_critical": 0.00045045045045045046,
+        "index": 9,
+        "label": "9:93e99d9f",
+        "rank": 90
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.022750000000000003,
+        "far": 0.41633710008570235,
+        "holm_accepted": false,
+        "holm_critical": 0.00045454545454545455,
+        "index": 119,
+        "label": "119:d17bff36",
+        "rank": 91
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.023000000000000003,
+        "far": 0.42347756668942144,
+        "holm_accepted": false,
+        "holm_critical": 0.00045871559633027525,
+        "index": 186,
+        "label": "186:58df512e",
+        "rank": 92
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.023250000000000003,
+        "far": 0.4679680560751665,
+        "holm_accepted": false,
+        "holm_critical": 0.000462962962962963,
+        "index": 67,
+        "label": "67:273c4b75",
+        "rank": 93
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0235,
+        "far": 0.46995836608641245,
+        "holm_accepted": false,
+        "holm_critical": 0.00046728971962616824,
+        "index": 93,
+        "label": "93:fda5b20f",
+        "rank": 94
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.02375,
+        "far": 0.47289156348574235,
+        "holm_accepted": false,
+        "holm_critical": 0.0004716981132075472,
+        "index": 101,
+        "label": "101:d0c607ab",
+        "rank": 95
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.024,
+        "far": 0.4730657978369047,
+        "holm_accepted": false,
+        "holm_critical": 0.0004761904761904762,
+        "index": 163,
+        "label": "163:8b0e6242",
+        "rank": 96
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.02425,
+        "far": 0.4890781399341976,
+        "holm_accepted": false,
+        "holm_critical": 0.0004807692307692308,
+        "index": 50,
+        "label": "50:6ee22127",
+        "rank": 97
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0245,
+        "far": 0.4912627176461887,
+        "holm_accepted": false,
+        "holm_critical": 0.00048543689320388353,
+        "index": 59,
+        "label": "59:b58d7dbb",
+        "rank": 98
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.02475,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0004901960784313725,
+        "index": 0,
+        "label": "0:02e2bcc3",
+        "rank": 99
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.025,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0004950495049504951,
+        "index": 2,
+        "label": "2:e6327f44",
+        "rank": 100
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.02525,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005,
+        "index": 4,
+        "label": "4:2e45a4ce",
+        "rank": 101
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.025500000000000002,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.000505050505050505,
+        "index": 8,
+        "label": "8:1cd32d05",
+        "rank": 102
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.025750000000000002,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005102040816326531,
+        "index": 10,
+        "label": "10:809de43d",
+        "rank": 103
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.026000000000000002,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005154639175257732,
+        "index": 15,
+        "label": "15:edf14120",
+        "rank": 104
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.026250000000000002,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005208333333333333,
+        "index": 16,
+        "label": "16:d3f51903",
+        "rank": 105
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.026500000000000003,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005263157894736842,
+        "index": 17,
+        "label": "17:17085b5c",
+        "rank": 106
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.026750000000000003,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005319148936170213,
+        "index": 21,
+        "label": "21:20982710",
+        "rank": 107
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.027000000000000003,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005376344086021505,
+        "index": 24,
+        "label": "24:0a2a4fcc",
+        "rank": 108
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.027250000000000003,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005434782608695652,
+        "index": 25,
+        "label": "25:56bb6ab7",
+        "rank": 109
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.027500000000000004,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005494505494505495,
+        "index": 26,
+        "label": "26:67a9960b",
+        "rank": 110
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.027750000000000004,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005555555555555556,
+        "index": 28,
+        "label": "28:51986fc7",
+        "rank": 111
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.028000000000000004,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005617977528089888,
+        "index": 30,
+        "label": "30:ca40445e",
+        "rank": 112
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.028249999999999997,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005681818181818183,
+        "index": 31,
+        "label": "31:dbad4213",
+        "rank": 113
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.028499999999999998,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005747126436781609,
+        "index": 32,
+        "label": "32:64aac627",
+        "rank": 114
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.028749999999999998,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005813953488372093,
+        "index": 33,
+        "label": "33:d1cfe637",
+        "rank": 115
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.028999999999999998,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005882352941176471,
+        "index": 34,
+        "label": "34:23fbdcc8",
+        "rank": 116
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.029249999999999998,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0005952380952380953,
+        "index": 35,
+        "label": "35:f0c9b244",
+        "rank": 117
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0295,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006024096385542169,
+        "index": 36,
+        "label": "36:b95e80b0",
+        "rank": 118
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.02975,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006097560975609756,
+        "index": 37,
+        "label": "37:87251941",
+        "rank": 119
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006172839506172839,
+        "index": 38,
+        "label": "38:9fca919f",
+        "rank": 120
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03025,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.000625,
+        "index": 39,
+        "label": "39:42ff4b50",
+        "rank": 121
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0305,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006329113924050633,
+        "index": 40,
+        "label": "40:446996a0",
+        "rank": 122
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03075,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.000641025641025641,
+        "index": 41,
+        "label": "41:fabd1afe",
+        "rank": 123
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.031,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006493506493506494,
+        "index": 43,
+        "label": "43:fc5f875c",
+        "rank": 124
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03125,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006578947368421052,
+        "index": 44,
+        "label": "44:af26b932",
+        "rank": 125
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0315,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006666666666666668,
+        "index": 45,
+        "label": "45:18eaa9b6",
+        "rank": 126
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03175,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006756756756756757,
+        "index": 47,
+        "label": "47:0e6bdfdd",
+        "rank": 127
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.032,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006849315068493151,
+        "index": 48,
+        "label": "48:9f52d78b",
+        "rank": 128
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03225,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0006944444444444445,
+        "index": 49,
+        "label": "49:1c444597",
+        "rank": 129
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0325,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0007042253521126761,
+        "index": 51,
+        "label": "51:86a9b05d",
+        "rank": 130
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03275,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0007142857142857143,
+        "index": 52,
+        "label": "52:42d5934f",
+        "rank": 131
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.033,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0007246376811594203,
+        "index": 53,
+        "label": "53:6bb4676f",
+        "rank": 132
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03325,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0007352941176470588,
+        "index": 54,
+        "label": "54:292cac40",
+        "rank": 133
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0335,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0007462686567164179,
+        "index": 55,
+        "label": "55:500c78c3",
+        "rank": 134
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03375,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0007575757575757576,
+        "index": 57,
+        "label": "57:f4ae83b8",
+        "rank": 135
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.034,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0007692307692307692,
+        "index": 66,
+        "label": "66:0dda6dd1",
+        "rank": 136
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03425,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.00078125,
+        "index": 69,
+        "label": "69:214fb4fa",
+        "rank": 137
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.034499999999999996,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0007936507936507937,
+        "index": 70,
+        "label": "70:ac4307eb",
+        "rank": 138
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.034749999999999996,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0008064516129032258,
+        "index": 71,
+        "label": "71:6128a189",
+        "rank": 139
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.034999999999999996,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.000819672131147541,
+        "index": 72,
+        "label": "72:faea17fc",
+        "rank": 140
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03525,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0008333333333333334,
+        "index": 73,
+        "label": "73:d788c744",
+        "rank": 141
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0355,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0008474576271186442,
+        "index": 78,
+        "label": "78:9e4e123a",
+        "rank": 142
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03575,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0008620689655172415,
+        "index": 79,
+        "label": "79:6630c61f",
+        "rank": 143
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.036,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0008771929824561404,
+        "index": 80,
+        "label": "80:07847f9e",
+        "rank": 144
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03625,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0008928571428571429,
+        "index": 81,
+        "label": "81:82690218",
+        "rank": 145
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0365,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0009090909090909091,
+        "index": 82,
+        "label": "82:69cf8c32",
+        "rank": 146
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03675,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.000925925925925926,
+        "index": 87,
+        "label": "87:0604972b",
+        "rank": 147
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.037,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0009433962264150943,
+        "index": 88,
+        "label": "88:9e146c49",
+        "rank": 148
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03725,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0009615384615384616,
+        "index": 89,
+        "label": "89:672979d7",
+        "rank": 149
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.037500000000000006,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.000980392156862745,
+        "index": 90,
+        "label": "90:6ea9fada",
+        "rank": 150
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.037750000000000006,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.001,
+        "index": 91,
+        "label": "91:1e4b059f",
+        "rank": 151
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.038000000000000006,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0010204081632653062,
+        "index": 92,
+        "label": "92:9a6121b9",
+        "rank": 152
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.038250000000000006,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0010416666666666667,
+        "index": 94,
+        "label": "94:dbd5c1f9",
+        "rank": 153
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.038500000000000006,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0010638297872340426,
+        "index": 95,
+        "label": "95:4c39b308",
+        "rank": 154
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03875000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0010869565217391304,
+        "index": 96,
+        "label": "96:580371e9",
+        "rank": 155
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03900000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0011111111111111111,
+        "index": 97,
+        "label": "97:e72060ef",
+        "rank": 156
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03925000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0011363636363636365,
+        "index": 108,
+        "label": "108:8be36a3f",
+        "rank": 157
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03950000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0011627906976744186,
+        "index": 109,
+        "label": "109:b1092fea",
+        "rank": 158
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.03975000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0011904761904761906,
+        "index": 110,
+        "label": "110:51917c4e",
+        "rank": 159
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04000000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0012195121951219512,
+        "index": 112,
+        "label": "112:051e6d31",
+        "rank": 160
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04025000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.00125,
+        "index": 114,
+        "label": "114:72bd1d6c",
+        "rank": 161
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04050000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.001282051282051282,
+        "index": 118,
+        "label": "118:ab2b8593",
+        "rank": 162
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04075,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0013157894736842105,
+        "index": 120,
+        "label": "120:f0b007fc",
+        "rank": 163
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.041,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0013513513513513514,
+        "index": 122,
+        "label": "122:549e6f8f",
+        "rank": 164
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04125,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.001388888888888889,
+        "index": 124,
+        "label": "124:703d9340",
+        "rank": 165
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0415,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0014285714285714286,
+        "index": 129,
+        "label": "129:1f5b66f7",
+        "rank": 166
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04175,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0014705882352941176,
+        "index": 132,
+        "label": "132:d3145e57",
+        "rank": 167
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.042,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0015151515151515152,
+        "index": 133,
+        "label": "133:b70d2583",
+        "rank": 168
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04225,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0015625,
+        "index": 137,
+        "label": "137:9543fffd",
+        "rank": 169
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0425,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0016129032258064516,
+        "index": 139,
+        "label": "139:fe609806",
+        "rank": 170
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04275,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0016666666666666668,
+        "index": 144,
+        "label": "144:0cdec08e",
+        "rank": 171
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.043000000000000003,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.001724137931034483,
+        "index": 146,
+        "label": "146:80261db0",
+        "rank": 172
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.043250000000000004,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0017857142857142859,
+        "index": 149,
+        "label": "149:9dd7db32",
+        "rank": 173
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.043500000000000004,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.001851851851851852,
+        "index": 151,
+        "label": "151:3ca78e00",
+        "rank": 174
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.043750000000000004,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0019230769230769232,
+        "index": 152,
+        "label": "152:acc7b6b8",
+        "rank": 175
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.044000000000000004,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.002,
+        "index": 154,
+        "label": "154:458d36c0",
+        "rank": 176
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.044250000000000005,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0020833333333333333,
+        "index": 155,
+        "label": "155:460efcf2",
+        "rank": 177
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.044500000000000005,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.002173913043478261,
+        "index": 156,
+        "label": "156:2e362ec5",
+        "rank": 178
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.044750000000000005,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.002272727272727273,
+        "index": 157,
+        "label": "157:6a6ff521",
+        "rank": 179
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.045000000000000005,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.002380952380952381,
+        "index": 160,
+        "label": "160:55d9a56d",
+        "rank": 180
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.045250000000000005,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0025,
+        "index": 161,
+        "label": "161:173137d6",
+        "rank": 181
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.045500000000000006,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.002631578947368421,
+        "index": 162,
+        "label": "162:49f2456e",
+        "rank": 182
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.045750000000000006,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.002777777777777778,
+        "index": 164,
+        "label": "164:4006da90",
+        "rank": 183
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.046000000000000006,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0029411764705882353,
+        "index": 165,
+        "label": "165:c894e4a0",
+        "rank": 184
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.046250000000000006,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.003125,
+        "index": 168,
+        "label": "168:858c6214",
+        "rank": 185
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04650000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0033333333333333335,
+        "index": 169,
+        "label": "169:33ed5a8e",
+        "rank": 186
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04675000000000001,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0035714285714285718,
+        "index": 172,
+        "label": "172:26daeabe",
+        "rank": 187
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.047,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0038461538461538464,
+        "index": 173,
+        "label": "173:fbb384b6",
+        "rank": 188
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04725,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.004166666666666667,
+        "index": 174,
+        "label": "174:ab7b80ee",
+        "rank": 189
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0475,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.004545454545454546,
+        "index": 175,
+        "label": "175:c6c56368",
+        "rank": 190
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04775,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.005,
+        "index": 177,
+        "label": "177:de460531",
+        "rank": 191
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.048,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.005555555555555556,
+        "index": 178,
+        "label": "178:ecdb7b80",
+        "rank": 192
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04825,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.00625,
+        "index": 183,
+        "label": "183:50c8d1a2",
+        "rank": 193
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0485,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0071428571428571435,
+        "index": 184,
+        "label": "184:bbbbf19d",
+        "rank": 194
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04875,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.008333333333333333,
+        "index": 185,
+        "label": "185:cfc6f6bf",
+        "rank": 195
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.049,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.01,
+        "index": 190,
+        "label": "190:2d7807d4",
+        "rank": 196
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04925,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.0125,
+        "index": 191,
+        "label": "191:76662be8",
+        "rank": 197
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.0495,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.016666666666666666,
+        "index": 195,
+        "label": "195:cbc51842",
+        "rank": 198
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.04975,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.025,
+        "index": 197,
+        "label": "197:ecce1da1",
+        "rank": 199
+      },
+      {
+        "bh_accepted": false,
+        "bh_critical": 0.05,
+        "far": 0.5,
+        "holm_accepted": false,
+        "holm_critical": 0.05,
+        "index": 198,
+        "label": "198:407a0c46",
+        "rank": 200
+      }
+    ],
+    "expected_max_note": "",
+    "holm_discoveries": 0,
+    "n": 200,
+    "q": 0.05,
+    "uncorrected_discoveries": 29
+  },
+  "deflation": {
+    "best_score": 0.1628926985136725,
+    "clears_selection_bar": true,
+    "expected_max_under_null": -0.008591974674705483,
+    "margin": 0.17148467318837798,
+    "n_sessions": 105,
+    "n_trials": 200,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "harness_failures": 0,
+  "n_trials": 200,
+  "outcomes": {
+    "completed": 200
+  },
+  "per_trial_accepts_at_0.001": 3,
+  "q": 0.05,
+  "record_digest": "8d260f8f0ba5fea86154ef9d4813772c30ca41a650f663f9a15721cd2a169053",
+  "record_tampered": false,
+  "uncorrected": {
+    "best_far": 0.0005,
+    "best_score": 0.1628926985136725,
+    "n_at_or_below_q": 29,
+    "reading": "what a report with no correction would say: the best of 200 candidates scored +0.1629 at a nominal false-acceptance rate of 0.0005"
+  },
+  "wall_clock_s": 266.1
+}

@@ -1,0 +1,24 @@
+{
+ "pool_downside_dev": 2.295990269515171,
+ "pool_sd": 2.709541392520442,
+ "reference": {
+  "at_0.001": 0,
+  "label": "the REFERENCE strategy",
+  "median_downside_dev": 2.160236877914338,
+  "median_return_sd": 2.494552706801641,
+  "median_trades": 635.5,
+  "n": 40,
+  "rate": 0.0,
+  "ratio_vs_promised": 0.0
+ },
+ "variants": {
+  "at_0.001": 4,
+  "label": "the null generator's variants",
+  "median_downside_dev": 2.4996495914055794,
+  "median_return_sd": 2.845760733577666,
+  "median_trades": 548.0,
+  "n": 400,
+  "rate": 0.01,
+  "ratio_vs_promised": 10.0
+ }
+}

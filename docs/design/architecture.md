@@ -768,6 +768,60 @@ mechanism for making crashes not count: the same hole in a friendlier shape.
 
 ---
 
+## 5d. `src/core/loop/` and `src/core/scoring/correction.py` — the loop, and the
+correction it exists for
+
+**The project's stated contribution is the correction over the trial ledger, and
+until Task 30 nothing consumed the FAR column.** Every system in the reference
+bibliography accepts a change when a single scalar improves and none corrects
+across hundreds of nightly trials. This is the part that was missing.
+
+| File | Responsibility |
+|---|---|
+| `src/core/scoring/correction.py` | Benjamini-Hochberg, Holm, and the DSR-shaped `deflation_view`. Checked against Benjamini & Hochberg (1995) Table 1, whose published answers are 4 and 3 |
+| `src/core/loop/agents.py` | The stub proposal side: `NullGenerator` (edgeless variants, deterministic) and `ReplayList` (a fixed sequence) |
+| `src/core/loop/campaign.py` | `CampaignRecord` (pre-registered and hashed), `run_campaign`, `summarise` |
+
+**A stub agent first, with no LLM in it.** A correction cannot be checked against
+a campaign whose ground truth is unknown, so the null generator proposes
+strategies that have no edge by construction and the known answer is zero real
+discoveries. It also means the machinery is debugged against something
+deterministic.
+
+**The campaign record is written and hashed before the first trial** — budget,
+stopping rule, q, the correction set, the stub's seed — and re-hashed at the end.
+A budget or a q chosen after seeing results is the failure this whole project
+exists to prevent, and building the loop without that guard would have been an
+embarrassing place to commit it. Verified: editing the budget from 200 to 20, or
+q from 0.05 to 0.2, is refused with the stored and recomputed digests side by
+side.
+
+**N is the count of a campaign's trial rows, unfiltered.** Accepted, rejected and
+crashed alike; a crashed trial enters the correction at the worst possible
+p-value rather than being dropped, because dropping it would shrink the
+denominator by exactly the trials that did not work. The single exception is
+`harness_failed`, which is not a trial: Task 25 gave it its own outcome for this
+reason, and it is counted separately and reported separately.
+
+**Campaigns run on the training split only** (`config/run.yaml`, profile
+`campaign`). A campaign that searched on validation would consume the split it is
+eventually judged against.
+
+**What the agent sees is deliberately unanswered.** `propose(history)` is passed
+the history and the stub ignores it, with `del history` in the body so the
+omission is explicit. Showing prior trials and their scores is what makes this
+research rather than random search, and it is also what makes trials correlated,
+which changes what raw N means. That is a decision to argue for, not to inherit
+from whoever wrote the stub.
+
+**Read `docs/reviews/task30/README.md` before quoting any campaign's numbers.**
+The first campaign ever run found that the FAR column does not support the
+correction: BH's realized error rate on known-null campaigns is 0.575 against a
+promised 0.05, because the null is one strategy's and a campaign points hundreds
+of *different* strategies at it.
+
+---
+
 ## 6. `src/core/types.py` and `src/strategies/`
 
 **`src/core/types.py`** holds every shared value type: `Ts`, `Side`, `Split`,
@@ -936,6 +990,7 @@ Each produces something committed. None is importable from `src/core/`.
 | `scripts/ledger_check.py` | nothing — per-row verdict on whether a ledger row is reproducible, and honest N with supersessions applied | a human, before a campaign; CI |
 | `scripts/lock_env.py` | `requirements.lock` — the full transitive set, pinned | `integrity.lockfile_digest()`, CI (`--check`) |
 | `scripts/gen_remote_surface.py` | `src/core/engine/remote/_surface.py` — the context surface, classified | the remote adapter and child; CI (`--check`) |
+| `scripts/campaign.py` | `runs/campaigns/<id>/` — the pre-registered record, the campaign's ledger, and the corrected summary | a human running a campaign |
 | `scripts/check_agent_paths.py` | nothing — the CI write-path allowlist | CI |
 
 The two generators both take `--check` and both run in CI, so a doc that has
@@ -964,6 +1019,7 @@ the bucket and skip when `R2_*` is absent.
 | `tests/test_layout.py` | The build-time / run-time boundary |
 | `tests/test_boundary.py` | The context boundary: immutability by introspection, subscription-id resolution, the protocol against the engine, warmup against the embargo, the reachability walk, and the finding-1 reproduction asserting the score does not move |
 | `tests/test_architecture_doc.py` | That this document names every module |
+| `tests/test_loop.py` | The correction against a published worked example, the pre-registration hash, and the accounting rules a campaign could most easily cheat |
 | `tests/test_ledger_integrity.py` | That every committed row names a commit still in history and reproduces, that supersession narrows N without deleting anything, and that a stored source with a relative import still loads |
 | `tests/test_examples.py` | That every worked example in `docs/agent/strategy-api.md` is byte-identical to a file in `tests/examples/` and actually runs |
 | `tests/test_agent_docs.py` | That the two documents the research agent reads agree with each other, and that the generated one is current |

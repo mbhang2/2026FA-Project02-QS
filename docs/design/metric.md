@@ -407,6 +407,32 @@ quantile estimated from 384 pooled sessions. It was the fix for the
 single-strategy finding; on the Task 28 evidence it is the fix for the transfer
 question too, and it is what should be built rather than an inflation factor.
 
+### The single-strategy assumption, measured (Task 30)
+
+The first campaign ever run put a number on it, and the number is large enough to
+break the thing the project is for.
+
+40 known-null campaigns of 50 edgeless proposals each, on 40 independent data
+realizations, corrected at q = 0.05:
+
+| | measured | promised |
+|---|---:|---:|
+| campaigns with any BH discovery | **0.575** | ≤ 0.05 |
+| campaigns with any Holm discovery | 0.500 | ≤ 0.05 |
+| per-trial accepts at far ≤ 0.001 | **0.0175** | 0.001 |
+
+The cause is not the correction and not the loop. Running the **reference
+strategy** — the one the null was tabulated from — over the same 40 seeds gives
+0 accepts in 40 at far ≤ 0.001, a rate of 0.00×. The variants give 10×. The table
+is right about the strategy it was built from and wrong about the others, because
+their per-session return distributions are not the reference's: median dispersion
+2.85 against the reference's 2.49, downside deviation 2.50 against 2.16.
+
+**So the per-candidate randomization null is blocking rather than intended.**
+Without it the correction does not control, and a procedure that consumes
+p-values cannot manufacture validity its inputs do not have. Full measurement in
+`docs/reviews/task30/README.md`.
+
 ### Two decisions not to tune a parameter, recorded so they are not re-opened
 
 Both look like omissions if the reasoning is not written down, and someone will

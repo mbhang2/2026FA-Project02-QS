@@ -1,0 +1,411 @@
+{
+ "bh_any": 23,
+ "campaigns": 40,
+ "holm_any": 20,
+ "per_trial_at_0.001": 0.0175,
+ "q": 0.05,
+ "rows": [
+  {
+   "at_0.001": 2,
+   "best_score": 0.14996648905842103,
+   "bh": 5,
+   "dataset_seed": 1000,
+   "holm": 2,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 7
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.11576952325617275,
+   "bh": 1,
+   "dataset_seed": 1001,
+   "holm": 1,
+   "min_far": 0.0007479226967783089,
+   "n": 50,
+   "uncorrected": 4
+  },
+  {
+   "at_0.001": 2,
+   "best_score": 0.13896744767230382,
+   "bh": 6,
+   "dataset_seed": 1002,
+   "holm": 2,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 9
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.0851590151715437,
+   "bh": 3,
+   "dataset_seed": 1003,
+   "holm": 0,
+   "min_far": 0.0013415141116974098,
+   "n": 50,
+   "uncorrected": 7
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.17327337934370274,
+   "bh": 3,
+   "dataset_seed": 1004,
+   "holm": 2,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 11
+  },
+  {
+   "at_0.001": 2,
+   "best_score": 0.32257194295962327,
+   "bh": 3,
+   "dataset_seed": 1005,
+   "holm": 2,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 13
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.053552351501868586,
+   "bh": 0,
+   "dataset_seed": 1006,
+   "holm": 0,
+   "min_far": 0.0024563671077964676,
+   "n": 50,
+   "uncorrected": 13
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.02408475527940711,
+   "bh": 0,
+   "dataset_seed": 1007,
+   "holm": 0,
+   "min_far": 0.004370927424825404,
+   "n": 50,
+   "uncorrected": 6
+  },
+  {
+   "at_0.001": 0,
+   "best_score": -0.005978837864019292,
+   "bh": 0,
+   "dataset_seed": 1008,
+   "holm": 0,
+   "min_far": 0.007781475397396633,
+   "n": 50,
+   "uncorrected": 3
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.11458418508835978,
+   "bh": 1,
+   "dataset_seed": 1009,
+   "holm": 1,
+   "min_far": 0.0007651836977321272,
+   "n": 50,
+   "uncorrected": 10
+  },
+  {
+   "at_0.001": 2,
+   "best_score": 0.11916575448676593,
+   "bh": 3,
+   "dataset_seed": 1010,
+   "holm": 2,
+   "min_far": 0.000700592452775144,
+   "n": 50,
+   "uncorrected": 9
+  },
+  {
+   "at_0.001": 3,
+   "best_score": 0.40980799611229246,
+   "bh": 5,
+   "dataset_seed": 1011,
+   "holm": 3,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 12
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.12261887114840132,
+   "bh": 2,
+   "dataset_seed": 1012,
+   "holm": 2,
+   "min_far": 0.0007581330854046036,
+   "n": 50,
+   "uncorrected": 9
+  },
+  {
+   "at_0.001": 3,
+   "best_score": 0.25377056141268545,
+   "bh": 6,
+   "dataset_seed": 1013,
+   "holm": 3,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 10
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.008430038244920906,
+   "bh": 0,
+   "dataset_seed": 1014,
+   "holm": 0,
+   "min_far": 0.005908690179438747,
+   "n": 50,
+   "uncorrected": 5
+  },
+  {
+   "at_0.001": 3,
+   "best_score": 0.33035188837711865,
+   "bh": 4,
+   "dataset_seed": 1015,
+   "holm": 3,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 10
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.07665636181021768,
+   "bh": 0,
+   "dataset_seed": 1016,
+   "holm": 0,
+   "min_far": 0.0015757751035094334,
+   "n": 50,
+   "uncorrected": 12
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.04510545026208694,
+   "bh": 0,
+   "dataset_seed": 1017,
+   "holm": 0,
+   "min_far": 0.0028975854567064837,
+   "n": 50,
+   "uncorrected": 8
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.10036452543610631,
+   "bh": 3,
+   "dataset_seed": 1018,
+   "holm": 0,
+   "min_far": 0.0010059887261030598,
+   "n": 50,
+   "uncorrected": 13
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.14813485654850594,
+   "bh": 1,
+   "dataset_seed": 1019,
+   "holm": 1,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 6
+  },
+  {
+   "at_0.001": 4,
+   "best_score": 0.24606438190847205,
+   "bh": 8,
+   "dataset_seed": 1020,
+   "holm": 4,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 16
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.08487137659539642,
+   "bh": 1,
+   "dataset_seed": 1021,
+   "holm": 1,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 4
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.15396242177631653,
+   "bh": 1,
+   "dataset_seed": 1022,
+   "holm": 1,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 7
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.12408341611530987,
+   "bh": 1,
+   "dataset_seed": 1023,
+   "holm": 1,
+   "min_far": 0.0008203805613031962,
+   "n": 50,
+   "uncorrected": 7
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.06815626044472194,
+   "bh": 0,
+   "dataset_seed": 1024,
+   "holm": 0,
+   "min_far": 0.001850854350325469,
+   "n": 50,
+   "uncorrected": 8
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.023164689425317363,
+   "bh": 0,
+   "dataset_seed": 1025,
+   "holm": 0,
+   "min_far": 0.004450287724425915,
+   "n": 50,
+   "uncorrected": 7
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.13788319343403493,
+   "bh": 6,
+   "dataset_seed": 1026,
+   "holm": 1,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 15
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.11136790164745579,
+   "bh": 4,
+   "dataset_seed": 1027,
+   "holm": 1,
+   "min_far": 0.0008140529770741569,
+   "n": 50,
+   "uncorrected": 7
+  },
+  {
+   "at_0.001": 0,
+   "best_score": -0.013422442324157463,
+   "bh": 0,
+   "dataset_seed": 1028,
+   "holm": 0,
+   "min_far": 0.00895374687280869,
+   "n": 50,
+   "uncorrected": 5
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.05120116941646818,
+   "bh": 0,
+   "dataset_seed": 1029,
+   "holm": 0,
+   "min_far": 0.0025719517823723725,
+   "n": 50,
+   "uncorrected": 5
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.06788943028952814,
+   "bh": 0,
+   "dataset_seed": 1030,
+   "holm": 0,
+   "min_far": 0.0018602264415789737,
+   "n": 50,
+   "uncorrected": 5
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.04398024140868754,
+   "bh": 0,
+   "dataset_seed": 1031,
+   "holm": 0,
+   "min_far": 0.002962054951841721,
+   "n": 50,
+   "uncorrected": 6
+  },
+  {
+   "at_0.001": 0,
+   "best_score": -0.03503204752066244,
+   "bh": 0,
+   "dataset_seed": 1032,
+   "holm": 0,
+   "min_far": 0.014038286709921842,
+   "n": 50,
+   "uncorrected": 6
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.07311400170891898,
+   "bh": 0,
+   "dataset_seed": 1033,
+   "holm": 0,
+   "min_far": 0.0016850602166327932,
+   "n": 50,
+   "uncorrected": 4
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.09122882030724333,
+   "bh": 0,
+   "dataset_seed": 1034,
+   "holm": 0,
+   "min_far": 0.0012460607133032854,
+   "n": 50,
+   "uncorrected": 12
+  },
+  {
+   "at_0.001": 3,
+   "best_score": 0.3432353527854546,
+   "bh": 3,
+   "dataset_seed": 1035,
+   "holm": 3,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 6
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.0420113238647108,
+   "bh": 0,
+   "dataset_seed": 1036,
+   "holm": 0,
+   "min_far": 0.0034185154661337085,
+   "n": 50,
+   "uncorrected": 3
+  },
+  {
+   "at_0.001": 1,
+   "best_score": 0.21609051716921016,
+   "bh": 1,
+   "dataset_seed": 1037,
+   "holm": 1,
+   "min_far": 0.0005,
+   "n": 50,
+   "uncorrected": 6
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.0702137937546566,
+   "bh": 2,
+   "dataset_seed": 1038,
+   "holm": 0,
+   "min_far": 0.0017801540356357005,
+   "n": 50,
+   "uncorrected": 15
+  },
+  {
+   "at_0.001": 0,
+   "best_score": 0.06915664682171427,
+   "bh": 0,
+   "dataset_seed": 1039,
+   "holm": 0,
+   "min_far": 0.0018161353988290034,
+   "n": 50,
+   "uncorrected": 8
+  }
+ ],
+ "trials_each": 50,
+ "uncorrected_any": 40
+}

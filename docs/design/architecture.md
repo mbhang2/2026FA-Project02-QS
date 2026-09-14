@@ -822,6 +822,68 @@ of *different* strategies at it.
 
 ---
 
+## 5e. `src/core/scoring/randomization/` — a null that knows which candidate it is
+
+Task 30 measured what a single-strategy null costs: BH fired in 23 of 40
+known-null campaigns against a promised 0.05, because the table was tabulated
+from one reference strategy and a campaign points hundreds of different ones at
+it. The reference gets 0/40; its variants get 10×.
+
+| File | Responsibility |
+|---|---|
+| `src/core/scoring/randomization/rotation.py` | `RotatedDataset` — circular rotation of each session's price path against the clock |
+| `src/core/scoring/randomization/candidate.py` | `candidate_null` — the candidate against R rotations of its own data, with the resolution floor reported as a floor |
+| `src/core/scoring/randomization/profile_null.py` | The cheap alternative: a null indexed by behavioural profile rather than by one strategy |
+
+**The null hypothesis, stated before the design.** *This candidate, with its
+trading behaviour unchanged, has no edge.* So the randomization must preserve the
+behavioural profile and destroy the relationship between decisions and subsequent
+price. Rotation preserves the multiset of within-session increments, the
+timestamps, the tick count and each session's net move; it destroys the alignment
+between where in the session a move happened and what the clock said. Measured
+profile drift across 60 candidates: median 2.6–7.5% per axis, p90 ≤ 23.8%.
+
+**Rotating by whole sessions was ruled out before implementing it.** Sortino is
+computed over per-session returns, so permuting sessions leaves it unchanged.
+
+**The resolution floor is the first thing about an empirical null.** R rotations
+cannot resolve a p-value below `1/(R+1)`, and that floor is a field, never a
+value substituted for one that could not be measured. Task 30's two BH
+discoveries were partly manufactured by exactly that substitution: the grid
+bottomed at 0.0005 and two trials tied there, at the rank-2 BH critical value.
+
+**The profile index is not dispersion**, despite dispersion being Task 30's
+headline number. Sortino is `mean / downside_deviation` and both scale with the
+series, so the ratio is scale-invariant and a dispersion index would index on
+something the metric cannot see. The axes are the scale-invariant ones where the
+variants actually spread: **active fraction** (0.343–1.000 across 24 variants,
+reference 1.000) and **downside fraction** (0.162–0.752, reference 0.590).
+
+**Candidate nulls run behind the process boundary**, which is the cost the design
+did not price: isolation is 5.7× per run, so R = 99 is 100 s per candidate and a
+200-candidate campaign is 5.5 hours. `RunTicket.for_null_calibration` is the
+route — it runs arbitrary generated strategies so it checks no digest, and in
+exchange it forbids in-process execution, asserted by `tests/test_accounting.py`.
+
+### The correction changed shape
+
+`N ≤ q(R+1)`. BH rejects the smallest p only if it beats `q/N`, and an empirical
+null resolves no finer than `1/(R+1)`. At q = 0.05 with R = 1,000 that is N ≤ 50,
+against 21,600 trials overnight. Four orders of magnitude, and no null closes it.
+
+So `correction.max_of_n` simulates the null distribution of the **best-of-N**
+directly: B replicates, one null draw per trial from that trial's own null, take
+the maximum. N becomes a parameter of the simulation rather than a divisor, and
+the resolution that matters is B, which is free — B = 10,000 puts the floor at
+1e-4 for any N. It controls FWER, which is the question the project asks: did the
+loop fool itself. `step_down_max` is the Westfall–Young step-down for per-trial
+discoveries. Drawing each trial independently overstates the spread when trials
+are correlated, so the test errs conservative.
+
+**Read `docs/reviews/task31/README.md` for what was and was not achieved.**
+
+---
+
 ## 6. `src/core/types.py` and `src/strategies/`
 
 **`src/core/types.py`** holds every shared value type: `Ts`, `Side`, `Split`,
@@ -990,6 +1052,7 @@ Each produces something committed. None is importable from `src/core/`.
 | `scripts/ledger_check.py` | nothing — per-row verdict on whether a ledger row is reproducible, and honest N with supersessions applied | a human, before a campaign; CI |
 | `scripts/lock_env.py` | `requirements.lock` — the full transitive set, pinned | `integrity.lockfile_digest()`, CI (`--check`) |
 | `scripts/gen_remote_surface.py` | `src/core/engine/remote/_surface.py` — the context surface, classified | the remote adapter and child; CI (`--check`) |
+| `scripts/tabulate_profile_null.py` | `data/calibration/profile-null.json` — the null indexed by behavioural profile | `randomization.profile_null`, the campaign summary |
 | `scripts/campaign.py` | `runs/campaigns/<id>/` — the pre-registered record, the campaign's ledger, and the corrected summary | a human running a campaign |
 | `scripts/check_agent_paths.py` | nothing — the CI write-path allowlist | CI |
 
@@ -1019,6 +1082,7 @@ the bucket and skip when `R2_*` is absent.
 | `tests/test_layout.py` | The build-time / run-time boundary |
 | `tests/test_boundary.py` | The context boundary: immutability by introspection, subscription-id resolution, the protocol against the engine, warmup against the embargo, the reachability walk, and the finding-1 reproduction asserting the score does not move |
 | `tests/test_architecture_doc.py` | That this document names every module |
+| `tests/test_randomization.py` | What rotation preserves and destroys, the resolution floor, the max-of-N correction, and that a thin profile bucket is refused rather than answered |
 | `tests/test_loop.py` | The correction against a published worked example, the pre-registration hash, and the accounting rules a campaign could most easily cheat |
 | `tests/test_ledger_integrity.py` | That every committed row names a commit still in history and reproduces, that supersession narrows N without deleting anything, and that a stored source with a relative import still loads |
 | `tests/test_examples.py` | That every worked example in `docs/agent/strategy-api.md` is byte-identical to a file in `tests/examples/` and actually runs |

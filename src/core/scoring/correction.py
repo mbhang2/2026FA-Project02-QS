@@ -178,3 +178,129 @@ def deflation_view(
                  "available and any rate quoted here would be an approximation "
                  "dressed as a measurement"),
     }
+
+
+# --------------------------------------------------------------------------- #
+# the correction has to change shape (Task 31 Part D)
+# --------------------------------------------------------------------------- #
+# This is arithmetic and it holds however good the null is.
+#
+# BH rejects the smallest p-value only if it beats `q/N`. An empirical null built
+# from R draws resolves a p-value no finer than `1/(R+1)`. So a campaign can only
+# produce a discovery when
+#
+#     1/(R+1) <= q/N        i.e.        N <= q(R+1)
+#
+# At q = 0.05 with R = 1,000 rotations per candidate that is **N <= 50**. Task 30
+# measured 1.33 s per trial, which is 21,600 trials overnight. Four orders of
+# magnitude, and no null closes it: the limit is that a p-value column cannot
+# express a number smaller than its own resolution.
+#
+# So stop computing N p-values and correcting them. Simulate the null
+# distribution of the **best-of-N score** directly: for each of B replicates draw
+# one null score per trial from that trial's own null, take the maximum, and
+# compare the campaign's observed best against the resulting distribution.
+#
+# N becomes a parameter of the simulation rather than a divisor of a p-value, and
+# the resolution that matters is B -- which is free, because drawing from stored
+# samples costs nothing. B = 10,000 puts the floor at 1e-4 for any N.
+#
+# What this controls is the **family-wise error rate**: the probability that the
+# campaign produced any false discovery. That is the question the project asks --
+# did the loop fool itself -- and it is the honest one to answer when the answer
+# to "which candidate" is going to be "the best one".
+MAX_OF_N_NOTE = (
+    "Trials are positively correlated once an agent sees history, which narrows "
+    "the true distribution of the maximum. Drawing each trial's null "
+    "independently therefore overstates the spread, so the test is conservative "
+    "in that direction rather than optimistic."
+)
+
+
+def max_of_n(
+    null_samples: Sequence[Sequence[float]],
+    observed_best: float,
+    *,
+    b: int = 10_000,
+    seed: int = 17,
+    q: float = 0.05,
+) -> dict:
+    """The null distribution of the best-of-N, simulated from per-trial nulls.
+
+    `null_samples[i]` is trial `i`'s own null score sample -- from
+    `randomization.candidate_null`, or from a profile-indexed table, or from any
+    other source that produces draws rather than a quantile grid.
+
+    A trial whose null is empty contributes nothing: it cannot be the campaign's
+    best under the null, and giving it a placeholder would put a number nobody
+    measured into the maximum.
+    """
+    import numpy as np
+
+    usable = [np.asarray(s, dtype=float) for s in null_samples if len(s)]
+    if not usable:
+        return {"n_trials": 0, "b": b, "p": 1.0, "p_floor": 1.0 / (b + 1),
+                "reject": False, "note": "no per-trial nulls were supplied"}
+
+    rng = np.random.default_rng(seed)
+    maxima = np.full(b, -np.inf)
+    for sample in usable:
+        draws = sample[rng.integers(0, sample.size, size=b)]
+        np.maximum(maxima, draws, out=maxima)
+
+    exceed = int((maxima >= observed_best).sum())
+    p = (1 + exceed) / (b + 1)
+    quantiles = {str(a): float(np.quantile(maxima, 1 - a))
+                 for a in (0.5, 0.2, 0.1, 0.05, 0.01)}
+    return {
+        "n_trials": len(usable),
+        "b": b,
+        "observed_best": float(observed_best),
+        "p": p,
+        "p_floor": 1.0 / (b + 1),
+        "at_floor": p <= 1.0 / (b + 1) + 1e-12,
+        "reject": p <= q,
+        "q": q,
+        "null_max_mean": float(maxima.mean()),
+        "null_max_quantiles": quantiles,
+        "note": MAX_OF_N_NOTE,
+    }
+
+
+def step_down_max(
+    null_samples: Sequence[Sequence[float]],
+    observed: Sequence[float],
+    *,
+    b: int = 10_000,
+    seed: int = 17,
+    q: float = 0.05,
+) -> list[dict]:
+    """Westfall-Young step-down: reject the best, drop it, re-simulate the max.
+
+    For per-trial discoveries rather than "did the campaign find anything". Stops
+    at the first non-rejection, like Holm, because the max distribution of the
+    remaining set is only the right reference once everything above it has been
+    rejected.
+    """
+    order = sorted(range(len(observed)), key=lambda i: -observed[i])
+    remaining = list(order)
+    out = []
+    for i in order:
+        result = max_of_n([null_samples[j] for j in remaining], observed[i],
+                          b=b, seed=seed, q=q)
+        result["index"] = i
+        out.append(result)
+        if not result["reject"]:
+            break
+        remaining.remove(i)
+    return out
+
+
+def resolution_cap(r: int, q: float = 0.05) -> int:
+    """The largest N at which a per-trial p-value can clear its BH bar.
+
+    `N <= q(R+1)`. Reported beside BH and Holm so a campaign that has outgrown
+    them says so rather than quietly returning zero discoveries for a reason
+    nobody notices.
+    """
+    return int(q * (r + 1))

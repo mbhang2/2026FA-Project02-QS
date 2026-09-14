@@ -433,6 +433,27 @@ Without it the correction does not control, and a procedure that consumes
 p-values cannot manufacture validity its inputs do not have. Full measurement in
 `docs/reviews/task30/README.md`.
 
+### Where the correction stands after Task 31
+
+The per-candidate null was built and it works; the cheap approximation to it does
+not deliver control, and that is measured rather than suspected.
+
+| known-null campaigns, q = 0.05 | realized error rate |
+|---|---:|
+| Task 30, single-strategy table + BH | **0.575** |
+| Task 31, profile-indexed null + max-of-N, C = 200 | **0.115**, 95% CI [0.083, 0.177] |
+
+0.05 is outside that interval. The remaining factor of 2.3 has a cause:
+**31.5% of a candidate's score variance is shared across the campaign's data
+realization**, and a null pooled across realizations cannot reproduce it. The
+per-candidate rotation null holds the realization fixed and its p-values are
+uniform (KS D = 0.1033 against a 5% critical value of 0.1756 at 60 candidates).
+
+So the conditional null is the right object. What is not yet affordable is
+running it at campaign scale: behind the process boundary it is 100 s per
+candidate at R = 99, or 5.5 hours for 200 candidates.
+`docs/reviews/task31/README.md` has the full measurement.
+
 ### Two decisions not to tune a parameter, recorded so they are not re-opened
 
 Both look like omissions if the reasoning is not written down, and someone will

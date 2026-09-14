@@ -36,6 +36,12 @@ LEDGER_SITES = {"run.py", "scripts/nq_smoke.py", "scripts/replay.py"}
 CALIBRATION_SITES = {
     "src/core/scoring/calibration/null.py",
     "src/core/scoring/calibration/_sweep.py",
+    # Task 31's per-candidate null and the profile-indexed table. Both run
+    # generated strategies, so both use `for_null_calibration`, which does not
+    # check a digest and in exchange requires the process boundary -- asserted
+    # separately by `test_null_calibration_always_pairs_with_the_process_boundary`.
+    "src/core/scoring/randomization/candidate.py",
+    "scripts/tabulate_profile_null.py",
 }
 
 
@@ -149,6 +155,23 @@ def calls_named(path: Path, names: set[str]) -> list[tuple[int, str]]:
         if name in names:
             out.append((node.lineno, name))
     return out
+
+
+def test_null_calibration_always_pairs_with_the_process_boundary():
+    """`for_null_calibration` runs arbitrary generated strategies, so it does not
+    check a digest -- and in exchange it must never run them in process. Findings
+    2 and 3 would otherwise reopen once per candidate."""
+    offenders = {}
+    for path in python_files():
+        text = path.read_text()
+        if "for_null_calibration" not in text:
+            continue
+        rel = str(path.relative_to(REPO_ROOT))
+        if rel == "src/core/runlog.py":
+            continue                          # where it is defined
+        if "RemoteStrategy" not in text:
+            offenders[rel] = "mints a null-calibration ticket with no RemoteStrategy"
+    assert not offenders, offenders
 
 
 def test_the_test_only_constructor_is_used_by_no_production_file():

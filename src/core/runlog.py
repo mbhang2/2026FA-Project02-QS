@@ -128,6 +128,26 @@ class RunTicket:
         return cls._mint(_MINT, "calibration", reason)
 
     @classmethod
+    def for_null_calibration(cls, reason: str) -> RunTicket:
+        """Calibrating a null against *arbitrary* candidate code.
+
+        A third calibration route, and it exists because Task 31's per-candidate
+        null does something `for_calibration` deliberately forbids: it runs
+        strategies that are not the committed reference. Thousands of them, to
+        build a null.
+
+        So it does not check a digest, and in exchange **it does not permit
+        in-process execution**. A caller minting this ticket is running untrusted
+        code and has to run it behind the boundary; `tests/test_accounting.py`
+        asserts every call site pairs it with `RemoteStrategy`. The digest rule
+        and the isolation rule are two ways of answering the same question, and
+        this route takes the second one.
+        """
+        if not reason:
+            raise RunNotAccounted("for_null_calibration() needs a reason")
+        return cls._mint(_MINT, "calibration", f"null calibration: {reason}")
+
+    @classmethod
     def for_test(cls, reason: str = "fixture") -> RunTicket:
         """Fixtures only. Asserted absent from `src/` and `scripts/`."""
         return cls._mint(_MINT, "test", reason)

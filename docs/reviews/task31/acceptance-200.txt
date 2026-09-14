@@ -1,0 +1,57 @@
+  5/200, maxN rejects 0, BH hits 0, 55s
+  10/200, maxN rejects 0, BH hits 0, 110s
+  15/200, maxN rejects 0, BH hits 0, 165s
+  20/200, maxN rejects 1, BH hits 0, 217s
+  25/200, maxN rejects 2, BH hits 0, 271s
+  30/200, maxN rejects 3, BH hits 0, 327s
+  35/200, maxN rejects 4, BH hits 0, 381s
+  40/200, maxN rejects 4, BH hits 0, 434s
+  45/200, maxN rejects 5, BH hits 0, 489s
+  50/200, maxN rejects 6, BH hits 0, 540s
+  55/200, maxN rejects 7, BH hits 0, 595s
+  60/200, maxN rejects 9, BH hits 0, 646s
+  65/200, maxN rejects 9, BH hits 0, 697s
+  70/200, maxN rejects 11, BH hits 0, 747s
+  75/200, maxN rejects 11, BH hits 0, 799s
+  80/200, maxN rejects 12, BH hits 0, 852s
+  85/200, maxN rejects 12, BH hits 0, 903s
+  90/200, maxN rejects 12, BH hits 0, 955s
+  95/200, maxN rejects 13, BH hits 0, 1007s
+  100/200, maxN rejects 15, BH hits 0, 1057s
+  105/200, maxN rejects 16, BH hits 0, 1109s
+  110/200, maxN rejects 16, BH hits 0, 1164s
+  115/200, maxN rejects 16, BH hits 0, 1216s
+  120/200, maxN rejects 16, BH hits 0, 1271s
+  125/200, maxN rejects 16, BH hits 0, 1326s
+  130/200, maxN rejects 16, BH hits 0, 1380s
+  135/200, maxN rejects 16, BH hits 0, 1434s
+  140/200, maxN rejects 17, BH hits 1, 1485s
+  145/200, maxN rejects 18, BH hits 1, 1536s
+  150/200, maxN rejects 18, BH hits 1, 1591s
+  155/200, maxN rejects 19, BH hits 1, 1644s
+  160/200, maxN rejects 21, BH hits 1, 1696s
+  165/200, maxN rejects 21, BH hits 1, 1748s
+  170/200, maxN rejects 21, BH hits 1, 1803s
+  175/200, maxN rejects 22, BH hits 1, 1854s
+  180/200, maxN rejects 22, BH hits 1, 1906s
+  185/200, maxN rejects 23, BH hits 1, 1957s
+  190/200, maxN rejects 23, BH hits 1, 2008s
+  195/200, maxN rejects 23, BH hits 1, 2060s
+  200/200, maxN rejects 23, BH hits 1, 2114s
+
+200 campaigns x 50 edgeless trials = 10,000 trials, q=0.05
+  binomial se at the target rate: 0.0154  -> a pass here means 'not broken like Task 30', not 'controls at 0.05'
+  candidates with no usable bucket    3156/10000 = 31.6%
+
+  test                                   rate               vs q
+  max-of-N (FWER, the new test)         0.115              ABOVE   (23/200)
+  BH over profile-null p                0.005 below (conservative)   (1/200)
+  Holm over profile-null p              0.000 below (conservative)   (0/200)
+  uncorrected                           0.805              ABOVE   (161/200)
+
+  BH's resolution cap at this table's floor: N <= 22   (campaign N = 50)
+
+  the reference strategy against the same profile null, for the gap Task 30 measured:
+    reference at p <= 0.05   4/200 = 0.020
+
+wall 2148s

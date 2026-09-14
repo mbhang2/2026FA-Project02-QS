@@ -170,10 +170,20 @@ def run_campaign(agent, record: CampaignRecord, *, ledger: Path,
                           wall_clock_s=time.monotonic() - t0, tampered=tampered)
 
 
-def summarise(result: CampaignResult, *, dataset: str | None = None) -> dict:
-    """The correction over the campaign, and the uncorrected view beside it."""
+def summarise(result: CampaignResult, *, dataset: str | None = None,
+              null_samples: list | None = None, q: float | None = None) -> dict:
+    """The correction over the campaign, and the uncorrected view beside it.
+
+    **`max_of_n` over per-candidate nulls is the gate; BH and Holm are
+    diagnostics.** Task 32 demoted the tabulated FAR column to screening: it is
+    one strategy's null, and `N <= q(R+1)` means no affordable resolution lets a
+    per-trial p-value clear its BH bar at campaign scale. Pass `null_samples` --
+    one null score sample per trial, in trial order -- to get the gate. Without
+    it only the diagnostics are reported, and the summary says so rather than
+    letting BH stand in.
+    """
     from ..scoring.calibration import null as nullmod
-    from ..scoring.correction import correct, deflation_view
+    from ..scoring.correction import correct, deflation_view, max_of_n, resolution_cap
 
     trials = result.trials
     fars, labels, scores, n_sessions = [], [], [], []
@@ -192,7 +202,8 @@ def summarise(result: CampaignResult, *, dataset: str | None = None) -> dict:
         scores.append(score["primary"])
         n_sessions.append(score["n_sessions"])
 
-    corrected = correct(fars, q=result.record.q, labels=labels)
+    q = result.record.q if q is None else q
+    corrected = correct(fars, q=q, labels=labels)
     out = {
         "campaign_id": result.record.campaign_id,
         "record_digest": result.record_digest,
@@ -203,9 +214,28 @@ def summarise(result: CampaignResult, *, dataset: str | None = None) -> dict:
         "harness_failures": len(result.harness_failures),
         "outcomes": _counts(r.get("outcome") for r in result.rows),
         "per_trial_accepts_at_0.001": sum(1 for f in fars if f <= 0.001),
-        "correction": corrected.as_dict(),
+        "diagnostics_only": {
+            "note": ("BH and Holm over the tabulated FAR column are DIAGNOSTICS. "
+                     "The column is one strategy's null (Task 30 measured 10-17x "
+                     "its stated rate for candidates that trade differently), and "
+                     "N <= q(R+1) caps how large a campaign a per-trial p-value "
+                     "can survive at all."),
+            "correction": corrected.as_dict(),
+        },
         "wall_clock_s": round(result.wall_clock_s, 1),
     }
+    if null_samples:
+        gate = max_of_n(null_samples, max(scores) if scores else float("-inf"), q=q)
+        gate["is_the_gate"] = True
+        out["gate"] = gate
+    else:
+        out["gate"] = {
+            "is_the_gate": False,
+            "note": ("no per-candidate nulls supplied, so this campaign has no "
+                     "accept decision. BH over the tabulated column is not a "
+                     "substitute -- see docs/design/metric.md."),
+            "bh_resolution_cap_at_the_tables_floor": resolution_cap(2_000, q),
+        }
     if scores:
         best = max(scores)
         out["uncorrected"] = {

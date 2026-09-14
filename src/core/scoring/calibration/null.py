@@ -574,6 +574,18 @@ def threshold_for(
 ) -> float:
     """The score a candidate must reach for a stated false-acceptance rate.
 
+    **Demoted to screening and diagnostics in Task 32. This is not the accept
+    decision.** The committed table is one strategy's null, which Task 30
+    measured at 10-17x its stated rate for candidates that trade differently, and
+    no affordable number of rotations resolves a per-trial p-value at far =
+    0.001 anyway: R = 99 floors at 0.01, and R = 999 floors at 0.001 exactly with
+    no headroom, at 55 hours a campaign.
+
+    The gate is `correction.max_of_n` over per-candidate nulls, which needs
+    resolution only at the 5% level of the maximum's distribution. What this
+    function is still good for is a cheap first look and a diagnostic column in a
+    run record -- so it stays, and it says what it is.
+
     `far` is chosen by whoever sets accept policy. This only reports what the
     null says that choice costs.
 
@@ -607,6 +619,11 @@ def far_for(
     dataset: str | None = None, path: Path | None = None,
 ) -> float:
     """The false-acceptance rate implied by a score. The inverse of `threshold_for`.
+
+    **Screening and diagnostics only since Task 32** -- see `threshold_for`. A
+    number from this must not be the accept decision, and it must not be fed to
+    BH or Holm as if it were a calibrated p-value: Task 30 measured what happens
+    when it is.
 
     Clamped at the edges of the table: a score past the last tabulated quantile
     is reported as `<= that far`, not extrapolated into a number nobody measured.

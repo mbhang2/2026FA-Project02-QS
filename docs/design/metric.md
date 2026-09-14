@@ -433,6 +433,64 @@ Without it the correction does not control, and a procedure that consumes
 p-values cannot manufacture validity its inputs do not have. Full measurement in
 `docs/reviews/task30/README.md`.
 
+### What the gate guarantees: conditional, and stated (Task 32)
+
+**The gate's false-discovery guarantee is conditional on the observed training
+data.** Given these sessions, the probability that a campaign produces any false
+discovery is at most q. The randomness the guarantee is over is **strategy
+generation and the randomization**, not over which market happened.
+
+It is not the marginal guarantee — *across markets that might have occurred* —
+which is stronger and is what Task 31's multi-seed calibration was measuring.
+
+*The guarantee does not extend to a period unlike the training data*, which is
+the same caveat already carried above from the transfer work rather than a new
+one.
+
+**Why conditional.** It is what a permutation test gives, it is standard, and it
+is honest about what a null built by randomizing one dataset can support. It also
+dissolves the specific failure Task 31 measured: 31.5% of a candidate's score
+variance sits between data realizations, and a null pooled across realizations
+cannot reproduce a component that a campaign's candidates all share. Production
+has one realization. A null built on it conditions on that by construction, so
+the between-realization component does not arise.
+
+**This is a decision, not a measurement**, taken once and recorded here so it is
+not revisited because a later result would prefer the other one.
+
+### Two numbers from Task 31 that look like success and are not
+
+`BH 0.005` and `Holm 0.000` in the Task 31 acceptance table came from a p-value
+column that was **31.6% ones**: a candidate with no usable profile bucket enters
+at p = 1. The correction was not controlling, it was being fed nulls by default.
+
+Worse, the one candidate in twelve whose rotation p-value fell below 0.05 was one
+of the excluded ones. **The pipeline was blind to unusual profiles** — precisely
+the candidates most likely to be genuine. Both facts are recorded wherever those
+numbers appear, because the numbers are quotable and wrong.
+
+### Under that framing, the cheap null controls (Task 32)
+
+Measured over **400 independent campaigns** on one data realization, each of 25
+distinct edgeless candidates, with buckets built from a **disjoint** calibration
+pool of 1,500 candidates on the same realization:
+
+| | known-null FWER | 95% CI |
+|---|---:|---|
+| Task 30, single-strategy table + BH | 0.575 | — |
+| Task 31, profile null pooled over seeds, marginal | 0.115 | [0.083, 0.177] |
+| **Task 32, profile null conditional on the seed** | **0.045** | **[0.029, 0.070]** |
+
+The interval contains q = 0.05 and its upper end is below 0.09, which is the
+effect the arm was sized to resolve. **The profile-indexed null is the operating
+null**, and production costs a dictionary lookup rather than hours of rotations.
+
+Two things that did not change and are the honest edges of this result. **21.8%
+of candidates still fall in a bucket with too few scores to answer for**, enter
+the correction at p = 1, and are never seen by the gate — the largest remaining
+hole. And the guarantee is conditional: it says nothing about a period unlike the
+training data.
+
 ### Where the correction stands after Task 31
 
 The per-candidate null was built and it works; the cheap approximation to it does

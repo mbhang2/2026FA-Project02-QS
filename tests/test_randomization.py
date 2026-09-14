@@ -239,3 +239,71 @@ def test_a_candidate_null_runs_and_preserves_the_candidates_profile():
     assert drift, "no profile comparison was made"
     assert abs(drift["mean_position_size"]) < 0.25
     assert abs(drift["return_sd"]) < 0.6, drift
+
+
+# --------------------------------------------------------------------------- #
+# Task 32: the guarantee is conditional, and the FAR column is demoted
+# --------------------------------------------------------------------------- #
+def _flat(path: Path) -> str:
+    """Prose with its line wrapping removed.
+
+    These assertions are about what a document *says*, and a claim that moves
+    because a paragraph was rewrapped -- or because someone put it in a
+    blockquote -- is a test about formatting.
+    """
+    lines = [ln.lstrip("> ").rstrip() for ln in path.read_text().splitlines()]
+    return " ".join(" ".join(lines).split())
+
+
+def test_the_conditional_guarantee_is_stated_in_metric_md():
+    """The decision, pinned where it was written down. A guarantee that lives
+    only in a review document is a guarantee nobody quoting the metric will
+    find."""
+    text = _flat(REPO_ROOT / "docs" / "design" / "metric.md")
+    assert "conditional on the observed training data" in text
+    assert "not over which market happened" in text
+    assert "does not extend to a period unlike the training data" in text
+
+
+def test_the_far_column_says_it_is_not_the_accept_decision():
+    """Demoted to screening in Task 32. The docstrings are where a caller finds
+    out, so they are what the test reads."""
+    import inspect
+
+    from src.core.scoring.calibration import null as N
+
+    for fn in (N.threshold_for, N.far_for):
+        doc = inspect.getdoc(fn) or ""
+        assert "screening" in doc.lower() or "diagnostic" in doc.lower(), fn
+        flat = " ".join(doc.split())
+        assert ("not the accept decision" in flat
+                or "must not be the accept decision" in flat), fn
+
+
+def test_the_two_misleading_numbers_are_flagged_where_they_appear():
+    """`BH 0.005` and `Holm 0.000` came from a column that was 31.6% ones. They
+    are quotable and wrong, so the warning has to sit beside them rather than in
+    a later document."""
+    text = _flat(REPO_ROOT / "docs" / "reviews" / "task31" / "README.md")
+    assert "not successes and must not be quoted as any" in text
+    assert "blind to unusual profiles" in text
+
+
+def test_the_rotation_null_forbids_amortizing_children():
+    """A candidate persisting across rotations could recognise repeated session
+    sets and sandbag its own null. The fresh child per rotation is what the
+    isolation multiplier buys, and amortizing is the obvious optimisation."""
+    import inspect
+
+    from src.core.scoring.randomization import candidate
+
+    doc = inspect.getdoc(candidate.candidate_null) or ""
+    assert "sandbag" in doc and "fresh child per rotation" in doc
+    source = inspect.getsource(candidate.candidate_null)
+    # the child is entered inside the per-run function, not hoisted out of it
+    assert source.count("RemoteStrategy(") == 1
+    assert "def run(dataset)" in source
+    run_body = source.split("def run(dataset)")[1].split("t0 =")[0]
+    assert "with RemoteStrategy(" in run_body, (
+        "the child must be created per run, not shared across rotations"
+    )

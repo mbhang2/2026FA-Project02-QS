@@ -146,8 +146,8 @@ def test_a_crashed_trial_counts_toward_n(tmp_path):
     assert len(result.trials) == 6, "a crashed trial is a trial"
     summary = summarise(result, dataset="synthetic")
     assert summary["n_trials"] == 6
-    assert summary["correction"]["n"] == 6
-    assert summary["correction"]["bh_discoveries"] == 0
+    assert summary["diagnostics_only"]["correction"]["n"] == 6
+    assert summary["diagnostics_only"]["correction"]["bh_discoveries"] == 0
     assert summary["outcomes"] == {"crashed": 6}
 
 
@@ -219,3 +219,41 @@ class Strategy:
     def on_fill(self, ctx): pass
     def on_lifecycle(self, ctx): pass
 '''
+
+
+def test_a_campaign_with_no_per_candidate_nulls_has_no_accept_decision():
+    """Task 32 demoted the tabulated FAR column to screening. BH over it is a
+    diagnostic, and a summary that let it stand in as the gate would be the exact
+    mistake Task 30 measured."""
+    result = CampaignResult(
+        record=CampaignRecord(campaign_id="x", profile="campaign", budget=2,
+                              q=0.05),
+        record_digest="d",
+        rows=[{"outcome": "completed", "score": None, "campaign_index": 0}],
+    )
+    summary = summarise(result, dataset="synthetic")
+    assert summary["gate"]["is_the_gate"] is False
+    assert "not a substitute" in summary["gate"]["note"]
+    assert "DIAGNOSTICS" in summary["diagnostics_only"]["note"]
+
+
+def test_supplying_per_candidate_nulls_produces_the_gate():
+    import numpy as np
+
+    rng = np.random.default_rng(2)
+    result = CampaignResult(
+        record=CampaignRecord(campaign_id="x", profile="campaign", budget=3,
+                              q=0.05),
+        record_digest="d",
+        rows=[{"outcome": "completed", "campaign_index": i,
+               "score": {"primary": 0.2, "sharpe": 0.1, "skew": 0.0,
+                         "kurtosis": 0.0, "n_sessions": 100, "net_pnl": 1.0,
+                         "trade_count": 5, "rejected": False,
+                         "reject_reason": "", "metric": "sortino_per_session"}}
+              for i in range(3)],
+    )
+    nulls = [list(rng.normal(0, 1, 300)) for _ in range(3)]
+    summary = summarise(result, dataset="synthetic", null_samples=nulls)
+    assert summary["gate"]["is_the_gate"] is True
+    assert summary["gate"]["reject"] is False       # 0.2 is nowhere near the max
+    assert summary["gate"]["n_trials"] == 3

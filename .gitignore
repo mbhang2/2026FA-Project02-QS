@@ -89,3 +89,9 @@ dist/
 .venv/
 __pycache__/
 *.pyc
+
+# Scratch strategy sources written by calibration runs. Regenerated
+# deterministically from a committed generator and a recorded seed, so
+# there is nothing here a review needs and tens of thousands of files
+# a review does not.
+runs/tmp-*/

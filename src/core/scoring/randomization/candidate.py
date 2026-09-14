@@ -192,6 +192,27 @@ def candidate_null(
 
     `strategy_path` is a file, not a factory, for the same reason: what crosses
     the boundary is source.
+
+    **Never amortize the rotations into one child.** Reusing a process across
+    rotations would let a candidate persist state, recognise that it is seeing
+    the same session set repeatedly, and *sandbag*: trade badly on what it
+    identifies as null runs, inflating its own null so its real score looks
+    exceptional. A fresh child per rotation is what the 5.7x isolation multiplier
+    is buying, and it is worth saying out loud because amortizing is the obvious
+    optimisation and it destroys the test.
+
+    **A residual risk this does not close.** Rotation preserves timestamps,
+    session labels, tick counts, the increment multiset and each session's net
+    move -- so a candidate that measures autocorrelation can still tell rotated
+    data from real, and one able to detect that it is being null-tested can
+    sandbag even with fresh children. Named in `docs/design/architecture.md` as a
+    target for the third adversarial pass rather than solved here.
+
+    **And a stated limitation of the null itself.** Behavioural drift across
+    rotations is small at the median (2.6-7.5% per axis) and reaches 23.8% at the
+    p90 for trade count. In the tail of rotations the null partly describes a
+    differently-behaving strategy, which makes it a slightly different null than
+    the one the hypothesis names.
     """
     import time
     from pathlib import Path

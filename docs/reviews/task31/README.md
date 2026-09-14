@@ -243,11 +243,19 @@ which is the answer to Part C's question. The fix is either to pay for rotation
 random effect to the bucket draws — a design that is not in this task and should
 be measured, not assumed, when it is.
 
-**31.9% of candidates land in a bucket the table will not answer for**, and enter
-the correction at p = 1. Conservative, and the reason BH and Holm report 0/40:
-they are being fed a column that is mostly ones. The max-of-N test only sees the
-candidates that have nulls, so a campaign whose *best* trial has no usable bucket
-is not tested at all — that is a real hole and it is the first thing to fix.
+**31.6% of candidates land in a bucket the table will not answer for**, and enter
+the correction at p = 1.
+
+> **The `BH 0.005` and `Holm 0.000` rows above are not successes and must not be
+> quoted as any.** They come from a column that is a third ones. The correction
+> was not controlling; it was being fed nulls by default. And the one candidate
+> in twelve whose rotation p-value fell below 0.05 was one of the excluded ones —
+> **the pipeline is blind to unusual profiles, which are precisely the candidates
+> most likely to be genuine.** Task 32 records this beside the numbers wherever
+> they appear.
+
+The max-of-N test only sees the candidates that have nulls, so a campaign whose
+*best* trial has no usable bucket is not tested at all.
 
 ## What this brief did not anticipate
 

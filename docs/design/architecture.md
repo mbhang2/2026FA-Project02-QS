@@ -865,6 +865,25 @@ did not price: isolation is 5.7× per run, so R = 99 is 100 s per candidate and 
 route — it runs arbitrary generated strategies so it checks no digest, and in
 exchange it forbids in-process execution, asserted by `tests/test_accounting.py`.
 
+### The guarantee is conditional, and the operating null is the cheap one
+
+Task 32 settled what the gate claims before paying for calibration, and the
+answer changed which null is needed. **The guarantee is conditional on the
+observed training data**: given these sessions, the probability that a campaign
+produces any false discovery is at most q, with the randomness over strategy
+generation and the randomization rather than over which market happened.
+
+Under that framing the between-realization variance that sank the pooled profile
+null in Task 31 does not arise — production has one realization, and a null built
+on it conditions on that by construction. Measured over 400 independent campaigns
+on one realization: **FWER 0.045, 95% CI [0.029, 0.070]**, against 0.575 in Task
+30 and 0.115 under the marginal framing.
+
+So the **profile-indexed null is the operating null** and rotation is the
+fallback, priced at 87 minutes for a 200-candidate campaign at R = 99 on eight
+cores. `docs/design/metric.md` carries the guarantee sentence and
+`docs/reviews/task32/README.md` the measurement.
+
 ### The correction changed shape
 
 `N ≤ q(R+1)`. BH rejects the smallest p only if it beats `q/N`, and an empirical
@@ -880,7 +899,20 @@ loop fool itself. `step_down_max` is the Westfall–Young step-down for per-tria
 discoveries. Drawing each trial independently overstates the spread when trials
 are correlated, so the test errs conservative.
 
-**Read `docs/reviews/task31/README.md` for what was and was not achieved.**
+**Never amortize rotations into one child process.** A candidate that persisted
+across rotations could recognise repeated session sets and *sandbag* -- trade
+badly on what it identifies as null runs, inflating its own null so its real
+score looks exceptional. A fresh child per rotation is what the 5.7x isolation
+multiplier buys. Amortizing is the obvious optimisation and it destroys the test.
+
+**Named for the third adversarial pass, not solved here:** rotation preserves
+timestamps, session labels, tick counts, the increment multiset and each
+session's net move, so a candidate that measures autocorrelation can tell rotated
+data from real. One that can detect it is being null-tested can sandbag even with
+fresh children per rotation. That is the next place to look.
+
+**Read `docs/reviews/task31/README.md` and `docs/reviews/task32/README.md` for
+what was and was not achieved.**
 
 ---
 

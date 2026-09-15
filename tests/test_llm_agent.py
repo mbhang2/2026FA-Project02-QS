@@ -246,3 +246,40 @@ def test_the_static_check_survives_being_called_from_several_threads():
         "the committed strategy failed its own static check under concurrency: "
         f"{bad[:2]}"
     )
+
+
+# --------------------------------------------------------------------------- #
+# the model that answered, versus the model that was asked for
+# --------------------------------------------------------------------------- #
+def test_a_substituted_model_is_a_harness_failure_not_a_blocked_proposal():
+    """A blocked proposal is a trial and counts toward N. A substituted model is
+    not a proposal that went wrong -- it is the experiment not having happened,
+    and a campaign whose record names one model while its trials ran on another
+    is a record that is false in a way no reader could detect.
+
+    Task 37 found this live: `claude-haiku-4-5` started returning 503 and the
+    gateway answered 200 with `gemini-3.1-pro-preview`.
+    """
+    agent = _agent()
+    agent.model = "claude-haiku-4-5"
+    assert agent._same_model("claude-haiku-4-5")
+    assert agent._same_model("anthropic/claude-haiku-4-5")
+    assert agent._same_model("claude-haiku-4-5-20251001")   # dated snapshot
+    assert not agent._same_model("gemini-3.1-pro-preview")
+    assert not agent._same_model("claude-sonnet-5")
+
+    with pytest.raises(llm.ModelSubstituted):
+        raise llm.ModelSubstituted("asked for x, got y")
+    assert not issubclass(llm.ModelSubstituted, llm.LLMError), (
+        "it must not be caught by the `except LLMError` that turns a failed "
+        "call into a blocked proposal -- that would charge a harness failure "
+        "to N"
+    )
+
+
+def test_every_call_records_the_model_that_answered_it():
+    c = llm.Call("propose", True, 1.0, model_served="gemini-3.1-pro-preview")
+    assert c.as_dict()["model_served"] == "gemini-3.1-pro-preview"
+    agent = _agent()
+    agent._pending.append(c)
+    assert agent.drain_log()["models_served"] == ["gemini-3.1-pro-preview"]

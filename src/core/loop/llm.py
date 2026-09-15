@@ -94,6 +94,22 @@ class LLMError(RuntimeError):
     """The call did not produce a usable answer. Never retried."""
 
 
+class ModelSubstituted(RuntimeError):
+    """The endpoint answered with a different model than the one asked for.
+
+    **A harness failure, never a candidate failure.** It is raised rather than
+    logged because a campaign whose record says one model and whose trials ran
+    on another is a campaign whose record is false, and every comparison drawn
+    from it is wrong in a way no reader could detect.
+
+    Task 37 found this live: `claude-haiku-4-5` started returning HTTP 503 and
+    the gateway answered 200 with `"model": "gemini-3.1-pro-preview"`. The run
+    in progress had to be discarded, and *how much* of it was affected could not
+    be established -- because nothing recorded the model that actually served
+    each call. That is the gap this class and `Call.model_served` close.
+    """
+
+
 @dataclass(frozen=True, slots=True)
 class Call:
     """One API call, for the bill and for the record."""
@@ -104,12 +120,16 @@ class Call:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     error: str = ""
+    # What the endpoint says it answered with. `config()["model"]` is what was
+    # asked for, and a gateway is free to serve something else.
+    model_served: str = ""
 
     def as_dict(self) -> dict:
         return {"kind": self.kind, "ok": self.ok,
                 "latency_s": round(self.latency_s, 2),
                 "prompt_tokens": self.prompt_tokens,
                 "completion_tokens": self.completion_tokens,
+                "model_served": self.model_served,
                 "error": self.error}
 
 
@@ -191,6 +211,8 @@ class LLMAgent:
             "completion_tokens": sum(c.completion_tokens for c in calls),
             "latency_s": round(sum(c.latency_s for c in calls), 2),
             "blocked": bool(calls) and not calls[-1].ok,
+            "models_served": sorted({c.model_served for c in calls
+                                     if c.model_served}),
         }
 
     # -- the one method the loop calls -------------------------------------- #
@@ -200,6 +222,8 @@ class LLMAgent:
         shown = history if self.show_history else ()
         try:
             source = self._one(self._prompt(shown, repair=""), "propose")
+        except ModelSubstituted:
+            raise                       # a harness failure; never a trial
         except LLMError as exc:
             return self._blocked("call_failed", str(exc))
 
@@ -222,6 +246,8 @@ class LLMAgent:
             )
             try:
                 source = self._one(self._prompt(shown, repair=repair), "repair")
+            except ModelSubstituted:
+                raise
             except LLMError as exc:
                 return self._blocked("repair_call_failed", str(exc))
         return self._blocked("unreachable", "")   # pragma: no cover
@@ -326,6 +352,40 @@ class LLMAgent:
                     *sources]
         return "\n".join(out)
 
+    def _same_model(self, served: str) -> bool:
+        """Endpoints decorate ids -- a provider prefix, a deployment suffix, a
+        dated snapshot. Substitution means a *different model*, not a different
+        spelling, so the comparison is on the last path segment and either may
+        be a prefix of the other."""
+        a = self.model.rsplit("/", 1)[-1].lower()
+        b = served.rsplit("/", 1)[-1].lower()
+        return a.startswith(b) or b.startswith(a)
+
+    def preflight(self) -> dict:
+        """One cheap call, to find out what the endpoint is actually serving.
+
+        Run before a campaign is registered and before one starts. Raises
+        `ModelSubstituted` if the answer is not the model that will be written
+        into the record.
+        """
+        import requests
+
+        body = {"model": self.model, "max_tokens": 16, "temperature": 0,
+                "messages": [{"role": "user", "content": "reply with: ok"}]}
+        resp = requests.post(
+            f"{self.base_url}/chat/completions", json=body,
+            headers={"Authorization": f"Bearer {os.environ['LITELLM_API_KEY']}"},
+            timeout=self.request_timeout_s)
+        if resp.status_code != 200:
+            raise LLMError(
+                f"the endpoint will not serve {self.model!r}: HTTP "
+                f"{resp.status_code}. {resp.text[:200]}")
+        served = str(resp.json().get("model") or "")
+        if served and not self._same_model(served):
+            raise ModelSubstituted(
+                f"asked for {self.model!r}, endpoint answered {served!r}")
+        return {"requested": self.model, "served": served}
+
     def _one(self, prompt: str, kind: str) -> str:
         """One call. One. A failure here is a blocked proposal, never a retry."""
         import requests
@@ -369,9 +429,21 @@ class LLMAgent:
                                       error=f"unparseable envelope: {exc}"[:300]))
             raise LLMError(f"unparseable response envelope: {exc}") from None
 
+        served = str(payload.get("model") or "")
+        if served and not self._same_model(served):
+            # Before anything else, including before the reply is parsed. A
+            # substituted model is not a proposal that went wrong; it is the
+            # experiment not having happened.
+            raise ModelSubstituted(
+                f"asked the endpoint for {self.model!r} and it answered with "
+                f"{served!r}. The campaign record says {self.model!r}, so "
+                "continuing would write a record that is false. Stop, wait for "
+                "the endpoint, and discard whatever has run."
+            )
         call = Call(kind, True, latency,
                     prompt_tokens=int(usage.get("prompt_tokens") or 0),
-                    completion_tokens=int(usage.get("completion_tokens") or 0))
+                    completion_tokens=int(usage.get("completion_tokens") or 0),
+                    model_served=served)
         source = extract_source(text)
         if source is None:
             # Silence and noise are the same event. An empty reply, prose with

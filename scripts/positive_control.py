@@ -176,6 +176,16 @@ def stage_register() -> None:
 def stage_run(only: str | None) -> None:
     from src.core.loop.campaign import CampaignRecord, run_campaign
 
+    # Before anything is billed: is the endpoint serving the model the records
+    # name? Task 37's first attempt at the 0.30 arm was discarded because it was
+    # not -- `claude-haiku-4-5` began returning 503 and the gateway answered 200
+    # with `gemini-3.1-pro-preview`. Nothing recorded the model that served each
+    # call, so how much of that run was affected could not be established. The
+    # per-call record and this probe are both new because of it.
+    probe = agent_for(next(iter(ARMS))).preflight()
+    print(f"preflight: asked for {probe['requested']!r}, endpoint served "
+          f"{probe['served']!r}", flush=True)
+
     for arm in ARMS:
         if only and arm != only:
             continue

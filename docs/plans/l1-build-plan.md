@@ -13,6 +13,8 @@ Nothing in this document is specific to a dataset. If something dataset-specific
 up here, it is in the wrong file.
 
 Rewritten 2026-09-08, splitting the v4 plan into this and the dataset adapter document.
+Status brought current 2026-09-14, after Task 34; the plan itself is unchanged, and the
+sections that moved are the build-order status, the tree, and the open questions.
 Companion to `architecture-proposal-v1.md`, which defines L1/L1.5/L2 and the committee.
 
 Status markers: **[decided]** · **[open]** · **[proposed]**
@@ -28,7 +30,10 @@ These are dataset-independent and are the actual contribution:
 4. **N is global** — see below.
 5. Accepting a candidate requires clearing a conjunctive gate, not a single scalar.
 6. The harness demonstrably rejects nothing-there data and demonstrably detects a
-   planted signal of known strength.
+   planted signal of known strength. Both halves are now measured, not promised: a
+   known-null campaign's family-wise error rate is 0.058, CI [0.039, 0.085], at q = 0.05,
+   and detection reaches 0.90 at N = 200 for a planted-signal prevalence of 0.05 and
+   strength 0.30. `docs/design/metric.md` states what that guarantee is conditional on.
 
 ## Interfaces
 
@@ -122,33 +127,60 @@ Both are just dataset implementations, which is the test that the abstraction is
 
 ## Build order
 
-Steps 1–6 need no market data and are not blocked by anything.
+Steps 1–6 need no market data and are not blocked by anything. Status is as of Task 34.
 
-1. **Dataset interface + synthetic implementation.** Parameterizable: pure noise, or a
-   planted signal of specified strength.
-2. **Scorer**, in a file the agent's tooling cannot open. Enforced by tool permissions
-   *and* a CI check on changed paths — the CI check is the one that holds.
-3. **Trial ledger**, before the loop that fills it. Append-only per run: global N, git
-   SHA, dataset name and digest, hypothesis family, wall-clock, score tuple, outcome
-   including crashes and abandonment. If it does not exist before run 1, N is a
-   reconstruction.
-4. **Engine + fill model interface.** Walks periods, calls the strategy, resolves
-   intents, emits a blotter.
-5. **Loop harness.** Propose → evaluate on validation → keep or `git reset --hard` →
-   log. Serial, wall-clock budgeted. Accept rule deliberately dumb at this stage:
-   single scalar.
-6. **Walking skeleton on synthetic**, end to end, with the dumbest possible strategy.
-   Then null and power calibration — which by now is just running it.
-7. **Committee as a second accept tier.** Cheap scalar keeps/resets inside the loop;
-   promotion runs four auditors in parallel — leakage, statistics, economics,
+1. **[done]** **Dataset interface + synthetic implementation.** Parameterizable: pure
+   noise, or a planted signal of specified strength.
+2. **[done]** **Scorer**, in a file the agent's tooling cannot open. Enforced by tool
+   permissions *and* a CI check on changed paths — the CI check is the one that holds.
+   Since Task 25 there is a third mechanism the first two do not depend on: the scorer
+   is not in the strategy's process.
+3. **[done]** **Trial ledger**, before the loop that fills it. Append-only per run:
+   global N, git SHA, dataset name and digest, hypothesis family, wall-clock, score
+   tuple, outcome including crashes and abandonment. If it does not exist before run 1,
+   N is a reconstruction.
+4. **[done]** **Engine + fill model interface.** Walks periods, calls the strategy,
+   resolves intents, emits a blotter.
+5. **[done]** **Loop harness.** Propose → evaluate → keep or discard → log. Serial,
+   wall-clock budgeted. *The accept rule did not stay dumb:* a single scalar compared to
+   a per-run threshold produced a family-wise error rate of 0.575 on a known-null
+   campaign, so the gate is now a correction over the campaign's trials. That is the
+   project's contribution and it arrived here.
+6. **[done]** **Walking skeleton on synthetic**, end to end, with the dumbest possible
+   strategy. Then null and power calibration. It was not "just running it" — the first
+   honest null needed a per-candidate conditional construction (Tasks 31–33) and the
+   first power curve is Task 33.
+7. **[open]** **Committee as a second accept tier.** Cheap scalar keeps/resets inside
+   the loop; promotion runs four auditors in parallel — leakage, statistics, economics,
    robustness — any one can veto. Plus purged/embargoed CV, DSR with global N, PBO via
-   CSCV, Harvey t > 3.0.
-8. **First real dataset adapter** and its pre-registered calendar.
-9. **First real run**, holdout still closed.
+   CSCV, Harvey t > 3.0. Nothing of this exists yet.
+8. **[done]** **First real dataset adapter** and its pre-registered calendar.
+9. **[open]** **First real run**, holdout still closed. Everything measured so far is on
+   the training split or on synthetic data; validation has not been spent.
 
 Build step 6 as a thin vertical slice rather than completing each layer first. The
 interfaces are the expensive part to change, and only an end-to-end run reveals whether
-they are right.
+they are right. *In hindsight this was right about the interfaces and wrong about the
+cost of step 6:* the walking skeleton was cheap and the gate behind it took five tasks
+to make honest.
+
+### What the vertical slice cost that the plan did not anticipate
+
+Recorded here rather than in the dataset document, because none of it is dataset-specific
+and a second harness would pay it again.
+
+- **The strategy needs its own process, not just an import guard.** Two adversarial
+  passes reached the dataset and the intent queue through the object graph from inside
+  `setup()`. A boundary maintained by inventory fails silently when someone adds a
+  re-export; a boundary that is a process fails by the module not being there.
+- **A check that runs the agent's code is an oracle even if it reports no number.**
+  Pass/fail is one bit, and eighteen probes binary-searching a threshold recovered peak
+  P&L with zero trials counted. The agent-facing check now executes nothing.
+- **The null has to be conditional on the candidate.** One null per dataset is a null
+  for one strategy's trading profile, and a selective candidate is 9–24× off it.
+- **Every number needs a stated resolution before it is measured.** Three confident
+  attributions in this project were wrong when checked, and each was caught by a
+  measurement designed to be able to resolve the effect it was claiming.
 
 ## Design principles
 
@@ -190,14 +222,24 @@ homework.
 ```
 config/calendars/<dataset>.yaml  immutable — pre-registered splits, one per dataset
 config/corrections.yaml          historical record of corrected objects
+config/run.yaml                  the run profile: dataset, split, seed, fill model,
+                                 history window, action cap, budgets
 scripts/                         build-time; produces committed artifacts
-src/core/                        run-time; importable by strategies, never editable
-  data/      dataset protocol, adapters, cache access
-  engine/    event loop, bars, orders, fill models, context
-  scoring/   metrics.py, scorer.py, calibration/ — none importable by strategies
-  types.py   shared value types
+src/core/                        run-time; never editable
+  types.py     shared value types — the one module the strategy process loads
+  runlog.py    RunTicket, LedgerRun, the append-only ledger
+  checks/      static analysis; what the agent-facing check runs instead of the code
+  data/        dataset protocol, adapters, cache access
+  engine/      event loop, bars, orders, fill models, context
+    reconstruct.py   P&L re-derived from the fill log — the score's source of truth
+    remote/          the strategy's own process: frames, adapter, child, isolation
+  scoring/     metrics.py, scorer.py, calibration/, randomization/, correction.py,
+               integrity.py — none importable by strategies, none loaded in the
+               strategy's process
+  loop/        the campaign driver, the proposing-agent protocol, the gate summary
 src/strategies/current.py        THE ONLY THING THE AGENT WRITES
-runs/                            trial ledger, append-only JSONL, committed
+runs/                            trial ledger, fill logs, campaign records; all
+                                 append-only JSONL, all committed
 data/                            committed artifacts;  data/cache/ gitignored
 tests/                           offline in CI; live tests skip without credentials
 docs/agent/                      the RESEARCH agent's context
@@ -207,16 +249,34 @@ docs/design/                     architecture, simulator interface, metric,
                                  generated context API
 docs/plans/                      this document
 docs/datasets/                   one file per adapter
-docs/setup/                      onboarding
+docs/setup/                      onboarding, and how to stand up the Linux runner
 docs/tasks/                      task briefs, versioned alongside their outputs
+docs/reviews/                    the script behind every measured number, with the
+                                 replication count and the resolution it can claim
 ```
 
 ## Open questions
 
-**[open] The metric.** Must be invariant to turnover, leverage and universe size.
+**[decided] The metric.** Sortino on per-session returns, MAR 0, with an observation
+floor and a Sharpe fallback that carries its own name and its own null. It passed a
+stated screening criterion for invariance to turnover, leverage and universe size;
+`docs/design/metric.md` has the screen and the exemption it needed.
 
-**[open] Python or R for the strategy layer.** Gate implementations (`purgedcv`,
-`skfolio`) are Python; Peterson authored `quantstrat`, whose indicator/signal/rule
-decomposition may be the expected shape. Ask directly.
+**[decided] Python for the strategy layer.** The whole harness is Python, the strategy
+protocol is a Python `Protocol`, and the agent-facing check is mypy against it.
 
-**[open] How holdout is budgeted across an agent's iterations** — for the mentors.
+**[open] How holdout is budgeted across an agent's iterations** — for the mentors. Still
+untouched, and now the main thing standing between the harness and a real result.
+
+**[open] What the proposing agent sees.** `propose(history)` takes the campaign history
+and the stub implementations delete it unread, which is the conservative default and not
+a decision. An agent that sees past scores can hill-climb the gate; one that sees nothing
+cannot learn. Deferred from Task 31 and still deferred.
+
+**[open] The stopping rule.** A campaign currently runs to a fixed N. Stopping when a
+discovery appears is optional stopping and breaks the correction; stopping on budget is
+honest but arbitrary.
+
+**[open] Campaign reproducibility under a real LLM agent.** Every number in the repo
+comes from a deterministic stub proposer. A sampling agent makes the candidate set itself
+a random variable, and nothing has been measured about what that does to the guarantee.

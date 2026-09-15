@@ -10,7 +10,14 @@ Scope is the MVP. Out of scope, deliberately: latency modelling, the N-contracts
 queue proxy, quote-based fills, tick/volume/dollar bars, the indicator library,
 partial-fill size modelling beyond the simple case, and the NQ adapter (Task 4).
 
-Status markers: **[decided]** · **[open]**
+Status markers: **[decided]** · **[open]** · **[superseded]**
+
+Written before the implementation and reconciled against it since. Four things changed
+after this spec was committed, and each is marked where it appears rather than quietly
+rewritten: the metric is decided (Task 4), the blotter is re-derived from the fill log
+rather than accumulated (Task 21), the agent-facing check executes nothing (Task 23), and
+the strategy runs in its own sandboxed process (Tasks 25–26). `docs/design/architecture.md`
+is the map of what was actually built.
 
 ## Roles
 
@@ -38,7 +45,9 @@ own fills anyway. Hiding it was theatre.
 judged.** `ctx` exposes realized and unrealized P&L; it exposes nothing the
 scorer computes. `src.core.scoring.scorer` and `src.core.scoring.metrics` remain unreachable from
 `src.strategies`, enforced at import time and by a static check, and a CI path
-check makes `src/strategies/**` the only writable tree.
+check makes `src/strategies/**` the only writable tree. Since Task 25 they are also
+not in the strategy's process, which is the version of this boundary that does not
+depend on anyone maintaining a list.
 
 Not exposed, deliberately: the score or anything the scorer computes, the split
 identity, the seed, and any data beyond the current instant.
@@ -303,7 +312,6 @@ is applied, so an order dropped past the cap never consumes an id. Drops are
 counted and reported exactly as before.
 
 ## Lifecycle events
-## Lifecycle events
 
 Delivered on the same actionable channel as fills: `ORDER_ACCEPTED`, `ORDER_REJECTED`,
 `GTD_EXPIRED`, `DAY_EXPIRED`, `CANCEL_CONFIRMED`, `SESSION_OPEN`, `SESSION_CLOSE`.
@@ -335,17 +343,30 @@ silently vary with available data, two ledger rows are not measuring the same th
 `score(blotter, *, period) -> ScoreTuple`. Blotter in, score tuple out, nothing
 dataset-specific. Lives in `src/core/scoring/scorer.py`.
 
-**[open] The metric.** It must be invariant to turnover, leverage, universe size, *and
-decision frequency* — candidates may subscribe to different timeframes and produce trade
-counts differing by orders of magnitude. For MVP the tuple is a placeholder: net P&L
-after costs, trade count, and a vol-normalized per-trade return with its t-statistic.
-The interface is fixed even though the metric is not.
+**[decided, Task 4] The metric is Sortino on per-session returns**, MAR 0, downside
+deviation over all N, with an observation floor and a Sharpe fallback that carries its
+own name. It had to be invariant to turnover, leverage, universe size *and decision
+frequency* — candidates may subscribe to different timeframes and produce trade counts
+differing by orders of magnitude — and it was chosen by a stated screening criterion
+rather than by preference. `docs/design/metric.md` has the screen, the one exemption it
+needed, and the calibration. The MVP placeholder it replaced was net P&L after costs,
+trade count, and a vol-normalized per-trade return with its t-statistic.
 
-Two guards, both required and both implemented:
+**The blotter the scorer sees is re-derived, not accumulated (Task 21).**
+`src/core/engine/reconstruct.py` rebuilds position, average price and P&L from the
+append-only fill log as a pure function of `(fills, commission_per_contract)`. An
+adversarial pass reached the running accumulator through a closure and moved Sortino from
+−0.2547 to +4.2089; the log is a record the strategy has no handle on. Every money
+aggregation is `math.fsum`, which is what makes a score bit-identical across platforms
+rather than merely close.
+
+Three guards, all required and all implemented:
 
 - CI check on changed paths — `src/strategies/**` is the only writable tree
 - `src.strategies.*` cannot import `src.core.scoring.scorer`, enforced at import time and
   asserted statically over the source tree
+- since Task 25 the scorer is not in the strategy's process at all, so neither of the
+  first two has to hold for the boundary to
 
 ## The run entry point
 
@@ -355,11 +376,23 @@ Two guards, both required and both implemented:
 ```
 run.py                                    <- immutable
   reads config: dataset, split, fill model, seed, wall-clock budget
-  imports src.strategies.current
-  Engine(...).run()
+  fingerprints the artifacts, the code and the environment
+  RemoteStrategy(src/strategies/current.py)   <- a child process, sandboxed
+  Engine(...).run()                       <- callbacks cross a JSON frame boundary
+  reconstruct(fills)                      <- the blotter, re-derived from the log
   score(blotter)                          <- the harness calls it, never the strategy
+  re-fingerprints, and invalidates the trial if anything moved
   appends the run record to runs/ledger.jsonl
 ```
+
+**[decided, Task 25] The strategy runs in its own process.** The engine imports nothing
+of the strategy's and the strategy imports nothing of the engine's: frames are JSON in
+both directions, never pickle, and the child's module allowlist is `src`, `src.core`,
+`src.core.types` and `src.strategies`. Two adversarial passes had reached the dataset and
+the intent queue through the object graph from inside `setup()`, and a boundary
+maintained by inventory fails silently the next time someone adds a re-export. The cost
+is +8.8% on macOS and +11.8% on Linux, and the golden blotter digests are byte-identical
+either way.
 
 **[decided] Run configuration is immutable, for the same reason the scorer is.**
 Whoever chooses the split, the fill model and the seed can point a run at the
@@ -377,17 +410,31 @@ the blotter digest from it. Without this, "every trial is reproducible" held onl
 for accepted trials that survived to a commit — and the rejected ones are exactly
 what N counts.
 
-**[decided] The agent may run evaluations, and every one counts.** An agent that
-cannot execute what it writes ships syntax errors into the loop, so it gets a
-fixed-config entry point: validation split only, no meaningful arguments, holdout
-unreachable. **Every invocation emits a ledger record**, whatever triggered it. If
-an agent can run fifty exploratory backtests, pick the best and present it as one
-candidate, then N is fiction and the multiple-testing argument collapses
-silently, in the one place nobody would look. Each record carries `trigger`
-(`harness` or `agent`) so the distinction is visible without being exploitable.
+**[superseded, Task 23] The agent may not run evaluations at all.** This spec used to
+say the agent gets a fixed-config entry point — validation split only, no meaningful
+arguments, holdout unreachable — on the reasoning that every invocation emits a ledger
+record, so exploratory runs would at least be counted. That was the second design of this
+boundary and it failed the same way the first did.
 
-This constrains the loop harness as much as the simulator, and it belongs in the
-spec its owner reads.
+A check that runs the strategy and reports pass or fail reports one bit, and a strategy
+that raises when its own P&L crosses a threshold turns the exit code into that bit.
+Eighteen probes binary-searching the threshold recovered peak realized P&L to ±0.0002
+with **zero trials counted**. Narrowing the channel does not help: any answer that
+depends on market data can carry a score.
+
+So `scripts/agent_check.py` executes nothing. It runs `compile()`, an AST pass and mypy
+against the `Strategy` protocol — all properties of the source text, and no amount of
+cleverness makes source text a function of NQ prices. It still appends a ledger row, with
+`purpose: check`, which does not count toward N.
+
+The consequence is deliberate and is stated to the agent: **a runtime error now costs a
+trial.** A `TypeError` on the first bar surfaces in a scored run as `outcome: crashed`,
+`score: null`, and a row against N. A free crash check is a mechanism for making crashes
+not count, which is the honest-N hole in a friendlier shape.
+
+Each record still carries `trigger` (`harness` or `agent`) so the distinction is visible
+without being exploitable. This constrains the loop harness as much as the simulator, and
+it belongs in the spec its owner reads.
 
 ## The walk is event-driven
 
@@ -429,12 +476,29 @@ depends on any trial being reproducible. Enforced by: seeded generators threaded
 explicitly, no reliance on set or dict iteration order for anything that reaches output,
 and stable sort keys wherever events are ordered.
 
+**And the same score, across platforms and interpreter versions (Task 28).** The same
+trial once scored differently on macOS and Linux. The inputs were already bit-identical —
+all 426 row prices, every per-row realized amount — and the divergence was in the
+aggregation: CPython 3.12's `sum()` carries a Neumaier compensation that 3.11's does not.
+Every money aggregation is now `math.fsum`, which is exactly rounded and therefore has no
+version or platform to depend on. `Blotter.exact_digest()` establishes identity;
+`as_row()` rounds to 10 dp and establishes only agreement, which is a weaker claim and is
+now named as one.
+
 ## Per-run record
 
 Every run emits, for the ledger: dataset name and `digest()`, split served, fill model,
 data capabilities, seed, git SHA, wall-clock, subscription set, action-cap hits, and
 outcome including crashes and abandonment. Written as one JSON object; the loop owner
 appends it to the trial ledger.
+
+Added since: the **artifact digests** (null tables, calendars, profiles, manifest and the
+strategy source, hashed before the run and again after scoring, so a mid-run write
+invalidates the trial), the **code fingerprint**, the **environment fingerprint** and the
+**lockfile digest**, the **fill-log digest** that lets a replay verify the P&L rather than
+trust it, and the **isolation level** — `isolated` or `best-effort`, with the platform and
+the filesystem, network, memory and CPU mechanisms named individually. A row that says
+`best-effort` is a row a reader can discount; a row that says nothing lies by omission.
 
 ## Types
 

@@ -417,6 +417,14 @@ You will reach for these. They do not exist.
   your P&L; you cannot know the number you are graded on.
 - **No split identity and no seed.** Nothing on `ctx` says whether this is
   train, validation or holdout.
+- **No network, and no filesystem outside your own source.** Your process runs
+  under a sandbox — bubblewrap on Linux, `sandbox-exec` on macOS — with the
+  repository mounted read-only and egress denied. A socket does not open; a write
+  to `config/`, `runs/`, `data/` or your own file is refused. This is not a style
+  rule. A strategy that fetched the real prices for the evaluation dates would
+  produce a genuine blotter, a stable dataset digest, a clean fingerprint and a
+  replay that reproduces — every other defence in the harness is orthogonal to it,
+  which is why this one is a kernel boundary rather than a check.
 - **No data beyond the current instant**, including no future bar, no full
   session you are in the middle of, and no next tick.
 - **No execution outside the logged path.** `python scripts/agent_check.py` is
@@ -481,7 +489,10 @@ cap — the same event, not a second one.
 
 You cannot reach the engine, the dataset or the scorer from your process, because
 they are not in it. The only harness modules loaded beside your file are
-`src.core` and `src.core.types`.
+`src.core` and `src.core.types`, and that is an allowlist that fails by name —
+`src.core.engine.engine`, `src.core.data`, `src.core.scoring.*` and
+`src.core.runlog` are each named as forbidden, so an accidental import says which
+one leaked rather than only that something did.
 
 ---
 

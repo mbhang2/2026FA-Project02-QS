@@ -1173,6 +1173,34 @@ comes from and not the number.
 Written down because the alternative is a document that reads like a finished
 system. Each of these has been demonstrated, not hypothesised.
 
+The second adversarial pass, as it stands now. The rows were written when every
+one of them was open; the status column is the part that has moved.
+`docs/reviews/second-pass/` holds the script that demonstrated each, and every
+script still runs.
+
+| # | Severity | What | Status |
+|---|---|---|---|
+| 1 | critical | `ctx._port.session_bounds.__closure__[0].cell_contents` reaches a mutable `_RunState`; writing `avg_price` took Sortino −0.2547 → **+4.2089** | **closed, Task 21** — the score is re-derived from the fill log |
+| 2 | critical | `_SealedDataset.__getattr__` forwards a bound method, so `ctx._session_bounds.__self__` is the raw dataset: seed, calendar, `unlock_holdout`, holdout ticks | **closed, Task 25** — structurally; there is no dataset in the strategy's process |
+| 3 | critical | `ctx._queue.cap` and `.actions` are mutable. 200 submits past a cap of 64, `action_cap_hits: 0`, a 50,000-contract position | **closed, Task 25** — the cap is enforced on the engine side of the boundary |
+| 4 | high | Task 19's "no anti-conservatism" claim is split-direction dependent; worst ratio 2.64 the other way round | **open** |
+| 5 | high | the null is 9–24× anti-conservative for selective strategies, where exposure is a free choice the strategy makes | **open** |
+| 6 | high | `scripts/agent_check.py` is an oracle: 18 probes recovered peak realized P&L to ±0.0002 with **0 trials counted** | **closed, Task 23** — the check executes nothing |
+| 7 | medium-high | null tables, `config/`, the ledger and the strategy source are writable, and the scoring fingerprint does not change when a null table is rewritten | **detection closed, Task 22; prevention closed on Linux, Task 26; best-effort on macOS** |
+
+Findings 4 and 5 are calibration rather than containment, and both are about the
+null being the wrong null for a selective strategy. Tasks 31 through 33 changed
+what the operating null *is* — per-candidate and conditional rather than one
+strategy's — which is the same territory, and the FWER numbers there are measured
+on campaigns rather than on a single strategy. Neither finding has been re-run
+against the current null, so neither is closed.
+
+Named for a third pass, and not yet attempted: **a candidate that measures
+autocorrelation can detect rotated data and sandbag its own null.** The rotation
+null runs a fresh child per rotation precisely so a candidate cannot carry state
+between them, but nothing stops a single run from noticing that its input has a
+seam in it.
+
 **Findings 2 and 3 are closed by Task 25, structurally.** The strategy runs in
 its own process, so there is no dataset in its address space to forward through
 `_SealedDataset.__getattr__` and no intent queue to reach: the action cap is
@@ -1195,28 +1223,25 @@ not, detection still catches it. `tests/test_context_and_run.py` asserts the
 property both share — no score, a row either way — and then each mechanism where
 it applies.
 
-Findings 1, 4, 5 and 6 are unaffected by Task 25.
+Findings 1 and 6 were already closed, by Tasks 21 and 23. Findings 4 and 5 are
+unaffected by Task 25 because they are calibration rather than containment — no
+process boundary makes a null the right null.
 
-**Process isolation is the answer and it has been costed.**
+**Process isolation was costed before it was built, and the estimate held.**
 `docs/reviews/task24/` is the spike: measurements, a throwaway prototype that
 produced a byte-identical blotter through a pipe, and a go recommendation at
-**6.6% of a full 564-session NQ trial**. It says findings 2 and 3 close
-structurally rather than by patch — in an isolated build there is no dataset and
-no intent queue in the strategy's address space to reach — and that the strategy
-process needs nothing from the harness but `src/core/types.py`. Read it before
-the loop driver: isolation changes "run one trial" from a function call into a
-subprocess with a protocol, and a driver written first gets written twice.
+**6.6% of a full 564-session NQ trial**. Measured after the build, the overhead
+came in at +8.8% on macOS and +11.8% on Linux — the same order, and invisible
+next to tick decoding. The spike's structural claim held too: findings 2 and 3
+closed by there being nothing to reach, not by a patch, and the strategy process
+needs nothing from the harness but `src/core/types.py`.
 
-**In-process containment is not won, and the fill log does not win it.** The log
-removes the *score* from a strategy's reach. It does not remove the interpreter.
-A strategy still shares an address space with the engine, and the honest boundary
-is a separate process with the fills crossing it as data. Everything here is the
-distance to that, measured.
-
-Open findings from the second adversarial pass, none of them closed by Task 21:
-
-| # | Severity | What |
-|---|---|---|
+**In-process containment was never won; it was made irrelevant.** This is where
+Task 21 left the argument: the fill log removes the *score* from a strategy's
+reach but not the interpreter, and a strategy sharing an address space with the
+engine is a boundary that holds by inventory rather than by construction. Task 25
+moved the fills across a pipe instead, and the only thing still running in
+process is the committed calibration reference, admitted by digest.
 
 Finding 6 is **closed**. The check no longer executes strategy code, so its
 answer is a property of the source text. `docs/reviews/task23/oracle_after.py`
@@ -1228,8 +1253,3 @@ Finding 7 is **closed** as far as detection goes — the artifact fingerprint ab
 covers the null tables, `config/` and the strategy source, and a mid-run write to
 a calibration table now invalidates the trial. The *writability* is unchanged and
 deliberately so: nothing in-process can take the write away.
-
-Findings 4 and 5 are calibration, not containment, and are open too: the
-"no anti-conservatism" claim from Task 19 is split-direction dependent (worst
-ratio 2.64 the other way round), and the null is 9–24× anti-conservative for
-selective strategies, where exposure is a free choice the strategy makes.

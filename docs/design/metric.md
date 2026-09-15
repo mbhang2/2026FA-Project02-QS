@@ -15,16 +15,24 @@ It is kept that way on purpose — the reasoning that was wrong is evidence abou
 how the gate was arrived at, and deleting it would leave conclusions with no
 argument behind them. But a reader needs to know which layer is current, so:
 
-| | current | superseded |
+| | current (through Task 34) | superseded |
 |---|---|---|
 | **Metric** | Sortino on per-session returns, MAR 0, downside deviation over all N | a t-statistic on per-trade P&L (Task 3) |
-| **Accept rule** | a threshold read off the tabulated null for a stated false-acceptance rate | `ratio × √N ≥ 3.0`, kept only as a committed ablation |
-| **The null** | measured per dataset, on that dataset's own training sessions, with a stationary block bootstrap whose block length is measured | assumed parametric; then measured but only on synthetic data |
+| **Accept rule** | a **campaign-level** gate: each candidate's conditional p-value, corrected for the campaign's N by Benjamini–Hochberg, with `max_of_n` as the family-wise view | a per-run threshold read off the tabulated null (Task 6); before that `ratio × √N ≥ 3.0`, kept only as a committed ablation |
+| **The null** | **per candidate, conditional**: the profile-indexed bucket where the bucket is populated, circular rotation of that candidate's own price path where it is not (Task 33's hybrid) | one dataset-level null shared by every candidate — measured, but on a single strategy's profile |
+| **What is guaranteed** | a **conditional** false-discovery statement, given the campaign's realized candidate profiles. Stated in full under *What the gate guarantees* (Task 32) | a marginal guarantee that was never true for selective candidates |
+| **Family-wise error, known null** | **0.058, CI [0.039, 0.085]** at q = 0.05, measured on campaigns with full coverage | 0.575 at Task 30 — the single-strategy null, and the number that started this |
+| **Power** | measured, and monotone in campaign size — detection 0.90 at N = 200 for π = 0.05, s = 0.30 | never measured before Task 33 |
+| **Operating parameters** | R ≥ 150 resamples per null; campaigns as large as affordable, at least N = 400 | R = 50, and an interior optimum for campaign size that belonged to the correction Task 31 retired |
 | **The `inf` case** | closed — `MIN_DOWNSIDE_SESSIONS` with a Sharpe fallback that carries its own name and its own null | listed as an open question |
-| **Does the gate have a known error rate?** | **yes**, per dataset, held out and verified | no |
+| **Does the gate have a known error rate?** | **yes** — conditional, measured on campaigns, with a stated resolution | no |
 
 Everything below the first horizontal rule is the record of how each of those
-was arrived at, in the order it happened.
+was arrived at, in the order it happened. The sections that carry the current
+layer are, in reading order: *What the gate guarantees: conditional, and stated*
+(Task 32), *The hybrid null, and the rule that keeps it valid* (Task 33), *The
+gate, characterized* (Task 33), and *How large should a campaign be?* (Task 34).
+`docs/reviews/taskNN/` holds the script behind every number in them.
 
 ## Why the placeholder was replaced
 

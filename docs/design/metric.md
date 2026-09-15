@@ -631,6 +631,47 @@ edge have unusual profiles and take the expensive path. The null budget grows
 precisely when the loop starts working, and `campaign.summarise` reports the
 share so it is visible while it happens.
 
+### The gate against a real agent, for the first time (Task 36)
+
+Everything above is measured against stubs — edgeless by construction, or
+planted-signal by construction. Task 36 put an LLM in the loop for 100 trials on
+the signal-free training split, with a control arm shown no history, and the
+numbers are the first evidence of what the correction is worth against something
+that is actually searching.
+
+| the same campaign, read five ways | says |
+|---|---|
+| best score, uncorrected | +0.4222 at a nominal FAR of 0.0005 |
+| BH over the tabulated FAR column | **97 discoveries of 99** |
+| Holm over the same column | 70 |
+| `deflation_view` | clears the selection bar by +0.4536 |
+| **the gate — `max_of_n` over per-candidate conditional nulls** | **p = 0.686, nothing accepted** |
+
+The control arm is the same shape, smaller: 4 BH, 2 Holm, deflation clears by
++0.3376, gate p = 0.266.
+
+Two things this pins that were previously arguments.
+
+**The tabulated column is not conservative against a candidate set it was not
+built from — it is catastrophically liberal.** 97 of 99 candidates on pure noise.
+Task 30 measured the single-strategy assumption at 10–17× for stub candidates;
+against LLM-authored ones the column is not usable at all, and the demotion to
+"diagnostic" in Task 32 was the right call for a stronger reason than the one
+given at the time.
+
+**`deflation_view` inherits that error and should be read next to the gate, not
+under `uncorrected`.** It compares the observed maximum against an expected
+maximum derived from the same single-strategy null, so it clears its bar in both
+arms while the gate rejects both. It is documented as a diagnostic; this is the
+first measurement of what the distinction is worth.
+
+And the coverage warning from Task 33 turned out to understate the problem:
+**the rotation share against a real agent is 98.0%**, against 23.5% for the stub.
+The profile buckets are tabulated from `NullGenerator`'s momentum variants, and
+an LLM does not write those. Under a profile-only gate, 98 of 99 candidates
+would have entered the correction at p = 1 — the campaign would have reported
+nothing while appearing to have a working gate.
+
 ### Two decisions not to tune a parameter, recorded so they are not re-opened
 
 Both look like omissions if the reasoning is not written down, and someone will

@@ -211,6 +211,54 @@ denominator that can shrink silently is the one thing this project cannot have.
 
 ---
 
+## What the first real campaign showed (Task 36)
+
+Two campaigns of 100 on the synthetic training split, identical but for whether
+the agent saw its own prior trials. Full numbers and the scripts:
+`docs/reviews/task36/`.
+
+**An agent shown its own scores learns, on a dataset with no edge in it, and the
+gate rejects it anyway.** The history arm's scores rise with trial index —
+Spearman rho +0.283, permutation p 0.0031 — and the control arm's do not (rho
+−0.139, p 0.942). The two arms differ by **1.59 SD** in the mean, rank-sum
+p = 0.0001, against a design that resolves 0.4 SD at 80% power. So it is not
+random search with a language model attached.
+
+What it learned is worthless, because there was nothing to learn: the profile is
+`signal_strength: 0.0`. **The trajectory measures how fast this agent overfits,
+not how well it researches.** Separating the two needs a planted-signal arm,
+which this campaign did not have.
+
+Every uncorrected reading of the history arm reports a discovery and the gate
+does not:
+
+| reading | verdict |
+|---|---|
+| best score, uncorrected | +0.4222 at a nominal false-acceptance rate of 0.0005 |
+| BH over the tabulated FAR column | **97 discoveries of 99** |
+| Holm over the same column | 70 discoveries |
+| the DSR-shaped `deflation_view` | clears its bar by +0.4536 |
+| **max-of-N over per-candidate conditional nulls** | **p = 0.686, nothing accepted** |
+
+That gap is the project's claim, demonstrated for the first time against an
+adversary that was trying.
+
+**The rotation share was 98.0%, not the 23.5% Task 33 measured with the stub.**
+The profile table is tabulated from `NullGenerator` momentum variants; an LLM
+writes Donchian breakouts with ATR brackets and multi-timeframe filters, and
+almost none of it lands in a covered bucket. The hybrid's fallback is not a
+fallback against a real agent — it is the mechanism, and it costs 113 isolated
+rotated runs per scored trial. Whether the table should be rebuilt from
+LLM-authored candidates (making it a function of the model, so a new model
+invalidates it) or the rotation cost is simply the standing cost of a campaign
+is **not decided here**.
+
+Two smaller results worth carrying: **198 of 198 scored trials reproduced their
+score exactly** from stored source, which is decision (d) demonstrated; and
+**zero repair attempts in 200 proposals** — the bounded-repair path was built,
+pre-registered, and never fired. The static check is not this model's binding
+constraint. The runtime is.
+
 ## What the loop still does not decide
 
 Recorded so they are not settled by accident later, the way these four nearly

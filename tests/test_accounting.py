@@ -42,6 +42,13 @@ CALIBRATION_SITES = {
     # separately by `test_null_calibration_always_pairs_with_the_process_boundary`.
     "src/core/scoring/randomization/candidate.py",
     "scripts/tabulate_profile_null.py",
+    # Task 36's campaign driver. It builds an Engine twice: once un-rotated, to
+    # recover the session returns the ledger row does not carry and to check
+    # that a trial reproduces from its stored source, and once per rotation for
+    # the per-candidate null. Both run agent-written strategies, so both take
+    # `for_null_calibration` and both go through `RemoteStrategy`. The trials
+    # themselves are not here -- those are `run.py`, via `run_trial`.
+    "scripts/llm_campaign.py",
 }
 
 

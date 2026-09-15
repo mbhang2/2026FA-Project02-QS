@@ -161,6 +161,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 ARTIFACT_GLOBS = (
     "config/*.yaml",                 # run profiles, corrections
     "config/calendars/*.yaml",       # the pre-registered splits
+    "config/prompts/*.md",           # the proposing agent's prompt (Task 36):
+                                     # an artifact that shaped the result, the
+                                     # same way a null table is
     "data/calibration/*.json",       # every null table, tagged or not
     "data/manifest.json",            # the bucket fingerprint
     "data/nq-contract-selection.json",

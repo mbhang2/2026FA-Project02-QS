@@ -111,6 +111,58 @@ def test_example_runs_and_trades(path: Path):
 
 
 @pytest.mark.parametrize("path", example_paths(), ids=lambda p: p.stem)
+def test_example_runs_on_the_path_the_scored_run_actually_uses(path: Path):
+    """The same examples, through `RemoteStrategy`, in a child process.
+
+    **This test exists because its absence cost a campaign's worth of trials.**
+    `Engine.for_test` above runs the example in process, against
+    `HistoryView`. Since Task 25 a scored run does not: it runs against
+    `remote.child.Window`, a different class implementing the same contract by
+    hand. `Window` was missing `last(k)` -- documented in `strategy-api.md` and
+    used by two of these very examples -- and nothing noticed, because the
+    check that claims the examples work against the current engine was checking
+    the engine no trial uses.
+
+    Task 36 found it by putting a model in the loop: it read the document, wrote
+    `history.last(n)`, and crashed. Since Task 23 a runtime error is a trial, so
+    a documentation promise the scored path does not keep is measured in N.
+    """
+    from src.core.engine.remote import RemoteStrategy
+    from src.core.runlog import RunTicket
+
+    ticket = RunTicket.for_test()
+    with RemoteStrategy(path, "Strategy") as strategy:
+        engine = Engine(SyntheticDataset(SPEC), strategy, ticket=ticket,
+                        split=Split.VALIDATION, warmup_sessions=1,
+                        fill_model="unfavorable", seed=1)
+        record = engine.run()
+    assert record.outcome == "completed", record.error
+    assert record.fills > 0
+
+
+def test_the_remote_window_offers_everything_the_in_process_view_does():
+    """Two hand-written classes implementing one contract drift. This is the
+    check that says so by name, rather than a strategy finding out at run time.
+
+    Not generated, because `Window` is not a projection of `HistoryView` -- it
+    bounds what it holds and raises where the other returns. The *names* are the
+    contract; the semantics differ deliberately and are tested separately.
+    """
+    from src.core.engine.remote.child import Window
+    from src.core.engine.view import HistoryView
+
+    public = lambda cls: {n for n in dir(cls)
+                          if not n.startswith("_") or n in ("__getitem__",
+                                                            "__len__", "__iter__")}
+    missing = public(HistoryView) - public(Window)
+    assert not missing, (
+        f"remote.child.Window does not implement {sorted(missing)}, which "
+        "HistoryView does and the documentation teaches. A strategy that "
+        "follows the document crashes on the scored path only."
+    )
+
+
+@pytest.mark.parametrize("path", example_paths(), ids=lambda p: p.stem)
 def test_example_is_deterministic(path: Path):
     """Same data, same strategy, same seed -> byte-identical blotter. If an
     example is not reproducible it is teaching the wrong thing."""

@@ -372,6 +372,32 @@ def main(argv: list[str] | None = None) -> int:
         row_builder=lambda record: _row(record, trigger, profile_name,
                                         ledger_path, purpose),
     ) as run_log:
+        return _walk(args, cfg, profile, profile_name, dataset, split, seed,
+                     fill_model, warmup_sessions, ledger_path, run_log)
+
+
+def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
+          warmup_sessions, ledger_path, run_log) -> int:
+    """The run itself. Split out of `main()` so the ledger block above reads as
+    one thing: acquire the ticket, run, write the row.
+
+    **Starting the strategy process is inside this try, and that is load-bearing
+    (Task 36).** It used to sit in `main()`, one level out, so a strategy that
+    failed to *load* -- a syntax error, no `Strategy` class, anything raised at
+    module level -- raised past every handler here. `LedgerRun.__exit__` still
+    wrote a row, as it promises to, but the row was built from an empty record:
+    no `outcome`, no `error`, no score. `summarise()` then counted it as neither
+    a trial nor a harness failure and **dropped it from N**.
+
+    A stub that always emits valid Python never found this. An LLM finds it on
+    the first malformed reply, and it shrinks the denominator by exactly the
+    proposals that failed -- the cheapest way there is to cheat a
+    multiple-testing correction.
+    """
+    started = time.monotonic()
+    record: dict = {}
+    engine = None
+    try:
         # The strategy runs in its own process. It is not imported here and
         # never has been on this path -- `load_strategy()` used to import it,
         # which put strategy code in the harness's address space before the
@@ -395,55 +421,15 @@ def main(argv: list[str] | None = None) -> int:
                 seed=seed,
                 wall_clock_budget_s=profile.get("wall_clock_budget_s"),
             )
-            return _walk(args, cfg, profile, profile_name, engine, dataset,
-                         strategy, split, seed, ledger_path, run_log)
-
-
-def _walk(args, cfg, profile, profile_name, engine, dataset, strategy, split,
-          seed, ledger_path, run_log) -> int:
-    """The run itself. Split out of `main()` so the ledger block above reads as
-    one thing: acquire the ticket, run, write the row."""
-    started = time.monotonic()
-    record: dict = {}
-    try:
-        engine.run()
-        if engine.record.outcome == "abandoned_on_budget":
-            record = engine.record.as_dict()
-            attach_fill_log(record, engine, ledger_path)
-            raise _Abandoned
-        period = engine.session_calendar()
-        # The reconstruction, not the accumulator. `engine.blotter` is the
-        # accumulator's version and is kept as a diagnostic; the number the loop
-        # acts on comes from the fill log, which nothing reachable from a
-        # strategy can touch.
-        scored_blotter = engine.reconstructed()
-        reconciliation = engine.reconciliation()
-        if not reconciliation["agree"]:
-            raise ScoringMismatch(
-                "the fill log and the accumulator disagree: "
-                f"{reconciliation['accumulated_digest'][:12]} vs "
-                f"{reconciliation['reconstructed_digest'][:12]}. One of the two "
-                "derivations is wrong and the trial cannot say which."
-            )
-        integrity.check(SCORING_AT_IMPORT, integrity.fingerprint())
-        integrity.check_artifacts(ARTIFACTS_AT_IMPORT, integrity.artifact_digests())
-        result = score(scored_blotter, period=period,
-                       notional_base=profile.get("notional_base", 1.0))
-        engine.record.score = result.as_dict()
-        engine.record.diagnostics = score_diagnostics(
-            scored_blotter,
-            period,
-            notional_base=profile.get("notional_base", 1.0),
-            fill_model_spread=(
-                _fill_model_spread(cfg, profile, seed, strategy, split, engine)
-                if profile.get("record_fill_spread")
-                else None
-            ),
-        ).as_dict()
+            record = _run_and_score(cfg, profile, engine, strategy, split, seed,
+                                    ledger_path)
+    except _Abandoned:
         record = engine.record.as_dict()
         attach_fill_log(record, engine, ledger_path)
-    except _Abandoned:
-        pass
+        run_log.update(record)
+        print(f"abandoned: {engine.record.error}", file=sys.stderr)
+        print(f"ledger       {ledger_path}", file=sys.stderr)
+        return 3
     except RemoteFailure as exc:
         # Five distinguishable kinds, and the distinction that matters is the
         # last one. A harness bug recorded as a crashed trial inflates N, and N
@@ -473,7 +459,8 @@ def _walk(args, cfg, profile, profile_name, engine, dataset, strategy, split,
             outcome=_invalidation_outcome(exc),
             error=str(exc), score=None, diagnostics=None,
         )
-        attach_fill_log(record, engine, ledger_path)
+        if rec:
+            attach_fill_log(record, engine, ledger_path)
         run_log.update(record)
         print(f"INVALIDATED: {exc}", file=sys.stderr)
         return 4
@@ -492,14 +479,8 @@ def _walk(args, cfg, profile, profile_name, engine, dataset, strategy, split,
             attach_fill_log(record, engine, ledger_path)
         run_log.update(record)
         raise
-    finally:
-        if record and record.get("outcome") in ("completed", "abandoned_on_budget"):
-            run_log.update(record)
 
-    if engine.record.outcome == "abandoned_on_budget":
-        print(f"abandoned: {engine.record.error}", file=sys.stderr)
-        print(f"ledger       {ledger_path}", file=sys.stderr)
-        return 3
+    run_log.update(record)
 
     if not args.quiet:
         s = engine.record.score
@@ -512,6 +493,50 @@ def _walk(args, cfg, profile, profile_name, engine, dataset, strategy, split,
             print(f"REJECTED     {s['reject_reason']}")
         print(f"ledger       {ledger_path}")
     return 0
+
+
+def _run_and_score(cfg, profile, engine, strategy, split, seed,
+                   ledger_path) -> dict:
+    """Walk, reconstruct, check the fingerprints, score. Returns the record.
+
+    Raises on every failure rather than handling any: the handlers are in
+    `_walk`, and there is exactly one set of them.
+    """
+    engine.run()
+    if engine.record.outcome == "abandoned_on_budget":
+        raise _Abandoned
+    period = engine.session_calendar()
+    # The reconstruction, not the accumulator. `engine.blotter` is the
+    # accumulator's version and is kept as a diagnostic; the number the loop
+    # acts on comes from the fill log, which nothing reachable from a
+    # strategy can touch.
+    scored_blotter = engine.reconstructed()
+    reconciliation = engine.reconciliation()
+    if not reconciliation["agree"]:
+        raise ScoringMismatch(
+            "the fill log and the accumulator disagree: "
+            f"{reconciliation['accumulated_digest'][:12]} vs "
+            f"{reconciliation['reconstructed_digest'][:12]}. One of the two "
+            "derivations is wrong and the trial cannot say which."
+        )
+    integrity.check(SCORING_AT_IMPORT, integrity.fingerprint())
+    integrity.check_artifacts(ARTIFACTS_AT_IMPORT, integrity.artifact_digests())
+    result = score(scored_blotter, period=period,
+                   notional_base=profile.get("notional_base", 1.0))
+    engine.record.score = result.as_dict()
+    engine.record.diagnostics = score_diagnostics(
+        scored_blotter,
+        period,
+        notional_base=profile.get("notional_base", 1.0),
+        fill_model_spread=(
+            _fill_model_spread(cfg, profile, seed, strategy, split, engine)
+            if profile.get("record_fill_spread")
+            else None
+        ),
+    ).as_dict()
+    record = engine.record.as_dict()
+    attach_fill_log(record, engine, ledger_path)
+    return record
 
 
 def _fill_model_spread(cfg, profile, seed, strategy, split, engine) -> float:

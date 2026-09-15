@@ -780,13 +780,27 @@ across hundreds of nightly trials. This is the part that was missing.
 |---|---|
 | `src/core/scoring/correction.py` | Benjamini-Hochberg, Holm, and the DSR-shaped `deflation_view`. Checked against Benjamini & Hochberg (1995) Table 1, whose published answers are 4 and 3 |
 | `src/core/loop/agents.py` | The stub proposal side: `NullGenerator` (edgeless variants, deterministic) and `ReplayList` (a fixed sequence) |
-| `src/core/loop/campaign.py` | `CampaignRecord` (pre-registered and hashed), `run_campaign`, `summarise` |
+| `src/core/loop/campaign.py` | `CampaignRecord` (pre-registered and hashed), `run_campaign`, `summarise`, and `CampaignResult.unaccounted` |
+| `src/core/loop/llm.py` | The real proposal side (Task 36): `LLMAgent`, the same one `propose(history)` method the stubs implement, plus the prompt assembly, the history whitelist, the bounded static-repair loop and the blocked-proposal path. Runs in the driver, which has network; nothing here is reachable from the strategy process, which does not |
 
 **A stub agent first, with no LLM in it.** A correction cannot be checked against
 a campaign whose ground truth is unknown, so the null generator proposes
 strategies that have no edge by construction and the known answer is zero real
 discoveries. It also means the machinery is debugged against something
 deterministic.
+
+**Then a real one (Task 36), and it found two things the stub could not.** The
+four Task 31 decisions — what the agent sees, how validation is spent, the
+stopping rule, what is reproducible — are settled and written into
+`docs/design/loop.md` and into every campaign record. What the stub had been
+hiding: a strategy that failed to *load* raised past `run.py`'s handlers and
+produced a ledger row with no outcome at all, which `summarise` counted as
+neither a trial nor a harness failure and **dropped from N**; and
+`remote.child.Window` was missing `last(k)`, which the documentation promises
+and two CI-checked worked examples use, because those examples were being run
+in process. Both are fixed, and both now have a check that fails by name. A
+stub that always emits valid Python and never reads the documentation finds
+neither.
 
 **The campaign record is written and hashed before the first trial** — budget,
 stopping rule, q, the correction set, the stub's seed — and re-hashed at the end.
@@ -1121,6 +1135,8 @@ Each produces something committed. None is importable from `src/core/`.
 | `scripts/gen_remote_surface.py` | `src/core/engine/remote/_surface.py` — the context surface, classified | the remote adapter and child; CI (`--check`) |
 | `scripts/tabulate_profile_null.py` | `data/calibration/profile-null.json` — the null indexed by behavioural profile | `randomization.profile_null`, the campaign summary |
 | `scripts/campaign.py` | `runs/campaigns/<id>/` — the pre-registered record, the campaign's ledger, and the corrected summary | a human running a campaign |
+| `scripts/llm_campaign.py` | `runs/campaigns/task36/` — the same, for a model-proposed campaign and its history-withheld control arm, in four resumable stages | a human running a campaign; `docs/reviews/task36/` |
+| `config/prompts/strategy-agent.md` | not a script — listed here because it is the other **input artifact** a campaign depends on. Hashed into the campaign record and into `ARTIFACT_GLOBS`, so a mid-run edit invalidates the trial the way a rewritten null table does | `src/core/loop/llm.py` |
 | `scripts/check_agent_paths.py` | nothing — the CI write-path allowlist | CI |
 
 The two generators both take `--check` and both run in CI, so a doc that has

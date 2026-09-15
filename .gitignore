@@ -95,3 +95,6 @@ __pycache__/
 # there is nothing here a review needs and tens of thousands of files
 # a review does not.
 runs/tmp-*/
+
+# transient: the proposing agent type-checks here, then deletes it
+src/strategies/_proposal_*.py

@@ -61,9 +61,18 @@ class CampaignRecord:
     split: str = ""
     note: str = ""
     written_at: str = ""
+    # Everything a non-deterministic agent needs pinned (Task 36): model id,
+    # temperature and sampling parameters, whatever seed the API accepts, the
+    # prompt template digest, what the agent is shown, and the invocation
+    # bounds. `None` for a stub campaign, which is why `digest()` drops None
+    # keys -- adding a field must not invalidate a record committed before it
+    # existed, and a record whose digest moved for a reason unrelated to its
+    # contents is a tamper alarm that cries wolf.
+    agent_config: dict | None = None
 
     def digest(self) -> str:
-        payload = json.dumps(asdict(self), sort_keys=True, default=str)
+        payload = json.dumps({k: v for k, v in asdict(self).items() if v is not None},
+                             sort_keys=True, default=str)
         return hashlib.sha256(payload.encode()).hexdigest()
 
     def write(self, path: Path) -> str:
@@ -103,6 +112,27 @@ class CampaignResult:
     @property
     def harness_failures(self) -> list[dict]:
         return [r for r in self.rows if r.get("outcome") == "harness_failed"]
+
+    @property
+    def unaccounted(self) -> list[dict]:
+        """Rows that are neither a trial nor a harness failure.
+
+        There should never be any, and for thirty-five tasks there were none --
+        because the stub always emitted valid Python. Task 36 found the case
+        that produces them: a strategy that failed to *load* raised past
+        `run.py`'s handlers, `LedgerRun` wrote the row it promises to write from
+        an empty record, and the row arrived here with no `outcome` at all.
+        Both `trials` and `harness_failures` filter on a known value, so the row
+        matched neither and **left N without leaving a trace**.
+
+        `run.py` is fixed. This property exists anyway, because the fix is a
+        correct attribution and this is the check that the attribution happened:
+        a denominator that can shrink silently is the one thing this project
+        cannot have, and "no row is unaccounted" is a cheaper thing to assert
+        than "every outcome is right".
+        """
+        known = set(TRIAL_OUTCOMES) | {"harness_failed"}
+        return [r for r in self.rows if r.get("outcome") not in known]
 
 
 def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
@@ -150,6 +180,14 @@ def run_campaign(agent, record: CampaignRecord, *, ledger: Path,
         source = agent.propose(history)
         row = run_trial(source, profile=record.profile, ledger=ledger,
                         campaign_id=record.campaign_id, index=i)
+        # What it cost to get that proposal. The stub has no log and no cost;
+        # an LLM agent has tokens, latency, repair attempts and a bill, and an
+        # overnight campaign's bill should be readable off the record rather
+        # than off an invoice. Attached to the row rather than to the summary
+        # because it is a property of the trial.
+        drain = getattr(agent, "drain_log", None)
+        if drain is not None:
+            row["agent_call"] = drain()
         rows.append(row)
         # What the agent is shown is a Task 31 decision. The stub ignores it, and
         # the loop passes the full row so that decision is made by whoever makes
@@ -215,6 +253,17 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
 
     q = result.record.q if q is None else q
     corrected = correct(fars, q=q, labels=labels)
+    if result.unaccounted:
+        # Loud rather than a field nobody reads. Every row is a trial or an
+        # admitted harness failure; a third category means N is wrong and every
+        # corrected p-value below it is computed against the wrong denominator.
+        raise RuntimeError(
+            f"{len(result.unaccounted)} of {len(result.rows)} rows are neither a "
+            f"trial nor a harness failure -- outcomes "
+            f"{sorted({str(r.get('outcome')) for r in result.unaccounted})}. "
+            "N would be short by exactly those rows. Fix the attribution; do not "
+            "summarise around it."
+        )
     out = {
         "campaign_id": result.record.campaign_id,
         "record_digest": result.record_digest,
@@ -223,6 +272,7 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
         "q": result.record.q,
         "n_trials": len(trials),
         "harness_failures": len(result.harness_failures),
+        "unaccounted": len(result.unaccounted),
         "outcomes": _counts(r.get("outcome") for r in result.rows),
         "per_trial_accepts_at_0.001": sum(1 for f in fars if f <= 0.001),
         "diagnostics_only": {

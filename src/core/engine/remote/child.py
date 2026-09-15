@@ -166,6 +166,35 @@ class Window:
             )
         return iter(self._items)
 
+    def last(self, k: int = 1):
+        """The k most recent, oldest first -- the same contract `HistoryView`
+        offers in process, which is the one the documentation and the worked
+        examples teach.
+
+        **Missing here until Task 36, and the first LLM in the loop found it on
+        its second proposal.** `strategy-api.md` documents `view.last(k)` and
+        two worked examples use it; `tests/test_examples.py` ran those examples
+        through `Engine.for_test`, which is the *in-process* path, so the check
+        that was supposed to prove the examples work against the current engine
+        never touched the engine the scored path uses. Every strategy that
+        followed the documentation raised `AttributeError` on its first bar --
+        and since Task 23 that costs a trial.
+
+        Short history returns what exists, like in process: a warmup shortfall
+        is a legitimate state. Asking for more than the *pushed window* holds
+        is not, and raises, because returning a shorter tail that looks complete
+        is the one thing this boundary refuses to do.
+        """
+        if k <= 0:
+            return ()
+        if k > len(self._items) and k <= self._total:
+            raise WindowTooShort(
+                f"last({k}) reaches past the pushed window: the engine sent the "
+                f"last {len(self._items)} of {self._total}. Declare a longer "
+                "window, or keep what you need on `self` as it arrives."
+            )
+        return tuple(self._items[-k:])
+
 
 class _ClosedBars:
     """`ctx.bars`, rebuilt from `ctx.closed` rather than sent.

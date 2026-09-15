@@ -222,3 +222,27 @@ def test_the_prompt_splits_into_exactly_one_system_and_one_user_part():
     prompt = _agent()._prompt((), repair="")
     assert prompt.count("\n## SYSTEM") == 1
     assert prompt.count("\n## USER") == 1
+
+
+# --------------------------------------------------------------------------- #
+# the static check under concurrency
+# --------------------------------------------------------------------------- #
+def test_the_static_check_survives_being_called_from_several_threads():
+    """The control arm generates its proposals concurrently, so `type_check`
+    runs from several threads at once. mypy's API keeps process-global state
+    and answers `INTERNAL ERROR ... _hashlib.pyi:26` when it is called that way
+    -- which `type_check` reports as a finding, which sends the agent away to
+    repair a file that was fine. A harness failure wearing a candidate
+    failure's clothes, on the one path whose job is to keep those apart.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    good = (REPO_ROOT / "src" / "strategies" / "current.py").read_text()
+    agent = _agent()
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        results = list(pool.map(lambda _: agent._static_ok(good), range(12)))
+    bad = [msg for ok, msg in results if not ok]
+    assert not bad, (
+        "the committed strategy failed its own static check under concurrency: "
+        f"{bad[:2]}"
+    )

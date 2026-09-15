@@ -18,6 +18,7 @@ message rather than an artefact of how this check is written.
 from __future__ import annotations
 
 import tempfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -76,6 +77,25 @@ def type_check(strategy_path: Path, class_name: str,
         return TypeResult(ok=False, errors=(unavailable,), skipped_reason=unavailable)
 
     from mypy import api
+
+    with _MYPY_LOCK:
+        return _run_mypy(api, strategy_path, class_name, module)
+
+
+# mypy's Python API keeps process-global state and is **not safe to call from
+# two threads at once**. Task 36 found out the expensive way: the control arm
+# generates its proposals concurrently, six threads reached `type_check`, and
+# mypy answered with `INTERNAL ERROR ... _hashlib.pyi:26`. That lands in stderr,
+# `type_check` reports it as a finding, and the agent is sent away to repair a
+# file that was fine -- a harness failure wearing a candidate failure's clothes,
+# on the path whose whole job is to keep those two apart.
+#
+# The lock costs nothing that matters: a check is ~0.4s and there are a hundred
+# of them.
+_MYPY_LOCK = threading.Lock()
+
+
+def _run_mypy(api, strategy_path: Path, class_name: str, module: str) -> TypeResult:
 
     # `STRATEGY` is an instance; the others are classes the loader instantiates.
     expression = "_Impl" if class_name == "STRATEGY" else "_Impl()"

@@ -28,7 +28,11 @@ argument behind them. But a reader needs to know which layer is current, so:
 | **Does the gate have a known error rate?** | **yes** — conditional, measured on campaigns, with a stated resolution | no |
 
 Everything below the first horizontal rule is the record of how each of those
-was arrived at, in the order it happened. The sections that carry the current
+was arrived at, in the order it happened. **What proposes the candidates, and
+what it is shown, is `docs/design/loop.md`** — the split matters here, because
+one of its four pre-registered decisions is a premise of everything below: the
+agent is shown the objective and never the gate, so the guarantees in this
+document are about a search that did not know the bar. The sections that carry the current
 layer are, in reading order: *What the gate guarantees: conditional, and stated*
 (Task 32), *The hybrid null, and the rule that keeps it valid* (Task 33), *The
 gate, characterized* (Task 33), and *How large should a campaign be?* (Task 34).

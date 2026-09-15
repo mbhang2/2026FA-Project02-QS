@@ -51,6 +51,43 @@ profiles:
     action_cap: 64
     history_window: 512
 
+  # Task 37's positive control. The same campaign profile in every respect --
+  # train split, unfavorable fills, seed 1, same caps and budgets -- with a
+  # planted signal of known strength and nothing else changed. Two strengths,
+  # both sized before the campaigns ran against the gate's own bar (the Task 36
+  # best-of-100 null maximum, +0.8011 at q = 0.05):
+  #
+  #   0.30  the calibration reference scores +0.7708 here: a plausible strategy
+  #         lands *on* the bar, so clearing it takes a candidate better than the
+  #         apparatus. The perfect-knowledge oracle scores +9.8190.
+  #   0.50  the reference scores +2.8810, 3.6x the bar. Oracle +38.2458.
+  #
+  # `docs/reviews/task37/sweep.json` is the measurement. The agent is never told
+  # a signal exists, and the prompt template digest is asserted identical to
+  # Task 36's in the campaign record -- otherwise this measures whether a model
+  # can implement a described rule, which is not the question.
+  campaign-s030:
+    dataset: synthetic-s030
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 0
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+
+  campaign-s050:
+    dataset: synthetic-s050
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 0
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+
   # The holdout. A profile rather than a flag: since Task 20 the split is not a
   # command-line argument, so pointing a run at the holdout is an edit to a
   # committed file rather than something anyone can type. It still refuses to
@@ -102,6 +139,26 @@ datasets:
     ticks_per_session: 390
     vol_per_tick: 0.15
     signal_strength: 0.5
+
+  # Task 37. Identical to `synthetic` but for `signal_strength`. The planted
+  # edge is momentum over consecutive 10-tick blocks, and ticks are 30s apart,
+  # so a block is exactly one 5m bar -- the interval every worked example in
+  # `strategy-api.md` uses. That is what makes it reachable by the kind of code
+  # a model actually writes, and it is a property of the generator rather than
+  # a choice made to flatter the result.
+  synthetic-s030:
+    kind: synthetic
+    n_sessions: 175
+    ticks_per_session: 390
+    vol_per_tick: 0.15
+    signal_strength: 0.30
+
+  synthetic-s050:
+    kind: synthetic
+    n_sessions: 175
+    ticks_per_session: 390
+    vol_per_tick: 0.15
+    signal_strength: 0.50
 
   # Real data. `commission_per_contract` is deliberately absent: the engine's
   # default is scaled for the synthetic generator's price units and a real NQ

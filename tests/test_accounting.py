@@ -49,6 +49,7 @@ CALIBRATION_SITES = {
     # `for_null_calibration` and both go through `RemoteStrategy`. The trials
     # themselves are not here -- those are `run.py`, via `run_trial`.
     "scripts/llm_campaign.py",
+    "scripts/positive_control.py",
 }
 
 

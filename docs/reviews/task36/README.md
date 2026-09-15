@@ -4,7 +4,7 @@ Two campaigns of 100 trials each on the synthetic training split, identical but
 for one thing: whether the agent is shown its own prior trials and their scores.
 Both pre-registered and hashed before either ran, both committed before the
 first trial. `claude-haiku-4-5` at temperature 0.7, prompt template digest
-`94c0d8df…`, q = 0.05, fixed budget, no early stop.
+`97e45328…`, q = 0.05, fixed budget, no early stop.
 
 Reproduce:
 

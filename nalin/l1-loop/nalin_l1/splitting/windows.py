@@ -48,8 +48,29 @@ REPO_ROOT = PROJECT_ROOT.parent.parent
 
 REGISTRIES = (
     REPO_ROOT / "config" / "calendars",     # the harness's; real datasets
-    PROJECT_ROOT / "calendars",             # this engine's; fixtures
+    PROJECT_ROOT / "calendars",             # this engine's; fixtures ONLY
 )
+
+FIXTURE_REGISTRY = PROJECT_ROOT / "calendars"
+
+# **The fixture registry serves these two datasets and refuses everything else.**
+#
+# Task 40 put this rule in a header comment in each calendar file, and Task 41
+# replaced the comment with a check, for the reason Task 35 found in
+# `agent-patterns/` and this project has now been caught by twice: an invariant
+# that lives only in prose, with nothing comparing it to the configuration, is
+# an invariant that has already drifted and nobody knows yet. The critic sharing
+# a model family with the coder was a stated rule with no test; so was the
+# scripts table in `architecture.md` before `session_closes.py` fell out of it.
+#
+# What this buys: the fixture registry exists so two toy datasets -- 240 rows of
+# generated placeholder and one session of ES -- do not re-date the artifact
+# provenance on every committed ledger row, which is what adding a file to
+# `config/calendars/` does. That is a reasonable exemption for fixtures and an
+# unreasonable one for anything a result depends on. The first time somebody
+# points this engine at real data, they should hit a refusal that names the
+# trade, not a convenience that silently accepted it.
+FIXTURE_DATASETS = frozenset({"placeholder", "es-20250703"})
 
 
 class NoRegisteredCalendar(FileNotFoundError):
@@ -66,11 +87,44 @@ class DateRange:
     end: pd.Timestamp
 
 
+class FixtureCalendarRefused(RuntimeError):
+    """A dataset outside `FIXTURE_DATASETS` was served from the fixture registry.
+
+    Not a missing-file error: the file is there, and that is the problem.
+    """
+
+
+def audit_fixture_registry() -> list[str]:
+    """Calendars sitting in the fixture registry that the allowlist does not name.
+
+    Catches the file being *added*, not only the file being *used* -- a calendar
+    committed there for a real dataset is already the mistake, whether or not a
+    run has reached it yet.
+    """
+    if not FIXTURE_REGISTRY.is_dir():
+        return []
+    return sorted(p.stem for p in FIXTURE_REGISTRY.glob("*.yaml")
+                  if p.stem not in FIXTURE_DATASETS)
+
+
 def calendar_path(name: str) -> Path:
     for registry in REGISTRIES:
         candidate = registry / f"{name}.yaml"
-        if candidate.is_file():
-            return candidate
+        if not candidate.is_file():
+            continue
+        if registry == FIXTURE_REGISTRY and name not in FIXTURE_DATASETS:
+            raise FixtureCalendarRefused(
+                f"{candidate} is in the fixture registry, which serves only "
+                f"{sorted(FIXTURE_DATASETS)}.\n"
+                "That registry exists so two toy datasets do not re-date the "
+                "artifact provenance on every committed ledger row. A dataset "
+                "whose results anyone will cite does not belong in it.\n"
+                f"Register {name!r} in config/calendars/ instead, and accept "
+                "that doing so changes artifact_digests() and makes every "
+                "existing row's artifact fingerprint stale. That is a human "
+                "decision with a stated cost, which is why it is not made here."
+            )
+        return candidate
     searched = "\n  ".join(str(r / f"{name}.yaml") for r in REGISTRIES)
     raise NoRegisteredCalendar(
         f"no pre-registered calendar for dataset {name!r}. Searched:\n  {searched}\n"

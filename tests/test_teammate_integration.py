@@ -244,3 +244,169 @@ def test_the_two_fill_models_disagree_and_the_difference_is_the_model():
     # The optimistic model does fill there -- which is the axis the two teams'
     # engines differ on, and nalin's sits at the optimistic end of it.
     assert FavorableFill().resolve(order, at_the_limit) is not None
+
+
+# --------------------------------------------------------------------------- #
+# 4. Gowtam's loop as a second driver over the harness interface
+# --------------------------------------------------------------------------- #
+def _gowtam():
+    path = str(REPO_ROOT / "Gowtam" / "L1")
+    if path not in sys.path:
+        sys.path.insert(0, path)
+    from loop import evaluate_step, paths as gpaths
+
+    return evaluate_step, gpaths
+
+
+GOOD_CANDIDATE = '''"""A minimal candidate, for the driver test."""
+
+
+class Strategy:
+    def setup(self, ctx) -> None:
+        ctx.subscribe("5m")
+
+    def on_bars(self, ctx) -> None:
+        if not ctx.actionable or ctx.position or ctx.working_order_ids:
+            return
+        history = ctx.history("5m")
+        if len(history) < 2:
+            return
+        last = history[-1]
+        if last.close > last.open:
+            ctx.buy(size=1, stop_offset=1.0, target_offset=1.0, tag="t")
+
+
+    def on_fill(self, ctx) -> None:
+        pass
+
+    def on_lifecycle(self, ctx) -> None:
+        pass
+'''
+
+BROKEN_CANDIDATE = '''"""A candidate that raises on the first bar."""
+
+
+class Strategy:
+    def setup(self, ctx) -> None:
+        ctx.subscribe("5m")
+
+    def on_bars(self, ctx) -> None:
+        raise RuntimeError("deliberate")
+
+    def on_fill(self, ctx) -> None:
+        pass
+
+    def on_lifecycle(self, ctx) -> None:
+        pass
+'''
+
+
+def test_gowtams_paths_point_at_its_own_project():
+    """Regression on the `PROJECT_ROOT` level bug: three `parent`s from a file
+    two levels down made it `Gowtam/`, so candidate state was written one
+    directory above the project whose name the constant carries."""
+    _, gpaths = _gowtam()
+    assert gpaths.PROJECT_ROOT.name == "L1"
+    assert gpaths.PROJECT_ROOT.parent.name == "Gowtam"
+    assert gpaths.REPO_ROOT == REPO_ROOT
+    assert gpaths.CONTEXT_API_PATH.is_file()
+
+
+def test_the_second_driver_produces_a_verifiable_ledger_row(tmp_path):
+    """**Two independent drivers over one harness, and this is the evidence.**
+
+    `Gowtam/L1/loop/evaluate_step.py` imports nothing from `src.core`: it writes
+    `src/strategies/current.py` and runs `run.py` as a subprocess, which is the
+    whole interface the harness offers a driver. The row it gets back carries
+    the things that make N honest -- and this asserts them by name, because
+    "it wrote a row" and "it wrote a row anybody can check" are different
+    claims.
+    """
+    evaluate_step, gpaths = _gowtam()
+    import loop.evaluate_step as es
+
+    cid = "test-candidate"
+    built = gpaths.candidate_file(cid, gpaths.STRATEGY_FILE)
+    built.write_text(GOOD_CANDIDATE)
+    ledger = tmp_path / "ledger.jsonl"
+    try:
+        row = es.run_evaluate_step(cid, ledger=ledger)
+    finally:
+        built.unlink(missing_ok=True)
+
+    assert row["outcome"] == "completed", row.get("error")
+    for field in ("code_fingerprint", "artifact_fingerprint", "artifacts",
+                  "environment_fingerprint", "lockfile_digest", "isolation",
+                  "strategy_digest", "fill_log_digest", "dataset_digest"):
+        assert field in row and row[field], f"a verifiable row needs {field}"
+    assert row["purpose"] == "trial"
+    assert row["reconciliation"]["agree"] is True
+
+
+def test_a_candidate_that_crashes_still_gets_a_row(tmp_path):
+    """The accounting the project rests on: a crashed trial is a trial."""
+    _, gpaths = _gowtam()
+    import loop.evaluate_step as es
+
+    cid = "test-broken"
+    built = gpaths.candidate_file(cid, gpaths.STRATEGY_FILE)
+    built.write_text(BROKEN_CANDIDATE)
+    ledger = tmp_path / "ledger.jsonl"
+    try:
+        row = es.run_evaluate_step(cid, ledger=ledger)
+    finally:
+        built.unlink(missing_ok=True)
+
+    assert row["outcome"] == "crashed"
+    assert row["score"] is None
+    assert "deliberate" in str(row.get("error", "")) + str(row.get("child_traceback", ""))
+
+
+def test_the_agent_file_is_restored_even_when_the_run_fails(tmp_path):
+    """`src/strategies/current.py` is an `ARTIFACT_GLOBS` entry. A candidate left
+    in it would change the artifact fingerprint of every subsequent run."""
+    _, gpaths = _gowtam()
+    import loop.evaluate_step as es
+
+    before = es.HARNESS_STRATEGY.read_text()
+    cid = "test-broken-2"
+    built = gpaths.candidate_file(cid, gpaths.STRATEGY_FILE)
+    built.write_text(BROKEN_CANDIDATE)
+    try:
+        es.run_evaluate_step(cid, ledger=tmp_path / "l.jsonl")
+    finally:
+        built.unlink(missing_ok=True)
+    assert es.HARNESS_STRATEGY.read_text() == before
+
+
+def test_nothing_to_evaluate_is_not_a_trial():
+    """A candidate that does not exist is not a proposal, and a row for it would
+    be a row about the loop rather than about a candidate."""
+    _, gpaths = _gowtam()
+    import loop.evaluate_step as es
+
+    with pytest.raises(es.NothingToEvaluate):
+        es.run_evaluate_step("no-such-candidate-at-all")
+
+
+def test_the_second_driver_imports_nothing_from_the_harness():
+    """The property that makes it evidence. An import would make this a shared
+    module rather than a second implementation of the driver contract.
+
+    Checked over the **import statements**, not the source text: the module's
+    docstring says "imports nothing from `src.core`", and a substring search
+    fails on the sentence that explains why it passes. Task 31 hit exactly this
+    with `choose_null`, whose docstring contains the word "score".
+    """
+    import ast
+
+    tree = ast.parse(
+        (REPO_ROOT / "Gowtam" / "L1" / "loop" / "evaluate_step.py").read_text())
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module)
+    harness = {m for m in imported if m == "src" or m.startswith("src.")}
+    assert not harness, f"the second driver imports {sorted(harness)}"

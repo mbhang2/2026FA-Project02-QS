@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from loop import paths
-from schemas import CandidateState
+from loop.schemas import CandidateState
 
 
 def load_state(candidate_id: str) -> CandidateState | None:

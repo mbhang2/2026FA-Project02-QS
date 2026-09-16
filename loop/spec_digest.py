@@ -15,7 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from loop import paths
-from schemas import ApprovedCandidate, TaskPlan
+from loop.schemas import ApprovedCandidate, TaskPlan
 
 DEFAULT_TIMEFRAME = "1d"
 

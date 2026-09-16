@@ -10,9 +10,9 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-from schemas.approved_candidate import ApprovedCandidate
-from schemas.review_verdict import ReviewVerdict
-from schemas.task_plan import TaskPlan
+from loop.schemas.approved_candidate import ApprovedCandidate
+from loop.schemas.review_verdict import ReviewVerdict
+from loop.schemas.task_plan import TaskPlan
 
 
 class CandidatePackage(BaseModel):

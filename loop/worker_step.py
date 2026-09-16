@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from loop import paths
 from loop.prompt_doc import _common_context, build_worker_prompt
-from opencode_bridge.invoke import extract_result_block, invoke_opencode
-from schemas import Task
+from loop.opencode_bridge.invoke import extract_result_block, invoke_opencode
+from loop.schemas import Task
 
 
 def run_worker_step(

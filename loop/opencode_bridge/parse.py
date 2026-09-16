@@ -6,7 +6,7 @@ from typing import Any, Callable, Type
 
 from pydantic import BaseModel
 
-from opencode_bridge.invoke import extract_result_block
+from loop.opencode_bridge.invoke import extract_result_block
 
 
 class ParseRetryError(Exception):

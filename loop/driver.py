@@ -20,7 +20,7 @@ from loop.reviewer_step import run_reviewer_step
 from loop.spec_digest import write_spec_digest
 from loop.state_store import load_state, save_state
 from loop.worker_step import run_worker_step
-from schemas import ApprovedCandidate, CandidateState, TaskPlan
+from loop.schemas import ApprovedCandidate, CandidateState, TaskPlan
 
 # --- Hard safety limits (Task 4.6) ---
 MAX_STEPS = 50                 # total worker+reviewer invocations across the candidate

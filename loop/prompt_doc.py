@@ -15,7 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from loop import paths
-from schemas import ApprovedCandidate, Task, TaskPlan
+from loop.schemas import ApprovedCandidate, Task, TaskPlan
 
 SELF_CRITIQUE = (
     "FINAL SELF-CRITIQUE (answer in writing before stopping):\n"

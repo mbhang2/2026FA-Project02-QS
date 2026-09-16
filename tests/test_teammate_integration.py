@@ -250,7 +250,7 @@ def test_the_two_fill_models_disagree_and_the_difference_is_the_model():
 # 4. Gowtam's loop as a second driver over the harness interface
 # --------------------------------------------------------------------------- #
 def _gowtam():
-    path = str(REPO_ROOT / "Gowtam" / "L1")
+    path = str(REPO_ROOT)
     if path not in sys.path:
         sys.path.insert(0, path)
     from loop import evaluate_step, paths as gpaths
@@ -301,13 +301,18 @@ class Strategy:
 '''
 
 
-def test_gowtams_paths_point_at_its_own_project():
-    """Regression on the `PROJECT_ROOT` level bug: three `parent`s from a file
-    two levels down made it `Gowtam/`, so candidate state was written one
-    directory above the project whose name the constant carries."""
+def test_the_drivers_paths_point_at_its_own_package():
+    """Regression on a constant that has now been wrong twice.
+
+    It was three `parent`s from `Gowtam/L1/loop/paths.py`, resolving to
+    `Gowtam/` -- one level above the project whose name it carried -- and Task
+    41 fixed it to two. Task 44 moved the package up a level, so two became one.
+    A relative walk is a fact about where a file sits, and a file that moves
+    invalidates it silently. This is the check that it did not.
+    """
     _, gpaths = _gowtam()
-    assert gpaths.PROJECT_ROOT.name == "L1"
-    assert gpaths.PROJECT_ROOT.parent.name == "Gowtam"
+    assert gpaths.PROJECT_ROOT.name == "loop"
+    assert gpaths.PROJECT_ROOT.parent == REPO_ROOT
     assert gpaths.REPO_ROOT == REPO_ROOT
     assert gpaths.CONTEXT_API_PATH.is_file()
 
@@ -315,7 +320,7 @@ def test_gowtams_paths_point_at_its_own_project():
 def test_the_second_driver_produces_a_verifiable_ledger_row(tmp_path):
     """**Two independent drivers over one harness, and this is the evidence.**
 
-    `Gowtam/L1/loop/evaluate_step.py` imports nothing from `src.core`: it writes
+    `loop/evaluate_step.py` imports nothing from `src.core`: it writes
     `src/strategies/current.py` and runs `run.py` as a subprocess, which is the
     whole interface the harness offers a driver. The row it gets back carries
     the things that make N honest -- and this asserts them by name, because
@@ -401,7 +406,7 @@ def test_the_second_driver_imports_nothing_from_the_harness():
     import ast
 
     tree = ast.parse(
-        (REPO_ROOT / "Gowtam" / "L1" / "loop" / "evaluate_step.py").read_text())
+        (REPO_ROOT / "loop" / "evaluate_step.py").read_text())
     imported = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):

@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from loop import paths
 from loop.prompt_doc import build_planner_prompt
-from opencode_bridge.invoke import invoke_opencode
-from opencode_bridge.parse import parse_or_retry
-from schemas import ApprovedCandidate, TaskPlan
+from loop.opencode_bridge.invoke import invoke_opencode
+from loop.opencode_bridge.parse import parse_or_retry
+from loop.schemas import ApprovedCandidate, TaskPlan
 
 
 def run_planner_step(

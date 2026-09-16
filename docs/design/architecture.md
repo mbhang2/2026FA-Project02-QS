@@ -1166,7 +1166,7 @@ be named here, so a new module nobody documented breaks the build.
 
 ---
 
-## 8b. `Gowtam/L1/`, `nalin/l1-loop/`, `research/` — beside the harness, not in it
+## 8b. `loop/`, `nalin/l1-loop/`, `research/` — beside the harness, not in it
 
 Three top-level trees that are **not** part of the harness and are not on the
 path a scored run takes. They arrived with the `merge-test-michael` merge and
@@ -1175,13 +1175,13 @@ section exists so the map does not stop at the parts that were already mapped.
 
 | tree | what it is | imports `src.core`? | on the scored path? |
 |---|---|---|---|
-| `Gowtam/L1/` | An OpenCode agentic loop: `loop/` (driver, planner/worker/reviewer steps, prompt assembly, spec digest, state store), `opencode_bridge/`, pydantic `schemas/`, and three agent definitions under `.opencode/`. 18 Python files. | no | no — nothing imports it and it has no entry point |
+| `loop/` (`loop/schemas/`, `loop/opencode_bridge/`) | The agentic driver, and **tier 2.5**: plan, build, review, then `evaluate_step.py`, which writes `src/strategies/current.py` and invokes `run.py` as a subprocess. 19 Python files. Was `loop/` until Task 44, where `schemas` and `opencode_bridge` stopped being top-level package names. | no — and deliberately: a driver that reaches the harness without importing it is evidence the interface is real | it drives the scored path without being on it |
 | `nalin/l1-loop/` | A second agentic loop **plus a second backtest engine**: `nalin_l1/{loop,opencode_bridge,schemas}` (the same loop, forked and diverged), and `{strategy,execution,metrics,splitting,config,data,orchestrator,packaging,serialization}` — a vectorised next-bar-position engine with its own metric set, fill model and trial log. 68 Python files, 17 test modules, its own `pyproject.toml`, and `market_data/raw/` (one ES session, committed). | no | no |
 | `audit/` (`audit/engine/`) | An **audit agent**, and **tier 3** of the three-tier gate since Task 43 — `tier3.py` reads `tier2-summary.json` and emits `tier3-verdict.json`, importing nothing from `src.core`. Its verdict type has three members and no fourth, so PROMOTE is unrepresentable rather than forbidden by policy. Also: its own backtest engine (`engine/{backtest,data,metrics,stats,leaks,store}.py`), five reference strategies including a deliberate `lookahead_cheat`, a `facade.py`, an OpenCode agent definition and two skills, its own `tests/`, and seven design documents of its own. 37 files. Arrived on a branch with **no shared history** — a root commit, merged with `--allow-unrelated-histories` — so nothing in it was ever based on the harness it now sits beside. Unassessed: it postdates the Task 41 overlap review and has not been through one. | no | no |
 | `research/` (`research/hypotheses`, `research/experiments`) | Hypotheses and one-off experiment scripts. Prose that is *input to* experiments, as against `docs/`, which describes the system that runs them. | no | no |
 
 **Neither teammate tree contains a single reference to `src.core`.** The coupling
-that exists is a convention, not an import: `Gowtam/L1/loop/paths.py` sets
+that exists is a convention, not an import: `loop/paths.py` sets
 `STRATEGY_FILE = "current.py"` and says in a comment that the file it builds must
 land in `src/strategies/current.py`. That is the cheapest possible integration
 and the right one — a loop that writes the file and invokes `run.py` needs no

@@ -4,15 +4,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
-# Two `parent`s from `Gowtam/L1/loop/paths.py` is `Gowtam/L1/`. It was three
-# until Task 41, which made `PROJECT_ROOT` be `Gowtam/` -- so `candidate_dir`
-# wrote candidate state to `Gowtam/candidates/<id>`, one level above the project
-# whose name the constant carries. Nothing failed, because nothing else referred
-# to either directory; it would have surfaced the first time two projects sat
-# side by side under `Gowtam/`.
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-# The harness repo, two levels above `Gowtam/L1/`.
-REPO_ROOT = PROJECT_ROOT.parent.parent
+# One `parent` from `loop/paths.py` is `loop/`, and `candidate_dir` writes to
+# `loop/candidates/<id>`.
+#
+# **This constant has now been wrong twice, and the pattern is the point.** It
+# was three `parent`s at `Gowtam/L1/loop/paths.py`, which resolved to `Gowtam/`
+# -- one level above the project whose name it carried -- and Task 41 fixed it
+# to two. Task 44 moved the package up a level, so two became one. A relative
+# walk is a fact about where a file sits, and a file that moves invalidates it
+# silently; nothing failed either time, because nothing else referred to the
+# directory it was pointing at.
+PROJECT_ROOT = Path(__file__).resolve().parent
+# The harness repo, one level above `loop/`.
+REPO_ROOT = PROJECT_ROOT.parent
 
 # Was `PROJECT_ROOT / "Docs" / "References" / "context-api.md"` -- capital D
 # against the repo's lowercase `docs/`, and a path that has never existed in any

@@ -37,10 +37,10 @@ def run_planner_step(
     persist it for the whole candidate.
     """
     prompt = build_planner_prompt(candidate, prior_reasoning)
-    context_files = [
-        str(paths.L1_READY_PATH),
-        str(paths.candidate_file(candidate.candidate_id, "candidate.json")),
-    ]
+    context_files = paths.context_files(
+        paths.L1_READY_PATH,
+        paths.candidate_file(candidate.candidate_id, "candidate.json"),
+    )
     cwd = str(paths.candidate_dir(candidate.candidate_id))
 
     result = invoke_opencode("planner", prompt, session_id, context_files, cwd=cwd)

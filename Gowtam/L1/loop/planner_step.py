@@ -24,10 +24,10 @@ def run_planner_step(
     is returned for provenance only and is not reused by later roles.
     """
     prompt = build_planner_prompt(candidate, prior_reasoning)
-    context_files = [
-        str(paths.CONTEXT_API_PATH),
-        str(paths.candidate_file(candidate.candidate_id, "candidate.json")),
-    ]
+    context_files = paths.context_files(
+        paths.CONTEXT_API_PATH,
+        paths.candidate_file(candidate.candidate_id, "candidate.json"),
+    )
     cwd = str(paths.candidate_dir(candidate.candidate_id))
 
     result = invoke_opencode("planner", prompt, None, context_files, cwd=cwd)

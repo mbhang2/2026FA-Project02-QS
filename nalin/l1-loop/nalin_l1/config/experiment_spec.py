@@ -17,9 +17,17 @@ class ExperimentSpec:
     asset_ids: list[str]
     start: str
     end: str
+    # Retained as the window of data to LOAD. They are no longer the source of
+    # the train/validation/holdout split -- `splitting.windows` reads that from
+    # a committed calendar, and checks these against it. See that module.
     train_end: str
     val_end: str
     strategy_module_path: str
+    # The pre-registered calendar this experiment runs against, by dataset name.
+    # Empty means "no registered split", and `split_periods` refuses rather than
+    # deriving one. Defaulted so existing specs still construct; the refusal
+    # happens where the split is asked for, with a message that says why.
+    calendar: str = ""
     data_source: str = "ES_20250703_1m.parquet"
     fee_bps: float = 0.0
     slippage_bps: float = 0.0

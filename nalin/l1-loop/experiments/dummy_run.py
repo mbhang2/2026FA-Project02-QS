@@ -20,6 +20,7 @@ def main() -> None:
         train_end="2025-07-03 09:37:00",
         val_end="2025-07-03 14:26:00",
         end="2025-07-03 23:59:00",
+        calendar="es-20250703",
         strategy_module_path="nalin_l1.strategy.candidate",
         fee_bps=1.0,
         slippage_bps=1.0,

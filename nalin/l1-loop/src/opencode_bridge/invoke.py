@@ -131,11 +131,8 @@ def invoke_opencode(
     """
     cmd = build_opencode_args(agent, prompt, session_id, context_files or [])
 
-    # Only resolve binary path for real execution outside test mocks
-    if "pytest" not in sys.modules and sys.platform == "win32":
-        resolved = shutil.which(cmd[0])
-        if resolved:
-            cmd[0] = resolved
+    if sys.platform == "win32":
+        cmd[0] = shutil.which(cmd[0]) or cmd[0]
 
     proc = subprocess.run(
         cmd,

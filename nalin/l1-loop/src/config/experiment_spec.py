@@ -20,6 +20,7 @@ class ExperimentSpec:
     train_end: str
     val_end: str
     strategy_module_path: str
+    data_source: str = "ES_20250703_1m.parquet"
     fee_bps: float = 0.0
     slippage_bps: float = 0.0
     output_dir: str = "output"

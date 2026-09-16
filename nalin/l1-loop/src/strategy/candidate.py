@@ -6,34 +6,72 @@ from src.strategy.protocol import Strategy
 
 
 class Momentum(Strategy):
-    """Time-series momentum strategy (Jegadeesh & Titman, 1993)
-    
-    Goes long (+1.0) when the current close is above its 20-bar simple moving 
-    average (SMA20) AND the trailing 20-bar return is positive. Otherwise, 
-    the position is flat (0.0).
+    """High-conviction intraday trend-following with turnover reduction.
+
+    Uses a 30-bar Exponential Moving Average (EMA30) as the trend
+    center and a 30-bar rolling standard deviation of close prices
+    as the noise-filter band. Entry requires a breakout beyond the
+    band:
+      - Long (+1.0): close > EMA30 + 5.0 * rolling_std
+      - Short (-1.0): close < EMA30 - 5.0 * rolling_std
+    Once in a position, holds it until the close crosses back through
+    the EMA30 (state persistence / deadband). A minimum 15-bar
+    holding period is enforced after each entry before allowing a
+    position flip. All signals are shifted by 1 bar to prevent
+    lookahead bias.
     """
 
     def generate_positions(self, price_history: pd.DataFrame) -> pd.Series:
-        # Compute 10-bar Exponential Moving Average (EMA10) of 'close'
-        ema10 = price_history["close"].ewm(span=10, adjust=False).mean()
+        close = price_history["close"]
 
-        # Compute the trailing 5-bar percentage return
-        trailing_5_bar_return = price_history["close"] / price_history["close"].shift(5) - 1
+        # 30-bar Exponential Moving Average
+        ema30 = close.ewm(span=30, adjust=False).mean()
 
-        # Shift all indicators by 1 to prevent lookahead bias
-        close_shifted = price_history["close"].shift(1)
-        ema10_shifted = ema10.shift(1)
-        trailing_5_bar_return_shifted = trailing_5_bar_return.shift(1)
+        # 30-bar rolling standard deviation of close prices
+        roll_std = close.rolling(window=30, min_periods=30).std()
 
-        # Initialize positions to flat (default)
-        positions = pd.Series(0.0, index=price_history.index)
+        # Band thresholds with 5.0x multiplier for robustness against
+        # outlier bars in 1-minute futures data
+        upper_band = ema30 + 5.0 * roll_std
+        lower_band = ema30 - 5.0 * roll_std
 
-        # Go Long (+1.0) if close > EMA10 and 5-bar return > +0.0075 (+0.75%).
-        long_condition = (close_shifted > ema10_shifted) & (trailing_5_bar_return_shifted > 0.0075)
-        positions.loc[long_condition] = 1.0
+        # Shift everything by 1 bar to prevent lookahead bias
+        close_shifted = close.shift(1)
+        ema30_shifted = ema30.shift(1)
+        upper_band_shifted = upper_band.shift(1)
+        lower_band_shifted = lower_band.shift(1)
 
-        # Go Short (-1.0) if close < EMA10 and 5-bar return < -0.0025 (-0.25%).
-        short_condition = (close_shifted < ema10_shifted) & (trailing_5_bar_return_shifted < -0.0025)
-        positions.loc[short_condition] = -1.0
+        # Raw signal: +1 above upper band, -1 below lower band, 0 within
+        raw_signal = pd.Series(0.0, index=close.index)
+        raw_signal.loc[close_shifted > upper_band_shifted] = 1.0
+        raw_signal.loc[close_shifted < lower_band_shifted] = -1.0
 
-        return positions
+        # State machine: enforce minimum 15-bar holding period
+        final_positions = pd.Series(0.0, index=close.index)
+        current_pos = 0.0
+        bars_since_entry = 0
+
+        for i in range(len(close)):
+            sig = raw_signal.iloc[i]
+
+            if current_pos == 0.0:
+                if sig != 0.0:
+                    current_pos = sig
+                    bars_since_entry = 0
+            else:
+                bars_since_entry += 1
+
+                # Exit when close crosses back through EMA30
+                # (after minimum holding period)
+                if current_pos == 1.0 and close_shifted.iloc[i] < ema30_shifted.iloc[i]:
+                    if bars_since_entry >= 15:
+                        current_pos = 0.0
+                        bars_since_entry = 0
+                elif current_pos == -1.0 and close_shifted.iloc[i] > ema30_shifted.iloc[i]:
+                    if bars_since_entry >= 15:
+                        current_pos = 0.0
+                        bars_since_entry = 0
+
+            final_positions.iloc[i] = current_pos
+
+        return final_positions

@@ -14,8 +14,8 @@ A ``pandas.DataFrame`` with:
 * long format: one row per ``(timestamp, asset_id)`` pair, ``asset_id`` present
   even when only a single asset is loaded
 
-The current implementation is a stub that reads a placeholder CSV/Parquet under
-``Data/raw/``. Swapping in the real source later is a one-file change: reimplement
+The current implementation reads CSV or Parquet files from ``Data/raw/``.
+Swapping in the real source later is a one-file change: reimplement
 ``load_prices`` against the real adapter while preserving this exact signature
 and output schema, and no caller changes.
 """
@@ -36,19 +36,34 @@ def _data_root() -> Path:
 
 
 def _canonicalize(df: pd.DataFrame) -> pd.DataFrame:
-    """Coerce a raw frame into the canonical schema (index/dtTypes/columns)."""
+    """Coerce a raw frame into the canonical schema (index/dtypes/columns)."""
+    df = df.copy()
+
     if "timestamp" in df.columns:
         df = df.set_index("timestamp")
-    df.index = pd.to_datetime(df.index, utc=True)
+
+    if not isinstance(df.index, pd.DatetimeIndex):
+        df.index = pd.to_datetime(df.index, utc=True)
+    elif df.index.tz is None:
+        df.index = df.index.tz_localize("UTC")
+    else:
+        df.index = df.index.tz_convert("UTC")
+
     df.index.name = "timestamp"
+
     for col in _PRICE_COLUMNS:
         if col not in df.columns:
             df[col] = float("nan")
         df[col] = df[col].astype("float64")
+
     if "asset_id" not in df.columns:
         df["asset_id"] = "default"
+    else:
+        df["asset_id"] = df["asset_id"].astype(str)
+
     df = df.reset_index().sort_values(["timestamp"]).set_index("timestamp")
-    df = df[["asset_id"] + _PRICE_COLUMNS]
+    cols: list[str] = ["asset_id"] + list(_PRICE_COLUMNS)
+    df = df.loc[:, cols]
     return df.sort_index()
 
 
@@ -61,8 +76,8 @@ def load_prices(
     """Load price data into the canonical schema.
 
     ``source`` is the adapter boundary: it is either a filesystem path or a
-    named data source. The stub implementation resolves it to a file under
-    ``Data/raw/`` and reads it as CSV.
+    named data source. Resolves to a file under ``Data/raw/`` if relative,
+    supporting both CSV and Parquet formats.
 
     Returns only rows for ``asset_ids`` within the inclusive ``[start, end]``
     window, sorted by timestamp.
@@ -74,7 +89,11 @@ def load_prices(
     if not path.exists():
         raise FileNotFoundError(f"price data source not found: {path}")
 
-    raw = pd.read_csv(path)
+    if path.suffix == ".parquet":
+        raw = pd.read_parquet(path)
+    else:
+        raw = pd.read_csv(path)
+
     df = _canonicalize(raw)
 
     mask = df["asset_id"].isin(asset_ids)
@@ -97,21 +116,21 @@ def load_prices_pit(
     """Point-in-time-safe price loading.
 
     Identical to :func:`load_prices`, but raises if any loaded row has a
-    ``timestamp`` greater than ``as_of``. This is the first concrete enforcement
-    of the "no forward data leakage" requirement: every other component should
-    call this (or a route through it), not the raw loader.
+    ``timestamp`` greater than ``as_of``. This enforces the "no forward data leakage"
+    requirement across pipeline consumers.
     """
     df = load_prices(source, asset_ids, start, end)
-    as_of = pd.Timestamp(as_of)
-    if as_of.tzinfo is None:
-        as_of = as_of.tz_localize("UTC")
+    as_of_ts = pd.Timestamp(as_of)
+    if as_of_ts.tzinfo is None:
+        as_of_ts = as_of_ts.tz_localize("UTC")
     else:
-        as_of = as_of.tz_convert("UTC")
-    future = df.index[df.index > as_of]
+        as_of_ts = as_of_ts.tz_convert("UTC")
+
+    future = df.index[df.index > as_of_ts]
     if len(future) > 0:
         first_future = future[0]
         raise LookaheadError(
-            f"price data contains rows past as_of={as_of}; "
+            f"price data contains rows past as_of={as_of_ts}; "
             f"first offending timestamp={first_future}"
         )
     return df

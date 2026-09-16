@@ -42,7 +42,7 @@ def run_experiment(spec: ExperimentSpec) -> dict:
     strategy = load_strategy(spec.strategy_module_path)
 
     prices = load_prices_pit(
-        DEFAULT_DATA_SOURCE,
+        getattr(spec, "data_source", DEFAULT_DATA_SOURCE),
         spec.asset_ids,
         as_of=pd.Timestamp(spec.end),
         start=spec.start,
@@ -102,6 +102,18 @@ def _run_window(
 
 
 def _compute_metrics(curve: pd.DataFrame, positions: pd.Series) -> dict:
+    if curve.empty or "daily_return" not in curve.columns:
+        return {
+            "cumulative_return": 0.0,
+            "sharpe_ratio": 0.0,
+            "annualized_volatility": 0.0,
+            "max_drawdown": 0.0,
+            "cvar": 0.0,
+            "stability_score": 0.0,
+            "per_window_sharpe": [],
+            "turnover": 0.0,
+            "pnl_concentration": 0.0,
+        }
     daily_returns = curve["daily_return"]
     stability = subperiod_stability(daily_returns)
     return {

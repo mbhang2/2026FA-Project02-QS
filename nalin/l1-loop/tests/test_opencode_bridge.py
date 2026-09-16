@@ -107,6 +107,8 @@ def test_build_opencode_args_no_session_no_files():
     ]
 
 
+from pathlib import Path
+
 def test_invoke_opencode_passes_expected_args(monkeypatch):
     import subprocess
 
@@ -121,8 +123,8 @@ def test_invoke_opencode_passes_expected_args(monkeypatch):
     result = invoke_opencode(
         "planner", "p", session_id="s", context_files=["x.md"], cwd="/tmp"
     )
-    assert captured["cmd"] == [
-        "opencode",
+    assert Path(captured["cmd"][0]).stem == "opencode"
+    assert captured["cmd"][1:] == [
         "run",
         "--auto",
         "--format",

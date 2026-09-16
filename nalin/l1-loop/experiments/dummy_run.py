@@ -14,11 +14,12 @@ from src.serialization.trial_log import write_trial_log
 
 def main() -> None:
     spec = ExperimentSpec(
-        asset_ids=["asset_a"],
-        start="2024-01-01",
-        train_end="2024-02-01",
-        val_end="2024-03-01",
-        end="2024-04-01",
+        data_source="ES_20250703_1m.parquet",
+        asset_ids=["ES"],
+        start="2025-07-03 00:00:00",
+        train_end="2025-07-03 09:37:00",
+        val_end="2025-07-03 14:26:00",
+        end="2025-07-03 23:59:00",
         strategy_module_path="src.strategy.candidate",
         fee_bps=1.0,
         slippage_bps=1.0,

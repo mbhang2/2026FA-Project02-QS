@@ -1165,6 +1165,47 @@ be named here, so a new module nobody documented breaks the build.
 
 ---
 
+## 8b. `Gowtam/L1/`, `nalin/l1-loop/`, `research/` — beside the harness, not in it
+
+Three top-level trees that are **not** part of the harness and are not on the
+path a scored run takes. They arrived with the `merge-test-michael` merge and
+Task 40 made them safe to sit next to; it did not integrate them, and this
+section exists so the map does not stop at the parts that were already mapped.
+
+| tree | what it is | imports `src.core`? | on the scored path? |
+|---|---|---|---|
+| `Gowtam/L1/` | An OpenCode agentic loop: `loop/` (driver, planner/worker/reviewer steps, prompt assembly, spec digest, state store), `opencode_bridge/`, pydantic `schemas/`, and three agent definitions under `.opencode/`. 18 Python files. | no | no — nothing imports it and it has no entry point |
+| `nalin/l1-loop/` | A second agentic loop **plus a second backtest engine**: `nalin_l1/{loop,opencode_bridge,schemas}` (the same loop, forked and diverged), and `{strategy,execution,metrics,splitting,config,data,orchestrator,packaging,serialization}` — a vectorised next-bar-position engine with its own metric set, fill model and trial log. 68 Python files, 17 test modules, its own `pyproject.toml`, and `market_data/raw/` (one ES session, committed). | no | no |
+| `research/` (`research/hypotheses`, `research/experiments`) | Hypotheses and one-off experiment scripts. Prose that is *input to* experiments, as against `docs/`, which describes the system that runs them. | no | no |
+
+**Neither teammate tree contains a single reference to `src.core`.** The coupling
+that exists is a convention, not an import: `Gowtam/L1/loop/paths.py` sets
+`STRATEGY_FILE = "current.py"` and says in a comment that the file it builds must
+land in `src/strategies/current.py`. That is the cheapest possible integration
+and the right one — a loop that writes the file and invokes `run.py` needs no
+import at all.
+
+**What Task 40 changed in them, and what it deliberately did not.** Changed: one
+importable `src` (nalin's package was renamed, because two top-level packages of
+that name resolved by `sys.path` order and `src.core` disappeared on a fresh
+checkout); the `Data/` and `Docs/` case traps; the split, which was derived from
+a spec at run time and is now read from a committed calendar; and the trial log,
+which now declares that it is not a trial-ledger row and is not counted in N.
+Not changed: **which of the two forked loops survives, which fill model, which
+metric set, which objective.** Those are decisions the invariants do not cover
+and a teammate would reasonably disagree with. `docs/reviews/task40/README.md`
+has the full account, and `docs/plans/task39-teammate-directory-mapping.md` the
+overlaps that remain open.
+
+**Two things about these trees that are true and easy to forget.** They carry
+their own `pyproject.toml`, `pytest` configuration and dependency set — seven of
+nalin's test modules need `pydantic`, which is not in this repo's lockfile, and
+installing it would drift `environment_fingerprint` on every committed ledger
+row. And the root `pytest` run does not collect them: `testpaths = ["tests"]`, by
+configuration rather than by accident.
+
+---
+
 ## 9. Tests
 
 Offline tests assert against committed artifacts and run in CI; live tests re-read

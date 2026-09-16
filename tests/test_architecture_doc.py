@@ -64,6 +64,49 @@ def test_architecture_doc_names_every_module():
     )
 
 
+def source_trees() -> list[str]:
+    """Top-level directories holding Python that is not `src/`, `scripts/` or
+    `tests/` — i.e. the ones the two checks above cannot see."""
+    import subprocess
+
+    # `git ls-files`, not `rglob`: the map documents the repository, and
+    # `runs/tmp-*/` holds generated strategy sources that are gitignored on
+    # purpose. Asking the filesystem would put scratch in the map.
+    tracked = subprocess.run(
+        ["git", "ls-files", "*.py"], cwd=REPO_ROOT,
+        capture_output=True, text=True, check=True).stdout.split()
+    out = set()
+    for rel in (Path(x) for x in tracked):
+        top = rel.parts[0]
+        if top in {"src", "scripts", "tests"} or len(rel.parts) == 1:
+            continue                     # covered by the two checks above
+        out.add("/".join(rel.parts[:2]) if len(rel.parts) > 2 else top)
+    return sorted(out)
+
+
+def test_architecture_doc_names_every_source_tree():
+    """The two checks above glob `src/` and `scripts/`. Nothing globbed anything
+    else — so when the `merge-test-michael` merge added `Gowtam/L1/` and
+    `nalin/l1-loop/`, **86 Python files across two top-level directories landed
+    outside the map and outside the check that exists to notice that.**
+
+    Same shape as the defect Task 36 found in `test_examples.py`: a completeness
+    check pointed at the wrong paths reports clean while the thing it guards
+    rots. This one asks the weaker, honest question — is each tree named at all
+    — because demanding a line per file would be 86 lines of noise, and a tree
+    nobody documented is what actually goes wrong.
+    """
+    text = DOC.read_text()
+    missing = [t for t in source_trees() if t not in text]
+    assert not missing, (
+        "docs/design/architecture.md does not mention:\n  "
+        + "\n  ".join(missing)
+        + "\n\nA top-level tree holding Python belongs in the map, even if the "
+        "answer is 'this is not harness code and nothing imports it' — that is "
+        "the sentence a reader needs."
+    )
+
+
 def test_architecture_doc_names_every_script():
     """Scripts drifted out of the map before the modules did: `session_closes.py`
     was added in Task 18 and the build-time table did not grow with it. The table

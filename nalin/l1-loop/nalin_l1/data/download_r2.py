@@ -50,7 +50,7 @@ def main() -> None:
     parser.add_argument(
         "--dest",
         type=Path,
-        default=Path("Data/raw/"),
+        default=Path("market_data/raw/"),
         help="Local destination directory.",
     )
     parser.add_argument(

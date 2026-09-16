@@ -1,4 +1,4 @@
-# Data
+# Market data
 
 Source price data lives in `raw/` and is **read-only**.
 

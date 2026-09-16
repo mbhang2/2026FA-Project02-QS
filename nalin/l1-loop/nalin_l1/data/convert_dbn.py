@@ -92,7 +92,7 @@ def convert_dbn_to_ohlcv(
 
 def main():
     root = _data_root()
-    raw_dir = root / "Data" / "raw"
+    raw_dir = root / "market_data" / "raw"
     
     input_file = raw_dir / "glbx-mdp3-20250703.trades.dbn.zst"
     output_file = raw_dir / "ES_20250703_1m.parquet"

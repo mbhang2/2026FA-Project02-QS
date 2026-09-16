@@ -14,7 +14,7 @@ A ``pandas.DataFrame`` with:
 * long format: one row per ``(timestamp, asset_id)`` pair, ``asset_id`` present
   even when only a single asset is loaded
 
-The current implementation reads CSV or Parquet files from ``Data/raw/``.
+The current implementation reads CSV or Parquet files from ``market_data/raw/``.
 Swapping in the real source later is a one-file change: reimplement
 ``load_prices`` against the real adapter while preserving this exact signature
 and output schema, and no caller changes.
@@ -76,7 +76,7 @@ def load_prices(
     """Load price data into the canonical schema.
 
     ``source`` is the adapter boundary: it is either a filesystem path or a
-    named data source. Resolves to a file under ``Data/raw/`` if relative,
+    named data source. Resolves to a file under ``market_data/raw/`` if relative,
     supporting both CSV and Parquet formats.
 
     Returns only rows for ``asset_ids`` within the inclusive ``[start, end]``
@@ -85,7 +85,7 @@ def load_prices(
     root = _data_root()
     path = Path(source)
     if not path.is_absolute():
-        path = root / "Data" / "raw" / source
+        path = root / "market_data" / "raw" / source
     if not path.exists():
         raise FileNotFoundError(f"price data source not found: {path}")
 

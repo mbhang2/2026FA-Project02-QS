@@ -103,3 +103,17 @@ def test_trial_log_round_trip(tmp_path):
     assert record["verdict"] is None
     assert record["spec"]["asset_ids"] == ["asset_a"]
     assert record["result"]["composite_score"] == result["composite_score"]
+
+
+def test_the_trial_log_says_it_is_not_a_ledger_row(tmp_path):
+    """Invariant 2. The name says "trial log", and the first thing anyone does
+    with a directory of these is count them — so the artifact states that it is
+    not a trial-ledger row and that N does not include it."""
+    spec = _spec()
+    path = write_trial_log(run_experiment(spec), spec,
+                           str(tmp_path / "trial_log.json"))
+    with open(path) as f:
+        record = json.load(f)
+    assert record["ledger"]["is_trial_ledger_row"] is False
+    assert record["ledger"]["counted_toward_n"] is False
+    assert record["ledger"]["the_ledger"] == "runs/ledger.jsonl"

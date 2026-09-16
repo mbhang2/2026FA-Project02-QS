@@ -1176,6 +1176,7 @@ section exists so the map does not stop at the parts that were already mapped.
 |---|---|---|---|
 | `Gowtam/L1/` | An OpenCode agentic loop: `loop/` (driver, planner/worker/reviewer steps, prompt assembly, spec digest, state store), `opencode_bridge/`, pydantic `schemas/`, and three agent definitions under `.opencode/`. 18 Python files. | no | no — nothing imports it and it has no entry point |
 | `nalin/l1-loop/` | A second agentic loop **plus a second backtest engine**: `nalin_l1/{loop,opencode_bridge,schemas}` (the same loop, forked and diverged), and `{strategy,execution,metrics,splitting,config,data,orchestrator,packaging,serialization}` — a vectorised next-bar-position engine with its own metric set, fill model and trial log. 68 Python files, 17 test modules, its own `pyproject.toml`, and `market_data/raw/` (one ES session, committed). | no | no |
+| `daksh/audit_agent/` | An **audit agent**: its own backtest engine (`engine/{backtest,data,metrics,stats,leaks,store}.py`), five reference strategies including a deliberate `lookahead_cheat`, a `facade.py`, an OpenCode agent definition and two skills, its own `tests/`, and seven design documents of its own. 37 files. Arrived on a branch with **no shared history** — a root commit, merged with `--allow-unrelated-histories` — so nothing in it was ever based on the harness it now sits beside. Unassessed: it postdates the Task 41 overlap review and has not been through one. | no | no |
 | `research/` (`research/hypotheses`, `research/experiments`) | Hypotheses and one-off experiment scripts. Prose that is *input to* experiments, as against `docs/`, which describes the system that runs them. | no | no |
 
 **Neither teammate tree contains a single reference to `src.core`.** The coupling
@@ -1196,6 +1197,13 @@ metric set, which objective.** Those are decisions the invariants do not cover
 and a teammate would reasonably disagree with. `docs/reviews/task40/README.md`
 has the full account, and `docs/plans/task39-teammate-directory-mapping.md` the
 overlaps that remain open.
+
+A fourth tree, `daksh/audit_agent/`, is listed above but **not** covered by the
+Task 41 role assignment: it arrived later, on an unrelated history, and the six
+overlaps that review settled were between the harness and the two trees that
+existed then. It plainly overlaps several of them again — another engine, another
+metric set, another set of reference strategies — and that is a review nobody has
+done.
 
 **Two things about these trees that are true and easy to forget.** They carry
 their own `pyproject.toml`, `pytest` configuration and dependency set — seven of

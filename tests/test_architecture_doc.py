@@ -87,7 +87,7 @@ def source_trees() -> list[str]:
 def test_architecture_doc_names_every_source_tree():
     """The two checks above glob `src/` and `scripts/`. Nothing globbed anything
     else — so when the `merge-test-michael` merge added `Gowtam/L1/` and
-    `nalin/l1-loop/`, **86 Python files across two top-level directories landed
+    `alternatives/l1_engine/`, **86 Python files across two top-level directories landed
     outside the map and outside the check that exists to notice that.**
 
     Same shape as the defect Task 36 found in `test_examples.py`: a completeness

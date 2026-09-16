@@ -1,0 +1,55 @@
+# Pre-registered train / validation / holdout split for the `placeholder.csv`
+# dataset that `alternatives.l1_engine`'s orchestrator tests run against.
+#
+# THE PRE-REGISTRATION DATE IS THE COMMIT DATE OF THIS FILE. There is no
+# `pre_registered:` field, for the reason given in
+# `config/calendars/nq-trades.yaml`: a date written into a file can disagree with
+# the commit that introduced it, and a pre-registration whose date can be wrong
+# is not one.
+#
+# WHY THIS FILE IS HERE AND NOT IN `config/calendars/`. The harness's registry is
+# inside `ARTIFACT_GLOBS`, so adding a file to it changes `artifact_digests()`
+# and with it the artifact fingerprint recorded on every committed ledger row.
+# `placeholder.csv` is 240 rows of generated data used only by this engine's
+# tests; it has no business re-dating the harness's provenance. **If nalin's
+# engine is ever pointed at real data, its calendar belongs in
+# `config/calendars/` and moving it there is a human decision with that cost
+# attached.**
+#
+# Boundaries are DATES, inclusive of `start` and exclusive of the next window's
+# `start`, matching the harness's convention.
+#
+# placeholder.csv covers 2024-01-01 .. 2024-04-29, daily bars, assets a and b.
+
+dataset: placeholder
+
+# Seven days at each boundary. The previous behaviour was a contiguous split
+# derived from the spec at run time -- validation began on the exact day
+# training ended, which is the adjacent-observation leak `Calendar` refuses in
+# the harness. Seven days is longer than any lookback in
+# `alternatives.l1_engine/strategy/reference_strategies/`, and it is a placeholder dataset, so
+# the number is a convention rather than a measurement. A real dataset's embargo
+# is measured.
+embargo_days: 7
+
+splits:
+
+  train:
+    start: 2024-01-01
+    end: 2024-02-01
+    reason: >
+      The first month of the generated series. Nothing rides on the choice --
+      this dataset exists so the engine has something deterministic to walk.
+
+  validation:
+    start: 2024-02-09
+    end: 2024-03-01
+    reason: >
+      Seven days after training ends. Shorter than the window the old derived
+      split produced, which is the embargo made visible.
+
+  holdout:
+    start: 2024-03-09
+    end: 2024-04-29
+    reason: >
+      Seven days after validation ends, running to the last bar in the file.

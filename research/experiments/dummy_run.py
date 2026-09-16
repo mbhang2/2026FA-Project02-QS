@@ -5,14 +5,14 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# `nalin/l1-loop`, two directories up and across: this script lives in
+# `alternatives/l1_engine`, two directories up and across: this script lives in
 # `research/experiments/` and the engine it smokes is a package that is not
 # installed. Moved in Task 40; the walk changed with it.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "nalin" / "l1-loop"))
 
-from nalin_l1.config.experiment_spec import ExperimentSpec
-from nalin_l1.orchestrator.run_experiment import run_experiment
-from nalin_l1.serialization.trial_log import write_trial_log
+from alternatives.l1_engine.config.experiment_spec import ExperimentSpec
+from alternatives.l1_engine.orchestrator.run_experiment import run_experiment
+from alternatives.l1_engine.serialization.trial_log import write_trial_log
 
 
 def main() -> None:
@@ -24,7 +24,7 @@ def main() -> None:
         val_end="2025-07-03 14:26:00",
         end="2025-07-03 23:59:00",
         calendar="es-20250703",
-        strategy_module_path="nalin_l1.strategy.candidate",
+        strategy_module_path="alternatives.l1_engine.strategy.candidate",
         fee_bps=1.0,
         slippage_bps=1.0,
         output_dir="output",

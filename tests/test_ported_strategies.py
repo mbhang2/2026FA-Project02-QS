@@ -1,11 +1,11 @@
-"""The two strategies ported from `nalin_l1` in Task 40.
+"""The two strategies ported from `alternatives.l1_engine` in Task 40.
 
 They exercise shared code -- the event-driven contract, `RemoteStrategy`, the
 engine and the scorer -- so they live here rather than beside the source they
 came from.
 
 **What these tests are for.** A port is a claim that two implementations mean the
-same thing, and the port of `nalin_l1.strategy.candidate.Momentum` had one place
+same thing, and the port of `alternatives.l1_engine.strategy.candidate.Momentum` had one place
 it could quietly go wrong: the source shifts every signal by one bar to avoid
 lookahead, and this API's history already contains only closed bars. Porting the
 shift literally would lag every decision by two bars and produce a strategy that

@@ -1,7 +1,7 @@
 """Cross-tree checks (Task 41). These run in CI; the teammate suites do not.
 
 `testpaths = ["tests"]`, so `pytest` at the root collects this file and does not
-collect `nalin/l1-loop/tests/`. Anything that has to **fail when somebody gets it
+collect `alternatives/l1_engine/tests/`. Anything that has to **fail when somebody gets it
 wrong later** therefore belongs here rather than beside the code it guards. That
 is the whole reason this file exists at the root.
 
@@ -30,10 +30,8 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-NALIN = REPO_ROOT / "nalin" / "l1-loop"
-for p in (str(REPO_ROOT), str(NALIN)):
-    if p not in sys.path:
-        sys.path.insert(0, p)
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 pd = pytest.importorskip("pandas", reason="nalin's engine is pandas-based")
 
@@ -51,7 +49,7 @@ def test_the_fixture_registry_refuses_a_dataset_it_does_not_name(tmp_path, monke
     in `agent-patterns/` -- the critic pinned to the coder's model family, with
     the invariant stated twice in prose and tested nowhere.
     """
-    from nalin_l1.splitting import windows
+    from alternatives.l1_engine.splitting import windows
 
     real = tmp_path / "nq-trades-but-really.yaml"
     real.write_text("dataset: x\nsplits: {}\n")
@@ -68,7 +66,7 @@ def test_the_fixture_registry_refuses_a_dataset_it_does_not_name(tmp_path, monke
 def test_the_allowlist_catches_the_file_being_added_not_only_used():
     """A calendar committed to the fixture registry for a real dataset is
     already the mistake, whether or not a run has reached it."""
-    from nalin_l1.splitting import windows
+    from alternatives.l1_engine.splitting import windows
 
     assert windows.audit_fixture_registry() == [], (
         "calendars in the fixture registry that the allowlist does not name"
@@ -77,7 +75,7 @@ def test_the_allowlist_catches_the_file_being_added_not_only_used():
 
 
 def test_the_two_fixtures_still_resolve():
-    from nalin_l1.splitting import windows
+    from alternatives.l1_engine.splitting import windows
 
     for name in sorted(windows.FIXTURE_DATASETS):
         assert windows.calendar_path(name).is_file()
@@ -101,7 +99,7 @@ def test_max_drawdown_agrees_in_magnitude_and_disagrees_in_sign(returns):
     reconciled: the two implementations use opposite sign conventions.**
 
     nalin's returns a *positive magnitude* and says so
-    (`nalin_l1/metrics/risk.py`: "returned as a positive magnitude"); the
+    (`alternatives.l1_engine/metrics/risk.py`: "returned as a positive magnitude"); the
     harness's returns a *negative* number, `min(worst, cum - peak)`, and its
     docstring does not mention the sign at all. Both are internally consistent
     and neither is wrong; what was wrong is that nothing anywhere said they
@@ -123,7 +121,7 @@ def test_max_drawdown_agrees_in_magnitude_and_disagrees_in_sign(returns):
     cumulative return path, which is correct for per-session returns already
     normalised by notional.
     """
-    from nalin_l1.metrics.risk import max_drawdown as nalin_mdd
+    from alternatives.l1_engine.metrics.risk import max_drawdown as nalin_mdd
 
     equity = []
     running = 1.0
@@ -161,7 +159,7 @@ def test_sharpe_disagrees_by_a_known_annualisation_factor(returns):
     The ratio is exactly sqrt(252). If that ever stops being exact, one of the
     two changed its definition and this test is how anyone finds out.
     """
-    from nalin_l1.metrics.returns import sharpe_ratio as nalin_sharpe
+    from alternatives.l1_engine.metrics.returns import sharpe_ratio as nalin_sharpe
 
     theirs = float(nalin_sharpe(pd.Series(returns)))
     ours = harness_metrics.sharpe(returns)
@@ -185,7 +183,7 @@ def test_the_second_objective_is_a_diagnostic_and_not_the_objective():
     """`composite_score` is a second scoring path. It is recorded, never used to
     accept: the objective is single and pre-registered, and a scorer any code
     can import is what `metrics.py`'s import guard exists to stop."""
-    from nalin_l1.metrics.composite import composite_score
+    from alternatives.l1_engine.metrics.composite import composite_score
 
     assert callable(composite_score)
     scorer = (REPO_ROOT / "src" / "core" / "scoring" / "scorer.py").read_text()
@@ -210,7 +208,7 @@ def test_the_two_fill_models_disagree_and_the_difference_is_the_model():
     argument assumes: nalin's model is the more optimistic of the two, because a
     fill is unconditional once the position changes.
     """
-    from nalin_l1.execution.simulator import simulate_fill
+    from alternatives.l1_engine.execution.simulator import simulate_fill
 
     bar = pd.Series({"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5})
     filled = simulate_fill(prev_position=0.0, new_position=1.0, bar=bar,

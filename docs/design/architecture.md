@@ -989,6 +989,24 @@ wrong for four tasks because nothing imported it.
 `MomentumStrategy`. Its current contents are a momentum placeholder that is also
 the shape the worked examples in `docs/agent/strategy-api.md` follow.
 
+**`src/strategies/ported_buy_and_hold.py`** and
+**`src/strategies/ported_momentum.py`** are Task 40's ports of
+`nalin_l1.strategy.reference_strategies.BuyAndHold` and
+`nalin_l1.strategy.candidate.Momentum` from a vectorised next-bar-position API
+onto this event-driven one. They are **apparatus, not proposals**: the loop
+writes `current.py` and never these, nothing runs them but
+`tests/test_ported_strategies.py`, and no ledger row references them. They are
+here because `src/strategies/` is where a strategy lives and parking them
+elsewhere would make the tree lie about what they are.
+
+Each carries its translation notes in its own docstring, and one of them is a
+finding about this API rather than about the port: the source applies
+`.shift(1)` to every signal by hand, because a pandas frame hands a strategy the
+bar it is deciding on and the defence has to be written each time. Here
+`ctx.history()` contains only closed bars and `history[len(history)]` raises,
+so the shift is in the type — and porting it literally would lag every decision
+by two bars. *The shape does the work the discipline used to do.*
+
 ---
 
 ## 7. `run.py` — the immutable entry point

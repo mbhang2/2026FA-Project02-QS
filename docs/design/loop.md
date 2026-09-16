@@ -342,6 +342,34 @@ at the **root**, because `testpaths = ["tests"]` and the teammate suites are not
 collected in CI. A check that must fail when somebody gets it wrong later has to
 be where CI can see it. What they found is in `docs/reviews/task41/`.
 
+## Three tiers, and the contract between them (Task 43)
+
+Tier 1 scores a trial (`run.py`). Tier 2 accepts or rejects a campaign, corrected
+for N (`src/core/loop/`). Tier 3 audits and may only veto
+(`daksh/audit_agent/tier3.py`). **Nothing imports across a tier boundary** — the
+interface is `tier2-summary.json` in one direction and `tier3-verdict.json` in
+the other, which is what lets three separately-authored trees be replaced
+independently. `docs/design/tier-contract.md` is the schema.
+
+Two properties are worth restating here because they bound what the gate can
+claim.
+
+**Tier 3 cannot promote, structurally.** Its verdict type has three members —
+PASS, FAIL, CANNOT_TELL — and no fourth, no score and no confidence. An auditor
+that can only remove candidates is safe with an uncharacterised error rate; one
+that can promote is not, and nobody has characterised this one. `CANNOT_TELL` is
+required and is not a veto: it escalates.
+
+**Tier 2 owns the correction and tier 3 does not re-correct.** Applying deflated
+Sharpe to a campaign of this shape is not a second opinion — it is a different
+model of the null. `max_of_n` takes the maximum over N draws from N *different*
+nulls, because Task 32 made the null per-candidate; the closed form assumes one.
+On the Task 36 history arm the per-candidate null means run from −0.2698 to
++0.1031 against a pooled +0.0154, and the closed form's bar comes out 0.114
+**below** the simulated one — below the observed best, so a pooled-null deflation
+would have reported a discovery on a campaign with no signal in it.
+`docs/reviews/task43/` has it.
+
 ## What the loop still does not decide
 
 Recorded so they are not settled by accident later, the way these four nearly

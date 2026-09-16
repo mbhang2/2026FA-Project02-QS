@@ -259,6 +259,58 @@ score exactly** from stored source, which is decision (d) demonstrated; and
 pre-registered, and never fired. The static check is not this model's binding
 constraint. The runtime is.
 
+## Six overlapping components, and the role each has (Task 41)
+
+The `merge-test-michael` merge brought two more loops and a second backtest
+engine alongside this one. Nothing was discarded. Every component has one of
+three roles — **driver** (sits on top of the harness's interface), **ported
+strategy** (runs against the scored contract), or **differential reference** (a
+second implementation used to check the first) — and the two that were settled by
+consequence rather than preference are stated first so nobody reopens them as a
+matter of taste.
+
+### Settled by consequence
+
+**The committed calendar is the only split.** Pre-registration cannot be applied
+retroactively. If a split is computed during a run, the conditional guarantee,
+the FWER measurement and every published number lose their basis at once — not
+because the split would be *wrong*, but because nothing could establish it was
+chosen before the outcomes were seen. `nalin_l1.splitting.windows` reads
+`config/calendars/` and refuses when there is none.
+
+The fixture registry inside `nalin/l1-loop/calendars/` exists so two toy datasets
+do not re-date artifact provenance on every committed ledger row, and it is
+**bounded by an enforced allowlist, not by a comment**: `FIXTURE_DATASETS` names
+the two, `calendar_path` raises `FixtureCalendarRefused` for anything else, and
+`audit_fixture_registry()` catches the file being added rather than only used. A
+rule with nothing comparing it to the configuration has already drifted and
+nobody knows yet — Task 35 found that pattern in `agent-patterns/`, and this
+project has been caught by it twice more.
+
+**One ledger.** A row asserts a `RunTicket`, a code fingerprint, artifact
+digests, a dataset digest, an isolation level and a reconciled reconstruction.
+That is what makes N honest and what `ledger_check` verifies. A component that
+cannot emit a verifiable row **does not emit rows** — it keeps its own records,
+labelled as not trials. A component that can be brought up to emitting them
+should be, and that means isolation and reconstruction, not a shim writing the
+same JSON shape. `Gowtam/L1/loop/evaluate_step.py` is what being brought up to it
+looks like: it writes the file, invokes `run.py`, and gets a row with every one
+of those fields in it.
+
+### The four decided here
+
+| overlap | role | why |
+|---|---|---|
+| **the loops** | `src/core/loop/` + `scripts/llm_campaign.py` **drives scored campaigns**; Gowtam's is a kept second driver; nalin's drives nalin's engine | Only the first has the ticket, the isolation, the ledger and the correction. Gowtam's is kept because it reaches the harness *without importing it* — a second independent driver over one interface is evidence the interface is real, and that is worth more than convenience. |
+| **the `Strategy` contracts** | the event-driven, T+1-eligible one is the **scored** contract; nalin's vectorised next-bar contract is a different research object | The gate's guarantees are defined over the first. Strategies written for the second get **ported**, and a port is **not score-comparable with its source**: fractional sizing against integer contracts is a different execution model, so the two numbers are not measuring the same strategy. |
+| **the fill models** | **differential reference** | Two modelling choices, not two implementations. nalin fills at the next bar's open unconditionally — a bar with no range at all still fills; the harness's `unfavorable` requires a trade strictly through the limit. They sit at opposite ends of one axis, which is what Task 4's argument about scoring on the pessimistic model is about. |
+| **the metric sets** | **differential reference** | A second implementation by a different author is the strongest available check on arithmetic nobody had verified. `composite_score` is a **recorded diagnostic and never the objective** — the objective is single and pre-registered, and a scorer any code can import is what `metrics.py`'s import guard exists to stop. |
+
+The differential comparisons are tests, in `tests/test_teammate_integration.py`
+at the **root**, because `testpaths = ["tests"]` and the teammate suites are not
+collected in CI. A check that must fail when somebody gets it wrong later has to
+be where CI can see it. What they found is in `docs/reviews/task41/`.
+
 ## What the loop still does not decide
 
 Recorded so they are not settled by accident later, the way these four nearly

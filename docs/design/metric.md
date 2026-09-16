@@ -21,7 +21,7 @@ argument behind them. But a reader needs to know which layer is current, so:
 | **Accept rule** | a **campaign-level** gate: each candidate's conditional p-value, corrected for the campaign's N by Benjamini–Hochberg, with `max_of_n` as the family-wise view | a per-run threshold read off the tabulated null (Task 6); before that `ratio × √N ≥ 3.0`, kept only as a committed ablation |
 | **The null** | **per candidate, conditional**: the profile-indexed bucket where the bucket is populated, circular rotation of that candidate's own price path where it is not (Task 33's hybrid) | one dataset-level null shared by every candidate — measured, but on a single strategy's profile |
 | **What is guaranteed** | a **conditional** false-discovery statement, given the campaign's realized candidate profiles. Stated in full under *What the gate guarantees* (Task 32) | a marginal guarantee that was never true for selective candidates |
-| **Family-wise error, known null** | **0.058, CI [0.039, 0.085]** at q = 0.05, measured on campaigns with full coverage | 0.575 at Task 30 — the single-strategy null, and the number that started this |
+| **Family-wise error, known null** | **0.060, CI [0.041, 0.088]** at q = 0.05, measured at the operating R = 150 (Task 38) | 0.058 at R = 50 (Task 33), and the ≈ 0.047 Task 34 predicted for R = 150, which the re-run contradicts; 0.575 at Task 30 — the single-strategy null, and the number that started this |
 | **Power** | measured, and monotone in campaign size — detection 0.90 at N = 200 for π = 0.05, s = 0.30 | never measured before Task 33 |
 | **Operating parameters** | R ≥ 150 resamples per null; campaigns as large as affordable, at least N = 400 | R = 50, and an interior optimum for campaign size that belonged to the correction Task 31 retired |
 | **The `inf` case** | closed — `MIN_DOWNSIDE_SESSIONS` with a Sharpe fallback that carries its own name and its own null | listed as an open question |
@@ -569,7 +569,9 @@ and until Task 33 the project had only ever measured the first half.
 | 0.30 | 0.97 | [0.89, 0.99] | +1.048 |
 | 0.50 | 1.00 | [0.94, 1.00] | +6.756 |
 
-Hybrid FWER over 400 campaigns: **0.058, CI [0.039, 0.085]**, with **no candidate
+Hybrid FWER over 400 campaigns, at R = 50: **0.058, CI [0.039, 0.085]** — see
+*The operating FWER, measured rather than corrected* (Task 38) for the same 400
+campaigns at R = 150 — with **no candidate
 left without a null**. It rose from Task 32's 0.045 because that number was
 conservative *by the size of the coverage gap*, not because anything regressed.
 
@@ -671,6 +673,51 @@ The profile buckets are tabulated from `NullGenerator`'s momentum variants, and
 an LLM does not write those. Under a profile-only gate, 98 of 99 candidates
 would have entered the correction at p = 1 — the campaign would have reported
 nothing while appearing to have a working gate.
+
+### The operating FWER, measured rather than corrected (Task 38)
+
+**0.0600, CI [0.041, 0.088], at R = 150.** This is the number to quote.
+
+Task 33 measured 0.0575 with the fallback at R = 50. Task 34 measured
+`max_of_n`'s resampling bias against R on known normal nulls (+0.011 at 50,
++0.002 at 150) and restated the headline as "≈ 0.047 by correction, not by
+construction", saying the by-construction figure needed a re-run. Task 38 ran it,
+**paired**: the same 400 campaigns, the same candidates, the same observed
+scores, the same routing, with 100 more rotations per fallback candidate.
+
+| | rejects | FWER | 95% CI |
+|---|---:|---:|---|
+| R = 50 | 23/400 | 0.0575 | [0.039, 0.085] |
+| R = 150 | 24/400 | **0.0600** | [0.041, 0.088] |
+
+One discordant campaign, McNemar exact p = 1.0. Counting rejections is a blunt
+instrument at that scale, so the p-values were compared directly — paired, at a
+fixed resampling seed: **mean Δ = −0.001**, signs split 145 up / 160 down / 95
+unchanged. **There is no effect of R here.**
+
+**The correction did not transfer, and the reason is specific.** `bias(R)`
+describes a cap: resampling with replacement cannot produce a simulated maximum
+above the largest draw a null happens to contain, so a small null truncates its
+own upper tail. That binds only when the observed statistic reaches the null's
+upper tail — which it does in Task 34's grid by construction, because the nulls
+and the observed value are drawn from the same normal. In the real campaigns it
+does not: **in 398 of 400, the observed best sits below every draw in every null
+the campaign has, by a median of 0.29.** Two candidate explanations were killed
+on the way: it is not dilution by the 78% of trials that use profile buckets
+(the rotation-only arm behaves identically), and it is not a shortfall in the
+extension (the R = 50 arm reproduces Task 33's 0.0575 exactly).
+
+`bias(R)` is not wrong. It was applied outside the configuration it was measured
+in, and the ≈ 0.047 figure is withdrawn.
+
+**R ≥ 150 stays, on a narrower argument.** It buys nothing measurable on
+known-null campaigns — the two headlines are the same number. It is cheap
+insurance in the regime where the cap *does* bind: a campaign whose best
+candidate reaches its nulls' upper tail, which is what a campaign that found
+something looks like. Nothing was tuned in response to the result.
+
+`docs/reviews/task38/` has the run, the diagnosis and the cost: 88,300 isolated
+rotations, 7.1 hours at 3.4 runs/s on 8 workers.
 
 ### Two decisions not to tune a parameter, recorded so they are not re-opened
 

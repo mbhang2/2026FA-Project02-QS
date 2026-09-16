@@ -1,0 +1,47 @@
+extending 883 fallback nulls from R=50 to R=150: 88,300 runs
+  extend: 2,000/88,300  3.8/s  eta 383 min
+  extend: 4,000/88,300  3.9/s  eta 356 min
+  extend: 6,000/88,300  4.0/s  eta 347 min
+  extend: 8,000/88,300  3.8/s  eta 356 min
+  extend: 10,000/88,300  3.7/s  eta 356 min
+  extend: 12,000/88,300  3.6/s  eta 348 min
+  extend: 14,000/88,300  3.7/s  eta 336 min
+  extend: 16,000/88,300  3.6/s  eta 335 min
+  extend: 18,000/88,300  3.6/s  eta 326 min
+  extend: 20,000/88,300  3.6/s  eta 313 min
+  extend: 22,000/88,300  3.6/s  eta 304 min
+  extend: 24,000/88,300  3.6/s  eta 294 min
+  extend: 26,000/88,300  3.6/s  eta 288 min
+  extend: 28,000/88,300  3.6/s  eta 279 min
+  extend: 30,000/88,300  3.6/s  eta 273 min
+  extend: 32,000/88,300  3.6/s  eta 261 min
+  extend: 34,000/88,300  3.6/s  eta 251 min
+  extend: 36,000/88,300  3.6/s  eta 244 min
+  extend: 38,000/88,300  3.6/s  eta 233 min
+  extend: 40,000/88,300  3.6/s  eta 223 min
+  extend: 42,000/88,300  3.6/s  eta 215 min
+  extend: 44,000/88,300  3.6/s  eta 207 min
+  extend: 46,000/88,300  3.6/s  eta 197 min
+  extend: 48,000/88,300  3.6/s  eta 189 min
+  extend: 50,000/88,300  3.6/s  eta 179 min
+  extend: 52,000/88,300  3.6/s  eta 170 min
+  extend: 54,000/88,300  3.5/s  eta 163 min
+  extend: 56,000/88,300  3.5/s  eta 153 min
+  extend: 58,000/88,300  3.5/s  eta 144 min
+  extend: 60,000/88,300  3.5/s  eta 136 min
+  extend: 62,000/88,300  3.5/s  eta 126 min
+  extend: 64,000/88,300  3.5/s  eta 117 min
+  extend: 66,000/88,300  3.4/s  eta 108 min
+  extend: 68,000/88,300  3.5/s  eta 98 min
+  extend: 70,000/88,300  3.4/s  eta 89 min
+  extend: 72,000/88,300  3.4/s  eta 79 min
+  extend: 74,000/88,300  3.5/s  eta 69 min
+  extend: 76,000/88,300  3.5/s  eta 59 min
+  extend: 78,000/88,300  3.5/s  eta 50 min
+  extend: 80,000/88,300  3.4/s  eta 40 min
+  extend: 82,000/88,300  3.4/s  eta 31 min
+  extend: 84,000/88,300  3.4/s  eta 21 min
+  extend: 86,000/88,300  3.4/s  eta 11 min
+  extend: 88,000/88,300  3.4/s  eta 1 min
+  extend: 88,300 in 25655s (3.4/s)
+wrote /Users/minhyukbhang/Desktop/Practicum/2026FA-Project02-2-QS/docs/reviews/task38/extend.json

@@ -256,10 +256,8 @@ def stage_fresh() -> None:
         print("fresh.json exists, skipping")
         return
     from src.core.scoring.randomization import choose_null
-    from src.core.scoring.randomization.profile_null import ProfileNull
 
-    pool = json.loads((T33 / "pool.json").read_text())
-    table = ProfileNull.from_runs([(r["returns"], r["score"]) for r in pool])
+    table = profile_table()
     paths = sources(CAMPAIGNS * N_TRIALS)
     lo = T33_CAMPAIGNS * N_TRIALS
     fresh_paths = paths[lo:]
@@ -289,6 +287,36 @@ def stage_fresh() -> None:
 # --------------------------------------------------------------------------- #
 # report
 # --------------------------------------------------------------------------- #
+def profile_table():
+    """Task 33's calibration table, rebuilt from its committed pool.
+
+    **`pool.json` no longer carries the return series it was written with.** It
+    was compacted after Task 33's report ran -- each row is now
+    `{"score", "bucket"}` rather than `{"score", "returns"}` -- so
+    `ProfileNull.from_runs`, which is what Task 33 called, raises `KeyError` on
+    the committed artifact. `docs/reviews/task33/hybrid_fwer.py --stage report`
+    is therefore no longer re-runnable as committed, which is worth writing down
+    rather than quietly working around.
+
+    The compacted form loses nothing this needs: `from_runs` only ever used the
+    returns to compute `bucket_of(...)`, and the bucket is what was kept. So the
+    table is rebuilt by grouping on the stored bucket, and the two constructions
+    agree by definition. The `from_runs` branch stays for a pool written the old
+    way.
+    """
+    from src.core.scoring.randomization.profile_null import ProfileNull
+
+    pool = json.loads((T33 / "pool.json").read_text())
+    if pool and "returns" in pool[0]:
+        return ProfileNull.from_runs([(r["returns"], r["score"]) for r in pool])
+    buckets: dict[str, list[float]] = {}
+    for r in pool:
+        if r.get("score") is None:
+            continue
+        buckets.setdefault(r["bucket"], []).append(float(r["score"]))
+    return ProfileNull(buckets=buckets)
+
+
 def _campaign_rejects(base, routes, nulls_by_index, table, lo, hi, r_needed):
     """Which campaigns in [lo, hi) produce a discovery. Task 33's rule, verbatim
     except that `r_needed` is the R this pass ran at."""
@@ -320,10 +348,8 @@ def _campaign_rejects(base, routes, nulls_by_index, table, lo, hi, r_needed):
 
 def stage_report() -> None:
     from src.core.scoring.correction import resolution_cap
-    from src.core.scoring.randomization.profile_null import ProfileNull
 
-    pool = json.loads((T33 / "pool.json").read_text())
-    table = ProfileNull.from_runs([(r["returns"], r["score"]) for r in pool])
+    table = profile_table()
     t33 = json.loads((T33 / "campaigns.json").read_text())
     ext = json.loads((HERE / "extend.json").read_text())
 

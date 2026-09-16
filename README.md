@@ -23,7 +23,7 @@ both were measured rather than argued:
 
 | | |
 |---|---|
-| Family-wise error on a known-null campaign | **0.058**, CI [0.039, 0.085], at q = 0.05 |
+| Family-wise error on a known-null campaign | **0.060**, CI [0.041, 0.088], at q = 0.05 and the operating R = 150 |
 | Detection of a planted signal | **0.90** at N = 200, prevalence 0.05, strength 0.30 |
 
 Not done: validation and holdout are still closed, the proposing agent is a stub rather

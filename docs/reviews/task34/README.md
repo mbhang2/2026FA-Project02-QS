@@ -69,6 +69,24 @@ which is 883 fallback candidates × 150 = 132,450 isolated runs, about **10 hour
 R = 50, of which about 0.011 is a known, measured artifact of the null sample
 size; production should run R ≥ 150, where that artifact is not present.*
 
+> **CORRECTION (Task 38). The re-run was done and this paragraph is wrong.**
+> Extending the same 400 campaigns from R = 50 to R = 150 — paired, same
+> candidates, same observed scores, same routing — gives **0.0600, CI
+> [0.041, 0.088]**, against 0.0575 at R = 50. One discordant campaign, McNemar
+> p = 1.0, and the paired p-values move by a mean of **−0.001** with the signs
+> split 145/160. There is no effect of R to back out.
+>
+> The reason is that the bias measured on this grid **does not apply to the
+> hybrid's campaigns**. `bias(R)` describes a cap — resampling cannot exceed the
+> largest draw a null contains — and that binds only when the observed statistic
+> reaches the null's upper tail. It does here, by construction, because the grid
+> draws the nulls and the observed value from the same normal. It does **not**
+> there: in 398 of 400 real campaigns the observed best sits below every draw in
+> every null the campaign has, by a median of 0.29.
+>
+> The grid is not wrong. It was applied outside the configuration it was
+> measured in. `docs/reviews/task38/` has the measurement and the diagnosis.
+
 ---
 
 ## 2. Detection versus campaign size

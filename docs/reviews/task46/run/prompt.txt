@@ -1,0 +1,1618 @@
+=== SYSTEM ===
+You are a quantitative researcher proposing one trading strategy at a time.
+
+You write a single Python file defining a class named `Strategy` against the
+API below. You do not run it, score it, or judge it -- the harness does that and
+reports the objective back to you.
+
+Reply with exactly one fenced `python` code block and nothing else: no preamble,
+no explanation after it. The block is written to a file verbatim and executed.
+Put your reasoning in the module docstring, where it becomes part of the record.
+
+=== USER ===
+Here is the complete interface. It is the whole of what exists; anything not in
+it is not available.
+
+### `docs/agent/strategy-api.md`
+
+# Writing a strategy
+
+Everything you can do, in the order you need it. You write one file,
+`src/strategies/current.py`; nothing else in the repo is yours to change.
+
+Read this with `docs/agent/data.md`, which is generated from the manifest and
+says what data exists, what fields it has and what they mean. This document says
+what you can *do* with it. Where the two overlap — bar fields, tick fields, the
+three values of `side` — `docs/agent/data.md` is the authority and is regenerated
+whenever the data changes.
+
+`docs/design/context-api.md` is the generated reference for every attribute and
+method on `ctx`. When this document and that one disagree, that one is right: it
+comes from the code.
+
+---
+
+## 1. Start here
+
+A complete, working strategy. Four methods, one subscription, one order.
+
+```python
+class Strategy:
+    def setup(self, ctx):
+        ctx.subscribe("5m")
+
+    def on_bars(self, ctx):
+        if not ctx.actionable or ctx.position or ctx.working_order_ids:
+            return
+        history = ctx.history("5m")
+        if len(history) < 1:
+            return
+        last = history[-1]
+        if last.close > last.open:
+            ctx.buy(size=1, stop_offset=0.75, target_offset=0.75, tag="entry")
+
+    def on_fill(self, ctx):
+        pass
+
+    def on_lifecycle(self, ctx):
+        pass
+```
+
+What each line is doing:
+
+- `ctx.subscribe("5m")` — declare the data you want, once, in `setup()`. There is
+  no way to subscribe later.
+- `ctx.actionable` — `False` during warmup sessions. The bars are real; the
+  orders would not be.
+- `ctx.history("5m")` — the bars that have **closed**. `history[-1]` is the one
+  that just closed. There is nothing after it to read.
+- `ctx.buy(...)` — records an intent. It does not fill here; see §6.
+- `stop_offset` / `target_offset` — a bracket. The engine arms the stop and the
+  target at the instant your entry fills, not at your next callback.
+
+`run.py` looks for a class named `Strategy` (or `STRATEGY`, or
+`MomentumStrategy`) in `src/strategies/current.py` and instantiates it with no
+arguments. Give every parameter a default.
+
+---
+
+## 2. The contract
+
+| Method | When it fires | Required |
+|---|---|---|
+| `setup(ctx)` | once, before the walk | **yes** |
+| `on_bars(ctx)` | one or more subscribed bars closed at this instant | **yes**, if you subscribe to any bars |
+| `on_fill(ctx)` | one of your orders filled | **yes** |
+| `on_lifecycle(ctx)` | an order was accepted, rejected, cancelled or expired; a session opened or closed | **yes** |
+| `on_tick(ctx)` | a trade occurred | only if you `subscribe("tick")` |
+
+`on_fill` and `on_lifecycle` fire whether or not you care — a session open is a
+lifecycle event and every run has one — so define them even if they do nothing.
+`on_tick` is the exception: the engine checks for it only when you subscribed to
+ticks, and refuses the run at wiring time if it is missing.
+
+**`ctx` is different in each callback and is valid only inside it.** Stashing it
+on `self` and reading it later raises `ContextExpired`, because that would be
+reading state from an instant you are not standing in. Read what you need while
+the callback runs; keep the *values* on `self`.
+
+### `setup(ctx)` — the only place with bulk data
+
+`setup` sees the **training split in bulk**. That is not a lookahead hole: the
+training split is, by construction, entirely before the split you are scored on.
+It is the place to fit parameters.
+
+| Call | Gives you |
+|---|---|
+| `ctx.subscribe(interval, emit_empty=False)` | declares a subscription, returns a `Subscription` — keep it |
+| `ctx.ticks()` | every training tick, in order, as a tuple |
+| `ctx.train_bars("5m")` | the training split aggregated at any interval, through the same code the live walk uses |
+| `ctx.dataset_name` | e.g. `"nq-trades:NQ"` |
+
+`setup()` **returns nothing**. Returning a list of subscriptions is the old shape
+and is refused with a message rather than silently ignored.
+
+You cannot place orders in `setup()`. There is no market instant to place them
+at.
+
+### The run-time callbacks
+
+`on_bars`, `on_tick`, `on_fill` and `on_lifecycle` all receive a context with the
+same reads and the same order methods, plus one extra each:
+
+| Callback | Extra |
+|---|---|
+| `on_bars` | `ctx.closed` — every `Bar` that closed at this instant; `ctx.closed_ids()` — their subscription ids |
+| `on_tick` | `ctx.tick` — the trade event |
+| `on_fill` | `ctx.fill` — the fill |
+| `on_lifecycle` | `ctx.event` — the lifecycle event |
+
+---
+
+## 3. Subscriptions
+
+Declared in `setup()`, once each.
+
+```python
+def setup(self, ctx):
+    ctx.subscribe("5m")
+    ctx.subscribe("30s")
+    ctx.subscribe("1h", emit_empty=True)
+    ctx.subscribe("tick")
+```
+
+**Time bars** take any interval: `"250ms"`, `"30s"`, `"5m"`, `"1h"`, `"1d"`, or a
+positive integer of nanoseconds. Bars are anchored to the **session open**, not
+to the wall clock — a grid anchored at midnight would put the first bar of a
+session in the middle of an interval. Empty intervals are skipped unless
+`emit_empty=True`, which emits a bar carrying the previous close forward at zero
+volume and `tick_count == 0`.
+
+Bar interval is close to free. Thirty-second bars cost about the same as
+five-minute ones, because the walk stops at boundaries either way.
+
+**Tick events** — `ctx.subscribe("tick")` — deliver every trade to `on_tick`.
+This is what volume bars, dollar bars, tick imbalance, cumulative delta and every
+order-flow feature are built from. It is the most expensive thing you can do: it
+disables the engine's event-driven jump, because every tick must now be
+delivered, and measured on real NQ sessions a tick subscriber runs about **5×
+slower** than the same strategy on bars alone. That cost lands on the wall-clock
+budget, where it is visible. Subscribe to ticks when you need them, not by
+default.
+
+**Name a subscription however you subscribed to it.** `"5m"`, the equivalent
+`"300s"`, the `Subscription` object, or the canonical id `time:300000000000` —
+every entry point that takes a subscription resolves all four to the same thing.
+An id you never subscribed to **raises** with a message listing the ones that
+exist; it does not quietly read as absent. `ctx.sub_id("5m")` returns the
+canonical form for the rare code that wants it.
+
+Subscribing to the same interval twice returns the same subscription. Subscribing
+to it twice with different `emit_empty` raises.
+
+**Several bars closing at the same instant arrive in one callback.** If a 5m and a
+1m bar both close at 09:35 you get a single `on_bars` with both in `ctx.closed`.
+This is deliberate: separate callbacks would make the ordering between them a
+hidden variable that changes your results and is recorded nowhere.
+
+So "did *my* bar close?" is a real question, and `ctx.bars` answers it:
+
+```python
+def on_bars(self, ctx):
+    if "5m" not in ctx.bars:
+        return                    # the 1m bar closed, not the 5m one
+    bar = ctx.bars["5m"]          # the bar that closed just now
+    history = ctx.history("5m")   # every 5m bar that has closed, ever
+```
+
+---
+
+## 4. What you can read
+
+### Market state
+
+| Read | What it is |
+|---|---|
+| `ctx.ts` | nanoseconds since the epoch, UTC |
+| `ctx.now` | the same instant as a timezone-aware `datetime` |
+| `ctx.session` | session index within the dataset, counting from 0 |
+| `ctx.session_start` | when this session opened, nanoseconds UTC |
+| `ctx.session_end` | when this session **closes**, nanoseconds UTC — `ctx.session_end - ctx.ts` is the time you have left |
+| `ctx.actionable` | `False` during warmup: bars are real, orders are ignored |
+| `ctx.last_price` | the most recent trade price |
+| `ctx.history(sub)` | every closed bar for a subscription, oldest first |
+| `ctx.bars` | the bars that closed **in this callback**; `"5m" in ctx.bars`, `ctx.bars["5m"]` |
+| `ctx.closed` | the same bars as a tuple; `ctx.closed_ids()` for their canonical ids |
+| `ctx.sub_id(sub)` | the canonical id of a subscription you declared |
+| `ctx.ticks()` | every trade event so far — **only populated if you subscribed to ticks** |
+
+`ctx.history(...)` returns a `HistoryView`. It supports `len()`, iteration,
+indexing (`view[0]`, `view[-1]`), slicing, and `view.last(k)` for the `k` most
+recent oldest-first. Slices and `last()` come back as tuples. Short history is a
+legitimate state — check `len()` rather than catching an exception.
+
+`ctx.bars` is empty outside `on_bars`: nothing closed at the instant of a fill,
+a tick or a session open. For the most recent close whenever it happened, use
+`ctx.history("5m")[-1]`.
+
+Bar and tick field names and meanings are in `docs/agent/data.md`. The short
+version: a bar carries `open_ts` and `close_ts` and you are called at `close_ts`;
+a tick carries `side`, whose three values are buy, sell and **unknown**, and
+unknown arrives as `None`.
+
+### Your own position
+
+| Read | What it is |
+|---|---|
+| `ctx.position` | signed contracts; `0` when flat |
+| `ctx.average_entry_price` | average price of the open position |
+| `ctx.realized_pnl` | realized P&L **net of commission** |
+| `ctx.unrealized_pnl` | mark-to-market on the open position, `0.0` when flat |
+| `ctx.equity` | `realized_pnl + unrealized_pnl` |
+| `ctx.working_order_ids` | ids of every order that can still do something, sorted |
+| `ctx.working_orders` | read-only `OrderView` copies of those orders |
+| `ctx.find_orders(...)` | the working orders matching `tag=`, `order_type=`, `side=`, `parent_id=` |
+| `ctx.fills` | fills since the previous callback |
+
+You are allowed to know how you are doing — you need it for risk logic and you
+would have it live. You are not allowed to know how you are being *judged*: there
+is no score, no metric, no split identity and no seed on `ctx`, and
+`src.core.scoring` refuses to be imported from a strategy.
+
+An `OrderView` is a frozen copy, never the engine's own object, and carries
+`id`, `tag`, `side`, `size`, `filled`, `remaining`, `order_type`, `limit_price`,
+`stop_price`, `tif`, `parent_id` and `status`. Assigning to one raises. Change an
+order with `ctx.modify()` — the only route that goes through the queue, the
+action cap and the T+1 rule, and the only one the run record sees.
+
+**Find your own orders by tag rather than by an id you stored.** A stored id goes
+stale the moment the order expires — a DAY order dies at the session close — and
+acting on a stale id raises:
+
+```python
+stops = ctx.find_orders(tag="protective-stop")
+if stops:
+    ctx.modify(stops[0].id, trigger=new_level)
+
+legs = ctx.find_orders(parent_id=entry_id)   # both halves of a bracket
+```
+
+---
+
+## 5. What you can do
+
+Every one of these **queues** an intent. Nothing happens until your callback
+returns.
+
+### Orders
+
+```python
+ctx.buy(size=1, **kw)      # returns the order id, or None if the cap dropped it
+ctx.sell(size=1, **kw)
+ctx.close(**kw)            # flatten with a market order; raises if flat
+ctx.modify(order_id, limit=None, trigger=None, size=None)
+ctx.cancel(order_id)
+ctx.cancel_all()
+
+ctx.find_orders(tag=..., order_type=..., side=..., parent_id=...)   # read
+```
+
+`buy` and `sell` take the same keywords:
+
+| Keyword | Meaning |
+|---|---|
+| `size` | positive whole contracts; use `sell()` rather than a negative size |
+| `type` | `"market"` (default), `"limit"`, `"stop"`, `"stop_limit"` |
+| `limit` | limit price — required for `"limit"` and `"stop_limit"` |
+| `trigger` | stop trigger price — required for `"stop"` and `"stop_limit"` |
+| `stop` / `target` | bracket levels as **absolute prices** |
+| `stop_offset` / `target_offset` | bracket levels as **positive distances** from the fill |
+| `tif` | `"DAY"` (default), `"GTC"`, `"GTD"`, `"IOC"`, `"FOK"` |
+| `expire_ts` | required for `"GTD"`; nanoseconds UTC |
+| `reduce_only` | the order may only reduce an existing position |
+| `tag` | free text; lands in the blotter row |
+
+`trigger` and `stop` are different things and the error message says so:
+`trigger` is where a stop order fires, `stop` is the protective stop of a
+bracket.
+
+### Brackets
+
+Give `stop`/`target` **or** `stop_offset`/`target_offset`, never both. Absolute
+prices are usually what you mean — "stop below that swing low" is a level — but a
+distance is the only form available before a market order's fill price is known.
+
+The engine arms both legs as a reduce-only OCO pair **at the instant the entry
+fills**. When one fills the other is cancelled before any callback runs, so the
+sibling can never resolve against the same trade. This is the single most
+valuable thing the engine does for you: a strategy that places its own protection
+on the next bar callback leaves the position naked for the rest of the interval,
+and that gap is where a large historical artefact lived.
+
+Absolute bracket levels are validated against the entry reference — the limit
+price if you gave one, otherwise the last trade price — so a stop above the entry
+of a long is refused at the call.
+
+### Time in force
+
+| TIF | Behaviour |
+|---|---|
+| `DAY` | rests until the session closes, then expires (default) |
+| `GTC` | rests until filled or cancelled — survives the session close |
+| `GTD` | rests until `expire_ts`; checked mid-session, not only at the close |
+| `IOC` | fills what it can against its first eligible tick, the rest cancels |
+| `FOK` | fills in full against its first eligible tick or cancels |
+
+**A position is not flattened at the session close.** DAY orders die; GTC and
+unexpired GTD orders live on, brackets included, and so does the position. If you
+want to be flat overnight, say so. The end-of-session position is recorded in the
+run record, so an unintended hold is visible.
+
+### Lifecycle events
+
+`ctx.event.kind` is one of:
+
+| Kind | Meaning |
+|---|---|
+| `session_open` | a session began |
+| `session_close` | a session ended |
+| `order_accepted` | the order exists and is working (also carries the `detail` when a reduce-only size was clamped) |
+| `order_rejected` | it was refused — read `ctx.event.detail` |
+| `cancel_confirmed` | your cancel took effect, or an IOC/FOK remainder was pulled |
+| `day_expired` | a DAY order died at the session close |
+| `gtd_expired` | a GTD order reached `expire_ts` |
+| `oco_cancelled` | the sibling of a filled bracket leg |
+
+`ctx.event.order_id` is the order it concerns, or `None` for session events.
+**Watch these if you hold order ids**: an id whose order has expired is stale, and
+`ctx.cancel()` on it raises.
+
+### The action cap
+
+**64 queued actions per callback.** Past it, calls are dropped, `buy()`/`sell()`
+return `None`, and the count reaches the run record as `action_cap_hits` and
+`actions_dropped`. It exists to turn a fill-modify-fill-modify ping-pong bug into
+a counted number instead of a mystery timeout.
+
+Treat `None` from `buy()`/`sell()` as "no order exists" rather than assuming an
+id.
+
+---
+
+## 6. The timing rules
+
+Four rules. Everything else in the engine follows from them.
+
+**1. An order submitted at instant *T* is eligible from the next tick, never at
+*T*.** You cannot fill against the trade that closed the bar you just read.
+Without this rule a strategy fills at the close of the bar it just saw, which is
+a clean one-bar lookahead that produces beautiful, entirely fake results.
+
+**2. A fill is its own callback, and it carries present-instant state only.**
+Never a partially formed bar. If you want finer intra-bar state, subscribe to a
+finer timeframe — one rule instead of two. Fills are delivered *before* the tick
+event and *before* the bar closes at the same instant, so you learn about your own
+fill before being asked to react to the trade that caused it.
+
+**3. `setup()` sees the training split in bulk; every run-time callback sees the
+current instant and the past, and nothing else.** `ctx.history(...)` holds only
+closed observations, and reaching at or beyond the cursor raises
+`LookaheadError`. There is no API that returns a future bar, and that is the
+point: a prompt telling you to avoid lookahead does not prevent lookahead, an
+interface that cannot express it does.
+
+**Knowing when the session ends is not lookahead.** An exchange publishes its
+calendar in advance, so `ctx.session_end` is a fact about the schedule, not about
+the data — it says nothing about what happens between now and then. Use it: a
+strategy that guesses the session's length from what it has already seen is wrong
+on the first short session it meets, which is a half day, which is exactly when
+being caught long overnight costs something.
+
+Two things it cannot do for you. You still need a callback to act on — a session
+whose last twenty minutes hold no trades gives you nothing to exit on, and
+nothing to exit *against*. And an order queued on a bar close is eligible from
+the next tick, so leave a margin: `ctx.subscribe(interval, emit_empty=True)` gives
+you a callback every interval whether or not anything traded, which is the
+difference between exiting late and not exiting.
+
+**4. Warmup reaches backward; decisions never reach forward.** The harness may
+serve some sessions before the split's first scored session so your features can
+spin up. During those, callbacks fire and `ctx.actionable` is `False`: orders are
+ignored and counted into `warmup_actions_ignored` rather than silently vanishing.
+Check `ctx.actionable` before acting.
+
+Within a single tick the order is fixed: resolve resting orders → fill callbacks
+→ tick event → one bar callback with every bar that closed → lifecycle events.
+
+### How much history you have
+
+There is no rule that refuses a long lookback — nothing raises. What bounds you
+is simply that history starts empty and fills up: at your first actionable bar
+you hold only the bars from the warmup sessions the harness configured, and the
+number of warmup sessions is set by the run profile, not by you. A feature
+needing twenty sessions of context will be undefined for a while.
+
+So **check `len(ctx.history(...))` and return early**, rather than assuming depth.
+A strategy that raises on its first bar is a crashed trial, and a crashed trial
+still counts.
+
+---
+
+## 7. What is not available
+
+You will reach for these. They do not exist.
+
+- **No bid, no ask, no BBO, no quotes.** The price source is trades only. That
+  rules out spread, mid, microprice and quoted-depth imbalance.
+- **No order book.** No queue position, no depth, no book pressure, no
+  cancel/replace flow.
+- **No vendor bars.** Bars are built from trades by the engine, so the session
+  and anchoring conventions live in reviewable code.
+- **No score, no metric, no null.** `src.core.scoring.scorer`,
+  `src.core.scoring.metrics` and `src.core.scoring.calibration` raise
+  `ImportError` when imported from anything under `src.strategies`. You can know
+  your P&L; you cannot know the number you are graded on.
+- **No split identity and no seed.** Nothing on `ctx` says whether this is
+  train, validation or holdout.
+- **No network, and no filesystem outside your own source.** Your process runs
+  under a sandbox — bubblewrap on Linux, `sandbox-exec` on macOS — with the
+  repository mounted read-only and egress denied. A socket does not open; a write
+  to `config/`, `runs/`, `data/` or your own file is refused. This is not a style
+  rule. A strategy that fetched the real prices for the evaluation dates would
+  produce a genuine blotter, a stable dataset digest, a clean fingerprint and a
+  replay that reproduces — every other defence in the harness is orthogonal to it,
+  which is why this one is a kernel boundary rather than a check.
+- **No data beyond the current instant**, including no future bar, no full
+  session you are in the middle of, and no next tick.
+- **No execution outside the logged path.** `python scripts/agent_check.py` is
+  your entry point and it **does not run your strategy**. It reads the file:
+  `compile()` for syntax, an AST pass for structure, and mypy against the
+  `Strategy` protocol. It tells you pass or fail on properties of the source
+  text.
+
+  This is stricter than it used to be, and the reason is worth knowing rather
+  than working around. The check used to walk a small dataset and report pass or
+  fail with no number, on the reasoning that a check yielding no score could not
+  be used for selection. It could: pass/fail is one bit, and a strategy that
+  raises when its own P&L crosses a threshold turns the exit code into that bit.
+  Eighteen probes binary-searching the threshold recovered peak realized P&L to
+  ±0.0002 with **zero trials counted**. Narrowing the channel does not fix that —
+  any answer that depends on market data can carry a score — so the answer no
+  longer depends on market data at all.
+
+  Scoring happens on the loop driver's path, which you do not invoke, with the
+  dataset, split, seed and fill model read from a committed profile rather than
+  from any argument. Every invocation of either path appends exactly one ledger
+  row, crashes included.
+
+Import what you need from `src.core.types` — `Side`, `OrderType`,
+`TimeInForce`, `NS_PER_SECOND` and the rest are all available and are the right
+way to compare enum values.
+
+---
+
+## 7a. Your code runs in its own process
+
+Since Task 25 the harness starts a separate process, hands it your file, and
+talks to it over a pipe. Everything in section 4 and section 5 still works and
+the callbacks are unchanged — the engine cannot tell the difference, and the
+golden digests are byte-identical either way. Four things follow that you can
+observe:
+
+**History is a window, and reaching past it raises.** Each callback carries the
+last N bars per subscription, N declared by the profile (512 by default).
+`len(ctx.history("5m"))` is still the true total — the count is exact — but
+`ctx.history("5m")[0]` on a run that has seen 4,000 bars raises
+`WindowTooShort` rather than returning something. If you need more than the
+window, keep it on `self` as it arrives; that is cheaper than the window anyway,
+because you keep the one number you wanted instead of every bar.
+
+**`setup()` bulk data is capped at 256 MB.** `ctx.train_bars("5m")` over the full
+NQ training split is 12.7 MB and `ctx.train_bars("1m")` is 62 MB, so bar
+intervals are fine. `ctx.ticks()` in `setup()` is 8.0 GB on that split and will
+be refused with the number. Fitting on training *bars* works; fitting on raw
+training *ticks* does not, and that is a real loss — volume bars, dollar bars and
+tick-imbalance features cannot be fitted in-sample. You can still subscribe to
+ticks for the live walk.
+
+**Your traceback survives.** A `ValueError` in `on_bars` arrives in the run
+record with the child's traceback intact, naming your file and your line. This is
+deliberate: a truncated traceback would make every error in section 8 a lie.
+
+**Order ids still come back from `ctx.buy()`.** They are pre-allocated per
+callback from a block the size of the action cap, so the call returns
+synchronously as it always did. Running out of the block *is* hitting the action
+cap — the same event, not a second one.
+
+You cannot reach the engine, the dataset or the scorer from your process, because
+they are not in it. The only harness modules loaded beside your file are
+`src.core` and `src.core.types`, and that is an allowlist that fails by name —
+`src.core.engine.engine`, `src.core.data`, `src.core.scoring.*` and
+`src.core.runlog` are each named as forbidden, so an accidental import says which
+one leaked rather than only that something did.
+
+---
+
+## 7b. Your iteration loop, and what it costs
+
+**A runtime error now costs a trial.** The static check catches a syntax error, a
+missing or misspelled callback, a wrong signature, an async callback, `setup()`
+returning subscriptions, a subscription to ticks with no `on_tick`, work done at
+module level, and anything mypy can see against the protocol — a return type the
+protocol forbids, a constructor the harness cannot call with no arguments.
+
+It cannot catch anything that only happens while the data is moving:
+
+- a `TypeError` or `AttributeError` on the first bar
+- `ContextError` from an unsubscribed subscription id
+- a malformed order the engine rejects
+- `LookaheadError`
+- a strategy that runs but never trades
+- exceeding the action cap or the wall-clock budget
+
+Those surface in a scored run. A scored run that crashes is a trial:
+`outcome: crashed`, `score: null`, and a row that counts toward N exactly like a
+completed one.
+
+**That is intended, not a regression.** The project's whole claim is that N
+includes crashed and abandoned runs, because a false-discovery rate computed over
+only the runs that finished is a false-discovery rate over a filtered sample. A
+free crash check is a mechanism for making crashes not count — the same hole in a
+friendlier shape.
+
+So the economics of your loop changed. Reading the interface carefully is now
+cheaper than trying something and seeing. Worked examples in section 9 are run in
+CI, so they are known to work against the current engine; starting from one and
+changing it is the cheapest path to a strategy that runs. `docs/design/context-api.md`
+is the generated per-attribute reference and it is exhaustive — if an attribute is
+not there, it does not exist, and finding that out from the reference is free
+while finding it out from a `ContextError` is not.
+
+---
+
+## 8. What will make a run fail
+
+Searchable, because a failure message is the fastest way to learn an interface.
+All of these are raised at the call that caused them, not swallowed — a silent
+no-op is a trial that looks like a result.
+
+### Wiring
+
+| Message | Cause |
+|---|---|
+| `MyStrategy does not match the strategy contract:` followed by one line per problem — `on_fill(ctx) is missing`, `on_bars(self) does not take exactly one argument (the context)` | a callback is absent or has the wrong signature. Checked once before the walk, so all four fail the same legible way; `on_tick(ctx) is missing` is the same error when you subscribed to ticks |
+| `setup() declared no subscriptions; call ctx.subscribe('5m')` | `setup()` subscribed to nothing |
+| `setup() returns nothing now; declare subscriptions with ctx.subscribe('5m') instead of returning them` | you returned a list of subscriptions |
+| `cannot read '5min' as an interval; use e.g. '30s', '5m', '1h', '1d'` | unparseable interval |
+| `interval must be positive, got -1` | a non-positive integer interval |
+| `time:300000000000 already subscribed with emit_empty=False` | same interval, two different `emit_empty` |
+| `train_bars() aggregates; for raw train events use ctx.ticks()` | `ctx.train_bars("tick")` |
+
+### Using the context wrongly
+
+`ContextExpired` and `ContextError` unless noted.
+
+| Message | Cause |
+|---|---|
+| `this context belonged to an earlier callback. Read what you need while the callback is running, or keep it on self.` | you stored `ctx` and used it later |
+| `the setup context is only valid during setup(); subscribe there, and keep anything you fitted on self.` | same, for the setup context |
+| `no subscription 'time:60000000000' (from '1m'); declare it in setup(). Subscribed: [...]` | any id you never subscribed to, through `ctx.history()`, `ctx.bars[...]`, `ctx.sub_id()` or `in ctx.bars` |
+| `'time:300000000000' did not close in this callback; test with \`if '5m' in ctx.bars:\` first, or use ctx.history(...) for the most recent close whenever it happened` | `ctx.bars[...]` for a subscription that did not close at this instant |
+| `subscriptions are not declared until setup() runs` | resolving an id before `setup()` has finished |
+
+### Reaching forward — `LookaheadError`
+
+| Message | Cause |
+|---|---|
+| `index 12 is at or beyond the current instant (12 closed observations; the newest readable is 11)` | `history[len(history)]` |
+| `slice stop 13 reaches past the current instant (12 closed observations)` | a slice whose stop runs past the cursor |
+| `index -20 reaches before the start of history (12 available)` | reaching back further than history goes |
+
+### Malformed orders — `ContextError`
+
+| Message | Cause |
+|---|---|
+| `size must be a positive whole number of contracts, got -1; use sell() rather than a negative size` | negative or fractional size |
+| `a limit order needs limit=<price>` | `type="limit"` with no `limit` |
+| `a stop order needs trigger=<price>; stop= is the protective stop of a bracket, which is a different thing` | `type="stop"` with no `trigger` |
+| `a market order cannot carry a limit price` | `type="market"` plus `limit=` |
+| `give bracket levels either as prices (stop=, target=) or as distances (stop_offset=, target_offset=), not both` | mixing the two bracket forms |
+| `stop 101.0 must be below the entry 100.0 for a long` | bracket level on the wrong side |
+| `target 99.0 must be above the entry 100.0 for a long` | same, for the target |
+| `stop_offset is a positive distance from the fill price, got -1` | a negative offset |
+| `a GTD order needs expire_ts=<nanoseconds>` | `tif="GTD"` with no expiry |
+| `close() with no position open` | `ctx.close()` while flat |
+| `no order 42` | an id that was never issued |
+| `cannot cancel order 42: it is already filled` | acting on an order that is done |
+| `cannot modify order 42: it is cancelled` | same, for modify |
+| `modify() with nothing to change` | `ctx.modify(oid)` with no keyword |
+
+### Rejections that do not raise
+
+These arrive as an `order_rejected` lifecycle event with a `detail`, because the
+order was well-formed when you wrote it and only became impossible later:
+
+| Detail | Cause |
+|---|---|
+| `reduce_only with no position open` | reduce-only while flat |
+| `reduce_only buy would increase a position of 2` | reduce-only on the wrong side |
+| `reduce_only size clamped from 5 to 2` | accepted, not rejected — the size was reduced to the position |
+| `cancel for an order that is not working` | the order had already filled or expired when the queue was applied |
+| `modify for an order that is not working` | same, for modify |
+| `cannot resize to 1: 1 already filled` | a modify shrinking below what is already filled |
+
+### The budget
+
+`abandoned after 121.4s against a 120s budget (4,096,000 ticks in)` —
+`BudgetExceeded`. The run is **abandoned, not crashed**: nothing went wrong
+except that the strategy was too slow, and the distinction is recorded. It still
+counts as a trial. The clock is checked every few thousand ticks *and* every few
+dozen callbacks, so a strategy that is slow inside a callback cannot overshoot
+unnoticed.
+
+The usual causes, in order of likelihood: recomputing a feature over the whole
+history on every bar instead of updating it incrementally; subscribing to ticks
+without needing them; an unbounded structure that grows across sessions.
+
+### Sent something the protocol does not allow — `strategy_violated_protocol`
+
+Actions cross the process boundary as data and are checked against a whitelist of
+operations and their keywords. `ctx.buy(1, unlock_holdout=True)` comes back as
+`buy does not take ['unlock_holdout']`, the run is `outcome: crashed` with
+`failure_kind: strategy_violated_protocol`, and it counts toward N like any other
+crash. The whitelist is in `src/core/engine/remote/protocol.py`.
+
+### Reached past the pushed window — `WindowTooShort`
+
+`ctx.history(...)` carries the last N bars, N from the profile. `len()` is the
+true total; an index older than the window raises. Keep what you need on `self`.
+
+### The holdout
+
+`the holdout is not served until it is explicitly unlocked, once. Call
+dataset.unlock_holdout(reason) and expect the reason to appear in the run
+record.` — `HoldoutLocked`. You cannot do this, and should not try. The run is
+recorded as `refused`.
+
+---
+
+## 9. Worked examples
+
+Every example below is a real file under `tests/examples/`, run in CI on the
+synthetic dataset. If one of them stops working, the build fails. Copy them.
+
+### 1. Fixed time entry
+
+The shape, with nothing else in it: enter on the third bar of every session and
+let the bracket do the exit.
+
+```python
+# tests/examples/01_fixed_time_entry.py
+"""Enter long on the third bar of every session, with a fixed bracket.
+
+The simplest thing that is still a strategy: no feature, no state beyond
+"which bar of this session is this". It exists to show the shape -- subscribe
+in setup(), act in on_bars(), let the bracket handle the exit.
+"""
+
+
+class Strategy:
+    def __init__(self, interval="5m", entry_bar=3, size=1,
+                 stop_offset=0.75, target_offset=0.75):
+        self.interval = interval
+        self.entry_bar = entry_bar
+        self.size = size
+        self.stop_offset = stop_offset
+        self.target_offset = target_offset
+        self._session = None
+        self._bars_this_session = 0
+
+    def setup(self, ctx):
+        # Declared once, before the walk. There is no way to subscribe later.
+        ctx.subscribe(self.interval)
+
+    def on_bars(self, ctx):
+        if ctx.session != self._session:
+            self._session = ctx.session
+            self._bars_this_session = 0
+        self._bars_this_session += 1
+
+        # Warmup sessions deliver real bars but refuse orders. Checking keeps
+        # the count of ignored actions in the run record at zero.
+        if not ctx.actionable:
+            return
+        if self._bars_this_session != self.entry_bar:
+            return
+        if ctx.position or ctx.working_order_ids:
+            return
+
+        # A market buy. The bracket is armed by the engine at the instant the
+        # entry fills, not at the next callback -- which is the difference
+        # between a protected position and an unprotected one.
+        ctx.buy(
+            size=self.size,
+            stop_offset=self.stop_offset,
+            target_offset=self.target_offset,
+            tag="entry",
+        )
+
+    def on_fill(self, ctx):
+        pass
+
+    def on_lifecycle(self, ctx):
+        pass
+```
+
+### 2. Feature-based entry, bracket in offsets
+
+A breakout of the last N closed bars, sized off the measured range rather than a
+constant. This is the first example that reads history, and it shows the pattern
+for it: take a window, check its length, never index past the end.
+
+```python
+# tests/examples/02_breakout_with_bracket.py
+"""Breakout of the last N closed bars, with the bracket given as distances.
+
+Shows the two things most feature code needs: reading history without reaching
+past the current instant, and sizing a bracket off a measured range rather than
+a constant.
+"""
+
+
+class Strategy:
+    def __init__(self, interval="5m", lookback=6, size=1, stop_mult=1.0,
+                 target_mult=1.5):
+        self.interval = interval
+        self.lookback = lookback
+        self.size = size
+        self.stop_mult = stop_mult
+        self.target_mult = target_mult
+
+    def setup(self, ctx):
+        ctx.subscribe(self.interval)
+
+    def on_bars(self, ctx):
+        if not ctx.actionable or ctx.position or ctx.working_order_ids:
+            return
+
+        history = ctx.history(self.interval)
+        # `history` holds only closed bars. `history[-1]` is the one that just
+        # closed; `history[len(history)]` raises LookaheadError rather than
+        # returning something plausible. Short history is legitimate during
+        # warmup, so check the length instead of catching.
+        if len(history) < self.lookback + 1:
+            return
+
+        window = history.last(self.lookback + 1)
+        last, prior = window[-1], window[:-1]
+        high = max(b.high for b in prior)
+        low = min(b.low for b in prior)
+        rng = high - low
+        if rng <= 0:
+            return
+
+        stop = rng * self.stop_mult
+        target = rng * self.target_mult
+
+        if last.close > high:
+            ctx.buy(size=self.size, stop_offset=stop, target_offset=target,
+                    tag="breakout-long")
+        elif last.close < low:
+            ctx.sell(size=self.size, stop_offset=stop, target_offset=target,
+                     tag="breakout-short")
+
+    def on_fill(self, ctx):
+        pass
+
+    def on_lifecycle(self, ctx):
+        pass
+```
+
+### 3. Multi-timeframe
+
+Five-minute entries filtered by the previous session's daily bar. Two
+subscriptions, so "did *my* bar close?" becomes a real question — and
+`if "5m" in ctx.bars:` is the answer.
+
+```python
+# tests/examples/03_multi_timeframe.py
+"""Five-minute entries, filtered by the previous session's daily bar.
+
+Two subscriptions. When both close at the same instant they arrive in **one**
+callback, so "did my fast bar close?" is a real question -- and `ctx.bars` is
+the answer: it holds exactly the bars that closed in this callback, addressed by
+whatever you subscribed with.
+
+`ctx.history(...)` is the other half: the closed bars for a subscription
+whenever they closed, which is what a decision reads.
+"""
+
+
+class Strategy:
+    def __init__(self, fast="5m", slow="1d", lookback=6, size=1,
+                 stop_offset=1.0, target_offset=1.5):
+        self.fast = fast
+        self.slow = slow
+        self.lookback = lookback
+        self.size = size
+        self.stop_offset = stop_offset
+        self.target_offset = target_offset
+
+    def setup(self, ctx):
+        ctx.subscribe(self.fast)
+        # A daily subscription on this data closes once per session -- a session
+        # is shorter than a day, and any bar still open at the session close is
+        # flushed there.
+        ctx.subscribe(self.slow)
+
+    def on_bars(self, ctx):
+        # Act only when the fast bar closed. The slow one closing is a session
+        # boundary, not a decision point.
+        if self.fast not in ctx.bars:
+            return
+        if not ctx.actionable or ctx.position or ctx.working_order_ids:
+            return
+
+        daily = ctx.history(self.slow)
+        if not len(daily):
+            return                      # no completed session yet
+        prev = daily[-1]
+        bias = prev.close - prev.open
+        if bias == 0:
+            return
+
+        fast = ctx.history(self.fast)
+        if len(fast) < self.lookback:
+            return
+        window = fast.last(self.lookback)
+        rising = window[-1].close > window[0].close
+
+        # Take only the fast signal that agrees with the last completed session.
+        if bias > 0 and rising:
+            ctx.buy(size=self.size, stop_offset=self.stop_offset,
+                    target_offset=self.target_offset, tag="with-trend-long")
+        elif bias < 0 and not rising:
+            ctx.sell(size=self.size, stop_offset=self.stop_offset,
+                     target_offset=self.target_offset, tag="with-trend-short")
+
+    def on_fill(self, ctx):
+        pass
+
+    def on_lifecycle(self, ctx):
+        pass
+```
+
+### 4. Managing a position from `on_fill`
+
+A resting limit entry with hand-rolled protection: cancel the entry if it goes
+stale, arm a stop the moment it fills, trail it, and flatten on time. Note where
+each decision lives, note the gap the bracket in examples 1–3 was closing for
+you, and note that it keeps no order ids — every order is found by tag, so a DAY
+expiry at the session close cannot leave it holding a stale one.
+
+```python
+# tests/examples/04_manage_from_on_fill.py
+"""A resting limit entry, managed by hand: cancel, arm, trail, close.
+
+Everything the bracket does for you in the earlier examples, done explicitly --
+because sooner or later a rule does not fit a bracket. Note where each decision
+lives: the entry is placed on a bar, the protection is armed on the *fill*, and
+the exit is a bar decision again.
+
+The gap this example is really about: between placing an entry and its fill you
+are unprotected, and `on_fill` is the first instant you can do anything. A
+bracket closes that gap inside the engine; managing it yourself does not.
+
+Orders are found by **tag** rather than by an id kept on `self`. A stored id goes
+stale the moment the order expires -- a DAY order dies at the session close --
+and acting on a stale id raises. `ctx.find_orders(tag=...)` asks the engine what
+is working right now, so there is no stale state to get wrong.
+"""
+
+ENTRY = "limit-entry"
+STOP = "protective-stop"
+
+
+class Strategy:
+    def __init__(self, interval="5m", size=1, offset=0.5, stop=1.0,
+                 trail=0.5, patience=3, max_hold=8):
+        self.interval = interval
+        self.size = size
+        self.offset = offset        # how far below the market to rest the entry
+        self.stop = stop            # initial protective distance
+        self.trail = trail          # tighten the stop by this much per bar held
+        self.patience = patience    # bars to wait for the entry before pulling it
+        self.max_hold = max_hold    # bars to hold before flattening
+        self.age = 0
+
+    def setup(self, ctx):
+        ctx.subscribe(self.interval)
+
+    def on_bars(self, ctx):
+        if not ctx.actionable:
+            return
+        self.age += 1
+
+        if ctx.position:
+            self._manage_open_position(ctx)
+            return
+
+        resting = ctx.find_orders(tag=ENTRY)
+        if resting:
+            # Still waiting on the entry. Pull it if it has gone stale: a limit
+            # that never fills is not free, it is an exposure to a move you no
+            # longer have a view on.
+            if self.age > self.patience:
+                ctx.cancel(resting[0].id)
+            return
+
+        # Flat, nothing working: rest a new bid under the market.
+        ctx.buy(
+            size=self.size,
+            type="limit",
+            limit=ctx.last_price - self.offset,
+            tif="DAY",            # cancelled at the session close, not carried
+            tag=ENTRY,
+        )
+        self.age = 0
+
+    def _manage_open_position(self, ctx):
+        stops = ctx.find_orders(tag=STOP)
+        if self.age >= self.max_hold:
+            for order in stops:
+                ctx.cancel(order.id)     # cancel before flattening
+            ctx.close()                  # market, reduce_only, tagged "close"
+            return
+        if stops:
+            # Trail the protective stop upward, never down.
+            new_stop = ctx.last_price - self.stop + self.trail * self.age
+            ctx.modify(stops[0].id, trigger=min(new_stop, ctx.last_price - 0.25))
+
+    def on_fill(self, ctx):
+        fill = ctx.fill
+        if fill.position == 0:
+            self.age = 0
+            return
+        if not ctx.find_orders(tag=STOP):
+            # The first instant protection can exist. reduce_only so it can only
+            # ever close this position, never open a new one.
+            self.age = 0
+            ctx.sell(
+                size=abs(fill.position),
+                type="stop",
+                trigger=fill.price - self.stop,
+                tif="GTC",         # survives the session close, like the position
+                reduce_only=True,
+                tag=STOP,
+            )
+
+    def on_lifecycle(self, ctx):
+        # Nothing to clean up: no order id is kept across callbacks, so a DAY
+        # expiry at the session close cannot leave this strategy holding one.
+        pass
+```
+
+### 5. A tick-subscribed strategy
+
+Signed-volume imbalance built from raw trades, decided on bars. This is the
+expensive one — the event-driven walk is off and every trade is a callback — and
+it is the example that shows the `side is None` branch, which you must write.
+
+```python
+# tests/examples/05_tick_imbalance.py
+"""Signed-volume imbalance from raw ticks, decided on bars.
+
+Subscribing to ticks is the only way to build order-flow features, and it is
+the most expensive thing a strategy can do: every trade becomes a callback, the
+event-driven walk is disabled because every tick must be delivered, and a tick
+subscriber runs roughly 5x slower than the same strategy on bars alone. That
+cost is charged to the wall-clock budget on purpose -- it is a real cost and it
+should be visible.
+
+**The `side is None` branch is not defensive programming.** The feed's aggressor
+flag has three values -- bid-initiated, ask-initiated, and *unknown* -- and the
+adapter maps unknown to `None`. It is rare (roughly one tick in 300,000 on the
+NQ data) and that is exactly why folding it into one side never shows up in a
+test and biases every order-flow number you compute. Decide what unknown means
+and say so.
+"""
+
+from collections import deque
+
+from src.core.types import Side
+
+
+class Strategy:
+    def __init__(self, interval="5m", window=200, threshold=0.25, size=1,
+                 stop_offset=1.0, target_offset=1.5):
+        self.interval = interval
+        self.window = window
+        self.threshold = threshold
+        self.size = size
+        self.stop_offset = stop_offset
+        self.target_offset = target_offset
+        self.signed = deque(maxlen=window)
+        self.unknown_side_ticks = 0
+
+    def setup(self, ctx):
+        ctx.subscribe(self.interval)
+        ctx.subscribe("tick")
+
+    def on_tick(self, ctx):
+        t = ctx.tick
+        if t.side is None:
+            # Unknown aggressor. This strategy contributes nothing rather than
+            # guessing -- and counts it, so the choice is visible afterwards
+            # instead of being invisible in an aggregate.
+            self.unknown_side_ticks += 1
+            self.signed.append(0.0)
+        elif t.side is Side.BUY:
+            self.signed.append(float(t.size))
+        else:
+            self.signed.append(-float(t.size))
+
+    def on_bars(self, ctx):
+        if not ctx.actionable or ctx.position or ctx.working_order_ids:
+            return
+        if len(self.signed) < self.window:
+            return
+
+        total = sum(abs(v) for v in self.signed)
+        if total <= 0:
+            return
+        imbalance = sum(self.signed) / total
+
+        if imbalance > self.threshold:
+            ctx.buy(size=self.size, stop_offset=self.stop_offset,
+                    target_offset=self.target_offset, tag="imbalance-long")
+        elif imbalance < -self.threshold:
+            ctx.sell(size=self.size, stop_offset=self.stop_offset,
+                     target_offset=self.target_offset, tag="imbalance-short")
+
+    def on_fill(self, ctx):
+        pass
+
+    def on_lifecycle(self, ctx):
+        pass
+```
+
+---
+
+## 10. Before you submit
+
+- Every parameter has a default, and the class is named `Strategy`.
+- `setup()` subscribes and returns nothing.
+- `on_fill` and `on_lifecycle` exist, even if they are `pass`.
+- `on_tick` exists if and only if you subscribed to ticks.
+- Every `ctx.history(...)` read checks `len()` first.
+- `ctx.actionable` is checked before every order.
+- Order ids from `buy()`/`sell()` are checked for `None`.
+- Orders are found with `ctx.find_orders(tag=...)` rather than by an id kept
+  across callbacks, which goes stale at the first expiry.
+- If you touch `tick.side`, the `None` branch is written and says what it means.
+- Nothing recomputes the whole history on every callback.
+
+
+### `docs/design/context-api.md` (generated; exhaustive)
+
+# Context API reference
+
+Everything a strategy can read or do. Generated from `src/core/engine/context.py` by `scripts/gen_context_api.py` — edit the code, not this file.
+
+What a strategy is handed, and the only surface it can act through.
+
+A strategy calls `ctx.buy(...)`; the call is **queued**, the callback returns,
+and the engine applies the queue. The facade is immutable code, so nothing is
+given up by making it convenient: the recorded intent list is exactly what the
+strategy used to return, and T+1 eligibility, the action cap and auditability are
+untouched.
+
+It is convenient on purpose. An LLM writes hundreds of these files, and
+`ctx.buy(...)` is the idiom in backtrader, zipline, QuantConnect and freqtrade,
+with a great deal of it in training data; assembling lists of dataclasses is not.
+A method can also reject `size=0`, or a stop on the wrong side of the entry, with
+a message naming the rule at the moment of the mistake. Every malformed action
+was a wasted trial and a wasted entry in N.
+
+**The boundary is the objective function, not P&L.** A strategy may know how it
+is doing -- it needs position P&L for risk logic, it has it in live trading, and
+it could reconstruct it from its own fills anyway. It may not know how it is
+being judged: nothing here exposes the score, anything the scorer computes, the
+split identity, the seed, or any data beyond the current instant.
+
+## Errors
+
+**`ContextError`** — A strategy asked for something the simulator will not do.
+
+Raised at the call, naming the rule, rather than accepted and silently
+dropped -- a silent no-op is a trial that looks like a result.
+
+**`ContextExpired`** — The context was used outside the callback it belongs to.
+
+Stashing `ctx` in `setup()` and reading it later would let a strategy read
+state from an instant it is not standing in.
+
+## `SetupContext`
+
+*`setup(ctx)` — once per run, before the walk*
+
+What `setup()` sees: the train split in bulk, and the subscription call.
+
+Bulk is the point -- a strategy fitting parameters needs the whole training
+period at once, and there is no lookahead risk in data that is, by
+construction, entirely before the split it will be scored on.
+
+**Bulk, but not materialised.** `train_ticks` is a factory returning a fresh
+iterator, not a list. The engine used to build the list eagerly and this
+class copied it again, which cost nothing on the synthetic generator's 68,000
+training ticks and was fatal on the first real run: the NQ training split is
+384 sessions of roughly 321,000 trades, so a run that never looked at a
+training tick still tried to hold about 247 million of them twice, on the
+order of 22 GiB, before `setup()` was called. A strategy that wants the ticks
+still gets them and still pays for them; one that does not pays nothing.
+
+### Reads
+
+- **`ctx.dataset_name`**
+
+### Calls
+
+#### `ctx.subscribe(interval: 'str | int', *, emit_empty: 'bool' = False) -> 'Subscription'`
+
+Declare a subscription.
+
+`ctx.subscribe("5m")` for time bars: anchored to the session open,
+stamped with their open timestamp, delivered on close. Empty intervals
+are skipped unless `emit_empty=True`, which carries the previous close
+forward at zero volume.
+
+`ctx.subscribe("tick")` for every trade event, which is what volume
+bars, dollar bars, tick imbalance and any order-flow feature need. It is
+expensive -- hundreds of thousands of callbacks a session -- and the
+wall-clock budget is what makes that an honest cost rather than a hidden
+one.
+
+#### `ctx.subscriptions() -> 'tuple[Subscription, ...]'`
+
+_(no docstring)_
+
+#### `ctx.ticks() -> 'tuple[Tick, ...]'`
+
+Every train tick, in order.
+
+Materialises the whole training split, which on a real dataset is
+hundreds of millions of events -- 384 NQ sessions at roughly 321,000
+trades each. Nothing stops you; it is your memory and your wall-clock
+budget. `train_bars()` streams the same data through the aggregator
+instead, and is what you want unless you are building something the bar
+builder cannot express.
+
+#### `ctx.train_bars(interval: 'str | int | Subscription') -> 'tuple[Bar, ...]'`
+
+Aggregate the train split at an arbitrary interval, through the same
+code path the live walk uses.
+
+## `BaseContext`
+
+*Shared by every run-time callback*
+
+Reads and writes shared by the three run-time callbacks.
+
+### Reads
+
+- **`ctx.actionable`** — False during warmup: the bars are real, the orders would not be.
+- **`ctx.average_entry_price`**
+- **`ctx.bars`** — The bars that closed **in this callback**, addressed by subscription.
+  `if "5m" in ctx.bars:` is the question a multi-timeframe strategy
+  actually has, and it is now the expression that answers it. It used to
+  mean "the most recent closed bar", which made the obvious membership test
+  true whenever any 5m bar had ever closed -- and made the obvious
+  `"5m" in ctx.closed_ids()` silently false, because ids are canonical.
+  A strategy that never trades and says nothing about why is the worst
+  failure mode there is.
+  For the most recent closed bar, whenever it closed, use
+  `ctx.history("5m")[-1]`.
+- **`ctx.closed`** — Every bar that closed at this instant, in one callback.
+  Empty in every callback but `on_bars`.
+- **`ctx.equity`**
+- **`ctx.fills`** — Fills since the previous callback.
+- **`ctx.last_price`**
+- **`ctx.now`**
+- **`ctx.position`**
+- **`ctx.realized_pnl`**
+- **`ctx.session`**
+- **`ctx.session_end`** — When this session closes, in nanoseconds UTC.
+  **Not lookahead.** An exchange publishes its calendar in advance, so the
+  close is known at the open; it is a fact about the schedule, not about
+  the data. Nothing here says anything about what happens between now and
+  then.
+  It exists because without it a strategy cannot be reliably flat at a
+  boundary. Every alternative is a guess at the session's length from what
+  it has already seen, and every such guess is wrong on the first session
+  shorter than anything before it -- a half day, which arrives without
+  warning and is exactly when being caught long overnight matters. The
+  calibration apparatus guessed from a bar count, which on real data
+  measured activity rather than length and collapsed its trading window to
+  a third of the session for most of a 384-session run.
+  `ctx.session_end - ctx.ts` is the time left. Deciding what margin to
+  leave is yours; knowing the deadline should not have been.
+- **`ctx.session_start`** — When this session opened, in nanoseconds UTC.
+- **`ctx.ts`** — Nanoseconds since the epoch, UTC.
+- **`ctx.unrealized_pnl`**
+- **`ctx.working_order_ids`**
+- **`ctx.working_orders`** — Read-only copies, in the order the engine holds them.
+  Copies rather than the engine's own `Order` objects: assigning to one of
+  those worked, and bypassed the queue, the cap, the T+1 rule and the run
+  record.
+
+### Calls
+
+#### `ctx.buy(size: 'int' = 1, **kw) -> 'int | None'`
+
+Submit a buy. Returns the order id, or None if the action cap dropped it.
+
+#### `ctx.cancel(order_id: 'int') -> 'None'`
+
+_(no docstring)_
+
+#### `ctx.cancel_all() -> 'None'`
+
+_(no docstring)_
+
+#### `ctx.close(**kw) -> 'int | None'`
+
+Flatten the current position with a market order.
+
+#### `ctx.closed_ids() -> 'tuple[str, ...]'`
+
+_(no docstring)_
+
+#### `ctx.find_orders(*, tag: 'str | None' = None, order_type: 'str | OrderType | None' = None, side: 'str | Side | None' = None, parent_id: 'int | None' = None) -> 'tuple[OrderView, ...]'`
+
+Working orders matching every filter given. Empty tuple if none do.
+
+`ctx.find_orders(tag="protective-stop")` is the intended way to get hold
+of an order you placed earlier, and `parent_id=` is how you reach the two
+legs of a bracket the engine armed for you. Tracking ids by hand across
+lifecycle events also works, and is exactly where a strategy holding an
+id through a DAY expiry crashes.
+
+#### `ctx.history(sub: 'str | Subscription') -> 'HistoryView[Bar]'`
+
+Closed bars for a subscription, oldest first.
+
+Takes whatever you subscribed with (`"5m"`), the canonical id, an
+equivalent spelling (`"300s"`), or the `Subscription` itself. An id you
+never subscribed to raises `ContextError`.
+
+Reaching at or beyond the current instant raises `LookaheadError` -- the
+newest readable element is the bar that just closed.
+
+#### `ctx.modify(order_id: 'int', *, limit: 'float | None' = None, trigger: 'float | None' = None, size: 'int | None' = None) -> 'None'`
+
+_(no docstring)_
+
+#### `ctx.sell(size: 'int' = 1, **kw) -> 'int | None'`
+
+_(no docstring)_
+
+#### `ctx.sub_id(sub: 'str | Subscription') -> 'str'`
+
+The canonical id of a subscription you declared.
+
+`ctx.sub_id("5m")` -> `"time:300000000000"`. Ids are canonical, not the
+text you typed, and an unknown one raises rather than quietly not
+matching -- so this is here for the rare code that needs the canonical
+form, not as something every strategy has to remember to call.
+
+#### `ctx.ticks() -> 'HistoryView[TickEvent]'`
+
+Every trade event seen so far, oldest first.
+
+Only populated when `setup()` subscribed to ticks -- the engine does not
+pay to retain them otherwise. Reaching at or beyond the current instant
+raises, exactly as for bars.
+
+## `BarContext`
+
+*`on_bars(ctx)` — one or more subscribed bars closed*
+
+Delivered when one or more subscribed bars close at this timestamp.
+
+`ctx.closed`, `ctx.closed_ids()` and `ctx.bars` are on the base context and
+are empty everywhere else, so the same expression reads correctly in every
+callback rather than existing in one of them.
+
+## `FillContext`
+
+*`on_fill(ctx)` — an order filled*
+
+Delivered on a fill. Present-instant state only, never a partial bar.
+
+### Reads
+
+- **`ctx.fill`**
+
+## `LifecycleContext`
+
+*`on_lifecycle(ctx)` — accept, reject, expiry, session*
+
+### Reads
+
+- **`ctx.event`**
+
+---
+
+Calls are queued: the context records the intent, the callback returns, and the engine applies the queue. Order methods return the id the order will have, or `None` if the action cap dropped it. A context is valid only during its own callback.
+
+
+### `docs/agent/data.md` (generated; what you may subscribe to)
+
+# Data available to a strategy
+
+**Generated by `scripts/gen_agent_data.py` from `data/manifest.json` and the run-time types. Do not hand-edit it — your edit will be overwritten and CI will fail first.** Change the code or regenerate after the data extends.
+
+This is the reference for writing a strategy: what you can subscribe to, what fields arrive, and what they mean. `CLAUDE.md` has the repo rules; `docs/data-inventory.md` has the bucket. Neither is this.
+
+## Datasets
+
+| instrument | adapter | sessions | first | last |
+|---|---|---|---|---|
+| ES | **no adapter yet** | 307 | 2025-07-04 | 2026-09-09 |
+| NQ | `nq-trades:NQ` | 564 | 2024-07-04 | 2026-09-09 |
+| QQQ.OPT | **no adapter yet** | 548 | 2024-07-03 | 2026-09-09 |
+
+Sessions are **assemblable CME sessions**, not files. A session runs 17:00 CT on the previous day to 16:00 CT, so it straddles exactly two UTC-day objects and a session exists only when both are present. File counts are larger and using one as N is wrong.
+
+Coverage is full Globex, not RTH.
+
+## Which split this run serves
+
+- **NQ** — `config/calendars/nq-trades.yaml` (committed). 564 sessions total.
+
+You are given one split per run and cannot ask for another. The holdout requires an explicit unlock whose reason lands in the run record.
+
+## Subscriptions
+
+Declare them in `setup(ctx)`, once, before the walk starts. You cannot subscribe later: what data a strategy consumed is part of what it is, and it is recorded. Kinds: `time`, `tick`.
+
+```python
+def setup(self, ctx):
+    ctx.subscribe("5m")                    # time bars, any interval
+    ctx.subscribe("30s")
+    ctx.subscribe("1h", emit_empty=True)   # carry the last close through
+    ctx.subscribe("tick")                  # every trade event
+```
+
+- **Time bars** — any interval (`"250ms"`, `"30s"`, `"5m"`, `"1h"`, or nanoseconds as an int). Anchored to the session open, never to the wall clock, so the first bar of a session starts at its first tick. Empty intervals are skipped unless `emit_empty=True`.
+- **Tick events** — `ctx.subscribe("tick")` delivers every trade to `on_tick(ctx)` as `ctx.tick`. This is what volume bars, dollar bars, tick imbalance and every order-flow feature are built from. It is expensive: hundreds of thousands of callbacks per session, and the wall-clock budget makes that an honest cost rather than a hidden one.
+
+Subscribing to the same interval twice returns the same subscription. When several bars close at the same instant you get **one** `on_bars` callback carrying all of them, in `ctx.closed` — never one callback per timeframe, because then the order between them would be a hidden variable that changes results and is recorded nowhere.
+
+## Bar fields
+
+| field | type | meaning |
+|---|---|---|
+| `sub_id` | `str` | Which subscription produced it (`time:300000000000`, `tick`). One callback can carry bars from several subscriptions. |
+| `open_ts` | `int (ns UTC)` | Nanoseconds UTC of the interval's **start**. This is the bar's identity — sort, join and index on it. |
+| `close_ts` | `int (ns UTC)` | Nanoseconds UTC of the interval's **end**, which is also the instant you are being called at. Both are carried so nothing downstream has to infer which one it is holding; using `open_ts` as the delivery time is how a join silently takes data from the future. |
+| `open` | `float` | First trade price in the interval. |
+| `high` | `float` | Highest trade price in the interval. |
+| `low` | `float` | Lowest trade price in the interval. |
+| `close` | `float` | Last trade price in the interval. |
+| `volume` | `int` | Contracts traded in the interval. |
+| `tick_count` | `int` | Number of trade events in the interval. Zero only on an `emit_empty=True` bar, where OHLC all carry the previous close forward. |
+| `session` | `int` | Session index within the dataset, counting from 0. Bars never span a session boundary. |
+
+`bar.is_empty` is `tick_count == 0`.
+
+**`open_ts` versus `close_ts`.** A bar is stamped with its open and delivered on its close. You are called at `close_ts`; everything in the bar happened in `[open_ts, close_ts)`. Both are on the object so you never have to guess which one a downstream join is using — that guess, made wrong, is lookahead that produces a beautiful equity curve.
+
+## Tick fields
+
+What `on_tick(ctx)` hands you as `ctx.tick`:
+
+| field | type | meaning |
+|---|---|---|
+| `ts` | `int (ns UTC)` | Nanoseconds UTC of the trade. |
+| `seq` | `int` | Position in the walk, assigned by the engine. Ticks with equal `ts` keep their feed order through it. |
+| `price` | `float` | Trade price. |
+| `size` | `int` | Contracts traded. |
+| `side` | `Side \| None` | Aggressor. See below — this is the field that gets silently mishandled. |
+| `session` | `int` | Session index within the dataset, counting from 0. |
+
+### `side` — the one to get right
+
+The feed's aggressor flag has **three** values, and the third is real:
+
+| feed value | meaning | what you receive |
+|---|---|---|
+| `B` | bid-initiated | `Side.BUY` (`'buy'`) |
+| `A` | ask-initiated | `Side.SELL` (`'sell'`) |
+| `N` | **unknown — the feed does not say** | `None` |
+
+`N` must be handled. It must **never** be folded into one side, dropped silently, or defaulted to buy.
+
+It is rare — a few hundred ticks in hundreds of millions; the measured rate for this data is in `docs/datasets/nq-es-qqq.md` — and that rarity is exactly what makes it dangerous. A signed-volume feature that treats `None` as a buy will not show up in any test you write; it will show up as a small, permanent bias in every order-flow number you compute, on data you cannot re-run. Write the branch:
+
+```python
+if tick.side is None:
+    ...        # decide, explicitly, what unknown aggressor means here
+elif tick.side is Side.BUY:
+    ...
+else:
+    ...
+```
+
+## Causality
+
+The API is built so lookahead is hard to express rather than merely discouraged, but the rules are worth knowing before you fight them.
+
+- **`setup(ctx)`** runs once, before the walk. It may read the **train split only** — `ctx.ticks()`, `ctx.train_bars(interval)` — to fit parameters. It may not see validation or holdout, and it is the only place a subscription can be declared. Keep whatever you fitted on `self`.
+- **`on_bars(ctx)` / `on_tick(ctx)` / `on_fill(ctx)` / `on_lifecycle(ctx)`** run during the walk and see the present instant and the past. `ctx.history(interval)` is closed bars only; indexing at or past the cursor raises `LookaheadError` rather than returning something plausible.
+- **Warmup reaches backward, decisions never reach forward.** A warmup of *k* sessions lets features spin up on the *k* sessions before the split starts, so a 20-session moving average is not undefined on day one and the split does not have to donate its own head. Actions taken during warmup are ignored and counted, not executed.
+- **Orders are queued.** A callback records intent; the engine applies it after the callback returns. Orders placed on a bar close become eligible on the **next** event, never against the tick that closed the bar (T+1). A context is valid only inside its own callback.
+
+## What is not available
+
+The price source is **trades only**. There is no book and no quote feed, which rules out a family of features that would otherwise look available:
+
+- **No bid/ask, no BBO, no quotes** — so no spread, no mid, no microprice, no quoted-depth imbalance.
+- **No order book** — so no queue position, no depth, no book pressure, no cancel/replace flow.
+- **No vendor bars.** Bars are built here from trades, so session boundaries and anchoring live in reviewable code rather than in a vendor's convention.
+
+A fill model declares what it requires and the dataset declares what it has; a mismatch is refused at wiring time rather than half-way through a run. Do not write a feature that needs a quote and hope.
+
+## Contract selection
+
+The bucket is requested with `stype_in=PARENT`, which means a `trades` file holds **every** NQ contract — outrights, back months and calendar spreads — not the front month. Choosing one is a research convention, not a fact, so it is written down per session rather than inferred:
+
+- The front month is the **outright** contract with the highest traded volume in that session. Spreads (`NQU5-NQZ5`) are separate instruments in the same file and are excluded, so they cannot win the comparison.
+- The choice is recorded for every session in `data/nq-contract-selection.json`, so a roll is visible as data instead of being read off a chart, and a wrong rule shows up as a contract that changes on the wrong day or flickers back and forth.
+- 564 sessions recorded, across 9 contracts (NQH5, NQH6, NQM5, NQM6, NQU4, NQU5, NQU6, NQZ4, NQZ5), with 8 roll(s) and no flicker — the chosen contract never returns to one it has left.
+- **`near_roll`** is set on 39 of them. share_of_session_volume < 0.9: the chosen contract had a real competitor in that session. Every flagged session is within four calendar days of a roll. It is a flag, not an exclusion: decide for yourself whether your feature survives a session where two contracts split the volume, and say which you did. A result that depends on those 39 sessions is telling you about the roll convention, not about the market.
+
+Each row carries `session`, `instrument_id`, `raw_symbol`, `volume`, `trades`, `share_of_session_volume`, `near_roll` and the `rule` that chose it.
+
+---
+
+Generated from `data/manifest.json` (2,703 objects, schema 3).
+
+
+### This run
+
+The documents above are the shipped interface and the first of them describes
+the NQ adapter, which is not necessarily what you are running on. These are the
+facts of *this* run, and they win where the two differ:
+
+Dataset: a synthetic tick series, not NQ. 40 sessions, 390 ticks each, a random
+walk with no drift and no structure planted in it. The API documents above
+describe the NQ adapter; the instrument here is `synthetic` and the field names
+are the same.
+
+Split: train. Fill model: unfavorable. Action cap: 64 per session.
+
+
+### The question this campaign is investigating
+
+A human wrote this before the campaign was registered, and it is hashed into the campaign record. It is the direction of the search, not a specification to implement: propose strategies that investigate it, and use your judgement about how.
+
+# Does an outsized move inside a session continue, or give it back?
+
+Written 2026-09-16, before the campaign that uses it was registered.
+
+## The question
+
+Within a single trading session, after price has made a move that is large
+relative to how that session has been moving so far, what happens over the rest
+of the session? Two accounts are common and they predict opposite things:
+
+- **Continuation.** A large move reflects information arriving, or participants
+  repositioning, and the flow has further to run. Later prices keep going the
+  same way.
+- **Give-back.** A large move reflects a temporary imbalance -- someone had to
+  trade, and paid for immediacy. Price drifts back toward where it came from.
+
+Both are plausible, both are widely claimed, and they cannot both describe this
+instrument at this time scale. Which one does?
+
+## What "large" should mean here
+
+Deliberately not fixed. "Large" has to be measured against something the session
+itself supplies -- its own realised range so far, the typical size of its moves,
+the time of day -- because a fixed number of points is a different question on a
+quiet day than on a busy one, and the answer would be about the number rather
+than about the market.
+
+Choosing that measure well is part of the work. Different choices are different
+strategies and each is its own proposal.
+
+## What would make the answer interesting
+
+That the direction is consistent. A story that only works on the largest handful
+of moves in the sample is a story about a handful of moves. What would be worth
+knowing is whether the effect is there across the ordinary run of sessions, in
+one direction, and survives being traded rather than merely observed -- entry,
+exit and holding are part of the claim, not details to be added later.
+
+## What this is not asking for
+
+- Not a search across many instruments. One instrument, this data.
+- Not a regime model that switches between the two accounts. If the answer is
+  "it depends", that is a later question and a harder one; answer the simple
+  version first.
+- Not a fast-execution idea. The claim should survive being filled at prices
+  that are worse than the ones that generated the signal.
+
+## Why this one
+
+It is simple enough to state in a sentence, it has a real direction to be
+wrong in, and it is not one of the hypothesis families this project has already
+falsified on this data -- those are listed under *Falsified hypothesis families*
+in `docs/datasets/nq-es-qqq.md` and re-exploring them spends trials on a known
+answer.
+
+---
+
+### The current strategy
+
+```python
+"""The agent's file. Everything else in the repo is immutable to it.
+
+Right now it holds the dumbest strategy that can express the planted signal: buy
+the next interval if the last one closed up, sell if it closed down, with a
+bracket so the position is protected from the instant it fills rather than from
+the next callback. On pure-noise data it has no edge by construction, which is
+what makes the null half of calibration meaningful.
+
+Start with `docs/agent/strategy-api.md`: the callbacks, the orders, the timing
+rules, what fails and why, and five worked examples that are run in CI. What you
+can subscribe to and what the fields mean is `docs/agent/data.md`, generated from
+the manifest. `docs/design/context-api.md` is the generated per-attribute
+reference for `ctx`.
+"""
+
+from __future__ import annotations
+
+
+class MomentumStrategy:
+    """Follow the last closed bar. A placeholder, and the calibration reference."""
+
+    def __init__(self, *, interval: str = "5m", stop: float = 0.75,
+                 target: float = 0.75, size: int = 1):
+        self.interval = interval
+        self.stop = stop
+        self.target = target
+        self.size = size
+
+    def setup(self, ctx) -> None:
+        ctx.subscribe(self.interval)
+
+    def on_bars(self, ctx) -> None:
+        if ctx.position or ctx.working_order_ids:
+            return  # one position at a time; the bracket does the exits
+        history = ctx.history(self.interval)
+        if len(history) < 1:
+            return
+        last = history[-1]      # the bar that just closed; history[len] would raise
+        if last.close == last.open:
+            return
+        place = ctx.buy if last.close > last.open else ctx.sell
+        place(
+            size=self.size,
+            stop_offset=self.stop,
+            target_offset=self.target,
+            tag="entry",
+        )
+
+    def on_fill(self, ctx) -> None:
+        pass
+
+    def on_lifecycle(self, ctx) -> None:
+        pass
+
+```
+
+---
+
+### Your prior trials in this campaign
+
+None yet. This is the first proposal of the campaign.
+
+---
+
+### Your task
+
+Propose the next strategy. The objective is the score reported above for each
+prior trial: **higher is better**. Write the complete file.
+
+Constraints that will cost you a trial if you break them:
+
+- A runtime error is a trial. It is recorded, it counts, and it scores nothing.
+- The callbacks are `setup`, `on_bars`, `on_fill`, `on_lifecycle`. All four must
+  exist with those exact signatures, and the class must be constructible with no
+  arguments.
+- Nothing may run at module level except the class definition and imports.
+- You cannot import the scorer, the metric, the engine, the dataset or anything
+  under `src.core.scoring`. They are not in your process.
+- `ctx.history(...)` is a bounded window. Keep what you need on `self`.

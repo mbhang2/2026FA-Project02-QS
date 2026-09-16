@@ -1,0 +1,25 @@
+{
+  "digest": "b05b5b22dea962214485bc2013814a876f1b3e3cc6825b71c98e9bb0d6e98157",
+  "record": {
+    "agent": "src.core.loop.agents.NullGenerator",
+    "agent_config": null,
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 46,
+    "budget": 5,
+    "campaign_id": "task46-e2e",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "synthetic",
+    "hypothesis_digest": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+    "hypothesis_path": "config/hypotheses/intraday-continuation.md",
+    "note": "Task 46 end-to-end. N=5 supports no claim about the hypothesis and is not meant to; it establishes that the question reaches the agent and the record. The proposer here is the STUB -- these candidates are edgeless by construction and are not an attempt to answer the question.",
+    "profile": "campaign",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-09-16T21:04:12+00:00"
+  }
+}

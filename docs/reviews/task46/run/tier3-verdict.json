@@ -1,0 +1,23 @@
+{
+  "schema": "tier3-audit-verdict/1",
+  "verdict": "CANNOT_TELL",
+  "is_veto": false,
+  "escalate_to_human": true,
+  "reasons": [
+    "this campaign has no gate verdict to audit",
+    "the best candidate's source is absent, so leakage review of the code itself was not possible"
+  ],
+  "checks": {
+    "deflation_cross_check": {
+      "available": false,
+      "why": "the summary carries no null moments or no simulated max"
+    },
+    "unknowns": [
+      "this campaign has no gate verdict to audit",
+      "the best candidate's source is absent, so leakage review of the code itself was not possible"
+    ]
+  },
+  "can_promote": false,
+  "promotion_note": "Tier 3 cannot promote. The verdict type has three members and none of them means approval; PASS means nothing was found to veto. An auditor that only removes candidates is safe with an uncharacterised error rate, and this one's has not been characterised.",
+  "n_trials_provenance": "read from the tier-2 campaign summary; N as runs/ledger.jsonl defines it -- every trial including crashes, global across datasets, written as the trials happen. Tier 3 displays and sanity-checks it and never recomputes a bar from it."
+}

@@ -44,6 +44,15 @@ inst/doc
 private_data*
 private_data/*
 
+# generated caches; data/manifest.json stays tracked
+data/cache/
+
+# Vendor downloads never belong in the tree -- they go to ~/dl/databento/ and
+# are uploaded to R2 from there. `ext/` does not exist; this is a guard for the
+# habit, because a couple of GiB of tick data plus one `git add -A` is not
+# something you undo quickly. See docs/setup/R2_ACCESS.md section 7.
+ext/
+
 # Python artifacts
 __pycache__/
 *.py[cod]
@@ -63,11 +72,7 @@ node_modules/*
 
 # Secrets
 secrets/*
-!secrets/.gitkeep.venv/
-__pycache__/
-*.pyc
-
-# Python
+!secrets/.gitkeep
 .venv/
 __pycache__/
 *.pyc
@@ -76,3 +81,21 @@ __pycache__/
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
+build/
+dist/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Scratch strategy sources written by calibration runs. Regenerated
+# deterministically from a committed generator and a recorded seed, so
+# there is nothing here a review needs and tens of thousands of files
+# a review does not.
+runs/tmp-*/
+
+# transient: the proposing agent type-checks here, then deletes it
+src/strategies/_proposal_*.py
+CLAUDE_TASK.md

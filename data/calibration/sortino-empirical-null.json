@@ -1,0 +1,160 @@
+{
+  "metric": "sortino_per_session",
+  "strategy": "reference/vol-scaled",
+  "accept_rule": "empirical: far <= 0.001 from the tabulated null, net > 0",
+  "far": 0.001,
+  "t_min": null,
+  "seeds": 20,
+  "sessions": 175,
+  "ticks_per_session": 390,
+  "fill_model": "unfavorable",
+  "curve": [
+    {
+      "signal_strength": 0.0,
+      "acceptance_rate": 0.0,
+      "mean_sortino": -0.18879766353968153,
+      "mean_significance": -1.1169420403635533,
+      "mean_sharpe": -0.1700853991077553,
+      "mean_skew": -0.0019194871608756527,
+      "mean_kurtosis": 1.5269426915834872,
+      "mean_net": -17.553187499999943,
+      "mean_trades": 229.7,
+      "mean_sessions_with_exposure": 35,
+      "n_sessions": 35,
+      "metrics_used": [
+        "sortino_per_session"
+      ],
+      "placeholder_acceptance_rate": 0.0,
+      "placeholder_mean_t": -0.9184028170335425
+    },
+    {
+      "signal_strength": 0.05,
+      "acceptance_rate": 0.0,
+      "mean_sortino": -0.1491474650068943,
+      "mean_significance": -0.8823683024278448,
+      "mean_sharpe": -0.13409485573583974,
+      "mean_skew": -0.14550096047639063,
+      "mean_kurtosis": 0.905446814688753,
+      "mean_net": -13.21137499999995,
+      "mean_trades": 241.05,
+      "mean_sessions_with_exposure": 35,
+      "n_sessions": 35,
+      "metrics_used": [
+        "sortino_per_session"
+      ],
+      "placeholder_acceptance_rate": 0.0,
+      "placeholder_mean_t": -0.6557712129357274
+    },
+    {
+      "signal_strength": 0.1,
+      "acceptance_rate": 0.0,
+      "mean_sortino": -0.05256618991576576,
+      "mean_significance": -0.3109857734352367,
+      "mean_sharpe": -0.05758059818822928,
+      "mean_skew": -0.01772892729272022,
+      "mean_kurtosis": 0.50364404506594,
+      "mean_net": -5.3999999999999435,
+      "mean_trades": 253.05,
+      "mean_sessions_with_exposure": 35,
+      "n_sessions": 35,
+      "metrics_used": [
+        "sortino_per_session"
+      ],
+      "placeholder_acceptance_rate": 0.0,
+      "placeholder_mean_t": -0.16424432971603004
+    },
+    {
+      "signal_strength": 0.2,
+      "acceptance_rate": 0.35,
+      "mean_sortino": 0.42166262950090977,
+      "mean_significance": 2.494589757678956,
+      "mean_sharpe": 0.20674846425811863,
+      "mean_skew": 0.007019103149681712,
+      "mean_kurtosis": 0.4226914486238329,
+      "mean_net": 22.091500000000067,
+      "mean_trades": 274.35,
+      "mean_sessions_with_exposure": 35,
+      "n_sessions": 35,
+      "metrics_used": [
+        "sortino_per_session"
+      ],
+      "placeholder_acceptance_rate": 0.05,
+      "placeholder_mean_t": 1.409382496062288
+    },
+    {
+      "signal_strength": 0.35,
+      "acceptance_rate": 0.9,
+      "mean_sortino": 1.7550545868786045,
+      "mean_significance": 10.38304295966876,
+      "mean_sharpe": 0.6665944958621337,
+      "mean_skew": -0.11444820757391762,
+      "mean_kurtosis": 0.3449735197694543,
+      "mean_net": 85.33693750000005,
+      "mean_trades": 316.5,
+      "mean_sessions_with_exposure": 35,
+      "n_sessions": 35,
+      "metrics_used": [
+        "sharpe_per_session",
+        "sortino_per_session"
+      ],
+      "placeholder_acceptance_rate": 0.85,
+      "placeholder_mean_t": 4.380800946226978
+    },
+    {
+      "signal_strength": 0.5,
+      "acceptance_rate": 1.0,
+      "mean_sortino": 2.182768152164385,
+      "mean_significance": 12.913430536213424,
+      "mean_sharpe": 1.0526201788473633,
+      "mean_skew": -0.33467157749828774,
+      "mean_kurtosis": -0.09177919592418861,
+      "mean_net": 174.61500000000012,
+      "mean_trades": 350.9,
+      "mean_sessions_with_exposure": 35,
+      "n_sessions": 35,
+      "metrics_used": [
+        "sharpe_per_session",
+        "sortino_per_session"
+      ],
+      "placeholder_acceptance_rate": 1.0,
+      "placeholder_mean_t": 7.884163659267935
+    },
+    {
+      "signal_strength": 0.75,
+      "acceptance_rate": 1.0,
+      "mean_sortino": 2.0571379937806222,
+      "mean_significance": 12.170192496051644,
+      "mean_sharpe": 1.9896816481506405,
+      "mean_skew": -0.5791599418399626,
+      "mean_kurtosis": 0.11092525362791303,
+      "mean_net": 410.6936875000001,
+      "mean_trades": 398.85,
+      "mean_sessions_with_exposure": 35,
+      "n_sessions": 35,
+      "metrics_used": [
+        "sharpe_per_session",
+        "sortino_per_session"
+      ],
+      "placeholder_acceptance_rate": 1.0,
+      "placeholder_mean_t": 17.9094417827476
+    },
+    {
+      "signal_strength": 1.0,
+      "acceptance_rate": 1.0,
+      "mean_sortino": 2.697730595287665,
+      "mean_significance": 15.959989435030648,
+      "mean_sharpe": 2.697730595287665,
+      "mean_skew": -0.8424702014084319,
+      "mean_kurtosis": 0.637756290279125,
+      "mean_net": 639.9944375000002,
+      "mean_trades": 424.9,
+      "mean_sessions_with_exposure": 35,
+      "n_sessions": 35,
+      "metrics_used": [
+        "sharpe_per_session"
+      ],
+      "placeholder_acceptance_rate": 1.0,
+      "placeholder_mean_t": 28.181973281417104
+    }
+  ]
+}

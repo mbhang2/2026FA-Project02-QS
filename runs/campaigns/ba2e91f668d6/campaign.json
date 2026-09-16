@@ -1,0 +1,22 @@
+{
+  "digest": "8d260f8f0ba5fea86154ef9d4813772c30ca41a650f663f9a15721cd2a169053",
+  "record": {
+    "agent": "src.core.loop.agents.NullGenerator",
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 1,
+    "budget": 200,
+    "campaign_id": "ba2e91f668d6",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "synthetic",
+    "note": "the null campaign: 200 edgeless proposals on the synthetic training split. Budget of 200 chosen because at far=0.001 it predicts on the order of 0.2 per-trial acceptances, which is the smallest budget where 'expect about zero' is a checkable prediction rather than a truism, and because the uncorrected best-of-200 is clearly inflated at that size.",
+    "profile": "campaign",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-09-14T01:24:21+00:00"
+  }
+}

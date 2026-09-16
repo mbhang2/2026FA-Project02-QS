@@ -1,0 +1,161 @@
+{
+  "sweep": [
+    0.0,
+    0.05,
+    0.1,
+    0.15,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "oracle": {
+    "0.0": {
+      "score": -0.258513933283505,
+      "net_pnl": -63.2,
+      "trades": 1008,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.05": {
+      "score": 0.2751205474474091,
+      "net_pnl": 51.46,
+      "trades": 963,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.1": {
+      "score": 0.7989456711616477,
+      "net_pnl": 137.31,
+      "trades": 917,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.15": {
+      "score": 1.769501210943815,
+      "net_pnl": 241.96,
+      "trades": 866,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.2": {
+      "score": 3.3286280839423448,
+      "net_pnl": 357.14,
+      "trades": 827,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.3": {
+      "score": 9.818982558463079,
+      "net_pnl": 629.85,
+      "trades": 738,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.4": {
+      "score": 23.228419833447454,
+      "net_pnl": 936.51,
+      "trades": 634,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.5": {
+      "score": 38.24582208331345,
+      "net_pnl": 1338.99,
+      "trades": 503,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.75": {
+      "score": 35.912766871627205,
+      "net_pnl": 2341.9,
+      "trades": 326,
+      "rejected": false,
+      "reason": ""
+    },
+    "1.0": {
+      "score": 0.8844132684104862,
+      "net_pnl": 3392.38,
+      "trades": 211,
+      "rejected": false,
+      "reason": "1 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead"
+    }
+  },
+  "reference": {
+    "0.0": {
+      "score": -0.45899551160289687,
+      "net_pnl": -115.25375000000001,
+      "trades": 632,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.05": {
+      "score": -0.31945244756687247,
+      "net_pnl": -81.15249999999995,
+      "trades": 679,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.1": {
+      "score": -0.19085273128779903,
+      "net_pnl": -43.48875000000001,
+      "trades": 719,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.15": {
+      "score": -0.12932695980045536,
+      "net_pnl": -30.738749999999897,
+      "trades": 722,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.2": {
+      "score": 0.07033828228427132,
+      "net_pnl": 14.575000000000031,
+      "trades": 761,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.3": {
+      "score": 0.7707950898444739,
+      "net_pnl": 133.69125000000003,
+      "trades": 823,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.4": {
+      "score": 1.7753723701580477,
+      "net_pnl": 288.455,
+      "trades": 881,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.5": {
+      "score": 2.880963817421481,
+      "net_pnl": 518.1887499999998,
+      "trades": 949,
+      "rejected": false,
+      "reason": ""
+    },
+    "0.75": {
+      "score": 10.654387685872972,
+      "net_pnl": 1126.6412499999997,
+      "trades": 1061,
+      "rejected": false,
+      "reason": ""
+    },
+    "1.0": {
+      "score": 14.547738078901816,
+      "net_pnl": 1763.0762499999998,
+      "trades": 1134,
+      "rejected": false,
+      "reason": ""
+    }
+  },
+  "gate_bar_at_n100": 0.8011,
+  "dataset_seed": 1,
+  "n_sessions_train": 105
+}

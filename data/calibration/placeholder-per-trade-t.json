@@ -1,0 +1,65 @@
+{
+  "metric": "placeholder_per_trade_t",
+  "status": "superseded by sortino_per_session (Task 4); kept as evidence",
+  "note": "The metric Task 3 shipped. Acceptance falls from 0.80 at signal 0.75 to 0.40 at 1.00 while mean net P&L keeps climbing -- a per-trade statistic is not invariant to decision frequency. Run at 60 sessions, which is below the 30-session validation floor the replacement metric enforces, so it is not directly comparable; sortino-per-session.json recomputes both metrics on the same runs for the comparison that is.",
+  "t_min": 3.0,
+  "seeds": 20,
+  "curve": [
+    {
+      "signal_strength": 0.0,
+      "acceptance_rate": 0.0,
+      "mean_t": -2.6480826640618464,
+      "mean_net": -45.48649999999996,
+      "mean_trades": 197.75
+    },
+    {
+      "signal_strength": 0.05,
+      "acceptance_rate": 0.0,
+      "mean_t": -2.1485413785719714,
+      "mean_net": -38.325499999999955,
+      "mean_trades": 205.95
+    },
+    {
+      "signal_strength": 0.1,
+      "acceptance_rate": 0.0,
+      "mean_t": -1.6124075102508924,
+      "mean_net": -31.053999999999952,
+      "mean_trades": 220.55
+    },
+    {
+      "signal_strength": 0.2,
+      "acceptance_rate": 0.0,
+      "mean_t": -0.3098239801809551,
+      "mean_net": -10.555499999999935,
+      "mean_trades": 256.25
+    },
+    {
+      "signal_strength": 0.35,
+      "acceptance_rate": 0.15,
+      "mean_t": 1.5825869604495135,
+      "mean_net": 27.44200000000009,
+      "mean_trades": 315.75
+    },
+    {
+      "signal_strength": 0.5,
+      "acceptance_rate": 0.45,
+      "mean_t": 3.753957717351108,
+      "mean_net": 94.46600000000012,
+      "mean_trades": 387.1
+    },
+    {
+      "signal_strength": 0.75,
+      "acceptance_rate": 0.8,
+      "mean_t": 4.5315122545242374,
+      "mean_net": 209.07650000000018,
+      "mean_trades": 502.15
+    },
+    {
+      "signal_strength": 1.0,
+      "acceptance_rate": 0.4,
+      "mean_t": 3.5280616433858847,
+      "mean_net": 252.33300000000023,
+      "mean_trades": 618.15
+    }
+  ]
+}

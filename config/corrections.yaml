@@ -1,0 +1,209 @@
+# Historical corrections record.
+#
+# This file is EVIDENCE, not a mechanism. Nothing reads it at runtime and no path
+# resolution happens anywhere: the bucket holds exactly one object per (symbol,
+# date) under raw/, and that object is canonical. It replaced
+# config/exclusions.yaml, which described a supersession scheme that no longer
+# exists.
+#
+# WHAT HAPPENED
+#
+# Task 1 (commit f40c3c3) found six objects under raw/trades/NQ/ whose DBN header
+# reported ES.FUT and whose decompressed bytes were identical to the
+# raw/trades/ES/ object of the same date. NQ had no data at all on those dates.
+# Correct NQ data was re-downloaded from Databento (job
+# GLBX-20260908-MRU3SPA6VW) and, on 2026-09-08, copied over the contaminated
+# objects in place. The patches/ prefix that briefly held the replacements was
+# then purged.
+#
+# DIVERGENCE FROM THE SOURCE LAKE
+#
+# raw/ is no longer byte-identical to gexalgo/raw. It differs on exactly the six
+# objects listed below and on nothing else. The contaminated originals still
+# exist in gexalgo/raw, so nothing here is unrecoverable. Because the in-place
+# overwrite gave up `rclone check` as a mirror-integrity test, data/manifest.json
+# now carries size and ETag for every object and scripts/inventory.py compares
+# them on every run.
+#
+# The `original.sha256` fields are null: Task 1b hashed only the replacements, and
+# the contaminated bytes were overwritten before a digest was taken. The size,
+# DBN version and header symbol below come from data/manifest.json at commit
+# 601f1f3, which was generated from the bucket while the originals were still in
+# place. A digest can be recovered from gexalgo/raw if one is ever needed.
+
+divergence_from_source_lake:
+  source: gexalgo/raw
+  objects_differing: 6
+  applied: 2026-09-08
+  method: in-place overwrite; the patches/ prefix that held the replacements was purged
+  originals_recoverable_from: gexalgo/raw
+
+corrections:
+  - date: 2025-07-03
+    symbol: NQ
+    key: raw/trades/NQ/glbx-mdp3-20250703.trades.dbn.zst
+    original:
+      dbn_header_symbol: ES.FUT
+      dbn_version: 1
+      size_bytes: 3095256
+      sha256: null            # never computed; see the header note
+      finding: >
+        DBN header reported ES.FUT. Decompressed bytes were identical to
+        raw/trades/ES/glbx-mdp3-20250703.trades.dbn.zst of the same date, so NQ had no
+        data at this key.
+    replacement:
+      dbn_header_symbol: NQ.FUT
+      dbn_version: 3
+      size_bytes: 2943000
+      records: 177758
+      sha256: bde5c02407ad9d115399ee85bebc44940d3e7752fce23e9ccf2c9e75c9c9dfd7
+      vendor_condition: available    # last modified 2026-06-13
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    found_in: f40c3c3
+    recorded: 2026-09-08
+    applied: 2026-09-08
+
+  - date: 2025-07-04
+    symbol: NQ
+    key: raw/trades/NQ/glbx-mdp3-20250704.trades.dbn.zst
+    original:
+      dbn_header_symbol: ES.FUT
+      dbn_version: 1
+      size_bytes: 810409
+      sha256: null            # never computed; see the header note
+      finding: >
+        DBN header reported ES.FUT. Decompressed bytes were identical to
+        raw/trades/ES/glbx-mdp3-20250704.trades.dbn.zst of the same date, so NQ had no
+        data at this key.
+    replacement:
+      dbn_header_symbol: NQ.FUT
+      dbn_version: 3
+      size_bytes: 844844
+      records: 51713
+      sha256: b02430b579ce4409ad81dc04aacf8c7783db4ca3da73dae20b1bc285403558ed
+      vendor_condition: available    # last modified 2026-06-13
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    found_in: f40c3c3
+    recorded: 2026-09-08
+    applied: 2026-09-08
+
+  - date: 2025-07-06
+    symbol: NQ
+    key: raw/trades/NQ/glbx-mdp3-20250706.trades.dbn.zst
+    original:
+      dbn_header_symbol: ES.FUT
+      dbn_version: 1
+      size_bytes: 161172
+      sha256: null            # never computed; see the header note
+      finding: >
+        DBN header reported ES.FUT. Decompressed bytes were identical to
+        raw/trades/ES/glbx-mdp3-20250706.trades.dbn.zst of the same date, so NQ had no
+        data at this key.
+    replacement:
+      dbn_header_symbol: NQ.FUT
+      dbn_version: 3
+      size_bytes: 141808
+      records: 8773
+      sha256: c40ed044a999f2627cd1b4ada1965339ddc4d5f8dafa8f53d9911de908e7de20
+      vendor_condition: available    # last modified 2026-06-09
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    found_in: f40c3c3
+    recorded: 2026-09-08
+    applied: 2026-09-08
+
+  - date: 2025-07-07
+    symbol: NQ
+    key: raw/trades/NQ/glbx-mdp3-20250707.trades.dbn.zst
+    original:
+      dbn_header_symbol: ES.FUT
+      dbn_version: 1
+      size_bytes: 6017456
+      sha256: null            # never computed; see the header note
+      finding: >
+        DBN header reported ES.FUT. Decompressed bytes were identical to
+        raw/trades/ES/glbx-mdp3-20250707.trades.dbn.zst of the same date, so NQ had no
+        data at this key.
+    replacement:
+      dbn_header_symbol: NQ.FUT
+      dbn_version: 3
+      size_bytes: 5015342
+      records: 303542
+      sha256: 7a93f7a3ab0443b8fbe7efd0d263c122c510490f627622d175aaf7bff43988f1
+      vendor_condition: available    # last modified 2026-06-10
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    found_in: f40c3c3
+    recorded: 2026-09-08
+    applied: 2026-09-08
+
+  - date: 2025-07-08
+    symbol: NQ
+    key: raw/trades/NQ/glbx-mdp3-20250708.trades.dbn.zst
+    original:
+      dbn_header_symbol: ES.FUT
+      dbn_version: 1
+      size_bytes: 5012947
+      sha256: null            # never computed; see the header note
+      finding: >
+        DBN header reported ES.FUT. Decompressed bytes were identical to
+        raw/trades/ES/glbx-mdp3-20250708.trades.dbn.zst of the same date, so NQ had no
+        data at this key.
+    replacement:
+      dbn_header_symbol: NQ.FUT
+      dbn_version: 3
+      size_bytes: 4465892
+      records: 268896
+      sha256: 40b0e98a947c276cc4ab40671634f0afaeab181752e9742fc651a113c2b6ed6b
+      vendor_condition: available    # last modified 2026-06-11
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    found_in: f40c3c3
+    recorded: 2026-09-08
+    applied: 2026-09-08
+
+  - date: 2025-07-09
+    symbol: NQ
+    key: raw/trades/NQ/glbx-mdp3-20250709.trades.dbn.zst
+    original:
+      dbn_header_symbol: ES.FUT
+      dbn_version: 1
+      size_bytes: 4899759
+      sha256: null            # never computed; see the header note
+      finding: >
+        DBN header reported ES.FUT. Decompressed bytes were identical to
+        raw/trades/ES/glbx-mdp3-20250709.trades.dbn.zst of the same date, so NQ had no
+        data at this key.
+    replacement:
+      dbn_header_symbol: NQ.FUT
+      dbn_version: 3
+      size_bytes: 4641052
+      records: 281937
+      sha256: 75887b8086dedd5935d15acad6349e90d169b8b87b49d459a70101f99d45f996
+      vendor_condition: available    # last modified 2026-06-11
+    databento_job: GLBX-20260908-MRU3SPA6VW
+    found_in: f40c3c3
+    recorded: 2026-09-08
+    applied: 2026-09-08
+
+# Provenance for the replacement download. The vendor sidecars that carried this
+# lived at patches/_jobs/GLBX-20260908-MRU3SPA6VW/ and were purged with the rest
+# of the prefix, so the fields below are transcribed from them here.
+job_provenance:
+  GLBX-20260908-MRU3SPA6VW:
+    dataset: GLBX.MDP3
+    schema: trades
+    symbols: [NQ.FUT]
+    stype_in: parent
+    stype_out: instrument_id
+    encoding: dbn
+    compression: zstd
+    split_duration: day
+    query_start_ns: 1751500800000000000   # 2025-07-03T00:00:00Z
+    query_end_ns: 1752105600000000000     # 2025-07-10T00:00:00Z
+    submitted: 2026-09-08
+    dbn_version: 3
+    sidecars_purged_from: patches/_jobs/GLBX-20260908-MRU3SPA6VW/
+    note: >
+      The replacements are DBN v3 while the rest of the mirror is DBN v1. Both
+      decode to the same 13 columns and dtypes with a ts_recv index, so the
+      difference is invisible above the reader. The v1/v3 mix now lives inside
+      raw/ and is permanent, so dbn_version is recorded per object in
+      data/manifest.json.

@@ -1,0 +1,49 @@
+{
+  "digest": "045ae77bbaa1e7a9d45de36eb96d59201ea343e0fdbd4e88e2b584e667f025a1",
+  "record": {
+    "agent": "src.core.loop.llm.LLMAgent[s050]",
+    "agent_config": {
+      "agent_told_a_signal_exists": false,
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "planted_mechanism": "momentum over consecutive signal_interval_ticks=10 blocks: the drift of block i is signal_strength * sign(return of block i-1), spread over the block. Ticks are a median 30s apart, so a block is one 5m bar.",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "97e45328af3f9f73a07281de3418127d6fc86e37423c260640413d86f1b1f165",
+      "prompt_template_digest_matches_task36": true,
+      "proposal_wall_clock_s": 900.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "- dataset: a **simulated** instrument, not NQ. Prices are generated tick by\n  tick; there is no options data, no GEX, no calendar of real sessions.\n- split: the pre-registered **training** split, 105 sessions of 390 ticks.\n- one price series, `trades` only. No quotes and no book, so nothing in the\n  documents above about spread, mid or depth applies.\n- fill model: `unfavorable`. A resting limit fills only on a trade strictly\n  through it.\n- warmup: 0 sessions. Action cap: 64 actions per callback.\n- history window: 512 bars per subscription. Past that, `ctx.history(...)[0]`\n  raises; keep what you need on `self`.\n- wall-clock budget: 120s for the whole walk. A tick subscription over 105\n  sessions will not finish inside it; bar intervals will.\n- commission is charged per contract on every fill, so turnover is not free.",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "signal_strength": 0.5,
+      "temperature": 0.7
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "budget": 100,
+    "campaign_id": "task37-s050",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "synthetic-s050",
+    "note": "Task 37 positive control, planted strength 0.5. Chosen clearly above the bar: the reference scores +2.8810, 3.6x the +0.8011 bar. Oracle ceiling +38.2458. Success takes BOTH conditions: the gate accepts at q, AND the accepted candidate exploits the planted mechanism rather than happening to look good. Stated before running: the rotation null preserves cyclic order and therefore retains between a third and a half of this signal (docs/reviews/task37/rotation-check.json), so the gate is expected to be conservative and a non-acceptance does not by itself mean the loop failed to find the edge.",
+    "profile": "campaign-s050",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "fixed budget of 100; no early stop on any observed result, no extension if the last trial looks promising",
+    "written_at": "2026-09-15T15:35:49+00:00"
+  }
+}

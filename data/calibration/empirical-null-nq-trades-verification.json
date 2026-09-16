@@ -1,0 +1,820 @@
+{
+  "question": "Is the FAR column a p-value column? Benjamini-Hochberg needs validity -- P(p <= a) <= a for every a -- not exact uniformity. Conservative costs power and stays valid; anti-conservative makes the reported false-discovery rate precise and wrong.",
+  "runs": {
+    "1": {
+      "anti_conservative_cells": [],
+      "block_length": 1,
+      "build_sessions": 192,
+      "check_sessions": 192,
+      "check_trials": 500000,
+      "far_column": [
+        {
+          "clamped_high": 169311,
+          "clamped_low": 6,
+          "endpoint_note": "alpha=0.5 is the table's upper clamp: every score above the last tabulated quantile reports exactly that value, so P(p <= it) is 1 by construction. Not evaluated.",
+          "ks_critical_0.01": 0.009305478164319996,
+          "ks_statistic_interior": 0.12849760508508212,
+          "n": 73,
+          "p_values": 200000,
+          "realised": {
+            "0.0005": 3e-05,
+            "0.001": 6e-05,
+            "0.002": 0.00015,
+            "0.005": 0.00049,
+            "0.01": 0.000975,
+            "0.02": 0.00241,
+            "0.05": 0.00733,
+            "0.1": 0.016925,
+            "0.2": 0.0416,
+            "0.5": 1.0
+          },
+          "valid_inside_grid": true
+        },
+        {
+          "clamped_high": 173784,
+          "clamped_low": 4,
+          "endpoint_note": "alpha=0.5 is the table's upper clamp: every score above the last tabulated quantile reports exactly that value, so P(p <= it) is 1 by construction. Not evaluated.",
+          "ks_critical_0.01": 0.010067868275660627,
+          "ks_statistic_interior": 0.15126913743431497,
+          "n": 86,
+          "p_values": 200000,
+          "realised": {
+            "0.0005": 2e-05,
+            "0.001": 5e-05,
+            "0.002": 0.00012,
+            "0.005": 0.00031,
+            "0.01": 0.000735,
+            "0.02": 0.00164,
+            "0.05": 0.005265,
+            "0.1": 0.012785,
+            "0.2": 0.03259,
+            "0.5": 1.0
+          },
+          "valid_inside_grid": true
+        }
+      ],
+      "rows": [
+        {
+          "far": 0.5,
+          "measured": 0.27063395394698686,
+          "n": 30,
+          "ratio": 0.5412679078939737,
+          "threshold": 0.06369129141384117
+        },
+        {
+          "far": 0.2,
+          "measured": 0.08650190304186692,
+          "n": 30,
+          "ratio": 0.43250951520933456,
+          "threshold": 0.361389062599073
+        },
+        {
+          "far": 0.1,
+          "measured": 0.03782083205830528,
+          "n": 30,
+          "ratio": 0.3782083205830528,
+          "threshold": 0.5787821074784081
+        },
+        {
+          "far": 0.05,
+          "measured": 0.016184356055833227,
+          "n": 30,
+          "ratio": 0.32368712111666453,
+          "threshold": 0.808703178699677
+        },
+        {
+          "far": 0.02,
+          "measured": 0.004996109914418117,
+          "n": 30,
+          "ratio": 0.24980549572090585,
+          "threshold": 1.1381981891261839
+        },
+        {
+          "far": 0.01,
+          "measured": 0.0020400448809873815,
+          "n": 30,
+          "ratio": 0.20400448809873814,
+          "threshold": 1.419518200609387
+        },
+        {
+          "far": 0.005,
+          "measured": 0.0007980175563862405,
+          "n": 30,
+          "ratio": 0.1596035112772481,
+          "threshold": 1.7525618623099088
+        },
+        {
+          "far": 0.002,
+          "measured": 0.00026000572012584275,
+          "n": 30,
+          "ratio": 0.13000286006292136,
+          "threshold": 2.2238276432580446
+        },
+        {
+          "far": 0.001,
+          "measured": 9.800215604743305e-05,
+          "n": 30,
+          "ratio": 0.09800215604743305,
+          "threshold": 2.6339179965635755
+        },
+        {
+          "far": 0.0005,
+          "measured": 3.4000748016456365e-05,
+          "n": 30,
+          "ratio": 0.06800149603291272,
+          "threshold": 3.1327719791990254
+        },
+        {
+          "far": 0.5,
+          "measured": 0.205892,
+          "n": 50,
+          "ratio": 0.411784,
+          "threshold": 0.060730779282635976
+        },
+        {
+          "far": 0.2,
+          "measured": 0.060916,
+          "n": 50,
+          "ratio": 0.30457999999999996,
+          "threshold": 0.271595224238112
+        },
+        {
+          "far": 0.1,
+          "measured": 0.025822,
+          "n": 50,
+          "ratio": 0.25822,
+          "threshold": 0.41420814615553053
+        },
+        {
+          "far": 0.05,
+          "measured": 0.0112,
+          "n": 50,
+          "ratio": 0.22399999999999998,
+          "threshold": 0.5532133215715702
+        },
+        {
+          "far": 0.02,
+          "measured": 0.003636,
+          "n": 50,
+          "ratio": 0.1818,
+          "threshold": 0.7401967580584413
+        },
+        {
+          "far": 0.01,
+          "measured": 0.00155,
+          "n": 50,
+          "ratio": 0.155,
+          "threshold": 0.8894103352580323
+        },
+        {
+          "far": 0.005,
+          "measured": 0.000576,
+          "n": 50,
+          "ratio": 0.1152,
+          "threshold": 1.0486886389276964
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000192,
+          "n": 50,
+          "ratio": 0.096,
+          "threshold": 1.2661661551103098
+        },
+        {
+          "far": 0.001,
+          "measured": 6.8e-05,
+          "n": 50,
+          "ratio": 0.068,
+          "threshold": 1.449459527801263
+        },
+        {
+          "far": 0.0005,
+          "measured": 3.2e-05,
+          "n": 50,
+          "ratio": 0.064,
+          "threshold": 1.636596380273784
+        },
+        {
+          "far": 0.5,
+          "measured": 0.153484,
+          "n": 73,
+          "ratio": 0.306968,
+          "threshold": 0.059665003344761346
+        },
+        {
+          "far": 0.2,
+          "measured": 0.041192,
+          "n": 73,
+          "ratio": 0.20595999999999998,
+          "threshold": 0.22783697551019083
+        },
+        {
+          "far": 0.1,
+          "measured": 0.016822,
+          "n": 73,
+          "ratio": 0.16821999999999998,
+          "threshold": 0.3363566296964144
+        },
+        {
+          "far": 0.05,
+          "measured": 0.007078,
+          "n": 73,
+          "ratio": 0.14156,
+          "threshold": 0.4386644957020943
+        },
+        {
+          "far": 0.02,
+          "measured": 0.002336,
+          "n": 73,
+          "ratio": 0.1168,
+          "threshold": 0.5706232610917463
+        },
+        {
+          "far": 0.01,
+          "measured": 0.000928,
+          "n": 73,
+          "ratio": 0.0928,
+          "threshold": 0.6746289884755242
+        },
+        {
+          "far": 0.005,
+          "measured": 0.000444,
+          "n": 73,
+          "ratio": 0.0888,
+          "threshold": 0.7752557227489935
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000156,
+          "n": 73,
+          "ratio": 0.078,
+          "threshold": 0.9112359806546833
+        },
+        {
+          "far": 0.001,
+          "measured": 6.2e-05,
+          "n": 73,
+          "ratio": 0.062,
+          "threshold": 1.0146339205934216
+        },
+        {
+          "far": 0.0005,
+          "measured": 3.4e-05,
+          "n": 73,
+          "ratio": 0.068,
+          "threshold": 1.1136780467446616
+        },
+        {
+          "far": 0.5,
+          "measured": 0.131446,
+          "n": 86,
+          "ratio": 0.262892,
+          "threshold": 0.05918483300207264
+        },
+        {
+          "far": 0.2,
+          "measured": 0.032798,
+          "n": 86,
+          "ratio": 0.16399,
+          "threshold": 0.21173101014638868
+        },
+        {
+          "far": 0.1,
+          "measured": 0.013006,
+          "n": 86,
+          "ratio": 0.13005999999999998,
+          "threshold": 0.30707984749978107
+        },
+        {
+          "far": 0.05,
+          "measured": 0.005478,
+          "n": 86,
+          "ratio": 0.10956,
+          "threshold": 0.3963512921560063
+        },
+        {
+          "far": 0.02,
+          "measured": 0.001696,
+          "n": 86,
+          "ratio": 0.0848,
+          "threshold": 0.5121803351623135
+        },
+        {
+          "far": 0.01,
+          "measured": 0.000744,
+          "n": 86,
+          "ratio": 0.0744,
+          "threshold": 0.598237965696848
+        },
+        {
+          "far": 0.005,
+          "measured": 0.000296,
+          "n": 86,
+          "ratio": 0.059199999999999996,
+          "threshold": 0.6864734528095908
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000106,
+          "n": 86,
+          "ratio": 0.053,
+          "threshold": 0.7995207620190233
+        },
+        {
+          "far": 0.001,
+          "measured": 4.6e-05,
+          "n": 86,
+          "ratio": 0.046,
+          "threshold": 0.8977295427376504
+        },
+        {
+          "far": 0.0005,
+          "measured": 1.8e-05,
+          "n": 86,
+          "ratio": 0.036,
+          "threshold": 0.9816697012193181
+        },
+        {
+          "far": 0.5,
+          "measured": 0.112924,
+          "n": 100,
+          "ratio": 0.225848,
+          "threshold": 0.058733375667194915
+        },
+        {
+          "far": 0.2,
+          "measured": 0.02685,
+          "n": 100,
+          "ratio": 0.13424999999999998,
+          "threshold": 0.19807088762196667
+        },
+        {
+          "far": 0.1,
+          "measured": 0.01056,
+          "n": 100,
+          "ratio": 0.1056,
+          "threshold": 0.2848529650210708
+        },
+        {
+          "far": 0.05,
+          "measured": 0.00439,
+          "n": 100,
+          "ratio": 0.08779999999999999,
+          "threshold": 0.3642074101115878
+        },
+        {
+          "far": 0.02,
+          "measured": 0.001424,
+          "n": 100,
+          "ratio": 0.0712,
+          "threshold": 0.46521479702466284
+        },
+        {
+          "far": 0.01,
+          "measured": 0.000602,
+          "n": 100,
+          "ratio": 0.0602,
+          "threshold": 0.5389081103872805
+        },
+        {
+          "far": 0.005,
+          "measured": 0.000246,
+          "n": 100,
+          "ratio": 0.0492,
+          "threshold": 0.6180457663293235
+        },
+        {
+          "far": 0.002,
+          "measured": 7e-05,
+          "n": 100,
+          "ratio": 0.034999999999999996,
+          "threshold": 0.7221261855656634
+        },
+        {
+          "far": 0.001,
+          "measured": 3.2e-05,
+          "n": 100,
+          "ratio": 0.032,
+          "threshold": 0.7967165352409217
+        },
+        {
+          "far": 0.0005,
+          "measured": 1.4e-05,
+          "n": 100,
+          "ratio": 0.028,
+          "threshold": 0.8732399408412149
+        }
+      ],
+      "tabulate_trials": 500000,
+      "worst_ratio": 0.5412679078939737
+    },
+    "7": {
+      "anti_conservative_cells": [],
+      "block_length": 7,
+      "build_sessions": 192,
+      "check_sessions": 192,
+      "check_trials": 500000,
+      "far_column": [
+        {
+          "clamped_high": 156992,
+          "clamped_low": 42,
+          "endpoint_note": "alpha=0.5 is the table's upper clamp: every score above the last tabulated quantile reports exactly that value, so P(p <= it) is 1 by construction. Not evaluated.",
+          "ks_critical_0.01": 0.007863667507974657,
+          "ks_statistic_interior": 0.011871579508081265,
+          "n": 73,
+          "p_values": 200000,
+          "realised": {
+            "0.0005": 0.00021,
+            "0.001": 0.000425,
+            "0.002": 0.00089,
+            "0.005": 0.0025,
+            "0.01": 0.00506,
+            "0.02": 0.009915,
+            "0.05": 0.02351,
+            "0.1": 0.044075,
+            "0.2": 0.08528,
+            "0.5": 1.0
+          },
+          "valid_inside_grid": true
+        },
+        {
+          "clamped_high": 161831,
+          "clamped_low": 45,
+          "endpoint_note": "alpha=0.5 is the table's upper clamp: every score above the last tabulated quantile reports exactly that value, so P(p <= it) is 1 by construction. Not evaluated.",
+          "ks_critical_0.01": 0.008348114055805777,
+          "ks_statistic_interior": 0.019295944884005045,
+          "n": 86,
+          "p_values": 200000,
+          "realised": {
+            "0.0005": 0.000225,
+            "0.001": 0.000465,
+            "0.002": 0.00087,
+            "0.005": 0.002205,
+            "0.01": 0.004305,
+            "0.02": 0.00847,
+            "0.05": 0.019965,
+            "0.1": 0.037885,
+            "0.2": 0.07277,
+            "0.5": 1.0
+          },
+          "valid_inside_grid": true
+        }
+      ],
+      "rows": [
+        {
+          "far": 0.5,
+          "measured": 0.326824,
+          "n": 30,
+          "ratio": 0.653648,
+          "threshold": 0.05708176316709451
+        },
+        {
+          "far": 0.2,
+          "measured": 0.138586,
+          "n": 30,
+          "ratio": 0.6929299999999999,
+          "threshold": 0.25856093981938505
+        },
+        {
+          "far": 0.1,
+          "measured": 0.073304,
+          "n": 30,
+          "ratio": 0.7330399999999999,
+          "threshold": 0.40354469069815807
+        },
+        {
+          "far": 0.05,
+          "measured": 0.037616,
+          "n": 30,
+          "ratio": 0.7523199999999999,
+          "threshold": 0.5481836501871898
+        },
+        {
+          "far": 0.02,
+          "measured": 0.014616,
+          "n": 30,
+          "ratio": 0.7308,
+          "threshold": 0.7414222578457929
+        },
+        {
+          "far": 0.01,
+          "measured": 0.007302,
+          "n": 30,
+          "ratio": 0.7302000000000001,
+          "threshold": 0.8906264612502947
+        },
+        {
+          "far": 0.005,
+          "measured": 0.003724,
+          "n": 30,
+          "ratio": 0.7447999999999999,
+          "threshold": 1.0393952278643455
+        },
+        {
+          "far": 0.002,
+          "measured": 0.001608,
+          "n": 30,
+          "ratio": 0.804,
+          "threshold": 1.2444335754554687
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000826,
+          "n": 30,
+          "ratio": 0.826,
+          "threshold": 1.4089491454317915
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.000416,
+          "n": 30,
+          "ratio": 0.832,
+          "threshold": 1.5857197146241746
+        },
+        {
+          "far": 0.5,
+          "measured": 0.267368,
+          "n": 50,
+          "ratio": 0.534736,
+          "threshold": 0.05746697682381186
+        },
+        {
+          "far": 0.2,
+          "measured": 0.10967,
+          "n": 50,
+          "ratio": 0.54835,
+          "threshold": 0.20112717458045004
+        },
+        {
+          "far": 0.1,
+          "measured": 0.057778,
+          "n": 50,
+          "ratio": 0.57778,
+          "threshold": 0.2954979303227703
+        },
+        {
+          "far": 0.05,
+          "measured": 0.0301,
+          "n": 50,
+          "ratio": 0.602,
+          "threshold": 0.38604935163001425
+        },
+        {
+          "far": 0.02,
+          "measured": 0.0124,
+          "n": 50,
+          "ratio": 0.62,
+          "threshold": 0.5048241276420832
+        },
+        {
+          "far": 0.01,
+          "measured": 0.00615,
+          "n": 50,
+          "ratio": 0.615,
+          "threshold": 0.5958794755420698
+        },
+        {
+          "far": 0.005,
+          "measured": 0.00304,
+          "n": 50,
+          "ratio": 0.608,
+          "threshold": 0.6855957607130924
+        },
+        {
+          "far": 0.002,
+          "measured": 0.001212,
+          "n": 50,
+          "ratio": 0.606,
+          "threshold": 0.8045499406726953
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000572,
+          "n": 50,
+          "ratio": 0.5720000000000001,
+          "threshold": 0.8981828242059532
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.000286,
+          "n": 50,
+          "ratio": 0.5720000000000001,
+          "threshold": 1.000816141585654
+        },
+        {
+          "far": 0.5,
+          "measured": 0.215256,
+          "n": 73,
+          "ratio": 0.430512,
+          "threshold": 0.057399962782641735
+        },
+        {
+          "far": 0.2,
+          "measured": 0.084478,
+          "n": 73,
+          "ratio": 0.42239,
+          "threshold": 0.17088429553899287
+        },
+        {
+          "far": 0.1,
+          "measured": 0.043854,
+          "n": 73,
+          "ratio": 0.43853999999999993,
+          "threshold": 0.24184164507346942
+        },
+        {
+          "far": 0.05,
+          "measured": 0.023096,
+          "n": 73,
+          "ratio": 0.46191999999999994,
+          "threshold": 0.30788411420070055
+        },
+        {
+          "far": 0.02,
+          "measured": 0.009754,
+          "n": 73,
+          "ratio": 0.4877,
+          "threshold": 0.393911613641598
+        },
+        {
+          "far": 0.01,
+          "measured": 0.005012,
+          "n": 73,
+          "ratio": 0.5012,
+          "threshold": 0.45797473930007304
+        },
+        {
+          "far": 0.005,
+          "measured": 0.00253,
+          "n": 73,
+          "ratio": 0.506,
+          "threshold": 0.5205041088337669
+        },
+        {
+          "far": 0.002,
+          "measured": 0.00097,
+          "n": 73,
+          "ratio": 0.48500000000000004,
+          "threshold": 0.6045053117347388
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000478,
+          "n": 73,
+          "ratio": 0.478,
+          "threshold": 0.6675598343944402
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.000258,
+          "n": 73,
+          "ratio": 0.5159999999999999,
+          "threshold": 0.7304018321667896
+        },
+        {
+          "far": 0.5,
+          "measured": 0.191548,
+          "n": 86,
+          "ratio": 0.383096,
+          "threshold": 0.05725191224080936
+        },
+        {
+          "far": 0.2,
+          "measured": 0.073246,
+          "n": 86,
+          "ratio": 0.36623,
+          "threshold": 0.16119919510962125
+        },
+        {
+          "far": 0.1,
+          "measured": 0.037944,
+          "n": 86,
+          "ratio": 0.37943999999999994,
+          "threshold": 0.2243687408348001
+        },
+        {
+          "far": 0.05,
+          "measured": 0.019942,
+          "n": 86,
+          "ratio": 0.39884000000000003,
+          "threshold": 0.2822719343165877
+        },
+        {
+          "far": 0.02,
+          "measured": 0.008482,
+          "n": 86,
+          "ratio": 0.4241,
+          "threshold": 0.3558306399793055
+        },
+        {
+          "far": 0.01,
+          "measured": 0.004344,
+          "n": 86,
+          "ratio": 0.43439999999999995,
+          "threshold": 0.411472345762134
+        },
+        {
+          "far": 0.005,
+          "measured": 0.002134,
+          "n": 86,
+          "ratio": 0.4268,
+          "threshold": 0.46724650388081485
+        },
+        {
+          "far": 0.002,
+          "measured": 0.00083,
+          "n": 86,
+          "ratio": 0.415,
+          "threshold": 0.5401936723988882
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000444,
+          "n": 86,
+          "ratio": 0.444,
+          "threshold": 0.5919323961826063
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.000228,
+          "n": 86,
+          "ratio": 0.456,
+          "threshold": 0.6427465235878644
+        },
+        {
+          "far": 0.5,
+          "measured": 0.16903,
+          "n": 100,
+          "ratio": 0.33806,
+          "threshold": 0.057299592401033765
+        },
+        {
+          "far": 0.2,
+          "measured": 0.064056,
+          "n": 100,
+          "ratio": 0.32028,
+          "threshold": 0.15154432498914805
+        },
+        {
+          "far": 0.1,
+          "measured": 0.033082,
+          "n": 100,
+          "ratio": 0.33082,
+          "threshold": 0.20861335242385529
+        },
+        {
+          "far": 0.05,
+          "measured": 0.017168,
+          "n": 100,
+          "ratio": 0.34335999999999994,
+          "threshold": 0.26106449593061126
+        },
+        {
+          "far": 0.02,
+          "measured": 0.00702,
+          "n": 100,
+          "ratio": 0.351,
+          "threshold": 0.3271223623615011
+        },
+        {
+          "far": 0.01,
+          "measured": 0.003658,
+          "n": 100,
+          "ratio": 0.36579999999999996,
+          "threshold": 0.3751954669642657
+        },
+        {
+          "far": 0.005,
+          "measured": 0.001954,
+          "n": 100,
+          "ratio": 0.3908,
+          "threshold": 0.4227268185521587
+        },
+        {
+          "far": 0.002,
+          "measured": 0.00081,
+          "n": 100,
+          "ratio": 0.40499999999999997,
+          "threshold": 0.4869281147117734
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000416,
+          "n": 100,
+          "ratio": 0.416,
+          "threshold": 0.5338355456002468
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.000202,
+          "n": 100,
+          "ratio": 0.404,
+          "threshold": 0.5795627180306336
+        }
+      ],
+      "tabulate_trials": 500000,
+      "worst_ratio": 0.832
+    }
+  },
+  "table": "empirical-null-nq-trades.json"
+}

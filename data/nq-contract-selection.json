@@ -1,0 +1,5707 @@
+{
+  "near_roll_rule": "share_of_session_volume < 0.9: the chosen contract had a real competitor in that session. Every flagged session is within four calendar days of a roll.",
+  "near_roll_sessions": 39,
+  "note": "Front-month selection per session. The rule is a research convention, not a fact: highest traded volume among outright contracts in the session. Recorded so a roll is data.",
+  "rolls": [
+    {
+      "from": "NQU4",
+      "session": "2024-09-16",
+      "share_after": 0.441946,
+      "share_before": 0.761311,
+      "to": "NQZ4"
+    },
+    {
+      "from": "NQZ4",
+      "session": "2024-12-17",
+      "share_after": 0.629128,
+      "share_before": 0.407128,
+      "to": "NQH5"
+    },
+    {
+      "from": "NQH5",
+      "session": "2025-03-18",
+      "share_after": 0.574241,
+      "share_before": 0.438347,
+      "to": "NQM5"
+    },
+    {
+      "from": "NQM5",
+      "session": "2025-06-16",
+      "share_after": 0.445827,
+      "share_before": 0.801784,
+      "to": "NQU5"
+    },
+    {
+      "from": "NQU5",
+      "session": "2025-09-16",
+      "share_after": 0.611446,
+      "share_before": 0.380294,
+      "to": "NQZ5"
+    },
+    {
+      "from": "NQZ5",
+      "session": "2025-12-15",
+      "share_after": 0.412233,
+      "share_before": 0.885656,
+      "to": "NQH6"
+    },
+    {
+      "from": "NQH6",
+      "session": "2026-03-16",
+      "share_after": 0.407333,
+      "share_before": 0.861072,
+      "to": "NQM6"
+    },
+    {
+      "from": "NQM6",
+      "session": "2026-06-15",
+      "share_after": 0.50984,
+      "share_before": 0.699326,
+      "to": "NQU6"
+    }
+  ],
+  "rule": "highest traded volume among outright contracts in the session",
+  "sessions": {
+    "2024-07-04": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-04",
+      "share_of_session_volume": 0.999014,
+      "trades": 35915,
+      "volume": 52694
+    },
+    "2024-07-05": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-05",
+      "share_of_session_volume": 0.998583,
+      "trades": 352531,
+      "volume": 539056
+    },
+    "2024-07-08": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-08",
+      "share_of_session_volume": 0.998638,
+      "trades": 321348,
+      "volume": 490382
+    },
+    "2024-07-09": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-09",
+      "share_of_session_volume": 0.998501,
+      "trades": 362200,
+      "volume": 564262
+    },
+    "2024-07-10": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-10",
+      "share_of_session_volume": 0.998128,
+      "trades": 357869,
+      "volume": 563663
+    },
+    "2024-07-11": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-11",
+      "share_of_session_volume": 0.997967,
+      "trades": 559156,
+      "volume": 890384
+    },
+    "2024-07-12": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-12",
+      "share_of_session_volume": 0.998041,
+      "trades": 440814,
+      "volume": 712780
+    },
+    "2024-07-15": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-15",
+      "share_of_session_volume": 0.998524,
+      "trades": 445808,
+      "volume": 693346
+    },
+    "2024-07-16": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-16",
+      "share_of_session_volume": 0.998219,
+      "trades": 404124,
+      "volume": 622766
+    },
+    "2024-07-17": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-17",
+      "share_of_session_volume": 0.997714,
+      "trades": 543838,
+      "volume": 835039
+    },
+    "2024-07-18": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-18",
+      "share_of_session_volume": 0.99832,
+      "trades": 617172,
+      "volume": 951860
+    },
+    "2024-07-19": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-19",
+      "share_of_session_volume": 0.997737,
+      "trades": 502156,
+      "volume": 763223
+    },
+    "2024-07-22": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-22",
+      "share_of_session_volume": 0.998148,
+      "trades": 424167,
+      "volume": 645159
+    },
+    "2024-07-23": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-23",
+      "share_of_session_volume": 0.998683,
+      "trades": 396190,
+      "volume": 593769
+    },
+    "2024-07-24": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-24",
+      "share_of_session_volume": 0.99618,
+      "trades": 526569,
+      "volume": 822747
+    },
+    "2024-07-25": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-25",
+      "share_of_session_volume": 0.995693,
+      "trades": 670243,
+      "volume": 970328
+    },
+    "2024-07-26": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-26",
+      "share_of_session_volume": 0.997085,
+      "trades": 470543,
+      "volume": 687457
+    },
+    "2024-07-29": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-29",
+      "share_of_session_volume": 0.99763,
+      "trades": 412972,
+      "volume": 591523
+    },
+    "2024-07-30": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-30",
+      "share_of_session_volume": 0.995389,
+      "trades": 492703,
+      "volume": 731539
+    },
+    "2024-07-31": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-07-31",
+      "share_of_session_volume": 0.997018,
+      "trades": 503149,
+      "volume": 744800
+    },
+    "2024-08-01": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-01",
+      "share_of_session_volume": 0.996283,
+      "trades": 599760,
+      "volume": 900049
+    },
+    "2024-08-02": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-02",
+      "share_of_session_volume": 0.995971,
+      "trades": 576253,
+      "volume": 823210
+    },
+    "2024-08-05": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-05",
+      "share_of_session_volume": 0.994787,
+      "trades": 670182,
+      "volume": 921700
+    },
+    "2024-08-06": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-06",
+      "share_of_session_volume": 0.996872,
+      "trades": 485629,
+      "volume": 682965
+    },
+    "2024-08-07": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-07",
+      "share_of_session_volume": 0.996627,
+      "trades": 502154,
+      "volume": 707286
+    },
+    "2024-08-08": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-08",
+      "share_of_session_volume": 0.995459,
+      "trades": 449969,
+      "volume": 649781
+    },
+    "2024-08-09": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-09",
+      "share_of_session_volume": 0.99748,
+      "trades": 354567,
+      "volume": 494481
+    },
+    "2024-08-12": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-12",
+      "share_of_session_volume": 0.997418,
+      "trades": 319054,
+      "volume": 464243
+    },
+    "2024-08-13": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-13",
+      "share_of_session_volume": 0.997323,
+      "trades": 327391,
+      "volume": 489902
+    },
+    "2024-08-14": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-14",
+      "share_of_session_volume": 0.997127,
+      "trades": 370067,
+      "volume": 542881
+    },
+    "2024-08-15": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-15",
+      "share_of_session_volume": 0.996619,
+      "trades": 341278,
+      "volume": 516216
+    },
+    "2024-08-16": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-16",
+      "share_of_session_volume": 0.99761,
+      "trades": 306332,
+      "volume": 449986
+    },
+    "2024-08-19": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-19",
+      "share_of_session_volume": 0.997828,
+      "trades": 285963,
+      "volume": 424458
+    },
+    "2024-08-20": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-20",
+      "share_of_session_volume": 0.998265,
+      "trades": 326438,
+      "volume": 479343
+    },
+    "2024-08-21": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-21",
+      "share_of_session_volume": 0.99742,
+      "trades": 326703,
+      "volume": 473242
+    },
+    "2024-08-22": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-22",
+      "share_of_session_volume": 0.997666,
+      "trades": 420757,
+      "volume": 621620
+    },
+    "2024-08-23": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-23",
+      "share_of_session_volume": 0.996235,
+      "trades": 390020,
+      "volume": 574212
+    },
+    "2024-08-26": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-26",
+      "share_of_session_volume": 0.99734,
+      "trades": 320176,
+      "volume": 467882
+    },
+    "2024-08-27": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-27",
+      "share_of_session_volume": 0.997572,
+      "trades": 297464,
+      "volume": 433128
+    },
+    "2024-08-28": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-28",
+      "share_of_session_volume": 0.99449,
+      "trades": 361584,
+      "volume": 530615
+    },
+    "2024-08-29": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-29",
+      "share_of_session_volume": 0.994158,
+      "trades": 456421,
+      "volume": 660810
+    },
+    "2024-08-30": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-08-30",
+      "share_of_session_volume": 0.996495,
+      "trades": 341785,
+      "volume": 484108
+    },
+    "2024-09-02": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-02",
+      "share_of_session_volume": 0.995837,
+      "trades": 52911,
+      "volume": 71521
+    },
+    "2024-09-03": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-03",
+      "share_of_session_volume": 0.993691,
+      "trades": 424025,
+      "volume": 615795
+    },
+    "2024-09-04": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-04",
+      "share_of_session_volume": 0.988961,
+      "trades": 409415,
+      "volume": 576119
+    },
+    "2024-09-05": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-05",
+      "share_of_session_volume": 0.989942,
+      "trades": 404868,
+      "volume": 577823
+    },
+    "2024-09-06": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-06",
+      "share_of_session_volume": 0.985404,
+      "trades": 494689,
+      "volume": 710853
+    },
+    "2024-09-09": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-09",
+      "share_of_session_volume": 0.983041,
+      "trades": 361253,
+      "volume": 524709
+    },
+    "2024-09-10": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-10",
+      "share_of_session_volume": 0.984003,
+      "trades": 368773,
+      "volume": 528811
+    },
+    "2024-09-11": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-11",
+      "share_of_session_volume": 0.970385,
+      "trades": 487037,
+      "volume": 710142
+    },
+    "2024-09-12": {
+      "instrument_id": 4358,
+      "near_roll": false,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-12",
+      "share_of_session_volume": 0.953964,
+      "trades": 398826,
+      "volume": 563372
+    },
+    "2024-09-13": {
+      "instrument_id": 4358,
+      "near_roll": true,
+      "raw_symbol": "NQU4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-13",
+      "share_of_session_volume": 0.761311,
+      "trades": 291270,
+      "volume": 416582
+    },
+    "2024-09-16": {
+      "instrument_id": 106364,
+      "near_roll": true,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-16",
+      "share_of_session_volume": 0.441946,
+      "trades": 196810,
+      "volume": 265970
+    },
+    "2024-09-17": {
+      "instrument_id": 106364,
+      "near_roll": true,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-17",
+      "share_of_session_volume": 0.625959,
+      "trades": 296649,
+      "volume": 411071
+    },
+    "2024-09-18": {
+      "instrument_id": 106364,
+      "near_roll": true,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-18",
+      "share_of_session_volume": 0.793063,
+      "trades": 367887,
+      "volume": 507619
+    },
+    "2024-09-19": {
+      "instrument_id": 106364,
+      "near_roll": true,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-19",
+      "share_of_session_volume": 0.818109,
+      "trades": 401170,
+      "volume": 564439
+    },
+    "2024-09-20": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-20",
+      "share_of_session_volume": 0.988929,
+      "trades": 327107,
+      "volume": 468333
+    },
+    "2024-09-23": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-23",
+      "share_of_session_volume": 0.998918,
+      "trades": 273916,
+      "volume": 391341
+    },
+    "2024-09-24": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-24",
+      "share_of_session_volume": 0.998795,
+      "trades": 307585,
+      "volume": 449958
+    },
+    "2024-09-25": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-25",
+      "share_of_session_volume": 0.998521,
+      "trades": 271235,
+      "volume": 396198
+    },
+    "2024-09-26": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-26",
+      "share_of_session_volume": 0.998522,
+      "trades": 345506,
+      "volume": 502675
+    },
+    "2024-09-27": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-27",
+      "share_of_session_volume": 0.998047,
+      "trades": 298834,
+      "volume": 429188
+    },
+    "2024-09-30": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-09-30",
+      "share_of_session_volume": 0.998556,
+      "trades": 348201,
+      "volume": 502074
+    },
+    "2024-10-01": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-01",
+      "share_of_session_volume": 0.998457,
+      "trades": 452126,
+      "volume": 649870
+    },
+    "2024-10-02": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-02",
+      "share_of_session_volume": 0.998088,
+      "trades": 325395,
+      "volume": 470924
+    },
+    "2024-10-03": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-03",
+      "share_of_session_volume": 0.998902,
+      "trades": 368488,
+      "volume": 521135
+    },
+    "2024-10-04": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-04",
+      "share_of_session_volume": 0.997502,
+      "trades": 378945,
+      "volume": 551865
+    },
+    "2024-10-07": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-07",
+      "share_of_session_volume": 0.997027,
+      "trades": 307910,
+      "volume": 443310
+    },
+    "2024-10-08": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-08",
+      "share_of_session_volume": 0.997722,
+      "trades": 296896,
+      "volume": 436745
+    },
+    "2024-10-09": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-09",
+      "share_of_session_volume": 0.997895,
+      "trades": 275651,
+      "volume": 414880
+    },
+    "2024-10-10": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-10",
+      "share_of_session_volume": 0.998945,
+      "trades": 297810,
+      "volume": 443278
+    },
+    "2024-10-11": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-11",
+      "share_of_session_volume": 0.99927,
+      "trades": 251143,
+      "volume": 379093
+    },
+    "2024-10-14": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-14",
+      "share_of_session_volume": 0.99895,
+      "trades": 255555,
+      "volume": 385134
+    },
+    "2024-10-15": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-15",
+      "share_of_session_volume": 0.997723,
+      "trades": 339220,
+      "volume": 509264
+    },
+    "2024-10-16": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-16",
+      "share_of_session_volume": 0.998654,
+      "trades": 273318,
+      "volume": 411075
+    },
+    "2024-10-17": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-17",
+      "share_of_session_volume": 0.998441,
+      "trades": 352030,
+      "volume": 525927
+    },
+    "2024-10-18": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-18",
+      "share_of_session_volume": 0.998484,
+      "trades": 256786,
+      "volume": 378788
+    },
+    "2024-10-21": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-21",
+      "share_of_session_volume": 0.998594,
+      "trades": 290619,
+      "volume": 444002
+    },
+    "2024-10-22": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-22",
+      "share_of_session_volume": 0.998652,
+      "trades": 304714,
+      "volume": 465086
+    },
+    "2024-10-23": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-23",
+      "share_of_session_volume": 0.998628,
+      "trades": 395708,
+      "volume": 606251
+    },
+    "2024-10-24": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-24",
+      "share_of_session_volume": 0.998533,
+      "trades": 307041,
+      "volume": 456022
+    },
+    "2024-10-25": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-25",
+      "share_of_session_volume": 0.997489,
+      "trades": 366029,
+      "volume": 570035
+    },
+    "2024-10-28": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-28",
+      "share_of_session_volume": 0.998496,
+      "trades": 288722,
+      "volume": 426986
+    },
+    "2024-10-29": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-29",
+      "share_of_session_volume": 0.998704,
+      "trades": 326625,
+      "volume": 488384
+    },
+    "2024-10-30": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-30",
+      "share_of_session_volume": 0.998543,
+      "trades": 343988,
+      "volume": 511825
+    },
+    "2024-10-31": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-10-31",
+      "share_of_session_volume": 0.997484,
+      "trades": 444118,
+      "volume": 675933
+    },
+    "2024-11-01": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-01",
+      "share_of_session_volume": 0.998653,
+      "trades": 360782,
+      "volume": 538204
+    },
+    "2024-11-04": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-04",
+      "share_of_session_volume": 0.998774,
+      "trades": 337448,
+      "volume": 513229
+    },
+    "2024-11-05": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-05",
+      "share_of_session_volume": 0.997885,
+      "trades": 295517,
+      "volume": 442628
+    },
+    "2024-11-06": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-06",
+      "share_of_session_volume": 0.996398,
+      "trades": 415273,
+      "volume": 618789
+    },
+    "2024-11-07": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-07",
+      "share_of_session_volume": 0.997928,
+      "trades": 304535,
+      "volume": 455640
+    },
+    "2024-11-08": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-08",
+      "share_of_session_volume": 0.99884,
+      "trades": 263418,
+      "volume": 395096
+    },
+    "2024-11-11": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-11",
+      "share_of_session_volume": 0.998017,
+      "trades": 293359,
+      "volume": 450555
+    },
+    "2024-11-12": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-12",
+      "share_of_session_volume": 0.998435,
+      "trades": 331284,
+      "volume": 502726
+    },
+    "2024-11-13": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-13",
+      "share_of_session_volume": 0.998612,
+      "trades": 345690,
+      "volume": 524473
+    },
+    "2024-11-14": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-14",
+      "share_of_session_volume": 0.998541,
+      "trades": 359857,
+      "volume": 545338
+    },
+    "2024-11-15": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-15",
+      "share_of_session_volume": 0.996875,
+      "trades": 432707,
+      "volume": 673974
+    },
+    "2024-11-18": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-18",
+      "share_of_session_volume": 0.998089,
+      "trades": 343856,
+      "volume": 519131
+    },
+    "2024-11-19": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-19",
+      "share_of_session_volume": 0.997526,
+      "trades": 360600,
+      "volume": 545561
+    },
+    "2024-11-20": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-20",
+      "share_of_session_volume": 0.996726,
+      "trades": 401816,
+      "volume": 610163
+    },
+    "2024-11-21": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-21",
+      "share_of_session_volume": 0.997255,
+      "trades": 463460,
+      "volume": 692741
+    },
+    "2024-11-22": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-22",
+      "share_of_session_volume": 0.997514,
+      "trades": 363324,
+      "volume": 537600
+    },
+    "2024-11-25": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-25",
+      "share_of_session_volume": 0.997576,
+      "trades": 357437,
+      "volume": 534691
+    },
+    "2024-11-26": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-26",
+      "share_of_session_volume": 0.997789,
+      "trades": 334249,
+      "volume": 496779
+    },
+    "2024-11-27": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-27",
+      "share_of_session_volume": 0.99657,
+      "trades": 342201,
+      "volume": 512783
+    },
+    "2024-11-28": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-28",
+      "share_of_session_volume": 0.997613,
+      "trades": 39363,
+      "volume": 54749
+    },
+    "2024-11-29": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-11-29",
+      "share_of_session_volume": 0.996415,
+      "trades": 190163,
+      "volume": 282643
+    },
+    "2024-12-02": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-02",
+      "share_of_session_volume": 0.993608,
+      "trades": 307624,
+      "volume": 468344
+    },
+    "2024-12-03": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-03",
+      "share_of_session_volume": 0.994754,
+      "trades": 290275,
+      "volume": 439162
+    },
+    "2024-12-04": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-04",
+      "share_of_session_volume": 0.990454,
+      "trades": 297705,
+      "volume": 454859
+    },
+    "2024-12-05": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-05",
+      "share_of_session_volume": 0.992026,
+      "trades": 273265,
+      "volume": 412556
+    },
+    "2024-12-06": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-06",
+      "share_of_session_volume": 0.992454,
+      "trades": 293998,
+      "volume": 448858
+    },
+    "2024-12-09": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-09",
+      "share_of_session_volume": 0.986932,
+      "trades": 325000,
+      "volume": 507056
+    },
+    "2024-12-10": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-10",
+      "share_of_session_volume": 0.990983,
+      "trades": 336009,
+      "volume": 528613
+    },
+    "2024-12-11": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-11",
+      "share_of_session_volume": 0.980527,
+      "trades": 329568,
+      "volume": 530126
+    },
+    "2024-12-12": {
+      "instrument_id": 106364,
+      "near_roll": false,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-12",
+      "share_of_session_volume": 0.960488,
+      "trades": 319599,
+      "volume": 490739
+    },
+    "2024-12-13": {
+      "instrument_id": 106364,
+      "near_roll": true,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-13",
+      "share_of_session_volume": 0.826483,
+      "trades": 364672,
+      "volume": 562210
+    },
+    "2024-12-16": {
+      "instrument_id": 106364,
+      "near_roll": true,
+      "raw_symbol": "NQZ4",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-16",
+      "share_of_session_volume": 0.407128,
+      "trades": 192509,
+      "volume": 294989
+    },
+    "2024-12-17": {
+      "instrument_id": 42288528,
+      "near_roll": true,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-17",
+      "share_of_session_volume": 0.629128,
+      "trades": 308874,
+      "volume": 453103
+    },
+    "2024-12-18": {
+      "instrument_id": 42288528,
+      "near_roll": true,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-18",
+      "share_of_session_volume": 0.763338,
+      "trades": 446957,
+      "volume": 642537
+    },
+    "2024-12-19": {
+      "instrument_id": 42288528,
+      "near_roll": true,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-19",
+      "share_of_session_volume": 0.856015,
+      "trades": 482000,
+      "volume": 689044
+    },
+    "2024-12-20": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-20",
+      "share_of_session_volume": 0.987862,
+      "trades": 570201,
+      "volume": 840157
+    },
+    "2024-12-23": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-23",
+      "share_of_session_volume": 0.99829,
+      "trades": 353283,
+      "volume": 502016
+    },
+    "2024-12-24": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-24",
+      "share_of_session_volume": 0.998341,
+      "trades": 174133,
+      "volume": 256897
+    },
+    "2024-12-26": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-26",
+      "share_of_session_volume": 0.996169,
+      "trades": 270495,
+      "volume": 398407
+    },
+    "2024-12-27": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-27",
+      "share_of_session_volume": 0.997804,
+      "trades": 378069,
+      "volume": 555262
+    },
+    "2024-12-30": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-30",
+      "share_of_session_volume": 0.995918,
+      "trades": 367335,
+      "volume": 516039
+    },
+    "2024-12-31": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2024-12-31",
+      "share_of_session_volume": 0.997232,
+      "trades": 332331,
+      "volume": 469100
+    },
+    "2025-01-02": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-02",
+      "share_of_session_volume": 0.997658,
+      "trades": 477266,
+      "volume": 658865
+    },
+    "2025-01-03": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-03",
+      "share_of_session_volume": 0.997676,
+      "trades": 325261,
+      "volume": 479425
+    },
+    "2025-01-06": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-06",
+      "share_of_session_volume": 0.99806,
+      "trades": 380783,
+      "volume": 562263
+    },
+    "2025-01-07": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-07",
+      "share_of_session_volume": 0.997614,
+      "trades": 442360,
+      "volume": 632574
+    },
+    "2025-01-08": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-08",
+      "share_of_session_volume": 0.996588,
+      "trades": 445977,
+      "volume": 626784
+    },
+    "2025-01-10": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-10",
+      "share_of_session_volume": 0.997921,
+      "trades": 479187,
+      "volume": 691607
+    },
+    "2025-01-13": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-13",
+      "share_of_session_volume": 0.9958,
+      "trades": 426966,
+      "volume": 606692
+    },
+    "2025-01-14": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-14",
+      "share_of_session_volume": 0.997584,
+      "trades": 463498,
+      "volume": 664463
+    },
+    "2025-01-15": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-15",
+      "share_of_session_volume": 0.997929,
+      "trades": 374989,
+      "volume": 543896
+    },
+    "2025-01-16": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-16",
+      "share_of_session_volume": 0.998216,
+      "trades": 418502,
+      "volume": 586335
+    },
+    "2025-01-17": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-17",
+      "share_of_session_volume": 0.998665,
+      "trades": 395828,
+      "volume": 580291
+    },
+    "2025-01-20": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-20",
+      "share_of_session_volume": 0.997543,
+      "trades": 115646,
+      "volume": 155116
+    },
+    "2025-01-21": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-21",
+      "share_of_session_volume": 0.998198,
+      "trades": 350562,
+      "volume": 499679
+    },
+    "2025-01-22": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-22",
+      "share_of_session_volume": 0.998572,
+      "trades": 333956,
+      "volume": 486780
+    },
+    "2025-01-23": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-23",
+      "share_of_session_volume": 0.999379,
+      "trades": 315074,
+      "volume": 466745
+    },
+    "2025-01-24": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-24",
+      "share_of_session_volume": 0.998982,
+      "trades": 343659,
+      "volume": 519260
+    },
+    "2025-01-27": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-27",
+      "share_of_session_volume": 0.9976,
+      "trades": 725103,
+      "volume": 1034722
+    },
+    "2025-01-28": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-28",
+      "share_of_session_volume": 0.997876,
+      "trades": 448322,
+      "volume": 649287
+    },
+    "2025-01-29": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-29",
+      "share_of_session_volume": 0.998146,
+      "trades": 440309,
+      "volume": 624948
+    },
+    "2025-01-30": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-30",
+      "share_of_session_volume": 0.998453,
+      "trades": 434401,
+      "volume": 612638
+    },
+    "2025-01-31": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-01-31",
+      "share_of_session_volume": 0.998047,
+      "trades": 456371,
+      "volume": 646025
+    },
+    "2025-02-03": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-03",
+      "share_of_session_volume": 0.996697,
+      "trades": 521757,
+      "volume": 720963
+    },
+    "2025-02-04": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-04",
+      "share_of_session_volume": 0.997662,
+      "trades": 345648,
+      "volume": 491670
+    },
+    "2025-02-05": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-05",
+      "share_of_session_volume": 0.997941,
+      "trades": 343843,
+      "volume": 493018
+    },
+    "2025-02-06": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-06",
+      "share_of_session_volume": 0.998221,
+      "trades": 309266,
+      "volume": 436061
+    },
+    "2025-02-07": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-07",
+      "share_of_session_volume": 0.997807,
+      "trades": 415215,
+      "volume": 591407
+    },
+    "2025-02-10": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-10",
+      "share_of_session_volume": 0.998308,
+      "trades": 267482,
+      "volume": 385195
+    },
+    "2025-02-11": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-11",
+      "share_of_session_volume": 0.998805,
+      "trades": 287012,
+      "volume": 418708
+    },
+    "2025-02-12": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-12",
+      "share_of_session_volume": 0.996959,
+      "trades": 366847,
+      "volume": 540960
+    },
+    "2025-02-13": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-13",
+      "share_of_session_volume": 0.997727,
+      "trades": 365937,
+      "volume": 529361
+    },
+    "2025-02-14": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-14",
+      "share_of_session_volume": 0.998246,
+      "trades": 289050,
+      "volume": 429223
+    },
+    "2025-02-17": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-17",
+      "share_of_session_volume": 0.997919,
+      "trades": 66634,
+      "volume": 101174
+    },
+    "2025-02-18": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-18",
+      "share_of_session_volume": 0.998333,
+      "trades": 308823,
+      "volume": 458230
+    },
+    "2025-02-19": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-19",
+      "share_of_session_volume": 0.998858,
+      "trades": 326296,
+      "volume": 491538
+    },
+    "2025-02-20": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-20",
+      "share_of_session_volume": 0.998208,
+      "trades": 369827,
+      "volume": 555432
+    },
+    "2025-02-21": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-21",
+      "share_of_session_volume": 0.996885,
+      "trades": 462150,
+      "volume": 697766
+    },
+    "2025-02-24": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-24",
+      "share_of_session_volume": 0.995948,
+      "trades": 451298,
+      "volume": 658441
+    },
+    "2025-02-25": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-25",
+      "share_of_session_volume": 0.995446,
+      "trades": 551122,
+      "volume": 791784
+    },
+    "2025-02-26": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-26",
+      "share_of_session_volume": 0.996052,
+      "trades": 447506,
+      "volume": 640013
+    },
+    "2025-02-27": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-27",
+      "share_of_session_volume": 0.995223,
+      "trades": 595077,
+      "volume": 843883
+    },
+    "2025-02-28": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-02-28",
+      "share_of_session_volume": 0.995415,
+      "trades": 596660,
+      "volume": 834281
+    },
+    "2025-03-03": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-03",
+      "share_of_session_volume": 0.993448,
+      "trades": 601448,
+      "volume": 826523
+    },
+    "2025-03-04": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-04",
+      "share_of_session_volume": 0.990747,
+      "trades": 682212,
+      "volume": 943693
+    },
+    "2025-03-05": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-05",
+      "share_of_session_volume": 0.993422,
+      "trades": 560484,
+      "volume": 772979
+    },
+    "2025-03-06": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-06",
+      "share_of_session_volume": 0.988941,
+      "trades": 532631,
+      "volume": 750516
+    },
+    "2025-03-07": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-07",
+      "share_of_session_volume": 0.984624,
+      "trades": 538947,
+      "volume": 750524
+    },
+    "2025-03-10": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-10",
+      "share_of_session_volume": 0.980732,
+      "trades": 548687,
+      "volume": 776378
+    },
+    "2025-03-11": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-11",
+      "share_of_session_volume": 0.971661,
+      "trades": 591239,
+      "volume": 838247
+    },
+    "2025-03-12": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-12",
+      "share_of_session_volume": 0.969065,
+      "trades": 485056,
+      "volume": 683839
+    },
+    "2025-03-13": {
+      "instrument_id": 42288528,
+      "near_roll": false,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-13",
+      "share_of_session_volume": 0.950738,
+      "trades": 518073,
+      "volume": 728581
+    },
+    "2025-03-14": {
+      "instrument_id": 42288528,
+      "near_roll": true,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-14",
+      "share_of_session_volume": 0.865101,
+      "trades": 480266,
+      "volume": 686302
+    },
+    "2025-03-17": {
+      "instrument_id": 42288528,
+      "near_roll": true,
+      "raw_symbol": "NQH5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-17",
+      "share_of_session_volume": 0.438347,
+      "trades": 288086,
+      "volume": 393973
+    },
+    "2025-03-18": {
+      "instrument_id": 42005804,
+      "near_roll": true,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-18",
+      "share_of_session_volume": 0.574241,
+      "trades": 350344,
+      "volume": 467061
+    },
+    "2025-03-19": {
+      "instrument_id": 42005804,
+      "near_roll": true,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-19",
+      "share_of_session_volume": 0.713817,
+      "trades": 370976,
+      "volume": 511665
+    },
+    "2025-03-20": {
+      "instrument_id": 42005804,
+      "near_roll": true,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-20",
+      "share_of_session_volume": 0.836212,
+      "trades": 411588,
+      "volume": 569867
+    },
+    "2025-03-21": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-21",
+      "share_of_session_volume": 0.986096,
+      "trades": 414254,
+      "volume": 593029
+    },
+    "2025-03-24": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-24",
+      "share_of_session_volume": 0.999051,
+      "trades": 347059,
+      "volume": 547242
+    },
+    "2025-03-25": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-25",
+      "share_of_session_volume": 0.998452,
+      "trades": 305043,
+      "volume": 466259
+    },
+    "2025-03-26": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-26",
+      "share_of_session_volume": 0.998498,
+      "trades": 400441,
+      "volume": 610815
+    },
+    "2025-03-27": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-27",
+      "share_of_session_volume": 0.998637,
+      "trades": 424537,
+      "volume": 624835
+    },
+    "2025-03-28": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-28",
+      "share_of_session_volume": 0.997454,
+      "trades": 467104,
+      "volume": 683770
+    },
+    "2025-03-31": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-03-31",
+      "share_of_session_volume": 0.998466,
+      "trades": 565593,
+      "volume": 829003
+    },
+    "2025-04-01": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-01",
+      "share_of_session_volume": 0.998383,
+      "trades": 531739,
+      "volume": 783579
+    },
+    "2025-04-02": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-02",
+      "share_of_session_volume": 0.997155,
+      "trades": 576259,
+      "volume": 829638
+    },
+    "2025-04-03": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-03",
+      "share_of_session_volume": 0.997692,
+      "trades": 625583,
+      "volume": 871649
+    },
+    "2025-04-04": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-04",
+      "share_of_session_volume": 0.997316,
+      "trades": 879398,
+      "volume": 1173315
+    },
+    "2025-04-07": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-07",
+      "share_of_session_volume": 0.997159,
+      "trades": 869158,
+      "volume": 1123811
+    },
+    "2025-04-08": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-08",
+      "share_of_session_volume": 0.997204,
+      "trades": 715878,
+      "volume": 939853
+    },
+    "2025-04-09": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-09",
+      "share_of_session_volume": 0.996317,
+      "trades": 815246,
+      "volume": 1055054
+    },
+    "2025-04-10": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-10",
+      "share_of_session_volume": 0.997962,
+      "trades": 739345,
+      "volume": 952611
+    },
+    "2025-04-11": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-11",
+      "share_of_session_volume": 0.997843,
+      "trades": 525573,
+      "volume": 660099
+    },
+    "2025-04-14": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-14",
+      "share_of_session_volume": 0.999069,
+      "trades": 432880,
+      "volume": 564487
+    },
+    "2025-04-15": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-15",
+      "share_of_session_volume": 0.999245,
+      "trades": 392980,
+      "volume": 520354
+    },
+    "2025-04-16": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-16",
+      "share_of_session_volume": 0.998741,
+      "trades": 491498,
+      "volume": 674475
+    },
+    "2025-04-17": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-17",
+      "share_of_session_volume": 0.999243,
+      "trades": 463918,
+      "volume": 623226
+    },
+    "2025-04-21": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-21",
+      "share_of_session_volume": 0.998564,
+      "trades": 337812,
+      "volume": 473548
+    },
+    "2025-04-22": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-22",
+      "share_of_session_volume": 0.998805,
+      "trades": 426307,
+      "volume": 610213
+    },
+    "2025-04-23": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-23",
+      "share_of_session_volume": 0.998884,
+      "trades": 536501,
+      "volume": 724101
+    },
+    "2025-04-24": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-24",
+      "share_of_session_volume": 0.998927,
+      "trades": 411143,
+      "volume": 589977
+    },
+    "2025-04-25": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-25",
+      "share_of_session_volume": 0.998717,
+      "trades": 413458,
+      "volume": 580630
+    },
+    "2025-04-28": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-28",
+      "share_of_session_volume": 0.998783,
+      "trades": 361919,
+      "volume": 505671
+    },
+    "2025-04-29": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-29",
+      "share_of_session_volume": 0.99911,
+      "trades": 394367,
+      "volume": 561158
+    },
+    "2025-04-30": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-04-30",
+      "share_of_session_volume": 0.99858,
+      "trades": 504895,
+      "volume": 705432
+    },
+    "2025-05-01": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-01",
+      "share_of_session_volume": 0.99854,
+      "trades": 412015,
+      "volume": 581491
+    },
+    "2025-05-02": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-02",
+      "share_of_session_volume": 0.998133,
+      "trades": 368133,
+      "volume": 509436
+    },
+    "2025-05-05": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-05",
+      "share_of_session_volume": 0.998668,
+      "trades": 289127,
+      "volume": 407810
+    },
+    "2025-05-06": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-06",
+      "share_of_session_volume": 0.998303,
+      "trades": 362889,
+      "volume": 509449
+    },
+    "2025-05-07": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-07",
+      "share_of_session_volume": 0.99862,
+      "trades": 432445,
+      "volume": 587037
+    },
+    "2025-05-08": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-08",
+      "share_of_session_volume": 0.99811,
+      "trades": 396197,
+      "volume": 558866
+    },
+    "2025-05-09": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-09",
+      "share_of_session_volume": 0.999128,
+      "trades": 316726,
+      "volume": 447061
+    },
+    "2025-05-12": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-12",
+      "share_of_session_volume": 0.997891,
+      "trades": 434080,
+      "volume": 624540
+    },
+    "2025-05-13": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-13",
+      "share_of_session_volume": 0.998236,
+      "trades": 347032,
+      "volume": 516679
+    },
+    "2025-05-14": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-14",
+      "share_of_session_volume": 0.998273,
+      "trades": 342190,
+      "volume": 504568
+    },
+    "2025-05-15": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-15",
+      "share_of_session_volume": 0.998444,
+      "trades": 366386,
+      "volume": 535253
+    },
+    "2025-05-16": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-16",
+      "share_of_session_volume": 0.996102,
+      "trades": 280502,
+      "volume": 406829
+    },
+    "2025-05-19": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-19",
+      "share_of_session_volume": 0.997822,
+      "trades": 339608,
+      "volume": 503585
+    },
+    "2025-05-20": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-20",
+      "share_of_session_volume": 0.998665,
+      "trades": 292540,
+      "volume": 431760
+    },
+    "2025-05-21": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-21",
+      "share_of_session_volume": 0.997708,
+      "trades": 407363,
+      "volume": 597621
+    },
+    "2025-05-22": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-22",
+      "share_of_session_volume": 0.998111,
+      "trades": 351031,
+      "volume": 508856
+    },
+    "2025-05-23": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-23",
+      "share_of_session_volume": 0.996867,
+      "trades": 378511,
+      "volume": 520244
+    },
+    "2025-05-26": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-26",
+      "share_of_session_volume": 0.996326,
+      "trades": 67209,
+      "volume": 87319
+    },
+    "2025-05-27": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-27",
+      "share_of_session_volume": 0.99797,
+      "trades": 291376,
+      "volume": 437426
+    },
+    "2025-05-28": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-28",
+      "share_of_session_volume": 0.997364,
+      "trades": 286832,
+      "volume": 415811
+    },
+    "2025-05-29": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-29",
+      "share_of_session_volume": 0.995959,
+      "trades": 394069,
+      "volume": 559283
+    },
+    "2025-05-30": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-05-30",
+      "share_of_session_volume": 0.99652,
+      "trades": 375279,
+      "volume": 542351
+    },
+    "2025-06-02": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-02",
+      "share_of_session_volume": 0.995597,
+      "trades": 301390,
+      "volume": 428279
+    },
+    "2025-06-03": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-03",
+      "share_of_session_volume": 0.996334,
+      "trades": 283562,
+      "volume": 419118
+    },
+    "2025-06-04": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-04",
+      "share_of_session_volume": 0.994443,
+      "trades": 272178,
+      "volume": 396186
+    },
+    "2025-06-05": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-05",
+      "share_of_session_volume": 0.993432,
+      "trades": 404328,
+      "volume": 581110
+    },
+    "2025-06-06": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-06",
+      "share_of_session_volume": 0.993065,
+      "trades": 318636,
+      "volume": 460119
+    },
+    "2025-06-09": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-09",
+      "share_of_session_volume": 0.991539,
+      "trades": 235342,
+      "volume": 350758
+    },
+    "2025-06-10": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-10",
+      "share_of_session_volume": 0.988168,
+      "trades": 293548,
+      "volume": 429199
+    },
+    "2025-06-11": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-11",
+      "share_of_session_volume": 0.979459,
+      "trades": 346757,
+      "volume": 509299
+    },
+    "2025-06-12": {
+      "instrument_id": 42005804,
+      "near_roll": false,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-12",
+      "share_of_session_volume": 0.939095,
+      "trades": 258238,
+      "volume": 378429
+    },
+    "2025-06-13": {
+      "instrument_id": 42005804,
+      "near_roll": true,
+      "raw_symbol": "NQM5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-13",
+      "share_of_session_volume": 0.801784,
+      "trades": 349066,
+      "volume": 483935
+    },
+    "2025-06-16": {
+      "instrument_id": 42008487,
+      "near_roll": true,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-16",
+      "share_of_session_volume": 0.445827,
+      "trades": 194786,
+      "volume": 262263
+    },
+    "2025-06-17": {
+      "instrument_id": 42008487,
+      "near_roll": true,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-17",
+      "share_of_session_volume": 0.70621,
+      "trades": 288477,
+      "volume": 400305
+    },
+    "2025-06-18": {
+      "instrument_id": 42008487,
+      "near_roll": true,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-18",
+      "share_of_session_volume": 0.798806,
+      "trades": 313459,
+      "volume": 440717
+    },
+    "2025-06-19": {
+      "instrument_id": 42008487,
+      "near_roll": true,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-19",
+      "share_of_session_volume": 0.869478,
+      "trades": 86150,
+      "volume": 113479
+    },
+    "2025-06-20": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-20",
+      "share_of_session_volume": 0.984617,
+      "trades": 356100,
+      "volume": 515500
+    },
+    "2025-06-23": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-23",
+      "share_of_session_volume": 0.998886,
+      "trades": 373745,
+      "volume": 542445
+    },
+    "2025-06-24": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-24",
+      "share_of_session_volume": 0.998414,
+      "trades": 301251,
+      "volume": 441302
+    },
+    "2025-06-25": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-25",
+      "share_of_session_volume": 0.999109,
+      "trades": 261295,
+      "volume": 390111
+    },
+    "2025-06-26": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-26",
+      "share_of_session_volume": 0.998976,
+      "trades": 268004,
+      "volume": 404964
+    },
+    "2025-06-27": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-27",
+      "share_of_session_volume": 0.998697,
+      "trades": 311458,
+      "volume": 470733
+    },
+    "2025-06-30": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-06-30",
+      "share_of_session_volume": 0.99835,
+      "trades": 277070,
+      "volume": 424767
+    },
+    "2025-07-01": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-01",
+      "share_of_session_volume": 0.998568,
+      "trades": 317410,
+      "volume": 483196
+    },
+    "2025-07-02": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-02",
+      "share_of_session_volume": 0.998989,
+      "trades": 266965,
+      "volume": 402342
+    },
+    "2025-07-03": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-03",
+      "share_of_session_volume": 0.99767,
+      "trades": 176426,
+      "volume": 264660
+    },
+    "2025-07-04": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-04",
+      "share_of_session_volume": 0.996084,
+      "trades": 55277,
+      "volume": 72496
+    },
+    "2025-07-07": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-07",
+      "share_of_session_volume": 0.999072,
+      "trades": 306103,
+      "volume": 458601
+    },
+    "2025-07-08": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-08",
+      "share_of_session_volume": 0.999475,
+      "trades": 271445,
+      "volume": 417034
+    },
+    "2025-07-09": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-09",
+      "share_of_session_volume": 0.999146,
+      "trades": 281008,
+      "volume": 444792
+    },
+    "2025-07-10": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-10",
+      "share_of_session_volume": 0.999321,
+      "trades": 247828,
+      "volume": 385379
+    },
+    "2025-07-11": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-11",
+      "share_of_session_volume": 0.998512,
+      "trades": 292586,
+      "volume": 455727
+    },
+    "2025-07-14": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-14",
+      "share_of_session_volume": 0.999002,
+      "trades": 263663,
+      "volume": 408577
+    },
+    "2025-07-15": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-15",
+      "share_of_session_volume": 0.997987,
+      "trades": 339997,
+      "volume": 519188
+    },
+    "2025-07-16": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-16",
+      "share_of_session_volume": 0.998839,
+      "trades": 362141,
+      "volume": 540438
+    },
+    "2025-07-17": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-17",
+      "share_of_session_volume": 0.998142,
+      "trades": 279919,
+      "volume": 436788
+    },
+    "2025-07-18": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-18",
+      "share_of_session_volume": 0.998354,
+      "trades": 273353,
+      "volume": 437309
+    },
+    "2025-07-21": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-21",
+      "share_of_session_volume": 0.998894,
+      "trades": 242286,
+      "volume": 390105
+    },
+    "2025-07-22": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-22",
+      "share_of_session_volume": 0.999095,
+      "trades": 336902,
+      "volume": 530913
+    },
+    "2025-07-23": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-23",
+      "share_of_session_volume": 0.998501,
+      "trades": 330874,
+      "volume": 508328
+    },
+    "2025-07-24": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-24",
+      "share_of_session_volume": 0.999198,
+      "trades": 278453,
+      "volume": 430895
+    },
+    "2025-07-25": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-25",
+      "share_of_session_volume": 0.99906,
+      "trades": 242954,
+      "volume": 389934
+    },
+    "2025-07-28": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-28",
+      "share_of_session_volume": 0.999359,
+      "trades": 257008,
+      "volume": 419312
+    },
+    "2025-07-29": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-29",
+      "share_of_session_volume": 0.998942,
+      "trades": 328659,
+      "volume": 530800
+    },
+    "2025-07-30": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-30",
+      "share_of_session_volume": 0.998223,
+      "trades": 345586,
+      "volume": 527586
+    },
+    "2025-07-31": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-07-31",
+      "share_of_session_volume": 0.998081,
+      "trades": 465848,
+      "volume": 728764
+    },
+    "2025-08-01": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-01",
+      "share_of_session_volume": 0.997239,
+      "trades": 525873,
+      "volume": 792154
+    },
+    "2025-08-04": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-04",
+      "share_of_session_volume": 0.998319,
+      "trades": 301768,
+      "volume": 463834
+    },
+    "2025-08-05": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-05",
+      "share_of_session_volume": 0.998488,
+      "trades": 352858,
+      "volume": 536166
+    },
+    "2025-08-06": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-06",
+      "share_of_session_volume": 0.998291,
+      "trades": 334702,
+      "volume": 516358
+    },
+    "2025-08-07": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-07",
+      "share_of_session_volume": 0.997731,
+      "trades": 373223,
+      "volume": 557015
+    },
+    "2025-08-08": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-08",
+      "share_of_session_volume": 0.998274,
+      "trades": 280475,
+      "volume": 447592
+    },
+    "2025-08-11": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-11",
+      "share_of_session_volume": 0.998686,
+      "trades": 278331,
+      "volume": 439363
+    },
+    "2025-08-12": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-12",
+      "share_of_session_volume": 0.997555,
+      "trades": 310500,
+      "volume": 480628
+    },
+    "2025-08-13": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-13",
+      "share_of_session_volume": 0.997263,
+      "trades": 289360,
+      "volume": 448246
+    },
+    "2025-08-14": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-14",
+      "share_of_session_volume": 0.997607,
+      "trades": 318397,
+      "volume": 486535
+    },
+    "2025-08-15": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-15",
+      "share_of_session_volume": 0.997746,
+      "trades": 278929,
+      "volume": 434317
+    },
+    "2025-08-18": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-18",
+      "share_of_session_volume": 0.998964,
+      "trades": 254184,
+      "volume": 396238
+    },
+    "2025-08-19": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-19",
+      "share_of_session_volume": 0.998777,
+      "trades": 353186,
+      "volume": 547883
+    },
+    "2025-08-20": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-20",
+      "share_of_session_volume": 0.997239,
+      "trades": 462071,
+      "volume": 704395
+    },
+    "2025-08-21": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-21",
+      "share_of_session_volume": 0.996059,
+      "trades": 354176,
+      "volume": 520650
+    },
+    "2025-08-22": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-22",
+      "share_of_session_volume": 0.996508,
+      "trades": 328479,
+      "volume": 480041
+    },
+    "2025-08-25": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-25",
+      "share_of_session_volume": 0.998211,
+      "trades": 256263,
+      "volume": 396107
+    },
+    "2025-08-26": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-26",
+      "share_of_session_volume": 0.996865,
+      "trades": 289785,
+      "volume": 437212
+    },
+    "2025-08-27": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-27",
+      "share_of_session_volume": 0.99821,
+      "trades": 273238,
+      "volume": 428803
+    },
+    "2025-08-28": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-28",
+      "share_of_session_volume": 0.997514,
+      "trades": 306120,
+      "volume": 479461
+    },
+    "2025-08-29": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-08-29",
+      "share_of_session_volume": 0.997107,
+      "trades": 346443,
+      "volume": 527958
+    },
+    "2025-09-01": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-01",
+      "share_of_session_volume": 0.996409,
+      "trades": 63356,
+      "volume": 87680
+    },
+    "2025-09-02": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-02",
+      "share_of_session_volume": 0.99527,
+      "trades": 427541,
+      "volume": 649736
+    },
+    "2025-09-03": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-03",
+      "share_of_session_volume": 0.99604,
+      "trades": 358306,
+      "volume": 557397
+    },
+    "2025-09-04": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-04",
+      "share_of_session_volume": 0.994753,
+      "trades": 303407,
+      "volume": 475080
+    },
+    "2025-09-05": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-05",
+      "share_of_session_volume": 0.992551,
+      "trades": 439448,
+      "volume": 662754
+    },
+    "2025-09-08": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-08",
+      "share_of_session_volume": 0.990529,
+      "trades": 289927,
+      "volume": 450764
+    },
+    "2025-09-09": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-09",
+      "share_of_session_volume": 0.987698,
+      "trades": 298413,
+      "volume": 466233
+    },
+    "2025-09-10": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-10",
+      "share_of_session_volume": 0.982206,
+      "trades": 327118,
+      "volume": 510078
+    },
+    "2025-09-11": {
+      "instrument_id": 42008487,
+      "near_roll": false,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-11",
+      "share_of_session_volume": 0.958968,
+      "trades": 278109,
+      "volume": 429449
+    },
+    "2025-09-12": {
+      "instrument_id": 42008487,
+      "near_roll": true,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-12",
+      "share_of_session_volume": 0.852901,
+      "trades": 240597,
+      "volume": 382625
+    },
+    "2025-09-15": {
+      "instrument_id": 42008487,
+      "near_roll": true,
+      "raw_symbol": "NQU5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-15",
+      "share_of_session_volume": 0.380294,
+      "trades": 142435,
+      "volume": 218969
+    },
+    "2025-09-16": {
+      "instrument_id": 158704,
+      "near_roll": true,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-16",
+      "share_of_session_volume": 0.611446,
+      "trades": 204455,
+      "volume": 320651
+    },
+    "2025-09-17": {
+      "instrument_id": 158704,
+      "near_roll": true,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-17",
+      "share_of_session_volume": 0.769091,
+      "trades": 365633,
+      "volume": 549031
+    },
+    "2025-09-18": {
+      "instrument_id": 158704,
+      "near_roll": true,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-18",
+      "share_of_session_volume": 0.837385,
+      "trades": 334050,
+      "volume": 518528
+    },
+    "2025-09-19": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-19",
+      "share_of_session_volume": 0.989081,
+      "trades": 303641,
+      "volume": 480380
+    },
+    "2025-09-22": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-22",
+      "share_of_session_volume": 0.999581,
+      "trades": 285046,
+      "volume": 467903
+    },
+    "2025-09-23": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-23",
+      "share_of_session_volume": 0.99928,
+      "trades": 339648,
+      "volume": 551327
+    },
+    "2025-09-24": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-24",
+      "share_of_session_volume": 0.999211,
+      "trades": 312374,
+      "volume": 521655
+    },
+    "2025-09-25": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-25",
+      "share_of_session_volume": 0.998908,
+      "trades": 426404,
+      "volume": 687130
+    },
+    "2025-09-26": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-26",
+      "share_of_session_volume": 0.999139,
+      "trades": 357841,
+      "volume": 542986
+    },
+    "2025-09-29": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-29",
+      "share_of_session_volume": 0.999103,
+      "trades": 307962,
+      "volume": 501113
+    },
+    "2025-09-30": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-09-30",
+      "share_of_session_volume": 0.999106,
+      "trades": 320579,
+      "volume": 503096
+    },
+    "2025-10-01": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-01",
+      "share_of_session_volume": 0.999182,
+      "trades": 299564,
+      "volume": 466539
+    },
+    "2025-10-02": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-02",
+      "share_of_session_volume": 0.999036,
+      "trades": 288416,
+      "volume": 451665
+    },
+    "2025-10-03": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-03",
+      "share_of_session_volume": 0.998946,
+      "trades": 303410,
+      "volume": 482299
+    },
+    "2025-10-06": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-06",
+      "share_of_session_volume": 0.999107,
+      "trades": 262972,
+      "volume": 410616
+    },
+    "2025-10-07": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-07",
+      "share_of_session_volume": 0.999209,
+      "trades": 331012,
+      "volume": 532138
+    },
+    "2025-10-08": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-08",
+      "share_of_session_volume": 0.998995,
+      "trades": 271233,
+      "volume": 436333
+    },
+    "2025-10-09": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-09",
+      "share_of_session_volume": 0.998879,
+      "trades": 310031,
+      "volume": 493736
+    },
+    "2025-10-10": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-10",
+      "share_of_session_volume": 0.998072,
+      "trades": 643242,
+      "volume": 914794
+    },
+    "2025-10-13": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-13",
+      "share_of_session_volume": 0.99867,
+      "trades": 438886,
+      "volume": 649746
+    },
+    "2025-10-14": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-14",
+      "share_of_session_volume": 0.998607,
+      "trades": 500684,
+      "volume": 720613
+    },
+    "2025-10-15": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-15",
+      "share_of_session_volume": 0.998786,
+      "trades": 427403,
+      "volume": 623584
+    },
+    "2025-10-16": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-16",
+      "share_of_session_volume": 0.998695,
+      "trades": 520140,
+      "volume": 726829
+    },
+    "2025-10-17": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-17",
+      "share_of_session_volume": 0.998623,
+      "trades": 520817,
+      "volume": 735170
+    },
+    "2025-10-20": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-20",
+      "share_of_session_volume": 0.998899,
+      "trades": 286963,
+      "volume": 429882
+    },
+    "2025-10-21": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-21",
+      "share_of_session_volume": 0.999073,
+      "trades": 289623,
+      "volume": 432351
+    },
+    "2025-10-22": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-22",
+      "share_of_session_volume": 0.99878,
+      "trades": 460665,
+      "volume": 683813
+    },
+    "2025-10-23": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-23",
+      "share_of_session_volume": 0.998928,
+      "trades": 341641,
+      "volume": 521868
+    },
+    "2025-10-24": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-24",
+      "share_of_session_volume": 0.99833,
+      "trades": 294040,
+      "volume": 459795
+    },
+    "2025-10-27": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-27",
+      "share_of_session_volume": 0.998365,
+      "trades": 266213,
+      "volume": 421306
+    },
+    "2025-10-28": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-28",
+      "share_of_session_volume": 0.998629,
+      "trades": 280776,
+      "volume": 440019
+    },
+    "2025-10-29": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-29",
+      "share_of_session_volume": 0.998128,
+      "trades": 366422,
+      "volume": 548648
+    },
+    "2025-10-30": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-30",
+      "share_of_session_volume": 0.998094,
+      "trades": 449185,
+      "volume": 654512
+    },
+    "2025-10-31": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-10-31",
+      "share_of_session_volume": 0.998133,
+      "trades": 391328,
+      "volume": 590702
+    },
+    "2025-11-03": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-03",
+      "share_of_session_volume": 0.998853,
+      "trades": 313970,
+      "volume": 468406
+    },
+    "2025-11-04": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-04",
+      "share_of_session_volume": 0.998312,
+      "trades": 444213,
+      "volume": 659924
+    },
+    "2025-11-05": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-05",
+      "share_of_session_volume": 0.997847,
+      "trades": 400003,
+      "volume": 610347
+    },
+    "2025-11-06": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-06",
+      "share_of_session_volume": 0.998251,
+      "trades": 504157,
+      "volume": 746174
+    },
+    "2025-11-07": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-07",
+      "share_of_session_volume": 0.997866,
+      "trades": 512631,
+      "volume": 752909
+    },
+    "2025-11-10": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-10",
+      "share_of_session_volume": 0.998204,
+      "trades": 393451,
+      "volume": 609648
+    },
+    "2025-11-11": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-11",
+      "share_of_session_volume": 0.998597,
+      "trades": 344743,
+      "volume": 524477
+    },
+    "2025-11-12": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-12",
+      "share_of_session_volume": 0.998537,
+      "trades": 386493,
+      "volume": 599965
+    },
+    "2025-11-13": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-13",
+      "share_of_session_volume": 0.998477,
+      "trades": 521510,
+      "volume": 764574
+    },
+    "2025-11-14": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-14",
+      "share_of_session_volume": 0.998253,
+      "trades": 587977,
+      "volume": 847616
+    },
+    "2025-11-17": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-17",
+      "share_of_session_volume": 0.998264,
+      "trades": 502477,
+      "volume": 731541
+    },
+    "2025-11-18": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-18",
+      "share_of_session_volume": 0.997859,
+      "trades": 611715,
+      "volume": 860410
+    },
+    "2025-11-19": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-19",
+      "share_of_session_volume": 0.997786,
+      "trades": 535784,
+      "volume": 761609
+    },
+    "2025-11-20": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-20",
+      "share_of_session_volume": 0.997077,
+      "trades": 698000,
+      "volume": 975531
+    },
+    "2025-11-21": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-21",
+      "share_of_session_volume": 0.997121,
+      "trades": 651637,
+      "volume": 903236
+    },
+    "2025-11-24": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-24",
+      "share_of_session_volume": 0.997583,
+      "trades": 409629,
+      "volume": 593852
+    },
+    "2025-11-25": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-25",
+      "share_of_session_volume": 0.995901,
+      "trades": 422938,
+      "volume": 617788
+    },
+    "2025-11-26": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-26",
+      "share_of_session_volume": 0.997234,
+      "trades": 347186,
+      "volume": 513391
+    },
+    "2025-11-27": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-27",
+      "share_of_session_volume": 0.992572,
+      "trades": 34091,
+      "volume": 46766
+    },
+    "2025-11-28": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-11-28",
+      "share_of_session_volume": 0.996847,
+      "trades": 92590,
+      "volume": 149531
+    },
+    "2025-12-01": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-01",
+      "share_of_session_volume": 0.996868,
+      "trades": 388529,
+      "volume": 567265
+    },
+    "2025-12-02": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-02",
+      "share_of_session_volume": 0.996126,
+      "trades": 372414,
+      "volume": 554416
+    },
+    "2025-12-03": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-03",
+      "share_of_session_volume": 0.993825,
+      "trades": 321955,
+      "volume": 485865
+    },
+    "2025-12-04": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-04",
+      "share_of_session_volume": 0.99585,
+      "trades": 334822,
+      "volume": 504410
+    },
+    "2025-12-05": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-05",
+      "share_of_session_volume": 0.994457,
+      "trades": 326659,
+      "volume": 488183
+    },
+    "2025-12-08": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-08",
+      "share_of_session_volume": 0.990236,
+      "trades": 302299,
+      "volume": 467045
+    },
+    "2025-12-09": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-09",
+      "share_of_session_volume": 0.98772,
+      "trades": 260946,
+      "volume": 400961
+    },
+    "2025-12-10": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-10",
+      "share_of_session_volume": 0.973122,
+      "trades": 365914,
+      "volume": 538109
+    },
+    "2025-12-11": {
+      "instrument_id": 158704,
+      "near_roll": false,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-11",
+      "share_of_session_volume": 0.956359,
+      "trades": 414099,
+      "volume": 612703
+    },
+    "2025-12-12": {
+      "instrument_id": 158704,
+      "near_roll": true,
+      "raw_symbol": "NQZ5",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-12",
+      "share_of_session_volume": 0.885656,
+      "trades": 458224,
+      "volume": 688034
+    },
+    "2025-12-15": {
+      "instrument_id": 42002475,
+      "near_roll": true,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-15",
+      "share_of_session_volume": 0.412233,
+      "trades": 220731,
+      "volume": 304939
+    },
+    "2025-12-16": {
+      "instrument_id": 42002475,
+      "near_roll": true,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-16",
+      "share_of_session_volume": 0.695198,
+      "trades": 389523,
+      "volume": 545470
+    },
+    "2025-12-17": {
+      "instrument_id": 42002475,
+      "near_roll": true,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-17",
+      "share_of_session_volume": 0.824072,
+      "trades": 429773,
+      "volume": 628078
+    },
+    "2025-12-18": {
+      "instrument_id": 42002475,
+      "near_roll": true,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-18",
+      "share_of_session_volume": 0.865174,
+      "trades": 452456,
+      "volume": 661010
+    },
+    "2025-12-19": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-19",
+      "share_of_session_volume": 0.984466,
+      "trades": 319402,
+      "volume": 485585
+    },
+    "2025-12-22": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-22",
+      "share_of_session_volume": 0.999143,
+      "trades": 236906,
+      "volume": 361214
+    },
+    "2025-12-23": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-23",
+      "share_of_session_volume": 0.999196,
+      "trades": 212765,
+      "volume": 330542
+    },
+    "2025-12-24": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-24",
+      "share_of_session_volume": 0.9993,
+      "trades": 101451,
+      "volume": 159844
+    },
+    "2025-12-26": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-26",
+      "share_of_session_volume": 0.998639,
+      "trades": 153544,
+      "volume": 235607
+    },
+    "2025-12-29": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-29",
+      "share_of_session_volume": 0.999082,
+      "trades": 220508,
+      "volume": 341852
+    },
+    "2025-12-30": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-30",
+      "share_of_session_volume": 0.999481,
+      "trades": 188016,
+      "volume": 296428
+    },
+    "2025-12-31": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2025-12-31",
+      "share_of_session_volume": 0.999383,
+      "trades": 205638,
+      "volume": 319280
+    },
+    "2026-01-02": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-02",
+      "share_of_session_volume": 0.999098,
+      "trades": 360016,
+      "volume": 538534
+    },
+    "2026-01-05": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-05",
+      "share_of_session_volume": 0.999199,
+      "trades": 299173,
+      "volume": 453961
+    },
+    "2026-01-06": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-06",
+      "share_of_session_volume": 0.999083,
+      "trades": 275827,
+      "volume": 439147
+    },
+    "2026-01-07": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-07",
+      "share_of_session_volume": 0.999382,
+      "trades": 290917,
+      "volume": 470730
+    },
+    "2026-01-08": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-08",
+      "share_of_session_volume": 0.999282,
+      "trades": 325962,
+      "volume": 501382
+    },
+    "2026-01-09": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-09",
+      "share_of_session_volume": 0.999318,
+      "trades": 327486,
+      "volume": 502228
+    },
+    "2026-01-12": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-12",
+      "share_of_session_volume": 0.999168,
+      "trades": 291548,
+      "volume": 449308
+    },
+    "2026-01-13": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-13",
+      "share_of_session_volume": 0.999271,
+      "trades": 358423,
+      "volume": 554832
+    },
+    "2026-01-14": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-14",
+      "share_of_session_volume": 0.999074,
+      "trades": 423553,
+      "volume": 634632
+    },
+    "2026-01-15": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-15",
+      "share_of_session_volume": 0.998588,
+      "trades": 386303,
+      "volume": 583324
+    },
+    "2026-01-16": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-16",
+      "share_of_session_volume": 0.999171,
+      "trades": 312660,
+      "volume": 482272
+    },
+    "2026-01-19": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-19",
+      "share_of_session_volume": 0.996901,
+      "trades": 118945,
+      "volume": 168250
+    },
+    "2026-01-20": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-20",
+      "share_of_session_volume": 0.998776,
+      "trades": 470749,
+      "volume": 683009
+    },
+    "2026-01-21": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-21",
+      "share_of_session_volume": 0.997781,
+      "trades": 538899,
+      "volume": 794674
+    },
+    "2026-01-22": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-22",
+      "share_of_session_volume": 0.998735,
+      "trades": 345934,
+      "volume": 526657
+    },
+    "2026-01-23": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-23",
+      "share_of_session_volume": 0.998832,
+      "trades": 323452,
+      "volume": 499583
+    },
+    "2026-01-26": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-26",
+      "share_of_session_volume": 0.99824,
+      "trades": 287927,
+      "volume": 442305
+    },
+    "2026-01-27": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-27",
+      "share_of_session_volume": 0.99716,
+      "trades": 271454,
+      "volume": 420244
+    },
+    "2026-01-28": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-28",
+      "share_of_session_volume": 0.997127,
+      "trades": 337113,
+      "volume": 506423
+    },
+    "2026-01-29": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-29",
+      "share_of_session_volume": 0.997238,
+      "trades": 466885,
+      "volume": 687692
+    },
+    "2026-01-30": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-01-30",
+      "share_of_session_volume": 0.995622,
+      "trades": 494438,
+      "volume": 700879
+    },
+    "2026-02-02": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-02",
+      "share_of_session_volume": 0.996999,
+      "trades": 387291,
+      "volume": 570038
+    },
+    "2026-02-03": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-03",
+      "share_of_session_volume": 0.997059,
+      "trades": 476247,
+      "volume": 685605
+    },
+    "2026-02-04": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-04",
+      "share_of_session_volume": 0.995264,
+      "trades": 522013,
+      "volume": 732808
+    },
+    "2026-02-05": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-05",
+      "share_of_session_volume": 0.996442,
+      "trades": 552811,
+      "volume": 762113
+    },
+    "2026-02-06": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-06",
+      "share_of_session_volume": 0.993513,
+      "trades": 449498,
+      "volume": 638954
+    },
+    "2026-02-09": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-09",
+      "share_of_session_volume": 0.99549,
+      "trades": 331620,
+      "volume": 482764
+    },
+    "2026-02-10": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-10",
+      "share_of_session_volume": 0.998759,
+      "trades": 317269,
+      "volume": 465118
+    },
+    "2026-02-11": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-11",
+      "share_of_session_volume": 0.998276,
+      "trades": 366325,
+      "volume": 524535
+    },
+    "2026-02-12": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-12",
+      "share_of_session_volume": 0.995104,
+      "trades": 445777,
+      "volume": 653809
+    },
+    "2026-02-13": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-13",
+      "share_of_session_volume": 0.996379,
+      "trades": 486819,
+      "volume": 678824
+    },
+    "2026-02-16": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-16",
+      "share_of_session_volume": 0.996845,
+      "trades": 78527,
+      "volume": 106793
+    },
+    "2026-02-17": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-17",
+      "share_of_session_volume": 0.993664,
+      "trades": 437324,
+      "volume": 636519
+    },
+    "2026-02-18": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-18",
+      "share_of_session_volume": 0.997481,
+      "trades": 353681,
+      "volume": 532109
+    },
+    "2026-02-19": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-19",
+      "share_of_session_volume": 0.996591,
+      "trades": 346239,
+      "volume": 500469
+    },
+    "2026-02-20": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-20",
+      "share_of_session_volume": 0.995431,
+      "trades": 425974,
+      "volume": 609190
+    },
+    "2026-02-23": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-23",
+      "share_of_session_volume": 0.995447,
+      "trades": 393805,
+      "volume": 583352
+    },
+    "2026-02-24": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-24",
+      "share_of_session_volume": 0.99761,
+      "trades": 336939,
+      "volume": 510065
+    },
+    "2026-02-25": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-25",
+      "share_of_session_volume": 0.996684,
+      "trades": 272344,
+      "volume": 409069
+    },
+    "2026-02-26": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-26",
+      "share_of_session_volume": 0.993105,
+      "trades": 407870,
+      "volume": 581208
+    },
+    "2026-02-27": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-02-27",
+      "share_of_session_volume": 0.990731,
+      "trades": 386894,
+      "volume": 552498
+    },
+    "2026-03-02": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-02",
+      "share_of_session_volume": 0.987503,
+      "trades": 441575,
+      "volume": 615472
+    },
+    "2026-03-03": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-03",
+      "share_of_session_volume": 0.978827,
+      "trades": 532723,
+      "volume": 704497
+    },
+    "2026-03-04": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-04",
+      "share_of_session_volume": 0.987444,
+      "trades": 428744,
+      "volume": 588798
+    },
+    "2026-03-05": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-05",
+      "share_of_session_volume": 0.991037,
+      "trades": 496163,
+      "volume": 670421
+    },
+    "2026-03-06": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-06",
+      "share_of_session_volume": 0.990742,
+      "trades": 473011,
+      "volume": 629977
+    },
+    "2026-03-09": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-09",
+      "share_of_session_volume": 0.984715,
+      "trades": 526203,
+      "volume": 696544
+    },
+    "2026-03-10": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-10",
+      "share_of_session_volume": 0.988011,
+      "trades": 417521,
+      "volume": 552388
+    },
+    "2026-03-11": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-11",
+      "share_of_session_volume": 0.984808,
+      "trades": 340468,
+      "volume": 467980
+    },
+    "2026-03-12": {
+      "instrument_id": 42002475,
+      "near_roll": false,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-12",
+      "share_of_session_volume": 0.9632,
+      "trades": 395509,
+      "volume": 542709
+    },
+    "2026-03-13": {
+      "instrument_id": 42002475,
+      "near_roll": true,
+      "raw_symbol": "NQH6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-13",
+      "share_of_session_volume": 0.861072,
+      "trades": 390969,
+      "volume": 539281
+    },
+    "2026-03-16": {
+      "instrument_id": 42004058,
+      "near_roll": true,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-16",
+      "share_of_session_volume": 0.407333,
+      "trades": 216631,
+      "volume": 280694
+    },
+    "2026-03-17": {
+      "instrument_id": 42004058,
+      "near_roll": true,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-17",
+      "share_of_session_volume": 0.637391,
+      "trades": 255090,
+      "volume": 354897
+    },
+    "2026-03-18": {
+      "instrument_id": 42004058,
+      "near_roll": true,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-18",
+      "share_of_session_volume": 0.784325,
+      "trades": 318495,
+      "volume": 444077
+    },
+    "2026-03-19": {
+      "instrument_id": 42004058,
+      "near_roll": true,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-19",
+      "share_of_session_volume": 0.896697,
+      "trades": 430833,
+      "volume": 586238
+    },
+    "2026-03-20": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-20",
+      "share_of_session_volume": 0.983157,
+      "trades": 410804,
+      "volume": 579181
+    },
+    "2026-03-23": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-23",
+      "share_of_session_volume": 0.996876,
+      "trades": 499170,
+      "volume": 672424
+    },
+    "2026-03-24": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-24",
+      "share_of_session_volume": 0.998888,
+      "trades": 391827,
+      "volume": 538222
+    },
+    "2026-03-25": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-25",
+      "share_of_session_volume": 0.998746,
+      "trades": 364071,
+      "volume": 515447
+    },
+    "2026-03-26": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-26",
+      "share_of_session_volume": 0.997222,
+      "trades": 378275,
+      "volume": 538803
+    },
+    "2026-03-27": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-27",
+      "share_of_session_volume": 0.997132,
+      "trades": 386075,
+      "volume": 550358
+    },
+    "2026-03-30": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-30",
+      "share_of_session_volume": 0.997203,
+      "trades": 386300,
+      "volume": 549468
+    },
+    "2026-03-31": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-03-31",
+      "share_of_session_volume": 0.998024,
+      "trades": 521866,
+      "volume": 735377
+    },
+    "2026-04-01": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-01",
+      "share_of_session_volume": 0.99765,
+      "trades": 393455,
+      "volume": 563402
+    },
+    "2026-04-02": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-02",
+      "share_of_session_volume": 0.997476,
+      "trades": 408726,
+      "volume": 567490
+    },
+    "2026-04-03": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-03",
+      "share_of_session_volume": 0.999341,
+      "trades": 30950,
+      "volume": 42430
+    },
+    "2026-04-06": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-06",
+      "share_of_session_volume": 0.998147,
+      "trades": 314493,
+      "volume": 434240
+    },
+    "2026-04-07": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-07",
+      "share_of_session_volume": 0.994026,
+      "trades": 395136,
+      "volume": 569404
+    },
+    "2026-04-08": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-08",
+      "share_of_session_volume": 0.998025,
+      "trades": 433535,
+      "volume": 626765
+    },
+    "2026-04-09": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-09",
+      "share_of_session_volume": 0.997966,
+      "trades": 341463,
+      "volume": 505801
+    },
+    "2026-04-10": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-10",
+      "share_of_session_volume": 0.998822,
+      "trades": 284381,
+      "volume": 423912
+    },
+    "2026-04-13": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-13",
+      "share_of_session_volume": 0.998035,
+      "trades": 336318,
+      "volume": 500858
+    },
+    "2026-04-14": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-14",
+      "share_of_session_volume": 0.998692,
+      "trades": 299714,
+      "volume": 461316
+    },
+    "2026-04-15": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-15",
+      "share_of_session_volume": 0.998545,
+      "trades": 333030,
+      "volume": 504256
+    },
+    "2026-04-16": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-16",
+      "share_of_session_volume": 0.998895,
+      "trades": 377964,
+      "volume": 577541
+    },
+    "2026-04-17": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-17",
+      "share_of_session_volume": 0.998853,
+      "trades": 372785,
+      "volume": 582463
+    },
+    "2026-04-20": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-20",
+      "share_of_session_volume": 0.998795,
+      "trades": 333864,
+      "volume": 490577
+    },
+    "2026-04-21": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-21",
+      "share_of_session_volume": 0.998949,
+      "trades": 398410,
+      "volume": 599674
+    },
+    "2026-04-22": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-22",
+      "share_of_session_volume": 0.998662,
+      "trades": 332289,
+      "volume": 498627
+    },
+    "2026-04-23": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-23",
+      "share_of_session_volume": 0.998684,
+      "trades": 436494,
+      "volume": 635289
+    },
+    "2026-04-24": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-24",
+      "share_of_session_volume": 0.998445,
+      "trades": 363147,
+      "volume": 532415
+    },
+    "2026-04-27": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-27",
+      "share_of_session_volume": 0.998537,
+      "trades": 304148,
+      "volume": 434646
+    },
+    "2026-04-28": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-28",
+      "share_of_session_volume": 0.998884,
+      "trades": 406603,
+      "volume": 591663
+    },
+    "2026-04-29": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-29",
+      "share_of_session_volume": 0.998214,
+      "trades": 346250,
+      "volume": 511472
+    },
+    "2026-04-30": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-04-30",
+      "share_of_session_volume": 0.997994,
+      "trades": 463878,
+      "volume": 688492
+    },
+    "2026-05-01": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-01",
+      "share_of_session_volume": 0.997082,
+      "trades": 338436,
+      "volume": 499576
+    },
+    "2026-05-04": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-04",
+      "share_of_session_volume": 0.998531,
+      "trades": 382929,
+      "volume": 563422
+    },
+    "2026-05-05": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-05",
+      "share_of_session_volume": 0.997695,
+      "trades": 301154,
+      "volume": 443187
+    },
+    "2026-05-06": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-06",
+      "share_of_session_volume": 0.99786,
+      "trades": 426367,
+      "volume": 620719
+    },
+    "2026-05-07": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-07",
+      "share_of_session_volume": 0.996977,
+      "trades": 442686,
+      "volume": 648101
+    },
+    "2026-05-08": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-08",
+      "share_of_session_volume": 0.997744,
+      "trades": 353425,
+      "volume": 527654
+    },
+    "2026-05-11": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-11",
+      "share_of_session_volume": 0.996995,
+      "trades": 368530,
+      "volume": 539212
+    },
+    "2026-05-12": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-12",
+      "share_of_session_volume": 0.997305,
+      "trades": 490228,
+      "volume": 703198
+    },
+    "2026-05-13": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-13",
+      "share_of_session_volume": 0.997478,
+      "trades": 387025,
+      "volume": 559962
+    },
+    "2026-05-14": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-14",
+      "share_of_session_volume": 0.997074,
+      "trades": 399031,
+      "volume": 601457
+    },
+    "2026-05-15": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-15",
+      "share_of_session_volume": 0.997133,
+      "trades": 524833,
+      "volume": 739183
+    },
+    "2026-05-18": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-18",
+      "share_of_session_volume": 0.996358,
+      "trades": 606767,
+      "volume": 838221
+    },
+    "2026-05-19": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-19",
+      "share_of_session_volume": 0.995946,
+      "trades": 513984,
+      "volume": 705989
+    },
+    "2026-05-20": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-20",
+      "share_of_session_volume": 0.996539,
+      "trades": 429800,
+      "volume": 594556
+    },
+    "2026-05-21": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-21",
+      "share_of_session_volume": 0.995937,
+      "trades": 435117,
+      "volume": 603451
+    },
+    "2026-05-22": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-22",
+      "share_of_session_volume": 0.995769,
+      "trades": 341143,
+      "volume": 482942
+    },
+    "2026-05-25": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-25",
+      "share_of_session_volume": 0.991358,
+      "trades": 86983,
+      "volume": 125160
+    },
+    "2026-05-26": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-26",
+      "share_of_session_volume": 0.995319,
+      "trades": 356626,
+      "volume": 532832
+    },
+    "2026-05-27": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-27",
+      "share_of_session_volume": 0.989201,
+      "trades": 427623,
+      "volume": 625014
+    },
+    "2026-05-28": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-28",
+      "share_of_session_volume": 0.989572,
+      "trades": 376839,
+      "volume": 546308
+    },
+    "2026-05-29": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-05-29",
+      "share_of_session_volume": 0.992747,
+      "trades": 386042,
+      "volume": 564469
+    },
+    "2026-06-01": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-01",
+      "share_of_session_volume": 0.993293,
+      "trades": 386197,
+      "volume": 557868
+    },
+    "2026-06-02": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-02",
+      "share_of_session_volume": 0.993689,
+      "trades": 350057,
+      "volume": 512347
+    },
+    "2026-06-03": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-03",
+      "share_of_session_volume": 0.991208,
+      "trades": 430069,
+      "volume": 621284
+    },
+    "2026-06-04": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-04",
+      "share_of_session_volume": 0.99036,
+      "trades": 478882,
+      "volume": 668884
+    },
+    "2026-06-05": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-05",
+      "share_of_session_volume": 0.984412,
+      "trades": 708880,
+      "volume": 1001874
+    },
+    "2026-06-08": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-08",
+      "share_of_session_volume": 0.982371,
+      "trades": 602464,
+      "volume": 822988
+    },
+    "2026-06-09": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-09",
+      "share_of_session_volume": 0.9777,
+      "trades": 773442,
+      "volume": 1057079
+    },
+    "2026-06-10": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-10",
+      "share_of_session_volume": 0.971707,
+      "trades": 565797,
+      "volume": 745136
+    },
+    "2026-06-11": {
+      "instrument_id": 42004058,
+      "near_roll": false,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-11",
+      "share_of_session_volume": 0.917261,
+      "trades": 513846,
+      "volume": 689280
+    },
+    "2026-06-12": {
+      "instrument_id": 42004058,
+      "near_roll": true,
+      "raw_symbol": "NQM6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-12",
+      "share_of_session_volume": 0.699326,
+      "trades": 315941,
+      "volume": 414654
+    },
+    "2026-06-15": {
+      "instrument_id": 42004177,
+      "near_roll": true,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-15",
+      "share_of_session_volume": 0.50984,
+      "trades": 255411,
+      "volume": 337967
+    },
+    "2026-06-16": {
+      "instrument_id": 42004177,
+      "near_roll": true,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-16",
+      "share_of_session_volume": 0.708905,
+      "trades": 363933,
+      "volume": 479880
+    },
+    "2026-06-17": {
+      "instrument_id": 42004177,
+      "near_roll": true,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-17",
+      "share_of_session_volume": 0.869074,
+      "trades": 404234,
+      "volume": 531548
+    },
+    "2026-06-18": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-18",
+      "share_of_session_volume": 0.976914,
+      "trades": 405009,
+      "volume": 544642
+    },
+    "2026-06-19": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-19",
+      "share_of_session_volume": 0.997793,
+      "trades": 78175,
+      "volume": 103510
+    },
+    "2026-06-22": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-22",
+      "share_of_session_volume": 0.998125,
+      "trades": 382974,
+      "volume": 523232
+    },
+    "2026-06-23": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-23",
+      "share_of_session_volume": 0.9983,
+      "trades": 523921,
+      "volume": 709877
+    },
+    "2026-06-24": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-24",
+      "share_of_session_volume": 0.997574,
+      "trades": 505194,
+      "volume": 669716
+    },
+    "2026-06-25": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-25",
+      "share_of_session_volume": 0.997632,
+      "trades": 478402,
+      "volume": 641755
+    },
+    "2026-06-26": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-26",
+      "share_of_session_volume": 0.995459,
+      "trades": 432071,
+      "volume": 573195
+    },
+    "2026-06-29": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-29",
+      "share_of_session_volume": 0.99603,
+      "trades": 388526,
+      "volume": 516017
+    },
+    "2026-06-30": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-06-30",
+      "share_of_session_volume": 0.997632,
+      "trades": 344641,
+      "volume": 470492
+    },
+    "2026-07-01": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-01",
+      "share_of_session_volume": 0.99813,
+      "trades": 383811,
+      "volume": 507191
+    },
+    "2026-07-02": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-02",
+      "share_of_session_volume": 0.997892,
+      "trades": 485998,
+      "volume": 631070
+    },
+    "2026-07-03": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-03",
+      "share_of_session_volume": 0.998399,
+      "trades": 67613,
+      "volume": 91657
+    },
+    "2026-07-06": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-06",
+      "share_of_session_volume": 0.997861,
+      "trades": 335198,
+      "volume": 446884
+    },
+    "2026-07-07": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-07",
+      "share_of_session_volume": 0.997654,
+      "trades": 418692,
+      "volume": 572409
+    },
+    "2026-07-08": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-08",
+      "share_of_session_volume": 0.996399,
+      "trades": 411225,
+      "volume": 547350
+    },
+    "2026-07-09": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-09",
+      "share_of_session_volume": 0.997589,
+      "trades": 332841,
+      "volume": 456423
+    },
+    "2026-07-10": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-10",
+      "share_of_session_volume": 0.998452,
+      "trades": 309536,
+      "volume": 419300
+    },
+    "2026-07-13": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-13",
+      "share_of_session_volume": 0.997344,
+      "trades": 370473,
+      "volume": 505122
+    },
+    "2026-07-14": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-14",
+      "share_of_session_volume": 0.997755,
+      "trades": 349909,
+      "volume": 461335
+    },
+    "2026-07-15": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-15",
+      "share_of_session_volume": 0.997774,
+      "trades": 362212,
+      "volume": 494414
+    },
+    "2026-07-16": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-16",
+      "share_of_session_volume": 0.997839,
+      "trades": 361953,
+      "volume": 488888
+    },
+    "2026-07-17": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-17",
+      "share_of_session_volume": 0.996447,
+      "trades": 469391,
+      "volume": 618922
+    },
+    "2026-07-20": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-20",
+      "share_of_session_volume": 0.997913,
+      "trades": 369854,
+      "volume": 494507
+    },
+    "2026-07-21": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-21",
+      "share_of_session_volume": 0.99794,
+      "trades": 319595,
+      "volume": 442697
+    },
+    "2026-07-22": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-22",
+      "share_of_session_volume": 0.997719,
+      "trades": 313505,
+      "volume": 437009
+    },
+    "2026-07-23": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-23",
+      "share_of_session_volume": 0.99739,
+      "trades": 471762,
+      "volume": 648893
+    },
+    "2026-07-24": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-24",
+      "share_of_session_volume": 0.997037,
+      "trades": 425598,
+      "volume": 581133
+    },
+    "2026-07-27": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-27",
+      "share_of_session_volume": 0.995279,
+      "trades": 432846,
+      "volume": 580767
+    },
+    "2026-07-28": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-28",
+      "share_of_session_volume": 0.996717,
+      "trades": 482136,
+      "volume": 648272
+    },
+    "2026-07-29": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-29",
+      "share_of_session_volume": 0.995334,
+      "trades": 605380,
+      "volume": 796659
+    },
+    "2026-07-30": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-30",
+      "share_of_session_volume": 0.995712,
+      "trades": 522353,
+      "volume": 702393
+    },
+    "2026-07-31": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-07-31",
+      "share_of_session_volume": 0.996362,
+      "trades": 497127,
+      "volume": 662239
+    },
+    "2026-08-03": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-03",
+      "share_of_session_volume": 0.996606,
+      "trades": 382653,
+      "volume": 525537
+    },
+    "2026-08-04": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-04",
+      "share_of_session_volume": 0.997244,
+      "trades": 432913,
+      "volume": 604263
+    },
+    "2026-08-05": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-05",
+      "share_of_session_volume": 0.997727,
+      "trades": 415031,
+      "volume": 556922
+    },
+    "2026-08-06": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-06",
+      "share_of_session_volume": 0.997442,
+      "trades": 412795,
+      "volume": 546695
+    },
+    "2026-08-07": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-07",
+      "share_of_session_volume": 0.998018,
+      "trades": 388470,
+      "volume": 523210
+    },
+    "2026-08-10": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-10",
+      "share_of_session_volume": 0.998413,
+      "trades": 287404,
+      "volume": 388260
+    },
+    "2026-08-11": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-11",
+      "share_of_session_volume": 0.998274,
+      "trades": 313054,
+      "volume": 439642
+    },
+    "2026-08-12": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-12",
+      "share_of_session_volume": 0.998107,
+      "trades": 287312,
+      "volume": 400162
+    },
+    "2026-08-13": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-13",
+      "share_of_session_volume": 0.997557,
+      "trades": 317414,
+      "volume": 449918
+    },
+    "2026-08-14": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-14",
+      "share_of_session_volume": 0.997586,
+      "trades": 277889,
+      "volume": 397883
+    },
+    "2026-08-17": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-17",
+      "share_of_session_volume": 0.99382,
+      "trades": 280176,
+      "volume": 397832
+    },
+    "2026-08-18": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-18",
+      "share_of_session_volume": 0.997436,
+      "trades": 396110,
+      "volume": 555575
+    },
+    "2026-08-19": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-19",
+      "share_of_session_volume": 0.996737,
+      "trades": 410248,
+      "volume": 562998
+    },
+    "2026-08-20": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-20",
+      "share_of_session_volume": 0.997677,
+      "trades": 406625,
+      "volume": 549716
+    },
+    "2026-08-21": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-21",
+      "share_of_session_volume": 0.997532,
+      "trades": 342237,
+      "volume": 483438
+    },
+    "2026-08-24": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-24",
+      "share_of_session_volume": 0.995991,
+      "trades": 368559,
+      "volume": 518024
+    },
+    "2026-08-25": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-25",
+      "share_of_session_volume": 0.99747,
+      "trades": 340385,
+      "volume": 480639
+    },
+    "2026-08-26": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-26",
+      "share_of_session_volume": 0.997966,
+      "trades": 321379,
+      "volume": 451827
+    },
+    "2026-08-27": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-27",
+      "share_of_session_volume": 0.996996,
+      "trades": 396521,
+      "volume": 560264
+    },
+    "2026-08-28": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-28",
+      "share_of_session_volume": 0.995104,
+      "trades": 419885,
+      "volume": 571150
+    },
+    "2026-08-31": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-08-31",
+      "share_of_session_volume": 0.994635,
+      "trades": 324570,
+      "volume": 455847
+    },
+    "2026-09-01": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-09-01",
+      "share_of_session_volume": 0.995958,
+      "trades": 383418,
+      "volume": 544592
+    },
+    "2026-09-02": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-09-02",
+      "share_of_session_volume": 0.995716,
+      "trades": 314990,
+      "volume": 435996
+    },
+    "2026-09-03": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-09-03",
+      "share_of_session_volume": 0.993848,
+      "trades": 380599,
+      "volume": 529546
+    },
+    "2026-09-04": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-09-04",
+      "share_of_session_volume": 0.994584,
+      "trades": 331051,
+      "volume": 462396
+    },
+    "2026-09-07": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-09-07",
+      "share_of_session_volume": 0.991222,
+      "trades": 65798,
+      "volume": 88080
+    },
+    "2026-09-08": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-09-08",
+      "share_of_session_volume": 0.983496,
+      "trades": 369329,
+      "volume": 506820
+    },
+    "2026-09-09": {
+      "instrument_id": 42004177,
+      "near_roll": false,
+      "raw_symbol": "NQU6",
+      "rule": "highest traded volume among outright contracts in the session",
+      "session": "2026-09-09",
+      "share_of_session_volume": 0.982623,
+      "trades": 347224,
+      "volume": 488183
+    }
+  },
+  "sessions_recorded": 564
+}

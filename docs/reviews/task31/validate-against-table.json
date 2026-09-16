@@ -1,0 +1,70 @@
+{
+ "candidate": {
+  "at_floor": false,
+  "degenerate": false,
+  "null_mean": -0.3449670551102875,
+  "null_sd": 0.06769391856359161,
+  "observed": -0.45899551160289687,
+  "observed_profile": {
+   "fills": 1306,
+   "mean_position_size": 1.0,
+   "median_holding_ns": 930000000000.0,
+   "return_sd": 2.5085262460537607,
+   "sessions_with_exposure": 11,
+   "trades": 632
+  },
+  "p": 0.9552238805970149,
+  "p_floor": 0.004975124378109453,
+  "profile_drift": {
+   "fills": 0.004594180704441042,
+   "mean_position_size": 0.0,
+   "median_holding_ns": 0.0,
+   "return_sd": 0.06210378544995765,
+   "sessions_with_exposure": 0.36363636363636365,
+   "trades": 0.011075949367088608
+  },
+  "profile_preserved": false,
+  "r": 200,
+  "wall_clock_s": 40.82
+ },
+ "n_grid_point": 100,
+ "r": 200,
+ "rows": [
+  {
+   "far": 0.005,
+   "rotation": -0.17839576858413012,
+   "table": 0.026126168997655505
+  },
+  {
+   "far": 0.01,
+   "rotation": -0.1816991983704302,
+   "table": -0.011643295738995708
+  },
+  {
+   "far": 0.02,
+   "rotation": -0.19554553897186047,
+   "table": -0.04978387482006419
+  },
+  {
+   "far": 0.05,
+   "rotation": -0.22259588190044965,
+   "table": -0.10437346688191251
+  },
+  {
+   "far": 0.1,
+   "rotation": -0.2472007346955075,
+   "table": -0.148615871811722
+  },
+  {
+   "far": 0.2,
+   "rotation": -0.27866815697663105,
+   "table": -0.19908073722500244
+  },
+  {
+   "far": 0.5,
+   "rotation": -0.350371351150008,
+   "table": -0.28456451801383836
+  }
+ ],
+ "worst_abs": 0.2045219375817856
+}

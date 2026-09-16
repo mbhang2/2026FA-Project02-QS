@@ -7,8 +7,27 @@
      them, and it should be as loud.
 
      Placeholders, all required: {api}, {context_api}, {data}, {run},
-     {current}, {history}, {repair}. A missing one is a KeyError at assembly,
-     before any API call, which is where a template mistake should surface.
+     {hypothesis}, {current}, {history}, {repair}. A missing one is a KeyError
+     at assembly, before any API call, which is where a template mistake should
+     surface.
+
+     {hypothesis} sits alone on a line between {run} and the rule that follows
+     it, so that substituting the empty string reproduces the pre-Task-46
+     SYSTEM and USER messages byte for byte. That is deliberate: this file's
+     digest changed when the slot was added, and Task 36's and Task 37's
+     campaigns are still comparable with a hypothesis-less campaign run today,
+     because what the model received did not move.
+
+     Note that this comment is not part of either message: the assembler cuts
+     the rendered file at the USER heading below and then at the SYSTEM heading,
+     and keeps only what follows them -- so documenting the new slot up here
+     costs nothing. `tests/test_hypothesis.py` asserts all of it.
+
+     DO NOT WRITE EITHER HEADING'S LITERAL TEXT IN THIS COMMENT. The split is on
+     the string, and the first occurrence wins, so a comment that quotes the
+     marker becomes the marker and the real one below is never reached. That is
+     not hypothetical -- it is what the first draft of this very paragraph did,
+     and the byte-identity test in `tests/test_hypothesis.py` is what caught it.
 
      NOTHING HERE MAY MENTION THE GATE. No threshold, no p-value, no
      false-acceptance rate, no accept/reject verdict, no N, no correction. The
@@ -51,7 +70,7 @@ the NQ adapter, which is not necessarily what you are running on. These are the
 facts of *this* run, and they win where the two differ:
 
 {run}
-
+{hypothesis}
 ---
 
 ### The current strategy

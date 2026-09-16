@@ -53,6 +53,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Sequence
 
+from .hypothesis import Hypothesis, block as hypothesis_block
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE_PATH = REPO_ROOT / "config" / "prompts" / "strategy-agent.md"
 
@@ -160,6 +162,11 @@ class LLMAgent:
     # only -- dataset, split name, sizes, budgets. Never whether there is an
     # edge to find, and never anything the correction computes.
     run_facts: str = ""
+    # The campaign's question, or None. Linted and digested by
+    # `src.core.loop.hypothesis.load` before it gets here -- this field takes a
+    # `Hypothesis`, never a path and never raw text, so there is no route by
+    # which unlinted prose reaches a prompt.
+    hypothesis: "Hypothesis | None" = None
     # Everything below is state, not configuration.
     calls: list[Call] = field(default_factory=list, init=False, repr=False)
     _pending: list[Call] = field(default_factory=list, init=False, repr=False)
@@ -190,6 +197,15 @@ class LLMAgent:
             "documents_shown": sorted(
                 str(p.relative_to(REPO_ROOT)) for p in DOC_PATHS.values()),
             "run_facts": self.run_facts,
+            # The question, by path and digest rather than by value. The text
+            # is in a committed file whose commit date is the pre-registration;
+            # copying it into the record would make the record the second place
+            # it lives, and two places is how they come to disagree.
+            "hypothesis": (
+                None if self.hypothesis is None else {
+                    "path": str(self.hypothesis.path.relative_to(REPO_ROOT)),
+                    "digest": self.hypothesis.digest,
+                }),
             "show_history": self.show_history,
             "history_full_sources": self.history_full_sources,
             "shows_the_gate": False,
@@ -298,6 +314,7 @@ class LLMAgent:
             context_api=self._docs["context_api"],
             data=self._docs["data"],
             run=self.run_facts or "(not supplied)",
+            hypothesis=hypothesis_block(self.hypothesis),
             current=current,
             history=self._history_block(history),
             repair=repair,

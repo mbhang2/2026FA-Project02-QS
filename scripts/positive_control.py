@@ -73,10 +73,26 @@ DATASET_SEED = 1
 B_PERM = 10_000
 WORKERS = 9
 
-# Task 36's template digest. Equality is asserted at registration: the whole
-# comparison rests on the agent having been asked the same question.
+# Task 36's template digest, and the one the same template hashes to after Task
+# 46 added the `{hypothesis}` slot. Equality against one of them is asserted at
+# registration: the whole comparison rests on the agent having been asked the
+# same question.
+#
+# **Why two constants and not a bumped one.** The slot is additive and it sits
+# alone on a line, so a campaign with no hypothesis renders the SYSTEM and USER
+# messages byte for byte as Task 36 did -- the file moved, what the model
+# received did not, and `test_hypothesis.py` asserts exactly that against the
+# template as it stood at Task 45. Overwriting the old constant would have
+# thrown away the fact that the two are comparable; keeping both, and requiring
+# `hypothesis is None`, is the version of this guard that still means something.
+#
+# A THIRD digest must never be added without re-establishing the same property.
+# If someone edits the body of this template, the comparison to Task 36 is over
+# and the honest move is to say so and stop, not to append a constant.
 TASK36_TEMPLATE_DIGEST = (
     "97e45328af3f9f73a07281de3418127d6fc86e37423c260640413d86f1b1f165")
+TASK46_TEMPLATE_DIGEST = (
+    "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e")
 
 # arm -> (profile, signal strength, why this strength)
 ARMS = {
@@ -122,10 +138,11 @@ def stage_register() -> None:
     from src.core.loop.llm import template_digest
 
     digest = template_digest()
-    if digest != TASK36_TEMPLATE_DIGEST:
+    if digest not in (TASK36_TEMPLATE_DIGEST, TASK46_TEMPLATE_DIGEST):
         sys.exit(
             f"the prompt template has changed since Task 36.\n"
             f"  now      {digest}\n  task 36  {TASK36_TEMPLATE_DIGEST}\n"
+            f"  task 46  {TASK46_TEMPLATE_DIGEST}\n"
             "The positive control compares against Task 36's campaigns, and a "
             "different prompt makes that comparison meaningless. Restore the "
             "template or abandon the comparison explicitly -- do not proceed."
@@ -136,8 +153,18 @@ def stage_register() -> None:
         if path.exists():
             sys.exit(f"{path} already exists. A pre-registration is written "
                      "once.")
-        cfg = agent_for(arm).config()
+        agent = agent_for(arm)
+        if agent.hypothesis is not None:
+            sys.exit(
+                "this control runs without a hypothesis, because Task 36's "
+                "campaigns had none and a hypothesis changes what the agent was "
+                "asked. Comparing across that is not a positive control.")
+        cfg = agent.config()
+        # True for either digest, and it is a claim about the MESSAGES rather
+        # than about the file -- see the constants above.
         cfg["prompt_template_digest_matches_task36"] = True
+        cfg["prompt_template_digest_is_task46_slot_only"] = (
+            digest == TASK46_TEMPLATE_DIGEST)
         cfg["signal_strength"] = strength
         cfg["planted_mechanism"] = (
             "momentum over consecutive signal_interval_ticks=10 blocks: the "

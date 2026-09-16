@@ -211,8 +211,8 @@ def test_every_placeholder_the_template_declares_is_supplied():
     fields = {f for _, f, _, _ in string.Formatter().parse(
         llm.TEMPLATE_PATH.read_text()) if f}
     prompt = _agent()._prompt((), repair="")
-    assert fields == {"api", "context_api", "data", "run", "current",
-                      "history", "repair"}, fields
+    assert fields == {"api", "context_api", "data", "run", "hypothesis",
+                      "current", "history", "repair"}, fields
     assert len(prompt) > 10_000, "the documents did not make it into the prompt"
 
 

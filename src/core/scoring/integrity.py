@@ -164,6 +164,12 @@ ARTIFACT_GLOBS = (
     "config/prompts/*.md",           # the proposing agent's prompt (Task 36):
                                      # an artifact that shaped the result, the
                                      # same way a null table is
+    "config/hypotheses/*.md",        # the campaign's question (Task 46). In for
+                                     # the identical reason: two campaigns run
+                                     # under different hypotheses are different
+                                     # experiments, and their scores are not
+                                     # comparable. The file's commit date is
+                                     # the pre-registration, as for a calendar.
     "data/calibration/*.json",       # every null table, tagged or not
     "data/manifest.json",            # the bucket fingerprint
     "data/nq-contract-selection.json",

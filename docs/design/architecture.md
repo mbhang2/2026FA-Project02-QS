@@ -782,6 +782,27 @@ across hundreds of nightly trials. This is the part that was missing.
 | `src/core/loop/agents.py` | The stub proposal side: `NullGenerator` (edgeless variants, deterministic) and `ReplayList` (a fixed sequence) |
 | `src/core/loop/campaign.py` | `CampaignRecord` (pre-registered and hashed), `run_campaign`, `summarise`, and `CampaignResult.unaccounted` |
 | `src/core/loop/llm.py` | The real proposal side (Task 36): `LLMAgent`, the same one `propose(history)` method the stubs implement, plus the prompt assembly, the history whitelist, the bounded static-repair loop and the blocked-proposal path. Runs in the driver, which has network; nothing here is reachable from the strategy process, which does not |
+| `src/core/loop/hypothesis.py` | The campaign's question (Task 46): loads `config/hypotheses/*.md`, **lints it against the gate's vocabulary**, digests it, and renders the prompt block. A hypothesis is human free text flowing into a prompt that is guaranteed to say nothing about thresholds, p-values, N, validation or the holdout, and one well-meant "check it holds out of sample" breaks that silently. The lint is the mechanism rather than a note, and `block(None)` renders empty so that a campaign without one reproduces Task 36's messages byte for byte |
+
+**The question is an input, and it is a file (Task 46).** Until then a campaign
+could say how it searched but not what it was searching for: the template had
+slots for the interface, the current strategy, the history and the run facts,
+all of them facts about the harness. `config/hypotheses/<name>.md` is the slot
+for the question, it is in `ARTIFACT_GLOBS` for the same reason the prompt is —
+two campaigns run under different hypotheses are different experiments — and its
+digest is in the campaign record, so editing it mid-campaign makes the record
+fail its own check. **The commit date is the pre-registration date**, as for a
+calendar.
+
+The part that is a mechanism rather than a convention is the lint. The whole
+file is pasted into the prompt, so every line of it reaches the agent, and
+`loop.md` guarantees the agent is told nothing about the gate or the closed
+splits. Measured on the hypothesis prose already in this repo: 31 true leaks in
+`research/hypotheses/Test1.md` — which describes its own evaluation methodology,
+p-values and out-of-sample requirements included — and no false positives on the
+two short hypotheses written before the lint existed. The one term that did
+produce false positives, a bare "threshold" used for a *signal* rule, was
+narrowed rather than kept.
 
 **A stub agent first, with no LLM in it.** A correction cannot be checked against
 a campaign whose ground truth is unknown, so the null generator proposes

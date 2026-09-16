@@ -61,6 +61,14 @@ class CampaignRecord:
     split: str = ""
     note: str = ""
     written_at: str = ""
+    # The campaign's question: the file, and what it hashed to when the record
+    # was written. Both None for a campaign that has none -- and `digest()`
+    # drops None keys, so adding these two fields does not move the digest of
+    # any record committed before they existed. Editing the hypothesis file
+    # mid-campaign changes `hypothesis_digest` and the record then fails its own
+    # check, which is the same alarm an edited budget rings.
+    hypothesis_path: str | None = None
+    hypothesis_digest: str | None = None
     # Everything a non-deterministic agent needs pinned (Task 36): model id,
     # temperature and sampling parameters, whatever seed the API accepts, the
     # prompt template digest, what the agent is shown, and the invocation

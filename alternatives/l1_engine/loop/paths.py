@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from alternatives.l1_engine._roots import tree_root
 
-# Two `parent`s from `alternatives/l1_engine/<sub>/<file>.py` is the
-# package root. It was three when this lived at
-# `nalin/l1-loop/nalin_l1/`, which had one more level above it (Task 44).
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Anchored on a marker and a name, never on a depth (see `_roots.py`).
+PROJECT_ROOT = tree_root()
 
 # Was `PROJECT_ROOT / "Docs"` -- capital D against the repo's lowercase `docs/`,
 # which case-resolves on macOS and does not on Linux. Corrected here.

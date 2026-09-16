@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from audit._roots import repo_root
 
-# Repo root: audit/config.py -> parents[1]. Was parents[2] when this package
-# lived at daksh/audit_agent/; Task 44 moved it one level up and the walk moved
-# with it.
-REPO_ROOT = Path(__file__).resolve().parents[1]
+# Anchored on a marker, never on a depth (see `audit/_roots.py`). This walked
+# `parents[2]` from `daksh/audit_agent/config.py` and pointed one directory
+# above the repository for the length of the Task 44 restructure.
+REPO_ROOT = repo_root()
 
 DEFAULT_LEDGER = REPO_ROOT / "research" / "audit_db.json"
 

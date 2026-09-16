@@ -7,12 +7,15 @@ from pathlib import Path
 
 import boto3
 from dotenv import load_dotenv
+from alternatives.l1_engine._roots import tree_root
 
 # --- Configuration ---
-# Two `parent`s from `alternatives/l1_engine/<sub>/<file>.py` is the
-# package root. It was three when this lived at
-# `nalin/l1-loop/nalin_l1/`, which had one more level above it (Task 44).
-ENV_PATH = Path(__file__).resolve().parent.parent / "secrets" / "r2.env"
+# Anchored on a marker and a name, never on a depth (see `../_roots.py`). When
+# this counted directories the Task 44 move sent it looking for the R2
+# credentials one directory too high, where it would have reported "please
+# ensure r2.env is correctly filled out" -- a path bug wearing a
+# configuration bug's clothes.
+ENV_PATH = tree_root() / "secrets" / "r2.env"
 PLACEHOLDER_PREFIX = "YOUR_"
 
 def validate_env_vars(env_vars: dict[str, str]) -> None:

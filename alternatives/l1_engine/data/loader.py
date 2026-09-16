@@ -25,6 +25,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from alternatives.l1_engine._roots import tree_root
 
 # Column layout of the canonical schema. ``timestamp`` is the index.
 _PRICE_COLUMNS = ["open", "high", "low", "close", "volume"]
@@ -32,9 +33,8 @@ _PRICE_COLUMNS = ["open", "high", "low", "close", "volume"]
 
 def _data_root() -> Path:
     # ``alternatives.l1_engine/data/loader.py`` -> project root is two levels up (``..``/``..``).
-    # Two `parent`s is the package root; three when this was at
-    # `nalin/l1-loop/nalin_l1/` (Task 44).
-    return Path(__file__).resolve().parent.parent
+    # Anchored on a marker and a name, never on a depth (see `../_roots.py`).
+    return tree_root()
 
 
 def _canonicalize(df: pd.DataFrame) -> pd.DataFrame:

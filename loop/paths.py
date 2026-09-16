@@ -3,20 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from loop._roots import repo_root, tree_root
 
-# One `parent` from `loop/paths.py` is `loop/`, and `candidate_dir` writes to
-# `loop/candidates/<id>`.
-#
-# **This constant has now been wrong twice, and the pattern is the point.** It
-# was three `parent`s at `Gowtam/L1/loop/paths.py`, which resolved to `Gowtam/`
-# -- one level above the project whose name it carried -- and Task 41 fixed it
-# to two. Task 44 moved the package up a level, so two became one. A relative
-# walk is a fact about where a file sits, and a file that moves invalidates it
-# silently; nothing failed either time, because nothing else referred to the
-# directory it was pointing at.
-PROJECT_ROOT = Path(__file__).resolve().parent
-# The harness repo, one level above `loop/`.
-REPO_ROOT = PROJECT_ROOT.parent
+# Anchored on a marker and a name, never on a depth (see `loop/_roots.py`).
+# This constant was wrong three separate times when it counted directories.
+PROJECT_ROOT = tree_root()
+REPO_ROOT = repo_root()
 
 # Was `PROJECT_ROOT / "Docs" / "References" / "context-api.md"` -- capital D
 # against the repo's lowercase `docs/`, and a path that has never existed in any

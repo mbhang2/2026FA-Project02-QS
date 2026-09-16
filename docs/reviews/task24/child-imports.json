@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "actions": [],
+  "src_modules": [
+    "src.core",
+    "src.core.scoring.calibration._remote_strategy",
+    "src.core.types"
+  ],
+  "open_fds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6
+  ],
+  "reachable_forbidden": [],
+  "objects_walked": 5387
+}

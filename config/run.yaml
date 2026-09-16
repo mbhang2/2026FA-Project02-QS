@@ -1,0 +1,170 @@
+# Run configuration. Immutable, for the same reason the scorer is.
+#
+# Whoever chooses the split, the fill model and the seed can point a run at the
+# holdout, select favorable fills, or retry until a lucky seed lands. None of
+# those require touching the scorer and all three are cheaper ways to fake a
+# result. This file is the only place they are set; nothing reads them from the
+# strategy or from arguments the agent controls.
+
+profiles:
+
+  # What the loop harness runs.
+  harness:
+    dataset: synthetic
+    split: validation
+    fill_model: unfavorable        # the loop scores on the pessimistic model
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 900
+    notional_base: 1.0
+
+  # What the agent may run itself, so it can execute what it writes rather than
+  # shipping syntax errors into the loop. Fixed: validation only, no arguments
+  # that change any of it, holdout unreachable. Every invocation still emits a
+  # ledger record.
+  agent:
+    dataset: synthetic-check
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+
+  # What a campaign searches on. **Training split only**, which is the point:
+  # the loop proposes and discards on train, and validation is a budget spent
+  # later by a promotion rule that does not exist yet (Task 31). A campaign that
+  # searched on validation would consume the split it is eventually judged
+  # against, which is the same mistake as scoring on the holdout with extra
+  # steps.
+  #
+  # 105 synthetic training sessions at signal_strength 0.0 -- no edge to find,
+  # which is exactly what the correction is calibrated against.
+  campaign:
+    dataset: synthetic
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 0
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+
+  # Task 37's positive control. The same campaign profile in every respect --
+  # train split, unfavorable fills, seed 1, same caps and budgets -- with a
+  # planted signal of known strength and nothing else changed. Two strengths,
+  # both sized before the campaigns ran against the gate's own bar (the Task 36
+  # best-of-100 null maximum, +0.8011 at q = 0.05):
+  #
+  #   0.30  the calibration reference scores +0.7708 here: a plausible strategy
+  #         lands *on* the bar, so clearing it takes a candidate better than the
+  #         apparatus. The perfect-knowledge oracle scores +9.8190.
+  #   0.50  the reference scores +2.8810, 3.6x the bar. Oracle +38.2458.
+  #
+  # `docs/reviews/task37/sweep.json` is the measurement. The agent is never told
+  # a signal exists, and the prompt template digest is asserted identical to
+  # Task 36's in the campaign record -- otherwise this measures whether a model
+  # can implement a described rule, which is not the question.
+  campaign-s030:
+    dataset: synthetic-s030
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 0
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+
+  campaign-s050:
+    dataset: synthetic-s050
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 0
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+
+  # The holdout. A profile rather than a flag: since Task 20 the split is not a
+  # command-line argument, so pointing a run at the holdout is an edit to a
+  # committed file rather than something anyone can type. It still refuses to
+  # run without --unlock-holdout and a reason, and --human on top of that.
+  holdout:
+    dataset: synthetic
+    split: holdout
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 900
+    notional_base: 1.0
+
+  # The first real end-to-end run: reference strategy, real NQ data, the
+  # pre-registered validation split. A plumbing check at full scale, not a
+  # result -- run it with `--purpose smoke`.
+  nq-validation:
+    dataset: nq
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 3600
+    notional_base: 1.0
+    record_fill_spread: false
+
+# Dataset definitions the profiles name.
+datasets:
+  synthetic:
+    kind: synthetic
+    n_sessions: 175
+    ticks_per_session: 390
+    vol_per_tick: 0.15
+    signal_strength: 0.0
+
+  # Deliberately small. The agent's check answers "does this code run", and a
+  # check that walked the whole validation split would be an evaluation with the
+  # number withheld rather than a check.
+  synthetic-check:
+    kind: synthetic
+    n_sessions: 40
+    ticks_per_session: 390
+    vol_per_tick: 0.15
+    signal_strength: 0.0
+
+  synthetic-signal:
+    kind: synthetic
+    n_sessions: 175
+    ticks_per_session: 390
+    vol_per_tick: 0.15
+    signal_strength: 0.5
+
+  # Task 37. Identical to `synthetic` but for `signal_strength`. The planted
+  # edge is momentum over consecutive 10-tick blocks, and ticks are 30s apart,
+  # so a block is exactly one 5m bar -- the interval every worked example in
+  # `strategy-api.md` uses. That is what makes it reachable by the kind of code
+  # a model actually writes, and it is a property of the generator rather than
+  # a choice made to flatter the result.
+  synthetic-s030:
+    kind: synthetic
+    n_sessions: 175
+    ticks_per_session: 390
+    vol_per_tick: 0.15
+    signal_strength: 0.30
+
+  synthetic-s050:
+    kind: synthetic
+    n_sessions: 175
+    ticks_per_session: 390
+    vol_per_tick: 0.15
+    signal_strength: 0.50
+
+  # Real data. `commission_per_contract` is deliberately absent: the engine's
+  # default is scaled for the synthetic generator's price units and a real NQ
+  # cost model is its own decision, not something to slip in here.
+  nq:
+    kind: nq
+    symbol: NQ
+
+ledger: runs/ledger.jsonl

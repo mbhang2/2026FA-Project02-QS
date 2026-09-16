@@ -1,0 +1,46 @@
+{
+  "bar_payload_bytes": 119,
+  "bars_pulled": 283779576,
+  "bars_read": 23823,
+  "callbacks": {
+    "on_bars": 23823,
+    "on_fill": 7422,
+    "on_lifecycle": 15186,
+    "setup": 1
+  },
+  "calls": {
+    "buy": 2016,
+    "cancel_all": 84,
+    "close": 84,
+    "history": 23823,
+    "sell": 1946,
+    "subscribe": 1
+  },
+  "dataset": "nq-trades:NQ",
+  "history_calls": 23823,
+  "history_index_reads": 23823,
+  "history_iterations": 0,
+  "history_len_calls": 23823,
+  "history_slices": 0,
+  "project_to": 564,
+  "reads": {
+    "position": 23910,
+    "session": 23910,
+    "session_end": 23823,
+    "ts": 23823,
+    "working_order_ids": 4347
+  },
+  "scale": 6.482758620689655,
+  "sessions": 87,
+  "slice_histogram": {},
+  "ticks": 33254026,
+  "total_callbacks": 46432,
+  "wall_plain_s": 44.80754791665822,
+  "window_histogram": {
+    "distinct_lengths": 23823,
+    "max": 23823,
+    "min": 1,
+    "note": "23823 distinct view lengths; the view grows by one bar per callback, so this was a per-callback trace rather than a summary. Kept: the range and the count.",
+    "total_bars_returned": 283779576
+  }
+}

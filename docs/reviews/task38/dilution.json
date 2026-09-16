@@ -1,0 +1,101 @@
+{
+ "null_sizes": {
+  "rotation_r50_median": 50,
+  "rotation_r150_median": 150,
+  "buckets_in_use": [
+   232,
+   279,
+   308,
+   349
+  ]
+ },
+ "rotation_trials_per_campaign": {
+  "mean": 2.2075,
+  "median": 2.0,
+  "none": 28,
+  "five_or_more": 19
+ },
+ "fwer": {
+  "full hybrid, R=50": {
+   "rejects": 23,
+   "campaigns": 400,
+   "fwer": 0.0575,
+   "ci": [
+    0.038617261729224514,
+    0.08480142520149289
+   ]
+  },
+  "full hybrid, R=150": {
+   "rejects": 24,
+   "campaigns": 400,
+   "fwer": 0.06,
+   "ci": [
+    0.0406476805246611,
+    0.0877234432030579
+   ]
+  },
+  "rotation-routed trials only, R=50": {
+   "rejects": 38,
+   "campaigns": 372,
+   "fwer": 0.10215053763440861,
+   "ci": [
+    0.07533029247537777,
+    0.13710388192149583
+   ]
+  },
+  "rotation-routed trials only, R=150": {
+   "rejects": 41,
+   "campaigns": 372,
+   "fwer": 0.11021505376344086,
+   "ci": [
+    0.08228906167853486,
+    0.14610928485894265
+   ]
+  },
+  "paired_p::full hybrid": {
+   "n": 400,
+   "mean_delta": -0.001152884711528846,
+   "median_delta": 0.0,
+   "rose": 145,
+   "fell": 160,
+   "unchanged": 95
+  },
+  "paired_p::rotation-routed trials only": {
+   "n": 372,
+   "mean_delta": -0.0007351415396094803,
+   "median_delta": -0.00019998000199980548,
+   "rose": 182,
+   "fell": 187,
+   "unchanged": 3
+  },
+  "cap_binding": {
+   "R=50": {
+    "binds": 2,
+    "campaigns": 400,
+    "share": 0.005,
+    "median_margin": -0.2921446691331637
+   },
+   "R=150": {
+    "binds": 2,
+    "campaigns": 400,
+    "share": 0.005,
+    "median_margin": -0.3082064644456445
+   }
+  }
+ },
+ "predicted_drop_from_task34": -0.009,
+ "cap_binding": {
+  "R=50": {
+   "binds": 2,
+   "campaigns": 400,
+   "share": 0.005,
+   "median_margin": -0.2921446691331637
+  },
+  "R=150": {
+   "binds": 2,
+   "campaigns": 400,
+   "share": 0.005,
+   "median_margin": -0.3082064644456445
+  }
+ }
+}

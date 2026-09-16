@@ -1,0 +1,153 @@
+{
+  "dataset_digest": "d4d2854a5006562c",
+  "disagreement_note": "The calendar says 12:00 CT and trading demonstrably continued to 12:15 on these dates -- the day after Thanksgiving, Christmas Eve, and one July 3. CME equity index futures close at 12:15 CT on those half days and pandas_market_calendars' CME_Equity reports 12:00. Reported rather than silently resolved: the resolved end is the later of the two so nothing is dropped, but the calendar is wrong about these dates and a CME-specific calendar would be the fix.",
+  "disagreements": [
+    "2024-11-29",
+    "2024-12-24",
+    "2025-07-03",
+    "2025-11-28",
+    "2025-12-24"
+  ],
+  "normal_close_ct": "16:00",
+  "note": "When each early-closing NQ session ends. The exchange calendar is the source a strategy may act on; the observed last trade is here to check it. Resolved end is the later of the two, so no observed trade is ever discarded by the session window.",
+  "sessions": {
+    "2024-07-04": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 35915
+    },
+    "2024-09-02": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 52911
+    },
+    "2024-11-28": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 39363
+    },
+    "2024-11-29": {
+      "calendar_close_ct": "12:00",
+      "disagreement_minutes": 15.0,
+      "observed_last_trade_ct": "12:14:59",
+      "resolved_close_ct": "12:15",
+      "ticks": 190163
+    },
+    "2024-12-24": {
+      "calendar_close_ct": "12:00",
+      "disagreement_minutes": 15.0,
+      "observed_last_trade_ct": "12:14:59",
+      "resolved_close_ct": "12:15",
+      "ticks": 174133
+    },
+    "2025-01-20": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 115646
+    },
+    "2025-02-17": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 66634
+    },
+    "2025-05-26": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 67209
+    },
+    "2025-06-19": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 86150
+    },
+    "2025-07-03": {
+      "calendar_close_ct": "12:00",
+      "disagreement_minutes": 15.0,
+      "observed_last_trade_ct": "12:14:59",
+      "resolved_close_ct": "12:15",
+      "ticks": 176426
+    },
+    "2025-07-04": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 55277
+    },
+    "2025-09-01": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 63356
+    },
+    "2025-11-27": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 34091
+    },
+    "2025-11-28": {
+      "calendar_close_ct": "12:00",
+      "disagreement_minutes": 15.0,
+      "observed_last_trade_ct": "12:14:59",
+      "resolved_close_ct": "12:15",
+      "ticks": 92590
+    },
+    "2025-12-24": {
+      "calendar_close_ct": "12:00",
+      "disagreement_minutes": 15.0,
+      "observed_last_trade_ct": "12:14:58",
+      "resolved_close_ct": "12:15",
+      "ticks": 101451
+    },
+    "2026-01-19": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 118945
+    },
+    "2026-02-16": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 78527
+    },
+    "2026-04-03": {
+      "calendar_close_ct": "08:15",
+      "observed_last_trade_ct": "08:14:58",
+      "resolved_close_ct": "08:15",
+      "ticks": 30950
+    },
+    "2026-05-25": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:58",
+      "resolved_close_ct": "12:00",
+      "ticks": 86983
+    },
+    "2026-06-19": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 78175
+    },
+    "2026-07-03": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 67613
+    },
+    "2026-09-07": {
+      "calendar_close_ct": "12:00",
+      "observed_last_trade_ct": "11:59:59",
+      "resolved_close_ct": "12:00",
+      "ticks": 65798
+    }
+  },
+  "wall_clock_s": 2.2
+}

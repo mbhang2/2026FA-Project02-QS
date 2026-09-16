@@ -1,0 +1,28 @@
+{
+  "baseline_s": 290.4924137931034,
+  "full_callbacks": 301007.448275862,
+  "full_pulls": 154438.75862068965,
+  "scale": 6.482758620689655,
+  "shapes": {
+    "push 1 bar": {
+      "us_per_callback": 55.32953620829943,
+      "full_trial_s": 16.65460250834713,
+      "pct_of_baseline": 5.7332314778481575
+    },
+    "push 200 bars, resent each time": {
+      "us_per_callback": 561.4320585842148,
+      "full_trial_s": 168.9952313346988,
+      "pct_of_baseline": 58.175437054635715
+    },
+    "push 200 bars, incremental": {
+      "us_per_callback": 63.46623270951994,
+      "full_trial_s": 19.103808759574648,
+      "pct_of_baseline": 6.576353754002298
+    },
+    "push 20,000 bars, incremental": {
+      "us_per_callback": 180.6346623270952,
+      "full_trial_s": 54.372378777250916,
+      "pct_of_baseline": 18.717314530621927
+    }
+  }
+}

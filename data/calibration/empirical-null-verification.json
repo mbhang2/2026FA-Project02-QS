@@ -1,0 +1,820 @@
+{
+  "question": "Is the FAR column a p-value column? Benjamini-Hochberg needs validity -- P(p <= a) <= a for every a -- not exact uniformity. Conservative costs power and stays valid; anti-conservative makes the reported false-discovery rate precise and wrong.",
+  "runs": {
+    "1": {
+      "anti_conservative_cells": [],
+      "block_length": 1,
+      "build_sessions": 2100,
+      "check_sessions": 2100,
+      "check_trials": 500000,
+      "far_column": [
+        {
+          "clamped_high": 121939,
+          "clamped_low": 26,
+          "endpoint_note": "alpha=0.5 is the table's upper clamp: every score above the last tabulated quantile reports exactly that value, so P(p <= it) is 1 by construction. Not evaluated.",
+          "ks_critical_0.01": 0.005835027229522601,
+          "ks_statistic_interior": 0.08508765563893661,
+          "n": 73,
+          "p_values": 200000,
+          "realised": {
+            "0.0005": 0.00013,
+            "0.001": 0.00024,
+            "0.002": 0.00058,
+            "0.005": 0.001655,
+            "0.01": 0.003605,
+            "0.02": 0.00806,
+            "0.05": 0.02304,
+            "0.1": 0.05304,
+            "0.2": 0.122825,
+            "0.5": 1.0
+          },
+          "valid_inside_grid": true
+        },
+        {
+          "clamped_high": 123790,
+          "clamped_low": 13,
+          "endpoint_note": "alpha=0.5 is the table's upper clamp: every score above the last tabulated quantile reports exactly that value, so P(p <= it) is 1 by construction. Not evaluated.",
+          "ks_critical_0.01": 0.005904983222389408,
+          "ks_statistic_interior": 0.08691969501319197,
+          "n": 86,
+          "p_values": 200000,
+          "realised": {
+            "0.0005": 6.5e-05,
+            "0.001": 0.000205,
+            "0.002": 0.00047,
+            "0.005": 0.00139,
+            "0.01": 0.003325,
+            "0.02": 0.00738,
+            "0.05": 0.021435,
+            "0.1": 0.050615,
+            "0.2": 0.119145,
+            "0.5": 1.0
+          },
+          "valid_inside_grid": true
+        }
+      ],
+      "rows": [
+        {
+          "far": 0.5,
+          "measured": 0.43012,
+          "n": 30,
+          "ratio": 0.86024,
+          "threshold": -0.2754942155514043
+        },
+        {
+          "far": 0.2,
+          "measured": 0.146148,
+          "n": 30,
+          "ratio": 0.73074,
+          "threshold": -0.09522748200500376
+        },
+        {
+          "far": 0.1,
+          "measured": 0.065462,
+          "n": 30,
+          "ratio": 0.65462,
+          "threshold": 0.023375438537035675
+        },
+        {
+          "far": 0.05,
+          "measured": 0.030482,
+          "n": 30,
+          "ratio": 0.60964,
+          "threshold": 0.13564688072924455
+        },
+        {
+          "far": 0.02,
+          "measured": 0.011254,
+          "n": 30,
+          "ratio": 0.5627,
+          "threshold": 0.2845773795920996
+        },
+        {
+          "far": 0.01,
+          "measured": 0.005282,
+          "n": 30,
+          "ratio": 0.5282,
+          "threshold": 0.4037887530425489
+        },
+        {
+          "far": 0.005,
+          "measured": 0.00241,
+          "n": 30,
+          "ratio": 0.48199999999999993,
+          "threshold": 0.5248501046622511
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000886,
+          "n": 30,
+          "ratio": 0.44299999999999995,
+          "threshold": 0.7000493042447823
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000422,
+          "n": 30,
+          "ratio": 0.422,
+          "threshold": 0.8473572750293031
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.000184,
+          "n": 30,
+          "ratio": 0.368,
+          "threshold": 1.0072803545898334
+        },
+        {
+          "far": 0.5,
+          "measured": 0.409266,
+          "n": 50,
+          "ratio": 0.818532,
+          "threshold": -0.27123403015462266
+        },
+        {
+          "far": 0.2,
+          "measured": 0.133534,
+          "n": 50,
+          "ratio": 0.66767,
+          "threshold": -0.13677389562461864
+        },
+        {
+          "far": 0.1,
+          "measured": 0.058638,
+          "n": 50,
+          "ratio": 0.58638,
+          "threshold": -0.05370851343781581
+        },
+        {
+          "far": 0.05,
+          "measured": 0.0259,
+          "n": 50,
+          "ratio": 0.5179999999999999,
+          "threshold": 0.023281369203400484
+        },
+        {
+          "far": 0.02,
+          "measured": 0.009192,
+          "n": 50,
+          "ratio": 0.4596,
+          "threshold": 0.11971652003331278
+        },
+        {
+          "far": 0.01,
+          "measured": 0.004198,
+          "n": 50,
+          "ratio": 0.4198,
+          "threshold": 0.19041833275707343
+        },
+        {
+          "far": 0.005,
+          "measured": 0.001926,
+          "n": 50,
+          "ratio": 0.3852,
+          "threshold": 0.2651488953792439
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000686,
+          "n": 50,
+          "ratio": 0.34299999999999997,
+          "threshold": 0.36190643184886595
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000338,
+          "n": 50,
+          "ratio": 0.33799999999999997,
+          "threshold": 0.43347188391203917
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.000152,
+          "n": 50,
+          "ratio": 0.304,
+          "threshold": 0.5067581166193884
+        },
+        {
+          "far": 0.5,
+          "measured": 0.39019,
+          "n": 73,
+          "ratio": 0.78038,
+          "threshold": -0.2693417653701547
+        },
+        {
+          "far": 0.2,
+          "measured": 0.122642,
+          "n": 73,
+          "ratio": 0.6132099999999999,
+          "threshold": -0.1601785205444944
+        },
+        {
+          "far": 0.1,
+          "measured": 0.05263,
+          "n": 73,
+          "ratio": 0.5263,
+          "threshold": -0.09495900683977822
+        },
+        {
+          "far": 0.05,
+          "measured": 0.022804,
+          "n": 73,
+          "ratio": 0.45608,
+          "threshold": -0.0360182046598617
+        },
+        {
+          "far": 0.02,
+          "measured": 0.007886,
+          "n": 73,
+          "ratio": 0.39430000000000004,
+          "threshold": 0.03624727794573354
+        },
+        {
+          "far": 0.01,
+          "measured": 0.003504,
+          "n": 73,
+          "ratio": 0.3504,
+          "threshold": 0.0885232802587239
+        },
+        {
+          "far": 0.005,
+          "measured": 0.001532,
+          "n": 73,
+          "ratio": 0.3064,
+          "threshold": 0.14018917010900545
+        },
+        {
+          "far": 0.002,
+          "measured": 0.00054,
+          "n": 73,
+          "ratio": 0.27,
+          "threshold": 0.20599031556549718
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000252,
+          "n": 73,
+          "ratio": 0.252,
+          "threshold": 0.2544783782745272
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.000118,
+          "n": 73,
+          "ratio": 0.236,
+          "threshold": 0.30249399556144924
+        },
+        {
+          "far": 0.5,
+          "measured": 0.380818,
+          "n": 86,
+          "ratio": 0.761636,
+          "threshold": -0.2685432191815918
+        },
+        {
+          "far": 0.2,
+          "measured": 0.118136,
+          "n": 86,
+          "ratio": 0.59068,
+          "threshold": -0.1690756489891421
+        },
+        {
+          "far": 0.1,
+          "measured": 0.050076,
+          "n": 86,
+          "ratio": 0.50076,
+          "threshold": -0.11066429863569908
+        },
+        {
+          "far": 0.05,
+          "measured": 0.021484,
+          "n": 86,
+          "ratio": 0.42967999999999995,
+          "threshold": -0.05778060898872774
+        },
+        {
+          "far": 0.02,
+          "measured": 0.007338,
+          "n": 86,
+          "ratio": 0.3669,
+          "threshold": 0.006194338602534052
+        },
+        {
+          "far": 0.01,
+          "measured": 0.003354,
+          "n": 86,
+          "ratio": 0.33540000000000003,
+          "threshold": 0.05232802528673599
+        },
+        {
+          "far": 0.005,
+          "measured": 0.001424,
+          "n": 86,
+          "ratio": 0.2848,
+          "threshold": 0.09818919042839884
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000486,
+          "n": 86,
+          "ratio": 0.243,
+          "threshold": 0.15627251427026678
+        },
+        {
+          "far": 0.001,
+          "measured": 0.00021,
+          "n": 86,
+          "ratio": 0.21,
+          "threshold": 0.1972844682630697
+        },
+        {
+          "far": 0.0005,
+          "measured": 8.6e-05,
+          "n": 86,
+          "ratio": 0.17200000000000001,
+          "threshold": 0.2381178513947148
+        },
+        {
+          "far": 0.5,
+          "measured": 0.370928,
+          "n": 100,
+          "ratio": 0.741856,
+          "threshold": -0.2680506298563801
+        },
+        {
+          "far": 0.2,
+          "measured": 0.113822,
+          "n": 100,
+          "ratio": 0.56911,
+          "threshold": -0.176479844035055
+        },
+        {
+          "far": 0.1,
+          "measured": 0.04778,
+          "n": 100,
+          "ratio": 0.4778,
+          "threshold": -0.12278768864405847
+        },
+        {
+          "far": 0.05,
+          "measured": 0.02033,
+          "n": 100,
+          "ratio": 0.4066,
+          "threshold": -0.07495469562016006
+        },
+        {
+          "far": 0.02,
+          "measured": 0.006744,
+          "n": 100,
+          "ratio": 0.3372,
+          "threshold": -0.016315573443712383
+        },
+        {
+          "far": 0.01,
+          "measured": 0.002974,
+          "n": 100,
+          "ratio": 0.2974,
+          "threshold": 0.02481098122016044
+        },
+        {
+          "far": 0.005,
+          "measured": 0.001294,
+          "n": 100,
+          "ratio": 0.2588,
+          "threshold": 0.06540194296023343
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000456,
+          "n": 100,
+          "ratio": 0.228,
+          "threshold": 0.11709689388948637
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000202,
+          "n": 100,
+          "ratio": 0.202,
+          "threshold": 0.15604221589691109
+        },
+        {
+          "far": 0.0005,
+          "measured": 7.8e-05,
+          "n": 100,
+          "ratio": 0.156,
+          "threshold": 0.19326833983731717
+        }
+      ],
+      "tabulate_trials": 500000,
+      "worst_ratio": 0.86024
+    },
+    "3": {
+      "anti_conservative_cells": [],
+      "block_length": 3,
+      "build_sessions": 2100,
+      "check_sessions": 2100,
+      "check_trials": 500000,
+      "far_column": [
+        {
+          "clamped_high": 121862,
+          "clamped_low": 18,
+          "endpoint_note": "alpha=0.5 is the table's upper clamp: every score above the last tabulated quantile reports exactly that value, so P(p <= it) is 1 by construction. Not evaluated.",
+          "ks_critical_0.01": 0.005831851907566497,
+          "ks_statistic_interior": 0.09520270965180366,
+          "n": 73,
+          "p_values": 200000,
+          "realised": {
+            "0.0005": 9e-05,
+            "0.001": 0.00017,
+            "0.002": 0.00038,
+            "0.005": 0.001215,
+            "0.01": 0.002885,
+            "0.02": 0.006965,
+            "0.05": 0.020855,
+            "0.1": 0.049425,
+            "0.2": 0.118945,
+            "0.5": 1.0
+          },
+          "valid_inside_grid": true
+        },
+        {
+          "clamped_high": 124093,
+          "clamped_low": 15,
+          "endpoint_note": "alpha=0.5 is the table's upper clamp: every score above the last tabulated quantile reports exactly that value, so P(p <= it) is 1 by construction. Not evaluated.",
+          "ks_critical_0.01": 0.005916837001405094,
+          "ks_statistic_interior": 0.09999272302006562,
+          "n": 86,
+          "p_values": 200000,
+          "realised": {
+            "0.0005": 7.5e-05,
+            "0.001": 0.000145,
+            "0.002": 0.000385,
+            "0.005": 0.00118,
+            "0.01": 0.00278,
+            "0.02": 0.00642,
+            "0.05": 0.019595,
+            "0.1": 0.047075,
+            "0.2": 0.11374,
+            "0.5": 1.0
+          },
+          "valid_inside_grid": true
+        }
+      ],
+      "rows": [
+        {
+          "far": 0.5,
+          "measured": 0.431758,
+          "n": 30,
+          "ratio": 0.863516,
+          "threshold": -0.27845341300714643
+        },
+        {
+          "far": 0.2,
+          "measured": 0.144474,
+          "n": 30,
+          "ratio": 0.72237,
+          "threshold": -0.10019788477483546
+        },
+        {
+          "far": 0.1,
+          "measured": 0.063078,
+          "n": 30,
+          "ratio": 0.6307799999999999,
+          "threshold": 0.0172441203518025
+        },
+        {
+          "far": 0.05,
+          "measured": 0.0282,
+          "n": 30,
+          "ratio": 0.564,
+          "threshold": 0.12872028611232278
+        },
+        {
+          "far": 0.02,
+          "measured": 0.009894,
+          "n": 30,
+          "ratio": 0.4947,
+          "threshold": 0.27814272125859085
+        },
+        {
+          "far": 0.01,
+          "measured": 0.004464,
+          "n": 30,
+          "ratio": 0.4464,
+          "threshold": 0.3956599938439178
+        },
+        {
+          "far": 0.005,
+          "measured": 0.00196,
+          "n": 30,
+          "ratio": 0.39199999999999996,
+          "threshold": 0.524700290250305
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000746,
+          "n": 30,
+          "ratio": 0.373,
+          "threshold": 0.6908605291719864
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000364,
+          "n": 30,
+          "ratio": 0.364,
+          "threshold": 0.8352777260535942
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.00017,
+          "n": 30,
+          "ratio": 0.34,
+          "threshold": 0.9807824597611592
+        },
+        {
+          "far": 0.5,
+          "measured": 0.40901,
+          "n": 50,
+          "ratio": 0.81802,
+          "threshold": -0.2728302275840027
+        },
+        {
+          "far": 0.2,
+          "measured": 0.130818,
+          "n": 50,
+          "ratio": 0.65409,
+          "threshold": -0.14010959099056317
+        },
+        {
+          "far": 0.1,
+          "measured": 0.056038,
+          "n": 50,
+          "ratio": 0.56038,
+          "threshold": -0.058185060494911275
+        },
+        {
+          "far": 0.05,
+          "measured": 0.024136,
+          "n": 50,
+          "ratio": 0.48272,
+          "threshold": 0.017924385984275783
+        },
+        {
+          "far": 0.02,
+          "measured": 0.00783,
+          "n": 50,
+          "ratio": 0.3915,
+          "threshold": 0.11513634040521008
+        },
+        {
+          "far": 0.01,
+          "measured": 0.00349,
+          "n": 50,
+          "ratio": 0.349,
+          "threshold": 0.18824595495121343
+        },
+        {
+          "far": 0.005,
+          "measured": 0.00149,
+          "n": 50,
+          "ratio": 0.298,
+          "threshold": 0.26113620528127823
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000572,
+          "n": 50,
+          "ratio": 0.28600000000000003,
+          "threshold": 0.35619312724151897
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000254,
+          "n": 50,
+          "ratio": 0.254,
+          "threshold": 0.42912342724210356
+        },
+        {
+          "far": 0.0005,
+          "measured": 0.000118,
+          "n": 50,
+          "ratio": 0.236,
+          "threshold": 0.5024914051334501
+        },
+        {
+          "far": 0.5,
+          "measured": 0.390852,
+          "n": 73,
+          "ratio": 0.781704,
+          "threshold": -0.27081674309997344
+        },
+        {
+          "far": 0.2,
+          "measured": 0.119596,
+          "n": 73,
+          "ratio": 0.59798,
+          "threshold": -0.1628853518970182
+        },
+        {
+          "far": 0.1,
+          "measured": 0.049514,
+          "n": 73,
+          "ratio": 0.49514,
+          "threshold": -0.09809955987787099
+        },
+        {
+          "far": 0.05,
+          "measured": 0.021102,
+          "n": 73,
+          "ratio": 0.42203999999999997,
+          "threshold": -0.039512541418997606
+        },
+        {
+          "far": 0.02,
+          "measured": 0.006914,
+          "n": 73,
+          "ratio": 0.3457,
+          "threshold": 0.032880013931243166
+        },
+        {
+          "far": 0.01,
+          "measured": 0.002934,
+          "n": 73,
+          "ratio": 0.2934,
+          "threshold": 0.0845560016566291
+        },
+        {
+          "far": 0.005,
+          "measured": 0.001268,
+          "n": 73,
+          "ratio": 0.2536,
+          "threshold": 0.13728019775155068
+        },
+        {
+          "far": 0.002,
+          "measured": 0.000422,
+          "n": 73,
+          "ratio": 0.211,
+          "threshold": 0.20507950230978433
+        },
+        {
+          "far": 0.001,
+          "measured": 0.00019,
+          "n": 73,
+          "ratio": 0.19,
+          "threshold": 0.25746250980002305
+        },
+        {
+          "far": 0.0005,
+          "measured": 8.6e-05,
+          "n": 73,
+          "ratio": 0.17200000000000001,
+          "threshold": 0.3073430469325878
+        },
+        {
+          "far": 0.5,
+          "measured": 0.378724,
+          "n": 86,
+          "ratio": 0.757448,
+          "threshold": -0.2694225011913133
+        },
+        {
+          "far": 0.2,
+          "measured": 0.113854,
+          "n": 86,
+          "ratio": 0.5692699999999999,
+          "threshold": -0.1708129809613673
+        },
+        {
+          "far": 0.1,
+          "measured": 0.046748,
+          "n": 86,
+          "ratio": 0.46747999999999995,
+          "threshold": -0.11234821726677524
+        },
+        {
+          "far": 0.05,
+          "measured": 0.01952,
+          "n": 86,
+          "ratio": 0.39039999999999997,
+          "threshold": -0.06002941771909844
+        },
+        {
+          "far": 0.02,
+          "measured": 0.006286,
+          "n": 86,
+          "ratio": 0.31429999999999997,
+          "threshold": 0.00442349151339138
+        },
+        {
+          "far": 0.01,
+          "measured": 0.002604,
+          "n": 86,
+          "ratio": 0.26039999999999996,
+          "threshold": 0.050704835479626335
+        },
+        {
+          "far": 0.005,
+          "measured": 0.001066,
+          "n": 86,
+          "ratio": 0.21320000000000003,
+          "threshold": 0.09544623010114889
+        },
+        {
+          "far": 0.002,
+          "measured": 0.00034,
+          "n": 86,
+          "ratio": 0.17,
+          "threshold": 0.1540923174571515
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000152,
+          "n": 86,
+          "ratio": 0.152,
+          "threshold": 0.1986670683732493
+        },
+        {
+          "far": 0.0005,
+          "measured": 7e-05,
+          "n": 86,
+          "ratio": 0.13999999999999999,
+          "threshold": 0.24299209034268507
+        },
+        {
+          "far": 0.5,
+          "measured": 0.370886,
+          "n": 100,
+          "ratio": 0.741772,
+          "threshold": -0.268789491772544
+        },
+        {
+          "far": 0.2,
+          "measured": 0.109526,
+          "n": 100,
+          "ratio": 0.54763,
+          "threshold": -0.1777632397780216
+        },
+        {
+          "far": 0.1,
+          "measured": 0.044128,
+          "n": 100,
+          "ratio": 0.44128,
+          "threshold": -0.12417047156207293
+        },
+        {
+          "far": 0.05,
+          "measured": 0.018296,
+          "n": 100,
+          "ratio": 0.36591999999999997,
+          "threshold": -0.07647292373222592
+        },
+        {
+          "far": 0.02,
+          "measured": 0.005916,
+          "n": 100,
+          "ratio": 0.2958,
+          "threshold": -0.019165059318834856
+        },
+        {
+          "far": 0.01,
+          "measured": 0.002438,
+          "n": 100,
+          "ratio": 0.2438,
+          "threshold": 0.02271991951553669
+        },
+        {
+          "far": 0.005,
+          "measured": 0.000998,
+          "n": 100,
+          "ratio": 0.1996,
+          "threshold": 0.06164986334013165
+        },
+        {
+          "far": 0.002,
+          "measured": 0.00036,
+          "n": 100,
+          "ratio": 0.18000000000000002,
+          "threshold": 0.11113411621957951
+        },
+        {
+          "far": 0.001,
+          "measured": 0.000176,
+          "n": 100,
+          "ratio": 0.176,
+          "threshold": 0.14518426200384438
+        },
+        {
+          "far": 0.0005,
+          "measured": 6.6e-05,
+          "n": 100,
+          "ratio": 0.132,
+          "threshold": 0.1834518131684656
+        }
+      ],
+      "tabulate_trials": 500000,
+      "worst_ratio": 0.863516
+    }
+  },
+  "table": "empirical-null.json"
+}

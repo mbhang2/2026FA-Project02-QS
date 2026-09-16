@@ -1,0 +1,61 @@
+{
+ "q": 0.05,
+ "n_trials": 10,
+ "fallback_r": 150,
+ "paired": {
+  "campaigns": 400,
+  "r50": {
+   "rejects": 23,
+   "fwer": 0.0575,
+   "ci": [
+    0.038617261729224514,
+    0.08480142520149289
+   ]
+  },
+  "r150": {
+   "rejects": 24,
+   "fwer": 0.06,
+   "ci": [
+    0.0406476805246611,
+    0.0877234432030579
+   ]
+  },
+  "both": 23,
+  "only_r50": 0,
+  "only_r150": 1,
+  "mcnemar_exact_p": 1.0
+ },
+ "pooled": {
+  "campaigns": 400,
+  "rejects": 24,
+  "fwer": 0.06,
+  "ci": [
+   0.0406476805246611,
+   0.0877234432030579
+  ]
+ },
+ "routing_paired_400": {
+  "bucket": 3117,
+  "rotation": 883,
+  "missing": 0,
+  "rotation_share": 0.22075
+ },
+ "fresh": null,
+ "resolution_cap_at_r": {
+  "r": 150,
+  "bh_max_n": 7,
+  "p_floor": 0.006622516556291391,
+  "resampling_bias": 0.002,
+  "meets_recommended_r": true,
+  "recommended_min_r": 150,
+  "note": "max_of_n resamples each null with replacement, so a small null truncates its own upper tail and the test is liberal by about `resampling_bias`. Measured, not assumed: docs/reviews/task34/bias-grid.json."
+ },
+ "task33_r50": {
+  "fwer": 0.0575,
+  "ci": [
+   0.0386,
+   0.0848
+  ],
+  "campaigns": 400
+ }
+}

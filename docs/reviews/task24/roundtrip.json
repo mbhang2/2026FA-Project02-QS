@@ -1,0 +1,66 @@
+[
+  {
+    "bars": 1,
+    "codec": "json",
+    "bytes": 312,
+    "median_us": 14.167,
+    "p90_us": 19.542,
+    "mean_us": 13.918076
+  },
+  {
+    "bars": 1,
+    "codec": "pickle",
+    "bytes": 253,
+    "median_us": 12.625,
+    "p90_us": 17.0,
+    "mean_us": 13.032191999999998
+  },
+  {
+    "bars": 10,
+    "codec": "json",
+    "bytes": 1401,
+    "median_us": 19.791,
+    "p90_us": 25.5,
+    "mean_us": 20.363318500000002
+  },
+  {
+    "bars": 10,
+    "codec": "pickle",
+    "bytes": 902,
+    "median_us": 13.708,
+    "p90_us": 17.292,
+    "mean_us": 14.7117515
+  },
+  {
+    "bars": 200,
+    "codec": "json",
+    "bytes": 24391,
+    "median_us": 125.458,
+    "p90_us": 133.0,
+    "mean_us": 127.88407099999999
+  },
+  {
+    "bars": 200,
+    "codec": "pickle",
+    "bytes": 14582,
+    "median_us": 51.25,
+    "p90_us": 59.333,
+    "mean_us": 52.5898675
+  },
+  {
+    "bars": 20000,
+    "codec": "json",
+    "bytes": 2420191,
+    "median_us": 17452.666,
+    "p90_us": 18755.916,
+    "mean_us": 17514.1477075
+  },
+  {
+    "bars": 20000,
+    "codec": "pickle",
+    "bytes": 1440409,
+    "median_us": 6827.625,
+    "p90_us": 7888.625,
+    "mean_us": 6984.3159995
+  }
+]

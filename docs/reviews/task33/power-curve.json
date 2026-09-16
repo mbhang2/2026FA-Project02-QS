@@ -1,0 +1,63 @@
+{
+ "campaigns": 60,
+ "n": 10,
+ "rows": [
+  {
+   "strength": 0.0,
+   "power": 0.06666666666666667,
+   "ci": [
+    0.02622827414319792,
+    0.15925579893767722
+   ],
+   "power_bucket": 0.08695652173913043,
+   "n_bucket": 46,
+   "power_rotation": 0.0,
+   "n_rotation": 14,
+   "rotation_share": 0.235,
+   "median_best_sortino": 0.010188785789773861
+  },
+  {
+   "strength": 0.15,
+   "power": 0.5333333333333333,
+   "ci": [
+    0.40893208671135106,
+    0.65372298459012
+   ],
+   "power_bucket": 0.0,
+   "n_bucket": 12,
+   "power_rotation": 0.6666666666666666,
+   "n_rotation": 48,
+   "rotation_share": 0.23166666666666666,
+   "median_best_sortino": 0.09453807515346543
+  },
+  {
+   "strength": 0.3,
+   "power": 0.9666666666666667,
+   "ci": [
+    0.8863601247107462,
+    0.9908108735098498
+   ],
+   "power_bucket": 0.5,
+   "n_bucket": 2,
+   "power_rotation": 0.9827586206896551,
+   "n_rotation": 58,
+   "rotation_share": 0.475,
+   "median_best_sortino": 1.0478784054341617
+  },
+  {
+   "strength": 0.5,
+   "power": 1.0,
+   "ci": [
+    0.9398260695220669,
+    0.9999999999999999
+   ],
+   "power_bucket": null,
+   "n_bucket": 0,
+   "power_rotation": 1.0,
+   "n_rotation": 60,
+   "rotation_share": 0.5516666666666666,
+   "median_best_sortino": 6.756463026420038
+  }
+ ],
+ "strength_at_80": 0.24230769230769234
+}

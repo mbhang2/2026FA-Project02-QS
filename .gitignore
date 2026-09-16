@@ -1,0 +1,101 @@
+# History files
+.Rhistory
+.Rapp.history
+.directory
+logs
+*.log
+trials
+#object files
+*.o
+*.so
+# Session Data files
+.RData
+# Example code in package build process
+*-Ex.R
+# Output files from R CMD build
+/*.tar.gz
+# Output files from R CMD check
+/*.Rcheck/
+# RStudio files
+.Rproj.user/
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+# knitr and R markdown default cache directories
+/*_book/
+/*_cache/
+/cache/
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+.Rproj.user
+inst/doc
+*_cache*
+*_files*
+*.bak
+*.sav*
+*.tex
+*.idx
+*.tmp
+
+# data directory
+private_data*
+private_data/*
+
+# generated caches; data/manifest.json stays tracked
+data/cache/
+
+# Vendor downloads never belong in the tree -- they go to ~/dl/databento/ and
+# are uploaded to R2 from there. `ext/` does not exist; this is a guard for the
+# habit, because a couple of GiB of tick data plus one `git add -A` is not
+# something you undo quickly. See docs/setup/R2_ACCESS.md section 7.
+ext/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+
+# Quarto / HTML output
+*.html
+
+node_modules/*
+
+#environment files
+.env*
+!.envrc
+!.env.example
+
+#scratch files
+.scratch*
+
+# Secrets
+secrets/*
+!secrets/.gitkeep
+.venv/
+__pycache__/
+*.pyc
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Scratch strategy sources written by calibration runs. Regenerated
+# deterministically from a committed generator and a recorded seed, so
+# there is nothing here a review needs and tens of thousands of files
+# a review does not.
+runs/tmp-*/
+
+# transient: the proposing agent type-checks here, then deletes it
+src/strategies/_proposal_*.py
+CLAUDE_TASK.md

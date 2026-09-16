@@ -1,0 +1,92 @@
+{
+  "accept_rule": "empirical: far <= 0.001",
+  "curve": [
+    {
+      "acceptance_rate": 0.0,
+      "mean_net": -41.225499999999926,
+      "mean_sortino": -0.45446827051089966,
+      "mean_trades": 282.15,
+      "metrics_used": [
+        "sortino_per_session"
+      ],
+      "signal_strength": 0.0
+    },
+    {
+      "acceptance_rate": 0.0,
+      "mean_net": -32.73399999999992,
+      "mean_sortino": -0.38571451456462075,
+      "mean_trades": 297,
+      "metrics_used": [
+        "sortino_per_session"
+      ],
+      "signal_strength": 0.05
+    },
+    {
+      "acceptance_rate": 0.0,
+      "mean_net": -23.38249999999991,
+      "mean_sortino": -0.2866863571519127,
+      "mean_trades": 315,
+      "metrics_used": [
+        "sortino_per_session"
+      ],
+      "signal_strength": 0.1
+    },
+    {
+      "acceptance_rate": 0.25,
+      "mean_net": 10.59400000000011,
+      "mean_sortino": 0.21278084401090838,
+      "mean_trades": 359.9,
+      "metrics_used": [
+        "sortino_per_session"
+      ],
+      "signal_strength": 0.2
+    },
+    {
+      "acceptance_rate": 1.0,
+      "mean_net": 91.14950000000015,
+      "mean_sortino": 2.0050219193427745,
+      "mean_trades": 448.4,
+      "metrics_used": [
+        "sharpe_per_session",
+        "sortino_per_session"
+      ],
+      "signal_strength": 0.35
+    },
+    {
+      "acceptance_rate": 1.0,
+      "mean_net": 193.9485000000002,
+      "mean_sortino": 1.730645246557843,
+      "mean_trades": 548.55,
+      "metrics_used": [
+        "sharpe_per_session"
+      ],
+      "signal_strength": 0.5
+    },
+    {
+      "acceptance_rate": 1.0,
+      "mean_net": 414.12900000000025,
+      "mean_sortino": 4.108446275440407,
+      "mean_trades": 722.7,
+      "metrics_used": [
+        "sharpe_per_session"
+      ],
+      "signal_strength": 0.75
+    },
+    {
+      "acceptance_rate": 1.0,
+      "mean_net": 600.3515,
+      "mean_sortino": 7.099146147314678,
+      "mean_trades": 887.85,
+      "metrics_used": [
+        "sharpe_per_session"
+      ],
+      "signal_strength": 1.0
+    }
+  ],
+  "metric": "sortino_per_session",
+  "note": "Ablation for Task 7 item 6: the agent's fixed-bracket strategy, which holds overnight, swept on the continuous-price generator. Isolates how much of the Task 4 non-monotonicity was the generator rather than the bracket.",
+  "seeds": 20,
+  "sessions": 175,
+  "strategy": "fixed-bracket MomentumStrategy",
+  "ticks_per_session": 390
+}

@@ -1,0 +1,29 @@
+{
+  "n_per_arm": 100,
+  "alpha": 0.05,
+  "reps": 2000,
+  "b_permutations_in_report": 10000,
+  "b_permutations_in_this_sim": 400,
+  "auc_power_rejected_statistic": {
+    "0.0": 0.07,
+    "0.5": 0.064,
+    "1.5": 0.088
+  },
+  "t1_trend_power": {
+    "0.0": 0.047,
+    "0.3": 0.227,
+    "0.5": 0.393,
+    "0.75": 0.655,
+    "1.0": 0.8725,
+    "1.25": 0.965
+  },
+  "t3_shift_power": {
+    "0.0": 0.033,
+    "0.2": 0.399,
+    "0.3": 0.638,
+    "0.4": 0.838,
+    "0.5": 0.971
+  },
+  "resolvable_trend_slope_sd": 1.0,
+  "resolvable_shift_sd": 0.4
+}

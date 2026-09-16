@@ -1,0 +1,99 @@
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  regressions:
+    name: simulator + data-integrity regressions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # the agent path check diffs against a base ref
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install -e .
+
+      # The agent may only ever change src/strategies/**. Tool permissions are
+      # the other half of this, but configs drift and get copied wrong; the CI
+      # check is the one that holds. It self-skips on non-agent branches.
+      - name: Agent may only write src/strategies/
+        run: python scripts/check_agent_paths.py --base origin/${{ github.event.repository.default_branch }}
+
+      # No R2 credentials in CI, by design. The live tier skips itself; the
+      # offline tier asserts against the committed data/manifest.json, which is
+      # regenerated from the bucket by scripts/inventory.py, so a regression in
+      # the data reaches CI as a diff in that file. The simulator tests need no
+      # credentials at all -- that is why the synthetic dataset came first.
+      - name: Run tests
+        run: pytest -q
+
+      # The reference the agent reads is generated from the code, so it cannot
+      # drift from it silently.
+      - name: Context API reference is current
+        run: python scripts/gen_context_api.py --check
+
+      # The remote adapter's view of the context surface is generated from the
+      # same source the context reference is. A context member added without
+      # regenerating is a member the boundary silently does not carry.
+      - name: Remote context surface is current
+        run: python scripts/gen_remote_surface.py --check
+
+      # The research agent's data reference is generated from data/manifest.json,
+      # so extending the series without regenerating it fails here rather than
+      # showing an agent session counts that stopped being true.
+      - name: Agent data reference is current
+        run: python scripts/gen_agent_data.py --check
+
+      # Task 22 found that `scripts/replay.py` had been broken for five tasks
+      # because nothing replayed a row in between. A checker that runs when
+      # someone remembers rebuilds that gap one level up, so it runs here on
+      # every commit. The cheap tier only: `--replay` needs bucket credentials,
+      # which CI does not have by design.
+      - name: Every ledger row is still verifiable
+        run: python scripts/ledger_check.py
+
+      # numpy and pandas versions change numbers, and no digest over the repo's
+      # files can see that. The lockfile records the environment that produces
+      # scored runs -- not this one, which is a different platform installing
+      # from requirements-dev.txt -- so CI asks the question it can answer: is
+      # the lockfile well formed and does it contradict what the repo declares.
+      - name: requirements.lock is consistent with the declared dependencies
+        run: python scripts/lock_env.py --verify
+
+      # Already covered by `pytest -q` above; run again as a named step so a
+      # stale document fails with a legible name rather than as one dot in 260.
+      # Cheap -- these three files take about a second.
+      - name: Docs match the code (architecture map, agent docs, worked examples)
+        run: |
+          pytest -q tests/test_architecture_doc.py
+          pytest -q tests/test_agent_docs.py
+          pytest -q tests/test_examples.py
+
+      - name: Check the entry points import cleanly
+        run: |
+          python -c "import sys; sys.path.insert(0, 'scripts'); import inventory, probe_dbn"
+          python scripts/inventory.py --help > /dev/null
+          python scripts/probe_dbn.py --help > /dev/null
+          python scripts/calibrate.py --help > /dev/null
+          python scripts/tabulate_null.py --help > /dev/null
+          python scripts/replay.py --help > /dev/null
+          python scripts/nq_contracts.py --help > /dev/null
+          python scripts/nq_smoke.py --help > /dev/null
+          python scripts/gen_agent_data.py --help > /dev/null
+          python scripts/agent_check.py --help > /dev/null
+          python scripts/session_closes.py --help > /dev/null
+          python scripts/check_agent_paths.py --paths src/strategies/current.py
+          python run.py --help > /dev/null

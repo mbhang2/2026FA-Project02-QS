@@ -1,0 +1,41 @@
+# Pre-registered split for `ES_20250703_1m.parquet` — one session of ES at one
+# minute, the only real data in this engine's tree.
+#
+# THE PRE-REGISTRATION DATE IS THE COMMIT DATE OF THIS FILE. Here, and not in
+# `config/calendars/`, for the reason in `placeholder.yaml`: that registry is
+# fingerprinted and this is a single day used by one smoke script.
+#
+# **A one-day split is not a research split.** Three windows carved out of a
+# single session share their regime, their volatility and their order flow, and
+# a holdout ten minutes after a validation window tells you almost nothing about
+# decay. It is committed so the smoke script has a split it did not invent at
+# run time, not because the boundaries mean anything.
+
+dataset: es-20250703
+
+# Twenty minutes, against a strategy whose longest lookback is a handful of
+# bars. Intraday, so the unit is minutes; the harness's NQ calendar counts
+# sessions because its embargo spans days.
+embargo_minutes: 20
+
+splits:
+
+  train:
+    start: 2025-07-03 00:00:00
+    end: 2025-07-03 09:37:00
+    reason: >
+      The window the smoke script used before the split was committed, kept so
+      the change is a change of provenance and not of result.
+
+  validation:
+    start: 2025-07-03 09:57:00
+    end: 2025-07-03 14:26:00
+    reason: >
+      Twenty minutes after training ends. The previous derived split began at
+      09:37 exactly, on the bar training closed on.
+
+  holdout:
+    start: 2025-07-03 14:46:00
+    end: 2025-07-03 23:59:00
+    reason: >
+      Twenty minutes after validation ends, to the last bar in the file.

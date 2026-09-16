@@ -1,0 +1,45 @@
+{
+  "digest": "3b279f349e69f50d08afb6fbcb32e09ea9366fb7e8b10c7d63571a1f893df3a0",
+  "record": {
+    "agent": "src.core.loop.llm.LLMAgent[control]",
+    "agent_config": {
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "97e45328af3f9f73a07281de3418127d6fc86e37423c260640413d86f1b1f165",
+      "proposal_wall_clock_s": 900.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "- dataset: a **simulated** instrument, not NQ. Prices are generated tick by\n  tick from a random walk; there is no options data, no GEX, no calendar of\n  real sessions, and no overnight gap structure to exploit.\n- split: the pre-registered **training** split, 105 sessions of 390 ticks.\n- one price series, `trades` only. No quotes and no book, so nothing in the\n  documents above about spread, mid or depth applies.\n- fill model: `unfavorable`. A resting limit fills only on a trade strictly\n  through it.\n- warmup: 0 sessions. Action cap: 64 actions per callback.\n- history window: 512 bars per subscription. Past that, `ctx.history(...)[0]`\n  raises; keep what you need on `self`.\n- wall-clock budget: 120s for the whole walk. A tick subscription over 105\n  sessions will not finish inside it; bar intervals will.\n- commission is charged per contract on every fill, so turnover is not free.",
+      "seed": null,
+      "show_history": false,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "budget": 100,
+    "campaign_id": "task36-control",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "synthetic",
+    "note": "Task 36 control arm. The agent sees the API documents, the current strategy and NOTHING about its own past (the control). It never sees a threshold, a p-value, a false-acceptance rate, an accept/reject verdict or N. Budget of 100 is below Task 34's 'at least 400': that recommendation is about detection power on data with something to detect, and this dataset has no edge by construction. The binding constraint here is the trajectory test, whose resolution is in docs/reviews/task36/resolution.json -- 80% power at a trend of 1.0 SD across the campaign and at a between-arm shift of 0.4 SD.",
+    "profile": "campaign",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "fixed budget of 100; no early stop on any observed result, no extension if the last trial looks promising",
+    "written_at": "2026-09-15T03:23:45+00:00"
+  }
+}

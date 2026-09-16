@@ -1,0 +1,34 @@
+{
+ "buckets_usable": 4,
+ "q": 0.05,
+ "results": [
+  {
+   "bh_any": 0.0025,
+   "campaigns": 400,
+   "ci": [
+    0.028651223384090457,
+    0.07000527956161895
+   ],
+   "controls": true,
+   "excludes_q": false,
+   "fwer": 0.045,
+   "label": "profile (conditional)",
+   "rejects": 18,
+   "unusable_fraction": 0.2176
+  },
+  {
+   "bh_any": 0.0,
+   "campaigns": 40,
+   "ci": [
+    0.05459419773541284,
+    0.26112420670238146
+   ],
+   "controls": false,
+   "excludes_q": true,
+   "fwer": 0.125,
+   "label": "rotation R=30",
+   "rejects": 5,
+   "unusable_fraction": 0.0
+  }
+ ]
+}

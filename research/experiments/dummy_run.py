@@ -5,7 +5,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# `nalin/l1-loop`, two directories up and across: this script lives in
+# `research/experiments/` and the engine it smokes is a package that is not
+# installed. Moved in Task 40; the walk changed with it.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "nalin" / "l1-loop"))
 
 from nalin_l1.config.experiment_spec import ExperimentSpec
 from nalin_l1.orchestrator.run_experiment import run_experiment

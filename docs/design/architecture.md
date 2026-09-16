@@ -1198,12 +1198,16 @@ and a teammate would reasonably disagree with. `docs/reviews/task40/README.md`
 has the full account, and `docs/plans/task39-teammate-directory-mapping.md` the
 overlaps that remain open.
 
-A fourth tree, `daksh/audit_agent/`, is listed above but **not** covered by the
-Task 41 role assignment: it arrived later, on an unrelated history, and the six
-overlaps that review settled were between the harness and the two trees that
-existed then. It plainly overlaps several of them again — another engine, another
-metric set, another set of reference strategies — and that is a review nobody has
-done.
+A fourth tree, `daksh/audit_agent/`, arrived later on an unrelated history and
+was outside the Task 41 role assignment. **Task 42 reviewed it**: its role is the
+committee — frozen gates plus a read-only critic that cannot override a FAIL —
+and its gates audit empirically what this harness enforces structurally. What
+that review found, in `docs/reviews/task42/`: its `n_trials` is a count of files
+in a directory rather than this project's N, its DSR bar is biased high by a
+measured +0.017 to +0.036 in Sharpe units against the harness's simulation, its
+`research/audit_db.json` records audits rather than trials, and **its three demo
+experiments were never committed** — all eight of its own tests fail on missing
+data, on this branch and on the commit it arrived from.
 
 **Two things about these trees that are true and easy to forget.** They carry
 their own `pyproject.toml`, `pytest` configuration and dependency set — seven of

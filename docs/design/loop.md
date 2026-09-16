@@ -306,6 +306,37 @@ of those fields in it.
 | **the fill models** | **differential reference** | Two modelling choices, not two implementations. nalin fills at the next bar's open unconditionally — a bar with no range at all still fills; the harness's `unfavorable` requires a trade strictly through the limit. They sit at opposite ends of one axis, which is what Task 4's argument about scoring on the pessimistic model is about. |
 | **the metric sets** | **differential reference** | A second implementation by a different author is the strongest available check on arithmetic nobody had verified. `composite_score` is a **recorded diagnostic and never the objective** — the objective is single and pre-registered, and a scorer any code can import is what `metrics.py`'s import guard exists to stop. |
 
+### A fourth tree, and a seventh overlap (Task 42)
+
+`daksh/audit_agent/` arrived after the review above, on an unrelated history, and
+was not covered by it. Its role: **the committee** — step 7 of the build plan,
+which this document previously recorded as not existing. Frozen Python gates and
+a read-only critic that cannot override a FAIL is exactly the second accept tier
+the plan describes, and its gates (leak, PIT, freeze, stats) **audit empirically
+what this harness enforces structurally**, which makes it a differential
+reference on the guarantees themselves rather than only on arithmetic.
+
+Two things about it change what a reader should do with its numbers.
+
+**Its `n_trials` is a file count.** `len(glob("experiments/*.json"))` — the
+experiments somebody left in a ticket directory. It is reconstructed from the
+filesystem after the fact, it shrinks when a file is deleted, and it is per
+ticket. This project's N is written as trials happen, includes the crashed ones,
+and is **global across every dataset**. An auditor deflating by the trials it can
+see is reasonable; a deflated Sharpe quoted against that number is not this
+project's deflated Sharpe, and `N_TRIALS_PROVENANCE` now travels with it.
+
+**Its DSR bar is biased high by a measured amount.** Its closed form and the
+harness's simulation compute the same published quantity by different routes and
+disagree by +0.017 to +0.036 in Sharpe units for N in 5–400, with the harness
+closer to a high-precision reference at every N. The bias is conservative for a
+gate — the bar is too high, so a real result is more likely to be called unproven
+than the reverse — which is why it is recorded rather than corrected.
+`docs/reviews/task42/` has the table.
+
+Its ledger, `research/audit_db.json`, records **audits and not trials**, and says
+so in the file for the same reason `nalin_l1`'s trial log does.
+
 The differential comparisons are tests, in `tests/test_teammate_integration.py`
 at the **root**, because `testpaths = ["tests"]` and the teammate suites are not
 collected in CI. A check that must fail when somebody gets it wrong later has to

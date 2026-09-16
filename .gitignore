@@ -98,3 +98,4 @@ runs/tmp-*/
 
 # transient: the proposing agent type-checks here, then deletes it
 src/strategies/_proposal_*.py
+CLAUDE_TASK.md

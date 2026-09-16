@@ -5,10 +5,10 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from src.config.experiment_spec import ExperimentSpec
-from src.strategy.loader import NoStrategyFoundError, load_strategy
-from src.strategy.protocol import Strategy
-from src.strategy.reference_strategies.buy_and_hold import BuyAndHold
+from nalin_l1.config.experiment_spec import ExperimentSpec
+from nalin_l1.strategy.loader import NoStrategyFoundError, load_strategy
+from nalin_l1.strategy.protocol import Strategy
+from nalin_l1.strategy.reference_strategies.buy_and_hold import BuyAndHold
 
 
 def _valid_spec(**overrides) -> ExperimentSpec:
@@ -81,7 +81,7 @@ def test_buy_and_hold_constant_position():
 
 def test_load_buy_and_hold():
     strategy = load_strategy(
-        "src.strategy.reference_strategies.buy_and_hold"
+        "nalin_l1.strategy.reference_strategies.buy_and_hold"
     )
     assert isinstance(strategy, Strategy)
 
@@ -89,6 +89,6 @@ def test_load_buy_and_hold():
 def test_loader_no_conforming_class_raises():
     import importlib
 
-    mod = importlib.import_module("src.strategy.protocol")
+    mod = importlib.import_module("nalin_l1.strategy.protocol")
     with pytest.raises(NoStrategyFoundError):
-        load_strategy("src.strategy.protocol")
+        load_strategy("nalin_l1.strategy.protocol")

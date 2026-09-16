@@ -6,9 +6,9 @@ import json
 
 import pytest
 
-from src.loop import driver, planner_step, reviewer_step, worker_step
-from src.opencode_bridge.invoke import OpencodeResult
-from src.schemas import ApprovedCandidate, ReviewVerdict
+from nalin_l1.loop import driver, planner_step, reviewer_step, worker_step
+from nalin_l1.opencode_bridge.invoke import OpencodeResult
+from nalin_l1.schemas import ApprovedCandidate, ReviewVerdict
 
 pytestmark = pytest.mark.usefixtures("redirect_candidate_paths")
 

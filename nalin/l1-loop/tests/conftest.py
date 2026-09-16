@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.loop import paths
+from nalin_l1.loop import paths
 
 
 @pytest.fixture

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from src.data.loader import LookaheadError, load_prices, load_prices_pit
+from nalin_l1.data.loader import LookaheadError, load_prices, load_prices_pit
 
 
 FIXTURE = "placeholder.csv"

@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import pytest
 
-from src.loop.driver import run_candidate
-from src.packaging.package_candidate import (
+from nalin_l1.loop.driver import run_candidate
+from nalin_l1.packaging.package_candidate import (
     assemble_package,
     run_engine_for_candidate,
     verify_strategy_conformance,
 )
-from src.schemas import ApprovedCandidate
+from nalin_l1.schemas import ApprovedCandidate
 
 pytestmark = pytest.mark.slow
 

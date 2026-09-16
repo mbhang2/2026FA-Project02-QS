@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from src.strategy.protocol import Strategy
+from nalin_l1.strategy.protocol import Strategy
 
 
 class LeakyStrategy(Strategy):

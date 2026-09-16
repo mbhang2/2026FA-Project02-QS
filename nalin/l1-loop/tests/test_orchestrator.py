@@ -6,11 +6,11 @@ import json
 
 import pytest
 
-from src.config.experiment_spec import ExperimentSpec
-from src.orchestrator.run_experiment import run_experiment
-from src.serialization.trial_log import write_trial_log
+from nalin_l1.config.experiment_spec import ExperimentSpec
+from nalin_l1.orchestrator.run_experiment import run_experiment
+from nalin_l1.serialization.trial_log import write_trial_log
 
-BUY_HOLD = "src.strategy.reference_strategies.buy_and_hold"
+BUY_HOLD = "nalin_l1.strategy.reference_strategies.buy_and_hold"
 
 
 def _spec() -> ExperimentSpec:
@@ -71,7 +71,7 @@ def test_invalid_spec_raises_before_engine():
 def test_leakage_guard_trips():
     import pandas as pd
 
-    from src.execution.leakage_guard import LookaheadViolation, assert_no_lookahead
+    from nalin_l1.execution.leakage_guard import LookaheadViolation, assert_no_lookahead
     from tests.fixtures.leaky_strategy import LeakyStrategy
 
     idx = pd.date_range("2024-01-01", periods=6, tz="UTC")

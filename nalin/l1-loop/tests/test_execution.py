@@ -5,8 +5,8 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from src.execution.portfolio import build_equity_curve
-from src.execution.simulator import simulate_fill
+from nalin_l1.execution.portfolio import build_equity_curve
+from nalin_l1.execution.simulator import simulate_fill
 
 
 def _prices(opens, closes):

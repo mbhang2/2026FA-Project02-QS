@@ -6,9 +6,9 @@ import json
 
 import pytest
 
-from src.loop import paths
-from src.loop.state_store import load_state, save_state
-from src.schemas import CandidateState
+from nalin_l1.loop import paths
+from nalin_l1.loop.state_store import load_state, save_state
+from nalin_l1.schemas import CandidateState
 
 
 @pytest.fixture
@@ -44,10 +44,10 @@ def test_save_state_is_atomic_no_leftover_tmp(redirect_paths):
 
 
 def test_resume_preserves_session_and_skips_replan(redirect_paths, monkeypatch):
-    from src.loop import driver
-    from src.loop import planner_step, reviewer_step, worker_step
-    from src.opencode_bridge.invoke import OpencodeResult
-    from src.schemas import ApprovedCandidate
+    from nalin_l1.loop import driver
+    from nalin_l1.loop import planner_step, reviewer_step, worker_step
+    from nalin_l1.opencode_bridge.invoke import OpencodeResult
+    from nalin_l1.schemas import ApprovedCandidate
 
     cid = "resume_session"
 

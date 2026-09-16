@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from src.config.experiment_spec import ExperimentSpec
-from src.orchestrator.run_experiment import run_experiment
+from nalin_l1.config.experiment_spec import ExperimentSpec
+from nalin_l1.orchestrator.run_experiment import run_experiment
 
 
 def _spec() -> ExperimentSpec:
@@ -13,7 +13,7 @@ def _spec() -> ExperimentSpec:
         train_end="2024-02-01",
         val_end="2024-03-01",
         end="2024-04-01",
-        strategy_module_path="src.strategy.reference_strategies.buy_and_hold",
+        strategy_module_path="nalin_l1.strategy.reference_strategies.buy_and_hold",
         fee_bps=1.0,
         slippage_bps=1.0,
         output_dir="out",

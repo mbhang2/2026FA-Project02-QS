@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.opencode_bridge.invoke import (
+from nalin_l1.opencode_bridge.invoke import (
     OpencodeInvocationError,
     OpencodeResult,
     ResultExtractionError,
@@ -12,8 +12,8 @@ from src.opencode_bridge.invoke import (
     extract_result_block,
     invoke_opencode,
 )
-from src.opencode_bridge.parse import ParseRetryError, parse_or_retry
-from src.schemas import TaskPlan
+from nalin_l1.opencode_bridge.parse import ParseRetryError, parse_or_retry
+from nalin_l1.schemas import TaskPlan
 
 
 CLEAN = "some preamble\n<<<RESULT>>>\n{\"candidate_id\": \"c1\", \"tasks\": []}\n<<<END>>>\ntrailing"
@@ -119,7 +119,7 @@ def test_invoke_opencode_passes_expected_args(monkeypatch):
         captured["cwd"] = cwd
         return subprocess.CompletedProcess(cmd, 0, "hello", "err")
 
-    monkeypatch.setattr("src.opencode_bridge.invoke.subprocess.run", fake_run)
+    monkeypatch.setattr("nalin_l1.opencode_bridge.invoke.subprocess.run", fake_run)
     result = invoke_opencode(
         "planner", "p", session_id="s", context_files=["x.md"], cwd="/tmp"
     )
@@ -154,7 +154,7 @@ def test_invoke_parses_session_id_and_text(monkeypatch):
     def fake_run(cmd, cwd, capture_output, text):
         return subprocess.CompletedProcess(cmd, 0, events, "")
 
-    monkeypatch.setattr("src.opencode_bridge.invoke.subprocess.run", fake_run)
+    monkeypatch.setattr("nalin_l1.opencode_bridge.invoke.subprocess.run", fake_run)
     result = invoke_opencode("planner", "p")
     assert result.session_id == "ses_abc123"
     assert result.stdout == "hello"
@@ -169,7 +169,7 @@ def test_invoke_opencode_raises_on_nonzero_exit(monkeypatch):
     def fake_run(cmd, cwd, capture_output, text):
         return subprocess.CompletedProcess(cmd, 1, "", "boom")
 
-    monkeypatch.setattr("src.opencode_bridge.invoke.subprocess.run", fake_run)
+    monkeypatch.setattr("nalin_l1.opencode_bridge.invoke.subprocess.run", fake_run)
     with pytest.raises(OpencodeInvocationError) as exc:
         invoke_opencode("planner", "p")
     assert "boom" in str(exc.value)

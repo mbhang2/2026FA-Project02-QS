@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-from src.config.experiment_spec import ExperimentSpec
-from src.splitting.windows import split_periods
+from nalin_l1.config.experiment_spec import ExperimentSpec
+from nalin_l1.splitting.windows import split_periods
 
 
 def _spec():

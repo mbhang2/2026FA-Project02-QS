@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from src.schemas import (
+from nalin_l1.schemas import (
     ApprovedCandidate,
     CandidatePackage,
     CandidateState,

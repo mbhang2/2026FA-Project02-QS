@@ -5,7 +5,7 @@ Source price data lives in `raw/` and is **read-only**.
 ## Canonical schema
 
 Every downstream component consumes data in one fixed shape, regardless of the
-underlying source. The loader (`src/data/loader.py`) is the single adapter
+underlying source. The loader (`nalin_l1/data/loader.py`) is the single adapter
 boundary that produces it.
 
 * **Index** — tz-aware UTC `DatetimeIndex` named `timestamp`, sorted ascending.

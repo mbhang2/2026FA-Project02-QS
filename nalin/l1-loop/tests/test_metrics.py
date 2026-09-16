@@ -6,16 +6,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.metrics.composite import composite_score
-from src.metrics.concentration import pnl_concentration, turnover
-from src.metrics.decay import MAX_DECAY_RATIO, decay_check
-from src.metrics.returns import (
+from nalin_l1.metrics.composite import composite_score
+from nalin_l1.metrics.concentration import pnl_concentration, turnover
+from nalin_l1.metrics.decay import MAX_DECAY_RATIO, decay_check
+from nalin_l1.metrics.returns import (
     annualized_volatility,
     cumulative_return,
     sharpe_ratio,
 )
-from src.metrics.risk import cvar, max_drawdown
-from src.metrics.stability import MAX_STABILITY, subperiod_stability
+from nalin_l1.metrics.risk import cvar, max_drawdown
+from nalin_l1.metrics.stability import MAX_STABILITY, subperiod_stability
 
 
 # --- Task 3.1: returns ---

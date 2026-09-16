@@ -6,19 +6,19 @@ import json
 
 import pytest
 
-from src.loop import paths
-from src.packaging.package_candidate import (
+from nalin_l1.loop import paths
+from nalin_l1.packaging.package_candidate import (
     EngineRunError,
     assemble_package,
     run_engine_for_candidate,
     verify_strategy_conformance,
 )
-from src.schemas import ApprovedCandidate, CandidateState, Task, TaskPlan
+from nalin_l1.schemas import ApprovedCandidate, CandidateState, Task, TaskPlan
 
 pytestmark = pytest.mark.usefixtures("redirect_candidate_paths")
 
 CONFORMING = '''
-from src.strategy.protocol import Strategy
+from nalin_l1.strategy.protocol import Strategy
 import pandas as pd
 
 class MyStrategy(Strategy):
@@ -66,7 +66,7 @@ def test_conformance_false_when_missing():
 
 
 def test_run_engine_success_writes_trial_log(monkeypatch):
-    from src.packaging import package_candidate
+    from nalin_l1.packaging import package_candidate
 
     cid = "pack_engine_ok"
     _write_strategy(cid, CONFORMING)
@@ -81,7 +81,7 @@ def test_run_engine_success_writes_trial_log(monkeypatch):
 
 
 def test_run_engine_error_recorded_distinctly(monkeypatch):
-    from src.packaging import package_candidate
+    from nalin_l1.packaging import package_candidate
 
     cid = "pack_engine_err"
     _write_strategy(cid, CONFORMING)
@@ -96,7 +96,7 @@ def test_run_engine_error_recorded_distinctly(monkeypatch):
 
 
 def test_assemble_success_package(monkeypatch):
-    from src.packaging import package_candidate
+    from nalin_l1.packaging import package_candidate
 
     cid = "pack_assemble_ok"
     _write_strategy(cid, CONFORMING)
@@ -106,7 +106,7 @@ def test_assemble_success_package(monkeypatch):
     paths.candidate_file(cid, "plan.json").write_text(plan.model_dump_json(indent=2))
     paths.candidate_file(cid, "trial_log.json").write_text(json.dumps({"composite_score": 1.0}))
 
-    from src.loop import state_store as ss
+    from nalin_l1.loop import state_store as ss
     monkeypatch.setattr(package_candidate, "load_state", lambda cid: CandidateState(candidate_id=cid, status="ENGINE_RUN"))
 
     pkg = assemble_package(cid)
@@ -116,7 +116,7 @@ def test_assemble_success_package(monkeypatch):
 
 
 def test_assemble_failed_package_no_trial_log(monkeypatch):
-    from src.packaging import package_candidate
+    from nalin_l1.packaging import package_candidate
 
     cid = "pack_assemble_fail"
     cand = _candidate(cid)

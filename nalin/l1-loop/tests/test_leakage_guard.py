@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from src.execution.leakage_guard import LookaheadViolation, assert_no_lookahead
+from nalin_l1.execution.leakage_guard import LookaheadViolation, assert_no_lookahead
 
 
 def test_no_lookahead_passes_when_clean():

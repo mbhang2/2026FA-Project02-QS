@@ -7,9 +7,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.config.experiment_spec import ExperimentSpec
-from src.orchestrator.run_experiment import run_experiment
-from src.serialization.trial_log import write_trial_log
+from nalin_l1.config.experiment_spec import ExperimentSpec
+from nalin_l1.orchestrator.run_experiment import run_experiment
+from nalin_l1.serialization.trial_log import write_trial_log
 
 
 def main() -> None:
@@ -20,7 +20,7 @@ def main() -> None:
         train_end="2025-07-03 09:37:00",
         val_end="2025-07-03 14:26:00",
         end="2025-07-03 23:59:00",
-        strategy_module_path="src.strategy.candidate",
+        strategy_module_path="nalin_l1.strategy.candidate",
         fee_bps=1.0,
         slippage_bps=1.0,
         output_dir="output",

@@ -1,11 +1,11 @@
-"""Tests for the lightweight runner (src/loop/run.py)."""
+"""Tests for the lightweight runner (nalin_l1/loop/run.py)."""
 
 from __future__ import annotations
 
 import pytest
 
-from src.loop import run
-from src.schemas import ApprovedCandidate
+from nalin_l1.loop import run
+from nalin_l1.schemas import ApprovedCandidate
 
 
 def _candidate(cid="run_test"):
@@ -32,7 +32,7 @@ def test_auto_candidate_id_is_unique():
 
 
 def test_run_full_success_path(monkeypatch):
-    from src.schemas import CandidateState, CandidatePackage, TaskPlan
+    from nalin_l1.schemas import CandidateState, CandidatePackage, TaskPlan
 
     cid = "run_success"
 
@@ -64,7 +64,7 @@ def test_run_full_success_path(monkeypatch):
 
 
 def test_run_full_conformance_failure(monkeypatch):
-    from src.schemas import CandidateState, CandidatePackage, TaskPlan
+    from nalin_l1.schemas import CandidateState, CandidatePackage, TaskPlan
 
     cid = "run_conf_fail"
     monkeypatch.setattr(
@@ -88,7 +88,7 @@ def test_run_full_conformance_failure(monkeypatch):
 
 
 def test_run_full_engine_error(monkeypatch):
-    from src.schemas import CandidateState, CandidatePackage, TaskPlan
+    from nalin_l1.schemas import CandidateState, CandidatePackage, TaskPlan
 
     cid = "run_engine_err"
     monkeypatch.setattr(
@@ -116,7 +116,7 @@ def test_run_full_engine_error(monkeypatch):
 
 
 def test_run_full_build_failure(monkeypatch):
-    from src.schemas import CandidateState, CandidatePackage, TaskPlan
+    from nalin_l1.schemas import CandidateState, CandidatePackage, TaskPlan
 
     cid = "run_build_fail"
     monkeypatch.setattr(

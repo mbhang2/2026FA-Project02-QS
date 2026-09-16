@@ -23,7 +23,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*"]
+include = ["nalin_l1*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

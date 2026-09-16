@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from daksh.audit_agent import tier3  # noqa: E402
+from audit import tier3  # noqa: E402
 
 ARMS = ("history", "control")
 
@@ -102,7 +102,7 @@ def test_tier_three_reads_n_from_the_summary_and_counts_nothing():
     """Tier 2 owns the correction. The audit agent's other path computes
     `n_trials` as `len(glob("experiments/*.json"))` -- a number that shrinks when
     a file is deleted -- and that number must not appear on this path."""
-    source = (REPO_ROOT / "daksh" / "audit_agent" / "tier3.py").read_text()
+    source = (REPO_ROOT / "audit" / "tier3.py").read_text()
     assert 'glob("*.json")' not in source
     assert "ledger" in tier3.N_TRIALS_PROVENANCE_TIER2.lower()
     for arm in ARMS:
@@ -182,7 +182,7 @@ def test_tier_three_imports_nothing_from_the_harness():
 
     harness = set()
     for node in ast.walk(ast.parse(
-            (REPO_ROOT / "daksh" / "audit_agent" / "tier3.py").read_text())):
+            (REPO_ROOT / "audit" / "tier3.py").read_text())):
         if isinstance(node, ast.Import):
             names = [a.name for a in node.names]
         elif isinstance(node, ast.ImportFrom) and node.module:
@@ -205,7 +205,7 @@ def test_tier_two_imports_nothing_from_the_audit_agent():
             names = [node.module]
         else:
             continue
-        audit.update(n for n in names if n.split(".")[0] == "daksh")
+        audit.update(n for n in names if n.split(".")[0] == "audit")
     assert not audit, f"tier 2 imports {sorted(audit)}"
 
 

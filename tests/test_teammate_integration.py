@@ -415,7 +415,7 @@ def test_the_second_driver_imports_nothing_from_the_harness():
 # --------------------------------------------------------------------------- #
 # 5. the audit agent's deflated Sharpe against the harness's (Task 42)
 # --------------------------------------------------------------------------- #
-"""`daksh/audit_agent/engine/stats.py` implements PSR and DSR from Bailey &
+"""`audit/engine/stats.py` implements PSR and DSR from Bailey &
 Lopez de Prado; `src/core/scoring/correction.deflation_view` implements the same
 deflation via `calibration.null.expected_max`. They compute the same published
 quantity -- E[max of N draws from the null] -- by two different routes, one a
@@ -483,7 +483,7 @@ def test_the_two_expected_max_implementations_disagree_and_the_harness_is_closer
     This test pins the sign and the rough size, so a change to either
     implementation surfaces instead of quietly shifting a published bar.
     """
-    from daksh.audit_agent.engine.stats import expected_max_sharpe
+    from audit.engine.stats import expected_max_sharpe
 
     reference = _standard_max_reference(n_trials)
     harness = _harness_method(n_trials)
@@ -520,9 +520,9 @@ def test_the_audit_agents_n_trials_is_a_file_count_and_says_so():
     wrong to call that number `n_trials` without saying which trials, so the
     packet now records its provenance and this test pins that it does.
     """
-    from daksh.audit_agent.engine import audit
+    from audit.engine import audit
 
-    source = (REPO_ROOT / "daksh" / "audit_agent" / "engine" / "audit.py").read_text()
+    source = (REPO_ROOT / "audit" / "engine" / "audit.py").read_text()
     assert 'glob("*.json")' in source, (
         "n_trials is no longer a file count; re-read this test's reasoning"
     )
@@ -540,7 +540,7 @@ def test_the_audit_ledger_declares_that_it_is_not_the_trial_ledger():
     file: a directory of rows with an `n_trials` column is something somebody
     will count, and counting these counts audits.
     """
-    from daksh.audit_agent.engine import store
+    from audit.engine import store
 
     db = store.empty_db()
     assert db["ledger"]["counted_toward_n"] is False
@@ -571,7 +571,7 @@ def test_the_audit_agent_imports_nothing_from_the_harness():
     import ast
 
     harness = set()
-    for path in (REPO_ROOT / "daksh").rglob("*.py"):
+    for path in (REPO_ROOT / "audit").rglob("*.py"):
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.Import):
                 names = [a.name for a in node.names]

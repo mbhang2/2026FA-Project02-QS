@@ -142,9 +142,18 @@ def build(arm_dir: Path) -> dict:
     record, record_digest = CampaignRecord.read(arm_dir / "campaign.json")
     blob = json.loads((arm_dir / "result.json").read_text())
     rows = blob["rows"]
+    # Two shapes produce a campaign: `scripts/llm_campaign.py`, which writes a
+    # multi-arm `report.json` beside the arms, and a single campaign whose
+    # `summarise()` output lands in its own directory as `summary.json`. The
+    # second form had no reader until the Task 44 end-to-end run went through
+    # it and came out with an empty outcome map and no gate -- which looked
+    # like the campaign had no gate rather than like this function had no
+    # source. Both are read now, the sibling report first.
     report_path = arm_dir.parent / "report.json"
     report = json.loads(report_path.read_text()) if report_path.exists() else {}
     arm = report.get("arms", {}).get(arm_dir.name, {})
+    if not arm and (arm_dir / "summary.json").exists():
+        arm = json.loads((arm_dir / "summary.json").read_text())
 
     trials = [r for r in rows if r.get("outcome") in TRIAL_OUTCOMES]
     scored = [(i, r) for i, r in enumerate(rows)

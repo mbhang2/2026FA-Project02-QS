@@ -94,8 +94,16 @@ it:
 ```
 tests/                 the harness's own
 tests/audit/           tier 3's
-tests/alternatives/    the second engine's
+tests/l1_engine/       the second engine's
 ```
+
+`tests/l1_engine/` and not `tests/alternatives/`, which is the one line of this
+document the execution had to correct. An `__init__.py` under
+`tests/alternatives/` makes `tests.alternatives` a package, and with `tests/` on
+`sys.path` the name `alternatives` then resolves to *that* directory instead of
+the real one at the repo root -- so every `from alternatives.l1_engine import
+...` fails. It is the same shadowing Task 39 found in the two packages both
+named `src`, which is half of what this restructure exists to remove.
 
 **No test is deleted and none is weakened.** Tests that cannot pass are skipped
 with a reason naming what they need — daksh's eight need demo fixtures that exist

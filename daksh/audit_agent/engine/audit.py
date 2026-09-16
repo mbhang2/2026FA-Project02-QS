@@ -337,6 +337,31 @@ def slim_audit(packet: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+# What this module's `n_trials` actually counts, recorded in every packet and
+# every ledger row it produces (Task 42).
+#
+# It is `len(glob("experiments/*.json"))` -- the experiment files somebody left
+# in a ticket directory. That is a reasonable thing for an auditor to deflate by:
+# it is the trials the auditor can see. It is **not** this project's N, and the
+# difference is worth stating wherever the number appears, because a deflated
+# Sharpe quoted against the wrong N is a number that looks corrected and is not.
+#
+# Three differences, none of them a defect in this code:
+#
+#   * it is reconstructed from the filesystem after the fact, where
+#     `runs/ledger.jsonl` is written as the trials happen -- CLAUDE.md's phrase
+#     is "logged rather than estimated after the fact";
+#   * it shrinks when a file is deleted, so removing a losing experiment lowers
+#     the deflation bar and improves whatever survives;
+#   * it is per ticket, where this project's N is global across every dataset,
+#     because otherwise adding a dataset silently buys a fresh holdout.
+N_TRIALS_PROVENANCE = (
+    "count of experiments/*.json in the ticket directory at audit time; "
+    "reconstructed from the filesystem, per-ticket, and NOT the project's N "
+    "(runs/ledger.jsonl, global, written as trials happen)"
+)
+
+
 def audit_ticket(
     experiment_paths: list[Path],
     *,
@@ -402,6 +427,7 @@ def audit_ticket(
     packet = {
         "verdict": overall,
         "n_trials": n_trials,
+        "n_trials_provenance": N_TRIALS_PROVENANCE,
         "gates": {
             "overall": overall,
             "critic_allowed": overall == "PASS",
@@ -520,6 +546,7 @@ def audit_experiment_id(
     return {
         "verdict": row["verdict"],
         "n_trials": n_trials,
+        "n_trials_provenance": N_TRIALS_PROVENANCE,
         "recommendation": None,
         "action": row["action"],
         "experiments": [row],

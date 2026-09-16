@@ -1,7 +1,30 @@
-"""JSON audit ledger. Same row shape as a future SQLite table.
+"""JSON **audit** ledger. One row per audit run. Same shape as a future SQLite table.
 
 Default file: research/audit_db.json
 Swap the backend later; keep record_from_row() unchanged.
+
+**This is not the trial ledger and its rows are not trials (Task 42).** The
+project counts trials in exactly one place -- `runs/ledger.jsonl`, append-only,
+one row per invocation of `run.py` including the ones that crashed, filtered on
+`purpose == "trial"` -- and N is the number of rows that match. Every corrected
+p-value the project publishes is computed against it.
+
+A row here records that an **audit** happened: which experiment was examined,
+which gates passed, and what the auditor recommends. It carries `dsr`, `psr` and
+`n_trials`, which is exactly why the distinction has to be written down rather
+than assumed -- a directory of rows with an `n_trials` column is something
+somebody will count, and counting these would be counting audits.
+
+These rows also could not become trial rows by relabelling. A trial row asserts
+a `RunTicket` minted by `LedgerRun`, a code fingerprint, artifact digests, a
+dataset digest, an isolation level and a reconstruction that reconciles with the
+accumulator -- that is what `scripts/ledger_check.py` verifies and what makes N
+honest. This engine runs in process against a JSON experiment spec. Emitting
+trial rows from it would grow N by rows nothing can check, which is worse than N
+not growing.
+
+Same disposition as `nalin_l1`'s trial log in Task 40, and for the same reason:
+the artifact says what it is, in the artifact.
 """
 
 from __future__ import annotations
@@ -42,8 +65,25 @@ ACTION_FROM_RECOMMENDATION = {
 }
 
 
+# Stated in the file, not only in the docstring: the docstring is not in the
+# JSON somebody finds in six months.
+NOT_A_TRIAL_LEDGER = {
+    "rows_are": "audit runs, not trials",
+    "counted_toward_n": False,
+    "the_trial_ledger": "runs/ledger.jsonl",
+    "why": (
+        "An audit row records that an experiment was examined. A trial row "
+        "asserts a RunTicket, a code fingerprint, artifact digests, a dataset "
+        "digest, an isolation level and a reconciled reconstruction, which is "
+        "what scripts/ledger_check.py verifies. N must not grow by rows nothing "
+        "can check."
+    ),
+}
+
+
 def empty_db() -> dict[str, Any]:
-    return {"version": 1, "backend": "json", "records": []}
+    return {"version": 1, "backend": "json", "ledger": NOT_A_TRIAL_LEDGER,
+            "records": []}
 
 
 def load_db(path: str | Path | None = None) -> dict[str, Any]:
@@ -60,6 +100,9 @@ def load_db(path: str | Path | None = None) -> dict[str, Any]:
 
 
 def save_db(db: dict[str, Any], path: str | Path | None = None) -> Path:
+    # Stamped on every write, so a file written before Task 42 gains the block
+    # the first time it is appended to rather than staying silently unlabelled.
+    db.setdefault("ledger", NOT_A_TRIAL_LEDGER)
     dest = Path(path) if path else DEFAULT_DB
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(db, indent=2, default=str) + "\n", encoding="utf-8")

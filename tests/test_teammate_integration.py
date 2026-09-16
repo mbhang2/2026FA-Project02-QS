@@ -410,3 +410,174 @@ def test_the_second_driver_imports_nothing_from_the_harness():
             imported.add(node.module)
     harness = {m for m in imported if m == "src" or m.startswith("src.")}
     assert not harness, f"the second driver imports {sorted(harness)}"
+
+
+# --------------------------------------------------------------------------- #
+# 5. the audit agent's deflated Sharpe against the harness's (Task 42)
+# --------------------------------------------------------------------------- #
+"""`daksh/audit_agent/engine/stats.py` implements PSR and DSR from Bailey &
+Lopez de Prado; `src/core/scoring/correction.deflation_view` implements the same
+deflation via `calibration.null.expected_max`. They compute the same published
+quantity -- E[max of N draws from the null] -- by two different routes, one a
+closed form and one a simulation, which makes this the sharpest differential
+reference in the repository: it lands directly on the project's own
+multiple-testing arithmetic."""
+
+
+def _standard_max_reference(n_trials: int, draws: int = 400_000,
+                            seed: int = 20260916) -> float:
+    """E[max of `n_trials` standard normals], to about 1e-3.
+
+    The adjudicator. Both implementations below are approximations of this, and
+    without a third number there is no way to say which disagreement is an error
+    and which is method.
+    """
+    import numpy as np
+
+    rng = np.random.default_rng(seed)
+    total, done, block = 0.0, 0, 50_000
+    while done < draws:
+        k = min(block, draws - done)
+        total += rng.normal(0.0, 1.0, size=(k, n_trials)).max(axis=1).sum()
+        done += k
+    return total / draws
+
+
+def _harness_method(n_trials: int, draws: int = 2000, seed: int = 7) -> float:
+    """`calibration.null.expected_max`'s method, standardised.
+
+    Mirrored rather than called: the real one reads a tabulated null and returns
+    `mean + sd * this`, so comparing it to a closed form written in Sharpe units
+    means stripping the location and scale off first. Same generator, same
+    default draw count, same seed.
+    """
+    import numpy as np
+
+    rng = np.random.default_rng(seed)
+    return float(rng.normal(0.0, 1.0, size=(draws, n_trials)).max(axis=1).mean())
+
+
+@pytest.mark.parametrize("n_trials", [5, 10, 25, 100, 400])
+def test_the_two_expected_max_implementations_disagree_and_the_harness_is_closer(n_trials):
+    """**A disagreement, adjudicated against a high-precision reference.**
+
+    `daksh`'s closed form is Bailey & Lopez de Prado (2014):
+
+        sigma * [(1 - gamma) * z(1 - 1/N) + gamma * z(1 - 1/(N*e))]
+
+    The harness simulates instead, because the closed form exists only for
+    Sharpe and the harness needs E[max] for Sortino too.
+
+    Measured against 400,000 draws, **the harness's simulation is closer at
+    every N tested** and the closed form is biased **high** by roughly +0.017 to
+    +0.036 in Sharpe units. Both are approximations; the closed form's error is
+    its own, documented in the literature for small N, while the harness's is
+    Monte Carlo noise at 2,000 draws.
+
+    **Which side I believe: the harness, on the number; daksh, on the method
+    being cheaper.** The closed form's bias is in the conservative direction for
+    an audit gate -- it sets the deflation bar too high, so a real result is more
+    likely to be called unproven than the reverse -- which is the safe direction
+    for a gate to be wrong in, and worth saying rather than fixing.
+
+    This test pins the sign and the rough size, so a change to either
+    implementation surfaces instead of quietly shifting a published bar.
+    """
+    from daksh.audit_agent.engine.stats import expected_max_sharpe
+
+    reference = _standard_max_reference(n_trials)
+    harness = _harness_method(n_trials)
+    closed = expected_max_sharpe(n_trials=n_trials, sr_variance=1.0)
+
+    assert abs(harness - reference) < abs(closed - reference), (
+        f"N={n_trials}: harness err {harness - reference:+.5f}, "
+        f"closed-form err {closed - reference:+.5f}"
+    )
+    assert closed > reference, (
+        "the closed form stopped over-stating the bar; its bias was the "
+        "conservative direction an audit gate wants"
+    )
+    assert 0.005 < closed - reference < 0.06, closed - reference
+
+
+def test_the_audit_agents_n_trials_is_a_file_count_and_says_so():
+    """**The finding that matters most in this tree.**
+
+    `engine/audit.py` computes `n_trials` as
+    `len(list((ticket_dir / "experiments").glob("*.json")))` -- the number of
+    experiment files somebody left in a directory. Three things follow, and none
+    of them is a bug in daksh's code so much as a different meaning of N:
+
+    * it is **reconstructible after the fact**, which is the failure
+      `runs/ledger.jsonl` exists to prevent -- CLAUDE.md's words are "logged
+      rather than estimated after the fact";
+    * it **shrinks when a file is deleted**, so removing a losing experiment
+      lowers the deflation bar and improves the surviving result;
+    * it is **per ticket**, where this project's rule is that N is global across
+      all datasets, because otherwise adding one buys a fresh holdout.
+
+    The audit agent is not wrong to deflate by the trials it can see. It is
+    wrong to call that number `n_trials` without saying which trials, so the
+    packet now records its provenance and this test pins that it does.
+    """
+    from daksh.audit_agent.engine import audit
+
+    source = (REPO_ROOT / "daksh" / "audit_agent" / "engine" / "audit.py").read_text()
+    assert 'glob("*.json")' in source, (
+        "n_trials is no longer a file count; re-read this test's reasoning"
+    )
+    assert hasattr(audit, "N_TRIALS_PROVENANCE"), (
+        "the packet must say where its n_trials came from"
+    )
+    assert "ledger" in audit.N_TRIALS_PROVENANCE.lower()
+
+
+def test_the_audit_ledger_declares_that_it_is_not_the_trial_ledger():
+    """Invariant 2 again, for a third record with an `n_trials` column.
+
+    `research/audit_db.json` records that an audit happened. It carries `dsr`,
+    `psr` and `n_trials`, which is exactly why this has to be stated in the
+    file: a directory of rows with an `n_trials` column is something somebody
+    will count, and counting these counts audits.
+    """
+    from daksh.audit_agent.engine import store
+
+    db = store.empty_db()
+    assert db["ledger"]["counted_toward_n"] is False
+    assert db["ledger"]["the_trial_ledger"] == "runs/ledger.jsonl"
+
+    # And a file written before the block existed gains it on the next write.
+    import json
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "audit_db.json"
+        path.write_text(json.dumps({"version": 1, "backend": "json",
+                                    "records": []}))
+        loaded = store.load_db(path)
+        assert "ledger" not in loaded
+        store.save_db(loaded, path)
+        assert json.loads(path.read_text())["ledger"]["counted_toward_n"] is False
+
+
+def test_the_audit_agent_imports_nothing_from_the_harness():
+    """Like Gowtam's driver, and for the same reason: an independent
+    implementation of gates over the same claims is evidence, and an import
+    would make it a shared module instead.
+
+    Checked over import statements rather than source text -- the reasoning
+    above contains the string a substring search trips on.
+    """
+    import ast
+
+    harness = set()
+    for path in (REPO_ROOT / "daksh").rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Import):
+                names = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                names = [node.module]
+            else:
+                continue
+            harness.update(n for n in names if n == "src" or n.startswith("src."))
+    assert not harness, f"the audit agent imports {sorted(harness)}"

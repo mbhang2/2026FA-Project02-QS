@@ -335,7 +335,9 @@ than the reverse — which is why it is recorded rather than corrected.
 `docs/reviews/task42/` has the table.
 
 Its ledger, `research/audit_db.json`, records **audits and not trials**, and says
-so in the file for the same reason `nalin_l1`'s trial log does.
+so in the file for the same reason `nalin_l1`'s trial log does. It is written on
+the first audit and has never been committed — on this branch or on the one
+`audit/` arrived from — so the path is where it *will* be, not where it is.
 
 The differential comparisons are tests, in `tests/test_teammate_integration.py`
 at the **root**, because `testpaths = ["tests"]` and the teammate suites are not

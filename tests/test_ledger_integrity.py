@@ -229,7 +229,12 @@ def test_environment_drift_is_reported_and_is_not_supersession():
     }
     result = ledger_check.check_row(0, row, replay=False, superseded={})
     assert result["environment_drifted"] is True
-    assert ledger_check.verdict(result) in ("UNVERIFIABLE", "env-drifted")
+    # "no-sha" since Task 47: this fixture's `git_sha` is "" incidentally --
+    # the subject here is drift -- and a row recording no sha at all is now told
+    # apart from one recording a sha nobody has. Either is acceptable; what the
+    # test is asserting is the two lines around it.
+    assert ledger_check.verdict(result) in (
+        "UNVERIFIABLE", "env-drifted", "no-sha")
     assert "superseded" not in result
     # and a row that matches today is not flagged
     same = dict(row, environment_fingerprint=integrity.environment_fingerprint())

@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 """Is every row in the ledger a row anyone could check?
 
-    python scripts/ledger_check.py                    # cheap checks, every row
+    python scripts/ledger_check.py                    # EVERY ledger, every row
     python scripts/ledger_check.py --replay           # re-run each row too
+    python scripts/ledger_check.py runs/ledger.jsonl  # just one
     python scripts/ledger_check.py --json
+
+**With no argument this checks every ledger in the repository**, which means
+`runs/ledger.jsonl` and every `runs/campaigns/**/ledger.jsonl`. It did not until
+Task 47, and the gap was not theoretical: all 200 rows of the Task 30 null
+campaign are unpinned -- run against a working tree with uncommitted edits, so
+the code that produced them cannot be recovered from history -- and nobody knew,
+because the standard invocation only ever looked at `runs/ledger.jsonl` and the
+campaign trials do not live there. A check whose default scope excludes most of
+the rows is a check that reports clean while the rows rot.
 
 The ledger is the p-value column. False-discovery control over it assumes each
 row is a calibrated number from a reproducible run, and a row nobody can
@@ -79,17 +89,48 @@ def load_rows(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
-def load_supersessions(path: Path = SUPERSESSIONS) -> dict[int, dict]:
-    """`{row index: entry}`. Keyed by index *and* checked against the digest, so
-    an entry cannot silently start pointing at a different row when the ledger
-    grows a line above it."""
+DEFAULT_LEDGER_KEY = "runs/ledger.jsonl"
+
+
+def ledger_key(path: Path) -> str:
+    """A ledger's name in the supersession file: repo-relative, POSIX."""
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def discover_ledgers(root: Path = REPO_ROOT) -> list[Path]:
+    """Every ledger in the repository, the main one first.
+
+    `runs/replays.jsonl` is deliberately absent: it records replays, which are
+    not trials and have their own purpose. `docs/reviews/**` is absent too --
+    those are a task's own scratch output, not the project's record.
+    """
+    found = []
+    main = root / "runs" / "ledger.jsonl"
+    if main.is_file():
+        found.append(main)
+    found.extend(sorted((root / "runs" / "campaigns").rglob("ledger.jsonl")))
+    return found
+
+
+def load_supersessions(path: Path = SUPERSESSIONS) -> dict[tuple[str, int], dict]:
+    """`{(ledger, row index): entry}`, checked against the digest as well.
+
+    **Keyed by ledger as well as by index since Task 47**, because the check now
+    spans several ledgers and row 7 of one is not row 7 of another. An entry
+    without a `ledger` field means the main ledger, which is what every entry
+    written before this meant -- there were none, so nothing needed migrating,
+    but the default is the right one either way.
+    """
     if not path.exists():
         return {}
     out = {}
     for line in path.read_text().splitlines():
         if line.strip():
             entry = json.loads(line)
-            out[entry["row"]] = entry
+            out[(entry.get("ledger", DEFAULT_LEDGER_KEY), entry["row"])] = entry
     return out
 
 
@@ -132,9 +173,12 @@ def code_fingerprint_at(sha: str) -> str | None:
 
 
 def check_row(index: int, row: dict, *, replay: bool,
-              superseded: dict[int, dict], replay_log: Path | None = None) -> dict:
+              superseded: dict[tuple[str, int], dict],
+              replay_log: Path | None = None,
+              ledger: str = DEFAULT_LEDGER_KEY) -> dict:
     sha = row.get("git_sha", "")
     result = {
+        "ledger": ledger,
         "row": index,
         "purpose": row.get("purpose"),
         "profile": row.get("profile"),
@@ -179,8 +223,8 @@ def check_row(index: int, row: dict, *, replay: bool,
     else:
         result["notes"].append("row predates the environment digest (Task 23)")
 
-    if index in superseded:
-        entry = superseded[index]
+    if (ledger, index) in superseded:
+        entry = superseded[(ledger, index)]
         result["superseded"] = entry.get("reason", "")
         if entry.get("blotter_digest") not in (None, row.get("blotter_digest")):
             result["notes"].append(
@@ -220,6 +264,20 @@ def verdict(result: dict) -> str:
         return "superseded"
     if result["reproduces"] is False:
         return "UNREPRODUCIBLE"
+    if not result["git_sha"]:
+        # A row that records NO sha at all, as against one that records a sha
+        # nobody has. The two were the same verdict until Task 47 and they are
+        # not the same condition: the only rows in this repo that hit it are
+        # blocked proposals -- the model call failed, so no strategy ever ran
+        # and `run.py` was never reached to stamp the commit. They still carry
+        # `code_fingerprint`, and it is the one every other row in their own
+        # campaign carries, so the code state IS recoverable; what is missing is
+        # this row's ability to say so by itself.
+        #
+        # Not folded into the clean set: a trial that counts toward N and cannot
+        # name its commit is worth a human seeing. Not in the failing set
+        # either, because there is no run here to fail to reproduce.
+        return "no-sha"
     if not result["sha_in_history"]:
         return "UNVERIFIABLE"
     if result["code_fingerprint_matches"] is False:
@@ -234,11 +292,27 @@ def verdict(result: dict) -> str:
     return "checkable"
 
 
+def registered_campaigns_without_a_ledger(root: Path = REPO_ROOT) -> list[Path]:
+    """Campaign records whose directory holds no ledger.
+
+    A pre-registration with no rows beside it is either a campaign that never
+    ran or a campaign whose rows went somewhere else, and the two look identical
+    from here. Reported rather than judged: both are worth a human knowing, and
+    only the human knows which it was.
+    """
+    out = []
+    for record in sorted((root / "runs" / "campaigns").rglob("campaign.json")):
+        if not (record.parent / "ledger.jsonl").is_file():
+            out.append(record.parent)
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("ledger", nargs="?", type=Path,
-                    default=REPO_ROOT / "runs" / "ledger.jsonl")
+    ap.add_argument("ledgers", nargs="*", type=Path,
+                    help="ledgers to check; every ledger in the repo by default "
+                         "-- runs/ledger.jsonl and runs/campaigns/**/ledger.jsonl")
     ap.add_argument("--replay", action="store_true",
                     help="re-run every row and compare digests. Slow, and the "
                          "only check that actually answers the question.")
@@ -249,46 +323,118 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
 
-    rows = load_rows(args.ledger)
+    ledgers = args.ledgers or discover_ledgers()
+    if not ledgers:
+        print("no ledgers found", file=sys.stderr)
+        return 1
     superseded = load_supersessions(args.supersessions)
-    results = [check_row(i, r, replay=args.replay, superseded=superseded,
-                         replay_log=args.replay_log)
-               for i, r in enumerate(rows)]
+
+    per_ledger: list[tuple[Path, list[dict]]] = []
+    for path in ledgers:
+        key = ledger_key(path)
+        rows = load_rows(path)
+        per_ledger.append((path, [
+            check_row(i, r, replay=args.replay, superseded=superseded,
+                      replay_log=args.replay_log, ledger=key)
+            for i, r in enumerate(rows)]))
+
+    everything = [r for _, results in per_ledger for r in results]
 
     if args.json:
-        print(json.dumps(results, indent=2, sort_keys=True))
+        print(json.dumps(everything, indent=2, sort_keys=True))
     else:
-        print(f"{args.ledger}  {len(rows)} rows\n")
-        print(f"{'row':>3}  {'purpose':<8} {'profile':<14} {'sha':<12} "
-              f"{'verdict':<15} notes")
-        for r in results:
-            note = "; ".join(r["notes"]) if r["notes"] else ""
-            if "superseded" in r:
-                note = f"superseded: {r['superseded']}" + (f"; {note}" if note else "")
-            print(f"{r['row']:>3}  {r['purpose'] or '-':<8} {r['profile'] or '-':<14} "
-                  f"{r['git_sha']:<12} {verdict(r):<15} {note}")
+        for path, results in per_ledger:
+            print(f"{ledger_key(path)}  {len(results)} rows\n")
+            print(f"{'row':>3}  {'purpose':<8} {'profile':<14} {'sha':<12} "
+                  f"{'verdict':<15} notes")
+            for r in results:
+                note = "; ".join(r["notes"]) if r["notes"] else ""
+                if "superseded" in r:
+                    note = (f"superseded: {r['superseded']}"
+                            + (f"; {note}" if note else ""))
+                print(f"{r['row']:>3}  {r['purpose'] or '-':<8} "
+                      f"{r['profile'] or '-':<14} {r['git_sha']:<12} "
+                      f"{verdict(r):<15} {note}")
+            _summarise(results, indent="  ", replay=args.replay)
+            print()
 
-        counted = [r for r in results
-                   if r["purpose"] == "trial" and "superseded" not in r]
-        print()
-        print(f"N (purpose=trial, not superseded): {len(counted)}")
-        print(f"superseded: {sum(1 for r in results if 'superseded' in r)}")
-        print(f"environment-drifted: "
-              f"{sum(1 for r in results if r.get('environment_drifted'))}"
-              f"  (current environment {_current_environment()[:12]})")
-        if args.replay:
-            print(f"reproduces: {sum(1 for r in results if r['reproduces'] is True)}"
-                  f" / {sum(1 for r in results if r['reproduces'] is not None)} attempted")
-        else:
-            print("reproduction not attempted; re-run with --replay")
+        if len(per_ledger) > 1:
+            print("=" * 72)
+            print("ALL LEDGERS")
+            _summarise(everything, indent="  ", replay=args.replay)
+            trials = sum(1 for r in everything
+                         if r["purpose"] == "trial" and "superseded" not in r)
+            main_trials = sum(
+                1 for r in everything
+                if r["ledger"] == DEFAULT_LEDGER_KEY
+                and r["purpose"] == "trial" and "superseded" not in r)
+            print()
+            print(f"  trial rows across every ledger: {trials}")
+            print(f"  of those, in {DEFAULT_LEDGER_KEY}: {main_trials}")
+            if trials != main_trials:
+                print()
+                print("  These are not the same number, and which one is N is a")
+                print("  question this tool does not answer. CLAUDE.md says N is")
+                print("  global and counts every trial including the crashed"
+                      " ones;")
+                print("  the campaign runner writes its rows to the campaign's"
+                      " own")
+                print("  ledger and never to the main one, so the main ledger"
+                      " has")
+                print("  never seen them. Decide it deliberately, once.")
 
-    bad = [r for r in results if verdict(r) in ("UNREPRODUCIBLE", "UNVERIFIABLE")]
+        orphans = registered_campaigns_without_a_ledger()
+        if orphans:
+            print()
+            print("registered campaigns with no ledger beside them:")
+            for d in orphans:
+                print(f"  {d.relative_to(REPO_ROOT)}")
+            print("  Either they never ran, or their rows went elsewhere.")
+
+    bad = [r for r in everything
+           if verdict(r) in ("UNREPRODUCIBLE", "UNVERIFIABLE")]
+    unpinned = [r for r in everything if verdict(r) == "unpinned"]
+    no_sha = [r for r in everything if verdict(r) == "no-sha"]
+    if no_sha:
+        print(f"\n{len(no_sha)} row(s) record no git_sha at all. Every one is a "
+              "blocked proposal -- the model call failed, so no strategy ran "
+              "and the commit was never stamped -- and every one still counts "
+              "toward N, which is the design. Their `code_fingerprint` matches "
+              "their campaign siblings', so the code is recoverable that way. "
+              "The row writer not stamping a sha on this path is a defect worth "
+              "fixing where the row is built, not here.", file=sys.stderr)
+    if unpinned:
+        print(f"\n{len(unpinned)} row(s) are unpinned: the code they name does "
+              "not hash to what they recorded, so they were run against "
+              "uncommitted edits and their code state is not recoverable from "
+              "history. Not a failure -- the rows replay from stored source -- "
+              "but any number derived from them carries that caveat.",
+              file=sys.stderr)
     if bad:
         print(f"\n{len(bad)} row(s) cannot be verified. Supersede them with a "
               f"reason in {args.supersessions.name} or fix what broke; do not "
               f"delete them.", file=sys.stderr)
         return 1
     return 0
+
+
+def _summarise(results: list[dict], *, indent: str, replay: bool) -> None:
+    counted = [r for r in results
+               if r["purpose"] == "trial" and "superseded" not in r]
+    print()
+    print(f"{indent}N (purpose=trial, not superseded): {len(counted)}")
+    print(f"{indent}superseded: {sum(1 for r in results if 'superseded' in r)}")
+    print(f"{indent}unpinned: {sum(1 for r in results if verdict(r) == 'unpinned')}")
+    print(f"{indent}no-sha: {sum(1 for r in results if verdict(r) == 'no-sha')}")
+    print(f"{indent}environment-drifted: "
+          f"{sum(1 for r in results if r.get('environment_drifted'))}"
+          f"  (current environment {_current_environment()[:12]})")
+    if replay:
+        print(f"{indent}reproduces: "
+              f"{sum(1 for r in results if r['reproduces'] is True)}"
+              f" / {sum(1 for r in results if r['reproduces'] is not None)} attempted")
+    else:
+        print(f"{indent}reproduction not attempted; re-run with --replay")
 
 
 if __name__ == "__main__":

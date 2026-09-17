@@ -18,6 +18,28 @@ tabulated from one.
 200 edgeless proposals, synthetic training split, q = 0.05, pre-registered before
 the first trial. `runs/campaigns/ba2e91f668d6/`.
 
+> **This campaign cannot be replayed, and that was not known until Task 47.**
+> All 200 of its rows are *unpinned*: the `code_fingerprint` each one records
+> does not match the fingerprint recomputed from the tree at the commit the row
+> names, which means they were run against a working tree with uncommitted
+> edits. **The code state that produced these 200 numbers is not recoverable
+> from history.** The rows are not deleted and they still replay *from stored
+> source* — every strategy's text is in `sources/` — but what harness they ran
+> under cannot be established, so a replay cannot be checked against them.
+>
+> **The conclusion survives, on the 40-campaign replication below.** That is the
+> measurement the finding actually rests on: 2,000 trials over 40 independent
+> data realizations, 23/40 campaigns with a BH discovery against a promised
+> 0.05. The single campaign here is an illustration of a result established
+> elsewhere, and its numbers should be read as such rather than as evidence in
+> their own right. Had the finding rested on this campaign alone it would now be
+> unsupported.
+>
+> Nobody knew because `scripts/ledger_check.py` only ever looked at
+> `runs/ledger.jsonl`, and campaign trials are written to the campaign's own
+> ledger and never to that one. Since Task 47 the standard invocation covers
+> every ledger in the repository, which is how this surfaced.
+
 Budget of 200 because at far = 0.001 it predicts on the order of 0.2 per-trial
 acceptances — the smallest budget where "expect about zero" is a checkable
 prediction rather than a truism — and because the uncorrected best-of-200 is

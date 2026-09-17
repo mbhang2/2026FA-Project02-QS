@@ -791,6 +791,30 @@ mechanism for making crashes not count: the same hole in a friendlier shape.
 
 ---
 
+### Two N, and the union that derives the global one (Task 48)
+
+`runlog.global_n()` is the honesty number: trial rows across **every** ledger —
+`runs/ledger.jsonl` and every `runs/campaigns/**/ledger.jsonl` — including crashed
+and abandoned trials and blocked proposals. **Nothing computes a bar from it**, and
+`tests/test_global_n.py` asserts that nothing under `src/core/scoring/` so much as
+mentions it.
+
+The correction is campaign-scoped and always was: `max_of_n` maximises over one
+campaign's per-candidate nulls and `deflation_view` is handed that campaign's
+`len(trials)`. A bar from every trial the project ever ran would be a bar for a
+family nobody selected over.
+
+For a long time `ledger_check` reported **N = 0** while 400 trials sat in campaign
+directories, because campaign trials are written to the campaign's own ledger and
+never to the main one, and nothing read both. The global count is a **union,
+derived, never stored** — nothing to keep in sync, no dedup question, and no
+backfill appending historical rows under today's timestamps.
+
+A campaign record with no ledger beside it carries `status.json` saying which of
+*never ran*, *rows went elsewhere* and *attempt discarded* it is; `ledger_check`
+fails on one that does not, because an unexplained empty pre-registration reads as
+pending and that is the most flattering of the three.
+
 ## 5d. `src/core/loop/` and `src/core/scoring/correction.py` — the loop, and the
 correction it exists for
 

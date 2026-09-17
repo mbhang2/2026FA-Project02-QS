@@ -858,6 +858,52 @@ by nearly ninefold out of sample. At twenty it holds. **Recommendation: keep 30
 unless sessions are genuinely scarce**, since 20 is at the edge of where the
 tabulation is trustworthy and the cost of the floor is only power.
 
+## Across campaigns: one is the experiment, the rest are exploratory (Task 48)
+
+Everything else in this document is about the correction **inside** one campaign:
+`max_of_n` over that campaign's per-candidate nulls, with the campaign's own
+`len(trials)` as the denominator. That correction is measured — the operating
+family-wise error rate is 0.060, CI [0.041, 0.088], at R = 150 (Task 38).
+
+**It says nothing about the campaign being one of several.** Run five campaigns,
+report the one that cleared, and the family-wise error rate of *that* procedure is
+not 0.060 and is not anything this project has measured. It is the forking path one
+level up from the one the gate closes, and it is invisible from inside any single
+campaign's summary, because each of the five is individually correct.
+
+So, and this is policy rather than arithmetic:
+
+1. **A discovery is reportable only from a campaign pre-registered before it ran.**
+   The record — budget, q, stopping rule, profile, agent config, hypothesis path and
+   digest — is written and hashed before trial 0, and `CampaignRecord.read` fails if
+   it moved. That is what makes the campaign an experiment rather than a look.
+
+2. **Every other campaign is exploratory and is not reportable as a discovery.**
+   Not deleted, not hidden, and not excluded from the global count — exploratory
+   campaigns are exactly the ones a dishonest accounting would drop. They inform
+   what to pre-register next, and they are named as exploratory in their record's
+   `note`.
+
+3. **Re-running a campaign after seeing its outcome makes it exploratory**, whatever
+   its record says. Task 37's discarded attempt is the clean case and the reason the
+   distinction is written down: 35 trials in, the gateway was found to be serving a
+   different model, and the run was thrown away *while the pre-registration was kept
+   untouched* — precisely so that the re-run is still the experiment. Had the record
+   been rewritten after those 35 trials, it would not have been.
+
+4. **A campaign that is abandoned says so, in `runs/campaigns/<id>/status.json`**,
+   with the reason. An empty pre-registration with no status reads as pending, which
+   is the most flattering of the things it could be and the least likely to be true;
+   `scripts/ledger_check.py` fails on one.
+
+**What this does not do.** It does not correct across campaigns, and it is not a
+substitute for doing so. A project that eventually wants to report "we searched all
+autumn and this is what survived" needs a correction over campaigns, with the
+campaign as the unit and the same measured-not-asserted standard applied to it.
+Nothing here builds that. What this does is stop the *unmeasured* version — pick the
+best of five and quote the single-campaign FWER — from happening by default, by
+making the reportable campaign the one that was named in advance.
+
 ## For the committee: DSR against an empirical null
 
 DSR deflates by the expected maximum of N draws from the null. The closed form

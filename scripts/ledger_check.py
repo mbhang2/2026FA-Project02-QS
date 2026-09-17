@@ -292,18 +292,33 @@ def verdict(result: dict) -> str:
     return "checkable"
 
 
-def registered_campaigns_without_a_ledger(root: Path = REPO_ROOT) -> list[Path]:
-    """Campaign records whose directory holds no ledger.
+CAMPAIGN_STATUSES = ("awaiting_rerun", "abandoned", "complete")
 
-    A pre-registration with no rows beside it is either a campaign that never
-    ran or a campaign whose rows went somewhere else, and the two look identical
-    from here. Reported rather than judged: both are worth a human knowing, and
-    only the human knows which it was.
+
+def registered_campaigns_without_a_ledger(root: Path = REPO_ROOT) -> list[tuple[Path, dict | None]]:
+    """`(directory, status)` for every campaign record with no ledger beside it.
+
+    A pre-registration with no rows is either a campaign that never ran, one
+    whose rows went somewhere else, or one whose attempt was thrown away -- and
+    **the three look identical from here**, which is the problem. Until Task 48
+    they all read as "pending", which is the most flattering of the three and
+    the one least likely to be true.
+
+    So a campaign in that state is expected to carry `status.json` saying which
+    it is and why. One that does not is reported as UNEXPLAINED, loudly: an
+    unexplained empty pre-registration is the shape a quietly-dropped campaign
+    would take, and a project whose whole subject is honest trial accounting
+    should not have one sitting unremarked.
     """
     out = []
     for record in sorted((root / "runs" / "campaigns").rglob("campaign.json")):
-        if not (record.parent / "ledger.jsonl").is_file():
-            out.append(record.parent)
+        if (record.parent / "ledger.jsonl").is_file():
+            continue
+        status_path = record.parent / "status.json"
+        status = None
+        if status_path.is_file():
+            status = json.loads(status_path.read_text())
+        out.append((record.parent, status))
     return out
 
 
@@ -364,32 +379,45 @@ def main(argv: list[str] | None = None) -> int:
             _summarise(everything, indent="  ", replay=args.replay)
             trials = sum(1 for r in everything
                          if r["purpose"] == "trial" and "superseded" not in r)
-            main_trials = sum(
-                1 for r in everything
-                if r["ledger"] == DEFAULT_LEDGER_KEY
-                and r["purpose"] == "trial" and "superseded" not in r)
             print()
-            print(f"  trial rows across every ledger: {trials}")
-            print(f"  of those, in {DEFAULT_LEDGER_KEY}: {main_trials}")
-            if trials != main_trials:
-                print()
-                print("  These are not the same number, and which one is N is a")
-                print("  question this tool does not answer. CLAUDE.md says N is")
-                print("  global and counts every trial including the crashed"
-                      " ones;")
-                print("  the campaign runner writes its rows to the campaign's"
-                      " own")
-                print("  ledger and never to the main one, so the main ledger"
-                      " has")
-                print("  never seen them. Decide it deliberately, once.")
+            print(f"  GLOBAL N (the union, every ledger): {trials}")
+            # Cross-checked against the definition the harness itself uses, so
+            # the reporting tool and the code cannot drift into two answers.
+            from src.core.runlog import global_n
+            derived = global_n()
+            agree = "" if derived == trials else f"   MISMATCH: runlog says {derived}"
+            print(f"  src.core.runlog.global_n() agrees: {derived == trials}{agree}")
+            print()
+            print("  Global N is the honesty number -- how many times this")
+            print("  project has looked. It is not a bar and nothing computes")
+            print("  one from it. The CORRECTION is campaign-scoped: max_of_n")
+            print("  takes the maximum over one campaign's per-candidate nulls,")
+            print("  and deflation_view is handed that campaign's len(trials).")
+            print("  See `## N: two numbers` in CLAUDE.md.")
 
         orphans = registered_campaigns_without_a_ledger()
         if orphans:
             print()
             print("registered campaigns with no ledger beside them:")
-            for d in orphans:
-                print(f"  {d.relative_to(REPO_ROOT)}")
-            print("  Either they never ran, or their rows went elsewhere.")
+            for d, status in orphans:
+                rel = d.relative_to(REPO_ROOT)
+                if status is None:
+                    print(f"  {rel}   UNEXPLAINED -- no status.json")
+                    continue
+                state = status.get("status", "?")
+                flag = "" if state in CAMPAIGN_STATUSES else "   UNKNOWN STATUS"
+                print(f"  {rel}   {state}{flag}")
+                print(f"      {status.get('summary', '(no summary)')}")
+                if status.get("blocked_on"):
+                    print(f"      blocked on: {status['blocked_on'][:150]}")
+            unexplained = [d for d, st in orphans if st is None]
+            if unexplained:
+                print()
+                print("  An empty pre-registration with no status.json reads as")
+                print("  pending, which is the most flattering of the three")
+                print("  things it could be and the least likely to be true.")
+                print("  Write runs/campaigns/<id>/status.json saying which it")
+                print("  is and why.")
 
     bad = [r for r in everything
            if verdict(r) in ("UNREPRODUCIBLE", "UNVERIFIABLE")]
@@ -410,6 +438,13 @@ def main(argv: list[str] | None = None) -> int:
               "history. Not a failure -- the rows replay from stored source -- "
               "but any number derived from them carries that caveat.",
               file=sys.stderr)
+    unexplained = [d for d, st in registered_campaigns_without_a_ledger()
+                   if st is None]
+    if unexplained:
+        print(f"\n{len(unexplained)} registered campaign(s) have no ledger and "
+              "no status.json, so nothing says whether they ran, were "
+              "abandoned, or are waiting. Write one.", file=sys.stderr)
+        return 1
     if bad:
         print(f"\n{len(bad)} row(s) cannot be verified. Supersede them with a "
               f"reason in {args.supersessions.name} or fix what broke; do not "

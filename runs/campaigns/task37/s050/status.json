@@ -1,0 +1,19 @@
+{
+  "schema": "campaign-status/1",
+  "campaign_id": "task37-s050",
+  "status": "awaiting_rerun",
+  "recorded_at": "2026-09-16",
+  "recorded_by": "Task 48",
+  "summary": "Attempt 1 discarded. The pre-registration stands and is not re-registered. Blocked on the gateway serving the model the record names.",
+  "why": [
+    "The 0.30 arm was 35 trials in when a probe of the gateway returned HTTP 200 for a request naming 'claude-haiku-4-5' and an answer from 'gemini-3.1-pro-preview'. The record says claude-haiku-4-5, and the entire point of Task 37 is that it is the same model Task 36 ran.",
+    "The run was discarded because the RECORD would have been false, not because the results looked wrong: the agent had found the planted edge on trial 0 at +9.8190, the oracle's score to four decimals, and the running best had reached +29.39.",
+    "How much of the run was affected cannot be established. Call recorded tokens, latency and errors; it did not record which model answered. That gap is now closed by Call.model_served, drain_log()['models_served'], ModelSubstituted and LLMAgent.preflight()."
+  ],
+  "pre_registration_untouched": true,
+  "pre_registration_note": "Budget, q, strengths, template digest and model were all correct and committed before any trial ran. Re-registering after seeing 35 trials is the pattern this project spends most of its effort avoiding, so the record stands and only the run was thrown away.",
+  "blocked_on": "the gateway serving 'claude-haiku-4-5'. Last checked 2026-09-16 during Task 46: 503 upstream. claude-sonnet-5 and claude-fable-5-1 returned 403 at the proxy and gemini-3.6-flash 503, so no substitute was available either -- and a substitute is not what this arm needs.",
+  "planted_strength": 0.50,
+  "discarded_attempt_log": null,
+  "not_abandoned_because": "d607d42 records 'The campaign resumes when it is not [503]'. Marking this abandoned would assert that the pre-registration is spent, which no one has decided. If that IS the decision, set status to 'abandoned' and say who decided and when -- the field exists for it."
+}

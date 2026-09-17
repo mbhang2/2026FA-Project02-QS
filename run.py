@@ -47,7 +47,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
-from src.core.engine import Engine  # noqa: E402
+from src.core.engine import Engine, git_sha  # noqa: E402
 from src.core.engine.remote import (  # noqa: E402
     HarnessFailed, RemoteFailure, RemoteStrategy, isolation_for,
 )
@@ -608,6 +608,15 @@ def _row(record: dict, trigger: str, profile: str, ledger_path: Path,
         # `code_fingerprint` hashes the engine and scoring sources on disk, and
         # is the one `scripts/ledger_check.py` can recompute at an arbitrary
         # commit to ask whether this row's code is still reachable in history.
+        # **A row names its commit even when nothing ran.** `git_sha` used to
+        # arrive only inside the engine's own record, so any run that failed
+        # before the engine existed -- a strategy that raises at module level,
+        # which is exactly what a BLOCKED PROPOSAL is -- produced a trial with
+        # no sha. Two such rows are in the Task 36 campaigns, one per arm, and
+        # `ledger_check` could say nothing about them: they count toward N and
+        # cannot name the code that produced them. The engine's value wins when
+        # there is one, so a successful run's row is unchanged.
+        "git_sha": record.get("git_sha") or git_sha(),
         "scoring_fingerprint": integrity.fingerprint(),
         "artifact_fingerprint": integrity.artifact_fingerprint(ARTIFACTS_AT_IMPORT),
         "artifacts": ARTIFACTS_AT_IMPORT,

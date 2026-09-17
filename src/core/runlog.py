@@ -167,6 +167,86 @@ class RunTicket:
 MAX_STORED_FILLS = 250_000
 
 
+# --------------------------------------------------------------------------- #
+# N: campaign-scoped for the correction, global for honesty
+# --------------------------------------------------------------------------- #
+#
+# **These are two different numbers and conflating them was a real defect.**
+#
+# The *correction* is campaign-scoped and always was in practice: `max_of_n`
+# takes the maximum over that campaign's per-candidate nulls, and
+# `deflation_view(best, len(trials), ...)` is handed the campaign's trial count.
+# A bar computed from every trial the project has ever run would be a bar for a
+# family nobody selected over.
+#
+# The *global* count is the honesty number -- how many times has this project
+# looked. It is not a bar and nothing computes one from it.
+#
+# CLAUDE.md said "any deflated-Sharpe or Harvey threshold computed anywhere uses
+# the global count", which was the Benjamini-Hochberg framing: one p-value
+# column, one family, one denominator. BH stopped being the gate when the null
+# became per-candidate and conditional (Tasks 31-33; `campaign.py` names Task 32
+# as the demotion), and the sentence was never updated.
+#
+# **The global count is a UNION and is derived, never stored.** Campaign trials
+# are written to the campaign's own ledger and never to `runs/ledger.jsonl`, so
+# for a long time the main ledger reported N = 0 while 400 trials sat beside it.
+# Deriving rather than dual-writing is deliberate: there is nothing to keep in
+# sync, no dedup question, no 400-row backfill appending historical rows under
+# today's timestamps, and past and future are handled by the same rule.
+
+LEDGER_NAME = "ledger.jsonl"
+
+
+def ledger_paths(root: Path | None = None) -> list[Path]:
+    """Every ledger in the repository, the main one first.
+
+    `runs/replays.jsonl` is not one: a replay is not a trial and carries its own
+    purpose. `docs/reviews/**` is not either -- a task's scratch output is not
+    the project's record, and counting it would let writing a review move N.
+    """
+    root = root or REPO_ROOT
+    found = []
+    main = root / "runs" / LEDGER_NAME
+    if main.is_file():
+        found.append(main)
+    found.extend(sorted((root / "runs" / "campaigns").rglob(LEDGER_NAME)))
+    return found
+
+
+def trial_rows(root: Path | None = None) -> list[tuple[str, int, dict]]:
+    """`(ledger, index, row)` for every row with `purpose == "trial"`.
+
+    The ledger is named because a row's identity is its position in a specific
+    file; row 7 of one is not row 7 of another, and a supersession entry has to
+    be able to say which.
+    """
+    root = root or REPO_ROOT
+    out = []
+    for path in ledger_paths(root):
+        try:
+            rel = path.relative_to(root).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        for i, line in enumerate(path.read_text().splitlines()):
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if row.get("purpose") == "trial":
+                out.append((rel, i, row))
+    return out
+
+
+def global_n(root: Path | None = None) -> int:
+    """How many times this project has looked. Not a bar; nobody computes one.
+
+    Includes crashed and abandoned trials, and blocked proposals, because
+    excluding exactly the trials that failed is the cheapest way to cheat a
+    multiple-testing correction and the one nobody would look for.
+    """
+    return len(trial_rows(root))
+
+
 def append_ledger(path: Path, record: dict) -> None:
     """Append-only. One line per invocation, whatever the outcome."""
     path.parent.mkdir(parents=True, exist_ok=True)

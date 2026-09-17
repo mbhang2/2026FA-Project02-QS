@@ -153,7 +153,12 @@ def check(before: str, after: str) -> None:
 # process with a read-only mount, and that is a later task.
 from pathlib import Path  # noqa: E402
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+from .._roots import repo_root
+
+# Was `Path(__file__).resolve().parents[3]`. The nine modules under
+# src/core/ counted at three different depths, which is the evidence
+# that a count describes this file rather than the repository.
+REPO_ROOT = repo_root()
 
 # Fixed here rather than assembled by a caller. A list passed in is a list a
 # caller can shorten, and the caller closest to the incentive is the one running

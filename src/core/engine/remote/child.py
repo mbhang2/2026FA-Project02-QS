@@ -21,7 +21,34 @@ import sys
 import traceback
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+def _repo_root() -> Path:
+    """The marker walk, inline, because this is the bootstrap.
+
+    Every other module under `src/core/` gets this from `src.core._roots`
+    (Task 47). This one cannot: it computes the root *in order to put it on*
+    `sys.path`, so at this point in the file there is nothing importable by
+    package name -- asking for a helper would be circular. `_load_sibling`
+    below cannot help either; reaching the file it would load is the same
+    problem one directory at a time.
+
+    So the walk is copied rather than imported, and what matters is that it is
+    a WALK: it looks upward for a marker and stops at the first one, which
+    survives this file being moved. `Path(__file__).resolve().parents[4]` did
+    not, and was one of nine such counts at three different depths.
+    `tests/test_no_depth_counted_roots.py` asserts this stays a walk.
+    """
+    here = Path(__file__).resolve()
+    for d in (here, *here.parents):
+        if (d / ".git").exists():
+            return d
+        if (d / "run.py").is_file() and (d / "pyproject.toml").is_file():
+            return d
+    raise RuntimeError(
+        f"no repository marker above {here}: looked for .git, and for run.py "
+        "beside pyproject.toml")
+
+
+REPO_ROOT = _repo_root()
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

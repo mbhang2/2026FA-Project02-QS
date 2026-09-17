@@ -55,7 +55,12 @@ from typing import Sequence
 
 from .hypothesis import Hypothesis, block as hypothesis_block
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+from .._roots import repo_root
+
+# Was `Path(__file__).resolve().parents[3]`. The nine modules under
+# src/core/ counted at three different depths, which is the evidence
+# that a count describes this file rather than the repository.
+REPO_ROOT = repo_root()
 TEMPLATE_PATH = REPO_ROOT / "config" / "prompts" / "strategy-agent.md"
 
 # What the agent reads. Two are generated and one is hand-written; all three are

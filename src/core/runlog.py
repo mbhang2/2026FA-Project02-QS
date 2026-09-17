@@ -39,7 +39,12 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+from ._roots import repo_root
+
+# Was `Path(__file__).resolve().parents[2]`. The nine modules under
+# src/core/ counted at three different depths, which is the evidence
+# that a count describes this file rather than the repository.
+REPO_ROOT = repo_root()
 STRATEGY_PATH = REPO_ROOT / "src" / "strategies" / "current.py"
 # The one strategy the harness may run in its own process. Not because it is
 # trusted in some general sense, but because it is *committed*: its digest is in

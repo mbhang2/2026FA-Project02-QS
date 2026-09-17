@@ -33,7 +33,11 @@ from .protocol import (
 )
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[3]
+from ..._roots import repo_root
+
+# Was `HERE.parents[3]`. A depth is a fact about where this file sits
+# today; six of these broke silently when Task 44 moved three trees.
+REPO_ROOT = repo_root()
 CHILD = HERE / "child.py"
 
 

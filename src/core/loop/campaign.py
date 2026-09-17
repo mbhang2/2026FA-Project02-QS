@@ -32,7 +32,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+from .._roots import repo_root
+
+# Was `Path(__file__).resolve().parents[3]`. The nine modules under
+# src/core/ counted at three different depths, which is the evidence
+# that a count describes this file rather than the repository.
+REPO_ROOT = repo_root()
 
 # Outcomes that are trials. `harness_failed` is deliberately absent.
 TRIAL_OUTCOMES = ("completed", "crashed", "abandoned_on_budget",

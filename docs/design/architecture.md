@@ -81,6 +81,29 @@ purpose, so the manifest and the adapter cannot disagree about how bytes decode.
 
 ---
 
+### Boundary 4 — the repository is found by a marker, never by a count
+
+`src/core/_roots.py` is `repo_root()` and `tree_root()`, and the four `_roots.py`
+files in the repo — here, `loop/`, `audit/`, `alternatives/l1_engine/` — are
+near-identical on purpose: those trees import nothing from one another, and a
+shared helper at the root under a generic name is the coupling Task 44 removed.
+
+Task 44 moved three trees and broke **six** relative root walks; not one failed
+loudly, and one of them would have made every committed split read as "no
+pre-registered calendar" without raising. Under `src/core/` there were nine more,
+at three different depths — `parents[2]`, `parents[3]`, `parents[4]` — which is
+itself the evidence that a count describes the file rather than the repository.
+Task 45 left those alone believing a fingerprinted edit would stale every
+committed row; Task 46 measured that `ledger_check` recomputes a row's
+fingerprint from the tree at the commit **the row names**, never from HEAD, so a
+committed row cannot be staled by a later edit. With no cost, Task 47 fixed them.
+
+One exception, and it is structural: `engine/remote/child.py` computes the root
+in order to put it on `sys.path`, so nothing is importable yet. It carries the
+same marker walk inline. `tests/test_no_depth_counted_roots.py` asserts the
+covered trees contain zero depth counts, that the bootstrap still *walks*, and
+that the eight importers still import.
+
 ## 2. One trial, end to end
 
 ```

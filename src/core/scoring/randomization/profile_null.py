@@ -51,7 +51,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+from ..._roots import repo_root
+
+# Was `Path(__file__).resolve().parents[4]`. The nine modules under
+# src/core/ counted at three different depths, which is the evidence
+# that a count describes this file rather than the repository.
+REPO_ROOT = repo_root()
 DEFAULT_PATH = REPO_ROOT / "data" / "calibration" / "profile-null.json"
 
 # Bucket edges on each axis. Coarse on purpose: finer buckets hold fewer scores,

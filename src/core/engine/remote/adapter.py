@@ -83,6 +83,12 @@ class HarnessFailed(RemoteFailure):
 
     kind = "harness_failed"
 
+    def __init__(self, message: str, *, child_exit_status: int | None = None,
+                 completed_callbacks: int | None = None):
+        super().__init__(message)
+        self.child_exit_status = child_exit_status
+        self.completed_callbacks = completed_callbacks
+
 
 # The harness modules the strategy process is allowed to have loaded. Twice now
 # an `__init__` re-export has quietly widened the boundary -- Task 24 found the
@@ -113,6 +119,11 @@ CHILD_MODULE_FORBIDDEN = (
     "src.core.scoring.calibration",
     "src.core.runlog",
 )
+
+# BSD `sysexits.h`: these are launcher/configuration failures, not a strategy
+# traceback. A child that exits in this range before returning from any callback
+# never executed strategy code, so charging it to a proposal would inflate N.
+SYSEXITS = range(64, 79)
 
 
 @dataclass
@@ -263,6 +274,7 @@ class RemoteStrategy:
     _setup_ctx: object = field(default=None, init=False, repr=False)
     _setup_bytes: int = field(default=0, init=False, repr=False)
     _mechanism: str = field(default="", init=False, repr=False)
+    completed_callbacks: int = field(default=0, init=False)
 
     # -- lifecycle --------------------------------------------------------- #
     def start(self) -> None:
@@ -457,6 +469,9 @@ class RemoteStrategy:
         if not reply.get("ok", False):
             raise StrategyRaised(reply.get("error", "the strategy raised"),
                                  reply.get("traceback", ""))
+        if message.get("kind") in {"setup", "on_bars", "on_fill",
+                                   "on_lifecycle", "on_tick"}:
+            self.completed_callbacks += 1
         try:
             return validate_actions(reply.get("actions", []))
         except ProtocolError as exc:
@@ -466,7 +481,8 @@ class RemoteStrategy:
         """The child closed the pipe. Which of the four it was comes from how."""
         code = self._proc.poll() if self._proc else None
         if code is None:
-            return HarnessFailed("the child closed the pipe while still running")
+            return HarnessFailed("the child closed the pipe while still running",
+                                 completed_callbacks=self.completed_callbacks)
         if code < 0:
             signal = -code
             if signal == 24:                                  # SIGXCPU
@@ -478,6 +494,13 @@ class RemoteStrategy:
                     "the strategy process was killed, most likely out of memory"
                 )
             return StrategyExceededResources(f"the child died on signal {signal}")
+        if code in SYSEXITS and self.completed_callbacks == 0:
+            return HarnessFailed(
+                "the child exited before strategy execution: empty traceback, "
+                f"sysexits status {code}, completed callbacks 0",
+                child_exit_status=code,
+                completed_callbacks=self.completed_callbacks,
+            )
         return StrategyRaised(f"the child exited with status {code}")
 
     # -- setup pulls ------------------------------------------------------- #

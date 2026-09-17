@@ -75,6 +75,21 @@ def test_trial_rows_name_their_ledger_and_index():
         assert row["purpose"] == "trial"
 
 
+def test_supersession_excludes_a_row_from_global_n_without_deleting_it(tmp_path):
+    ledger = tmp_path / "runs" / "campaigns" / "x" / "ledger.jsonl"
+    ledger.parent.mkdir(parents=True)
+    ledger.write_text(json.dumps({"purpose": "trial"}) + "\n")
+    assert runlog.global_n(tmp_path) == 1
+
+    supersessions = tmp_path / "runs" / "supersessions.jsonl"
+    supersessions.write_text(json.dumps({
+        "ledger": "runs/campaigns/x/ledger.jsonl", "row": 0,
+        "reason": "the child exited before strategy execution",
+    }) + "\n")
+    assert runlog.global_n(tmp_path) == 0
+    assert ledger.read_text(), "supersession is not deletion"
+
+
 def test_global_n_counts_crashed_and_blocked_trials():
     """Excluding the trials that failed is the cheapest way to cheat a
     correction and the one nobody would look for."""

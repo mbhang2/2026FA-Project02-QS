@@ -319,6 +319,22 @@ def test_the_failure_kinds_are_distinguishable_and_harness_failure_is_separate()
     assert adapter.HarnessFailed.kind == "harness_failed"
 
 
+def test_a_pre_execution_sysexit_is_a_harness_failure_not_a_strategy_raise():
+    """No callback and no traceback means the strategy never got control."""
+    from types import SimpleNamespace
+
+    from src.core.engine.remote import adapter
+
+    remote = adapter.RemoteStrategy(Path("strategy.py"))
+    remote._proc = SimpleNamespace(poll=lambda: 71)
+    failure = remote._died()
+    assert isinstance(failure, adapter.HarnessFailed)
+    assert not isinstance(failure, adapter.StrategyRaised)
+    assert failure.kind == "harness_failed"
+    assert failure.child_exit_status == 71
+    assert failure.completed_callbacks == 0
+
+
 def test_a_strategy_that_reaches_past_the_window_is_told_so(tmp_path):
     """The one semantic difference between the two paths, and it is loud."""
     with pytest.raises(StrategyRaised, match="outside the pushed window"):

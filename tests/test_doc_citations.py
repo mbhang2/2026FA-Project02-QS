@@ -57,9 +57,6 @@ TOP_LEVEL = {
 # Cited on purpose, and absent on purpose. Each entry states which, because an
 # allowlist without reasons becomes the place failures go to be forgotten.
 ABSENT_BY_DESIGN: dict[str, str] = {
-    "runs/supersessions.jsonl":
-        "written on first supersession and not before. There have been none: "
-        "ledger_check reports 0 superseded across all four ledgers.",
     "research/audit_db.json":
         "tier 3's audit ledger, written on the first audit. `audit/config.py` "
         "names it as DEFAULT_LEDGER; it has never been committed, on this "

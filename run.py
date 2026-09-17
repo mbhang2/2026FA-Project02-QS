@@ -442,6 +442,8 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
                      else "crashed"),
             failure_kind=exc.kind, error=str(exc),
             child_traceback=getattr(exc, "child_traceback", ""),
+            child_exit_status=getattr(exc, "child_exit_status", None),
+            completed_callbacks=getattr(exc, "completed_callbacks", None),
             score=None, diagnostics=None,
         )
         if rec:

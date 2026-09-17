@@ -1195,7 +1195,8 @@ that a trial happened, which is the one thing the ledger cannot afford to lose;
 leaving it unmarked corrupts the column. So supersessions live in their own
 append-only file, `runs/supersessions.jsonl`, one entry per row naming it by
 index *and* blotter digest, with a reason. The ledger itself is never rewritten.
-Nothing is superseded today: all four committed rows reproduce.
+The supersession record is present when a row must be excluded without erasing
+the fact that it occurred; `scripts/ledger_check.py` reports each reason.
 
 ---
 

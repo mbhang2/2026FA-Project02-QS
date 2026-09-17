@@ -196,6 +196,7 @@ MAX_STORED_FILLS = 250_000
 # today's timestamps, and past and future are handled by the same rule.
 
 LEDGER_NAME = "ledger.jsonl"
+SUPERSESSIONS_NAME = "supersessions.jsonl"
 
 
 def ledger_paths(root: Path | None = None) -> list[Path]:
@@ -214,14 +215,32 @@ def ledger_paths(root: Path | None = None) -> list[Path]:
     return found
 
 
+def superseded_rows(root: Path) -> set[tuple[str, int]]:
+    """Rows removed from N by the append-only supersession record."""
+    path = root / "runs" / SUPERSESSIONS_NAME
+    if not path.is_file():
+        return set()
+    out = set()
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        entry = json.loads(line)
+        ledger = entry.get("ledger", "runs/ledger.jsonl")
+        row = entry.get("row")
+        if isinstance(ledger, str) and isinstance(row, int):
+            out.add((ledger, row))
+    return out
+
+
 def trial_rows(root: Path | None = None) -> list[tuple[str, int, dict]]:
-    """`(ledger, index, row)` for every row with `purpose == "trial"`.
+    """`(ledger, index, row)` for non-superseded rows with `purpose == "trial"`.
 
     The ledger is named because a row's identity is its position in a specific
     file; row 7 of one is not row 7 of another, and a supersession entry has to
     be able to say which.
     """
     root = root or REPO_ROOT
+    superseded = superseded_rows(root)
     out = []
     for path in ledger_paths(root):
         try:
@@ -232,7 +251,7 @@ def trial_rows(root: Path | None = None) -> list[tuple[str, int, dict]]:
             if not line.strip():
                 continue
             row = json.loads(line)
-            if row.get("purpose") == "trial":
+            if row.get("purpose") == "trial" and (rel, i) not in superseded:
                 out.append((rel, i, row))
     return out
 
@@ -240,9 +259,9 @@ def trial_rows(root: Path | None = None) -> list[tuple[str, int, dict]]:
 def global_n(root: Path | None = None) -> int:
     """How many times this project has looked. Not a bar; nobody computes one.
 
-    Includes crashed and abandoned trials, and blocked proposals, because
-    excluding exactly the trials that failed is the cheapest way to cheat a
-    multiple-testing correction and the one nobody would look for.
+    Includes crashed and abandoned trials, and blocked proposals. A row is
+    excluded only by an append-only supersession record naming its ledger row
+    and reason; a platform failure is not evidence about a proposal.
     """
     return len(trial_rows(root))
 

@@ -187,24 +187,31 @@ def test_task37_is_recorded_as_waiting_rather_than_left_ambiguous():
 # a blocked proposal names its commit
 # --------------------------------------------------------------------------- #
 
-def test_a_row_names_its_commit_even_when_the_engine_never_ran():
+def test_a_row_names_its_commit_even_when_the_engine_never_ran(tmp_path):
     """`git_sha` used to arrive only inside the engine's record, so a run that
     failed at module load -- which is exactly what a blocked proposal is --
     produced a trial with no sha at all. Two such rows are in the Task 36
-    campaigns, one per arm."""
+    campaigns, one per arm.
+
+    The ledger path is `tmp_path`, not the real one: `_row` calls
+    `store_source`, which copies the strategy into `<ledger>/../sources/`. The
+    first draft of this test passed `runs/ledger.jsonl` and left an untracked
+    file in the committed record -- a test that writes to the ledger it is
+    checking is the wrong shape whatever it asserts.
+    """
     import run as runner
 
     row = runner._row({"outcome": "crashed", "error": "agent_blocked: x"},
-                      "human", "campaign", REPO_ROOT / "runs" / "ledger.jsonl",
+                      "human", "campaign", tmp_path / "ledger.jsonl",
                       purpose="trial")
     assert row["git_sha"], "a row with no engine record still has a commit"
     assert len(row["git_sha"]) == 40
 
 
-def test_the_engines_own_sha_is_not_overwritten():
+def test_the_engines_own_sha_is_not_overwritten(tmp_path):
     import run as runner
 
     row = runner._row({"git_sha": "b" * 40}, "human", "campaign",
-                      REPO_ROOT / "runs" / "ledger.jsonl", purpose="trial")
+                      tmp_path / "ledger.jsonl", purpose="trial")
     assert row["git_sha"] == "b" * 40, (
         "the engine recorded the sha at engine time; _row must not replace it")

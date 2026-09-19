@@ -906,6 +906,23 @@ of *different* strategies at it.
 
 ## 5e. `src/core/scoring/randomization/` — a null that knows which candidate it is
 
+`src/core/scoring/randomization/round_turn.py` is a **second, cheap null source** (Task 55): it sign-flips the
+candidate's own round turns, B = 10,000, re-applies commission, reassembles into
+per-session returns and computes the same Sortino. **13 seconds** on the heaviest
+realistic candidate against **~11 hours** for the same candidate under rotation at
+R = 150, which is what makes the loop iterable — `config/run.yaml`'s
+`campaign.null_source` selects between them, and
+`docs/design/pre-registration.md` §3b is its specification.
+
+Two things about it that are not optional reading. It **conditions on the trades
+the strategy actually took**, so it cannot see a candidate that got lucky in
+*which* trades it entered — rotation can, and that is the difference between
+seconds and hours. And it tests **directional skill, not profitability**: holding
+the trade count fixed makes a high-turnover candidate's null commission-dominated,
+so a strategy losing 3,275 points measured at p = 0.0005 against its own null.
+The `sortino > 0` floor is what stops that, and it has to apply wherever this null
+gates anything.
+
 Task 30 measured what a single-strategy null costs: BH fired in 23 of 40
 known-null campaigns against a promised 0.05, because the table was tabulated
 from one reference strategy and a campaign points hundreds of different ones at

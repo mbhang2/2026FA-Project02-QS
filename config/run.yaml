@@ -101,6 +101,32 @@ profiles:
     wall_clock_budget_s: 900
     notional_base: 1.0
 
+  # NQ TRAINING SPLIT. The split the loop is meant to hammer -- the calendar
+  # says so: "the loop scores here repeatedly and this split is expected to be
+  # overfit by selection, that is what the holdout is for."
+  #
+  # `commission_per_contract: 0.10` is the cost decision, and it is per SIDE.
+  # NQ is $20 per index point; $4.00 round turn is $2.00 a side, which is
+  # 0.10 points. The figure is Michael's live round turn on this contract, not
+  # an estimate. The engine charges `commission_per_contract * fill.size` on
+  # every fill, and a round trip is two fills -- putting 0.25 here would
+  # double-charge. The engine default of 0.01 is scaled for the synthetic
+  # generator's price units and is 6-12x too cheap on NQ, which would subsidise
+  # exactly the high-turnover strategies a search drifts toward.
+  #
+  # Added in Task 54 to MEASURE per-trial cost. A scored campaign against this
+  # profile is governed by the pre-registration, not by this file existing.
+  nq-train:
+    dataset: nq
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 7200
+    notional_base: 1.0
+    commission_per_contract: 0.10
+    record_fill_spread: false
+
   # The first real end-to-end run: reference strategy, real NQ data, the
   # pre-registered validation split. A plumbing check at full scale, not a
   # result -- run it with `--purpose smoke`.
@@ -166,5 +192,39 @@ datasets:
   nq:
     kind: nq
     symbol: NQ
+
+# Campaign-level settings. Pre-registered by `docs/design/pre-registration.md`;
+# the values here are copied into `CampaignRecord` and hashed before trial 0, so
+# a budget edited mid-campaign fails the record's own digest check. This file is
+# where they are written; the hashed record is where they are committed.
+campaign:
+  n_trials: 50
+
+  # TWO AXES, not one. `max_of_n` is a correction; `round_turn_mc` is a null
+  # source. See pre-registration.md 3a -- including which combinations are
+  # coherent, and the fact that the measured FWER of 0.060 describes the PAIR
+  # (conditional + max_of_n) rather than either setting alone.
+  #
+  # null_source: where a candidate's null comes from
+  #   conditional     rotation/bucket at R=150. Per-candidate. ~15h per campaign.
+  #   round_turn_mc   sign-flip the candidate's round turns, B=10,000. Seconds.
+  #                   Exact method in pre-registration.md 3b -- "Monte Carlo over
+  #                   round turns" is not one method and the ambiguity would be a
+  #                   free parameter.
+  #   tabulated       the committed empirical null table. Free, NOT per-candidate.
+  #   none            no null is built.
+  null_source: round_turn_mc
+
+  # correction: how N candidates become one decision
+  #   max_of_n        distribution of the best-of-N. Needs a per-candidate source.
+  #   step_down_max   Westfall-Young. Needs a per-candidate source.
+  #   bh / holm       need p-values. Demoted to diagnostics in Task 32, and
+  #                   resolvable only while N <= q(R+1) -- N <= 100 at R=2000.
+  #   haircut_sharpe  Harvey-Liu. NOT BUILT.
+  #   dsr             Bailey & Lopez de Prado. Biased high +0.017..+0.036 (Task 42).
+  #   none            read the metrics.
+  correction: max_of_n
+
+  q: 0.05
 
 ledger: runs/ledger.jsonl

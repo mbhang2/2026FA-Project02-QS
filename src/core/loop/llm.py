@@ -403,7 +403,21 @@ class LLMAgent:
                 f"the endpoint will not serve {self.model!r}: HTTP "
                 f"{resp.status_code}. {resp.text[:200]}")
         served = str(resp.json().get("model") or "")
-        if served and not self._same_model(served):
+        if not served:
+            # **An endpoint that does not say what it served cannot be checked,
+            # and "cannot be checked" is not "fine".** This used to fall through
+            # to `return`, so the one configuration where a substitution is
+            # invisible -- a reply with no `model` field -- was the one that
+            # passed silently. The gateway carries a wildcard fallback,
+            # `fallbacks=[{'*': ['gemini-3.1-pro-preview']}]`, so that is not a
+            # hypothetical shape: it is exactly what Task 37 cost 35 trials to
+            # discover, in the form that would not have raised.
+            raise ModelSubstituted(
+                f"the endpoint answered for {self.model!r} without naming a "
+                "model, so substitution cannot be ruled out. The gateway has a "
+                "wildcard fallback configured; an unverifiable reply is treated "
+                "as a substitution rather than as a pass.")
+        if not self._same_model(served):
             raise ModelSubstituted(
                 f"asked for {self.model!r}, endpoint answered {served!r}")
         return {"requested": self.model, "served": served}

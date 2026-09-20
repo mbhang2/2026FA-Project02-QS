@@ -1,0 +1,88 @@
+{
+  "budget": 1,
+  "campaign_id": "task53-pilot-linux-pinned",
+  "deflation": {
+    "best_score": -0.2889205021135601,
+    "clears_selection_bar": false,
+    "expected_max_under_null": -0.2810032689948695,
+    "margin": -0.007917233118690581,
+    "n_sessions": 105,
+    "n_trials": 1,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.5,
+      "best_label": "0:6f9c8a43",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 0,
+          "label": "0:6f9c8a43",
+          "rank": 1
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 1,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "gate": {
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_trials": 1,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_mean": -0.08745900230479685,
+    "null_max_quantiles": {
+      "0.01": 0.30347413660607586,
+      "0.05": 0.18708229094885098,
+      "0.1": 0.07032040854577067,
+      "0.2": 0.0034405780177685706,
+      "0.5": -0.10763908400050659
+    },
+    "observed_best": -0.2889205021135601,
+    "p": 0.9796020397960205,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "reject": false
+  },
+  "harness_failures": 0,
+  "n_trials": 1,
+  "null_routing": {
+    "bucket": 0,
+    "note": "a leading indicator: candidates exploiting an edge have unusual profiles and take the expensive path. 23.5% with no signal, 55.2% at strength 0.50 (Task 33). A rising share means the loop is producing something atypical, and that the bill is going up.",
+    "rotation": 1,
+    "rotation_share": 1.0,
+    "unrouted": 0
+  },
+  "null_wall_clock_s": 27.136441036011092,
+  "outcomes": {
+    "completed": 1
+  },
+  "per_trial_accepts_at_0.001": 0,
+  "q": 0.05,
+  "record_digest": "a6933e8086a59b6a7c29a524ed205b52385a7055acd9b82f283e1881dc008ad4",
+  "record_tampered": false,
+  "reproduction": {
+    "checked": 1,
+    "exact": 1,
+    "mismatches": []
+  },
+  "unaccounted": 0,
+  "uncorrected": {
+    "best_far": 0.5,
+    "best_score": -0.2889205021135601,
+    "n_at_or_below_q": 0,
+    "reading": "what a report with no correction would say: the best of 1 candidates scored -0.2889 at a nominal false-acceptance rate of 0.5"
+  },
+  "wall_clock_s": 1.1
+}

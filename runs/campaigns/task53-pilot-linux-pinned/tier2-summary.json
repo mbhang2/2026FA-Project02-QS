@@ -1,0 +1,273 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 0,
+    "diagnostics": {
+      "avg_holding_period_ns": 817674418604.6511,
+      "best_session_share": 0.14812103527858836,
+      "by_hour_utc": {
+        "00": 1.2623863636363597,
+        "01": -2.04,
+        "02": -1.29,
+        "03": 0.5269230769230802,
+        "04": -1.02,
+        "05": -1.2190909090909066,
+        "06": -0.88375,
+        "07": -0.52,
+        "09": 1.1175,
+        "10": -0.76,
+        "11": 0.47,
+        "12": -1.53,
+        "13": -1.04,
+        "14": -0.52,
+        "15": 0.32538461538461316,
+        "16": -1.03,
+        "17": -2.05,
+        "19": -0.28,
+        "20": -1.28,
+        "21": 0.5325,
+        "22": -2.4866666666666717,
+        "23": 0.977857142857153
+      },
+      "by_month": {
+        "2023-11": -2.9703571428571385,
+        "2023-12": -1.5609498834498845,
+        "2024-01": -7.507613636363636,
+        "2024-02": -0.6980357142857083
+      },
+      "by_weekday": {
+        "Fri": -0.3328409090909066,
+        "Mon": -1.1155357142857083,
+        "Sat": -2.8474999999999984,
+        "Sun": -1.85,
+        "Thu": -3.294615384615386,
+        "Tue": -0.06010073260073012,
+        "Wed": -3.23636363636364
+      },
+      "commission": 0.86,
+      "fill_model_spread": null,
+      "gross_pnl": -11.876956376956372,
+      "max_drawdown": -14.311063519813516,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.481,
+        "exposure_share": 0.4095,
+        "return_dispersion": 0.0017,
+        "trades_per_session": 0.0094
+      },
+      "profit_concentration_top5pct": 0.534766006087211,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 43,
+      "trade_count": 43,
+      "turnover_contracts_per_session": 0.819047619047619,
+      "win_rate": 0.32558139534883723
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 29,
+      "kurtosis": 1.377684124515823,
+      "metric": "sortino_per_session",
+      "n_sessions": 105,
+      "net_pnl": -12.736956376956371,
+      "primary": -0.2889205021135601,
+      "reject_reason": "",
+      "rejected": false,
+      "sharpe": -0.25951962089835523,
+      "significance": -2.960554160433976,
+      "skew": -0.5762484970483724,
+      "sortino": -0.2889205021135601,
+      "trade_count": 43
+    },
+    "source": "\"\"\"Trade continuation after a session-relative directional move.\"\"\"\n\n\nclass Strategy:\n    def __init__(\n        self,\n        interval=\"5m\",\n        size=1,\n        min_bars=6,\n        signal_multiple=3.0,\n        min_efficiency=0.55,\n        first_entry_fraction=0.20,\n        last_entry_fraction=0.75,\n        exit_buffer_minutes=10,\n        stop_multiple=1.5,\n        target_multiple=3.0,\n    ):\n        self.interval = interval\n        self.size = size\n        self.min_bars = min_bars\n        self.signal_multiple = signal_multiple\n        self.min_efficiency = min_efficiency\n        self.first_entry_fraction = first_entry_fraction\n        self.last_entry_fraction = last_entry_fraction\n        self.exit_buffer_ns = exit_buffer_minutes * 60 * 1_000_000_000\n        self.stop_multiple = stop_multiple\n        self.target_multiple = target_multiple\n\n        self._session = None\n        self._opening_price = None\n        self._previous_close = None\n        self._path = 0.0\n        self._bar_count = 0\n        self._traded_this_session = False\n        self._exit_requested = False\n\n    def setup(self, ctx):\n        ctx.subscribe(self.interval, emit_empty=True)\n\n    def on_bars(self, ctx):\n        if self.interval not in ctx.bars:\n            return\n\n        history = ctx.history(self.interval)\n        if len(history) < 1:\n            return\n        bar = history[-1]\n        if ctx.session != self._session:\n            self._session = ctx.session\n            self._opening_price = bar.open\n            self._previous_close = bar.open\n            self._path = 0.0\n            self._bar_count = 0\n            self._traded_this_session = False\n            self._exit_requested = False\n\n        self._path += abs(bar.close - self._previous_close)\n        self._previous_close = bar.close\n        self._bar_count += 1\n\n        if ctx.position:\n            if (\n                not self._exit_requested\n                and ctx.session_end - ctx.ts <= self.exit_buffer_ns\n            ):\n                ctx.cancel_all()\n                close_id = ctx.close()\n                if close_id is not None:\n                    self._exit_requested = True\n            return\n\n        if not ctx.actionable or ctx.working_order_ids:\n            return\n        if self._traded_this_session or self._bar_count < self.min_bars:\n            return\n\n        session_length = ctx.session_end - ctx.session_start\n        if session_length <= 0:\n            return\n        elapsed_fraction = (ctx.ts - ctx.session_start) / session_length\n        if (\n            elapsed_fraction < self.first_entry_fraction\n            or elapsed_fraction > self.last_entry_fraction\n            or ctx.session_end - ctx.ts <= self.exit_buffer_ns\n        ):\n            return\n\n        average_move = self._path / self._bar_count\n        if average_move <= 0:\n            return\n\n        displacement = bar.close - self._opening_price\n        standardized_move = abs(displacement) / average_move\n        efficiency = abs(displacement) / self._path if self._path > 0 else 0.0\n        if (\n            standardized_move < self.signal_multiple\n            or efficiency < self.min_efficiency\n        ):\n            return\n\n        stop = average_move * self.stop_multiple\n        target = average_move * self.target_multiple\n        if displacement > 0:\n            order_id = ctx.buy(\n                size=self.size,\n                stop_offset=stop,\n                target_offset=target,\n                tag=\"session-move-continuation-long\",\n            )\n        else:\n            order_id = ctx.sell(\n                size=self.size,\n                stop_offset=stop,\n                target_offset=target,\n                tag=\"session-move-continuation-short\",\n            )\n        if order_id is not None:\n            self._traded_this_session = True\n\n    def on_fill(self, ctx):\n        pass\n\n    def on_lifecycle(self, ctx):\n        pass\n",
+    "source_sha256": "6f9c8a4328feeb02b2aeb5f3b427d0630aa23d4e7e3c868c052e074500e60368",
+    "strategy_digest": "6f9c8a4328feeb02"
+  },
+  "campaign": {
+    "agent": "Claude Code",
+    "agent_config": {
+      "access": "full repository access",
+      "campaign_purpose": "smoke",
+      "driver": "human-driven",
+      "ledger_row_purpose": "trial; counts toward global N",
+      "model": "as-configured and unverified",
+      "prohibited_reads": [
+        "src/core/scoring/",
+        "data/calibration/",
+        "runs/"
+      ],
+      "proposal_count": 1,
+      "proposer": "Claude Code",
+      "reportability": "exploratory; not reportable as a discovery"
+    },
+    "arm": "task53-pilot-linux-pinned",
+    "budget": 1,
+    "campaign_id": "task53-pilot-linux-pinned",
+    "dataset": "synthetic",
+    "profile": "campaign",
+    "q": 0.05,
+    "record_digest": "a6933e8086a59b6a7c29a524ed205b52385a7055acd9b82f283e1881dc008ad4",
+    "record_digest_now": "a6933e8086a59b6a7c29a524ed205b52385a7055acd9b82f283e1881dc008ad4",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "single pre-registered proposal; no extension or replacement after its result",
+    "written_at": "2026-09-17T06:18:57+00:00"
+  },
+  "deflation_view": {
+    "best_score": -0.2889205021135601,
+    "clears_selection_bar": false,
+    "expected_max_under_null": -0.2810032689948695,
+    "margin": -0.007917233118690581,
+    "n_sessions": 105,
+    "n_trials": 1,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.5,
+      "best_label": "0:6f9c8a43",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 0,
+          "label": "0:6f9c8a43",
+          "rank": 1
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 1,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "12154ccb7edfe0e97afd08827688bb3e7398fefed542ec8b48cfa57397220126",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 1,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 0.18708229094885098,
+    "null_max_mean": -0.08745900230479685,
+    "null_max_quantiles": {
+      "0.01": 0.30347413660607586,
+      "0.05": 0.18708229094885098,
+      "0.1": 0.07032040854577067,
+      "0.2": 0.0034405780177685706,
+      "0.5": -0.10763908400050659
+    },
+    "observed_best": -0.2889205021135601,
+    "p": 0.9796020397960205,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/task53-pilot-linux-pinned/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "4a67cd66047484106af183eda6b54668602ce4a1c87847ee93cb82601009df24",
+        "outcome": "completed",
+        "score": -0.2889205021135601,
+        "strategy_digest": "6f9c8a4328feeb02"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 1
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 1,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 0.37055665676717925,
+    "mean": -0.08779974786107224,
+    "min": -0.32815030998625655,
+    "n_draws": 150,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.12790263473916583
+  },
+  "provenance": {
+    "artifact_fingerprint": "dba64908f4208fdc5653fa951fc3707929ec1de6dfc5e521db84b8a327739680",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/run.yaml": "f66079ab8fdd222c14a72d27401fb458ebf9bbee3c89da8d4165a9358453f17b",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "6f9c8a4328feeb02b2aeb5f3b427d0630aa23d4e7e3c868c052e074500e60368"
+    },
+    "code_fingerprint": "e615f17fe724834451144bc415d0b5f775dc4b8cc103d51ce3b7ae2f8ca29cba",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "7e2db782a913dd39b8ce9041b11fe8b76eff1605bc041285c7aea56d25696e30",
+    "git_sha": "42a0861539e190b289678b2bd0ebaa7b9c47dd75",
+    "isolation": {
+      "address_space": {
+        "active": true,
+        "mechanism": "RLIMIT_AS"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "",
+      "filesystem": {
+        "active": true,
+        "mechanism": "read-only bind mount, unprivileged user namespace (bubblewrap)"
+      },
+      "level": "isolated",
+      "network": {
+        "active": true,
+        "mechanism": "empty network namespace (bubblewrap --unshare-net)"
+      },
+      "platform": "Linux",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.12.3",
+    "scoring_fingerprint": "bcbffc7826a0c5ad0dbae23c7a46112fe30dbf976ac266b5a08f6e89e7d79100"
+  },
+  "routing": {
+    "bucket": 0,
+    "note": "a leading indicator: candidates exploiting an edge have unusual profiles and take the expensive path. 23.5% with no signal, 55.2% at strength 0.50 (Task 33). A rising share means the loop is producing something atypical, and that the bill is going up.",
+    "rotation": 1,
+    "rotation_share": 1.0,
+    "unrouted": 0
+  },
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-09-17T06:42:01+00:00"
+}

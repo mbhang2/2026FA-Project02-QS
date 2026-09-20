@@ -1,0 +1,1155 @@
+{
+  "best_candidate": null,
+  "campaign": {
+    "agent": "src.core.loop.agents.NullGenerator",
+    "agent_config": null,
+    "arm": "task52-stub",
+    "budget": 60,
+    "campaign_id": "ec92ed9817d8",
+    "dataset": "synthetic",
+    "profile": "campaign",
+    "q": 0.05,
+    "record_digest": "2b96f3245dc36ca7c8418dd4f041fa98a77d942763c7300cc35c27cdd3dc0cf0",
+    "record_digest_now": "2b96f3245dc36ca7c8418dd4f041fa98a77d942763c7300cc35c27cdd3dc0cf0",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-09-17T05:43:24+00:00"
+  },
+  "deflation_view": null,
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 1.0,
+      "best_label": "0:5f6f1a6e",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0008333333333333334,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0008333333333333334,
+          "index": 0,
+          "label": "0:5f6f1a6e",
+          "rank": 1
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0016666666666666668,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0008474576271186442,
+          "index": 1,
+          "label": "1:ab01e778",
+          "rank": 2
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0025000000000000005,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0008620689655172415,
+          "index": 2,
+          "label": "2:58a5430a",
+          "rank": 3
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0033333333333333335,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0008771929824561404,
+          "index": 3,
+          "label": "3:6dce1d3f",
+          "rank": 4
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.004166666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0008928571428571429,
+          "index": 4,
+          "label": "4:c8a16c73",
+          "rank": 5
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005000000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0009090909090909091,
+          "index": 5,
+          "label": "5:19053efa",
+          "rank": 6
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005833333333333334,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.000925925925925926,
+          "index": 6,
+          "label": "6:b8c46ccc",
+          "rank": 7
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.006666666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0009433962264150943,
+          "index": 7,
+          "label": "7:5701a775",
+          "rank": 8
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0075,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0009615384615384616,
+          "index": 8,
+          "label": "8:b33a03a1",
+          "rank": 9
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.008333333333333333,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.000980392156862745,
+          "index": 9,
+          "label": "9:33fd29ac",
+          "rank": 10
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.009166666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001,
+          "index": 10,
+          "label": "10:faa0db88",
+          "rank": 11
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010000000000000002,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0010204081632653062,
+          "index": 11,
+          "label": "11:9c2a5f25",
+          "rank": 12
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010833333333333334,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0010416666666666667,
+          "index": 12,
+          "label": "12:8ed94249",
+          "rank": 13
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.011666666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0010638297872340426,
+          "index": 13,
+          "label": "13:324d54d6",
+          "rank": 14
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0125,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0010869565217391304,
+          "index": 14,
+          "label": "14:77d7c871",
+          "rank": 15
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.013333333333333334,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0011111111111111111,
+          "index": 15,
+          "label": "15:01b1dcf5",
+          "rank": 16
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.014166666666666668,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0011363636363636365,
+          "index": 16,
+          "label": "16:b087564f",
+          "rank": 17
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0011627906976744186,
+          "index": 17,
+          "label": "17:82a5a719",
+          "rank": 18
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015833333333333335,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0011904761904761906,
+          "index": 18,
+          "label": "18:fe2f1251",
+          "rank": 19
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.016666666666666666,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0012195121951219512,
+          "index": 19,
+          "label": "19:14db5c32",
+          "rank": 20
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.017499999999999998,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00125,
+          "index": 20,
+          "label": "20:c2c5a398",
+          "rank": 21
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.018333333333333333,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001282051282051282,
+          "index": 21,
+          "label": "21:559e5ce1",
+          "rank": 22
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.01916666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0013157894736842105,
+          "index": 22,
+          "label": "22:30f369d5",
+          "rank": 23
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020000000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0013513513513513514,
+          "index": 23,
+          "label": "23:3bf81801",
+          "rank": 24
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020833333333333336,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001388888888888889,
+          "index": 24,
+          "label": "24:c0f13923",
+          "rank": 25
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.021666666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0014285714285714286,
+          "index": 25,
+          "label": "25:f4217971",
+          "rank": 26
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.022500000000000003,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0014705882352941176,
+          "index": 26,
+          "label": "26:5615eaec",
+          "rank": 27
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.023333333333333334,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0015151515151515152,
+          "index": 27,
+          "label": "27:e9096da1",
+          "rank": 28
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.02416666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0015625,
+          "index": 28,
+          "label": "28:fa310aed",
+          "rank": 29
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0016129032258064516,
+          "index": 29,
+          "label": "29:f3ecaa6f",
+          "rank": 30
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025833333333333337,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0016666666666666668,
+          "index": 30,
+          "label": "30:e28b317d",
+          "rank": 31
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.02666666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001724137931034483,
+          "index": 31,
+          "label": "31:0ee09a3d",
+          "rank": 32
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.027500000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0017857142857142859,
+          "index": 32,
+          "label": "32:c1db1563",
+          "rank": 33
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028333333333333335,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001851851851851852,
+          "index": 33,
+          "label": "33:c44d8186",
+          "rank": 34
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.02916666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0019230769230769232,
+          "index": 34,
+          "label": "34:00123264",
+          "rank": 35
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002,
+          "index": 35,
+          "label": "35:78c6fb69",
+          "rank": 36
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.030833333333333338,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0020833333333333333,
+          "index": 36,
+          "label": "36:0d0f3b9c",
+          "rank": 37
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03166666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002173913043478261,
+          "index": 37,
+          "label": "37:c396e29a",
+          "rank": 38
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0325,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002272727272727273,
+          "index": 38,
+          "label": "38:0e000213",
+          "rank": 39
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03333333333333333,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002380952380952381,
+          "index": 39,
+          "label": "39:d18d8c2d",
+          "rank": 40
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03416666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0025,
+          "index": 40,
+          "label": "40:f5b5514c",
+          "rank": 41
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034999999999999996,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "index": 41,
+          "label": "41:dc7a411e",
+          "rank": 42
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.035833333333333335,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "index": 42,
+          "label": "42:cdf0c1f3",
+          "rank": 43
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03666666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "index": 43,
+          "label": "43:44c2fb1a",
+          "rank": 44
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.037500000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.003125,
+          "index": 44,
+          "label": "44:3a04d2e1",
+          "rank": 45
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03833333333333334,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "index": 45,
+          "label": "45:3d7cbf6b",
+          "rank": 46
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03916666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "index": 46,
+          "label": "46:3e979b26",
+          "rank": 47
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04000000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "index": 47,
+          "label": "47:fe735f89",
+          "rank": 48
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04083333333333333,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "index": 48,
+          "label": "48:57721f34",
+          "rank": 49
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04166666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "index": 49,
+          "label": "49:4e1fe1ca",
+          "rank": 50
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0425,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.005,
+          "index": 50,
+          "label": "50:9d6bcb7a",
+          "rank": 51
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.043333333333333335,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "index": 51,
+          "label": "51:9e21064e",
+          "rank": 52
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04416666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00625,
+          "index": 52,
+          "label": "52:7d75bde6",
+          "rank": 53
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045000000000000005,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "index": 53,
+          "label": "53:1c60ef7a",
+          "rank": 54
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04583333333333334,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "index": 54,
+          "label": "54:7dba5687",
+          "rank": 55
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04666666666666667,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.01,
+          "index": 55,
+          "label": "55:d9ee8fd8",
+          "rank": 56
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0475,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0125,
+          "index": 56,
+          "label": "56:57dbf9ae",
+          "rank": 57
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04833333333333334,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "index": 57,
+          "label": "57:3b84f515",
+          "rank": 58
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.049166666666666664,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.025,
+          "index": 58,
+          "label": "58:f28c9abe",
+          "rank": 59
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 59,
+          "label": "59:3b9a4d4f",
+          "rank": 60
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 60,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "298235cd627ba2f24ddf3baee0a893d41225c4d15f5cd8de3d6cc74ad5fb55f2",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": null,
+    "b": null,
+    "is_the_gate": false,
+    "n_nulls": null,
+    "note": "no per-candidate nulls supplied, so this campaign has no accept decision. BH over the tabulated column is not a substitute -- see docs/design/metric.md.",
+    "null_max_at_q": null,
+    "null_max_mean": null,
+    "null_max_quantiles": null,
+    "observed_best": null,
+    "p": null,
+    "p_floor": null,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/task52-stub/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "5f6f1a6e442b69f3"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "ab01e778f8091fe7"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "58a5430a2755c533"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "6dce1d3f60fe5c94"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "c8a16c73b6bf24e4"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "19053efa51fe9faa"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "b8c46ccccfb57b3b"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "5701a775e103c5d0"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "b33a03a1aa5ae797"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "33fd29ac909ae1f3"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "faa0db88387f569a"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "9c2a5f250e4275d6"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "8ed9424985c026f4"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "324d54d6f50fc105"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "77d7c8713572a781"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "01b1dcf53e015ae3"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "b087564f9895a181"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "82a5a7193f057de7"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "fe2f1251b8e606e9"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "14db5c32e28af1e0"
+      },
+      {
+        "campaign_index": 20,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "c2c5a39813a1f3a5"
+      },
+      {
+        "campaign_index": 21,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "559e5ce10f2f13c3"
+      },
+      {
+        "campaign_index": 22,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "30f369d55485a948"
+      },
+      {
+        "campaign_index": 23,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "3bf818013def0ec2"
+      },
+      {
+        "campaign_index": 24,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "c0f139239045062e"
+      },
+      {
+        "campaign_index": 25,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4217971028fa223"
+      },
+      {
+        "campaign_index": 26,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "5615eaecb81ff1ef"
+      },
+      {
+        "campaign_index": 27,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "e9096da1d3d0dcf5"
+      },
+      {
+        "campaign_index": 28,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "fa310aedf08b4347"
+      },
+      {
+        "campaign_index": 29,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f3ecaa6f1cdb5631"
+      },
+      {
+        "campaign_index": 30,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "e28b317d17cc7f90"
+      },
+      {
+        "campaign_index": 31,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "0ee09a3d8abd916d"
+      },
+      {
+        "campaign_index": 32,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "c1db1563dfc74458"
+      },
+      {
+        "campaign_index": 33,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "c44d81862403e839"
+      },
+      {
+        "campaign_index": 34,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "001232643e777ed6"
+      },
+      {
+        "campaign_index": 35,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "78c6fb6926e65ce7"
+      },
+      {
+        "campaign_index": 36,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "0d0f3b9c6f0e33ea"
+      },
+      {
+        "campaign_index": 37,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "c396e29a055e4e6f"
+      },
+      {
+        "campaign_index": 38,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "0e000213a806664b"
+      },
+      {
+        "campaign_index": 39,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "d18d8c2db0b334b8"
+      },
+      {
+        "campaign_index": 40,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f5b5514c331b22d2"
+      },
+      {
+        "campaign_index": 41,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "dc7a411e41eff684"
+      },
+      {
+        "campaign_index": 42,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "cdf0c1f3860b82f2"
+      },
+      {
+        "campaign_index": 43,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "44c2fb1ad13413f0"
+      },
+      {
+        "campaign_index": 44,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "3a04d2e1dfe21042"
+      },
+      {
+        "campaign_index": 45,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "3d7cbf6b53235e0d"
+      },
+      {
+        "campaign_index": 46,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "3e979b262029f345"
+      },
+      {
+        "campaign_index": 47,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "fe735f8941732896"
+      },
+      {
+        "campaign_index": 48,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "57721f342ab5fa18"
+      },
+      {
+        "campaign_index": 49,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "4e1fe1ca6749594d"
+      },
+      {
+        "campaign_index": 50,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "9d6bcb7af5f44d7c"
+      },
+      {
+        "campaign_index": 51,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "9e21064e55e81f98"
+      },
+      {
+        "campaign_index": 52,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "7d75bde6b290df27"
+      },
+      {
+        "campaign_index": 53,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "1c60ef7a30ada6f8"
+      },
+      {
+        "campaign_index": 54,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "7dba568726ec9294"
+      },
+      {
+        "campaign_index": 55,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "d9ee8fd8cc6c3c2b"
+      },
+      {
+        "campaign_index": 56,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "57dbf9ae53f3cc5f"
+      },
+      {
+        "campaign_index": 57,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "3b84f515e34582c6"
+      },
+      {
+        "campaign_index": 58,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f28c9abe7dbf893f"
+      },
+      {
+        "campaign_index": 59,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "3b9a4d4f61385569"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "crashed": 60
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 60,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": false,
+    "why": "no nulls.json; the campaign has no per-candidate nulls"
+  },
+  "provenance": {
+    "artifact_fingerprint": "3218133283fc7495128df3a494fd6e4580f513e8ac6c3f573a57b51fcd219c13",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/run.yaml": "f66079ab8fdd222c14a72d27401fb458ebf9bbee3c89da8d4165a9358453f17b",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "5f6f1a6e442b69f3e8a0cdf793044cf7ccc0f2921cb94240e7b2649c9538c107"
+    },
+    "code_fingerprint": "ee7bd9874cbd75b0b23156a982dac47f9fef6d8f5918e35741289b17c0b9ce80",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "1780999a09c5f53172887db2f7008c9235d2f685bf7f64ee487d213c8eef9361",
+    "git_sha": "9b9b4d41f5969aab66182de7deb8c8f5ffe50209",
+    "isolation": {
+      "address_space": {
+        "active": false,
+        "mechanism": "unavailable: RLIMIT_AS/DATA/RSS cannot be set"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "scored campaigns should run on Linux; see docs/design/architecture.md",
+      "filesystem": {
+        "active": true,
+        "mechanism": "sandbox-exec profile (deprecated)"
+      },
+      "level": "best-effort",
+      "network": {
+        "active": true,
+        "mechanism": "denied by the same profile"
+      },
+      "platform": "Darwin",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.11.5",
+    "scoring_fingerprint": "6b5f93783bb17ce951844df41fc656c38a9eca30a8fdb43180f73f7749225610"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-09-17T05:44:20+00:00"
+}

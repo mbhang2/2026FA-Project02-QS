@@ -1,0 +1,28 @@
+{
+  "audited_at": "2026-09-17T06:08:12+00:00",
+  "campaign_id": "task53-stub-linux",
+  "can_promote": false,
+  "checks": {
+    "deflation_cross_check": {
+      "available": false,
+      "why": "the summary carries no null moments or no simulated max"
+    },
+    "unknowns": [
+      "this campaign has no gate verdict to audit"
+    ]
+  },
+  "digest": "d0462e8aea8a311e08f11b5ee800bfdd0300929412d48745766d834a015a6583",
+  "escalate_to_human": true,
+  "is_veto": false,
+  "ledger": "runs/campaigns/task53-stub-linux/ledger.jsonl",
+  "n_trials": 60,
+  "n_trials_provenance": "read from the tier-2 campaign summary; N as runs/ledger.jsonl defines it -- every trial including crashes, global across datasets, written as the trials happen. Tier 3 displays and sanity-checks it and never recomputes a bar from it.",
+  "promotion_note": "Tier 3 cannot promote. The verdict type has three members and none of them means approval; PASS means nothing was found to veto. An auditor that only removes candidates is safe with an uncharacterised error rate, and this one's has not been characterised.",
+  "reasons": [
+    "this campaign has no gate verdict to audit"
+  ],
+  "schema": "tier3-audit-verdict/1",
+  "tier2_gate_verdict": "REJECT",
+  "tier2_summary_digest": "27b7bc93f3b998f16e47a4a71045786d0916c3425bdef4ba9d1ba66fb96cea86",
+  "verdict": "CANNOT_TELL"
+}

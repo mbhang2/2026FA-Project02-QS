@@ -1,0 +1,25 @@
+{
+  "digest": "be23ed4946951eae1d9074b87321b793b270293f4024a19f9ba6440f5793c46c",
+  "record": {
+    "agent": "src.core.loop.agents.NullGenerator",
+    "agent_config": null,
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 52,
+    "budget": 60,
+    "campaign_id": "task53-stub-linux",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "synthetic",
+    "hypothesis_digest": null,
+    "hypothesis_path": null,
+    "note": "Task 53 fresh Linux rerun of the Task 52 stub campaign: N=60, training split, q=0.05, pre-registered and hashed before trial 1; NullGenerator proposals are edgeless by construction. Exploratory calibration run; all three tiers requested.",
+    "profile": "campaign",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-09-17T06:04:29+00:00"
+  }
+}

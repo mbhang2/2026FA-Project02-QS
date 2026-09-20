@@ -1,0 +1,39 @@
+{
+  "digest": "5e10d572eecb4292fb1d2064d19993e53bbde8b4cc64c7587575035353db8ca2",
+  "record": {
+    "agent": "Claude Code",
+    "agent_config": {
+      "access": "full repository access",
+      "campaign_purpose": "smoke",
+      "driver": "human-driven",
+      "ledger_row_purpose": "trial; counts toward global N",
+      "model": "as-configured and unverified",
+      "prohibited_reads": [
+        "src/core/scoring/",
+        "data/calibration/",
+        "runs/"
+      ],
+      "proposal_count": 1,
+      "proposer": "Claude Code",
+      "reportability": "exploratory; not reportable as a discovery"
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "budget": 1,
+    "campaign_id": "task53-pilot-linux",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "synthetic",
+    "hypothesis_digest": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+    "hypothesis_path": "config/hypotheses/intraday-continuation.md",
+    "note": "Task 53 Linux rerun of Task 52 pilot. campaign_purpose: smoke. human-driven, single proposal. Proposer was Claude Code with full repository access and instructions not to read src/core/scoring/, data/calibration/, or runs/. Model as-configured and unverified. Exploratory: counts toward global N, not reportable as a discovery.",
+    "profile": "campaign",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "single pre-registered proposal; no extension or replacement after its result",
+    "written_at": "2026-09-17T06:03:58+00:00"
+  }
+}

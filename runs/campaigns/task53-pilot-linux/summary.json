@@ -1,0 +1,68 @@
+{
+  "budget": 1,
+  "campaign_id": "task53-pilot-linux",
+  "deflation": {
+    "best_score": -0.2889205021135601,
+    "clears_selection_bar": false,
+    "expected_max_under_null": -0.2810032689948695,
+    "margin": -0.007917233118690581,
+    "n_sessions": 105,
+    "n_trials": 1,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.5,
+      "best_label": "0:6f9c8a43",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 0,
+          "label": "0:6f9c8a43",
+          "rank": 1
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 1,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "gate": {
+    "is_the_gate": false,
+    "note": "no per-candidate nulls supplied, so this campaign has no accept decision. BH over the tabulated column is not a substitute -- see docs/design/metric.md.",
+    "resolution": {
+      "bh_max_n": 100,
+      "meets_recommended_r": true,
+      "note": "max_of_n resamples each null with replacement, so a small null truncates its own upper tail and the test is liberal by about `resampling_bias`. Measured, not assumed: docs/reviews/task34/bias-grid.json.",
+      "p_floor": 0.0004997501249375312,
+      "r": 2000,
+      "recommended_min_r": 150,
+      "resampling_bias": -0.0
+    }
+  },
+  "harness_failures": 0,
+  "n_trials": 1,
+  "outcomes": {
+    "completed": 1
+  },
+  "per_trial_accepts_at_0.001": 0,
+  "q": 0.05,
+  "record_digest": "5e10d572eecb4292fb1d2064d19993e53bbde8b4cc64c7587575035353db8ca2",
+  "record_tampered": false,
+  "unaccounted": 0,
+  "uncorrected": {
+    "best_far": 0.5,
+    "best_score": -0.2889205021135601,
+    "n_at_or_below_q": 0,
+    "reading": "what a report with no correction would say: the best of 1 candidates scored -0.2889 at a nominal false-acceptance rate of 0.5"
+  },
+  "wall_clock_s": 0.0
+}

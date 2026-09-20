@@ -1,0 +1,32 @@
+{
+  "audited_at": "2026-09-17T05:44:20+00:00",
+  "campaign_id": "ec92ed9817d8",
+  "can_promote": false,
+  "checks": {
+    "deflation_cross_check": {
+      "available": false,
+      "why": "the summary carries no null moments or no simulated max"
+    },
+    "unknowns": [
+      "isolation level is 'best-effort': on this platform the strategy process cannot be given a memory ceiling, so a resource-exhaustion escape cannot be ruled out from the record alone",
+      "this campaign has no gate verdict to audit",
+      "the best candidate's source is absent, so leakage review of the code itself was not possible"
+    ]
+  },
+  "digest": "4d6939f1c151c40d4a10d5f67730e0c88b9c0cd3c842df41b716c7ec0de90a53",
+  "escalate_to_human": true,
+  "is_veto": false,
+  "ledger": "runs/campaigns/task52-stub/ledger.jsonl",
+  "n_trials": 60,
+  "n_trials_provenance": "read from the tier-2 campaign summary; N as runs/ledger.jsonl defines it -- every trial including crashes, global across datasets, written as the trials happen. Tier 3 displays and sanity-checks it and never recomputes a bar from it.",
+  "promotion_note": "Tier 3 cannot promote. The verdict type has three members and none of them means approval; PASS means nothing was found to veto. An auditor that only removes candidates is safe with an uncharacterised error rate, and this one's has not been characterised.",
+  "reasons": [
+    "isolation level is 'best-effort': on this platform the strategy process cannot be given a memory ceiling, so a resource-exhaustion escape cannot be ruled out from the record alone",
+    "this campaign has no gate verdict to audit",
+    "the best candidate's source is absent, so leakage review of the code itself was not possible"
+  ],
+  "schema": "tier3-audit-verdict/1",
+  "tier2_gate_verdict": "REJECT",
+  "tier2_summary_digest": "298235cd627ba2f24ddf3baee0a893d41225c4d15f5cd8de3d6cc74ad5fb55f2",
+  "verdict": "CANNOT_TELL"
+}

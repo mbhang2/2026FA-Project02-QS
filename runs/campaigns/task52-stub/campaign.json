@@ -1,0 +1,25 @@
+{
+  "digest": "2b96f3245dc36ca7c8418dd4f041fa98a77d942763c7300cc35c27cdd3dc0cf0",
+  "record": {
+    "agent": "src.core.loop.agents.NullGenerator",
+    "agent_config": null,
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 52,
+    "budget": 60,
+    "campaign_id": "ec92ed9817d8",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "synthetic",
+    "hypothesis_digest": null,
+    "hypothesis_path": null,
+    "note": "Task 52 stub campaign: N=60, training split, q=0.05, pre-registered before trial 1; NullGenerator proposals are edgeless by construction. Exploratory calibration run; all three tiers requested after tier-2 conditional-null construction.",
+    "profile": "campaign",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-09-17T05:43:24+00:00"
+  }
+}

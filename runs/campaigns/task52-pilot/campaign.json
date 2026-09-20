@@ -1,0 +1,39 @@
+{
+  "digest": "fc2875f79397ea367e2a1a132f57dc0562f1c49718c3155992fedb951ca262e8",
+  "record": {
+    "agent": "Claude Code",
+    "agent_config": {
+      "access": "full repository access",
+      "campaign_purpose": "smoke",
+      "driver": "human-driven",
+      "ledger_row_purpose": "trial; counts toward global N",
+      "model": "as-configured and unverified",
+      "prohibited_reads": [
+        "src/core/scoring/",
+        "data/calibration/",
+        "runs/"
+      ],
+      "proposal_count": 1,
+      "proposer": "Claude Code",
+      "reportability": "exploratory; not reportable as a discovery"
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "budget": 1,
+    "campaign_id": "task52-pilot",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "synthetic",
+    "hypothesis_digest": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+    "hypothesis_path": "config/hypotheses/intraday-continuation.md",
+    "note": "Task 52 pilot campaign. campaign_purpose: smoke. human-driven, single proposal. Proposer was Claude Code with full repository access and instructions not to read src/core/scoring/, data/calibration/, or runs/. Model as-configured and unverified. Exploratory: the scored ledger row is purpose trial and therefore counts toward global N; this campaign is not reportable as a discovery.",
+    "profile": "campaign",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "single pre-registered proposal; no extension or replacement after its result",
+    "written_at": "2026-09-17T05:42:40+00:00"
+  }
+}

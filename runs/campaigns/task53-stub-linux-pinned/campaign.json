@@ -1,0 +1,25 @@
+{
+  "digest": "60d95cd194a1ffc3433118dcde9060cbb1d1a7978fbd72b0d6940388992cee69",
+  "record": {
+    "agent": "src.core.loop.agents.NullGenerator",
+    "agent_config": null,
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 52,
+    "budget": 60,
+    "campaign_id": "task53-stub-linux-pinned",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "synthetic",
+    "hypothesis_digest": null,
+    "hypothesis_path": null,
+    "note": "Fresh Linux rerun after commit 42a0861: N=60, training split, q=0.05, pre-registered and hashed before trial 1; NullGenerator proposals are edgeless by construction. Conditional per-candidate nulls and all three tiers are part of this campaign.",
+    "profile": "campaign",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-09-17T06:19:09+00:00"
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "pre_registration": "docs/reviews/task59/README.md",
+  "campaigns": 60,
+  "n": 10,
+  "b": 10000,
+  "q": 0.05,
+  "task33_curve": {
+    "0.0": 0.0667,
+    "0.15": 0.5333,
+    "0.3": 0.9667,
+    "0.5": 1.0,
+    "0.8": null
+  },
+  "rows": [
+    {
+      "strength": 0.0,
+      "campaigns": 60,
+      "accepts": 0,
+      "power": 0.0,
+      "ci": [
+        0.0,
+        0.06017393047793289
+      ],
+      "median_best": 0.007883344416118728,
+      "median_null_max": 0.19142940420036025,
+      "median_p": 0.9673032696730327,
+      "task33_conditional": 0.0667
+    },
+    {
+      "strength": 0.15,
+      "campaigns": 60,
+      "accepts": 6,
+      "power": 0.1,
+      "ci": [
+        0.04664219945723587,
+        0.20149694492511044
+      ],
+      "median_best": 0.09432295946064898,
+      "median_null_max": 0.17687663210089644,
+      "median_p": 0.7702229777022298,
+      "task33_conditional": 0.5333
+    },
+    {
+      "strength": 0.3,
+      "campaigns": 60,
+      "accepts": 52,
+      "power": 0.8666666666666667,
+      "ci": [
+        0.7583460540992789,
+        0.9308597302169036
+      ],
+      "median_best": 1.0471252461201146,
+      "median_null_max": 0.17713086081399684,
+      "median_p": 0.00029997000299970003,
+      "task33_conditional": 0.9667
+    },
+    {
+      "strength": 0.5,
+      "campaigns": 60,
+      "accepts": 60,
+      "power": 1.0,
+      "ci": [
+        0.9398260695220669,
+        0.9999999999999999
+      ],
+      "median_best": 6.712357940106377,
+      "median_null_max": 0.16419936492401244,
+      "median_p": 9.999000099990002e-05,
+      "task33_conditional": 1.0
+    },
+    {
+      "strength": 0.8,
+      "campaigns": 60,
+      "accepts": 60,
+      "power": 1.0,
+      "ci": [
+        0.9398260695220669,
+        0.9999999999999999
+      ],
+      "median_best": 7.191862003993828,
+      "median_null_max": 0.15659517996252925,
+      "median_p": 9.999000099990002e-05,
+      "task33_conditional": null
+    }
+  ]
+}

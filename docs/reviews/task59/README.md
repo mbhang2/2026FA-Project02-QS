@@ -84,3 +84,67 @@ should not.
 
 `RunTicket.for_null_calibration`, so none of these 3,000 runs is a trial and none
 touches N.
+
+---
+
+# Result
+
+**`round_turn_mc` is not a dead gate. It works, and it costs about 19% in
+detectable effect size.**
+
+| strength | `round_turn_mc` | conditional (Task 33) | median best | median null-max |
+|---:|---:|---:|---:|---:|
+| 0.00 | **0.000** | 0.067 | +0.0079 | +0.1914 |
+| 0.15 | 0.100 | 0.533 | +0.0943 | +0.1769 |
+| 0.30 | **0.867** | 0.967 | +1.0471 | +0.1771 |
+| 0.50 | **1.000** | 1.000 | +6.7124 | +0.1642 |
+| 0.80 | 1.000 | — | +7.1919 | +0.1566 |
+
+**80% power at strength 0.287, against the conditional null's 0.242** — a 19%
+rightward shift. C = 60, so each figure carries a 95% half-width of about 0.10.
+
+**The prior recorded before running was wrong and wrong in the pessimistic
+direction.** It said "crossing 80% somewhere between 0.5 and 0.8". The true
+crossing is 0.287, and power is already 1.000 at 0.5.
+
+## What the mechanism turned out to be
+
+Look at the last column. **The median null-max sits at +0.16 to +0.19 whatever
+the planted strength is** — it barely moves across a range where the median best
+score moves from +0.008 to +7.19.
+
+So the gate is, in effect, a **near-constant bar at about +0.18 in Sortino**, and
+the only question is whether the campaign's best clears it. That is why the
+FWER is 0.000 rather than 0.05: under a pure null the best of ten candidates
+reaches +0.008, which is nowhere near +0.18, and there is no tail to speak of.
+It is not that the test is broken; it is that the bar sits far above where
+noise reaches.
+
+The diagnosis written in the pre-registration — "the max of ten clustered
+observations loses to the max of ten wide nulls" — is right about the shape and
+overstated the consequence. It costs the marginal band and nothing else.
+
+## Where the cost actually falls
+
+Entirely at **strength 0.15: power 0.100 against the conditional null's 0.533.**
+A five-fold loss, and it is the only row where the two differ materially. At 0.30
+the gap is 0.867 vs 0.967; from 0.5 upward they are identical.
+
+So the trade is legible: **`round_turn_mc` will miss marginal effects that the
+conditional null would catch, and will find anything moderate or larger.** In
+exchange the null stage costs 145 seconds instead of roughly twelve hours.
+
+## What this says about `nq-mvp-01`
+
+Its REJECT is now interpretable, and it is informative rather than vacuous. The
+campaign's best scored **+0.0256** against a bar of roughly +0.18. It was not
+rejected by a gate that rejects everything; it was rejected by a gate with
+demonstrated power at moderate effects, and it was an order of magnitude short.
+
+## Recommendation
+
+**Keep `round_turn_mc` as the default.** Add one line to how a result is read: a
+campaign whose best lands between roughly +0.05 and +0.18 is in the band where
+this null is weak and the conditional null is not, and that is the case worth
+re-running under `conditional` before concluding anything. Above +0.18 the two
+agree; below +0.05 neither will accept.

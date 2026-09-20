@@ -160,7 +160,13 @@ def stage_run(name: str) -> None:
                         campaign_id=record.campaign_id, index=i)
         drain = getattr(agent, "drain_log", None)
         if drain is not None:
+            # Kept in a sidecar, because `run.py` owns the ledger row and this is
+            # the driver's cost rather than the run's. The first version attached
+            # it to the in-memory row only, so the campaign's bill was lost the
+            # moment the process exited.
             row["agent_call"] = drain()
+            with (d / "agent-calls.jsonl").open("a") as fh:
+                fh.write(json.dumps({"trial": i, **row["agent_call"]}) + "\n")
 
         # The champion advances only on a strict improvement. A tie keeps the
         # incumbent, so the base does not drift between equivalent files.
@@ -240,6 +246,13 @@ def stage_report(name: str) -> None:
 
     result = CampaignResult(record=record, record_digest=digest, rows=rows)
     summary = summarise(result, dataset="nq-trades", null_samples=samples, q=record.q)
+
+    # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
+    # same route every other campaign's do rather than through this script.
+    (d / "result.json").write_text(json.dumps(
+        {"rows": rows, "wall_clock_s": result.wall_clock_s,
+         "record_digest": digest, "tampered": result.tampered},
+        indent=2, default=str))
     summary["null_source"] = "round_turn_mc"
     summary["error_control_note"] = (
         "The FWER of 0.060, CI [0.041, 0.088], is the CONDITIONAL null with "
@@ -255,8 +268,17 @@ def stage_report(name: str) -> None:
     print(f"  p {g.get('p')}   reject-the-null {g.get('reject')}   "
           f"best>0 {g.get('observed_best_positive')}   ACCEPT {g.get('accept')}")
 
+    # **Tier 3 reads `tier2-summary.json`, not `summarise()`'s output.** The
+    # contract is a file and the two shapes are not the same -- feeding the
+    # wrong one made tier 3 report "the best candidate's source is absent",
+    # which was true of the object it was handed and not of the campaign.
+    import subprocess
+    subprocess.run([sys.executable, str(ROOT / "scripts" / "campaign_summary.py"),
+                    str(d)], cwd=str(ROOT), check=True)
+
+    tier2 = json.loads((d / "tier2-summary.json").read_text())
     from audit.tier3 import audit_campaign_summary
-    verdict = audit_campaign_summary(summary)
+    verdict = audit_campaign_summary(tier2)
     (d / "tier3-verdict.json").write_text(
         json.dumps(verdict.as_dict(), indent=2, default=str))
     print(f"  tier 3: {verdict.verdict.value}  escalate "

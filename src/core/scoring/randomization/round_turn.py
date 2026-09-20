@@ -75,7 +75,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from ...types import Blotter, BlotterRow
-from ..metrics import SessionSpan, sortino
+from ..metrics import SessionSpan
 
 B_DEFAULT = 10_000
 
@@ -152,11 +152,33 @@ def null_sample(
 
     Vectorised where it has to be -- a candidate with 100,000 round turns and
     b = 10,000 is 10^9 sign draws -- and deliberately *not* vectorised for the
-    statistic itself: the loop calls `metrics.sortino`, the same function the gate
-    calls, so the null and the observed score cannot drift apart. A
-    re-implementation that was 3% faster and 1% different would be worthless.
+    statistic itself: the loop calls `scorer.score_returns`, the same rule the
+    gate is computed from, so the null and the observed score cannot drift apart.
+    A re-implementation that was 3% faster and 1% different would be worthless.
+
+    **It calls `score_returns` and not `metrics.sortino`, and the first version
+    got that wrong.** `score_returns` is the whole rule, including the fallback
+    from Sortino to Sharpe below `MIN_DOWNSIDE_SESSIONS` and the infinite-Sortino
+    guard. Calling the bare statistic produced two defects that only appeared on
+    real data, in campaign `nq-mvp-01`:
+
+    * **The null measured a different statistic from the score.** Six of fifty
+      candidates traded so little that the scorer reported
+      `sharpe_per_session` -- including the campaign's best, at three trades --
+      while their nulls were Sortino distributions. Comparing them is
+      meaningless. Task 29 closed this at the FAR level, where every trial is
+      charged `max(far_sortino, far_sharpe)` precisely so a strategy cannot
+      choose which null judges it; that fix does not reach `max_of_n`, which
+      compares raw scores, and this null inherited the gap.
+    * **2.14% of draws were infinite.** A sign-flip in which every traded session
+      comes out positive has zero downside deviation, and bare Sortino returns
+      `+inf` there. Nine thousand infinities put `null_max_mean` at `inf` and
+      inflated the p-value. `score_returns` routes those to the Sharpe leg
+      instead, which is exactly what it exists for.
     """
     import numpy as np
+
+    from ..scorer import score_returns
 
     turns = round_turns(blotter, calendar)
     if not turns:
@@ -193,6 +215,6 @@ def null_sample(
         if notional_base != 1.0:
             acc /= notional_base
         for row in acc:
-            out.append(sortino(row.tolist()))
+            out.append(score_returns(row.tolist()).primary)
         done += c
     return out

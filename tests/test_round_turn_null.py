@@ -13,6 +13,7 @@ import pytest
 
 from src.core.scoring import metrics
 from src.core.scoring.randomization import round_turn as rt
+from src.core.scoring.scorer import score_returns
 from src.core.types import Blotter, BlotterRow, Side
 
 NS = 1_000_000_000
@@ -111,6 +112,9 @@ def test_every_session_in_the_calendar_is_in_the_return_vector():
     # distinct values and they are enumerable. Computing them over the FULL
     # 50-session vector and requiring every sample to be one of them pins the
     # flat sessions exactly: drop them and the achievable set changes.
+    #
+    # Enumerated with `score_returns`, not `metrics.sortino`, because that is what
+    # the sample applies -- the whole rule including the Sortino/Sharpe fallback.
     turns = rt.round_turns(b, cal)
     achievable = set()
     for s0 in (-1, 1):
@@ -118,7 +122,7 @@ def test_every_session_in_the_calendar_is_in_the_return_vector():
             vec = [0.0] * 50
             for sign, t in zip((s0, s1), turns):
                 vec[t.session] += sign * t.gross - t.cost
-            achievable.add(round(metrics.sortino(vec), 10))
+            achievable.add(round(score_returns(vec).primary, 10))
     assert {round(x, 10) for x in sample} <= achievable, (
         "a sample value is not reachable over the full-length session vector")
 
@@ -141,10 +145,37 @@ def test_commission_is_charged_again_rather_than_flipped_with_the_pnl():
 
 
 def test_it_is_deterministic_for_a_seed():
-    cal = _cal(6)
-    b = _blotter([(i % 6, float(i % 5) - 2.0, 0.1) for i in range(30)])
+    # 40 sessions, above MIN_SESSIONS. Below it every draw is REJECT and two
+    # different seeds produce identical all-rejected lists, which would make this
+    # test pass for the wrong reason and then fail on the inequality.
+    cal = _cal(40)
+    b = _blotter([(i % 40, float(i % 5) - 2.0, 0.1) for i in range(400)])
     assert rt.null_sample(b, cal, b=128, seed=11) == rt.null_sample(b, cal, b=128, seed=11)
     assert rt.null_sample(b, cal, b=128, seed=11) != rt.null_sample(b, cal, b=128, seed=12)
+
+
+def test_the_null_applies_the_scorers_rule_and_not_the_bare_statistic():
+    """The defect `nq-mvp-01` exposed, asserted so it cannot come back.
+
+    A candidate that trades so little it has fewer than MIN_DOWNSIDE_SESSIONS
+    losing sessions is scored on Sharpe, not Sortino. If the null were computed
+    with bare `metrics.sortino` it would (a) measure a different statistic from
+    the score it is compared against, and (b) return +inf whenever a replication
+    happens to have no losing session at all -- 2.14% of draws in that campaign,
+    which put `null_max_mean` at infinity.
+    """
+    cal = _cal(60)
+    b = _blotter([(3, 2.0, 0.1), (17, 1.5, 0.1), (41, 1.0, 0.1)])   # 3 turns, no losers
+    sample = rt.null_sample(b, cal, b=500, seed=9)
+    assert sample, "three round turns over 60 sessions should still produce a null"
+    assert not any(x == float("inf") for x in sample), (
+        "an infinite draw means the bare Sortino is being used: zero downside "
+        "deviation with a positive mean. score_returns routes that to Sharpe.")
+    # and the all-positive replication is scored the way the scorer would score it
+    vec = [0.0] * 60
+    for sess, g in ((3, 2.0), (17, 1.5), (41, 1.0)):
+        vec[sess] = g - 0.2
+    assert score_returns(vec).metric == "sharpe_per_session"
 
 
 def test_a_candidate_that_never_traded_contributes_no_null():

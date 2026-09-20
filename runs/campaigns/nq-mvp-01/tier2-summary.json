@@ -1,0 +1,1094 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 44,
+    "diagnostics": {
+      "avg_holding_period_ns": 177281788.33333334,
+      "best_session_share": 0.5,
+      "by_hour_utc": {
+        "09": 0.7000000000011641,
+        "18": 0.7000000000011641,
+        "19": -0.77
+      },
+      "by_month": {
+        "2024-08": -0.77,
+        "2024-11": 0.7000000000011641,
+        "2024-12": 0.7000000000011641
+      },
+      "by_weekday": {
+        "Thu": 1.4000000000023283,
+        "Tue": -0.77
+      },
+      "commission": 0.06,
+      "fill_model_spread": null,
+      "gross_pnl": 0.6900000000023283,
+      "max_drawdown": -0.77,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.0001,
+        "exposure_share": 0.0078,
+        "return_dispersion": 0.0002,
+        "trades_per_session": 0.0002
+      },
+      "profit_concentration_top5pct": 1.0,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 3,
+      "trade_count": 3,
+      "turnover_contracts_per_session": 0.015625,
+      "win_rate": 0.6666666666666666
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 1,
+      "kurtosis": 126.03538012901535,
+      "metric": "sharpe_per_session",
+      "n_sessions": 384,
+      "net_pnl": 0.6300000000023283,
+      "primary": 0.02560948800058127,
+      "reject_reason": "1 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+      "rejected": false,
+      "sharpe": 0.02560948800058127,
+      "significance": 0.5018414254028216,
+      "skew": 2.2047747163023903,
+      "sortino": 0.04175266607032212,
+      "trade_count": 3
+    },
+    "source": "\"\"\"\nMean-reversion fade with simplified entry and focus on trade quality.\n\nAnalysis of recent trials:\n- #42: -0.0034 \u2014 best score but only 2 trades (over-filtering)\n- #43: -0.0495 \u2014 regression when relaxing range_stability_threshold to 0.35\n- #39: -0.0304 \u2014 solid baseline with simple two-bar pattern\n\nKey insight: #42's success with minimal trades suggests we should focus on\ntrade quality over quantity, but 2 trades is clearly too few. The issue with\n#43 was that relaxing range_stability_threshold to 0.35 let in worse volatility.\n\nHypothesis for #44: The core two-bar fade pattern works, but we need to:\n1. SIMPLIFY: Remove some of the complex penetration/reversal_strength logic\n   that may be over-optimized. Keep the basic two-bar reversal pattern.\n2. TIGHTER MOMENTUM FILTER: Make the momentum check stricter - only trade when\n   momentum is neutral or weak, not when it's directional.\n3. ADJUST THRESHOLDS: The reversal_strength_threshold (0.17) may be too loose.\n   Increase it to 0.25 to require stronger reversals.\n4. KEEP WORKING PARTS: The 1.32 move_threshold, 0.58 confirmation ratio, \n   0.70/0.72 stops/targets, and range stability concept all worked.\n5. REDUCE COMPLEXITY: Remove the penetration check (min_confirmation_penetration)\n   and early_session_confirmation_boost - these may be over-fitting.\n\nThis approach: Focus on cleaner entries with fewer but higher-quality trades.\nStricter momentum filter means we only fade moves that lack directional support.\n\"\"\"\n\nfrom __future__ import annotations\n\n\nclass Strategy:\n    def __init__(\n        self,\n        *,\n        interval: str = \"5m\",\n        lookback: int = 8,\n        move_threshold: float = 1.32,\n        min_body_ratio: float = 0.75,\n        base_confirmation_body_ratio: float = 0.58,\n        base_size: int = 1,\n        stop_offset: float = 0.70,\n        target_offset: float = 0.72,\n        reversal_strength_threshold: float = 0.25,\n        min_typical_range: float = 0.10,\n        momentum_lookback: int = 4,\n        momentum_threshold: float = 0.10,\n        early_session_bars: int = 4,\n        late_session_bars: int = 4,\n        range_stability_threshold: float = 0.25,\n    ) -> None:\n        self.interval = interval\n        self.lookback = lookback\n        self.move_threshold = move_threshold\n        self.min_body_ratio = min_body_ratio\n        self.base_confirmation_body_ratio = base_confirmation_body_ratio\n        self.base_size = base_size\n        self.stop_offset = stop_offset\n        self.target_offset = target_offset\n        self.reversal_strength_threshold = reversal_strength_threshold\n        self.min_typical_range = min_typical_range\n        self.momentum_lookback = momentum_lookback\n        self.momentum_threshold = momentum_threshold\n        self.early_session_bars = early_session_bars\n        self.late_session_bars = late_session_bars\n        self.range_stability_threshold = range_stability_threshold\n        \n        self._session: int | None = None\n        self._bars_in_session: int = 0\n        self._bar_minus_1_outsized: bool = False\n        self._bar_minus_1_direction: str | None = None\n        self._bar_minus_1_open: float = 0.0\n        self._bar_minus_1_high: float = 0.0\n        self._bar_minus_1_low: float = 0.0\n        self._bar_minus_1_range: float = 0.0\n\n    def setup(self, ctx) -> None:\n        ctx.subscribe(self.interval)\n\n    def on_bars(self, ctx) -> None:\n        if not ctx.actionable:\n            return\n        \n        # Reset on new session\n        if ctx.session != self._session:\n            self._session = ctx.session\n            self._bars_in_session = 0\n            self._bar_minus_1_outsized = False\n            self._bar_minus_1_direction = None\n            self._bar_minus_1_open = 0.0\n            self._bar_minus_1_high = 0.0\n            self._bar_minus_1_low = 0.0\n            self._bar_minus_1_range = 0.0\n        \n        history = ctx.history(self.interval)\n        if len(history) < 1:\n            return\n        \n        self._bars_in_session += 1\n        current_bar = history[-1]\n        \n        # Don't trade if we have a position or working orders\n        if ctx.position or ctx.working_order_ids:\n            return\n        \n        # Avoid trading in first N bars (need session context)\n        if self._bars_in_session < self.early_session_bars + 1:\n            return\n        \n        # Avoid trading in last N bars (need time for mean reversion)\n        time_left_ns = ctx.session_end - ctx.ts\n        bars_left_estimate = time_left_ns / (5 * 60 * 1e9)\n        if bars_left_estimate < self.late_session_bars:\n            return\n        \n        # Need enough history to measure typical range\n        if len(history) < self.lookback + 1:\n            return\n        \n        # Measure typical range from lookback window (excluding current bar)\n        window_start = max(0, len(history) - self.lookback - 1)\n        window_end = len(history) - 1\n        \n        if window_end - window_start < self.lookback:\n            return\n        \n        window = history[window_start:window_end]\n        if len(window) == 0:\n            return\n        \n        ranges = [b.high - b.low for b in window]\n        typical_range = sum(ranges) / len(ranges)\n        if typical_range < self.min_typical_range:\n            return\n        \n        # Check range stability - don't trade if volatility is too inconsistent\n        avg_range = typical_range\n        range_std = (sum((r - avg_range) ** 2 for r in ranges) / len(ranges)) ** 0.5\n        if avg_range > 0:\n            range_cv = range_std / avg_range\n            if range_cv > self.range_stability_threshold:\n                # Volatility too unstable, skip\n                self._bar_minus_1_outsized = False\n                self._bar_minus_1_direction = None\n                return\n        \n        # Analyze current bar for outsized move\n        current_range = current_bar.high - current_bar.low\n        current_body = abs(current_bar.close - current_bar.open)\n        \n        # Simple outsized detection: range is large AND body is substantial\n        is_outsized = (\n            current_range > typical_range * self.move_threshold and\n            current_body > current_range * self.min_body_ratio\n        )\n        \n        current_direction = None\n        current_open = current_bar.open\n        \n        if is_outsized:\n            if current_bar.close > current_bar.open:\n                current_direction = \"up\"\n            elif current_bar.close < current_bar.open:\n                current_direction = \"down\"\n        \n        # TWO-BAR CONFIRMATION PATTERN\n        if self._bar_minus_1_outsized and self._bar_minus_1_direction is not None:\n            current_moved_up = current_bar.close > current_bar.open\n            current_moved_down = current_bar.close < current_bar.open\n            current_body = abs(current_bar.close - current_bar.open)\n            current_range = current_bar.high - current_bar.low\n            \n            # Check body quality of confirmation bar\n            has_good_body = (\n                current_body > current_range * self.base_confirmation_body_ratio\n                if current_range > 0 else False\n            )\n            \n            # Calculate session momentum from the last momentum_lookback bars\n            session_momentum = None\n            if len(history) >= self.momentum_lookback + 2:\n                momentum_window_start = max(0, len(history) - self.momentum_lookback - 2)\n                momentum_window_end = len(history) - 2\n                momentum_window = history[momentum_window_start:momentum_window_end]\n                \n                if len(momentum_window) > 0:\n                    momentum_closes = [b.close for b in momentum_window]\n                    if len(momentum_closes) >= 2:\n                        momentum_change = momentum_closes[-1] - momentum_closes[0]\n                        momentum_range = max(b.high for b in momentum_window) - min(b.low for b in momentum_window)\n                        if momentum_range > 0:\n                            session_momentum = momentum_change / momentum_range\n            \n            # Check for reversal confirmation\n            if (self._bar_minus_1_direction == \"up\" and current_moved_down and \n                has_good_body):\n                # Previous was up, current is down\n                if current_bar.close < self._bar_minus_1_open:\n                    # Measure reversal strength\n                    prior_range = self._bar_minus_1_high - self._bar_minus_1_low\n                    if prior_range > 0:\n                        reversal_distance = self._bar_minus_1_open - current_bar.close\n                        reversal_strength = reversal_distance / prior_range\n                        \n                        if reversal_strength >= self.reversal_strength_threshold:\n                            # Stricter momentum filter: only trade if momentum is weak or neutral\n                            trade_signal = True\n                            if session_momentum is not None:\n                                if abs(session_momentum) > self.momentum_threshold:\n                                    trade_signal = False\n                            \n                            if trade_signal:\n                                ctx.sell(\n                                    size=self.base_size,\n                                    stop_offset=self.stop_offset,\n                                    target_offset=self.target_offset,\n                                    tag=\"fade-up\",\n                                )\n            \n            elif (self._bar_minus_1_direction == \"down\" and current_moved_up and \n                  has_good_body):\n                # Previous was down, current is up\n                if current_bar.close > self._bar_minus_1_open:\n                    # Measure reversal strength\n                    prior_range = self._bar_minus_1_high - self._bar_minus_1_low\n                    if prior_range > 0:\n                        reversal_distance = current_bar.close - self._bar_minus_1_open\n                        reversal_strength = reversal_distance / prior_range\n                        \n                        if reversal_strength >= self.reversal_strength_threshold:\n                            # Stricter momentum filter: only trade if momentum is weak or neutral\n                            trade_signal = True\n                            if session_momentum is not None:\n                                if abs(session_momentum) > self.momentum_threshold:\n                                    trade_signal = False\n                            \n                            if trade_signal:\n                                ctx.buy(\n                                    size=self.base_size,\n                                    stop_offset=self.stop_offset,\n                                    target_offset=self.target_offset,\n                                    tag=\"fade-down\",\n                                )\n        \n        # Store current bar info for next iteration\n        self._bar_minus_1_outsized = is_outsized\n        self._bar_minus_1_direction = current_direction\n        self._bar_minus_1_open = current_open\n        self._bar_minus_1_high = current_bar.high\n        self._bar_minus_1_low = current_bar.low\n        self._bar_minus_1_range = current_bar.high - current_bar.low\n\n    def on_fill(self, ctx) -> None:\n        pass\n\n    def on_lifecycle(self, ctx) -> None:\n        pass\n",
+    "source_sha256": "44ad27e00afb7b19ed7836272f368234a3248b4448eb596225b3df5992f9f7b4",
+    "strategy_digest": "44ad27e00afb7b19"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.1,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+        "path": "config/hypotheses/intraday-continuation.md"
+      },
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "model_served_at_registration": "claude-haiku-4-5",
+      "null_source": "round_turn_mc",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real NQ futures trades, 384 sessions on the pre-registered train split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side. NQ is $20 a point, so a round trip costs about $4.00 a contract. At high turnover this dominates: the baseline strategy on this split traded 103,355 times and paid more in commission than it made gross.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "nq-mvp-01",
+    "budget": 50,
+    "campaign_id": "nq-mvp-01",
+    "dataset": "nq-trades",
+    "profile": "nq-train",
+    "q": 0.05,
+    "record_digest": "602a18d2885fe587d9897c124cc80285d6f2dcdcab7359c6c9718c3d32a9377f",
+    "record_digest_now": "602a18d2885fe587d9897c124cc80285d6f2dcdcab7359c6c9718c3d32a9377f",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-09-20T00:49:56+00:00"
+  },
+  "deflation_view": {
+    "best_score": 0.02560948800058127,
+    "clears_selection_bar": false,
+    "expected_max_under_null": 0.16651240644065973,
+    "margin": -0.14090291844007846,
+    "n_sessions": 384,
+    "n_trials": 50,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.23762821163761105,
+      "best_label": "None:44ad27e0",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.001,
+          "far": 0.23762821163761105,
+          "holm_accepted": false,
+          "holm_critical": 0.001,
+          "index": 44,
+          "label": "None:44ad27e0",
+          "rank": 1
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.002,
+          "far": 0.3632405219914701,
+          "holm_accepted": false,
+          "holm_critical": 0.0010204081632653062,
+          "index": 45,
+          "label": "None:2e42279e",
+          "rank": 2
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.003,
+          "far": 0.3846675264116373,
+          "holm_accepted": false,
+          "holm_critical": 0.0010416666666666667,
+          "index": 42,
+          "label": "None:a2cbd962",
+          "rank": 3
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.004,
+          "far": 0.3846675264116373,
+          "holm_accepted": false,
+          "holm_critical": 0.0010638297872340426,
+          "index": 46,
+          "label": "None:575dfa2f",
+          "rank": 4
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005000000000000001,
+          "far": 0.3846675264116373,
+          "holm_accepted": false,
+          "holm_critical": 0.0010869565217391304,
+          "index": 47,
+          "label": "None:33218b24",
+          "rank": 5
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.006,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011111111111111111,
+          "index": 0,
+          "label": "None:deb04049",
+          "rank": 6
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.007000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011363636363636365,
+          "index": 1,
+          "label": "None:a12ac547",
+          "rank": 7
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.008,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011627906976744186,
+          "index": 3,
+          "label": "None:1c5bb9d4",
+          "rank": 8
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.009,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011904761904761906,
+          "index": 5,
+          "label": "None:31d8f31c",
+          "rank": 9
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0012195121951219512,
+          "index": 6,
+          "label": "None:ad1b7260",
+          "rank": 10
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.011000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.00125,
+          "index": 8,
+          "label": "None:32706c77",
+          "rank": 11
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.012,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001282051282051282,
+          "index": 9,
+          "label": "None:7003cd91",
+          "rank": 12
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.013000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0013157894736842105,
+          "index": 10,
+          "label": "None:98d6153a",
+          "rank": 13
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.014000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0013513513513513514,
+          "index": 11,
+          "label": "None:7088f640",
+          "rank": 14
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001388888888888889,
+          "index": 12,
+          "label": "None:256cef8e",
+          "rank": 15
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.016,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0014285714285714286,
+          "index": 13,
+          "label": "None:984cd62e",
+          "rank": 16
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.017,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0014705882352941176,
+          "index": 14,
+          "label": "None:b3745a61",
+          "rank": 17
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.018,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0015151515151515152,
+          "index": 15,
+          "label": "None:e638408c",
+          "rank": 18
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.019000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0015625,
+          "index": 16,
+          "label": "None:33ccf983",
+          "rank": 19
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0016129032258064516,
+          "index": 17,
+          "label": "None:b2b87fd8",
+          "rank": 20
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.021,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0016666666666666668,
+          "index": 18,
+          "label": "None:83310bf0",
+          "rank": 21
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.022000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001724137931034483,
+          "index": 19,
+          "label": "None:d835b2c8",
+          "rank": 22
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.023000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0017857142857142859,
+          "index": 20,
+          "label": "None:1129f7d7",
+          "rank": 23
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.024,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001851851851851852,
+          "index": 21,
+          "label": "None:aa4841b2",
+          "rank": 24
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0019230769230769232,
+          "index": 23,
+          "label": "None:e03e63c6",
+          "rank": 25
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.026000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002,
+          "index": 24,
+          "label": "None:42954a5c",
+          "rank": 26
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.027000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0020833333333333333,
+          "index": 26,
+          "label": "None:0ff9ef4f",
+          "rank": 27
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002173913043478261,
+          "index": 27,
+          "label": "None:9ec16d08",
+          "rank": 28
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028999999999999998,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002272727272727273,
+          "index": 28,
+          "label": "None:052443e3",
+          "rank": 29
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002380952380952381,
+          "index": 29,
+          "label": "None:b95bc814",
+          "rank": 30
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.031,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0025,
+          "index": 30,
+          "label": "None:858c2c13",
+          "rank": 31
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.032,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "index": 32,
+          "label": "None:a0ba3380",
+          "rank": 32
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.033,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "index": 33,
+          "label": "None:7ac889d8",
+          "rank": 33
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "index": 34,
+          "label": "None:dfe5ef19",
+          "rank": 34
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034999999999999996,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.003125,
+          "index": 35,
+          "label": "None:1f2ab1ac",
+          "rank": 35
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.036,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "index": 36,
+          "label": "None:35e547c5",
+          "rank": 36
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.037,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "index": 37,
+          "label": "None:a4a687e4",
+          "rank": 37
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.038000000000000006,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "index": 38,
+          "label": "None:874f5914",
+          "rank": 38
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03900000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "index": 39,
+          "label": "None:b3338b5d",
+          "rank": 39
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "index": 40,
+          "label": "None:c174135d",
+          "rank": 40
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.041,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.005,
+          "index": 41,
+          "label": "None:e3491810",
+          "rank": 41
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.042,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "index": 43,
+          "label": "None:4833da55",
+          "rank": 42
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.043000000000000003,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00625,
+          "index": 2,
+          "label": "None:afb290f6",
+          "rank": 43
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.044000000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "index": 4,
+          "label": "None:55ed6b4e",
+          "rank": 44
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045000000000000005,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "index": 7,
+          "label": "None:33d74b5b",
+          "rank": 45
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.046000000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.01,
+          "index": 22,
+          "label": "None:48cef2c6",
+          "rank": 46
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.047,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0125,
+          "index": 25,
+          "label": "None:3225af7a",
+          "rank": 47
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.048,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "index": 31,
+          "label": "None:2a131669",
+          "rank": 48
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.049,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.025,
+          "index": 48,
+          "label": "None:b401fba7",
+          "rank": 49
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 49,
+          "label": "None:5c52a700",
+          "rank": 50
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 50,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "b6ff1f44354665a7bef30df2547799d21f3296f783e1194374791419abbd1e2c",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 42,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 0.09796025655937875,
+    "null_max_mean": 0.06076745583413783,
+    "null_max_quantiles": {
+      "0.01": 0.13162456839389639,
+      "0.05": 0.09796025655937875,
+      "0.1": 0.08858825449193643,
+      "0.2": 0.07542538686270059,
+      "0.5": 0.07223464901332036
+    },
+    "observed_best": 0.02560948800058127,
+    "p": 0.8236176382361764,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/nq-mvp-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "02cd6623e44217b38911c6e1f4d61df919363aebd6fd2366e809ebca6e957a87",
+        "outcome": "completed",
+        "score": -0.7270946432946502,
+        "strategy_digest": "deb04049fdc2d15f"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "ecd994ebdc254e464dc957578feb915b98925e48e159ae60bc5afb77d47e2ae4",
+        "outcome": "completed",
+        "score": -0.6312916064712835,
+        "strategy_digest": "a12ac547532572d5"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "b0720e7189aff6cea00de50626c05cecf50f4ea41a7042d82a0928c34e63918a",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "afb290f6e0889e04"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "94a25d3cbf4b36ea05f74ce86ad3d38dd8768b9a70d5c52a7e6a28d5084ba951",
+        "outcome": "completed",
+        "score": -0.6232177853494012,
+        "strategy_digest": "1c5bb9d4d5e1229c"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "03eb32645ae6dc44fcb60e83fe1d0033613c0ded53a8646fe7acc0590c33a2ff",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "55ed6b4e697050f3"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "f1be66799d5a46a30c16e07baece80a91be2cac4d1808649bf2aebbec7e54e6a",
+        "outcome": "completed",
+        "score": -0.5817276665688768,
+        "strategy_digest": "31d8f31cec5c905c"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "5759c5ad3b010316876395fe90a921ed997f4ea89dfe221fe6b37cc058988051",
+        "outcome": "completed",
+        "score": -0.36382340631760407,
+        "strategy_digest": "ad1b7260d526e8a5"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "33d74b5b076f712e"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "3bb1e52165c397e40614843f7380b34b745aba1a14796e80b773ed51ae449008",
+        "outcome": "completed",
+        "score": -0.5015506004201753,
+        "strategy_digest": "32706c7748088162"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "f3a2d22d0e5eff1bce0489ee5ac9c832c77d9f798a1024f822fdb36041fb7ff8",
+        "outcome": "completed",
+        "score": -0.36437255111846334,
+        "strategy_digest": "7003cd91643be5fa"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "d48fd5a1e6298ac10a5b1edcc4db8b07f436ca23f282f52b811c628e643464d6",
+        "outcome": "completed",
+        "score": -0.18624490302853652,
+        "strategy_digest": "98d6153a5f8e9b4a"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "f09d560cd6ebd6abe54e80de005666b58fa367fc368857720d45532dcd28f3d0",
+        "outcome": "completed",
+        "score": -0.2188774499171442,
+        "strategy_digest": "7088f640dd44e6d9"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "65db8e27c95442be117f7d4901aceadafc4dda6277f00005c4bc3ed1004f3ef7",
+        "outcome": "completed",
+        "score": -0.23770160357324066,
+        "strategy_digest": "256cef8e3eee3be3"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "27cb1e17ec847c3f686e3b5de61cbd5bb3e3ff24f00674d21d0377cc60d8aa84",
+        "outcome": "completed",
+        "score": -0.3922454250097306,
+        "strategy_digest": "984cd62e9c6317ed"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "c78a8d1cf49b441e034789392c83c13d6f680442e01d3cc1e6fb99b9a7bd3413",
+        "outcome": "completed",
+        "score": -0.3107608022524174,
+        "strategy_digest": "b3745a611d7d8863"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "75c2ec4e1333013956d15082c2623fbf9fd181b0977e63b4abb6835649c3d8d1",
+        "outcome": "completed",
+        "score": -0.40123872465623883,
+        "strategy_digest": "e638408c5a841eee"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "d887b54c76a235445ac08d0e6776a42a259aba34299b2f7eefd4279bdf8d4552",
+        "outcome": "completed",
+        "score": -0.45741651535662253,
+        "strategy_digest": "33ccf983a65bf7db"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "25a510f6ddf0d9a97c406b86a2ff33c7b423d7f79613127913aff2e844bd20d6",
+        "outcome": "completed",
+        "score": -0.46485836842886735,
+        "strategy_digest": "b2b87fd84b13155d"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "b5893034d8a0534667606ca431642211c3ea3eece054fdd8bf703c67273abef4",
+        "outcome": "completed",
+        "score": -0.4503041230472345,
+        "strategy_digest": "83310bf0c34fd39c"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": "2a606ff58fb62359694590dc081a52489e26e7f14deb37c6c7d82516c93cfab2",
+        "outcome": "completed",
+        "score": -0.27717965579457443,
+        "strategy_digest": "d835b2c8bfbe3385"
+      },
+      {
+        "campaign_index": 20,
+        "fill_log_digest": "75dd62f4624b16957cf324af845446ae2f95e6535cca0592a80b08aca8b7939c",
+        "outcome": "completed",
+        "score": -0.3570665694380257,
+        "strategy_digest": "1129f7d7c323df7d"
+      },
+      {
+        "campaign_index": 21,
+        "fill_log_digest": "0a2aa6ada9b7a12f3bbf29c334272009681ad38f7f604f00cde83a47600375ff",
+        "outcome": "completed",
+        "score": -0.2631620515156292,
+        "strategy_digest": "aa4841b2f59cc02f"
+      },
+      {
+        "campaign_index": 22,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "48cef2c621bf7b26"
+      },
+      {
+        "campaign_index": 23,
+        "fill_log_digest": "c967e410793566f18841f6d828413d945d68ebd0de9c73b37aa362c176fd6e86",
+        "outcome": "completed",
+        "score": -0.2468632576004878,
+        "strategy_digest": "e03e63c6416dc3ed"
+      },
+      {
+        "campaign_index": 24,
+        "fill_log_digest": "ac04924d455a28af7088835fbe931a790c98bfe1efe52113c90fb00fc39f4bc3",
+        "outcome": "completed",
+        "score": -0.2238084781778438,
+        "strategy_digest": "42954a5c72443b8d"
+      },
+      {
+        "campaign_index": 25,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "3225af7a154ea854"
+      },
+      {
+        "campaign_index": 26,
+        "fill_log_digest": "bdc3ef050df7403251ec346543752e3430f2ecbdc9bcefaaa5cdcd81a70c2a17",
+        "outcome": "completed",
+        "score": -0.2478920910195912,
+        "strategy_digest": "0ff9ef4f87981111"
+      },
+      {
+        "campaign_index": 27,
+        "fill_log_digest": "91571414719229f925b8e61dd32b8124104d76c155eb03902a5d6527f2a2fdd1",
+        "outcome": "completed",
+        "score": -0.19536791387672883,
+        "strategy_digest": "9ec16d080c2e4ac1"
+      },
+      {
+        "campaign_index": 28,
+        "fill_log_digest": "688305ea793b5d5ee021eabffce9028adffe6921ce67d85ba74e041eddd726a1",
+        "outcome": "completed",
+        "score": -0.1902668199242849,
+        "strategy_digest": "052443e34484762d"
+      },
+      {
+        "campaign_index": 29,
+        "fill_log_digest": "4c979964eb36ab77b84e8ea7a521d563237bbca244b3728e74f0e9d852c9e986",
+        "outcome": "completed",
+        "score": -0.17068089735377234,
+        "strategy_digest": "b95bc81446a1a891"
+      },
+      {
+        "campaign_index": 30,
+        "fill_log_digest": "cdfd2a8d75dee2d25172603a7cb3b28667acf2d3fc5a2ab5887444fabae1c631",
+        "outcome": "completed",
+        "score": -0.26751439322271414,
+        "strategy_digest": "858c2c1368a9406b"
+      },
+      {
+        "campaign_index": 31,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "2a1316691f5f979f"
+      },
+      {
+        "campaign_index": 32,
+        "fill_log_digest": "f2bf947e4f70e25264cd2656deb03ee58ee1ba8af321af557d4d99ce29669414",
+        "outcome": "completed",
+        "score": -0.239892306793451,
+        "strategy_digest": "a0ba3380e6e22112"
+      },
+      {
+        "campaign_index": 33,
+        "fill_log_digest": "3000b96a0168cb9270de609c680e848833bc171b31952764ba7def3efd64d580",
+        "outcome": "completed",
+        "score": -0.13422941454353654,
+        "strategy_digest": "7ac889d8221a1efb"
+      },
+      {
+        "campaign_index": 34,
+        "fill_log_digest": "2944a926f7001ca4f70b1e685839d5b7dc018e0cef829661b094923df4b7a8c1",
+        "outcome": "completed",
+        "score": -0.07915439345215228,
+        "strategy_digest": "dfe5ef194fab729f"
+      },
+      {
+        "campaign_index": 35,
+        "fill_log_digest": "a37ccc8962faf8b2fc464b1d9f6ee15099ce284ffa22e9fe6253d11b7de485bd",
+        "outcome": "completed",
+        "score": -0.15640791040567867,
+        "strategy_digest": "1f2ab1acbd56c561"
+      },
+      {
+        "campaign_index": 36,
+        "fill_log_digest": "388f577f813a35622937588f428b1bd82bae804502da50b5df180efd11707d0c",
+        "outcome": "completed",
+        "score": -0.08552527946908389,
+        "strategy_digest": "35e547c5e4b0bf62"
+      },
+      {
+        "campaign_index": 37,
+        "fill_log_digest": "a37689a96a547090ad98a28954657d19e9f739cea8be407d6d6dc57dca09f1e6",
+        "outcome": "completed",
+        "score": -0.047571322260846795,
+        "strategy_digest": "a4a687e43f555fd5"
+      },
+      {
+        "campaign_index": 38,
+        "fill_log_digest": "b60d87e2db473e3e5f05556ac533de83cb17f8ee6a98d1099a5adbc7854ccff0",
+        "outcome": "completed",
+        "score": -0.0653313805949255,
+        "strategy_digest": "874f59144bcb305d"
+      },
+      {
+        "campaign_index": 39,
+        "fill_log_digest": "b495c8cb938a260a9993d9398b8e8b35ca35e9418f616c9963590ae01447e065",
+        "outcome": "completed",
+        "score": -0.03036810351791678,
+        "strategy_digest": "b3338b5d98b83367"
+      },
+      {
+        "campaign_index": 40,
+        "fill_log_digest": "7de0b267afcfe6bed5b1686873c9e719c00d832e2be313b55e4235d1c504b99f",
+        "outcome": "completed",
+        "score": -0.04376866088514026,
+        "strategy_digest": "c174135d6a2ef7d3"
+      },
+      {
+        "campaign_index": 41,
+        "fill_log_digest": "2d1f14afb949e1d37fc625578e1d6ecd6a3fd1443b308aae97a177e464e4bfa5",
+        "outcome": "completed",
+        "score": -0.04830179847834678,
+        "strategy_digest": "e34918108f74653e"
+      },
+      {
+        "campaign_index": 42,
+        "fill_log_digest": "42eed326a2aee7fb021cad680061c28b0abba048a4dade8a225ac5d8beacf9bd",
+        "outcome": "completed",
+        "score": -0.0034282665760578678,
+        "strategy_digest": "a2cbd9623a7e131f"
+      },
+      {
+        "campaign_index": 43,
+        "fill_log_digest": "8c292e83d3eb4852645a8463cb118314159f97fe1344cf480a32fa072f53832f",
+        "outcome": "completed",
+        "score": -0.049541112938054986,
+        "strategy_digest": "4833da554da9a1a4"
+      },
+      {
+        "campaign_index": 44,
+        "fill_log_digest": "640495ba3d3c96987a6d8b4ae97dcd4923adbca683bb9a86cecf5bf9e6df4664",
+        "outcome": "completed",
+        "score": 0.02560948800058127,
+        "strategy_digest": "44ad27e00afb7b19"
+      },
+      {
+        "campaign_index": 45,
+        "fill_log_digest": "a152d168e852bdbe76c9a6719782e725974ff7250f468d5e9724cc66dc61a469",
+        "outcome": "completed",
+        "score": 0.0001978806606733347,
+        "strategy_digest": "2e42279ed4e96f4e"
+      },
+      {
+        "campaign_index": 46,
+        "fill_log_digest": "e2e5d1271718c76101a6be5294c9f30b6b79a039417f03ab8feda0821feb9295",
+        "outcome": "completed",
+        "score": -0.0034282665760578678,
+        "strategy_digest": "575dfa2f2ba9000b"
+      },
+      {
+        "campaign_index": 47,
+        "fill_log_digest": "e2e5d1271718c76101a6be5294c9f30b6b79a039417f03ab8feda0821feb9295",
+        "outcome": "completed",
+        "score": -0.0034282665760578678,
+        "strategy_digest": "33218b24a70642c6"
+      },
+      {
+        "campaign_index": 48,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "b401fba791f3ad0e"
+      },
+      {
+        "campaign_index": 49,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "5c52a700d1838380"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 48,
+      "crashed": 2
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 50,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 0.2505995494687671,
+    "mean": -0.22933486963814717,
+    "min": -0.8540599136081927,
+    "n_draws": 420000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.18775913028456415
+  },
+  "provenance": {
+    "artifact_fingerprint": "24d46b5637bca91479b1836e801a6240f36939b98a359822ef75f2a826fba082",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/run.yaml": "c1707af24af2d02616ae761fdca09f5c83a3cc50005ccef5481d8ee6ca98c133",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "deb04049fdc2d15f3d204a75c6102e27d3c239cfb245e47b1547f6426cb1049d"
+    },
+    "code_fingerprint": "68fe3d8bca23c8cd93cf20e286adfc7c82d0c0aba19907e9ba7edb3abf33784a",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "1780999a09c5f53172887db2f7008c9235d2f685bf7f64ee487d213c8eef9361",
+    "git_sha": "9a1cd51dfc61e04d08cc68a5fdc567f7f37d66f3",
+    "isolation": {
+      "address_space": {
+        "active": false,
+        "mechanism": "unavailable: RLIMIT_AS/DATA/RSS cannot be set"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "scored campaigns should run on Linux; see docs/design/architecture.md",
+      "filesystem": {
+        "active": true,
+        "mechanism": "sandbox-exec profile (deprecated)"
+      },
+      "level": "best-effort",
+      "network": {
+        "active": true,
+        "mechanism": "denied by the same profile"
+      },
+      "platform": "Darwin",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.11.5",
+    "scoring_fingerprint": "6b5f93783bb17ce951844df41fc656c38a9eca30a8fdb43180f73f7749225610"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-09-20T04:22:41+00:00"
+}

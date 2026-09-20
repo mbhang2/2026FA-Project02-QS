@@ -1,0 +1,571 @@
+{
+  "campaign_id": "nq-mvp-01",
+  "record_digest": "602a18d2885fe587d9897c124cc80285d6f2dcdcab7359c6c9718c3d32a9377f",
+  "record_tampered": false,
+  "budget": 50,
+  "q": 0.05,
+  "n_trials": 50,
+  "harness_failures": 0,
+  "unaccounted": 0,
+  "outcomes": {
+    "completed": 48,
+    "crashed": 2
+  },
+  "per_trial_accepts_at_0.001": 0,
+  "diagnostics_only": {
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "correction": {
+      "n": 50,
+      "q": 0.05,
+      "bh_discoveries": 0,
+      "holm_discoveries": 0,
+      "uncorrected_discoveries": 0,
+      "best_far": 0.23762821163761105,
+      "best_label": "None:44ad27e0",
+      "decisions": [
+        {
+          "index": 44,
+          "label": "None:44ad27e0",
+          "far": 0.23762821163761105,
+          "rank": 1,
+          "bh_critical": 0.001,
+          "bh_accepted": false,
+          "holm_critical": 0.001,
+          "holm_accepted": false
+        },
+        {
+          "index": 45,
+          "label": "None:2e42279e",
+          "far": 0.3632405219914701,
+          "rank": 2,
+          "bh_critical": 0.002,
+          "bh_accepted": false,
+          "holm_critical": 0.0010204081632653062,
+          "holm_accepted": false
+        },
+        {
+          "index": 42,
+          "label": "None:a2cbd962",
+          "far": 0.3846675264116373,
+          "rank": 3,
+          "bh_critical": 0.003,
+          "bh_accepted": false,
+          "holm_critical": 0.0010416666666666667,
+          "holm_accepted": false
+        },
+        {
+          "index": 46,
+          "label": "None:575dfa2f",
+          "far": 0.3846675264116373,
+          "rank": 4,
+          "bh_critical": 0.004,
+          "bh_accepted": false,
+          "holm_critical": 0.0010638297872340426,
+          "holm_accepted": false
+        },
+        {
+          "index": 47,
+          "label": "None:33218b24",
+          "far": 0.3846675264116373,
+          "rank": 5,
+          "bh_critical": 0.005000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0010869565217391304,
+          "holm_accepted": false
+        },
+        {
+          "index": 0,
+          "label": "None:deb04049",
+          "far": 0.5,
+          "rank": 6,
+          "bh_critical": 0.006,
+          "bh_accepted": false,
+          "holm_critical": 0.0011111111111111111,
+          "holm_accepted": false
+        },
+        {
+          "index": 1,
+          "label": "None:a12ac547",
+          "far": 0.5,
+          "rank": 7,
+          "bh_critical": 0.007000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0011363636363636365,
+          "holm_accepted": false
+        },
+        {
+          "index": 3,
+          "label": "None:1c5bb9d4",
+          "far": 0.5,
+          "rank": 8,
+          "bh_critical": 0.008,
+          "bh_accepted": false,
+          "holm_critical": 0.0011627906976744186,
+          "holm_accepted": false
+        },
+        {
+          "index": 5,
+          "label": "None:31d8f31c",
+          "far": 0.5,
+          "rank": 9,
+          "bh_critical": 0.009,
+          "bh_accepted": false,
+          "holm_critical": 0.0011904761904761906,
+          "holm_accepted": false
+        },
+        {
+          "index": 6,
+          "label": "None:ad1b7260",
+          "far": 0.5,
+          "rank": 10,
+          "bh_critical": 0.010000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0012195121951219512,
+          "holm_accepted": false
+        },
+        {
+          "index": 8,
+          "label": "None:32706c77",
+          "far": 0.5,
+          "rank": 11,
+          "bh_critical": 0.011000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.00125,
+          "holm_accepted": false
+        },
+        {
+          "index": 9,
+          "label": "None:7003cd91",
+          "far": 0.5,
+          "rank": 12,
+          "bh_critical": 0.012,
+          "bh_accepted": false,
+          "holm_critical": 0.001282051282051282,
+          "holm_accepted": false
+        },
+        {
+          "index": 10,
+          "label": "None:98d6153a",
+          "far": 0.5,
+          "rank": 13,
+          "bh_critical": 0.013000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0013157894736842105,
+          "holm_accepted": false
+        },
+        {
+          "index": 11,
+          "label": "None:7088f640",
+          "far": 0.5,
+          "rank": 14,
+          "bh_critical": 0.014000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0013513513513513514,
+          "holm_accepted": false
+        },
+        {
+          "index": 12,
+          "label": "None:256cef8e",
+          "far": 0.5,
+          "rank": 15,
+          "bh_critical": 0.015,
+          "bh_accepted": false,
+          "holm_critical": 0.001388888888888889,
+          "holm_accepted": false
+        },
+        {
+          "index": 13,
+          "label": "None:984cd62e",
+          "far": 0.5,
+          "rank": 16,
+          "bh_critical": 0.016,
+          "bh_accepted": false,
+          "holm_critical": 0.0014285714285714286,
+          "holm_accepted": false
+        },
+        {
+          "index": 14,
+          "label": "None:b3745a61",
+          "far": 0.5,
+          "rank": 17,
+          "bh_critical": 0.017,
+          "bh_accepted": false,
+          "holm_critical": 0.0014705882352941176,
+          "holm_accepted": false
+        },
+        {
+          "index": 15,
+          "label": "None:e638408c",
+          "far": 0.5,
+          "rank": 18,
+          "bh_critical": 0.018,
+          "bh_accepted": false,
+          "holm_critical": 0.0015151515151515152,
+          "holm_accepted": false
+        },
+        {
+          "index": 16,
+          "label": "None:33ccf983",
+          "far": 0.5,
+          "rank": 19,
+          "bh_critical": 0.019000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0015625,
+          "holm_accepted": false
+        },
+        {
+          "index": 17,
+          "label": "None:b2b87fd8",
+          "far": 0.5,
+          "rank": 20,
+          "bh_critical": 0.020000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0016129032258064516,
+          "holm_accepted": false
+        },
+        {
+          "index": 18,
+          "label": "None:83310bf0",
+          "far": 0.5,
+          "rank": 21,
+          "bh_critical": 0.021,
+          "bh_accepted": false,
+          "holm_critical": 0.0016666666666666668,
+          "holm_accepted": false
+        },
+        {
+          "index": 19,
+          "label": "None:d835b2c8",
+          "far": 0.5,
+          "rank": 22,
+          "bh_critical": 0.022000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.001724137931034483,
+          "holm_accepted": false
+        },
+        {
+          "index": 20,
+          "label": "None:1129f7d7",
+          "far": 0.5,
+          "rank": 23,
+          "bh_critical": 0.023000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0017857142857142859,
+          "holm_accepted": false
+        },
+        {
+          "index": 21,
+          "label": "None:aa4841b2",
+          "far": 0.5,
+          "rank": 24,
+          "bh_critical": 0.024,
+          "bh_accepted": false,
+          "holm_critical": 0.001851851851851852,
+          "holm_accepted": false
+        },
+        {
+          "index": 23,
+          "label": "None:e03e63c6",
+          "far": 0.5,
+          "rank": 25,
+          "bh_critical": 0.025,
+          "bh_accepted": false,
+          "holm_critical": 0.0019230769230769232,
+          "holm_accepted": false
+        },
+        {
+          "index": 24,
+          "label": "None:42954a5c",
+          "far": 0.5,
+          "rank": 26,
+          "bh_critical": 0.026000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.002,
+          "holm_accepted": false
+        },
+        {
+          "index": 26,
+          "label": "None:0ff9ef4f",
+          "far": 0.5,
+          "rank": 27,
+          "bh_critical": 0.027000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0020833333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 27,
+          "label": "None:9ec16d08",
+          "far": 0.5,
+          "rank": 28,
+          "bh_critical": 0.028000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.002173913043478261,
+          "holm_accepted": false
+        },
+        {
+          "index": 28,
+          "label": "None:052443e3",
+          "far": 0.5,
+          "rank": 29,
+          "bh_critical": 0.028999999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.002272727272727273,
+          "holm_accepted": false
+        },
+        {
+          "index": 29,
+          "label": "None:b95bc814",
+          "far": 0.5,
+          "rank": 30,
+          "bh_critical": 0.03,
+          "bh_accepted": false,
+          "holm_critical": 0.002380952380952381,
+          "holm_accepted": false
+        },
+        {
+          "index": 30,
+          "label": "None:858c2c13",
+          "far": 0.5,
+          "rank": 31,
+          "bh_critical": 0.031,
+          "bh_accepted": false,
+          "holm_critical": 0.0025,
+          "holm_accepted": false
+        },
+        {
+          "index": 32,
+          "label": "None:a0ba3380",
+          "far": 0.5,
+          "rank": 32,
+          "bh_critical": 0.032,
+          "bh_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "holm_accepted": false
+        },
+        {
+          "index": 33,
+          "label": "None:7ac889d8",
+          "far": 0.5,
+          "rank": 33,
+          "bh_critical": 0.033,
+          "bh_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "holm_accepted": false
+        },
+        {
+          "index": 34,
+          "label": "None:dfe5ef19",
+          "far": 0.5,
+          "rank": 34,
+          "bh_critical": 0.034,
+          "bh_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "holm_accepted": false
+        },
+        {
+          "index": 35,
+          "label": "None:1f2ab1ac",
+          "far": 0.5,
+          "rank": 35,
+          "bh_critical": 0.034999999999999996,
+          "bh_accepted": false,
+          "holm_critical": 0.003125,
+          "holm_accepted": false
+        },
+        {
+          "index": 36,
+          "label": "None:35e547c5",
+          "far": 0.5,
+          "rank": 36,
+          "bh_critical": 0.036,
+          "bh_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "holm_accepted": false
+        },
+        {
+          "index": 37,
+          "label": "None:a4a687e4",
+          "far": 0.5,
+          "rank": 37,
+          "bh_critical": 0.037,
+          "bh_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "holm_accepted": false
+        },
+        {
+          "index": 38,
+          "label": "None:874f5914",
+          "far": 0.5,
+          "rank": 38,
+          "bh_critical": 0.038000000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "holm_accepted": false
+        },
+        {
+          "index": 39,
+          "label": "None:b3338b5d",
+          "far": 0.5,
+          "rank": 39,
+          "bh_critical": 0.03900000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "holm_accepted": false
+        },
+        {
+          "index": 40,
+          "label": "None:c174135d",
+          "far": 0.5,
+          "rank": 40,
+          "bh_critical": 0.04000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "holm_accepted": false
+        },
+        {
+          "index": 41,
+          "label": "None:e3491810",
+          "far": 0.5,
+          "rank": 41,
+          "bh_critical": 0.041,
+          "bh_accepted": false,
+          "holm_critical": 0.005,
+          "holm_accepted": false
+        },
+        {
+          "index": 43,
+          "label": "None:4833da55",
+          "far": 0.5,
+          "rank": 42,
+          "bh_critical": 0.042,
+          "bh_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "holm_accepted": false
+        },
+        {
+          "index": 2,
+          "label": "None:afb290f6",
+          "far": 1.0,
+          "rank": 43,
+          "bh_critical": 0.043000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00625,
+          "holm_accepted": false
+        },
+        {
+          "index": 4,
+          "label": "None:55ed6b4e",
+          "far": 1.0,
+          "rank": 44,
+          "bh_critical": 0.044000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "holm_accepted": false
+        },
+        {
+          "index": 7,
+          "label": "None:33d74b5b",
+          "far": 1.0,
+          "rank": 45,
+          "bh_critical": 0.045000000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 22,
+          "label": "None:48cef2c6",
+          "far": 1.0,
+          "rank": 46,
+          "bh_critical": 0.046000000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.01,
+          "holm_accepted": false
+        },
+        {
+          "index": 25,
+          "label": "None:3225af7a",
+          "far": 1.0,
+          "rank": 47,
+          "bh_critical": 0.047,
+          "bh_accepted": false,
+          "holm_critical": 0.0125,
+          "holm_accepted": false
+        },
+        {
+          "index": 31,
+          "label": "None:2a131669",
+          "far": 1.0,
+          "rank": 48,
+          "bh_critical": 0.048,
+          "bh_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "holm_accepted": false
+        },
+        {
+          "index": 48,
+          "label": "None:b401fba7",
+          "far": 1.0,
+          "rank": 49,
+          "bh_critical": 0.049,
+          "bh_accepted": false,
+          "holm_critical": 0.025,
+          "holm_accepted": false
+        },
+        {
+          "index": 49,
+          "label": "None:5c52a700",
+          "far": 1.0,
+          "rank": 50,
+          "bh_critical": 0.05,
+          "bh_accepted": false,
+          "holm_critical": 0.05,
+          "holm_accepted": false
+        }
+      ],
+      "expected_max_note": ""
+    }
+  },
+  "wall_clock_s": 0.0,
+  "gate": {
+    "n_trials": 42,
+    "b": 10000,
+    "observed_best": 0.02560948800058127,
+    "p": 0.8236176382361764,
+    "p_floor": 9.999000099990002e-05,
+    "at_floor": false,
+    "reject": false,
+    "q": 0.05,
+    "null_max_mean": 0.06076745583413783,
+    "null_max_quantiles": {
+      "0.5": 0.07223464901332036,
+      "0.2": 0.07542538686270059,
+      "0.1": 0.08858825449193643,
+      "0.05": 0.09796025655937875,
+      "0.01": 0.13162456839389639
+    },
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "is_the_gate": true,
+    "observed_best_positive": true,
+    "accept": false,
+    "floor_note": "accept = reject AND observed_best > 0. The second term is not a formality: under a sign-flip null a losing high-turnover candidate can clear the first one decisively."
+  },
+  "uncorrected": {
+    "best_score": 0.02560948800058127,
+    "best_far": 0.23762821163761105,
+    "n_at_or_below_q": 0,
+    "reading": "what a report with no correction would say: the best of 50 candidates scored +0.0256 at a nominal false-acceptance rate of 0.2376"
+  },
+  "deflation": {
+    "best_score": 0.02560948800058127,
+    "expected_max_under_null": 0.16651240644065973,
+    "margin": -0.14090291844007846,
+    "clears_selection_bar": false,
+    "n_trials": 50,
+    "n_sessions": 384,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "null_source": "round_turn_mc",
+  "error_control_note": "The FWER of 0.060, CI [0.041, 0.088], is the CONDITIONAL null with max_of_n at R = 150 (Task 38). It does not describe this campaign, whose null is the sign-flip over round turns. See docs/design/pre-registration.md sections 3a and 3b."
+}

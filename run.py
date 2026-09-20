@@ -420,6 +420,21 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
                 warmup_sessions=warmup_sessions,
                 seed=seed,
                 wall_clock_budget_s=profile.get("wall_clock_budget_s"),
+                # **The profile's cost model, which this did not read until
+                # Task 60.** `commission_per_contract` was declared in
+                # `config/run.yaml`, copied into the campaign record, and printed
+                # in the agent's run facts -- and never reached the engine, which
+                # fell back to its own default of 0.01. That default is scaled for
+                # the synthetic generator's price units and is TEN TIMES too cheap
+                # on NQ, so `nq-mvp-01` ran at a tenth of the intended cost and
+                # every artefact said otherwise.
+                #
+                # The default stays 0.01 in `Engine` for synthetic profiles that
+                # do not set one; `_run_and_score` asserts the charged total
+                # matches fills x rate, so a rate that fails to arrive is loud
+                # rather than silent.
+                **({"commission_per_contract": profile["commission_per_contract"]}
+                   if "commission_per_contract" in profile else {}),
             )
             record = _run_and_score(cfg, profile, engine, strategy, split, seed,
                                     ledger_path)
@@ -513,6 +528,23 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     # acts on comes from the fill log, which nothing reachable from a
     # strategy can touch.
     scored_blotter = engine.reconstructed()
+
+    # **The rate that was configured is the rate that was charged.** Task 60:
+    # `commission_per_contract` reached the record and the prompt but not the
+    # engine, so a campaign ran at a tenth of its stated cost and every artefact
+    # said 0.10 while the P&L said 0.01. Nothing cross-checked the two, and this
+    # identity would have caught it on the first trial.
+    want = profile.get("commission_per_contract", engine.commission)
+    charged = sum(r.commission for r in scored_blotter.rows)
+    expected = want * sum(r.size for r in scored_blotter.rows)
+    if abs(charged - expected) > 1e-9 * max(1.0, abs(expected)):
+        raise ScoringMismatch(
+            f"the profile charges {want} per contract per side and the blotter "
+            f"paid {charged:.6f} on {sum(r.size for r in scored_blotter.rows)} "
+            f"contract-fills, which should be {expected:.6f}. The configured "
+            "cost model did not reach the engine, so the P&L is not the P&L "
+            "the record describes.")
+
     reconciliation = engine.reconciliation()
     if not reconciliation["agree"]:
         raise ScoringMismatch(

@@ -579,6 +579,89 @@ session had no exposure" applies identically to the observed series and to all
 untouched, so `trade_count` and commission remain honest and gross-versus-net
 arithmetic still reaches the economics auditor unchanged.
 
+### What "a session with no exposure" must mean
+
+**Not "a session with no fills", which is what `sessions_with_exposure` counts
+today** (`metrics.py`, `per_session_rows`: sessions holding at least one blotter
+row). That definition reopens the corner case one level down — one lot held for
+one minute in every session pays no idle charge at all while the strategy is
+effectively flat.
+
+It happens to be unprofitable right now, and only just: 384 token round turns cost
+**76.8** points in commission against **69.1** for never trading. The margin is
+7.7 points, and it exists solely because commission per trade (0.20) exceeds the
+idle charge per session (0.18). **Break-even is 0.20.** A charge set anywhere at or
+above the commission rate makes token participation the cheaper option, and the
+coupling between those two numbers is invisible to anyone reading either one.
+
+So exposure is **time-weighted**: the fraction of the session during which a
+position was held, with `IDLE_CHARGE * (1 - fraction)` charged against it. A
+one-minute hold in a 6.5-hour session pays 0.1795 of 0.18 rather than nothing.
+This closes the case structurally instead of by numerical coincidence, and it is
+Brian's "minimum quote size that is not zero" in continuous form. `_holding_periods`
+already exists, so the inputs are present.
+
+### The participation floor, and what it is not for
+
+`min_exposed_sessions` becomes a campaign setting beside N, `null_source`,
+`correction` and q, written into `campaign.json` at registration so the digest
+covers it — the same machinery that stops the hypothesis changing mid-campaign.
+
+**Its job is statistical validity, not enforced activity**, and it defaults to the
+existing 30. A floor is a constraint on the feasible set rather than a term in the
+objective, so it is the safe kind under Ng — but it is the wrong tool for this
+problem, for two reasons:
+
+- *It pins rather than removes.* Inside the feasible region the gradient still
+  points at less trading, so the agent lands on exactly the floor and stays there.
+  The corner moves; it does not close.
+- *It answers the question by fiat.* If absorption genuinely fires 40 times a
+  year, a floor of 100 makes the real phenomenon unrepresentable and the agent
+  must pad with filler to clear the bar. The campaign then tests "absorption plus
+  filler", and the pre-registered question is no longer the one being answered.
+
+Setting it high to express "a strategy trading 8 times is not worth deploying" is
+legitimate, but it is a **business preference that narrows what is testable**, and
+it is recorded as one rather than as a fix for reward hacking.
+
+### The charge is bounded above as well as below
+
+Re-scoring `nq-orderflow-01`'s trials exactly — flat sessions contributed 0, so
+the new mean and downside sum follow in closed form — gives the correlation
+between exposed sessions and score:
+
+| charge | corr(exposed, score) | best trial |
+|---|---|---|
+| 0.0 | **-0.949** | trial 16, 8 exposed |
+| 0.10 | +0.352 | trial 3, 140 exposed |
+| **0.18** | **+0.622** | trial 4, 208 exposed |
+| 0.30 | +0.758 | trial 4, 208 exposed |
+| 1.00 | +0.960 | trial 0, **355 exposed** |
+
+The least-active trial falls from 4th of 22 to last. But **at 1.00 the winner is
+trial 0, the worst strategy in the campaign** — it lost 507 points and wins on
+activity alone. That is the mirror hack: churn to dodge the charge. The charge
+needs an upper bound as well as a lower one, and the bound is the same economic
+argument — charging more than the true cost of capital is a thumb on the scale in
+the other direction.
+
+**The order of reasoning matters and is recorded deliberately.** 0.18 was derived
+from the cost of capital *before* this table was computed. The table is a sanity
+check that the honest number lands in a workable window, **not** the source of the
+number. Choosing the charge because the table preferred it would be fitting a
+threshold to results, which section 5 already refuses to do for the decay rule.
+
+### Correction to an earlier claim in this amendment
+
+An earlier draft said the corner case is closed scale-invariantly, so the level of
+the charge only sets the hurdle. **That is true only at the never-trade limit.**
+Across the realistic range the score becomes monotone in participation only once
+the charge is comparable to the session return volatility: at a per-session
+volatility of 1.0 a charge of 0.18 achieves it and 0.10 does not; at volatility
+2.0 it takes 0.30. The requirement tracks volatility rather than the strategy's
+loss rate, which is why a single charge can work across candidates where a fixed
+`lambda` could not.
+
 ### Open, and to be settled before this takes effect
 
 1. **The level of `IDLE_CHARGE`.** It is a cost of capital, so the question is

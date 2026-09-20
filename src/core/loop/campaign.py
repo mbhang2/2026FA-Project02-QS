@@ -314,8 +314,27 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
                      "something atypical, and that the bill is going up."),
         }
     if null_samples:
-        gate = max_of_n(null_samples, max(scores) if scores else float("-inf"), q=q)
+        observed_best = max(scores) if scores else float("-inf")
+        gate = max_of_n(null_samples, observed_best, q=q)
         gate["is_the_gate"] = True
+        # **The floor, and it is load-bearing rather than decorative.** `reject`
+        # means "reject the null": the best of N beat what N nulls would produce.
+        # Under the sign-flip null that is a statement about DIRECTIONAL SKILL and
+        # not about profit, because holding the trade count fixed makes a
+        # high-turnover candidate's null commission-dominated. Measured while
+        # building `round_turn.py`: a strategy losing 3,275 points scored p =
+        # 0.0005 against its own null. It beat coin flips and still lost money.
+        #
+        # So the campaign decision is the conjunction, and `accept` is the field
+        # a caller should read. `reject` keeps its narrow meaning so nothing that
+        # already reads it changes.
+        gate["observed_best"] = observed_best
+        gate["observed_best_positive"] = bool(observed_best > 0)
+        gate["accept"] = bool(gate["reject"] and observed_best > 0)
+        gate["floor_note"] = (
+            "accept = reject AND observed_best > 0. The second term is not a "
+            "formality: under a sign-flip null a losing high-turnover candidate "
+            "can clear the first one decisively.")
         out["gate"] = gate
     else:
         out["gate"] = {

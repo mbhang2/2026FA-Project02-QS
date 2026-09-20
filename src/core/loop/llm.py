@@ -172,6 +172,17 @@ class LLMAgent:
     # `Hypothesis`, never a path and never raw text, so there is no route by
     # which unlinted prose reaches a prompt.
     hypothesis: "Hypothesis | None" = None
+    # **What the agent is shown as "the current strategy".** `None` means the
+    # committed baseline, which is what every campaign before Task 56 did: the
+    # file never advanced, so the agent re-derived from the same starting point
+    # every trial and its own best work reached it only as text in the history.
+    #
+    # Set this to a path and the loop gets Karpathy's semantics -- the champion
+    # IS the base for the next edit. It is deliberately not
+    # `src/strategies/current.py`: that file is an `ARTIFACT_GLOBS` entry, so
+    # leaving a candidate in it would change the artifact fingerprint of every
+    # subsequent run. The champion is campaign state and lives beside the ledger.
+    champion: Path | None = None
     # Everything below is state, not configuration.
     calls: list[Call] = field(default_factory=list, init=False, repr=False)
     _pending: list[Call] = field(default_factory=list, init=False, repr=False)
@@ -211,6 +222,7 @@ class LLMAgent:
                     "path": str(self.hypothesis.path.relative_to(REPO_ROOT)),
                     "digest": self.hypothesis.digest,
                 }),
+            "champion_carry_forward": self.champion is not None,
             "show_history": self.show_history,
             "history_full_sources": self.history_full_sources,
             "shows_the_gate": False,
@@ -313,7 +325,10 @@ class LLMAgent:
         return (not errors), "; ".join(errors[:6])
 
     def _prompt(self, history: Sequence[dict], *, repair: str) -> str:
-        current = (REPO_ROOT / "src" / "strategies" / "current.py").read_text()
+        if self.champion is not None and self.champion.is_file():
+            current = self.champion.read_text()
+        else:
+            current = (REPO_ROOT / "src" / "strategies" / "current.py").read_text()
         return self._template.format(
             api=self._docs["api"],
             context_api=self._docs["context_api"],

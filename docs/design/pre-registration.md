@@ -701,25 +701,44 @@ deliberately rather than inherit.
 gross and net P&L and the round-turn construction are unchanged; only the
 reassembled per-session vector carries the charge.
 
-### Open, and to be settled before this takes effect
+### Settled — 2026-09-20, with Michael
 
-1. **The level of `IDLE_CHARGE`.** It is a cost of capital, so the question is
-   what capital is committed. Risk-free on margin (~$20k a contract at ~4.5%/252)
-   is about **0.18 points a day**; on notional (NQ ~20,000 x $20) about **3.57**.
-   The range is decisive rather than cosmetic: at 0.18 even a +0.15/session edge is
-   negative everywhere. And these strategies are flat overnight, so a full-day
-   charge on every calendar day overcharges capital that is not deployed.
-   **To be derived and pre-registered, never fitted to a result.**
-2. **Idle-only, or a hurdle on every session?** This amendment charges idle
-   sessions only, which is the "cost of cash held" reading. The standard
-   alternative is `MAR = hurdle` on all sessions, which also charges traded
-   sessions that underperform the hurdle. Idle-only is the narrower claim.
-3. **`MIN_DOWNSIDE_SESSIONS` goes inert.** Every charged idle session falls below
-   MAR, so the downside count jumps to roughly the flat count and the Sharpe
-   fallback would essentially never fire again. Not obviously wrong, but it is a
-   behaviour change that should be chosen rather than inherited.
-4. **Comparability breaks.** Every score computed before this is incomparable with
-   every score after. A clean break, recorded here, not smoothed over.
+1. **`IDLE_CHARGE = 0.18` index points per session.** Cost of capital: about
+   $20,000 initial margin at ~4.5%, over 252 days, at $20 a point
+   (`20000 * 0.045 / 252 / 20 = 0.179`). Across plausible inputs -- margin
+   $15k-$30k, rates 4-5% -- the derivation spans **0.12 to 0.30**, and the
+   measured window in which the incentive points at participation without
+   rewarding churn is **0.10 to 0.30**. 0.18 sits inside both, which is the
+   claim being made: it is a reasonable economic figure that is also effective,
+   not a precise one. **Frozen into `campaign.json` at registration.** If margin
+   or rates move materially it is re-derived, never re-fitted to a result.
+2. **Idle sessions only, not a hurdle on every session.** The narrower
+   intervention: it charges "the strategy was not there", not "the strategy was
+   there and underperformed". Only the first is the corner case.
+3. **Exposure is time-weighted**, per the section above.
+4. **The Sharpe fallback retires, and that is accepted.** It existed because
+   Sortino's denominator could rest on too few losing sessions; the charge
+   guarantees a populated denominator. It still fires for a strategy that trades
+   nearly every session and loses in almost none, which is the case it was for.
+   Reversible by raising `MIN_DOWNSIDE_SESSIONS` if that proves wrong.
+5. **`min_exposed_sessions` is NOT adopted.** Considered and dropped: a floor
+   leaves the gradient intact and the agent parks on it (measured: 384 -> -0.0785,
+   200 -> -0.0637, 100 -> +0.0075, still monotone toward less trading), and set
+   high it makes a genuinely rare phenomenon unrepresentable. The existing
+   `MIN_SESSIONS = 30` stays exactly as it is.
+6. **Comparability breaks at this commit.** `nq-mvp-01` and `nq-orderflow-01` were
+   scored under `MAR = 0` with no charge and are not comparable to anything after
+   it. A clean break, stated, not smoothed over. `nq-orderflow-01` is retained
+   deliberately as the unconstrained arm: the follow-up campaign re-runs the same
+   hypothesis, data, N and model with the charge on, so the two differ in one
+   thing.
+
+### Still open
+
+- **Brian's review.** The diagnosis is his; the retirement of the Sharpe fallback
+  (4) and the decision not to adopt a participation floor (5) are the two places
+  where a second opinion is most worth having, since both were reasonable
+  alternatives.
 
 ### What this does not claim
 

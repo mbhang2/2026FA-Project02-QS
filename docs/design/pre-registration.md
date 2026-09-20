@@ -428,3 +428,52 @@ keeps the incumbent so the base does not drift between equivalent files.
 N = 50, q = 0.05, `null_source: round_turn_mc`, `correction: max_of_n`, NQ train,
 commission 0.10 a side, model `claude-haiku-4-5`, hypothesis
 `config/hypotheses/intraday-continuation.md`.
+
+---
+
+## Amendment 2 — 2026-09-20
+
+**The committee is four auditors, and §6 now means this concretely.**
+`audit/committee/` runs **leakage, statistics, economics, robustness** over one
+completed campaign, in parallel, each with its own evidence slice. Any one may
+VETO; any may say CANNOT_TELL; none can approve, and `AuditorVerdict` raises on a
+verdict that would mean approval.
+
+**The isolation invariant is that no auditor sees another auditor's verdict**, not
+that each sees a disjoint set of facts. Two auditors reading the same source for
+different questions is two reviews; showing one the other's conclusion is how four
+opinions collapse into the first one.
+
+**Economics owns the question nobody else asks: does the code implement the
+hypothesis?** The hypothesis is pre-registered and hashed into the record and the
+proposing agent is shown it, but until now nothing verified the link. A campaign
+whose code tests something else answered a different question from the one
+registered, and that matters more than any number in the evidence.
+
+**How much latitude the agent gets is set by how specifically the hypothesis is
+written, and that is the author's choice.** This is worth knowing *before* writing
+one:
+
+- *Specific* — "an ATR-based momentum breakout strategy" names the volatility
+  measure, the direction and the entry style. A fade, or a fixed point threshold
+  with no volatility normalisation, is a different strategy and is vetoable.
+- *General* — "an orderflow imbalance strategy" names a family and nothing else.
+  Any imbalance measure, horizon or entry rule is inside it, and vetoing a
+  particular choice would substitute the auditor's judgement for the author's.
+- *A question* — "does an outsized move continue, or give it back?" has more than
+  one correct answer. Testing either arm is a correct implementation. Only
+  ignoring the premise is not.
+
+**Drift across a campaign's trials is expected and is not a finding.** The agent
+refines as it goes; that is the search working. The auditor sees the winner, and
+the only question is whether the winner is still inside the guardrail.
+
+A vague hypothesis is a weakness in the pre-registration rather than a fault in
+the code, and the auditor is instructed to say so and pass rather than invent a
+constraint the author did not write.
+
+**Economics also judges whether the hypothesis is feasible at all** — a per-trade
+edge smaller than spread plus commission, a horizon the fill model cannot support.
+That is a minor question while a human writes hypotheses and becomes the main one
+when a retrieval pipeline generates them, because a machine-proposed hypothesis
+has had no sanity check before it reaches the loop.

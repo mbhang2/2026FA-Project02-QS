@@ -477,3 +477,132 @@ edge smaller than spread plus commission, a horizon the fill model cannot suppor
 That is a minor question while a human writes hypotheses and becomes the main one
 when a retrieval pipeline generates them, because a machine-proposed hypothesis
 has had no sanity check before it reaches the loop.
+
+---
+
+## Amendment 3 — 2026-09-20 — the idle-capital charge, and why the metric was hackable
+
+**Status: DRAFT, not in force.** Written while `nq-orderflow-01` is running and
+before any code changes. Nothing below applies to `nq-mvp-01` or
+`nq-orderflow-01`; both were scored under `MAR = 0` and stay that way.
+
+### What went wrong
+
+`MAR = 0.0` and a return vector over the full calendar make **sitting out
+profitable for a losing strategy**. It is arithmetic, not a tendency:
+
+`sortino = sum(r) / sqrt(n * sum_of_squared_losses)`, so for a fixed set of trades
+`|sortino| ~ 1/sqrt(n)`. Padding the vector with flat sessions leaves the
+numerator and the losses untouched and grows `n`, which drags a negative score up
+toward zero. Measured on one fixed 40-session sample: **-0.0299 scored over its
+own 40 sessions, -0.0097 padded to 384.** Identical trades, identical losses.
+
+The agent optimises that score, so it learns to stop trading. `nq-mvp-01` ended on
+3 trades in 384 sessions. `nq-orderflow-01`'s best trials at the time of writing
+are its three least active (26, 8 and 27 sessions with exposure) while everything
+trading 100+ sessions sits at -0.17 to -0.22. Brian Peterson named it on
+2026-09-20: **reward hacking** — "if trading is most likely to result in a loss
+(no edge), then the agent will learn to not trade."
+
+**The gate was never fooled; the search was.** A p-value is a rank statistic, so
+the common `1/sqrt(n)` factor cancels between a candidate's observed score and its
+own null: measured p is **0.8846 at every padding level** while the observed score
+moves from -0.2398 to -0.0774. `nq-mvp-01`'s REJECT was correct. What the padding
+corrupts is which candidate the search climbs toward -- and, because `max_of_n`
+picks the best by raw score, which candidate is *selected* across a campaign with
+varying participation.
+
+### The change
+
+**A session in which the strategy held no position is charged `IDLE_CHARGE`
+index points**, applied when the per-session return vector is built. Sessions
+with exposure are not charged.
+
+Two properties make this the form to use:
+
+- **It reverses the gradient rather than flattening it.** A losing strategy now
+  scores worse the less it trades (-0.2985 at 300 exposed sessions, -0.7096 at 8,
+  at a charge of 0.18); a winning strategy scores better the more it trades. An
+  earlier draft of this amendment proposed scoring only exposed sessions, which
+  makes the score merely *indifferent* to participation. Reversing beats
+  flattening, and this is Brian's "constrain or penalise the corner case".
+- **Never trading scores exactly -1 for any positive charge** — 0.001 and 3.57
+  give the same answer. The corner case is closed scale-invariantly, so the level
+  of the charge does not decide *whether* the pathology dies, only the hurdle
+  faced by the middle of the range.
+
+### Why not a penalty term on the score
+
+`score - lambda * (fraction not traded)` was considered and **rejected**, on two
+grounds.
+
+*It cannot work arithmetically.* The sit-out gain is proportional to the
+strategy's own loss magnitude, because it comes from `1/sqrt(n)`. Going from 300
+to 30 exposed sessions gains a heavy loser **+0.189** and a mild loser **+0.005**.
+A fixed `lambda` is a constant subtraction and cannot cancel a per-candidate
+scaling term: whichever value neutralises one over-penalises the other.
+
+*And it has no safety guarantee.* Ng, Harada & Russell (1999), *Policy Invariance
+Under Reward Transformations*, show potential-based shaping is the only additive
+class that provably preserves the optimal policy — and it telescopes to
+`gamma^T Phi(s_T) - Phi(s_0)`, a constant over a fixed-endpoint trajectory, so it
+**cannot change which strategy wins**. That is the dilemma: a shaping term that
+preserves the optimum cannot fix a problem whose symptom *is* the wrong optimum,
+and one that moves the optimum is outside the guaranteed class and may reorder
+legitimate candidates invisibly. The fix therefore has to change what the
+objective *measures*, not add a term to it. The idle charge changes the return
+series; it is not a shaping term.
+
+Our loop is not an MDP — there is no discount factor and the score is one scalar
+over a whole backtest — so the theorem does not apply literally. It is recorded
+because the warning transfers: no potential-based guarantee is available to us at
+this level, so no invented additive term carries one either.
+
+### Why not synthetic losing trades
+
+The same charge could be implemented as tagged loss rows in the blotter, with the
+tag excluding them from the sign-flip. **Rejected as an implementation, not as an
+idea** — the semantics above are exactly that proposal's.
+
+The tag would be load-bearing in at least six places: `round_turns()`, commission
+accounting, `trade_count`, `gross_pnl` diagnostics, blotter reconciliation, and
+the economics auditor's evidence slice. Each is a silent-corruption site, and the
+cost of missing one is not small: a synthetic loss that reaches the sign-flip is
+flipped into a synthetic *gain*, and measured p moves from **0.0367 to 0.1813**.
+
+None of that is needed, because **the set of sessions with exposure is invariant
+under the null.** `null_from_turns` assigns each turn to `slot` from
+`turn.session`; flipping a sign changes the contribution, never which session it
+lands in. A flat session has no round turn to flip, so a charge keyed on "this
+session had no exposure" applies identically to the observed series and to all
+10,000 draws with nothing to mark and nothing to remember. The blotter stays
+untouched, so `trade_count` and commission remain honest and gross-versus-net
+arithmetic still reaches the economics auditor unchanged.
+
+### Open, and to be settled before this takes effect
+
+1. **The level of `IDLE_CHARGE`.** It is a cost of capital, so the question is
+   what capital is committed. Risk-free on margin (~$20k a contract at ~4.5%/252)
+   is about **0.18 points a day**; on notional (NQ ~20,000 x $20) about **3.57**.
+   The range is decisive rather than cosmetic: at 0.18 even a +0.15/session edge is
+   negative everywhere. And these strategies are flat overnight, so a full-day
+   charge on every calendar day overcharges capital that is not deployed.
+   **To be derived and pre-registered, never fitted to a result.**
+2. **Idle-only, or a hurdle on every session?** This amendment charges idle
+   sessions only, which is the "cost of cash held" reading. The standard
+   alternative is `MAR = hurdle` on all sessions, which also charges traded
+   sessions that underperform the hurdle. Idle-only is the narrower claim.
+3. **`MIN_DOWNSIDE_SESSIONS` goes inert.** Every charged idle session falls below
+   MAR, so the downside count jumps to roughly the flat count and the Sharpe
+   fallback would essentially never fire again. Not obviously wrong, but it is a
+   behaviour change that should be chosen rather than inherited.
+4. **Comparability breaks.** Every score computed before this is incomparable with
+   every score after. A clean break, recorded here, not smoothed over.
+
+### What this does not claim
+
+It does not make the metric unhackable; it closes one corner case that was found
+by watching an agent walk into it. `MIN_SESSIONS = 30` counts **calendar**
+sessions and so is satisfied trivially by any NQ run — it has never been a
+participation floor, whatever its comment implies, and this amendment does not
+make it one.

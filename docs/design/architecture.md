@@ -1306,6 +1306,41 @@ configuration rather than by accident.
 
 ---
 
+## 8c. `audit/committee/` — four auditors, per campaign, any one can veto
+
+Task 58. Tier 3's deterministic gates answer structural questions; this answers
+the ones that need reading. Four LLM auditors — **leakage, statistics, economics,
+robustness** — review one completed campaign in parallel and each may **VETO** or
+say **CANNOT_TELL**. There is no verdict meaning approval and `AuditorVerdict`
+raises on one, for the same reason `tier3.Verdict` has three members.
+
+**Isolation is the mechanism.** Each auditor gets its own call and its own
+evidence slice, and never sees another's evidence or verdict. Show them each
+other's findings and they anchor — the fourth rubber-stamps three PASSes, and
+"any one can veto" becomes "the first one decides". `tests/test_committee.py`
+asserts the slices are disjoint: only leakage sees the source, and leakage does
+not see the gate's verdict, so it reads the file rather than agreeing with a
+number.
+
+**It has its own model client** (`audit/committee/llm.py`), about sixty lines,
+because `audit/` imports nothing from `src.core` and that separation is what lets
+either tier be replaced. A test asserts the boundary rather than trusting it. The
+one thing copied rather than reinvented is the substitution check.
+
+**Measured on its first live run**, against `nq-mvp-01` (`docs/reviews/task56/`):
+four parallel calls, **10 seconds**, three independent vetoes and one PASS.
+Leakage passed the code; statistics vetoed the Sortino→Sharpe fallback and a
+ratio estimated from three trades; economics vetoed a degenerate optimum at $0.63
+net; robustness vetoed 50% of profit in one session. **They found from four
+disjoint slices what a human took an hour to find with all of it**, and economics
+reported the one gap in its own evidence — the commission rate, which the first
+draft looked for under the wrong key.
+
+**What none of them can see**, stated in the statistics prompt rather than left
+to inference: how many campaigns came before. Two campaigns with identical
+evidence, one a first look and one a twenty-seventh, are indistinguishable to any
+reviewer because the look count is not a property of the campaign under review.
+
 ## 9. Tests
 
 Offline tests assert against committed artifacts and run in CI; live tests re-read

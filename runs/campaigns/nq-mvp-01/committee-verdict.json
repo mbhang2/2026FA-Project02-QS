@@ -1,0 +1,69 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics",
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The strategy reads only closed bars from history and stores prior-bar state in instance variables; no lookahead, future-dated state, or evaluation peeking detected.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "Degenerate metric: the best candidate has only 3 trades across 384 sessions. A Sharpe ratio estimated from 3 trades is not a reliable statistic and is highly susceptible to noise. The strategy's entire result rests on an extremely sparse signal.",
+        "Extreme concentration in downside sessions: only 1 downside session was observed, placing the denominator of the Sortino ratio at the floor. The fallback to Sharpe (noted in reject_reason) confirms the metric is degenerate.",
+        "Kurtosis of 126 indicates extreme outliers dominating the distribution. With only 3 trades, one or two outsized moves are carrying the entire result.",
+        "Inconsistency between views: the gate p-value is 0.824 (strong rejection), the deflation margin is -0.141 (well below the bar), and the uncorrected FAR is 0.238 (no discovery). All three agree the result should be rejected, but the best_candidate_score reports 'rejected: false' despite these signals. The rejection reason cites a Sharpe fallback, not a discovery.",
+        "The observed_best of 0.0256 is far below the null_max_at_q of 0.0980, and the expected_max_under_null of 0.1665 dwarfs it. This is not a borderline case; the result is decisively below noise."
+      ],
+      "confidence_note": "I cannot see the strategy code or session-by-session returns, so I cannot verify whether the 3 trades are real or an artifact of filtering, nor can I assess whether the extreme kurtosis reflects genuine market conditions or a data issue.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "Degenerate optimum: 3 trades over 384 sessions (0.78% of sessions with any exposure) is a signature of inactivity optimization, not signal discovery. The strategy has found that doing almost nothing scores well when activity is costly.",
+        "Commission dominates outcome: commission paid ($0.06) is 8.7% of gross P&L ($0.69). On a $20/point contract with only 3 trades, the cost structure is the primary determinant of the result, not any trading edge.",
+        "Implausible activity for the instrument: 3 contracts over 384 sessions with only 3 sessions of exposure suggests the strategy is not actually trading NQ; it is avoiding it. This is not a viable strategy discovery.",
+        "Extreme max drawdown (-77%) with minimal trade count indicates the few trades taken were poorly timed or the result is noise from a near-inactive baseline."
+      ],
+      "confidence_note": "The P&L is positive and net is real, but the economic signal is entirely obscured by the cost model and the near-zero activity rate; this is a cost-avoidance artifact, not a discovery.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Extreme concentration: best_session_share of 0.5 means a single session accounts for 50% of total profit. Removing it would flip the result from positive to negative.",
+        "Minimal trade count: only 3 trades executed across 384 sessions. The strategy is almost entirely inactive, making any observed profit unreliable.",
+        "Profit concentration in top 5%: 100% of profits come from the top 5% of sessions, indicating the result is entirely dependent on a handful of outlier outcomes.",
+        "Temporal clustering: positive returns concentrated in exactly two months (Nov and Dec 2024) and two specific hours (09 and 18 UTC), with a single negative month (Aug). This is a narrow temporal window.",
+        "Only 1 downside session across 3 sessions with exposure suggests insufficient negative outcome sampling to assess robustness.",
+        "Tiny per-cell counts acknowledged by the campaign itself ('at a few hundred sessions the per-cell counts in these breakdowns are tiny'), making the by_hour and by_weekday breakdowns unreliable for assessing true patterns."
+      ],
+      "confidence_note": "The data clearly shows extreme concentration in both time and outcome space; the robustness axis is the one place where this concentration is directly visible and measurable.",
+      "error": null
+    }
+  ],
+  "model": "claude-haiku-4-5",
+  "model_served": "claude-haiku-4-5",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "1dcfa3999a17acd0",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

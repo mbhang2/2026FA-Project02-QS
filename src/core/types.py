@@ -194,6 +194,32 @@ class Bar:
     volume: int
     tick_count: int
     session: int
+    # **Signed volume, split by the aggressor the feed reports.** `volume` stays
+    # the total, so `volume - buy_volume - sell_volume` is the part whose
+    # aggressor the feed did not say. That residual is carried rather than
+    # folded into either side for the reason `Tick.side` documents: silently
+    # treating "unknown" as "buy" is how every order-flow feature ever written
+    # against an ambiguous feed goes wrong. On the NQ trades feed it is
+    # negligible -- one tick in 352,531 on the first train session -- but a
+    # different adapter may not be so clean, and `unknown_volume` is how a
+    # strategy finds out rather than assumes.
+    buy_volume: int = 0
+    sell_volume: int = 0
+
+    @property
+    def delta(self) -> int:
+        """Aggressive buying minus aggressive selling, in contracts.
+
+        The quantity order-flow work is built on: positive means buyers were
+        lifting the offer, negative means sellers were hitting the bid. Unknown-
+        aggressor volume is in neither term.
+        """
+        return self.buy_volume - self.sell_volume
+
+    @property
+    def unknown_volume(self) -> int:
+        """Volume the feed gave no aggressor for. Usually zero; check it."""
+        return self.volume - self.buy_volume - self.sell_volume
 
     @property
     def is_empty(self) -> bool:

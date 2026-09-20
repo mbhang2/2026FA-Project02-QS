@@ -70,7 +70,14 @@ BAR_NOTES = {
     "high": "Highest trade price in the interval.",
     "low": "Lowest trade price in the interval.",
     "close": "Last trade price in the interval.",
-    "volume": "Contracts traded in the interval.",
+    "volume": "Contracts traded in the interval. Equals "
+              "`buy_volume + sell_volume + unknown_volume`.",
+    "buy_volume": "Contracts in the interval whose aggressor was `Side.BUY`. "
+                  "Accumulated per tick by the bar builder, so it is available "
+                  "without subscribing to ticks.",
+    "sell_volume": "Contracts in the interval whose aggressor was `Side.SELL`. "
+                   "Ticks with an unknown aggressor are in **neither** this nor "
+                   "`buy_volume` — see `unknown_volume` below.",
     "tick_count": "Number of trade events in the interval. Zero only on an "
                   "`emit_empty=True` bar, where OHLC all carry the previous "
                   "close forward.",
@@ -249,6 +256,34 @@ def render() -> str:
     L += [
         "",
         "`bar.is_empty` is `tick_count == 0`.",
+        "",
+        "### Derived on the bar",
+        "",
+        "Two properties, not stored fields, so they cannot drift from the "
+        "volumes they are computed from:",
+        "",
+        "| property | definition |",
+        "|---|---|",
+        "| `bar.delta` | `buy_volume - sell_volume` — signed order flow over the "
+        "interval. |",
+        "| `bar.unknown_volume` | `volume - buy_volume - sell_volume` — contracts "
+        "the feed did not attribute to a side. |",
+        "",
+        "`delta` deliberately **excludes** unknown-aggressor volume rather than "
+        "splitting or assigning it, which is the same rule the tick-level `side` "
+        "section below states. `unknown_volume` is carried so you can check that "
+        "the exclusion is small on your data instead of assuming it: on the NQ "
+        "train split it is a single tick in the first session. If it is not small "
+        "on some session, a delta feature computed there is measuring the feed's "
+        "gaps, and you should say so rather than let it through.",
+        "",
+        "These are on every bar from every time subscription, so an order-flow "
+        "feature at bar resolution does **not** need `ctx.subscribe(\"tick\")`. "
+        "That matters: a tick subscription disables the engine's ability to skip "
+        "spans with nothing resting in them, and on the NQ train split that is "
+        "the difference between stepping 453,598 events and stepping "
+        "141,578,011 — about 312x the work for the same bars. Subscribe to ticks "
+        "when you need sub-bar sequence; use `bar.delta` when you do not.",
         "",
         "**`open_ts` versus `close_ts`.** A bar is stamped with its open and "
         "delivered on its close. You are called at `close_ts`; everything in the "

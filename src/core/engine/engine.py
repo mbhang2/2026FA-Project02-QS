@@ -669,6 +669,13 @@ class Engine:
             price = np.fromiter((t.price for t in batch), dtype=float, count=len(batch))
             tsarr = np.fromiter((t.ts for t in batch), dtype=np.int64, count=len(batch))
             sizes = np.fromiter((t.size for t in batch), dtype=np.int64, count=len(batch))
+            # The aggressor, encoded so a skipped span's signed volume is one
+            # vectorised pass rather than a Python loop: +1 buy, -1 sell, 0 for
+            # a feed that did not say. Built here beside price/ts/size because
+            # `add_span` needs it and the per-tick path gets it from `Tick.side`.
+            sides = np.fromiter(
+                (1 if t.side is Side.BUY else (-1 if t.side is Side.SELL else 0)
+                 for t in batch), dtype=np.int8, count=len(batch))
             n = len(batch)
 
             i = 0
@@ -690,11 +697,20 @@ class Engine:
                     # accumulation and it folds in one go.
                     lo, hi = i + 1, nxt
                     seg = price[lo:hi]
+                    segs, segd = sizes[lo:hi], sides[lo:hi]
+                    # Signed volume over the same slice, the same way. Unknown
+                    # aggressors are in neither sum, so `Bar.unknown_volume`
+                    # accounts for them -- the alternative is a delta that is
+                    # silently wrong on exactly the ticks the feed was unsure
+                    # about.
+                    buy = int(segs[segd == 1].sum())
+                    sell = int(segs[segd == -1].sum())
                     for builder in self.builders.values():
                         builder.add_span(
                             high=float(seg.max()), low=float(seg.min()),
-                            close=float(seg[-1]), volume=int(sizes[lo:hi].sum()),
+                            close=float(seg[-1]), volume=int(segs.sum()),
                             count=hi - lo, first=float(seg[0]),
+                            buy=buy, sell=sell,
                         )
                     skipped = hi - lo
                     self.n_ticks += skipped

@@ -284,3 +284,89 @@ def test_the_walk_really_skips_and_the_tests_above_are_not_trivial():
     # and the hard case still skips, just less
     busy, _ = both_ways(ReferenceStrategy, warmup_sessions=1)
     assert busy.n_stepped < busy.n_ticks, "the never-flat case skipped nothing at all"
+
+
+# --------------------------------------------------------------------------- #
+# Signed volume (Task 61): the fold has to be exact, and only the fold can be
+# wrong.
+# --------------------------------------------------------------------------- #
+
+class _BarRecorder:
+    """Subscribes and keeps every bar it is handed. Trades nothing.
+
+    A strategy that never acts is the right probe here: the blotter comparison
+    the rest of this file does can only see a bar field through a decision the
+    strategy made about it, so a wrong `buy_volume` would be invisible unless it
+    happened to change a trade. This compares the bars themselves.
+    """
+
+    def __init__(self, interval: str = "1m") -> None:
+        self.interval = interval
+        self.bars: list = []
+
+    def setup(self, ctx) -> None:
+        ctx.subscribe(self.interval)
+
+    def on_bars(self, ctx) -> None:
+        # `ctx.bars` is addressed by subscription id; `ctx.closed` is the tuple
+        # of Bar objects that closed in this callback.
+        self.bars.extend(ctx.closed)
+
+    def on_fill(self, ctx) -> None:
+        pass
+
+    def on_lifecycle(self, ctx) -> None:
+        pass
+
+
+def _bars_both_ways(**kw):
+    made = []
+    for event_walk in (True, False):
+        rec = _BarRecorder()
+        eng = Engine.for_test(ds(**kw), rec, split=Split.VALIDATION,
+                              event_walk=event_walk)
+        eng.run()
+        made.append(rec.bars)
+    return made
+
+
+def test_the_jump_produces_identical_bars_including_signed_volume():
+    """**The abort condition for the whole order-flow direction.**
+
+    The walk skips 99.68% of ticks on real NQ data and folds them with
+    `add_span`. If that fold gets signed volume wrong, delta is wrong *only on
+    the skipped spans* -- which is almost everywhere -- and every trial still
+    looks fine, because nothing else would notice.
+    """
+    fast, slow = _bars_both_ways()
+    assert len(fast) == len(slow) > 0
+    for a, b in zip(fast, slow):
+        assert (a.open_ts, a.close_ts) == (b.open_ts, b.close_ts)
+        assert (a.open, a.high, a.low, a.close) == (b.open, b.high, b.low, b.close)
+        assert a.volume == b.volume and a.tick_count == b.tick_count
+        assert a.buy_volume == b.buy_volume, (
+            f"bar at {a.open_ts}: buy_volume {a.buy_volume} jumping vs "
+            f"{b.buy_volume} stepping -- the add_span fold is wrong")
+        assert a.sell_volume == b.sell_volume, (
+            f"bar at {a.open_ts}: sell_volume {a.sell_volume} vs {b.sell_volume}")
+        assert a.delta == b.delta
+
+
+def test_signed_volume_is_actually_populated_and_not_all_zero():
+    """A fold that returned zero everywhere would pass an equality test."""
+    fast, _ = _bars_both_ways()
+    traded = [b for b in fast if b.volume > 0]
+    assert traded, "no bar carried volume"
+    assert any(b.buy_volume for b in traded), "buy_volume is zero on every bar"
+    assert any(b.sell_volume for b in traded), "sell_volume is zero on every bar"
+    assert any(b.delta for b in traded), "delta is zero on every bar"
+
+
+def test_the_three_volumes_reconcile_on_every_bar():
+    """`volume` is the total; the sides plus the unknown residual must equal it.
+    A tick counted into both sides, or into neither by mistake, breaks this."""
+    fast, _ = _bars_both_ways()
+    for b in fast:
+        assert b.buy_volume >= 0 and b.sell_volume >= 0
+        assert b.buy_volume + b.sell_volume + b.unknown_volume == b.volume
+        assert b.delta == b.buy_volume - b.sell_volume

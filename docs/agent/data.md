@@ -50,11 +50,26 @@ Subscribing to the same interval twice returns the same subscription. When sever
 | `high` | `float` | Highest trade price in the interval. |
 | `low` | `float` | Lowest trade price in the interval. |
 | `close` | `float` | Last trade price in the interval. |
-| `volume` | `int` | Contracts traded in the interval. |
+| `volume` | `int` | Contracts traded in the interval. Equals `buy_volume + sell_volume + unknown_volume`. |
 | `tick_count` | `int` | Number of trade events in the interval. Zero only on an `emit_empty=True` bar, where OHLC all carry the previous close forward. |
 | `session` | `int` | Session index within the dataset, counting from 0. Bars never span a session boundary. |
+| `buy_volume` | `int` | Contracts in the interval whose aggressor was `Side.BUY`. Accumulated per tick by the bar builder, so it is available without subscribing to ticks. |
+| `sell_volume` | `int` | Contracts in the interval whose aggressor was `Side.SELL`. Ticks with an unknown aggressor are in **neither** this nor `buy_volume` — see `unknown_volume` below. |
 
 `bar.is_empty` is `tick_count == 0`.
+
+### Derived on the bar
+
+Two properties, not stored fields, so they cannot drift from the volumes they are computed from:
+
+| property | definition |
+|---|---|
+| `bar.delta` | `buy_volume - sell_volume` — signed order flow over the interval. |
+| `bar.unknown_volume` | `volume - buy_volume - sell_volume` — contracts the feed did not attribute to a side. |
+
+`delta` deliberately **excludes** unknown-aggressor volume rather than splitting or assigning it, which is the same rule the tick-level `side` section below states. `unknown_volume` is carried so you can check that the exclusion is small on your data instead of assuming it: on the NQ train split it is a single tick in the first session. If it is not small on some session, a delta feature computed there is measuring the feed's gaps, and you should say so rather than let it through.
+
+These are on every bar from every time subscription, so an order-flow feature at bar resolution does **not** need `ctx.subscribe("tick")`. That matters: a tick subscription disables the engine's ability to skip spans with nothing resting in them, and on the NQ train split that is the difference between stepping 453,598 events and stepping 141,578,011 — about 312x the work for the same bars. Subscribe to ticks when you need sub-bar sequence; use `bar.delta` when you do not.
 
 **`open_ts` versus `close_ts`.** A bar is stamped with its open and delivered on its close. You are called at `close_ts`; everything in the bar happened in `[open_ts, close_ts)`. Both are on the object so you never have to guess which one a downstream join is using — that guess, made wrong, is lookahead that produces a beautiful equity curve.
 

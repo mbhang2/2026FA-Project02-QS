@@ -7,7 +7,7 @@ it is offset from the thing a trader would call a five-minute bar.
 
 from __future__ import annotations
 
-from ..types import Bar, Subscription, Tick, Ts
+from ..types import Bar, Side, Subscription, Tick, Ts
 
 
 class BarBuilder:
@@ -27,6 +27,8 @@ class BarBuilder:
         "_l",
         "_c",
         "_vol",
+        "_buy",
+        "_sell",
         "_n",
         "_session",
         "_last_close",
@@ -38,6 +40,7 @@ class BarBuilder:
         self._open_ts: Ts = 0
         self._o = self._h = self._l = self._c = 0.0
         self._vol = 0
+        self._buy = self._sell = 0
         self._n = 0
         self._session = -1
         self._last_close: float | None = None
@@ -53,6 +56,7 @@ class BarBuilder:
     def _reset_accumulators(self) -> None:
         self._o = self._h = self._l = self._c = 0.0
         self._vol = 0
+        self._buy = self._sell = 0
         self._n = 0
 
     def _boundary_after(self, ts: Ts) -> Ts:
@@ -92,10 +96,16 @@ class BarBuilder:
             self._l = min(self._l, tick.price)
             self._c = tick.price
         self._vol += tick.size
+        # Unknown aggressor lands in neither side. `Bar.unknown_volume` is the
+        # residual, so a strategy can see how much it is rather than assume.
+        if tick.side is Side.BUY:
+            self._buy += tick.size
+        elif tick.side is Side.SELL:
+            self._sell += tick.size
         self._n += 1
 
     def add_span(self, high: float, low: float, close: float, volume: int, count: int,
-                 first: float) -> None:
+                 first: float, buy: int = 0, sell: int = 0) -> None:
         """Fold a whole run of ticks in at once.
 
         Only valid when the span crosses no boundary of this subscription, which
@@ -103,6 +113,11 @@ class BarBuilder:
         the same ones `add` performs one tick at a time -- this exists because
         doing them one tick at a time in Python was most of the cost of a
         session.
+
+        `buy` and `sell` are the signed-volume sums over the same span. They
+        default to zero so a caller that has no aggressor information degrades to
+        an unsigned bar rather than to a wrong one -- `Bar.unknown_volume` then
+        accounts for the whole span, which is true.
         """
         if count <= 0:
             return
@@ -114,6 +129,8 @@ class BarBuilder:
             self._l = min(self._l, low)
         self._c = close
         self._vol += volume
+        self._buy += buy
+        self._sell += sell
         self._n += count
 
     def _close_current(self, close_ts: Ts | None = None) -> Bar | None:
@@ -137,6 +154,8 @@ class BarBuilder:
                 volume=0,
                 tick_count=0,
                 session=self._session,
+                buy_volume=0,
+                sell_volume=0,
             )
         self._last_close = self._c
         return Bar(
@@ -148,6 +167,8 @@ class BarBuilder:
             low=self._l,
             close=self._c,
             volume=self._vol,
+            buy_volume=self._buy,
+            sell_volume=self._sell,
             tick_count=self._n,
             session=self._session,
         )

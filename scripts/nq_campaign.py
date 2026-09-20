@@ -43,7 +43,10 @@ import yaml  # noqa: E402
 PROFILE = "nq-train"
 OUT = ROOT / "runs" / "campaigns"
 MODEL = "claude-haiku-4-5"
-HYPOTHESIS = ROOT / "config" / "hypotheses" / "intraday-continuation.md"
+# The default only applies to `--stage register`, which writes the choice into
+# campaign.json. Every later stage reads the path back out of the record, so a
+# campaign cannot be registered against one question and run against another.
+DEFAULT_HYPOTHESIS = ROOT / "config" / "hypotheses" / "intraday-continuation.md"
 B_NULL = 10_000
 
 
@@ -79,7 +82,7 @@ def run_facts(profile: dict, n_sessions: int) -> str:
         f"History window: {profile.get('history_window', 512)} bars.\n")
 
 
-def agent_for(champion: pathlib.Path | None):
+def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None):
     from src.core.loop import hypothesis as H
     from src.core.loop.llm import LLMAgent
 
@@ -87,13 +90,134 @@ def agent_for(champion: pathlib.Path | None):
     profile = c["profiles"][PROFILE]
     return LLMAgent(
         model=MODEL, temperature=0.7, max_tokens=16_384, show_history=True,
-        hypothesis=H.load(HYPOTHESIS), champion=champion,
-        run_facts=run_facts(profile, 384))
+        # None is a real state, not a missing argument: `hypothesis_path` is
+        # optional on the record, and a campaign that registered without a
+        # question runs without one rather than borrowing another campaign's.
+        hypothesis=H.load(hypothesis) if hypothesis is not None else None,
+        champion=champion, run_facts=run_facts(profile, 384))
 
 
 # --------------------------------------------------------------------------- #
 
-def stage_register(name: str) -> None:
+VALIDATION_PROFILE = "nq-validation"
+
+
+def _winner(rows: list[dict]) -> dict | None:
+    """The campaign's gate winner: the highest primary score among completed runs.
+
+    The same candidate `summarise` calls best, by the same rule, so validation
+    cannot quietly check a different strategy from the one the gate ruled on.
+    """
+    scored = [r for r in rows if isinstance(r.get("score"), dict)
+              and r["score"].get("primary") is not None]
+    return max(scored, key=lambda r: r["score"]["primary"]) if scored else None
+
+
+def stage_validate(name: str) -> None:
+    """Run the campaign's winner once on the validation split (section 5).
+
+    **This is not a trial and must never be counted as one.** N is the number of
+    looks taken while *searching*, and the winner was already chosen on train --
+    running it again on held-out data does not search for anything. It goes to a
+    separate ledger with `--purpose check`, so `global_n()` cannot pick it up.
+
+    The multiplicity that validation *does* create -- M campaigns each getting one
+    validation look -- is corrected at L2 by `max_of_m` (section 4), not here.
+
+    Section 5's three rules are computed and all three recorded: (a) Sortino > 0
+    and (b) the L2 test are pass conditions; (c) train-versus-validation decay is
+    **evidence for the committee and not a threshold**, because "within X%" needs
+    an X and this project does not fit one.
+    """
+    import subprocess
+
+    from src.core.loop.campaign import CampaignRecord
+
+    d = OUT / name
+    record, _ = CampaignRecord.read(d / "campaign.json")
+    rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines()
+            if x.strip()]
+    win = _winner(rows)
+    if win is None:
+        sys.exit(f"{name}: no completed trial has a score; nothing to validate.")
+
+    digest = win.get("strategy_digest")
+    src_file = d / "sources" / f"{digest}.py"
+    source = src_file.read_text() if src_file.exists() else win.get("strategy_source")
+    if not source:
+        sys.exit(f"{name}: the winner's source is not on disk (digest {digest}).")
+
+    train_score = win["score"]["primary"]
+    print(f"{name}: validating winner  digest {digest}  train {train_score:+.4f}")
+
+    out = d / "validation.jsonl"
+    before = len(out.read_text().splitlines()) if out.exists() else 0
+    if before:
+        sys.exit(
+            f"{out} already has {before} row(s). The validation split is looked at "
+            "ONCE per campaign (section 5). Re-running would be a second look that "
+            "the L2 correction does not know about -- delete the file deliberately "
+            "if you really mean to discard the first look and record why.")
+
+    strategy_path = ROOT / "src" / "strategies" / "current.py"
+    original = strategy_path.read_text()
+    strategy_path.write_text(source)
+    try:
+        proc = subprocess.run(
+            [sys.executable, "run.py", "--human", "--quiet",
+             "--purpose", "check", "--profile", VALIDATION_PROFILE,
+             "--ledger", str(out)],
+            capture_output=True, text=True, cwd=str(ROOT))
+    finally:
+        strategy_path.write_text(original)
+
+    vrows = [json.loads(x) for x in out.read_text().splitlines() if x.strip()] \
+        if out.exists() else []
+    if not vrows:
+        sys.exit(f"{name}: the validation run produced no ledger row.\n"
+                 f"{proc.stderr[-2000:]}")
+    v = vrows[-1]
+    if v.get("strategy_digest") != digest:
+        sys.exit(
+            f"{name}: validation ran digest {v.get('strategy_digest')} but the "
+            f"winner is {digest}. Refusing to record a comparison between two "
+            "different strategies.")
+
+    vscore = (v.get("score") or {}).get("primary")
+    result = {
+        "schema": "campaign-validation/1",
+        "campaign_id": name,
+        "winner_digest": digest,
+        "winner_campaign_index": win.get("campaign_index"),
+        "train": {"profile": record.profile, "primary": train_score,
+                  "score": win.get("score"), "diagnostics": win.get("diagnostics")},
+        "validation": {"profile": VALIDATION_PROFILE, "primary": vscore,
+                       "outcome": v.get("outcome"), "score": v.get("score"),
+                       "diagnostics": v.get("diagnostics"),
+                       "git_sha": v.get("git_sha")},
+        "rule_a_sortino_positive": (vscore is not None and vscore > 0),
+        "rule_c_decay": (None if vscore is None else vscore - train_score),
+        "note": ("Section 5. Rule (a) Sortino > 0 and rule (b) the max_of_m test "
+                 "at L2 are pass conditions; rule (c), the train-to-validation "
+                 "change, is committee evidence and NOT a threshold -- it is "
+                 "reported unjudged, including when validation beats train. This "
+                 "run has purpose 'check' and is not a trial: it does not count "
+                 "toward N. The multiplicity of one validation look per campaign "
+                 "is corrected at L2 by max_of_m, not here."),
+    }
+    (d / "validation.json").write_text(json.dumps(result, indent=2, default=str))
+    if vscore is None:
+        print(f"  validation did not score: outcome {v.get('outcome')}")
+    else:
+        print(f"  train {train_score:+.4f}   validation {vscore:+.4f}   "
+              f"change {vscore - train_score:+.4f}")
+        print(f"  rule (a) Sortino > 0 on validation: {result['rule_a_sortino_positive']}")
+    print(f"  wrote {d / 'validation.json'}")
+
+
+# --------------------------------------------------------------------------- #
+
+def stage_register(name: str, hypothesis: pathlib.Path) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -107,7 +231,7 @@ def stage_register(name: str) -> None:
     print(f"  asked {served['requested']!r}  served {served['served']!r}")
 
     cc, profile = campaign_cfg(), cfg()["profiles"][PROFILE]
-    agent_cfg = agent_for(None).config()
+    agent_cfg = agent_for(None, hypothesis).config()
     agent_cfg["null_source"] = cc["null_source"]
     agent_cfg["correction"] = cc["correction"]
     agent_cfg["b_null"] = B_NULL
@@ -118,14 +242,19 @@ def stage_register(name: str) -> None:
     record = CampaignRecord(
         campaign_id=name, profile=PROFILE, budget=cc["n_trials"], q=cc["q"],
         agent="src.core.loop.llm.LLMAgent", dataset="nq-trades", split="train",
-        hypothesis_path=str(HYPOTHESIS.relative_to(ROOT)),
+        hypothesis_path=str(hypothesis.relative_to(ROOT)),
         hypothesis_digest=agent_cfg["hypothesis"]["digest"],
         agent_config=agent_cfg,
         note=("MVP campaign, governed by docs/design/pre-registration.md. Real "
               "NQ train split. The model proposes one strategy at a time and "
               "edits the champion; the null is the sign-flip over round turns "
-              "(section 3b), NOT the conditional null, so the measured FWER of "
-              "0.060 does not describe this campaign."),
+              "(section 3b), NOT the conditional null. The conditional null's "
+              "FWER of 0.060 therefore does not describe this campaign; the "
+              "figure that does is Task 57's, measured on this exact "
+              "configuration at this exact N: 0 acceptances in 400 campaigns, "
+              "FWER below about 0.010 at 95%. It is conservative, and Task 59 "
+              "prices that -- 80% power at a signal strength of 0.287 against "
+              "0.242 for the conditional null."),
         written_at=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"))
     digest = record.write(d / "campaign.json")
     print(f"  registered {name}  N={cc['n_trials']}  q={cc['q']}  "
@@ -151,7 +280,23 @@ def stage_run(name: str) -> None:
         return
     print(f"{name}: resuming at trial {start} of {record.budget}", flush=True)
 
-    agent = agent_for(champion if champion.exists() else None)
+    # From the record, never from a flag or the module default: a resumed run
+    # must ask the question the pre-registration names. The digest is re-checked
+    # because `hypothesis_path` is a path -- editing the file it points at would
+    # otherwise change the question silently, halfway through a campaign.
+    from src.core.loop import hypothesis as H
+
+    hyp_path = ROOT / record.hypothesis_path if record.hypothesis_path else None
+    got = H.load(hyp_path).digest if hyp_path else None
+    if got != record.hypothesis_digest:
+        sys.exit(
+            f"{hyp_path} has changed since {name} was registered.\n"
+            f"  registered digest {record.hypothesis_digest}\n"
+            f"  current digest    {got}\n"
+            "A campaign answers the question it registered. Restore the file, or "
+            "register a new campaign for the new question.")
+
+    agent = agent_for(champion if champion.exists() else None, hyp_path)
     t0 = time.monotonic()
     for i in range(start, record.budget):
         agent.champion = champion if champion.exists() else None
@@ -255,10 +400,15 @@ def stage_report(name: str) -> None:
         indent=2, default=str))
     summary["null_source"] = "round_turn_mc"
     summary["error_control_note"] = (
-        "The FWER of 0.060, CI [0.041, 0.088], is the CONDITIONAL null with "
-        "max_of_n at R = 150 (Task 38). It does not describe this campaign, "
-        "whose null is the sign-flip over round turns. See "
-        "docs/design/pre-registration.md sections 3a and 3b.")
+        "This campaign's null is the sign-flip over round turns, not the "
+        "conditional null, so Task 38's FWER of 0.060 CI [0.041, 0.088] does "
+        "NOT describe it. The figure that does is Task 57's, measured on this "
+        "configuration (round_turn_mc x max_of_n, q = 0.05, B = 10,000) at both "
+        "N = 10 and N = 50: 0 acceptances in 400 campaigns per arm, FWER below "
+        "about 0.010 at 95%, below 0.005 pooled over 800. It is conservative "
+        "rather than merely correct, and Task 59 prices the conservatism: 80% "
+        "power at a signal strength of 0.287 against 0.242 for the conditional "
+        "null. See docs/design/pre-registration.md sections 3a and 3b.")
     (d / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
 
     g = summary.get("gate", {})
@@ -286,16 +436,85 @@ def stage_report(name: str) -> None:
     for r in verdict.reasons:
         print(f"    - {r}")
 
+    # **The committee is a separate file, not merged into the tier-3 verdict.**
+    # Tier 3 is a deterministic audit of the record: same input, same output,
+    # re-runnable by anyone. The committee is four language models reading the
+    # same evidence, and its answer can differ between runs of the same campaign.
+    # Folding an unreproducible judgement into a reproducible one would make the
+    # combined artefact neither, and `ledger_check` could no longer tell a
+    # changed verdict from a changed apparatus.
+    if record.hypothesis_path:
+        hyp_text = (ROOT / record.hypothesis_path).read_text()
+    else:
+        hyp_text = None
+    # Section 5's out-of-sample evidence, if `--stage validate` has run. Absent is
+    # a state the slices state explicitly rather than omit -- see
+    # `_validation_evidence`: "not checked" and "checked and held up" are opposite
+    # readings and a silent gap gets read as the flattering one.
+    vfile = d / "validation.json"
+    if vfile.exists():
+        tier2["validation"] = json.loads(vfile.read_text())
+        print(f"  validation: train {tier2['validation']['train']['primary']:+.4f}"
+              f"  validation {tier2['validation']['validation']['primary']:+.4f}")
+    else:
+        print("  validation: not run (--stage validate)")
+
+    best_source = (tier2.get("best_candidate") or {}).get("source")
+    print("  committee ...", flush=True)
+    try:
+        from audit.committee.review import review
+        cv = review(tier2, source=best_source, model=MODEL, hypothesis=hyp_text)
+    except Exception as exc:                                      # noqa: BLE001
+        # Recorded, not swallowed. A committee that failed to run is a different
+        # state from one that had nothing to veto, and the MVP rule "no veto =
+        # approve" would read the second from the first.
+        (d / "committee-verdict.json").write_text(json.dumps(
+            {"schema": "committee-verdict/1", "verdict": "ERROR",
+             "error": f"{type(exc).__name__}: {exc}",
+             "note": ("The committee did not run. This is NOT a pass: the MVP "
+                      "rule reads 'no veto' as approval, and no verdict is not "
+                      "no veto.")}, indent=2))
+        print(f"  committee FAILED: {type(exc).__name__}: {exc}")
+        print("    recorded as ERROR in committee-verdict.json -- not a pass")
+        return
+    (d / "committee-verdict.json").write_text(
+        json.dumps(cv.as_dict(), indent=2, default=str))
+    print(f"  committee: {cv.verdict}"
+          + (f"  vetoed by {', '.join(v.axis for v in cv.auditors if v.verdict == 'VETO')}"
+             if cv.verdict == "VETO" else ""))
+    for v in cv.auditors:
+        print(f"    {v.axis:<12} {v.verdict}")
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--stage", required=True,
-                    choices=("register", "run", "nulls", "report"))
+                    choices=("register", "run", "nulls", "validate", "report"))
     ap.add_argument("--name", required=True)
+    ap.add_argument("--hypothesis", type=pathlib.Path,
+                    default=DEFAULT_HYPOTHESIS,
+                    help="path to the hypothesis markdown; --stage register only, "
+                         "and it is written into campaign.json. Later stages read "
+                         "it from there and ignore this flag.")
     a = ap.parse_args()
-    {"register": stage_register, "run": stage_run,
-     "nulls": stage_nulls, "report": stage_report}[a.stage](a.name)
+    if a.stage == "register":
+        hyp = a.hypothesis.resolve()
+        try:
+            hyp.relative_to(ROOT)
+        except ValueError:
+            sys.exit(f"{hyp} is outside the repository. A campaign's question has "
+                     "to be a committed file, or the record points at nothing a "
+                     "reader can check.")
+        stage_register(a.name, hyp)
+    else:
+        # Refused rather than ignored. Silently accepting it on a run stage is how
+        # someone believes they changed the question and did not.
+        if a.hypothesis.resolve() != DEFAULT_HYPOTHESIS.resolve():
+            sys.exit(f"--hypothesis applies to --stage register only; "
+                     f"--stage {a.stage} reads it from campaign.json.")
+        {"run": stage_run, "nulls": stage_nulls,
+         "validate": stage_validate, "report": stage_report}[a.stage](a.name)
     return 0
 
 

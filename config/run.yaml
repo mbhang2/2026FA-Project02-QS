@@ -138,6 +138,13 @@ profiles:
     warmup_sessions: 1
     wall_clock_budget_s: 3600
     notional_base: 1.0
+    # Must match nq-train. The protocol runs a campaign's winner on validation
+    # and compares the two numbers; costed at different rates they are not
+    # comparable, and the cheaper split would look like the better one. This key
+    # was absent until Task 61, which meant validation silently charged the
+    # engine default of 0.01 against train's 0.10 -- the Task 60 bug again, in
+    # the one place where the difference would have been read as a result.
+    commission_per_contract: 0.10
     record_fill_spread: false
 
 # Dataset definitions the profiles name.

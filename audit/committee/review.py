@@ -92,6 +92,41 @@ class CommitteeVerdict:
 # evidence slices -- each auditor sees ONLY its own
 # --------------------------------------------------------------------------- #
 
+def _validation_evidence(summary: dict) -> dict:
+    """Section 5's three rules, or an explicit statement that they are missing.
+
+    Never silently absent. "Out-of-sample was not checked" and "out-of-sample was
+    checked and held up" are opposite readings of the same campaign, and an
+    auditor handed neither will assume one of them.
+
+    Rule (c), the train-to-validation change, is passed through **unjudged**. It
+    is deliberately not a threshold (section 5): "within X%" needs an X, this
+    project does not fit one, and a winner that does BETTER out of sample is not
+    a failure. The auditor weighs it in context, which is the whole reason it is
+    evidence rather than a gate.
+    """
+    v = summary.get("validation")
+    if not v:
+        return {"_validation": (
+            "NOT RUN. The campaign winner was not evaluated on the validation "
+            "split, so there is no out-of-sample evidence. Do not read this as "
+            "the winner having failed out of sample, and do not read it as the "
+            "winner having held up: it was not looked at.")}
+    val, tr = v.get("validation") or {}, v.get("train") or {}
+    return {"_validation_note": (
+                "One look, on the held-out validation split, at the winner "
+                "selected on train. Rule (c) below is the raw change and is NOT a "
+                "pass/fail threshold -- weigh it; a winner that improves out of "
+                "sample has not failed."),
+            "train_primary": tr.get("primary"),
+            "validation_primary": val.get("primary"),
+            "validation_outcome": val.get("outcome"),
+            "rule_a_sortino_positive_on_validation": v.get("rule_a_sortino_positive"),
+            "rule_c_change_validation_minus_train": v.get("rule_c_decay"),
+            "validation_score": val.get("score"),
+            "validation_diagnostics": val.get("diagnostics")}
+
+
 def _slice(axis: str, summary: dict, source: str | None,
            hypothesis: str | None = None) -> str:
     best = summary.get("best_candidate") or {}
@@ -114,6 +149,7 @@ def _slice(axis: str, summary: dict, source: str | None,
             "null_source": summary.get("null_source"),
             "best_candidate_score": score,
             "error_control_note": summary.get("error_control_note"),
+            **_validation_evidence(summary),
         }, indent=2, default=str)
 
     if axis == "economics":
@@ -150,6 +186,7 @@ def _slice(axis: str, summary: dict, source: str | None,
             "max_drawdown": diag.get("max_drawdown"),
             "fill_model_spread": diag.get("fill_model_spread"),
             "campaign": {k: campaign.get(k) for k in ("profile", "dataset", "split")},
+            **_validation_evidence(summary),
         }, indent=2, default=str)
         return (
             "### The hypothesis this campaign was pre-registered under\n\n"
@@ -161,6 +198,7 @@ def _slice(axis: str, summary: dict, source: str | None,
 
     if axis == "robustness":
         return json.dumps({
+            **_validation_evidence(summary),
             "by_month": diag.get("by_month"),
             "by_hour_utc": diag.get("by_hour_utc"),
             "by_weekday": diag.get("by_weekday"),

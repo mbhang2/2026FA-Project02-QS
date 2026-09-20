@@ -104,3 +104,38 @@ def test_the_invariant_is_asserted_where_the_record_is_built():
     body = src[src.index("def _run_and_score"):src.index("def _failure_record")]
     assert "commission_per_contract" in body and "ScoringMismatch" in body, (
         "the charged-vs-configured check has been removed from _run_and_score")
+
+
+def test_every_nq_profile_declares_its_commission():
+    """The class of bug, not the instance.
+
+    Task 60 fixed `run.py` so a declared rate reaches the engine, and added an
+    invariant that charged must equal declared. Neither can see an omission: with
+    no key in the profile, `want` falls back to the engine default, charged equals
+    want, and the invariant is satisfied by a run costed ten times too cheap.
+
+    `nq-validation` was in exactly that state -- and it is the profile the protocol
+    uses to check a campaign's winner against its train result, so the two splits
+    would have been priced differently and the gap read as out-of-sample decay.
+
+    Any profile on real NQ data states its own commission. The default belongs to
+    the synthetic generator's price units and is never right here.
+    """
+    from pathlib import Path
+
+    import yaml
+
+    cfg = yaml.safe_load(
+        (Path(__file__).resolve().parents[1] / "config/run.yaml").read_text())
+    nq = {name: p for name, p in cfg["profiles"].items()
+          if p.get("dataset", "").startswith("nq")}
+    assert nq, "no NQ profiles found -- this test is looking in the wrong place"
+    missing = [n for n, p in nq.items() if "commission_per_contract" not in p]
+    assert not missing, (
+        f"NQ profiles without a declared commission: {missing}. They would run at "
+        "the engine default of 0.01, which is a tenth of NQ's real cost, and "
+        "nothing downstream would notice.")
+    rates = {n: p["commission_per_contract"] for n, p in nq.items()}
+    assert len(set(rates.values())) == 1, (
+        f"NQ profiles disagree on commission: {rates}. Scores from different "
+        "splits are compared directly and cannot be priced differently.")

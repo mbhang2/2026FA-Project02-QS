@@ -168,13 +168,70 @@ def test_the_economics_auditor_gets_what_it_needs_to_price_the_costs():
 
 
 @pytest.mark.parametrize("axis", AXES)
-def test_no_slice_carries_validation_or_holdout(axis):
-    """The campaign is scored on train only, and nothing about the other splits
-    may reach a reviewer whose verdict could then depend on a budget nobody
-    pre-registered."""
+def test_no_slice_ever_carries_the_holdout(axis):
+    """The holdout is not the committee's business, in any campaign, ever.
+
+    Section 8: it is opened once, by a human, at the end of the project. A
+    reviewer whose verdict could depend on it is a reviewer who has spent a budget
+    nobody pre-registered, and unlike validation there is no correction that buys
+    the look back.
+    """
     s = _slice(axis, SUMMARY, SOURCE, HYPOTHESIS).lower()
-    for word in ("holdout", "validation"):
-        assert word not in s, f"{axis} slice mentions {word}"
+    assert "holdout" not in s, f"{axis} slice mentions the holdout"
+
+
+@pytest.mark.parametrize("axis", AXES)
+def test_a_campaign_without_a_validation_run_says_so_rather_than_going_quiet(axis):
+    """Absence is stated, not omitted.
+
+    This test used to forbid the word "validation" outright, and section 5 of the
+    pre-registration overtook it: rule (c), the train-to-validation change, is
+    named there as **committee evidence**. So the invariant is no longer "they
+    must not see it" -- it is "they must not be able to mistake not-looking for
+    looking-and-passing", which is the failure that actually costs something.
+    """
+    s = _slice(axis, SUMMARY, SOURCE, HYPOTHESIS)
+    assert "validation" not in SUMMARY, "fixture drifted: SUMMARY has a validation block"
+    if "validation" in s.lower():
+        assert "NOT RUN" in s, (
+            f"{axis} slice mentions validation for a campaign that has none, "
+            "without saying it was not run")
+
+
+@pytest.mark.parametrize("axis", ("statistics", "economics", "robustness"))
+def test_validation_reaches_the_axes_that_weigh_it_unjudged(axis):
+    """Section 5 rules (a) and (c), as evidence rather than a verdict.
+
+    (c) is passed through raw and explicitly not as a threshold: "within X%" needs
+    an X, the project does not fit one, and a winner that does *better* out of
+    sample has not failed. The slice must therefore carry the number and must not
+    carry a pass/fail reading of it.
+    """
+    summary = dict(SUMMARY)
+    summary["validation"] = {
+        "train": {"primary": 0.42},
+        "validation": {"primary": 0.05, "outcome": "completed",
+                       "score": {"primary": 0.05}, "diagnostics": {}},
+        "rule_a_sortino_positive": True,
+        "rule_c_decay": -0.37,
+    }
+    s = _slice(axis, summary, SOURCE, HYPOTHESIS)
+    assert "0.42" in s and "0.05" in s, f"{axis} slice lost the two scores"
+    assert "-0.37" in s, f"{axis} slice lost rule (c)"
+    assert "NOT a pass/fail threshold" in s, (
+        f"{axis} slice presents rule (c) without saying it is not a threshold")
+
+
+def test_leakage_never_sees_validation_even_when_it_ran():
+    """Leakage reads the source and nothing else. Handing it an out-of-sample
+    score invites it to reason from the number instead of from the code, which is
+    the one thing only it is positioned to do."""
+    summary = dict(SUMMARY)
+    summary["validation"] = {"train": {"primary": 0.42},
+                             "validation": {"primary": 0.05},
+                             "rule_a_sortino_positive": True,
+                             "rule_c_decay": -0.37}
+    assert "0.05" not in _slice("leakage", summary, SOURCE, HYPOTHESIS)
 
 
 # --------------------------------------------------------------------------- #

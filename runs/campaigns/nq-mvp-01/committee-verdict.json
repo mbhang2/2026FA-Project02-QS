@@ -21,39 +21,39 @@
       "axis": "statistics",
       "verdict": "VETO",
       "reasons": [
-        "Degenerate metric: the best candidate has only 3 trades across 384 sessions. A Sharpe ratio estimated from 3 trades is not a reliable statistic and is highly susceptible to noise. The strategy's entire result rests on an extremely sparse signal.",
-        "Extreme concentration in downside sessions: only 1 downside session was observed, placing the denominator of the Sortino ratio at the floor. The fallback to Sharpe (noted in reject_reason) confirms the metric is degenerate.",
-        "Kurtosis of 126 indicates extreme outliers dominating the distribution. With only 3 trades, one or two outsized moves are carrying the entire result.",
-        "Inconsistency between views: the gate p-value is 0.824 (strong rejection), the deflation margin is -0.141 (well below the bar), and the uncorrected FAR is 0.238 (no discovery). All three agree the result should be rejected, but the best_candidate_score reports 'rejected: false' despite these signals. The rejection reason cites a Sharpe fallback, not a discovery.",
-        "The observed_best of 0.0256 is far below the null_max_at_q of 0.0980, and the expected_max_under_null of 0.1665 dwarfs it. This is not a borderline case; the result is decisively below noise."
+        "Degenerate metric: the best candidate's Sharpe ratio (0.0256) is estimated from only 3 trades across 384 sessions. A ratio with a denominator this small is unreliable; the strategy's performance is not meaningfully characterized by this statistic.",
+        "Fallback from Sortino to Sharpe: the candidate has only 1 downside session, falling below the pre-registered threshold of 5. The Sortino (0.0418) was rejected and scoring fell back to Sharpe (0.0256). A ratio computed from 1 downside session is a degenerate estimate and should not be the basis for any inference.",
+        "Extreme kurtosis (126.04) and high skew (2.20) in the best candidate's returns indicate the distribution is heavily non-normal, dominated by outliers. With only 3 trades, these moments are unstable and the Sharpe ratio does not capture tail risk.",
+        "Gate p-value (0.824) is far above any reasonable significance threshold and the observed best score (0.0256) is well below the null maximum mean (0.0608), confirming the result is consistent with noise."
       ],
-      "confidence_note": "I cannot see the strategy code or session-by-session returns, so I cannot verify whether the 3 trades are real or an artifact of filtering, nor can I assess whether the extreme kurtosis reflects genuine market conditions or a data issue.",
+      "confidence_note": "I cannot see the strategy code or session-by-session returns, so I cannot verify whether the 3 trades are genuine or whether the single downside session is an artifact of the test period; however, the statistical degeneracy is concrete and independent of code review.",
       "error": null
     },
     {
       "axis": "economics",
       "verdict": "VETO",
       "reasons": [
-        "Degenerate optimum: 3 trades over 384 sessions (0.78% of sessions with any exposure) is a signature of inactivity optimization, not signal discovery. The strategy has found that doing almost nothing scores well when activity is costly.",
-        "Commission dominates outcome: commission paid ($0.06) is 8.7% of gross P&L ($0.69). On a $20/point contract with only 3 trades, the cost structure is the primary determinant of the result, not any trading edge.",
-        "Implausible activity for the instrument: 3 contracts over 384 sessions with only 3 sessions of exposure suggests the strategy is not actually trading NQ; it is avoiding it. This is not a viable strategy discovery.",
-        "Extreme max drawdown (-77%) with minimal trade count indicates the few trades taken were poorly timed or the result is noise from a near-inactive baseline."
+        "The hypothesis asks whether outsized intraday moves continue or give back. The code implements a two-bar mean-reversion fade (betting on give-back), but the hypothesis explicitly states it should answer 'which one does?' without pre-committing to a direction. The code tests only the give-back direction and would not detect if the data showed continuation instead. This is a directional choice presented as hypothesis implementation, not a neutral test of the effect.",
+        "The strategy trades only 3 times across 384 sessions (0.78% of sessions touched). This is a degenerate optimum signature: the strategy maximized its score by trading almost never. With costs of $0.06 per trade and only $0.63 net P&L on 3 trades, the strategy is barely above its commission burden. The score (Sharpe 0.0256) is driven by inactivity being cheap, not by finding an edge.",
+        "Commission paid ($0.06) represents 9.5% of gross P&L ($0.69). On only 3 trades, this is economically meaningless \u2014 the strategy has not demonstrated it can cover its own costs at any reasonable scale. Each trade nets $0.21 on average; at $0.1 per side per contract, the edge is indistinguishable from noise.",
+        "The hypothesis requires the effect to be 'consistent across the ordinary run of sessions' and 'survive being traded'. Three trades across 384 sessions is not a demonstration of consistency; it is a demonstration that the signal is so rare or weak that the strategy found it safer to sit idle. The hypothesis explicitly warns against 'a story that only works on the largest handful of moves in the sample'."
       ],
-      "confidence_note": "The P&L is positive and net is real, but the economic signal is entirely obscured by the cost model and the near-zero activity rate; this is a cost-avoidance artifact, not a discovery.",
+      "confidence_note": "I cannot see the actual fill prices, slippage, or whether the three trades were genuinely exceptional or merely the ones that passed an over-fitted filter; I also cannot verify the session calendar or whether 384 sessions is the full dataset. However, the trade count and P&L ratio are concrete and sufficient to veto on economic grounds.",
       "error": null
     },
     {
       "axis": "robustness",
       "verdict": "VETO",
       "reasons": [
-        "Extreme concentration: best_session_share of 0.5 means a single session accounts for 50% of total profit. Removing it would flip the result from positive to negative.",
-        "Minimal trade count: only 3 trades executed across 384 sessions. The strategy is almost entirely inactive, making any observed profit unreliable.",
-        "Profit concentration in top 5%: 100% of profits come from the top 5% of sessions, indicating the result is entirely dependent on a handful of outlier outcomes.",
-        "Temporal clustering: positive returns concentrated in exactly two months (Nov and Dec 2024) and two specific hours (09 and 18 UTC), with a single negative month (Aug). This is a narrow temporal window.",
-        "Only 1 downside session across 3 sessions with exposure suggests insufficient negative outcome sampling to assess robustness.",
-        "Tiny per-cell counts acknowledged by the campaign itself ('at a few hundred sessions the per-cell counts in these breakdowns are tiny'), making the by_hour and by_weekday breakdowns unreliable for assessing true patterns."
+        "Extreme concentration: best_session_share of 0.5 means half of all profit comes from a single session. Removing it would flip the result from positive to negative.",
+        "Minimal trade count: only 3 trades executed across 384 sessions. The strategy is almost entirely inactive, making any result noise-like and unreliable.",
+        "Temporal concentration: profit is split between only 3 sessions with exposure. Two sessions show +0.70 return, one shows -0.77. This is not a distributed result.",
+        "Hour-level concentration: all positive return concentrated in hours 09 and 18 (identical +0.70 values, suspicious precision). Hour 19 is -0.77. Pattern is too narrow.",
+        "Weekday concentration: Thursday shows positive return, Tuesday shows -0.77. Only two days represented in the breakdown.",
+        "Profit concentration metric: top 5% of sessions account for 100% of profit. Everything else is loss or break-even.",
+        "Downside sessions: only 1 downside session across 384, but with 3 trades total, the sample is too small to assess robustness to adverse conditions."
       ],
-      "confidence_note": "The data clearly shows extreme concentration in both time and outcome space; the robustness axis is the one place where this concentration is directly visible and measurable.",
+      "confidence_note": "The strategy executed only 3 trades in 384 sessions; the result is entirely dependent on the outcome of a handful of trades in a handful of sessions, with half the profit from one session.",
       "error": null
     }
   ],
@@ -61,7 +61,7 @@
   "model_served": "claude-haiku-4-5",
   "prompt_digests": {
     "_shared.md": "e3a7bf407e59cad2",
-    "economics.md": "1dcfa3999a17acd0",
+    "economics.md": "b5bcd655b907e3bb",
     "leakage.md": "b5f7af4181d9bb74",
     "robustness.md": "496b944a00727a49",
     "statistics.md": "b7471556c6784238"

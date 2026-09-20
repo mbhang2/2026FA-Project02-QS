@@ -1327,6 +1327,22 @@ because `audit/` imports nothing from `src.core` and that separation is what let
 either tier be replaced. A test asserts the boundary rather than trusting it. The
 one thing copied rather than reinvented is the substitution check.
 
+**The economics auditor owns the question nobody else asks: does the code
+implement the hypothesis?** The hypothesis is pre-registered and hashed into the
+campaign record, and the strategy is written by an agent that was shown it — but
+until Task 58 nothing checked the link. If the code tests something else, the
+campaign answered a different question from the one registered and **the
+pre-registration is decorative**, which matters more than any number in the
+evidence. So economics sees three things where the others see one: the
+hypothesis, the source, and the cost evidence. That is not a break in isolation —
+the invariant is that no auditor sees another's *verdict*, and two auditors
+reading the same source for different questions is two reviews rather than one.
+
+It also judges whether the hypothesis is economically feasible at all. That is a
+minor question while a human writes them and becomes the main one when a
+retrieval pipeline generates them, because a machine-proposed hypothesis has had
+no sanity check before it arrives.
+
 **Measured on its first live run**, against `nq-mvp-01` (`docs/reviews/task56/`):
 four parallel calls, **10 seconds**, three independent vetoes and one PASS.
 Leakage passed the code; statistics vetoed the Sortino→Sharpe fallback and a

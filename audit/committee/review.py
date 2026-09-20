@@ -92,7 +92,8 @@ class CommitteeVerdict:
 # evidence slices -- each auditor sees ONLY its own
 # --------------------------------------------------------------------------- #
 
-def _slice(axis: str, summary: dict, source: str | None) -> str:
+def _slice(axis: str, summary: dict, source: str | None,
+           hypothesis: str | None = None) -> str:
     best = summary.get("best_candidate") or {}
     score = best.get("score") or {}
     diag = best.get("diagnostics") or {}
@@ -124,7 +125,7 @@ def _slice(axis: str, summary: dict, source: str | None) -> str:
         # reasons without it.
         campaign = summary.get("campaign") or {}
         cfg = campaign.get("agent_config") or {}
-        return json.dumps({
+        evidence = json.dumps({
             "net_pnl": score.get("net_pnl"),
             "gross_pnl": diag.get("gross_pnl"),
             "commission_paid": diag.get("commission"),
@@ -139,6 +140,13 @@ def _slice(axis: str, summary: dict, source: str | None) -> str:
             "fill_model_spread": diag.get("fill_model_spread"),
             "campaign": {k: campaign.get(k) for k in ("profile", "dataset", "split")},
         }, indent=2, default=str)
+        return (
+            "### The hypothesis this campaign was pre-registered under\n\n"
+            + (hypothesis or "NOT SUPPLIED -- you cannot judge question 1.")
+            + "\n\n### The winning strategy's source\n\n```python\n"
+            + (source or "NO SOURCE AVAILABLE.")
+            + "\n```\n\n### The economic evidence\n\n```json\n"
+            + evidence + "\n```")
 
     if axis == "robustness":
         return json.dumps({
@@ -173,9 +181,10 @@ def prompt_digests() -> dict:
 
 # --------------------------------------------------------------------------- #
 
-def _one(axis: str, client: Client, summary: dict, source: str | None) -> AuditorVerdict:
+def _one(axis: str, client: Client, summary: dict, source: str | None,
+         hypothesis: str | None) -> AuditorVerdict:
     try:
-        got = client.ask(_prompt(axis), _slice(axis, summary, source))
+        got = client.ask(_prompt(axis), _slice(axis, summary, source, hypothesis))
     except ModelSubstituted:
         raise
     except LLMUnavailable as exc:
@@ -196,6 +205,7 @@ def _one(axis: str, client: Client, summary: dict, source: str | None) -> Audito
 
 
 def review(summary: dict, *, source: str | None, model: str,
+           hypothesis: str | None = None,
            axes: tuple[str, ...] = AXES) -> CommitteeVerdict:
     """The four, in parallel, isolated. Returns a verdict that cannot approve.
 
@@ -207,7 +217,7 @@ def review(summary: dict, *, source: str | None, model: str,
     client = Client(model=model)
     with ThreadPoolExecutor(max_workers=len(axes)) as pool:
         verdicts = tuple(pool.map(
-            lambda a: _one(a, client, summary, source), axes))
+            lambda a: _one(a, client, summary, source, hypothesis), axes))
 
     if any(v.verdict == "VETO" for v in verdicts):
         overall = "VETO"

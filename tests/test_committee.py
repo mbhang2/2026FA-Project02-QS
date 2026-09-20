@@ -20,6 +20,7 @@ from audit.committee.review import _slice, _prompt, prompt_digests
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SOURCE = '"""A candidate."""\n\nclass Strategy:\n    SECRET_MARKER = 1\n'
+HYPOTHESIS = "# HYPOTHESIS_MARKER\n\nDoes an outsized move continue or give back?"
 SUMMARY = {
     "n": {"trials": 50, "by_outcome": {"completed": 48}},
     "gate": {"p": 0.8236, "verdict": "REJECT", "observed_best": 0.0256,
@@ -99,12 +100,39 @@ def test_a_veto_outranks_a_cannot_tell():
 # isolation: each auditor sees ONLY its own evidence
 # --------------------------------------------------------------------------- #
 
-def test_only_the_leakage_auditor_sees_the_code():
+def test_the_isolation_invariant_is_about_verdicts_not_about_the_source():
+    """The first version of this test asserted only leakage may see the code,
+    which was an over-tight reading of isolation and would have blocked the
+    economics auditor from doing its main job.
+
+    **The invariant is that no auditor sees another auditor's verdict or
+    reasons.** That is what stops anchoring. Two auditors reading the same source
+    for different questions -- leakage for lookahead, economics for whether the
+    code implements the hypothesis -- is not anchoring; it is two reviews.
+    """
     assert "SECRET_MARKER" in _slice("leakage", SUMMARY, SOURCE)
-    for axis in ("statistics", "economics", "robustness"):
+    assert "SECRET_MARKER" in _slice("economics", SUMMARY, SOURCE, HYPOTHESIS)
+    for axis in ("statistics", "robustness"):
         assert "SECRET_MARKER" not in _slice(axis, SUMMARY, SOURCE), (
-            f"{axis} can see the source. Each auditor reviews one axis on one "
-            "slice; widening a slice makes four opinions into one.")
+            f"{axis} has no question that needs the source")
+    # and nothing carries a verdict from elsewhere
+    for axis in AXES:
+        text = _slice(axis, SUMMARY, SOURCE, HYPOTHESIS)
+        assert "auditors" not in text and "vetoed_by" not in text
+
+
+def test_only_economics_is_given_the_hypothesis():
+    """It owns the question nobody else asks: does the code implement what the
+    campaign was pre-registered to test? If it does not, the pre-registration is
+    decorative whatever the numbers say."""
+    assert "HYPOTHESIS_MARKER" in _slice("economics", SUMMARY, SOURCE, HYPOTHESIS)
+    for axis in ("leakage", "statistics", "robustness"):
+        assert "HYPOTHESIS_MARKER" not in _slice(axis, SUMMARY, SOURCE, HYPOTHESIS)
+
+
+def test_economics_says_when_it_cannot_judge_the_match():
+    s = _slice("economics", SUMMARY, SOURCE, None)
+    assert "NOT SUPPLIED" in s and "cannot judge question 1" in s
 
 
 def test_the_leakage_auditor_does_not_see_the_gate():
@@ -123,10 +151,17 @@ def test_the_economics_auditor_gets_what_it_needs_to_price_the_costs():
     """Its first live run said 'commission per contract was not provided',
     because the first draft looked for it under `provenance`. It is in the
     campaign's agent_config and the paid total is in the diagnostics."""
-    s = json.loads(_slice("economics", SUMMARY, SOURCE))
-    assert s["commission_per_contract_per_side"] == 0.10
-    assert s["commission_paid"] == 0.06
-    assert s["gross_pnl"] == 0.69
+    # The slice is a document now -- hypothesis, source, then the evidence in a
+    # fenced block -- so the numbers are extracted rather than parsed whole.
+    import re
+
+    text = _slice("economics", SUMMARY, SOURCE, HYPOTHESIS)
+    block = re.search(r"```json\n(.*?)\n```", text, re.DOTALL)
+    assert block, "the economic evidence should still be a json block"
+    ev = json.loads(block.group(1))
+    assert ev["commission_per_contract_per_side"] == 0.10
+    assert ev["commission_paid"] == 0.06
+    assert ev["gross_pnl"] == 0.69
 
 
 @pytest.mark.parametrize("axis", AXES)
@@ -134,7 +169,7 @@ def test_no_slice_carries_validation_or_holdout(axis):
     """The campaign is scored on train only, and nothing about the other splits
     may reach a reviewer whose verdict could then depend on a budget nobody
     pre-registered."""
-    s = _slice(axis, SUMMARY, SOURCE).lower()
+    s = _slice(axis, SUMMARY, SOURCE, HYPOTHESIS).lower()
     for word in ("holdout", "validation"):
         assert word not in s, f"{axis} slice mentions {word}"
 

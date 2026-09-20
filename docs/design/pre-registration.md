@@ -662,6 +662,45 @@ volatility of 1.0 a charge of 0.18 achieves it and 0.10 does not; at volatility
 loss rate, which is why a single charge can work across candidates where a fixed
 `lambda` could not.
 
+### Does the charge break the metric or the null? Measured, not argued
+
+**The null is unaffected.** Simulating no-edge strategies (R = 300 campaigns,
+B = 400 draws, against the real `score_returns`):
+
+| | P(p<=0.05) | P(p<=0.10) | median p |
+|---|---|---|---|
+| no charge (today) | 0.037 | 0.080 | 0.559 |
+| with idle charge | 0.043 | 0.077 | 0.544 |
+
+Within one Monte-Carlo standard error (0.013), and both slightly conservative,
+which agrees with Task 57. The reason it survives is structural: the charge is a
+deterministic block identical in the observed series and in every draw, because
+sign-flipping changes a turn's P&L and never which session it belongs to.
+
+**Sortino changes meaning and should be described accordingly.** The downside
+deviation now includes the idle charges, so the statistic is return per unit of
+downside risk *including the cost of inaction*, not downside risk from trading
+alone. For a thin strategy the idle block dominates that denominator. Intended,
+but it is a different quantity from the one `nq-mvp-01` and `nq-orderflow-01`
+were scored on.
+
+**Never trading already returns REJECT, with no new code.** Every session is then
+identical at `-IDLE_CHARGE`, which trips the existing zero-dispersion guard in
+`score_returns`. That is stronger than the `-1` an earlier draft of this
+amendment claimed.
+
+**`MIN_DOWNSIDE_SESSIONS` effectively retires.** With `MAR = 0` every charged idle
+session is below MAR, so the downside count is large for any strategy that sits
+out at all and the Sharpe fallback stops firing except for a strategy that trades
+nearly every session and loses in almost none. Defensible -- the fallback existed
+because Sortino's denominator could rest on too few losses, and the charge
+guarantees a populated denominator -- but it is a behaviour change to accept
+deliberately rather than inherit.
+
+**Nothing else moves.** The blotter is untouched, so `trade_count`, commission,
+gross and net P&L and the round-turn construction are unchanged; only the
+reassembled per-session vector carries the charge.
+
 ### Open, and to be settled before this takes effect
 
 1. **The level of `IDLE_CHARGE`.** It is a cost of capital, so the question is

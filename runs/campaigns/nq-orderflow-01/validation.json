@@ -1,0 +1,126 @@
+{
+  "schema": "campaign-validation/1",
+  "campaign_id": "nq-orderflow-01",
+  "winner_digest": "4abb6772d63688d5",
+  "winner_campaign_index": null,
+  "train": {
+    "profile": "nq-train",
+    "primary": -0.012520518519564242,
+    "score": {
+      "downside_sessions": 2,
+      "kurtosis": 212.44521169832342,
+      "metric": "sharpe_per_session",
+      "n_sessions": 384,
+      "net_pnl": -0.6999999999912689,
+      "primary": -0.012520518519564242,
+      "reject_reason": "2 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+      "rejected": false,
+      "sharpe": -0.012520518519564242,
+      "significance": -0.24535105350399544,
+      "skew": -12.683054936250063,
+      "sortino": -0.013594103945314224,
+      "trade_count": 8
+    },
+    "diagnostics": {
+      "avg_holding_period_ns": 211875406.625,
+      "best_session_share": 0.16666666666666666,
+      "by_hour_utc": {
+        "09": 0.45000000000145524,
+        "11": 0.45000000000145524,
+        "13": 0.9000000000029105,
+        "14": -0.049999999997089484,
+        "17": -2.45
+      },
+      "by_month": {
+        "2025-02": 0.9000000000029105,
+        "2025-04": -2.45,
+        "2025-05": 0.45000000000145524,
+        "2025-06": 0.45000000000145524,
+        "2025-08": 0.45000000000145524,
+        "2025-11": -0.49999999999854483
+      },
+      "by_weekday": {
+        "Mon": 0.9000000000029105,
+        "Thu": 0.45000000000145524,
+        "Tue": -0.49999999999854483,
+        "Wed": -1.5499999999970897
+      },
+      "commission": 1.6,
+      "fill_model_spread": null,
+      "gross_pnl": 0.9000000000087311,
+      "max_drawdown": -2.45,
+      "n_sessions": 384,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.0001,
+        "exposure_share": 0.0208,
+        "return_dispersion": 0.0005,
+        "trades_per_session": 0.0005
+      },
+      "profit_concentration_top5pct": 1.0,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 8,
+      "trade_count": 8,
+      "turnover_contracts_per_session": 0.041666666666666664,
+      "win_rate": 0.75
+    }
+  },
+  "validation": {
+    "profile": "nq-validation",
+    "primary": -0.1516320268819263,
+    "outcome": "completed",
+    "score": {
+      "downside_sessions": 2,
+      "kurtosis": 41.837966955763676,
+      "metric": "sharpe_per_session",
+      "n_sessions": 86,
+      "net_pnl": -1.65,
+      "primary": -0.1516320268819263,
+      "reject_reason": "2 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+      "rejected": false,
+      "sharpe": -0.1516320268819263,
+      "significance": -1.4061775690017335,
+      "skew": -6.5510850120323845,
+      "sortino": -0.15077770085995726,
+      "trade_count": 2
+    },
+    "diagnostics": {
+      "avg_holding_period_ns": 90055401.5,
+      "best_session_share": 0.0,
+      "by_hour_utc": {
+        "14": -0.95,
+        "20": -0.7
+      },
+      "by_month": {
+        "2026-02": -0.95,
+        "2026-04": -0.7
+      },
+      "by_weekday": {
+        "Mon": -0.95,
+        "Thu": -0.7
+      },
+      "commission": 0.4,
+      "fill_model_spread": null,
+      "gross_pnl": -1.25,
+      "max_drawdown": -1.65,
+      "n_sessions": 86,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.0001,
+        "exposure_share": 0.0233,
+        "return_dispersion": 0.0005,
+        "trades_per_session": 0.0005
+      },
+      "profit_concentration_top5pct": 0.0,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 2,
+      "trade_count": 2,
+      "turnover_contracts_per_session": 0.046511627906976744,
+      "win_rate": 0.0
+    },
+    "git_sha": "c125fe386723b8262069f779a6f3df1dc251a403"
+  },
+  "rule_a_sortino_positive": false,
+  "rule_c_decay": -0.13911150836236208,
+  "note": "Section 5. Rule (a) Sortino > 0 and rule (b) the max_of_m test at L2 are pass conditions; rule (c), the train-to-validation change, is committee evidence and NOT a threshold -- it is reported unjudged, including when validation beats train. This run has purpose 'check' and is not a trial: it does not count toward N. The multiplicity of one validation look per campaign is corrected at L2 by max_of_m, not here."
+}

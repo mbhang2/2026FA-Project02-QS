@@ -1,0 +1,71 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics",
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The strategy accesses only closed bars from ctx.history() and ctx.actionable guards against forming bars; all state variables are computed from closed data at decision time; no access to scoring infrastructure or future-dated values detected.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "The best candidate's result rests on a degenerate metric: only 2 downside sessions out of 384, far below the pre-registered threshold of 5. The strategy was scored on Sharpe instead of Sortino, meaning the denominator (downside volatility) is estimated from almost nothing and is unreliable.",
+        "The validation split shows catastrophic degradation: train Sharpe = -0.0125, validation Sharpe = -0.1516, a change of -0.139. The strategy loses money on both splits (train net PnL = -0.70, validation net PnL = -1.65) and shows a win rate of 0% on validation with only 2 trades.",
+        "Extreme concentration in validation: the strategy executed only 2 trades across 86 sessions (2.3% of sessions had exposure). Both trades lost money. A result from 2 trades is not a statistic; it is a pair of outcomes.",
+        "The null distribution shows the observed best score (-0.0125) is far below the null mean (0.053) and well below even the 50th percentile of the null max (0.067). The gate p-value is 0.987, indicating the result is indistinguishable from random noise.",
+        "Validation diagnostics reveal extreme concentration by time: all losses occur in 2 months (Feb and Apr 2026) and 2 specific hours (14:00 and 20:00 UTC). This pattern suggests the result is an artifact of a handful of market conditions rather than a generalizable strategy."
+      ],
+      "confidence_note": "I cannot see the strategy code or how candidates were generated, so I cannot assess whether the search process itself was sound; however, the statistical evidence on this axis is unambiguous.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "The strategy has negative net P&L on both train (-0.70 points) and validation (-1.65 points) after commission. Gross P&L is +0.90 points on train but commission paid is 1.60 points, making the net result -0.70 points. This is not an edge; it is a cost artifact.",
+        "Commission as a fraction of gross P&L is 178% on train (1.6 / 0.9) and 128% on validation (0.4 / -1.25). The strategy does not pay for itself. On 8 trades over 384 sessions, the strategy is losing money to transaction costs.",
+        "Trade count is degenerate: 8 trades across 384 sessions (0.021 trades per session) on train, and 2 trades across 86 sessions (0.023 trades per session) on validation. This is not a signal; this is inactivity. A strategy that trades almost never will score well when activity is costly, and that is what has happened here.",
+        "The validation result is substantially worse than train (Sharpe -0.152 vs -0.013), and the strategy fires only 2 times on the validation set. With 2 trades and 86 sessions, the result is noise, not a discovery. The win rate on validation is 0%.",
+        "The hypothesis claims absorption marks a turn and initiation confirms it. The code requires 3 consecutive initiation bars after absorption before entering (initiation_bars_required=3). This is a multi-bar confirmation that is so strict it filters out almost all signal. The docstring acknowledges trial #15 was 'too restrictive' with prior-bar confirmation, but the solution \u2014 requiring 3 consecutive initiation bars \u2014 is even more restrictive. The strategy has collapsed to near-zero activity.",
+        "The hypothesis is economically plausible in principle (orderflow reversals are real), but this implementation does not test it. It tests whether a 3-bar confirmation filter on top of absorption detection produces a profitable strategy. It does not. The filter has killed the signal without improving the edge."
+      ],
+      "confidence_note": "I cannot see whether the absorption and initiation detection logic correctly implements the hypothesis as written, or whether the delta thresholds and prior-bar confirmation are sound. I can see that the strategy as deployed trades almost never and loses money to commission, which is sufficient to veto on economic grounds regardless of the signal quality.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Extreme concentration in single trades: only 2 trades executed on validation (86 sessions), with 0% win rate and -1.65 net PnL. The strategy is not a repeatable pattern but a pair of losing bets.",
+        "Validation performance is a mirror image of training: train primary -0.0125, validation primary -0.1516. The 139bp deterioration (rule_c) combined with negative validation Sharpe and Sortino indicates the strategy does not generalize; this is not noise but systematic failure.",
+        "Validation shows only 2 sessions with exposure out of 86 sessions. This is not a strategy; it is two isolated trades. No basis to assess robustness across conditions.",
+        "Training data shows 8 trades across 384 sessions with best_session_share of 16.7% and profit_concentration_top5pct of 1.0 \u2014 all profit comes from one session. Removing that session flips the sign.",
+        "Kurtosis of 41.8 on validation indicates extreme tail risk and non-normal returns, consistent with a strategy that fires rarely and unpredictably rather than a robust repeatable signal.",
+        "By-month and by-hour breakdowns on validation show all losses concentrated in 2026-02 (Mon, 14 UTC) and 2026-04 (Thu, 20 UTC) \u2014 only two data points, each a single trade. No evidence of broad-based behavior."
+      ],
+      "confidence_note": "You cannot see out-of-sample results, but the validation split itself shows the strategy is not robust: it executes almost no trades, loses on both, and exhibits extreme concentration. The training-to-validation deterioration is severe and systematic, not sampling noise.",
+      "error": null
+    }
+  ],
+  "model": "claude-haiku-4-5",
+  "model_served": "claude-haiku-4-5",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

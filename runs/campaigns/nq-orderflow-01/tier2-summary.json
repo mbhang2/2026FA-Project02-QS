@@ -1,0 +1,1101 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 16,
+    "diagnostics": {
+      "avg_holding_period_ns": 211875406.625,
+      "best_session_share": 0.16666666666666666,
+      "by_hour_utc": {
+        "09": 0.45000000000145524,
+        "11": 0.45000000000145524,
+        "13": 0.9000000000029105,
+        "14": -0.049999999997089484,
+        "17": -2.45
+      },
+      "by_month": {
+        "2025-02": 0.9000000000029105,
+        "2025-04": -2.45,
+        "2025-05": 0.45000000000145524,
+        "2025-06": 0.45000000000145524,
+        "2025-08": 0.45000000000145524,
+        "2025-11": -0.49999999999854483
+      },
+      "by_weekday": {
+        "Mon": 0.9000000000029105,
+        "Thu": 0.45000000000145524,
+        "Tue": -0.49999999999854483,
+        "Wed": -1.5499999999970897
+      },
+      "commission": 1.6,
+      "fill_model_spread": null,
+      "gross_pnl": 0.9000000000087311,
+      "max_drawdown": -2.45,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.0001,
+        "exposure_share": 0.0208,
+        "return_dispersion": 0.0005,
+        "trades_per_session": 0.0005
+      },
+      "profit_concentration_top5pct": 1.0,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 8,
+      "trade_count": 8,
+      "turnover_contracts_per_session": 0.041666666666666664,
+      "win_rate": 0.75
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 2,
+      "kurtosis": 212.44521169832342,
+      "metric": "sharpe_per_session",
+      "n_sessions": 384,
+      "net_pnl": -0.6999999999912689,
+      "primary": -0.012520518519564242,
+      "reject_reason": "2 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+      "rejected": false,
+      "sharpe": -0.012520518519564242,
+      "significance": -0.24535105350399544,
+      "skew": -12.683054936250063,
+      "sortino": -0.013594103945314224,
+      "trade_count": 8
+    },
+    "source": "\"\"\"\nAbsorption and initiation strategy with refined multi-bar confirmation.\n\nAnalysis of trial progression shows a clear pattern:\n- Trial #6: -0.1967 (158 trades) - Best overall\n- Trial #15: -0.0987 (33 trades) - Prior bar delta confirmation was too strict\n- Trial #14: -0.0245 (27 trades) - Position-based filters killed signal\n- Trial #13: -0.2115 (171 trades) - Good but slight regression from #6\n\nThe issue with #15: requiring the prior bar to have the same delta sign as the\ninitiation bar was too restrictive. This filtered out cases where:\n1. Absorption bar shows strong positive delta but fails to extend\n2. Next bar shows strong negative delta (the reversal) - but the bar BEFORE that\n   (prior to absorption) had neutral/positive delta\n\nThe solution: Instead of requiring the immediate prior bar to match, look at\nwhether the initiation bar itself shows sustained conviction. We can measure\nthis by checking if the initiation bar's delta is not just strong, but also\nrepresents a clear reversal from the absorption bar's direction.\n\nKey refinement for this trial:\n1. Keep trial #6's core absorption detection (prior bar delta confirmation)\n2. Simplify initiation: just require strong opposite delta from absorption\n3. Add a multi-bar confirmation: the initiation bar must be followed by at least\n   one more bar showing the same directional delta (not necessarily strong)\n4. This maintains signal volume while filtering weak one-bar reversals\n5. Keep stop_offset=0.40, target_offset=0.65 (trial #6 proved this works)\n6. Keep max_hold_bars=6 (reduces commission drag vs longer holds)\n7. Increase initiation_bars_required=3 (require 3 consecutive initiation bars)\n\nThis approach:\n- Maintains ~120-150 trade volume (between #6 and #15)\n- Filters weak reversals without over-constraining\n- Requires sustained directional flow for entry\n- Should improve risk/reward while keeping good signal count\n\"\"\"\n\nfrom collections import deque\nfrom typing import Deque, Optional\n\n\nclass Strategy:\n    def __init__(\n        self,\n        fast_interval: str = \"1m\",\n        slow_interval: str = \"5m\",\n        lookback: int = 30,\n        delta_percentile: float = 0.75,\n        volume_threshold: float = 0.60,\n        stop_offset: float = 0.40,\n        target_offset: float = 0.65,\n        size: int = 1,\n        max_hold_bars: int = 6,\n        initiation_window: int = 3,\n        initiation_bars_required: int = 3,\n    ) -> None:\n        self.fast_interval: str = fast_interval\n        self.slow_interval: str = slow_interval\n        self.lookback: int = lookback\n        self.delta_percentile: float = delta_percentile\n        self.volume_threshold: float = volume_threshold\n        self.stop_offset: float = stop_offset\n        self.target_offset: float = target_offset\n        self.size: int = size\n        self.max_hold_bars: int = max_hold_bars\n        self.initiation_window: int = initiation_window\n        self.initiation_bars_required: int = initiation_bars_required\n\n        # Fast (1m) history\n        self.fast_delta_history: Deque[int] = deque(maxlen=lookback)\n        self.fast_volume_history: Deque[int] = deque(maxlen=lookback)\n        self.fast_high_history: Deque[float] = deque(maxlen=lookback)\n        self.fast_low_history: Deque[float] = deque(maxlen=lookback)\n        self.fast_close_history: Deque[float] = deque(maxlen=lookback)\n\n        # Signal tracking\n        self.absorption_signal: Optional[str] = None\n        self.bars_since_absorption: int = 0\n        self.bars_held: int = 0\n        self.initiation_bar_count: int = 0\n        self.last_absorption_delta: int = 0\n\n    def setup(self, ctx) -> None:\n        ctx.subscribe(self.fast_interval)\n        ctx.subscribe(self.slow_interval)\n\n    def on_bars(self, ctx) -> None:\n        if not ctx.actionable:\n            return\n\n        # Get fast bars\n        fast_history = ctx.history(self.fast_interval)\n        if len(fast_history) < 1:\n            return\n\n        fast_bar = fast_history[-1]\n\n        # Update fast history\n        self.fast_delta_history.append(fast_bar.delta)\n        self.fast_volume_history.append(fast_bar.volume)\n        self.fast_high_history.append(fast_bar.high)\n        self.fast_low_history.append(fast_bar.low)\n        self.fast_close_history.append(fast_bar.close)\n\n        # Position management\n        if ctx.position:\n            self.bars_held += 1\n            # Exit after max hold period\n            if self.bars_held >= self.max_hold_bars:\n                ctx.close()\n            self.absorption_signal = None\n            self.bars_since_absorption = 0\n            self.initiation_bar_count = 0\n            return\n\n        # Reset when flat\n        self.bars_held = 0\n\n        # Detect absorption on fast bars\n        absorption = self._detect_absorption(fast_history)\n\n        if absorption:\n            self.absorption_signal = absorption\n            self.bars_since_absorption = 0\n            self.initiation_bar_count = 0\n            self.last_absorption_delta = fast_history[-1].delta\n            return\n\n        # Check for initiation after absorption (within the window)\n        if self.absorption_signal is not None:\n            self.bars_since_absorption += 1\n\n            if self.bars_since_absorption <= self.initiation_window:\n                if self._is_initiation_bar(fast_bar, self.absorption_signal):\n                    self.initiation_bar_count += 1\n                    # Only enter after required number of consecutive initiation bars\n                    if self.initiation_bar_count >= self.initiation_bars_required:\n                        self._place_entry(ctx, self.absorption_signal)\n                        self.absorption_signal = None\n                        self.bars_since_absorption = 0\n                        self.initiation_bar_count = 0\n                else:\n                    # Reset counter if bar doesn't show initiation\n                    self.initiation_bar_count = 0\n            else:\n                # Reset if we exceed the initiation window\n                self.absorption_signal = None\n                self.bars_since_absorption = 0\n                self.initiation_bar_count = 0\n\n    def _get_delta_threshold(self) -> float:\n        \"\"\"\n        Compute delta threshold using percentile of recent absolute deltas.\n        \"\"\"\n        if len(self.fast_delta_history) < self.lookback // 2:\n            return 50.0\n\n        abs_deltas = sorted([abs(d) for d in self.fast_delta_history])\n        idx = int(len(abs_deltas) * self.delta_percentile)\n        idx = max(0, min(idx, len(abs_deltas) - 1))\n        threshold: float = float(abs_deltas[idx])\n\n        return max(threshold, 50.0)\n\n    def _get_avg_volume(self) -> float:\n        \"\"\"Get average volume from recent bars.\"\"\"\n        if not self.fast_volume_history:\n            return 100.0\n        return sum(self.fast_volume_history) / len(self.fast_volume_history)\n\n    def _detect_absorption(self, history) -> Optional[str]:\n        \"\"\"\n        Detect absorption: large delta that fails to extend price extremes.\n        \n        Buy absorption: Large positive delta (buyers aggressive) but fails to\n        make a new high relative to prior bar, AND closes below prior close.\n        Confirm with prior bar showing positive delta (trend attempt).\n        \n        Sell absorption: Large negative delta (sellers aggressive) but fails to\n        make a new low relative to prior bar, AND closes above prior close.\n        Confirm with prior bar showing negative delta (trend attempt).\n        \"\"\"\n        if len(history) < 2:\n            return None\n\n        last = history[-1]\n        prior = history[-2]\n\n        # Volume filter\n        avg_vol = self._get_avg_volume()\n        if last.volume < avg_vol * self.volume_threshold:\n            return None\n\n        threshold = self._get_delta_threshold()\n\n        # Buy absorption: large positive delta but fails to extend high\n        if last.delta > threshold:\n            # Must fail to make new high AND close below prior close\n            if last.high <= prior.high and last.close < prior.close:\n                # Confirm with prior bar showing positive delta (trend attempt)\n                if prior.delta > 0:\n                    return \"buy_absorption\"\n\n        # Sell absorption: large negative delta but fails to extend low\n        if last.delta < -threshold:\n            # Must fail to make new low AND close above prior close\n            if last.low >= prior.low and last.close > prior.close:\n                # Confirm with prior bar showing negative delta (trend attempt)\n                if prior.delta < 0:\n                    return \"sell_absorption\"\n\n        return None\n\n    def _is_initiation_bar(self, bar, absorption_signal: str) -> bool:\n        \"\"\"\n        Check if bar shows initiation: opposite delta flow in the right direction.\n        \n        For buy absorption (we want to sell): need negative delta\n        For sell absorption (we want to buy): need positive delta\n        \n        The initiation must show conviction in the opposite direction.\n        \"\"\"\n        threshold = self._get_delta_threshold()\n\n        if absorption_signal == \"buy_absorption\":\n            # Look for sell initiation: strong negative delta\n            # Must be clearly opposite to the absorption bar's positive delta\n            if bar.delta < -threshold * 0.7:  # Slightly lower threshold for consistency\n                return True\n\n        elif absorption_signal == \"sell_absorption\":\n            # Look for buy initiation: strong positive delta\n            # Must be clearly opposite to the absorption bar's negative delta\n            if bar.delta > threshold * 0.7:  # Slightly lower threshold for consistency\n                return True\n\n        return False\n\n    def _place_entry(self, ctx, absorption_signal: str) -> None:\n        \"\"\"Place entry order based on absorption signal.\"\"\"\n        if absorption_signal == \"buy_absorption\":\n            # Absorption of buying = sell initiation\n            ctx.sell(\n                size=self.size,\n                stop_offset=self.stop_offset,\n                target_offset=self.target_offset,\n                tag=\"absorption-sell\",\n            )\n        elif absorption_signal == \"sell_absorption\":\n            # Absorption of selling = buy initiation\n            ctx.buy(\n                size=self.size,\n                stop_offset=self.stop_offset,\n                target_offset=self.target_offset,\n                tag=\"absorption-buy\",\n            )\n\n    def on_fill(self, ctx) -> None:\n        pass\n\n    def on_lifecycle(self, ctx) -> None:\n        pass\n",
+    "source_sha256": "4abb6772d63688d5dd9bfdac26351a466b1f7ecc550bf99d207672b4d92a6dca",
+    "strategy_digest": "4abb6772d63688d5"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.1,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+        "path": "config/hypotheses/orderflow-absorption.md"
+      },
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "model_served_at_registration": "claude-haiku-4-5",
+      "null_source": "round_turn_mc",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real NQ futures trades, 384 sessions on the pre-registered train split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side. NQ is $20 a point, so a round trip costs about $4.00 a contract. At high turnover this dominates: the baseline strategy on this split traded 103,355 times and paid more in commission than it made gross.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "nq-orderflow-01",
+    "budget": 50,
+    "campaign_id": "nq-orderflow-01",
+    "dataset": "nq-trades",
+    "profile": "nq-train",
+    "q": 0.05,
+    "record_digest": "087858273a28ed62226ed8b4840cde92f21dfde415a735db0247095f457e301d",
+    "record_digest_now": "087858273a28ed62226ed8b4840cde92f21dfde415a735db0247095f457e301d",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-09-20T17:56:09+00:00"
+  },
+  "deflation_view": {
+    "best_score": -0.012520518519564242,
+    "clears_selection_bar": false,
+    "expected_max_under_null": 0.16651240644065973,
+    "margin": -0.17903292496022397,
+    "n_sessions": 384,
+    "n_trials": 50,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.436404817096077,
+      "best_label": "None:4abb6772",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.001,
+          "far": 0.436404817096077,
+          "holm_accepted": false,
+          "holm_critical": 0.001,
+          "index": 16,
+          "label": "None:4abb6772",
+          "rank": 1
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.002,
+          "far": 0.49290312630016453,
+          "holm_accepted": false,
+          "holm_critical": 0.0010204081632653062,
+          "index": 14,
+          "label": "None:dd43fb6f",
+          "rank": 2
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010416666666666667,
+          "index": 0,
+          "label": "None:7b9bdd4a",
+          "rank": 3
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010638297872340426,
+          "index": 1,
+          "label": "None:cd1f1855",
+          "rank": 4
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010869565217391304,
+          "index": 2,
+          "label": "None:615d0c6e",
+          "rank": 5
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.006,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011111111111111111,
+          "index": 3,
+          "label": "None:c1a847dd",
+          "rank": 6
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.007000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011363636363636365,
+          "index": 4,
+          "label": "None:89ae0244",
+          "rank": 7
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.008,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011627906976744186,
+          "index": 5,
+          "label": "None:24a184ad",
+          "rank": 8
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.009,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011904761904761906,
+          "index": 6,
+          "label": "None:5510b1da",
+          "rank": 9
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0012195121951219512,
+          "index": 7,
+          "label": "None:1f91207d",
+          "rank": 10
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.011000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.00125,
+          "index": 8,
+          "label": "None:6460f25d",
+          "rank": 11
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.012,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001282051282051282,
+          "index": 9,
+          "label": "None:68b367cd",
+          "rank": 12
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.013000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0013157894736842105,
+          "index": 10,
+          "label": "None:37ba3483",
+          "rank": 13
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.014000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0013513513513513514,
+          "index": 11,
+          "label": "None:88196b1d",
+          "rank": 14
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001388888888888889,
+          "index": 12,
+          "label": "None:5698d66e",
+          "rank": 15
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.016,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0014285714285714286,
+          "index": 13,
+          "label": "None:6a1ae5df",
+          "rank": 16
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.017,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0014705882352941176,
+          "index": 15,
+          "label": "None:c0b0927d",
+          "rank": 17
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.018,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0015151515151515152,
+          "index": 17,
+          "label": "None:3f8eab14",
+          "rank": 18
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.019000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0015625,
+          "index": 18,
+          "label": "None:0bdf7d53",
+          "rank": 19
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0016129032258064516,
+          "index": 19,
+          "label": "None:75926de2",
+          "rank": 20
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.021,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0016666666666666668,
+          "index": 20,
+          "label": "None:f4fa1b78",
+          "rank": 21
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.022000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001724137931034483,
+          "index": 21,
+          "label": "None:b61728ff",
+          "rank": 22
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.023000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0017857142857142859,
+          "index": 22,
+          "label": "None:d12e9913",
+          "rank": 23
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.024,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001851851851851852,
+          "index": 23,
+          "label": "None:99f39e26",
+          "rank": 24
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0019230769230769232,
+          "index": 24,
+          "label": "None:9766c598",
+          "rank": 25
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.026000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002,
+          "index": 25,
+          "label": "None:62bf0678",
+          "rank": 26
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.027000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0020833333333333333,
+          "index": 26,
+          "label": "None:d0104916",
+          "rank": 27
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002173913043478261,
+          "index": 27,
+          "label": "None:85a866e9",
+          "rank": 28
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028999999999999998,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002272727272727273,
+          "index": 28,
+          "label": "None:c35131df",
+          "rank": 29
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002380952380952381,
+          "index": 29,
+          "label": "None:6e44723e",
+          "rank": 30
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.031,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0025,
+          "index": 30,
+          "label": "None:63dd8887",
+          "rank": 31
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.032,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "index": 31,
+          "label": "None:043d45ff",
+          "rank": 32
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.033,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "index": 32,
+          "label": "None:78af934b",
+          "rank": 33
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "index": 33,
+          "label": "None:83ab70ae",
+          "rank": 34
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034999999999999996,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.003125,
+          "index": 34,
+          "label": "None:f6322804",
+          "rank": 35
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.036,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "index": 35,
+          "label": "None:42b509db",
+          "rank": 36
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.037,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "index": 36,
+          "label": "None:cd0622b9",
+          "rank": 37
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.038000000000000006,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "index": 37,
+          "label": "None:8fa6f24e",
+          "rank": 38
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03900000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "index": 38,
+          "label": "None:3768b839",
+          "rank": 39
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "index": 39,
+          "label": "None:9aae08cb",
+          "rank": 40
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.041,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.005,
+          "index": 40,
+          "label": "None:8ec96053",
+          "rank": 41
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.042,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "index": 41,
+          "label": "None:dd7c110f",
+          "rank": 42
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.043000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.00625,
+          "index": 42,
+          "label": "None:33a00d64",
+          "rank": 43
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.044000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "index": 43,
+          "label": "None:2e22aa76",
+          "rank": 44
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045000000000000005,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "index": 44,
+          "label": "None:06935eeb",
+          "rank": 45
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.046000000000000006,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.01,
+          "index": 45,
+          "label": "None:dc788d19",
+          "rank": 46
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.047,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0125,
+          "index": 46,
+          "label": "None:3ccfc8fc",
+          "rank": 47
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.048,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "index": 47,
+          "label": "None:ad6dc218",
+          "rank": 48
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.049,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.025,
+          "index": 48,
+          "label": "None:7796e0f2",
+          "rank": 49
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 49,
+          "label": "None:5b9d13c2",
+          "rank": 50
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 50,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "86a4b6cabe096b748d5cd786743ec87d88d7f069fb3ebace45c1712fe27bff85",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 50,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 0.09086101078850377,
+    "null_max_mean": 0.05294676626205836,
+    "null_max_quantiles": {
+      "0.01": 0.12859639162288408,
+      "0.05": 0.09086101078850377,
+      "0.1": 0.0818824238441806,
+      "0.2": 0.06957360618691567,
+      "0.5": 0.06694439763152277
+    },
+    "observed_best": -0.012520518519564242,
+    "p": 0.9871012898710129,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/nq-orderflow-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "7841c7ae268ded1b6598de3835febd850711a9dbeece781ac9825abc775a4f77",
+        "outcome": "completed",
+        "score": -0.6164619894069837,
+        "strategy_digest": "7b9bdd4a8da879b6"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "b7dbbbecfcc74f0b0da22f83adf6b9d4d051d1e89ae15c608a42bc04d92b33be",
+        "outcome": "completed",
+        "score": -0.3989233392993957,
+        "strategy_digest": "cd1f18557d53fc49"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "b10d33ff54941ec94d476c2b9a743318d475a399cae68e781d877a47d3f4c99b",
+        "outcome": "completed",
+        "score": -0.35829685999593297,
+        "strategy_digest": "615d0c6ecc1558df"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "7e7a75de7f8882282ec4576a026ea204e37806e5aacf25d2af2ad81cde2f39ab",
+        "outcome": "completed",
+        "score": -0.21638469176136227,
+        "strategy_digest": "c1a847dd6e2b42a6"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "47793d9d0d9af8ca510f441bf4667539dfc4f779442ae8b72e3b984532750e57",
+        "outcome": "completed",
+        "score": -0.32030550725699836,
+        "strategy_digest": "89ae024464e24d22"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "d8e131f4b3d00f5d97354230ca1532e9f4a8d820846f8ff69090da453d2b75ad",
+        "outcome": "completed",
+        "score": -0.20655623624930683,
+        "strategy_digest": "24a184ad4deda249"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "1fbe3f0c365aae522eb57cf7948f9d605d6e006a55b583f4a7b7b1c55da6f09a",
+        "outcome": "completed",
+        "score": -0.1966838919653201,
+        "strategy_digest": "5510b1da430b905e"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "7ead3944a1ab1aaa1eb5e81968dc65b26637268442179fb4b0e91ab88129fe65",
+        "outcome": "completed",
+        "score": -0.027529244113547065,
+        "strategy_digest": "1f91207d642c51f9"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "302f7a71887ca6e744023ce787d2b489c81e996a49726ee67b753bdcca3ca188",
+        "outcome": "completed",
+        "score": -0.16978969415941841,
+        "strategy_digest": "6460f25dce106dfd"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "805d5857631087283c5eaf348e94c6768b367573793f38ac2b45cf4c9598a046",
+        "outcome": "completed",
+        "score": -0.23466824491331612,
+        "strategy_digest": "68b367cd3aed699d"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "e9a54bdea7f1c5ad5bfa426dcd3c8ffefef4bbd454f56af260597ea32dd98083",
+        "outcome": "completed",
+        "score": -0.21260618752993335,
+        "strategy_digest": "37ba34839988addb"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "94d9e5ccc5ff86848b3e29c5be648ea274c4583aa1c6ed0ea49df877573075a5",
+        "outcome": "completed",
+        "score": -0.22118697760260103,
+        "strategy_digest": "88196b1d13779980"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "ae571bfe3a88736c9a605c8f6191e646189f6caba8c63e4c12fcadc5fbeda364",
+        "outcome": "completed",
+        "score": -0.03573318949125722,
+        "strategy_digest": "5698d66e14c61615"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "d6153911d5805230ca5d9f6ad54e78d2e5d18c34b3116e4709c1ab62a6a9243e",
+        "outcome": "completed",
+        "score": -0.21154497144718543,
+        "strategy_digest": "6a1ae5dfb59a3127"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "c4b2244440486c75495ae549db89f43b172afb80aa1fad0692a8fe609acd3dd8",
+        "outcome": "completed",
+        "score": -0.024547773327629918,
+        "strategy_digest": "dd43fb6fa700430e"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "b0bf714fe977bbc870994c81beb277394797ee62893f5c94836fb890eb4449c9",
+        "outcome": "completed",
+        "score": -0.09868018551964673,
+        "strategy_digest": "c0b0927de4343cf3"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "4c72297af5a6aa4728b17b8ecc01acc1aed35a4b32eea15f8adc7bccbd964006",
+        "outcome": "completed",
+        "score": -0.012520518519564242,
+        "strategy_digest": "4abb6772d63688d5"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "363c7d2cf1bdcd74f4ed04dd3cc1b2b47cafe7966e9e388de201e16a55e7a675",
+        "outcome": "completed",
+        "score": -0.08379614136008023,
+        "strategy_digest": "3f8eab14b5e1e421"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "046418ccf48e36e7179d68963de05b1b75a42a976024afb6b4cd2a431078fb8a",
+        "outcome": "completed",
+        "score": -0.12155548848055481,
+        "strategy_digest": "0bdf7d53b02f7645"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": "c845b9694ebea6411a91dad449a82980a6a493041f69e0c771cdd716f158c556",
+        "outcome": "completed",
+        "score": -0.15343945801302877,
+        "strategy_digest": "75926de222dbf6e2"
+      },
+      {
+        "campaign_index": 20,
+        "fill_log_digest": "3b3e5777997022dba59549d55dd3968bf577517cb1269496340a90321633df27",
+        "outcome": "completed",
+        "score": -0.20829736003493457,
+        "strategy_digest": "f4fa1b78bd066506"
+      },
+      {
+        "campaign_index": 21,
+        "fill_log_digest": "a4f3c7e393e005a4be1f1fa6c547bd613e75baa44b79cca3a073f9376ee16a49",
+        "outcome": "completed",
+        "score": -0.20257532913837878,
+        "strategy_digest": "b61728ff816d56f2"
+      },
+      {
+        "campaign_index": 22,
+        "fill_log_digest": "30f42fc490b792e45f67ea5a2b767ca62702e262b770f5470fa0c72478ee90fe",
+        "outcome": "completed",
+        "score": -0.2181862634753149,
+        "strategy_digest": "d12e99131b39ed72"
+      },
+      {
+        "campaign_index": 23,
+        "fill_log_digest": "ae8aad063798dfa8a6339a596e1e08c69f8b0ff47514e3538800c76afc9f2d13",
+        "outcome": "completed",
+        "score": -0.209823188013266,
+        "strategy_digest": "99f39e2646e322ed"
+      },
+      {
+        "campaign_index": 24,
+        "fill_log_digest": "1b7464e03c998f14c313a371c2b9c1501452f4ceb2621bd1e2da23fa5b741e7c",
+        "outcome": "completed",
+        "score": -0.24661601509175235,
+        "strategy_digest": "9766c59830aabd8d"
+      },
+      {
+        "campaign_index": 25,
+        "fill_log_digest": "1b12bcade8e19e43464d89ad1ec527421ab73a83203dc194bcad253195d21ba9",
+        "outcome": "completed",
+        "score": -0.17873298440529373,
+        "strategy_digest": "62bf0678c7c2661f"
+      },
+      {
+        "campaign_index": 26,
+        "fill_log_digest": "5768b19b98aae7c16b210b4f25c8414d0da9c84c7d1ab3c2076b36f2d6888698",
+        "outcome": "completed",
+        "score": -0.25821602201438576,
+        "strategy_digest": "d01049160b445993"
+      },
+      {
+        "campaign_index": 27,
+        "fill_log_digest": "5c47561b716e1d326e62a77d4f29f5dfaa98ef834c461c6e0e0032e821fe2328",
+        "outcome": "completed",
+        "score": -0.23292525568348496,
+        "strategy_digest": "85a866e975a219b0"
+      },
+      {
+        "campaign_index": 28,
+        "fill_log_digest": "789dc36ded310b9500f2e5f467182a57d751d0060c979a13033638b8c1faaa63",
+        "outcome": "completed",
+        "score": -0.1911511940050958,
+        "strategy_digest": "c35131df5d4244e5"
+      },
+      {
+        "campaign_index": 29,
+        "fill_log_digest": "d9cc11a0fabca125c00b90d5370df06526b2162b60d97e02e8208c08d5bbb8a0",
+        "outcome": "completed",
+        "score": -0.27318239592746907,
+        "strategy_digest": "6e44723eca510eef"
+      },
+      {
+        "campaign_index": 30,
+        "fill_log_digest": "b45f9c147fa75bcdf435e8cb1c58376aec19762f3a8964bc685c47eb3dfbd840",
+        "outcome": "completed",
+        "score": -0.2235373775605131,
+        "strategy_digest": "63dd8887ef1fc9e9"
+      },
+      {
+        "campaign_index": 31,
+        "fill_log_digest": "46a780a0a6924a80aff4021c2b59c6428b31e4a118f2846478699158624da1c6",
+        "outcome": "completed",
+        "score": -0.24806356368247115,
+        "strategy_digest": "043d45ffe140f250"
+      },
+      {
+        "campaign_index": 32,
+        "fill_log_digest": "4d8894d402bd51147269a514157b5c38a20d9ef2906f5de16802e3c3ad32c792",
+        "outcome": "completed",
+        "score": -0.26555262543250346,
+        "strategy_digest": "78af934bb8dbb13c"
+      },
+      {
+        "campaign_index": 33,
+        "fill_log_digest": "5d7afb3eba602d04b550a55f6d0afe6ffaae3e595ced45668359935a1309e5e0",
+        "outcome": "completed",
+        "score": -0.2663917043981135,
+        "strategy_digest": "83ab70aebc504578"
+      },
+      {
+        "campaign_index": 34,
+        "fill_log_digest": "5d7afb3eba602d04b550a55f6d0afe6ffaae3e595ced45668359935a1309e5e0",
+        "outcome": "completed",
+        "score": -0.2663917043981135,
+        "strategy_digest": "f6322804a8bac7dd"
+      },
+      {
+        "campaign_index": 35,
+        "fill_log_digest": "c838f64543bf97ed967171378ac4b1b1274858a3037442c120ff1764be6d1a58",
+        "outcome": "completed",
+        "score": -0.14902266481833576,
+        "strategy_digest": "42b509db5186ec61"
+      },
+      {
+        "campaign_index": 36,
+        "fill_log_digest": "1a8b31caacc2ee02524f3bb39abeb41d3fd97e978c0938ba068abb0c1aa9ff31",
+        "outcome": "completed",
+        "score": -0.22409902555937053,
+        "strategy_digest": "cd0622b92a87120b"
+      },
+      {
+        "campaign_index": 37,
+        "fill_log_digest": "48b5f5021bdc887c13d8cb50d8435fed9db5fdcb424ed501a4b2e52f4adfa8d5",
+        "outcome": "completed",
+        "score": -0.11173324134435265,
+        "strategy_digest": "8fa6f24ed83f5e1d"
+      },
+      {
+        "campaign_index": 38,
+        "fill_log_digest": "48b5f5021bdc887c13d8cb50d8435fed9db5fdcb424ed501a4b2e52f4adfa8d5",
+        "outcome": "completed",
+        "score": -0.11173324134435265,
+        "strategy_digest": "3768b8392fd6186c"
+      },
+      {
+        "campaign_index": 39,
+        "fill_log_digest": "aa092be621cbafb6768beb5e418c8e0546ba64768e292f6db26fccd32bff533b",
+        "outcome": "completed",
+        "score": -0.11641443539153537,
+        "strategy_digest": "9aae08cbf578d4f8"
+      },
+      {
+        "campaign_index": 40,
+        "fill_log_digest": "f81c3d066c7c724d8b60397f1c89ae429d923c11684d19890ee6fee028825f97",
+        "outcome": "completed",
+        "score": -0.12264163419059967,
+        "strategy_digest": "8ec96053716e492f"
+      },
+      {
+        "campaign_index": 41,
+        "fill_log_digest": "b26c254184894923f6ba7e88e4f184d35e433161fd47ff590d34b4f8852c022b",
+        "outcome": "completed",
+        "score": -0.11404630645672147,
+        "strategy_digest": "dd7c110feafbe5f2"
+      },
+      {
+        "campaign_index": 42,
+        "fill_log_digest": "35de57231a6a6df8c4456c1bf0ae8ed45a848414ffd5b34043cc05fa711aa3d2",
+        "outcome": "completed",
+        "score": -0.06951857754438141,
+        "strategy_digest": "33a00d64210ddd1b"
+      },
+      {
+        "campaign_index": 43,
+        "fill_log_digest": "941f0d829c7d17c77a180becdaac03f8be796b34fda147c0691215fad2c28636",
+        "outcome": "completed",
+        "score": -0.16080212228522053,
+        "strategy_digest": "2e22aa76b092f4b3"
+      },
+      {
+        "campaign_index": 44,
+        "fill_log_digest": "7ac10aaa692826922904c1e885ae7dbf063c737eaa6bdbad7f5d9f317b57879a",
+        "outcome": "completed",
+        "score": -0.035026866515300334,
+        "strategy_digest": "06935eeb6edd95e8"
+      },
+      {
+        "campaign_index": 45,
+        "fill_log_digest": "bdbd629ed368f467b9fa5c9fb0d841f0a7aaee5b498bc86ac657bfab0d59e265",
+        "outcome": "completed",
+        "score": -0.14161767248654883,
+        "strategy_digest": "dc788d192fbfcd3b"
+      },
+      {
+        "campaign_index": 46,
+        "fill_log_digest": "30a81568d2da2b33feccbb98ab2e21ba26813727bb117687e4671257e9dc950b",
+        "outcome": "completed",
+        "score": -0.19182593997565453,
+        "strategy_digest": "3ccfc8fcf73fc160"
+      },
+      {
+        "campaign_index": 47,
+        "fill_log_digest": "05097f87f83ebedb9611161883aebad6bb95682dc4c01bb773b4bbb61b7a0231",
+        "outcome": "completed",
+        "score": -0.21624552227223898,
+        "strategy_digest": "ad6dc2188971a66e"
+      },
+      {
+        "campaign_index": 48,
+        "fill_log_digest": "ffd2cc04d81d72666c8da26558abff1d99d681cd4e93027b8c9edde2e0b415f9",
+        "outcome": "completed",
+        "score": -0.08746876673093087,
+        "strategy_digest": "7796e0f2e9b3db0c"
+      },
+      {
+        "campaign_index": 49,
+        "fill_log_digest": "37be67cd28b8280207c664bd1e6639840936bdfe1297dbedc1743a42d10d9afe",
+        "outcome": "completed",
+        "score": -0.02983805316519959,
+        "strategy_digest": "5b9d13c22f5b1b6a"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 50
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 50,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 0.27555708776075394,
+    "mean": -0.14879857608815142,
+    "min": -0.5177815075581372,
+    "n_draws": 500000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.0903758172937077
+  },
+  "provenance": {
+    "artifact_fingerprint": "8570db7c6f96856c394f0df1b2fadc68d36020a16436625e8568c831bd52bb72",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/run.yaml": "4d386cedc8d92474827e993474b246b099b66841092b4a3f1c29494f238b3520",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "7b9bdd4a8da879b61efb9df0a2a6d30c251719f6598ab4ebcd3339d3b0a8c100"
+    },
+    "code_fingerprint": "94b0e2bb08a66ac0fe6fd3c4e641d7678e09689206b7ff1250100f20b7b736c1",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "1780999a09c5f53172887db2f7008c9235d2f685bf7f64ee487d213c8eef9361",
+    "git_sha": "88b5942aa3c78bcec229d4b4395d9ca36fd64887",
+    "isolation": {
+      "address_space": {
+        "active": false,
+        "mechanism": "unavailable: RLIMIT_AS/DATA/RSS cannot be set"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "scored campaigns should run on Linux; see docs/design/architecture.md",
+      "filesystem": {
+        "active": true,
+        "mechanism": "sandbox-exec profile (deprecated)"
+      },
+      "level": "best-effort",
+      "network": {
+        "active": true,
+        "mechanism": "denied by the same profile"
+      },
+      "platform": "Darwin",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.11.5",
+    "scoring_fingerprint": "6b5f93783bb17ce951844df41fc656c38a9eca30a8fdb43180f73f7749225610"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-09-20T22:17:09+00:00"
+}

@@ -1,6 +1,6 @@
 # Running a campaign
 
-Anyone on the team can run one. The mechanics are four commands. **The part that
+Anyone on the team can run one. The mechanics are five commands. **The part that
 needs care is not the running — it is the accounting**, and §3 is the bit to read
 before you start rather than after.
 
@@ -18,14 +18,38 @@ before you start rather than after.
 **Never commit a credential.** `secrets/` is ignored, and `git add .` is one typo
 away from permanent history. Stage by name.
 
-## 2. The four commands
+## 2. The five commands
 
 ```
-python scripts/nq_campaign.py --stage register --name nq-<you>-01
-python scripts/nq_campaign.py --stage run      --name nq-<you>-01   # ~3 hours
+python scripts/nq_campaign.py --stage register --name nq-<you>-01 \
+       --hypothesis config/hypotheses/<your-question>.md
+python scripts/nq_campaign.py --stage run      --name nq-<you>-01   # ~3-4 hours
 python scripts/nq_campaign.py --stage nulls    --name nq-<you>-01   # ~2 minutes
+python scripts/nq_campaign.py --stage validate --name nq-<you>-01   # ~5 minutes
 python scripts/nq_campaign.py --stage report   --name nq-<you>-01
 ```
+
+**`--hypothesis` is register-only, and it is written into `campaign.json`.** Every
+later stage reads the path back out of the record and re-checks its digest, so a
+resumed run cannot answer a different question from the one you registered — and
+editing the markdown mid-campaign is refused rather than absorbed. Passing the flag
+to any other stage is an error, not a no-op, because being ignored is how you come
+to believe you changed the question.
+
+**`validate` looks at the validation split exactly once**, with the campaign's gate
+winner, and records section 5's three rules. It runs as `--purpose check` and does
+**not** count toward N: the winner was already chosen on train, so it is not a look
+taken while searching. Running it twice is refused. The multiplicity it does create
+— one validation look per campaign — is corrected at L2 by `max_of_m`.
+
+Rule (c), train-versus-validation, is **evidence for the committee and not a
+threshold**. Do not treat a drop as a failure or a rise as a success on its own;
+that is exactly the constant this project declines to fit.
+
+`report` runs the four-auditor committee at the end and writes
+`committee-verdict.json`, separately from `tier3-verdict.json`. If the gateway is
+down, the committee records `ERROR` — which is **not** a pass. Under the MVP rule
+(§6a) no veto means approve, and no verdict is not no veto.
 
 **Name it after yourself.** `register` refuses to overwrite an existing record,
 but only on your own disk — two people can both create `nq-mvp-02` and collide at
@@ -33,6 +57,22 @@ push time, and the loser's campaign has nowhere to go.
 
 `run` is resumable: re-running it picks up at the next trial. A crash in hour
 three does not cost hours one and two. Use `caffeinate -i` on a laptop.
+
+**While `run` is going, leave the tree alone. Both directions bite.**
+
+- *Do not run the test suite.* Each trial writes the candidate into
+  `src/strategies/current.py` and restores it afterwards, so for most of a
+  campaign that file is not the reference strategy. Tests that import
+  `MomentumStrategy` from it fail to collect — three of them do. Nothing is
+  broken and nothing needs fixing; you are reading a file mid-swap.
+- *Do not edit anything under `src/core/` or `run.py`.* Every trial spawns a fresh
+  process that re-imports them, so an edit lands in the middle of a campaign and
+  the trials on either side of it ran different code. The ledger records a
+  `code_fingerprint` per row and will show you the seam afterwards, which is worth
+  something but is not worth the campaign.
+
+Docs, `scripts/`, `audit/` and `tests/` are safe to edit — nothing a trial spawns
+imports them.
 
 Settings come from `config/run.yaml` under `campaign:` — N, `null_source`,
 `correction`, q. Nothing about the evaluation is a command-line argument, for the

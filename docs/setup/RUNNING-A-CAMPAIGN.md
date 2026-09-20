@@ -74,6 +74,24 @@ three does not cost hours one and two. Use `caffeinate -i` on a laptop.
 Docs, `scripts/`, `audit/` and `tests/` are safe to edit — nothing a trial spawns
 imports them.
 
+**On a machine short of memory, supervise it instead of babysitting it:**
+
+```
+nohup scripts/supervise_campaign.sh nq-<you>-01 50 >/dev/null 2>&1 &
+disown
+```
+
+It restarts `--stage run` each time the process dies and stops after eight
+attempts that advance no trials, so a campaign that cannot progress waits for you
+rather than spinning all night. Progress goes to
+`runs/campaigns/<name>/supervisor.log`.
+
+This is not belt-and-braces. `nq-orderflow-01` was killed by a memory watchdog
+four minutes in on a 16 GB laptop with 8 GB of swap already in use, and an
+unattended campaign that dies at 02:00 has wasted the night. A kill costs the
+trial in flight and nothing else: it never reaches the ledger, so it is not a look
+at the data and does not count toward N.
+
 Settings come from `config/run.yaml` under `campaign:` — N, `null_source`,
 `correction`, q. Nothing about the evaluation is a command-line argument, for the
 reason `run.py`'s docstring gives at length.

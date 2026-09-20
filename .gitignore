@@ -102,3 +102,16 @@ CLAUDE_TASK.md
 
 # the agentic loop writes per-candidate working state here
 loop/candidates/
+
+# Raw per-run dumps from the calibration measurements. 431 MB for Task 57 alone
+# (arm-b-runs.json is 281 MB), and one `git add .` puts that in history forever.
+# They regenerate deterministically from the committed script and the seeds it
+# names; the committed `*.json` summary keeps every per-campaign verdict a
+# reader needs. Summaries stay tracked -- only the raw dumps are ignored.
+#
+# Task 59's `_sources` (3,000 files, 12 MB) was committed before this rule and
+# stays tracked -- git keeps tracking a file it already knows, ignore rules only
+# govern what is untracked. It is left alone rather than removed: rewriting
+# history to save 12 MB is not a trade worth making.
+docs/reviews/*/arm-*-runs.json
+docs/reviews/*/_sources/

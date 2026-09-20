@@ -176,11 +176,30 @@ def null_sample(
       inflated the p-value. `score_returns` routes those to the Sharpe leg
       instead, which is exactly what it exists for.
     """
+    return null_from_turns(round_turns(blotter, calendar),
+                           [c.session for c in calendar],
+                           b=b, seed=seed, notional_base=notional_base)
+
+
+def null_from_turns(
+    turns: Sequence[RoundTurn],
+    sessions: Sequence[int],
+    *,
+    b: int = B_DEFAULT,
+    seed: int = 17,
+    notional_base: float = 1.0,
+) -> list[float]:
+    """The same null, from round turns and a session list rather than a blotter.
+
+    Split out so a measurement can carry `(gross, cost, session)` triples across a
+    process boundary instead of whole blotters -- 24,000 candidates' blotters do
+    not fit anywhere convenient, and the triples are all the null ever reads.
+    `null_sample` is the ordinary entry point and delegates here.
+    """
     import numpy as np
 
     from ..scorer import score_returns
 
-    turns = round_turns(blotter, calendar)
     if not turns:
         # Nothing was traded, so there is no direction to destroy and no null to
         # build. An empty sample contributes nothing to `max_of_n`, which is what
@@ -196,9 +215,9 @@ def null_sample(
     # its return vector and they are part of its Sortino. Building the full
     # vector rather than only the traded sessions is what keeps this the same
     # statistic.
-    index = {s.session: i for i, s in enumerate(calendar)}
+    index = {s: i for i, s in enumerate(sessions)}
     slot = np.array([index[s] for s in sess], dtype=np.int64)
-    n_sessions = len(calendar)
+    n_sessions = len(sessions)
 
     rng = np.random.default_rng(seed)
     out: list[float] = []

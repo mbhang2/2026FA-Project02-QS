@@ -280,6 +280,26 @@ def stage_run(name: str) -> None:
         return
     print(f"{name}: resuming at trial {start} of {record.budget}", flush=True)
 
+    # **A killed trial leaves the candidate behind.** `run_trial` restores
+    # `current.py` in a `finally`, which a SIGKILL does not run -- and on this
+    # machine the campaign HAS been killed mid-trial, by the memory watchdog. The
+    # next trial would then read the abandoned candidate as its "original" and
+    # restore that afterwards, so the reference file silently becomes whatever the
+    # agent last wrote and stays that way for the rest of the campaign.
+    #
+    # Restore it from the commit rather than trusting what is on disk. Checked
+    # every resume, because the whole point is that the previous process did not
+    # get to clean up after itself.
+    import subprocess as _sp
+
+    cur = "src/strategies/current.py"
+    dirty = _sp.run(["git", "status", "--porcelain", "--", cur],
+                    capture_output=True, text=True, cwd=str(ROOT)).stdout.strip()
+    if dirty:
+        _sp.run(["git", "checkout", "--", cur], cwd=str(ROOT), check=True)
+        print(f"  restored {cur} from HEAD -- a previous trial was killed before "
+              "it could put the reference strategy back", flush=True)
+
     # From the record, never from a flag or the module default: a resumed run
     # must ask the question the pre-registration names. The digest is re-checked
     # because `hypothesis_path` is a path -- editing the file it points at would

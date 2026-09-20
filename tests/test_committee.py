@@ -159,9 +159,12 @@ def test_the_economics_auditor_gets_what_it_needs_to_price_the_costs():
     block = re.search(r"```json\n(.*?)\n```", text, re.DOTALL)
     assert block, "the economic evidence should still be a json block"
     ev = json.loads(block.group(1))
-    assert ev["commission_per_contract_per_side"] == 0.10
-    assert ev["commission_paid"] == 0.06
-    assert ev["gross_pnl"] == 0.69
+    assert ev["commission_per_contract_per_side_points"] == 0.10
+    assert ev["commission_paid_points"] == 0.06
+    assert ev["gross_pnl_points"] == 0.69
+    # Units are labelled because the first live run read a rate in index points
+    # as dollars and produced confident, wrong arithmetic from it.
+    assert "INDEX POINTS" in ev["_units"] and ev["usd_per_index_point"] == 20
 
 
 @pytest.mark.parametrize("axis", AXES)

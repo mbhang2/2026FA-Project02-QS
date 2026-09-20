@@ -12,11 +12,35 @@ registered 2026-09-19 19:49:46, before this ran.
 | N | 50, `q` = 0.05 |
 | null source | **`round_turn_mc`**, B = 10,000 (§3b) |
 | correction | `max_of_n` |
-| commission | **0.10 index points per side** — $2.00/side, $4.00 round turn, Michael's live figure |
+| commission | **configured** 0.10 index points per side — $2.00/side, $4.00 round turn, Michael's live figure. **Actually charged: 0.01.** See the correction below. |
 | model | `claude-haiku-4-5`, preflight verified serving and echoing its own id |
 | hypothesis | `config/hypotheses/intraday-continuation.md`, digest `38c817dc28bab487` |
 | champion | carries forward, advancing on a strict improvement |
 | cost | 3 h 01 m for the trials, **145 s** for the nulls |
+
+## Correction — this campaign was costed at a tenth of its stated commission
+
+Found in Task 60, after this record was written. `run.py` consumed eleven profile
+keys and `commission_per_contract` was not one of them, so `Engine` fell back to its
+own default of **0.01**, which is scaled for the synthetic generator's price units.
+The 0.10 above was declared in `config/run.yaml`, copied into the campaign record and
+printed in the agent's run facts — it just never reached the engine.
+
+**Everything below ran at 0.01 per side, not 0.10.** The record is left as it ran
+rather than rewritten; the numbers are what the apparatus produced, and what was
+wrong was the apparatus. On the train-split baseline the fix moves net P&L from
+−23,653 to −42,257 points — 18,604 points, exactly 206,710 fills x 0.09, about
+$372,000 of commission never charged.
+
+**What it does and does not change here.** The campaign REJECTED, and charging *more*
+cost cannot turn a rejection into an acceptance, so the verdict stands and is if
+anything understated. What is not reusable is the cost arithmetic: the winner's
+"commission 0.06 points on 6 fills" is 0.01 per fill, and any statement about this
+campaign's cost burden is a statement about the wrong cost. `committee-verdict.json`
+carries the auditors' reasoning over that inconsistent slice — the economics auditor
+was handed a configured 0.10 alongside a charged 0.06 and tried to reconcile the two.
+Campaigns from `2806832` onward are charged what they declare, and `run.py` now raises
+`ScoringMismatch` if charged and declared ever disagree again.
 
 ## The result — all five views reject
 

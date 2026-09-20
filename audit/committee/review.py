@@ -125,11 +125,22 @@ def _slice(axis: str, summary: dict, source: str | None,
         # reasons without it.
         campaign = summary.get("campaign") or {}
         cfg = campaign.get("agent_config") or {}
+        # **Units, spelled out.** The first live run computed "6 fills at $0.10
+        # each = $0.60" -- it read the commission RATE, which is in index points,
+        # as dollars, and then compared it against a total that is also in index
+        # points. Unlabelled numbers in an evidence slice are an invitation to
+        # guess, and the guess was wrong in a way that looked authoritative.
         evidence = json.dumps({
-            "net_pnl": score.get("net_pnl"),
-            "gross_pnl": diag.get("gross_pnl"),
-            "commission_paid": diag.get("commission"),
-            "commission_per_contract_per_side": cfg.get("commission_per_contract"),
+            "_units": ("All P&L and commission figures are in INDEX POINTS, not "
+                       "dollars. NQ is $20 per index point, so multiply by 20 for "
+                       "dollars. commission_per_contract_per_side is also in index "
+                       "points and is charged on EVERY fill; a round trip is two "
+                       "fills."),
+            "net_pnl_points": score.get("net_pnl"),
+            "gross_pnl_points": diag.get("gross_pnl"),
+            "commission_paid_points": diag.get("commission"),
+            "commission_per_contract_per_side_points": cfg.get("commission_per_contract"),
+            "usd_per_index_point": 20,
             "trade_count": score.get("trade_count"),
             "n_sessions": score.get("n_sessions"),
             "sessions_with_exposure": diag.get("sessions_with_exposure"),

@@ -6,57 +6,81 @@ turnover, holding periods.
 
 You are asking three questions, in this order.
 
-### 1. Does the code implement the hypothesis?
+### 1. Find the agent's CURRENT hypothesis, then judge three things
 
-**This is the one nobody else checks.** The hypothesis is pre-registered and
-hashed into the campaign record; the strategy is written by an agent that was
-shown it. If the code tests something else, then the campaign answered a
-different question from the one registered and **the pre-registration is
-decorative** — which matters more than any number in the evidence.
+A general hypothesis — "an orderflow imbalance strategy" — is a licence for the
+agent to develop its own, and that is intended. It explores, narrows, and settles
+on something specific. **So the thing you are checking the code against is often
+not the file you were given: it is the hypothesis the agent has arrived at,
+inside the one the file set.**
 
-**Judge the code against the hypothesis at the hypothesis's own level of
-specificity.** How much latitude the agent has is set by how tightly the
-hypothesis was written, and that is the author's choice, not yours to tighten.
+**Read the strategy's module docstring first.** The agent states its current
+reasoning there — what it is testing, what it learned from prior trials, why this
+version differs. That docstring is the developed hypothesis. If it is absent or
+says nothing, note that in your confidence note; you can still judge the code
+against the original.
 
-*A specific hypothesis constrains the mechanism.* "An ATR-based momentum breakout
-strategy" names the volatility measure, the direction and the entry style. Code
-that fades instead of breaking out, or that sizes on a fixed point threshold with
-no volatility normalisation, is testing something else — **veto**.
+Then, in order:
 
-*A general hypothesis constrains only the family.* "An orderflow imbalance
-strategy" names a family and nothing else. Any imbalance measure, any horizon,
-any entry rule is inside it. Vetoing such a strategy for choosing one particular
-imbalance definition would be substituting your judgement for the author's —
-**do not**.
+**(a) Is the developed hypothesis still inside the original guardrail?**
+Not "is it the same" — it will not be, and it should not be. Is it a member of
+the family the original named? An imbalance strategy that became a volume-profile
+strategy has left the family. One that became a bid-ask imbalance strategy at a
+particular horizon has not.
 
-*A hypothesis that poses a question has more than one correct answer.* "Does an
-outsized move continue, or give it back?" asks which of two things happens. Code
-that fades is testing the give-back arm and code that follows through is testing
-the continuation arm. **Both are correct implementations. Neither is a mismatch.**
-Only ignoring the premise entirely — not conditioning on an outsized move at all —
-would be.
+**(b) Is the developed hypothesis financially sensible in its own right?**
+The agent had no human check it. A narrowing that is arithmetically inside the
+guardrail can still be an economic non-starter — an effect requiring turnover the
+instrument cannot absorb, or an edge structurally smaller than spread plus
+commission. Veto that on its own merits, whatever the original said.
 
-**Drift across the campaign's trials is expected and is not a finding.** The agent
+**(c) Does the code implement the hypothesis it claims to?**
+The docstring says one thing; read the code and see whether it does it.
+**If the hypothesis is momentum and the strategy fades, that is a veto** — name
+the line that goes the wrong way.
+
+### The distinction that decides most of these
+
+**A hypothesis that NAMES a direction constrains it. A hypothesis that ASKS which
+direction holds does not.**
+
+- *"A momentum trading strategy"* names momentum. Code that mean-reverts is
+  testing the opposite effect — **VETO**.
+- *"Does an outsized move continue, or give it back?"* asks which of two happens.
+  Code that fades is testing the give-back arm; code that follows through is
+  testing the continuation arm. **Both are correct. Neither is a mismatch.** Only
+  ignoring the premise — not conditioning on an outsized move at all — would be.
+
+Latitude is otherwise set by how specifically the hypothesis was written, and that
+is the author's choice, not yours to tighten:
+
+- *Specific* — "an ATR-based momentum breakout" names the volatility measure, the
+  direction and the entry style. A fade, or a fixed point threshold with no
+  volatility normalisation, is a different strategy — **veto**.
+- *General* — "an orderflow imbalance strategy" names a family and nothing else.
+  Vetoing a particular imbalance definition would substitute your judgement for
+  the author's — **do not**.
+
+**Drift across a campaign's trials is expected and is not a finding.** The agent
 refines as it goes; that is the search working. You see the winner, and the only
-question is whether the winner is still inside the guardrail the hypothesis set.
+question is whether the winner is still inside the guardrail.
 
-So veto on question 1 only when the code tests a **different family** from the one
-named, or **ignores a mechanism the hypothesis explicitly required**. Be concrete:
-quote what the hypothesis asked for and name what the code does instead. If the
-hypothesis is loose enough that almost anything satisfies it, say so in your
-confidence note and PASS — a vague hypothesis is a weakness in the
+If the hypothesis is loose enough that almost anything satisfies it, say so in
+your confidence note and PASS — a vague hypothesis is a weakness in the
 pre-registration, not a fault in the code.
 
-### 2. Is the hypothesis economically plausible at all?
+### 2. Is the ORIGINAL hypothesis economically plausible at all?
 
-Some hypotheses cannot pay for themselves whatever the signal. Veto if the
-proposition is structurally unable to clear its own costs — a per-trade edge
-smaller than the spread plus commission, an effect that requires turnover the
-instrument cannot absorb, a horizon shorter than the fill model allows.
+Separate from (b), which judges where the agent went. This judges where it was
+sent. Veto if the proposition as written cannot pay for itself whatever the
+signal: a per-trade edge smaller than spread plus commission, an effect requiring
+turnover the instrument cannot absorb, a horizon shorter than the fill model
+allows.
 
 *(A later version of this loop will generate hypotheses from retrieved papers
-rather than from a human. When that happens this question becomes the main one:
-a machine-proposed hypothesis has had no human sanity check before it gets here.)*
+rather than from a human. When that happens this question and (b) become the same
+question, and the main one: nothing will have sanity-checked the proposition
+before it reaches the loop.)*
 
 ### 3. Is the measured result economically meaningful, or an artifact?
 

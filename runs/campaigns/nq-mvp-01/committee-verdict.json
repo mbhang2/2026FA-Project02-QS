@@ -21,24 +21,24 @@
       "axis": "statistics",
       "verdict": "VETO",
       "reasons": [
-        "Degenerate metric: best candidate has only 3 trades across 384 sessions. A Sharpe ratio estimated from 3 trades is not a reliable statistic and is highly susceptible to noise.",
-        "Degenerate metric: best candidate has only 1 downside session. The Sortino ratio denominator is near-zero (downside volatility estimated from 1 session), making the fallback to Sharpe appropriate but the resulting Sharpe itself unreliable with only 3 trades.",
-        "Extreme kurtosis (126.04) and high skew (2.20) in the best candidate indicate the return distribution is heavily non-normal, dominated by outlier events. With only 3 trades, these moments are estimated from almost nothing.",
-        "Net PnL of 0.63 on 3 trades means the result rests on a handful of sessions. The strategy's performance is not diversified across independent observations.",
-        "Gate p-value of 0.824 is far above any reasonable significance threshold, and the observed best score (0.0256) is well below the null mean (0.0608) and far below the 5th percentile of the null distribution (0.0980). The result is indistinguishable from noise."
+        "Degenerate metric: the best candidate's Sharpe ratio (0.0256) is estimated from only 3 trades across 384 sessions. A ratio with a denominator this small is unreliable; the strategy's performance is not characterized by a meaningful sample of trading activity.",
+        "Fallback from Sortino to Sharpe: the reject_reason field confirms only 1 downside session exists, falling short of the pre-registered threshold of 5. This means the Sortino denominator (downside deviation) is estimated from almost nothing, forcing a fallback to Sharpe. The Sharpe itself then rests on 3 trades, compounding the degeneracy.",
+        "Extreme kurtosis (126.04) and high skew (2.20) in the best candidate indicate the distribution is dominated by outliers. With only 3 trades, these moments are unstable and the mean return is not a robust summary.",
+        "Inconsistency between views: the gate p-value is 0.824 (clear rejection), the deflation margin is -0.141 (clear rejection), and all 50 candidates fail both BH and Holm correction. However, the best candidate's uncorrected significance is 0.502, which is not extreme. The coherence is there, but the underlying issue is that the best score itself is too sparse to interpret."
       ],
-      "confidence_note": "I cannot see the strategy code or how these 3 trades were selected, but the statistical foundation is too thin: a ratio estimated from 3 independent observations with extreme higher moments is not a reliable basis for any claim.",
+      "confidence_note": "I cannot see the strategy code or session-by-session returns, so I cannot verify whether the 3 trades are clustered in one session or distributed, or whether they represent genuine edge or luck; however, the statistical degeneracy is concrete regardless.",
       "error": null
     },
     {
       "axis": "economics",
       "verdict": "VETO",
       "reasons": [
-        "The hypothesis asks 'does an outsized move continue or give it back?' \u2014 a question requiring directional consistency across the ordinary run of sessions. The strategy traded in only 3 of 384 sessions (0.78%). This is a degenerate optimum: the strategy maximised its score by trading almost never, not by finding an edge. The hypothesis explicitly states 'A story that only works on the largest handful of moves in the sample is a story about a handful of moves. What would be worth knowing is whether the effect is there across the ordinary run of sessions, in one direction' \u2014 this result violates that requirement.",
-        "Commission paid ($0.06) is 8.7% of gross P&L ($0.69). On 3 trades, this is $0.02 per trade in commission against $0.23 gross per trade. The net result ($0.63) is driven entirely by the cost structure of inactivity, not by a replicable signal. The strategy found that not trading scores well when trading is costly.",
-        "The Sharpe per session of 0.0256 with only 3 sessions of exposure means the metric is measuring noise across 384 sessions, 381 of which had zero activity. This is not a meaningful economic result \u2014 it is an artifact of extreme selectivity combined with a cost structure that rewards inactivity."
+        "The strategy implements mean-reversion fading (sells after up moves, buys after down moves) but the pre-registered hypothesis asks 'does an outsized move continue, or give it back?' without naming a direction. The hypothesis is genuinely open to either answer. However, the docstring claims this is testing mean-reversion fade as THE answer, not as one arm of the question. The code does not condition on anything that would make fading the correct test of the hypothesis \u2014 it simply assumes give-back is the effect and builds a fade. This is not a developed hypothesis narrowing within the guardrail; it is a choice of direction without justification from prior trials.",
+        "The economic result is degenerate and does not support the claim. 3 trades over 384 sessions (0.78% of sessions with exposure) with net P&L of 0.63 index points ($12.60) is not a discovered edge \u2014 it is noise. The strategy found a way to trade almost never and score well because inactivity avoids costs. The docstring explicitly states 'we should focus on trade quality over quantity, but 2 trades is clearly too few' yet the winning entry has 3 trades, which is only marginally better. This is the signature of a degenerate optimum: the strategy maximized its score by not trading.",
+        "Commission paid (0.06 points) is 9.5% of gross P&L (0.69 points). On 3 trades (6 fills at 0.1 points each), the strategy is barely profitable after costs. A single fill at worse-than-modeled prices or a single trade that hits the stop would erase the entire result. This is not economically meaningful.",
+        "The momentum filter (lines checking `abs(session_momentum) > self.momentum_threshold`) is applied AFTER the two-bar reversal pattern is detected, not as a primary condition. The strategy first identifies an outsized move and a reversal, then filters by momentum. This means it is not testing 'does an outsized move continue or give back' \u2014 it is testing 'after an outsized move and a reversal, does momentum predict the next bar?' That is a different hypothesis and was not pre-registered."
       ],
-      "confidence_note": "I cannot see the fill model details or whether the entry/exit logic correctly implements the two-bar fade pattern as written, but the trade count and session coverage are sufficient to veto on economic grounds independent of those details.",
+      "confidence_note": "The pre-registered hypothesis is genuinely open-ended (continuation vs. give-back), so the choice to test fading is not inherently wrong. However, the docstring does not justify why fading is the developed hypothesis \u2014 it reads as an assumption, not a finding. The economic evidence is too thin (3 trades, 0.63 points net, 9.5% of gross paid in commission) to support any claim, and the pattern (minimal trading, high score) is the classic signature of over-filtering rather than edge discovery. A human reviewer should examine whether the momentum filter was added post-hoc to improve the score rather than as a principled refinement of the hypothesis.",
       "error": null
     },
     {
@@ -47,12 +47,12 @@
       "reasons": [
         "Extreme concentration: best_session_share of 0.5 means a single session accounts for 50% of total profit. Removing it would flip the result from positive to negative.",
         "Minimal trade count: only 3 trades executed across 384 sessions. The strategy is almost entirely inactive, making any observed profit unreliable.",
-        "Profit concentration in top 5%: 100% of profits come from the top 5% of sessions, indicating the result is entirely dependent on a handful of outlier outcomes.",
+        "Profit concentration in top 5%: 100% of profits come from the top 5% of sessions, indicating the result is entirely dependent on a handful of outlier trades.",
         "Temporal clustering: positive returns concentrated in exactly two months (Nov and Dec 2024) and two specific hours (09 and 18 UTC), with a single negative month (Aug). This is a narrow temporal window.",
-        "Only 1 downside session across 3 sessions with exposure suggests insufficient negative outcome sampling to assess robustness.",
-        "Tiny per-cell counts acknowledged by the campaign itself ('at a few hundred sessions the per-cell counts in these breakdowns are tiny'), making the by_hour and by_weekday breakdowns unreliable for assessing true patterns."
+        "Only 1 downside session across 3 sessions with exposure suggests the strategy has seen almost no adversarial conditions to test robustness.",
+        "The strategy fired only 3 times in 384 sessions (0.78% activity rate), making this a sparse, event-dependent result rather than a systematic pattern."
       ],
-      "confidence_note": "The data clearly shows extreme concentration in both time and outcome space; the robustness axis is the one place where this concentration is directly visible and measurable.",
+      "confidence_note": "The data clearly shows extreme concentration by trade, session, and time period; the caveat about tiny per-cell counts at 384 sessions confirms these breakdowns are unreliable, but the core finding\u2014that 50% of profit comes from one session and 100% from top 5%\u2014is unambiguous.",
       "error": null
     }
   ],
@@ -60,7 +60,7 @@
   "model_served": "claude-haiku-4-5",
   "prompt_digests": {
     "_shared.md": "e3a7bf407e59cad2",
-    "economics.md": "6d603bdbb78f837a",
+    "economics.md": "5fb68f8ca3b2124c",
     "leakage.md": "b5f7af4181d9bb74",
     "robustness.md": "496b944a00727a49",
     "statistics.md": "b7471556c6784238"

@@ -1,0 +1,75 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics",
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The strategy operates entirely on closed bars from ctx.bars and ctx.history(), with no access to forming bar data, future state, or scoring infrastructure. The absorption_bar state is computed from closed bars only and decays naturally within the session.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "The best candidate's primary metric (Sortino: -0.423) is deeply negative, indicating systematic losses rather than gains. The strategy loses money on average: net PnL is -67.65 on the training set and -16.0 on validation.",
+        "The gate verdict is REJECT with p=1.0, meaning the observed best score (-0.423) is far worse than the null distribution's maximum (null_max_at_q=0.05 is -0.308). The observed result is 0.59 standard deviations below the expected maximum under the null hypothesis.",
+        "The deflation view shows a large negative margin (-0.590): the best score is -0.423 while the expected maximum under null is +0.167, a gap of 0.59 in the direction of worse performance.",
+        "All 50 candidates in the correction table show FAR=0.5 or FAR=1.0 with zero BH and zero Holm discoveries. No candidate passes multiple-testing correction at any reasonable threshold.",
+        "The validation performance degrades relative to training (rule_c_change: -0.042), meaning the strategy performs worse on held-out data, not better. Validation Sortino is approximately -0.465 versus training -0.423.",
+        "The strategy has only 257 trades across 384 sessions (0.67 trades/session) with 302 downside sessions (78.6% of sessions are losing). The metric is estimated from a heavily loss-dominated distribution.",
+        "Validation diagnostics show extreme concentration: best_session_share=0.132 (13% of profit from one session) and profit_concentration_top5pct=0.312. The result rests on a handful of outlier sessions.",
+        "The null moments show the pooled null distribution has mean -0.35 and max -0.21, while this candidate scores -0.42. The candidate is in the left tail of the null, not above it."
+      ],
+      "confidence_note": "I cannot see the strategy code or how many prior campaigns were run, but the statistical evidence is unambiguous: the gate rejects this result, all correction methods reject it, the metric is negative, validation degrades, and the result concentrates in a few sessions.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "The strategy has a negative gross P&L of -16.25 points across 257 trades. After commission of 51.4 points, net P&L is -67.65 points. Commission represents 76% of gross losses (51.4 / 67.65), meaning the strategy loses money before costs and loses more money after. This is not an edge; it is a cost sink.",
+        "The Sortino ratio of -0.42 on train and -0.47 on validation indicates the strategy systematically underperforms a zero return. A negative Sortino means downside volatility exceeds upside returns \u2014 the strategy is reliably unprofitable.",
+        "On validation (held-out data), the strategy scores -0.47 Sortino with net P&L of -16.0 points on 60 trades. The degradation from train (-0.42) to validation (-0.47) of -0.042 is material and in the wrong direction, indicating the pattern does not generalize.",
+        "The strategy fires 257 times over 384 sessions (0.67 trades per session) with an average holding period of 3.4 seconds. At this frequency and speed, the strategy is fighting the bid-ask spread and commission on nearly every trade. The fill model spread is null (not specified), but at 0.1 points commission per side (0.2 round-trip), the strategy needs a 0.2+ point edge per trade just to break even. Gross P&L of -16.25 on 257 trades is -0.063 points per trade \u2014 far below breakeven.",
+        "The hypothesis claims to test 'absorption and initiation' as an orderflow signal that marks a turn. The code implements this correctly (absorption detection, initiation confirmation, trend filtering). However, the economic result shows the signal has no edge: it loses money before and after costs. The hypothesis is inside the guardrail, the code matches the hypothesis, but the proposition itself is not economically viable on this data at this frequency."
+      ],
+      "confidence_note": "The evidence is clear: negative gross P&L, negative Sortino, commission-driven losses, and validation degradation. The only uncertainty is whether the fill model or market microstructure assumptions are misspecified, but the auditor cannot see those details and must judge on the evidence given.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Severe degradation on validation split: train primary -0.423 vs validation primary -0.[REDACTED], with rule_c_change of -0.042 indicating material out-of-sample deterioration. The strategy was selected on train and fails to hold up.",
+        "Validation set shows negative Sortino (-0.[REDACTED]), negative Sharpe (-0.504), and net PnL of -16.0 across 86 sessions with 60 trades. This is not a narrow result; it is a losing result.",
+        "Best session concentration on validation is 13.2% of total return \u2014 a single session accounts for over one-eighth of the result. Removing it would flip the sign of an already-negative outcome.",
+        "Profit concentration (top 5%) on validation is 0.312, indicating heavy dependence on a small number of winning trades within an overall losing strategy.",
+        "Training set shows persistent monthly losses across 18 months (2024-07 through 2025-12), with only two positive months (2025-02 and 2025-05). No evidence of a regime where this strategy works reliably.",
+        "Hourly breakdown on validation shows no consistent pattern \u2014 losses scattered across all hours with no clear time-of-day edge that would justify the strategy's existence.",
+        "Weekday breakdown on validation is erratic (Fri near zero, Mon -7.99, Tue -0.75, Wed -3.0, Thu -4.25), suggesting no stable day-of-week signal.",
+        "The strategy has 41 sessions with exposure on validation (out of 86 total), meaning it is inactive most of the time. When active, it loses money."
+      ],
+      "confidence_note": "I cannot see the specific rules, parameters, or entry/exit logic, but the distributional evidence is clear: this is a losing strategy on both train and validation, with concentrated risk in single sessions and no evidence of robustness across time, hour, or day.",
+      "error": null
+    }
+  ],
+  "model": "claude-haiku-4-5",
+  "model_served": "claude-haiku-4-5",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

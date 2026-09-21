@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.02447v1",
+  "abstract": "Transient impact models compose a nonlinearity with a memory kernel, and the order of composition determines the criterion for absence of price manipulation. We classify both orders. If an arbitrary instantaneous law $f$ acts on the trading rate before any nonzero integrable Volterra kernel, nonnegative cost on every finite piecewise-constant round trip forces $f$ to be affine, and linear for every nonzero convolution kernel. In particular, the power law $\\mathrm{sgn}(x)|x|^\u03b4$, $\u03b4>0$, combined with power-law decay $t^{-\u03b3}$, $0<\u03b3<1$, admits manipulation if and only if $\u03b4\\ne1$: square-root impact is manipulable at every decay exponent, and the region left open by Gatheral's slow-rate two-block bound $\u03b4+\u03b3\\ge1$ collapses to the line $\u03b4=1$. Earlier rigidity theorems require a kernel that is bounded at zero; the argument here is a zero-volume chattering pump read out by two thin baseline trades, and it applies to singular kernels. If instead a monotone readout acts on the impact state after the kernel, safety for all inputs and all readouts is equivalent to complete positivity of the kernel, with a constructive converse; in particular, square-root impact after power-law memory is manipulation-free. A remote compensating block shows that round-trip safety and all-input safety coincide for kernels with uniformly vanishing tails and differ, for permanent memory, by an explicit storage quotient. These mechanisms classify every two-mode Prony kernel, first-order time-inhomogeneous memory, and stable fully actuated matrix memory, and they quantify the friction, the two-block phase, and the switching complexity behind the power-law case. Calibrated exponent pairs all lie in the manipulable set: absent friction, concavity has to enter after the memory, not before it.",
+  "authors": [
+    "Minhyeok Lee"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2609.02447v1",
+  "published": "2026-09-02T11:11:12Z",
+  "source": "arxiv",
+  "title": "Price manipulation in nonlinear transient impact models: rigidity before memory and complete positivity after memory",
+  "updated": "2026-09-02T11:11:12Z"
+}

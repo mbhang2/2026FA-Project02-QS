@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.25258v1",
+  "abstract": "Hedging a derivative position under transaction costs and market frictions requires a trading rule that adapts to changing conditions. Deep hedging trains a neural policy for this task but policy training does not determine whether a trading desk can afford to run the policy. We apply robust hedging valuation adjustment (HVA) as a post-training valuation-adjustment layer that evaluates tracking-loss CVaR together with explicit funding and margin add-ons. The funding and margin add-ons share the same KL uncertainty set as HVA. For each policy, a single common-stress tilt computes HVA, funding and margin jointly and a trading desk can get one internally consistent reserve instead of the three separately. We compare classical hedge policies with learned hedge specifications across three market environments with different liquidity. No single specification dominates in every market. Under the strict tracking-risk budget, gamma-wide classical bands are selected in High and Middle Liquidity while sparse learned execution is selected in Low Liquidity. At looser validation budgets wider classical bands are generally selected.",
+  "authors": [
+    "Takayuki Sakuma"
+  ],
+  "categories": [
+    "q-fin.RM",
+    "q-fin.CP",
+    "q-fin.PR"
+  ],
+  "id": "2607.25258v1",
+  "published": "2026-07-28T03:59:19Z",
+  "source": "arxiv",
+  "title": "Robust Hedging Valuation Adjustment for Deep Hedging Policies under Market Frictions",
+  "updated": "2026-07-28T03:59:19Z"
+}

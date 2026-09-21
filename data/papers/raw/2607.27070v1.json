@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.27070v1",
+  "abstract": "Do crypto perpetual-futures crashes carry a reproducible early-warning fingerprint of a critical transition, and in which state variable? We study seven major BTC liquidation cascades (2022-2025, including the record 19B USD event of 10 October 2025) using minute-level price and 5-minute leverage/order-flow data. On detrended residuals we compute rolling variance and lag-1 autocorrelation and test their pre-cascade trend with the Kendall-tau statistic, sweeping 39 analysis configurations per variable per event. No variable is event-invariant. Price carries the critical-slowing-down signature in five of seven events but is silent in exactly the two sudden-news (tariff) shocks, suggesting a two-type structure: endogenous-buildup versus exogenous-shock cascades. The October 2025 event, whose in-sample analysis suggests the signature lives in leverage rather than price, turns out to be the outlier, not the rule. The one regularity surviving all events with data is a compression of taker order-flow variance, which passes a 300-onset placebo test (Fisher-combined p ~ 5e-6) but is a population-level precursor, not a per-event alarm. Single-event critical-slowing-down claims in crypto derivatives are therefore fragile by construction. We argue the pattern of failures is itself diagnostic: slowing down is absent exactly where the destabilising mechanism is most abrupt, as one would expect if these cascades are discontinuous, shock-driven transitions rather than critical ones.",
+  "authors": [
+    "Ramon Marc Garcia Seuma"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "physics.soc-ph"
+  ],
+  "id": "2607.27070v1",
+  "published": "2026-07-29T15:56:58Z",
+  "source": "arxiv",
+  "title": "Where does the criticality live? Early-warning signals are event-heterogeneous across seven crypto-perpetual liquidation cascades",
+  "updated": "2026-07-29T15:56:58Z"
+}

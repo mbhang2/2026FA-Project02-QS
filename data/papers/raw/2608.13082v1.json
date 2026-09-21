@@ -1,0 +1,21 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.13082v1",
+  "abstract": "Generative models of limit orderbook (LOB) data have advanced rapidly, but their evaluation often focuses on stylised facts and selected market statistics. These measures provide useful diagnostics but may not capture the joint temporal and cross-level structure of order-book trajectories. We introduce LOB-ID, an embedding-based framework that adapts the Fr\u00e9chet Inception Distance (FID) and Monge Inception Distance (MIND) to LOB data. To obtain domain-specific embeddings, we train the DeepLOB architecture on four months of Level-2 order-book data for five equities. We show that LOB-ID is stable across time, instruments, and embedding checkpoints, and rises monotonically under controlled distortions. We then construct a moment-matching attack against FID and a deep-book perturbation that evades statistic-based evaluation. MIND remains substantially more sensitive to both distortions. Finally, we score five generative LOB models, spanning stochastic baselines and deep learning approaches, and find that LOB-ID ranks them in line with the joint temporal and cross-level structure each captures by construction.",
+  "authors": [
+    "Andreea Bacalum",
+    "Zhuohan Wang",
+    "Ollie Olby",
+    "Martin Garaj",
+    "Namid Stillman"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.AI",
+    "cs.CE"
+  ],
+  "id": "2608.13082v1",
+  "published": "2026-08-13T10:52:33Z",
+  "source": "arxiv",
+  "title": "LOB-ID: Evaluating Synthetic Market Data by Inception Distances",
+  "updated": "2026-08-13T10:52:33Z"
+}

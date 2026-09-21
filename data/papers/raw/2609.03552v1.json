@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.03552v1",
+  "abstract": "Portfolio replication, or the construction of a tradable basket of assets to match the risk-return profile of a target benchmark, is fundamentally an ill-posed inverse problem. When restricted to a subset of available assets, classical variance-minimizing models often yield unstable, over-leveraged portfolios highly vulnerable to market shocks. We propose a unified, two-stage methodology rooted in information theory to achieve robust portfolio replication. First, we model the constituent asset returns against target factors, estimating parameters within data-driven empirical bounds via an entropy minimization principle. Second, using the same entropic approach, we determine the optimal weight replication. In both cases we use an entropy function of the Fermi-Dirac type defined directly on sets of constraints of the inverse problem. We validate this Entropic Factor Model (EFM) against standard Ordinary Least Squares (OLS) across five numerical experiments, including standard equity tracking, multi-asset synthesis, and severe stress-test scenarios. Empirical results demonstrate that the EFM consistently outperforms OLS in terms of annualized turnover and net-of-fees returns. Crucially, during the COVID-19 market crash and under severe idiosyncratic data corruption, the entropic framework acts as a probabilistic ``circuit breaker\", defensively reducing capital allocation to compromised assets and providing a highly robust, risk-averse solution for generalized portfolio replication.",
+  "authors": [
+    "Argimiro Arratia",
+    "Henryk Gzyl"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "math.OC",
+    "q-fin.CP"
+  ],
+  "id": "2609.03552v1",
+  "published": "2026-09-03T08:54:26Z",
+  "source": "arxiv",
+  "title": "An Entropic Factor Model for Robust Portfolio Replication",
+  "updated": "2026-09-03T08:54:26Z"
+}

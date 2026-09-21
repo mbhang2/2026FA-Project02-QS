@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.20762v1",
+  "abstract": "We provide a large-scale empirical audit of DEX routing using 2.98 million WETH-USDC swaps on Ethereum. Comparing realized routes with optimized benchmarks, we measure an average shortfall of 2.02 bps per trade or \\$24 million. To attribute losses, we introduce three reproducible optimal benchmarks: a Support-Constrained Optimum (SCO) that evaluates split quality conditional on the pools actually used; a Full-Venue Optimum (FVO) that considers all available pools to quantify the value of broader pool access; and a Gas-Aware FVO (G-FVO) that augments FVO with gas costs to capture the trade-off between additional pool usage and gas expenditure. Computing these benchmarks at scale is enabled by a bisection-based algorithm for optimal routing across multiple pools for the same token pair. Two regularities emerge. First, information timeliness is crucial: moving from execution-time state to one-block lagged state optimization significantly raises mean shortfall and additional delays further degrade performance, albeit with diminishing increments; evaluated on the same stale snapshots, realized routes lie closer to optimal, indicating timing-mismatch as a key component. Second, inefficiency is heterogeneous and heavy-tailed: small trades suffer higher percentage losses, while a few extreme outliers dominate the aggregate dollar shortfalls. Finally, we demonstrate that sandwiching attacks drive a significant fraction of routing sub-optimality. Our benchmark protocol and algorithm offer a rigorous, reproducible basis for evaluating and improving information-timely, gas-aware routing.",
+  "authors": [
+    "Weiye Xi",
+    "Ciamac C. Moallemi"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2607.20762v1",
+  "published": "2026-07-22T22:28:18Z",
+  "source": "arxiv",
+  "title": "Quantifying Sub-Optimality in Routing for Automated Market Makers",
+  "updated": "2026-07-22T22:28:18Z"
+}

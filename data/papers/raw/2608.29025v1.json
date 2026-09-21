@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.29025v1",
+  "abstract": "Classical option-hedging methods like Black-Scholes delta assume constant, free rebalancing, which real markets don't allow. Deep hedging trains a neural network to handle these frictions directly, and prior work reports strong results. But those comparisons usually pit deep hedging against a frictionless classical baseline on simulated price data. That's not a fair fight, and it leaves open whether the advantage is real. We test this using five years of actual BTC options data from Deribit (2020-2024), comparing Black-Scholes delta, Leland's cost-adjusted hedge, and the Whalley-Wilmott no-trade band against three deep hedging setups: an LSTM and a feedforward network, each trained with a CVaR loss and, in some runs, a penalty for trading too often. All six strategies face the same 5 basis point transaction cost. On 11,546 test episodes from September 2023 to December 2024, Whalley-Wilmott cuts transaction costs significantly versus hourly rebalancing, saving $1.79 per episode against plain BS delta (95% CI [-2.21, -1.39], p < 0.0001) by trading about eight times less often. Its P&L and tail-risk numbers are better too, though not quite significant at this sample size. None of the three deep hedging models beat any classical benchmark on any metric, and all kept trading almost every hour regardless of penalty weight, a twenty-fold range barely moved the needle. A calmer validation period shows Whalley-Wilmott's P&L edge shrinks or disappears there while its cost edge holds, so the result depends on market regime. We think the likely causes are a small training set and the lack of any built-in mechanism for sitting still in the architectures tested. Not a flashy result, but an honest one: a real-data check on a claim mostly supported by simulations so far.",
+  "authors": [
+    "Sheryan Kumar"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "q-fin.CP"
+  ],
+  "id": "2608.29025v1",
+  "published": "2026-08-29T03:36:05Z",
+  "source": "arxiv",
+  "title": "Deep Hedging Under Realistic Market Frictions: A Regime-Conditional Empirical Study of Dynamic Option Hedging on Bitcoin Options",
+  "updated": "2026-08-29T03:36:05Z"
+}

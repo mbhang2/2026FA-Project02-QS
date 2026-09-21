@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.14323v1",
+  "abstract": "Using neural networks for stock return prediction typically requires choices about depth and hidden-layer width that are difficult to connect to financial interpretation. We study an alternative: estimate dependence among firm characteristics with a Maximally Filtered Clique Forest (MFCF), then map its clique structure to a Homological Neural Network (HNN). The MFCF maximum clique size K is the only parameter controlling architectural complexity, and it has a clear graphical meaning: it bounds the number of characteristics in each maximal clique and hence the highest interaction order the network can represent. The filtered graph then fixes the neural network's depth, layer widths, and sparse connections before training, in place of a separately chosen depth and width sequence. We apply two HNN variants to annual out-of-sample forecasts of U.S. stock excess returns from 1987 to 2016 using 94 firm characteristics. The HNN models match a three-hidden-layer benchmark on pooled predictive accuracy, rank the cross-section more accurately, and use roughly 80 times fewer parameters than a fully connected network with the same induced layer widths. Two structural ablations indicate that both the sparse connectivity and the estimated grouping of characteristics contribute to the ranking advantage, and both effects remain significant after correcting for multiple testing. These findings show that HNNs offer a practical and interpretable way to incorporate estimated dependence among firm characteristics into neural architecture design.",
+  "authors": [
+    "Hongyu Lin",
+    "Yulin Chen",
+    "Yuanrong Wang",
+    "Antonio Briola",
+    "Tomaso Aste"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2608.14323v1",
+  "published": "2026-08-14T14:07:29Z",
+  "source": "arxiv",
+  "title": "Dependence-Informed Sparse Neural Architecture for Stock Return Prediction",
+  "updated": "2026-08-14T14:07:29Z"
+}

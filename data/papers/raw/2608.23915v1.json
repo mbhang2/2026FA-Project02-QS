@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.23915v1",
+  "abstract": "We study equilibria in a closed, fee-free constant-function market maker (CFMM) economy with two assets and two traders. An interior state is a unilateral no-trade equilibrium exactly when the CFMM marginal price equals both traders' marginal rates of substitution. For an interior initial state, individually rational unilateral equilibria are Pareto optimal relative to the fixed CFMM invariant. A weak representative agent is obtained at each fixed equilibrium by weighted sup-convolution, whereas a state-independent strong representative agent exists exactly when traders share a common homothetic preference. Every interior feasible state is reachable through finitely many valid trades, and alternating utility-maximizing trades converge to a Pareto optimal unilateral equilibrium. We also derive conditions under which trading order produces a first-mover advantage or disadvantage in the first round.",
+  "authors": [
+    "Muqiao Huang",
+    "Ruodu Wang",
+    "Yiyun Wang"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2608.23915v1",
+  "published": "2026-08-24T23:43:13Z",
+  "source": "arxiv",
+  "title": "Equilibrium in closed constant-function market maker economies",
+  "updated": "2026-08-24T23:43:13Z"
+}

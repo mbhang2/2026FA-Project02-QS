@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.29669v1",
+  "abstract": "Spatial return models take the interaction matrix as given and leave feedback uninterpreted. We construct a bandwidth-free field from firms' language-model article embedding distributions using target-anchored Wasserstein barycentric reconstruction. A quadratic exposure-adjustment problem maps feedback into a peer-misalignment penalty ratio. For 52 firms, the field, frozen from 2018-2022 news, yields a 2023-2026 penalty ratio of 3.46 (95% interval [2.89, 4.17]) and higher conditional quasi-likelihood than equal-weighted peer support or RBF weighting of the same distances. Joint penalty ratios for the barycentric and news co-mention fields are 2.33 and 0.86 with boundary calibrated tests which reject both exclusions.",
+  "authors": [
+    "Marcus Gawronsky",
+    "Chun-Sung Huang"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2608.29669v1",
+  "published": "2026-08-30T09:06:25Z",
+  "source": "arxiv",
+  "title": "Wasserstein-Barycentric Interaction Fields for Spatial Factor Models: Evidence from Language-Model Representations",
+  "updated": "2026-08-30T09:06:25Z"
+}

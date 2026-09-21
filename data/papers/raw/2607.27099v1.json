@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.27099v1",
+  "abstract": "We propose a new approach to model rainfall by combining heterogeneous data sources at different time scales. Continuous arrivals of rain cells are incorporated into a Hawkes process formalism that encompasses the classical Bartlett-Lewis and Neyman-Scott models, thereby providing a more flexible representation of clustering. Analysis of high frequency rainfall data (at the minute scale over several years) indicates that critical Hawkes processes with heavy-tailed power-law kernels yield a superior fit relative to classical models and alternative kernel specifications. Scaling arguments inspired by Jaisson and Rosenbaum (2016) imply that aggregated rainfall at coarse time scales converges to a rough fractional process with Hurst exponent close to zero. This prediction is supported by empirical evidence from low-frequency data (annual observations spanning centuries to millennia), where the Hurst exponent is estimated to lie between 0.01 and 0.1 based on either direct observations from weather stations or proxy reconstructions such as tree-ring records. These results establish a connection between rainfall dynamics and models developed in quantitative finance for market microstructure and volatility. They also provide a new perspective on classical scaling phenomena originally studied by Hurst and Mandelbrot.",
+  "authors": [
+    "Thomas Deschatre",
+    "Marc Hoffmann",
+    "Mathieu Rosenbaum"
+  ],
+  "categories": [
+    "stat.AP",
+    "q-fin.ST",
+    "stat.CO"
+  ],
+  "id": "2607.27099v1",
+  "published": "2026-07-29T16:27:30Z",
+  "source": "arxiv",
+  "title": "Rainfall is rough",
+  "updated": "2026-07-29T16:27:30Z"
+}

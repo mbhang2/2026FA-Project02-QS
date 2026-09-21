@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.04373v3",
+  "abstract": "Informed traders are supposed to need anonymity: they profit by hiding among the uninformed. A decentralized exchange now publishes the counterparty. Every committed order, cancellation, rejection, and fill carries a persistent pseudonymous wallet address. We reconstruct the full-depth limit order book from a record of 17.1 billion messages and 14.3 million aggressive orders by 147,113 wallets, covering $84.3 billion in taker notional. We report three findings. First, informativeness is a persistent wallet attribute. Wallets ranked by the price movement following their aggressive orders retain that ordering across adjacent ten-day windows, with a rank correlation of 0.52. Second, the ranking predicts returns. Adding the live activity of the highest-ranked wallets to a standard anonymous benchmark of prices, quotes, and order flow raises the out-of-sample R2 for one-second returns to 12.31%, a 13.2% gain (t = 9.2) that is 1.6 times the largest of 200 activity-matched placebo cohorts. Third, measured at realized trades rather than at every sampled moment, the increment grows from 1.43 to 2.47 percentage points of R2. Public wallet histories therefore carry short-horizon price information that anonymous order-book data leave unmeasured.",
+  "authors": [
+    "Daojing Zhai"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.PR"
+  ],
+  "id": "2608.04373v3",
+  "published": "2026-08-05T02:24:55Z",
+  "source": "arxiv",
+  "title": "Public Trader Identity: Adverse Selection and Return Predictability",
+  "updated": "2026-08-23T04:05:14Z"
+}

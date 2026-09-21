@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.18195v1",
+  "abstract": "We introduce a reinforcement learning framework for market making in a limit order book. Our algorithm aims to maximize trading revenue by dynamically submitting market and limit orders of varying sizes across multiple price levels while controlling inventory size. We use multivariate logistic-normal distributions to model order allocations and employ a deep-set encoder to aggregate features from variable-length order sets into a fixed-dimensional latent representation. Additionally, we incorporate potential-based reward shaping to accelerate learning without altering the optimal policy. We illustrate the performance of the method in three simulated market environments consisting of noise traders who submit random trades, tactical traders who respond to instantaneous volume imbalance, and strategic traders who trade in the direction of an exponentially weighted volume imbalance signal.",
+  "authors": [
+    "Patrick Cheridito",
+    "Moritz Weiss"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2608.18195v1",
+  "published": "2026-08-18T16:30:58Z",
+  "source": "arxiv",
+  "title": "Multi-Level Market Making with Reinforcement Learning",
+  "updated": "2026-08-18T16:30:58Z"
+}

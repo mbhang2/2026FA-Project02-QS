@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.18975v1",
+  "abstract": "Prior empirical work on Solana memecoin markets has often conflated pre-graduation (bonding-curve) and post-graduation (open-market) token populations. We test the assumption of population overlap between two independent algorithmic detection streams operating on the same underlying market: sniper-cohort detection and algorithmic filter rejection. Using two non-overlapping observation windows (June 11 to June 25, 2026, and June 29 to July 16, 2026) and two independent versions of the cohort-detection pipeline (v1 and v2), we compute set overlap between cohort-detected mints and rejection-stream mints in each window. Overlap remains under 1 percent of the cohort population in both windows despite substantial variation in cohort detector selectivity (v1: 20,162 mints; v2: 623 mints) and rejection-stream coverage (v1 window: 83 mints; v2 window: 1,743 mints). The lifecycle-stage separation is structural rather than statistical: cohort detection operates at the pump.fun bonding-curve stage, while rejection filtering operates on PumpSwap and other post-graduation venues. Cross-window cohort overlap is zero, confirming that different time windows detect distinct token populations. We systematically rule out four alternative explanations: time-window artifact, data-source mismatch, DEX venue asymmetry, and pipeline-version artifact. Implications for filter design, coordinated-behaviour research, and cross-stage token surveillance are discussed. All datasets are released under CC-BY-4.0 for replication.",
+  "authors": [
+    "Arati Uday Kamat"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.CP",
+    "q-fin.ST"
+  ],
+  "id": "2609.18975v1",
+  "published": "2026-07-16T19:09:00Z",
+  "source": "arxiv",
+  "title": "Sniper Cohorts and Algorithmic Filter Rejections in Solana Memecoin Markets: Two-Window Replication of Lifecycle-Stage Population Separation",
+  "updated": "2026-07-16T19:09:00Z"
+}

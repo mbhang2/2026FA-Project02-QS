@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.15841v1",
+  "abstract": "Reinforcement learning has gained increasing attention as a data-driven approach for stock trading. However, learning a policy that is both profitable and stable remains challenging due to non-stationary market behaviour and noisy reward signals. Auxiliary tasks are often used to improve representation learning and stabilize training, yet they are usually designed manually and depend heavily on prior assumptions about targets and prediction horizons. Such fixed designs may not remain suitable across changing market regimes. In this work, we propose a self-supervised framework that automatically discovers auxiliary tasks to support reinforcement learning for stock trading. The auxiliary tasks are formulated as General Value Functions so that their predictions enrich the learned state representation and assist policy optimization. The framework consists of two networks. The main network learns the trading policy along with the auxiliary predictions, while the secondary network generates the definitions of auxiliary tasks through learned cumulants and discount factors. These tasks are updated using a meta gradient mechanism that accounts for their long-term impact on trading performance and improves training stability. We evaluate the proposed approach across four major equity indices: DJI, FTSE, Sensex, and TAIEX. The empirical results demonstrate that automatically discovered auxiliary tasks lead to more robust learning and improved trading performance compared to existing baselines.",
+  "authors": [
+    "Arishi Orra",
+    "Himanshu Choudhary",
+    "Manoj Thakur"
+  ],
+  "categories": [
+    "cs.LG",
+    "q-fin.CP",
+    "stat.ML"
+  ],
+  "id": "2608.15841v1",
+  "published": "2026-08-16T16:20:40Z",
+  "source": "arxiv",
+  "title": "Self-Supervised Auxiliary Task Discovery for Stable Reinforcement Learning in Stock Trading",
+  "updated": "2026-08-16T16:20:40Z"
+}

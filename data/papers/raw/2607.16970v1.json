@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.16970v1",
+  "abstract": "An order-book market whose liquidity provision is anchored to a fundamental value carries a restoring force: the price mean-reverts to value and the book refills after a shock. We show this restoring force is a robust intrinsic stabiliser and identify it causally-dialling the anchor down removes the mean-reversion, and a leverage-driven fire-sale then self-sustains. Separately, we ask whether a stressed market transmits its liquidity stress to a coupled calmer one, and find that it cannot: across six transmission channels of increasing strength-cross-market herding, arbitrage flow, and market-maker withdrawal up to a funding-constrained population fire-sale and a leverage spiral-the receiver's stress is independent of whether its neighbour is stressed, at every anchor strength. Market-maker withdrawal thins the receiving book but does not ignite it. Our order parameter throughout is the one-sidedness of the book-liquidity stress rather than a directional price crash-so a liquidity crisis here means the sustained one-sidedness a failing anchor produces. A liquidity crisis in this model is a failure of fundamental anchoring, not of market making.",
+  "authors": [
+    "Jan Novotny"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2607.16970v1",
+  "published": "2026-07-18T21:10:15Z",
+  "source": "arxiv",
+  "title": "Herding and Liquidity in Order-Book Markets. II. Fundamental Anchoring and the Resilience of Liquidity",
+  "updated": "2026-07-18T21:10:15Z"
+}

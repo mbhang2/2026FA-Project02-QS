@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.27485v1",
+  "abstract": "Design/methodology/approach A time-varying parameter vector autoregression (TVP-VAR) model is employed to quantify dynamic connectedness and directional volatility spillovers using daily data from May 1, 2013, to May 2, 2023. The study isolates the impact of extreme events by splitting the data into pre- and post-COVID-19 samples based on the February 2020 stock market crash. Purpose This paper examines the daily financial risk spillovers associated with investing in critical minerals. It examines the dynamic interconnectedness between seven critical mineral Exchange-Traded Fund (ETF) portfolios and key economic-wide variables, including the energy market, carbon emissions, market sentiment, and global infrastructure. Findings Portfolios with high Environmental, Social, and Governance (ESG) scores significantly contribute to shock spillovers. Net directional connectedness analysis reveals that West Texas Intermediate (WTI) crude oil and carbon emission futures consistently act as \"net receivers,\" absorbing volatility from the system. Conversely, Cobalt and Aluminum ETFs primarily act as \"net givers,\" transmitting volatility. The pandemic caused significant structural shifts in these transmission roles. Practical implications The identification of specific net givers and receivers provides actionable insights for investors, facilitating better hedging strategies against time-varying structural breaks and broader economic shocks. Originality This study uniquely utilizes financial ETF data rather than physical mineral prices to capture accessible investment risks. It is among the first to link ESG scores to the directional role (giver vs. receiver) of critical mineral assets within a broader macro-financial network.",
+  "authors": [
+    "Haibo Wang",
+    "Lutfu Sua",
+    "Jaime Ortiz",
+    "Jun Huang",
+    "Bahram Alidaee"
+  ],
+  "categories": [
+    "econ.EM",
+    "q-fin.TR"
+  ],
+  "id": "2607.27485v1",
+  "published": "2026-07-29T21:59:54Z",
+  "source": "arxiv",
+  "title": "Energy Market and Carbon Emission Spillovers in Critical Minerals Investment: A Dynamic Connectedness Approach",
+  "updated": "2026-07-29T21:59:54Z"
+}

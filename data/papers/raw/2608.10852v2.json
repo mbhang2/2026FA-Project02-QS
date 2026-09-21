@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.10852v2",
+  "abstract": "This study investigates whether the macroscopic statistical maturity of cryptocurrencies implies dynamical equivalence with an equity-market benchmark. We analyze one-minute data (2020--2025) for Bitcoin, Ethereum, XRP, and E-mini S\\&P~500 futures using the Complexity--Entropy Causality Plane (CECP) and directed horizontal visibility graphs (DHVG). While conventional stylized facts overlap across the analyzed assets, cryptocurrencies exhibit weaker local ordinal organization and a larger divergence between their high-degree in- and out-visibility distributions relative to matched surrogate baselines under the primary specification. This high-degree separation is strongest at the one-minute scale and weakens under 5- and 10-minute aggregation, while the direction of the underlying asymmetry remains more asset- and preprocessing-dependent. We therefore conclude only that macroscopic similarity can coexist with diagnostic-specific structural differences in the assets and period examined.",
+  "authors": [
+    "Jaesung Kim",
+    "Changhee Cho",
+    "Jae Woo Lee"
+  ],
+  "categories": [
+    "physics.soc-ph",
+    "q-fin.ST"
+  ],
+  "id": "2608.10852v2",
+  "published": "2026-08-11T12:24:24Z",
+  "source": "arxiv",
+  "title": "Universality and Heterogeneity of Stylized Facts in Cryptocurrency and Equity Markets",
+  "updated": "2026-09-17T02:17:12Z"
+}

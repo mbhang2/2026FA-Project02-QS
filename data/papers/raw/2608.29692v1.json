@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.29692v1",
+  "abstract": "Portfolio risk assessment ordinarily relies on reliable estimates of cross-asset return covariances, which are difficult to obtain in short, high-dimensional panels. We show that firm-level distribution-valued characteristics can instead provide one-sided certificates of portfolio risk. Under maintained links from characteristics to systematic exposures and from exposures to returns, multi-firm Wasserstein-2 dispersion yields a sharp upper bound on systematic portfolio variance and a corresponding bound for standardized returns. A weighted pairwise relaxation produces an objective that is convex under a checkable condition and requires marginal volatility scales but no cross-asset return covariances. With zero firm-specific slack, the common-map scale changes the certified variance reduction but not the normalized allocation, which depends only on observed information geometry. In a 52-firm panel from 2018-2022, an allocation constructed from Qwen3-Embedding-8B news representations lies between the 0.69th and 1.33rd in-sample variance percentiles across four prespecified capped portfolio populations; equal risk weighting lies between the 21.1st and 28.6th percentiles. The lower in-sample variance ranking relative to equal risk also appears across the reported frozen language-model representations. The framework therefore distribution-valued firm information into a coherent risk bound and an implementable allocation rule constructed without cross-asset return covariances.",
+  "authors": [
+    "Marcus Gawronsky",
+    "Chun-Sung Huang"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2608.29692v1",
+  "published": "2026-08-30T10:01:14Z",
+  "source": "arxiv",
+  "title": "Portfolio Risk Bounds without Cross-Asset Return Covariances: Distributional Fields from Language-Model Representations",
+  "updated": "2026-08-30T10:01:14Z"
+}

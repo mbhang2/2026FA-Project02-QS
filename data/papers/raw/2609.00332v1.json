@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.00332v1",
+  "abstract": "Generative models for implied volatility surfaces must produce outputs that satisfy static no-arbitrage constraints. We study these constraints in latent space. For a fixed generator, we assign each latent code a scalar margin determined by the no-arbitrage conditions of the generated surface. The codes with nonnegative margin form the admissible latent set. We establish conditions under which strictly admissible codes remain admissible under small perturbations and the boundary of the admissible set is characterized by zero margin. For regular boundary components, we formulate a level-set equation whose local dynamics are directed toward the zero-margin set. The analysis treats the generator as a map from latent variables to surfaces and is therefore not restricted to a particular architecture. It applies to variational autoencoders, generative adversarial networks, and other generative models with a deterministic realization map. Numerical tests recover known boundaries in analytic examples. Experiments with a variational autoencoder trained on Heston surfaces show that similar reconstruction errors can correspond to different admissible regions and that the latent prior may be concentrated inside such a region. The computed boundary can also be used to modify latent codes that generate violating surfaces.",
+  "authors": [
+    "Jing Wang",
+    "Shuaiqiang Liu",
+    "Cornelis Vuik"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.AI",
+    "cs.LG",
+    "math.NA"
+  ],
+  "id": "2609.00332v1",
+  "published": "2026-08-31T20:27:40Z",
+  "source": "arxiv",
+  "title": "Latent-Space No-Arbitrage Geometry of Generative Models for Implied Volatility Surfaces",
+  "updated": "2026-08-31T20:27:40Z"
+}

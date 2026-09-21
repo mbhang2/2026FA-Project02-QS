@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.27575v1",
+  "abstract": "Bitcoin inverse options, traded on the Deribit exchange and settled in the underlying cryptocurrency rather than in fiat currency, combine extreme and genuinely rough volatility dynamics with a non-linear, currency-dependent payoff structure. This paper develops and empirically validates a pricing and calibration framework for these instruments based on the rough Bergomi (rBergomi) model of Bayer, Friz and Gatheral (2016). We adapt the rBergomi dynamics to the inverse payoff max(S_T - K, 0)/S_T, and implement and compare three computational pipelines that differ in the simulation scheme for the driving fractional Brownian motion (coarse-grid Cholesky vs. the Hybrid Scheme of Bennedsen et al., 2017) and in the Monte Carlo pricing estimator (plain log-Euler vs. the Mixed Estimator of McCrickerd and Pakkanen, 2018). The model is calibrated to thirty implied volatility surfaces extracted from Deribit trade data between May 2022 and March 2025, spanning seven major market-stress events and nine baseline regimes stratified by volatility level. The Hybrid and Mixed pipeline is simultaneously the most accurate (mean unweighted RMSE 22.83 percentage points, versus 41.76 pp for the Cholesky and Euler benchmark) and the fastest (17 seconds per snapshot, a 20-fold speed-up). The calibrated Hurst exponent is consistently close to the lower bound of the search space (H approximately equal to 0.01--0.06 in most regimes), confirming that Bitcoin's volatility is genuinely rough, and calibration error scales approximately linearly with the level of at-the-money implied volatility (Pearson r = 0.89).",
+  "authors": [
+    "Riccardo Caruso"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.MF"
+  ],
+  "id": "2608.27575v1",
+  "published": "2026-08-27T18:03:58Z",
+  "source": "arxiv",
+  "title": "Pricing and Calibration of Bitcoin Inverse Options via the Rough Bergomi Model",
+  "updated": "2026-08-27T18:03:58Z"
+}

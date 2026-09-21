@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.04420v1",
+  "abstract": "Let a finite population of n labelled examples carry a class-weighted loss, with pi*n in a rare positive class weighted by N0/N1. We study estimation of total risk from a subsample K << n under designs allocating K0 and K1 draws to the two strata. We derive the exact finite-population variance of the weighted risk estimator under class-conditional sampling without replacement and solve for the optimal allocation. The class multiplier inflates positive-stratum dispersion by the imbalance ratio, causing that ratio to cancel from the optimal allocation and making equal, rather than proportional, allocation the natural default. Simple random sampling is dominated by an explicit between-stratum term; an exact bias identity shows that cluster-representative selection has no general unbiasedness guarantee; and a Serfling bound transfers the allocation result to selection error over a finite candidate set. Under the implemented truncation, the realised allocation ratio is gamma=min(2*pi/f,1), independent of n, yielding the parameter-free efficiency prediction A(pi,f)=gamma/[pi(1-pi)(1+gamma)^2]. A separate measurability result bounds the record occupied by a labelled example, determining the required train-test separation and controlling departure from block independence under absolute regularity. We test these predictions on forecasting the onset of statistically explosive price regimes, dated ex post by the Phillips-Shi-Yu procedure, using 350 U.S. equities from 2004-2011 with under 1% positive rows and five purged forward blocks. The predicted ordering of the four designs holds, and at the 10-day horizon the five design points are ordered exactly as predicted by A (Spearman rho=1, exact p=0.0167). The predicted dependence on pi across horizons does not hold; we identify the channels lying outside the design-based argument.",
+  "authors": [
+    "Jaskaran Singh"
+  ],
+  "categories": [
+    "math.ST",
+    "q-fin.ST",
+    "stat.ML"
+  ],
+  "id": "2609.04420v1",
+  "published": "2026-09-03T19:38:01Z",
+  "source": "arxiv",
+  "title": "Optimal Stratified Allocation for Rare-Event Onset Forecasting in Dependent Sequences",
+  "updated": "2026-09-03T19:38:01Z"
+}

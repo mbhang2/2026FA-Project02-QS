@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.19030v1",
+  "abstract": "The Gasoil options market is illiquid, making it difficult to construct its implied volatility surface directly. However, it is closely linked to the highly liquid Brent options market. In this paper, we jointly model Brent and Gasoil futures prices through a correlated Bachelier local volatility model: the Brent factor is described by a normal mixture diffusion model, while the Gasoil-Brent spot volatility spread is estimated using a data-driven procedure that identifies clusters of historical crack-spread levels and Gasoil-Brent volatility spreads. The resulting bivariate model allows us to compute an implied volatility correction that maps Brent implied volatilities to Gasoil implied volatilities without using illiquid Gasoil option prices as inputs. Monte Carlo simulations demonstrate that the resulting implied volatilities closely match observed Gasoil implied volatilities when benchmarked against more direct approaches. These results suggest that the proposed framework is well suited for modeling refined products and pricing the corresponding financial derivatives.",
+  "authors": [
+    "Federico Aluigi",
+    "Lucia Caramellino",
+    "Paolo Pigato",
+    "Edoardo Scrima"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.PR",
+    "stat.CO"
+  ],
+  "id": "2607.19030v1",
+  "published": "2026-07-21T12:17:59Z",
+  "source": "arxiv",
+  "title": "Pricing options on illiquid assets using liquid market benchmarks: an application to energy markets",
+  "updated": "2026-07-21T12:17:59Z"
+}

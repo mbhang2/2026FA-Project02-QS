@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.02828v2",
+  "abstract": "Observation-driven filters usually use the likelihood score, tying their updates to the logarithmic scoring rule. We study recursions driven instead by the negative parameter derivative of a differentiable proper scoring rule, under a declared working family and predictable scaling. This separates three roles: the rule determines the conditional risk projection and tail response; the scaling converts its derivative into the implemented update; and the autoregressive component determines the composite dynamic centre. We characterize local mean reversion and update noise through risk curvature and innovation variance, which coincide for the log score under the information identity but generally differ. For high-frequency scale models, centred updates converge to diffusions, whereas non-centred updates follow deterministic mean flows. When the rule-specific projection moves over time, the local tracking error admits an Ornstein--Uhlenbeck approximation, valid up to a stopping time and allowing update and target shocks to be correlated. For static parameters, we establish consistency and asymptotic normality under explicit stability and fixed-tuning conditions. Simulations and an international-equity application illustrate how criterion choice affects robustness, adaptation, variance-forecast loss, value-at-risk calibration, and probability-integral-transform diagnostics. The results show that predictive density and updating criterion are distinct design choices whose relative performance depends on the target and disturbance.",
+  "authors": [
+    "Giulia Livieri",
+    "Gianluca Palmari"
+  ],
+  "categories": [
+    "math.ST",
+    "math.PR",
+    "q-fin.ST"
+  ],
+  "id": "2608.02828v2",
+  "published": "2026-08-03T19:40:59Z",
+  "source": "arxiv",
+  "title": "Proper-score observation-driven filters: local geometry, estimation, and continuous-time limits",
+  "updated": "2026-09-01T08:48:11Z"
+}

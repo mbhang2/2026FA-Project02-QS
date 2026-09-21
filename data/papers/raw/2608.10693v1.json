@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.10693v1",
+  "abstract": "Our primary goal is to forecast and empirically examine the evolution of the implied volatility (IV) surface, with particular focus on the dates of scheduled meetings of the Federal Open Market Committee (FOMC). Firstly, we check if IV increases before the announcement and if thes effect is stronger for short-dated, out-the-money (OTM) options in high volatility regimes. In the second part, we turn the focus to verifying if the ML framework can beat the benchmark random walk in forecasting this effect. A feature related to dates of scheduled FOMC meetings augments the model, which allows us to discover if it can learn the effect of elevated pre-announcement uncertainty. Our contribution relies mainly on the quantitative prediction of the pre-announcement effect and the inclusion of exogenous information inside the ML framework used for the IV surface forecasting. It is also on of the first attempts to apply ML models directly on the IV surface without relying on dimensionality reduction. To achieve this, we employ a convolutional two-dimensional LSTM model, which is capable of learning spatio-temporal signals in the surface. Our analysis reveals that the edge of the ML framework can be limited due to the noisy characteristics of the IV surface. Nevertheless, our study reinforces the perspective that ML models can effectively forecast the IV surface also during abnormal days.",
+  "authors": [
+    "Lukasz Adamski",
+    "Robert Slepaczuk"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2608.10693v1",
+  "published": "2026-08-11T09:17:12Z",
+  "source": "arxiv",
+  "title": "When the Fed Speaks: Dynamics and Forecasts of the Volatility Surface",
+  "updated": "2026-08-11T09:17:12Z"
+}

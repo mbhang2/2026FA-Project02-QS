@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.09188v1",
+  "abstract": "Crypto-listed equity perpetuals trade while the primary cash market is closed, yet still need a mark for margin, funding, and liquidation. We model the closed-window mark as the fixed point of an oracle operator with two blocks: external anchoring and self/peer derivative reference. From marks and proxies alone the two are observationally equivalent: every reduced form admits infinitely many topology decompositions, and a path-law argument extends this to the full mark dynamics, so lead-lag and information-share estimators have power equal to size. Disclosure breaks the tie -- disclosed diagonal adjustment identifies the normalized topology, and disclosed support with forbidden anchors gives a row-level test that identifies, falsifies, or leaves a positive-dimensional class under a rank condition and finite-sample tolerance. Empirically, a disclosed OKX row survives pre-open falsification while a pure-external baseline shows the test's limited power, and an eight-week deep-closed panel with cash-reopen validation bounds the live-external content of closure variance. Cross-venue agreement is not price discovery unless disclosure or the cash reopen breaks the equivalence class.",
+  "authors": [
+    "Donghwa Seo",
+    "Doohwi Cha",
+    "Seunghan Son",
+    "Juyeong Lee",
+    "Minjae Lee",
+    "Minsuk Sung"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2608.09188v1",
+  "published": "2026-08-10T06:57:16Z",
+  "source": "arxiv",
+  "title": "When Cross-Venue Agreement Is Not Price Discovery: Disclosure Frontiers for 24/7 Equity-Perpetual Oracles",
+  "updated": "2026-08-10T06:57:16Z"
+}

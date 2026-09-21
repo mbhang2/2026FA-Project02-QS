@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.11505v1",
+  "abstract": "Studies of association-football forecasting routinely report three-way accuracy in the low fifties and present it as competitive with the betting market. Accuracy against a uniform benchmark answers the wrong question; the question worth asking is whether a model carries information a margin-free closing price has not already absorbed. We formalise that test as the fitted weight in a logarithmic opinion pool and apply it to nineteen complete Serie A seasons (7,220 matches). The answer is negative and stable. A Dixon-Coles model with tuned exponential decay attains 53.4% accuracy and a Ranked Probability Score of 0.1972 against the market's 0.1905; the paired difference is +0.0067 (95% CI [0.0046, 0.0088]) and the market wins in all seven test seasons. The fitted pooling weight on the structural model is 0.000, and the log-loss profile is monotone increasing in that weight on validation and test alike, so this is a boundary solution, not an optimisation artefact. Refitting the same machinery to shots on target yields a variant earning weight 0.35 against the goals model -- it carries information the goals model lacks -- and 0.000 against the market. Two structural signals, each informative about the other, both priced. The structural model is better calibrated than the market on the home-win margin (slope 0.995 versus 1.103) while clearly less sharp: the market's advantage is discrimination rather than honesty, which accuracy alone cannot distinguish. Value lies not in a better forecast but in what is built on a calibrated one. We define match leverage, the change in a club's probability of achieving a season objective between winning and losing a fixture, and compute it for ACF Fiorentina: an away fixture against a relegation rival carried 2.25x the leverage of hosting the eventual champions. The paper also documents and corrects errors in an earlier study of our own.",
+  "authors": [
+    "Yannik Pitcan"
+  ],
+  "categories": [
+    "stat.AP",
+    "q-fin.ST"
+  ],
+  "id": "2608.11505v1",
+  "published": "2026-08-11T23:40:06Z",
+  "source": "arxiv",
+  "title": "Does a Structural Model Add Anything to the Closing Price? Calibrated forecasting, incremental information, and match leverage in the Italian Serie A",
+  "updated": "2026-08-11T23:40:06Z"
+}

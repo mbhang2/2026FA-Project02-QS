@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.20589v1",
+  "abstract": "The Marketron model of \\cite{HalperinItkin2025Mark} and its option pricing extension in \\cite{HalperinItkinMarketron2} suffer from structural non-identifiability: an eighteen-parameter space traps solvers in suboptimal local minima and renders economic quantities unmeasurable. By removing exact scaling gauges and sign symmetries, freezing non-financial parameters by explicit criteria, and adiabatically eliminating the fast hidden signal, we derive a robust nine-parameter reduced model. A Gauss-Newton Hessian with empty null space and a manifold-boundary analysis confirm that the reduced core carries no exact symmetry and admits no further reduction. A diffusive correlation between flow and return innovations captures the short-maturity skew. A staged calibration from the physical measure to the risk-neutral measure, illustrated on SPX options, fits the whole surface with a single parameter set. The same reduction turns the wedge between the physical and pricing values of the flow block into a well-defined market price of flow risk rather than a ridge artifact, identifiable here for the first time, though a single surface constrains its level only weakly. Finally, our analysis reveals that in the Marketron model the log-price obeys a generalized Langevin equation with a closed-form, state-modulated memory kernel, and that the memory variable itself is the exact Markovian lift of this kernel. This mapping also yields a testable condition, the equality of the signal and memory relaxation rates, which on the SPX surface come out well separated, though both weakly identified, placing the fitted market tentatively in the driven, non-equilibrium regime and turning the active-matter reading from an analogy into a falsifiable constraint.",
+  "authors": [
+    "Andrey Itkin"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "physics.comp-ph",
+    "q-fin.MF",
+    "q-fin.PR"
+  ],
+  "id": "2608.20589v1",
+  "published": "2026-08-20T22:00:09Z",
+  "source": "arxiv",
+  "title": "Calibrating Inelastic Markets to Options: The Lean Marketron and the Generalized Langevin Equation",
+  "updated": "2026-08-20T22:00:09Z"
+}

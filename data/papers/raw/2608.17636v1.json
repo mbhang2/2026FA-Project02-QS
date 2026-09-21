@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.17636v1",
+  "abstract": "This paper considers European multi-asset option pricing under L\u00e9vy and affine characteristic-function models. The main obstruction is the curse of dimensionality: direct multidimensional COS pricing forms tensor-product coefficient arrays whose size grows exponentially with the number of assets. We study and extend COS-TT-CHF, a low-rank construction that uses TT-cross to compress sampled characteristic-function tensors into tensor-train COS coefficients for arithmetic basket and min/max option pricing. Once built, the compressed representation gives fast post-setup strike-grid and selected component Delta/Vega calculations. The numerical study compares with adaptive-quadrature Fourier benchmarks, direct COS, a tensor-Fourier min-option benchmark, and quasi-Monte Carlo (QMC) references based on randomized Sobol points. The reported timings show a low-dimensional crossover against direct COS as the benchmark moves from $d=2$ to $d=4$, favorable timings against the tensor-Fourier min-option benchmark from $d=3$ onward, and favorable timings against the QMC common-Heston reference already at $d=2$. The reported tests reach $d=30$ for GBM and $d=20$ for VG, NIG, and common-Heston benchmark families, with accuracy, rank, runtime, control-sensitivity, and component Delta/Vega diagnostics reported throughout.",
+  "authors": [
+    "Lucas Arenstein",
+    "Michael Kastoryano"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "math.NA",
+    "q-fin.PR"
+  ],
+  "id": "2608.17636v1",
+  "published": "2026-08-18T10:54:51Z",
+  "source": "arxiv",
+  "title": "COS-TT-CHF: A Tensor-Train Characteristic-Function COS Method for Multi-Asset Option Pricing",
+  "updated": "2026-08-18T10:54:51Z"
+}

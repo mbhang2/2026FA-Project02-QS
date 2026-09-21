@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.15057v2",
+  "abstract": "Foster and Viswanathan (1996) extend the discrete-time setting of Kyle (1985) to multiple informed traders who have partial information about the stock's terminal dividend. We resolve two long-standing open problems in this literature. First, we prove that an equilibrium exists in the setting of Foster and Viswanathan (1996). Second, as the number of trading times goes to infinity, we prove that the discrete-time equilibrium converges to the continuous-time equilibrium already proven to exist in Back, Cao, and Willard (2000).",
+  "authors": [
+    "Jin Choi",
+    "Kasper Larsen"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "math.PR"
+  ],
+  "id": "2607.15057v2",
+  "published": "2026-07-16T14:32:13Z",
+  "source": "arxiv",
+  "title": "Existence and convergence of discrete-time Kyle models with multiple insiders",
+  "updated": "2026-07-17T10:11:25Z"
+}

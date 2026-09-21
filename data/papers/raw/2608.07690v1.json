@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.07690v1",
+  "abstract": "We consider a market maker who can only obtain and dispose of inventory by responding to a sequence of sealed-bid enquiries, and whose customers arrive with imbalanced intent: sellers more often than buyers, or the reverse. Under the assumption that the best competing response is exponentially distributed around a commonly discerned fair price, we observe a symmetry in the steady state solution that compresses the imbalanced problem onto the perfectly balanced one. Order imbalance is absorbed, exactly, by a translation of the market maker's skew, a widening of her quotes, and a multiplication of her effective cost of carry. The adjustment is simple even though the solution it adjusts is not, and it involves no free parameter beyond the observable market width. The exponential assumption is needed only locally, at the quotes actually made, and the width that enters is the locally observed one. Among the consequences: a market maker with zero inventory should still skew; skew responds to imbalance at first order whereas width responds only at second order; and the popular \"constant width, linear skew\" heuristic is recovered as the small-skew solution in the special case of balanced flow and quadratic holding cost.",
+  "authors": [
+    "Peter Cotton"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.MF",
+    "q-fin.ST"
+  ],
+  "id": "2608.07690v1",
+  "published": "2026-08-07T18:30:02Z",
+  "source": "arxiv",
+  "title": "On a Simple Relationship Between Order Imbalance, Skew and Width in Over-The-Counter Trading",
+  "updated": "2026-08-07T18:30:02Z"
+}

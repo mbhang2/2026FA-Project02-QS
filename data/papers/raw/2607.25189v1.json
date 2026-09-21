@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.25189v1",
+  "abstract": "This paper proposes a GARCH-type volatility model in which level-and-slope updates of a latent power-law kernel generate state-dependent decay of past shocks within a two-dimensional Markov state. We derive a joint Foster--Lyapunov condition and establish positive Harris recurrence and uniqueness of the invariant distribution. Simulations show substantial low-frequency persistence in log-squared innovations, especially near the diagnostic stability boundary. Empirically, the model captures a substantial portion of observed volatility persistence and delivers competitive out-of-sample forecast accuracy using only a two-dimensional Markov state.",
+  "authors": [
+    "Kyungsub Lee",
+    "Kennedy Titus Kayaki"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "stat.ME"
+  ],
+  "id": "2607.25189v1",
+  "published": "2026-07-28T01:42:25Z",
+  "source": "arxiv",
+  "title": "Long-memory GARCH via a two-dimensional Markov chain",
+  "updated": "2026-07-28T01:42:25Z"
+}

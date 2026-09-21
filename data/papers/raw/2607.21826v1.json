@@ -1,0 +1,21 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.21826v1",
+  "abstract": "The growth of peer-to-peer exchanges and the blockchain technology has led to a proliferation of cryptocurrencies and to a massive increase in the number of investors who actually negotiate digital money. Cryptocurrencies trade at prices mainly driven by investor sentiment, becoming a potential source of financial bubbles and instabilities. In this work, we apply quantitative models to the study of Bitcoin and Ether, two of the most famous cryptocurrencies. Our bubble detection methodology combines the Log Periodic Power Law (LPPL) model, originally created by Johansen, Ledoit and Sornette (JLS), and the statistical model developed by Phillips, Shi, and Yu (PSY). In particular, we employ three different versions of JLS model, i.e. Ordinary Least Square (OLS), Generalised Least Squares (GLS) and Maximum Likelihood Estimation (MLE), and two PSY statistical tests (BSADF and BSADF*). We find that, during the sample period 1st December 2016 - 16th January 2018, Bitcoin shows typical hallmarks of a bubble phase in mid December 2017 and in the first half of January 2018, anticipating the large crashes observed thereafter. Also the Ether price dynamics reveals bubble evidence in mid June 2017, anticipating the crash observed on 12th June, and a weaker signal around 12th January 2018, anticipating the crash observed in the same days. This paper confirms the high risk of speculative bubbles associated with cryptocurrencies, related to investor exuberance pumping market prices far away from their fundamental values, thus creating critical situations subject to possible crashes. Our methodology is general and can be applied to virtually any financial time series, and may support investing and risk management strategies.",
+  "authors": [
+    "Marco Bianchetti",
+    "Camilla Ricci",
+    "Marco Scaringi"
+  ],
+  "categories": [
+    "q-fin.RM",
+    "econ.GN",
+    "q-fin.CP",
+    "q-fin.GN",
+    "q-fin.ST"
+  ],
+  "id": "2607.21826v1",
+  "published": "2026-07-23T21:25:51Z",
+  "source": "arxiv",
+  "title": "Are cryptocurrencies real financial bubbles? Evidence from quantitative analyses",
+  "updated": "2026-07-23T21:25:51Z"
+}

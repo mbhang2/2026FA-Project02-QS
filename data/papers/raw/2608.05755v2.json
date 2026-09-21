@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.05755v2",
+  "abstract": "Predicting financial asset returns remains one of the most difficult challenges in empirical finance, driven by the low signal-to-noise ratio and the semi-strong form of market efficiency. While deep learning models, especially LSTM networks, have shown promise in capturing temporal dependencies, standard architectures often struggle to account for the cross-sectional heterogeneity of asset returns. This paper proposes a novel architectural extension to the basic LSTM model designed to improve both predictive accuracy and model interpretability. The framework integrates macro-financial covariates to capture broader economic signals and learnable sector embeddings to encompass heterogeneity by sector. The trading strategy involves constructing a long-short portfolio based on daily directional forecasts for each S&P 500 constituent, targeting stocks expected to under- or outperform the cross-sectional median return of the S&P 500. Model Performance is evaluated against three competitive benchmarks: a basic LSTM, a Random Forest model and a traditional market buy-and-hold strategy. The empirical results demonstrate that the LSTM with sector embeddings outperforms all benchmarks across key risk and return metrics. By utilizing sector embeddings, the model explicitly incorporates cross-sectional heterogeneity, allowing it to adapt to varying industry dynamics within the market. To address the black-box nature of deep learning, I use latent space visualizations to analyse how the model differentiates between sectors, providing insights into the internal representation of the sectors in the LSTM. The impact of the sector information can be quantified using a novel contribution metric by inspecting the weights of the LSTM. The predictive signal is driven by a short-term reversal factor and an industry momentum factor.",
+  "authors": [
+    "Julius D\u00f6belt"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2608.05755v2",
+  "published": "2026-08-06T08:39:41Z",
+  "source": "arxiv",
+  "title": "Cross-Sectional Heterogeneity in LSTM Networks for Financial Time Series",
+  "updated": "2026-08-13T09:07:36Z"
+}

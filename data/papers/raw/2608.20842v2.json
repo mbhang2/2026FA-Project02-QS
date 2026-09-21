@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.20842v2",
+  "abstract": "Deep hedging is a data-driven approach to learn hedging strategies. It relies on synthetic price paths generator, as real market data is often limited for training. Existing approaches primarily evaluate such generators based on realism, i.e., how well they capture statistical properties of real markets, but the relationship between realism and hedging performance remains unclear. In this work, we introduce a decision-centric perspective on synthetic data for deep hedging based on the notion of compatibility. Compatibility measures the extent to which strategies trained on synthetic scenarios remain effective in the true market. We theoretically show that 1) hedging performance decomposes into learning error and a compatibility gap, and 2) realism and compatibility can diverge. Empirically, we find that hedging performance is governed not by realism alone, but by the alignment between the generator and the hedger, together with task structure. Taken together, this work provides a principled basis for designing synthetic data in finance aligned with decision tasks.",
+  "authors": [
+    "Ryuji Hashimoto",
+    "Masanori Hirano",
+    "Ryota Ozaki",
+    "Kentaro Imajo"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2608.20842v2",
+  "published": "2026-08-21T08:05:04Z",
+  "source": "arxiv",
+  "title": "Rethinking Synthetic Scenario Realism: Compatibility, Not Fidelity, Drives Hedging Performance",
+  "updated": "2026-09-04T06:22:27Z"
+}

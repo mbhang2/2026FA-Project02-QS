@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.24680v1",
+  "abstract": "We present a distinctive approach to parameterizing the risk neutral distribution. Using parsimonious and interpretable parameters, the model provides direct and localized control over the shape of the implied volatility curve. It captures a wide variety of shapes, including those with local concavity. Empirical results demonstrate accurate calibration across a quarter million curves from a two-year Standard and Poor's 500 index option dataset. The fitted parameters exhibit stable patterns across tenors, enabling term structure interpolation and dynamic process construction without static arbitrage.",
+  "authors": [
+    "Jimin Lin"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "math.PR"
+  ],
+  "id": "2607.24680v1",
+  "published": "2026-07-27T17:21:10Z",
+  "source": "arxiv",
+  "title": "One Other Option Pricing Scheme",
+  "updated": "2026-07-27T17:21:10Z"
+}

@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.25162v1",
+  "abstract": "Solving high-dimensional parabolic partial differential equations (PDEs) is important in engineering, physics, and stochastic control. Deep BSDE methods reformulate semilinear PDEs as backward stochastic differential equations and admit a model-based reinforcement learning interpretation, where trajectories are generated from known stochastic dynamics while a trainable model learns the gradient-related control process. We propose a Quantum Transformer BSDE solver based on Multi-Layer Fully-Connected Variational Quantum Circuits (FC-VQC). The method treats the normalized state trajectory as time--coordinate tokens and applies causal self-attention to learn interactions in the adapted BSDE gradient process. All trainable model parameters are contained within the FC-VQC embedding, projection, feed-forward, and decoder modules, while attention and structural operations remain classical and parameter-free. Experiments on three d=36 PDE benchmarks show that QTransformer consistently improves over the non-attentive FC-VQC baseline and outperforms the classical Transformer at compact hidden widths, while the wider classical Transformer achieves the best overall accuracy. These results demonstrate that combining causal attention with FC-VQC provides an effective quantum architecture for high-dimensional BSDE trajectory learning.",
+  "authors": [
+    "Howard Su",
+    "Huan-Hsin Tseng",
+    "Chi-Sheng Chen",
+    "Lance Bai"
+  ],
+  "categories": [
+    "quant-ph",
+    "q-fin.CP"
+  ],
+  "id": "2607.25162v1",
+  "published": "2026-07-28T00:18:55Z",
+  "source": "arxiv",
+  "title": "Quantum Transformer BSDE Solver via Multi-Layer Fully-Connected Variational Quantum Circuits",
+  "updated": "2026-07-28T00:18:55Z"
+}

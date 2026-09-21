@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.07207v1",
+  "abstract": "We develop a filter for time series, defined at each time $t$ as the minimizer of a discounted convex combination of observed and expected losses. The filter can be estimated by simulation to an arbitrary level of accuracy in $O(1)$ flops at each time point $t$ and can be run for all values $t=1,...,T$ in parallel. These methods are applied to robustly compute a preaveraged price process from the more than 1.5 million trades made on a single financial asset in a single day where the noise's variance is infinite. It yields a flat \"volatility signature\" plot, down to the 1 second level, so the microstructure noise no longer biases the volatility estimate. This is not true when linear methods are employed.",
+  "authors": [
+    "Simon Donker van Heel",
+    "Neil Shephard"
+  ],
+  "categories": [
+    "econ.EM",
+    "q-fin.ST",
+    "stat.ME"
+  ],
+  "id": "2609.07207v1",
+  "published": "2026-09-07T08:26:51Z",
+  "source": "arxiv",
+  "title": "Filtering without recursion and some of its uses in financial economics",
+  "updated": "2026-09-07T08:26:51Z"
+}

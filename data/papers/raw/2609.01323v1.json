@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.01323v1",
+  "abstract": "We propose a deterministic numerical method for pricing and hedging surrenderable equity-linked life-insurance contracts with periodic premiums and fund contributions, maturity and death guarantees, and Bermudan surrender under correlated stochastic volatility and stochastic interest rates. The main computational challenge is the non-recombining accumulated fund, which couples with multiple stochastic factors and early exercise. Our key idea is to avoid a full multidimensional fund lattice: variance and interest-rate factors are discretized on recombining lattices, while at each factor node the contract value is represented as an adaptive one-dimensional function of the fund. Periodic contributions then act as translations of the fund argument, whereas surrender is handled directly through a backward obstacle condition. Piecewise-cubic representations propagate payoff and exercise singularities and are compressed by continuous pruning criteria that control the representation error. We establish weak convergence of the financial chains, convergence of the adaptive valuation under vanishing representation error, and Delta consistency on regular fund regions. For the strict binomial scheme, additional regularity yields first-order weak accuracy and a Talay-Tubaro expansion supporting Richardson extrapolation. Numerical experiments show compact representations, favorable cost--accuracy, and close agreement with independent Monte Carlo and cross-fitted least-squares Monte Carlo benchmarks. Hedging results further show that contracts with similar values can generate materially different exposures to equity, volatility, and interest-rate risk.",
+  "authors": [
+    "Andrea Molent",
+    "Marcellino Gaudenzi"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.PR"
+  ],
+  "id": "2609.01323v1",
+  "published": "2026-09-01T14:41:45Z",
+  "source": "arxiv",
+  "title": "Adaptive singular-point method for pricing and hedging surrenderable equity-linked contracts",
+  "updated": "2026-09-01T14:41:45Z"
+}

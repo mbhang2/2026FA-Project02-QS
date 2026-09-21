@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.27461v1",
+  "abstract": "We present a simple framework for dynamic portfolio management that uses nothing but daily prices, trading volumes, and market capitalizations. Its state is three fixed-size matrices built from the price history: the distance matrix of the return correlations and the transition matrices of two Markov chains that rank the S\\&P 500 names monthly by trailing return and by trailing volatility. These three matrices rest on the price history alone, the same information Markowitz mean-variance optimization draws on, but they replace its expected-return vector and covariance matrix. Our method requires no matrix inversion, works on outlier-robust cross-sectional ranks, and is dynamic rather than single-period. Empirically the volatility rank is forecastable one step ahead while the return rank stays close to unforecastable. A portfolio built on the forecasts, a market-neutral momentum long-short blended with an opportunistic long-only sleeve, beats the market on two non-overlapping out-of-sample test sets, January 2022 to December 2024 and January 2025 to July 2026, at Sharpes of $1.06$ and $1.32$ against the market's $0.78$ and $1.14$, respectively, net of a five-basis-point trading cost and marked to market daily. It also outperforms the classical minimum-variance and maximum-diversification portfolios. Diversifying the long sleeve by residual distance adds a further edge on both periods, lifting the Sharpe to $1.08$ and $1.44$ and the annualized return from $18\\%$ to $20\\%$ and from $44\\%$ to $56\\%$, respectively. A convex information-leader overlay separately insures the market-neutral sleeve, buying convexity and a shallower drawdown at a small cost in return, the Sharpe unchanged.",
+  "authors": [
+    "Igor Halperin"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "q-fin.RM",
+    "q-fin.ST"
+  ],
+  "id": "2607.27461v1",
+  "published": "2026-07-29T20:53:46Z",
+  "source": "arxiv",
+  "title": "Are Three Matrices All You Need To Beat the Market? Observable Matrix Dynamics for Portfolio Optimization",
+  "updated": "2026-07-29T20:53:46Z"
+}

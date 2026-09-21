@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.23274v1",
+  "abstract": "Option prices are prices of insurance, so the risk-neutral probabilities they imply overstate physical crash risk. A power utility pricing kernel undoes the premium. But finitely many contracts trade, each at a bid and an ask, and many distributions fit inside the spreads. Each implies its own crash probability and expected loss below a crash threshold. This paper characterizes the attainable pairs exactly. With bounded support, they form a compact convex set. We call its boundary the physical crash frontier. It separates what the quotes admit from what they rule out. Both coordinates are ratios of moments, yet finite second-order cone programs trace the frontier. In a thousand weekly S&P 500 cross sections, quotes beyond the two puts nearest the threshold shrink the admissible probability range by a median of about 80 percent. Remove the bound, and a vanishing mass deep in the right tail inflates the denominator of those ratios, so the crash probability slides toward zero while every quote stays priced within its spread. The collapse occurs precisely when risk aversion exceeds that of the log investor. A positive floor requires a tail restriction the quotes cannot supply. What the quotes supply is the physical crash frontier.",
+  "authors": [
+    "Jirong Zhuang"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.RM"
+  ],
+  "id": "2608.23274v1",
+  "published": "2026-08-24T14:00:29Z",
+  "source": "arxiv",
+  "title": "The Physical Crash Frontier: What Finite Option Quotes Can and Cannot Reveal",
+  "updated": "2026-08-24T14:00:29Z"
+}

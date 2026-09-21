@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.00911v1",
+  "abstract": "We propose Adaptive Refinement Bayesian Optimization for Day-Ahead and Real-Time (ARBO-DART) markets, an algorithm for BESS intraday dispatch co-optimization in which day-ahead (DA) commitment profiles are optimized against value of real-time (RT) recourse computed by a black-box stochastic control solver. In our framework, the DA price curve is taken as exogenous and RT prices evolve as a mean-reverting process around it. The RT recourse layer performs dynamic closed-loop control while accounting for the piecewise-linear state-of-charge dynamics and the DA-driven feasible control set. By wrapping Bayesian Optimization (BO) around the RT solver, ARBO-DART jointly optimizes DA commitments and dynamic RT flexibility without requiring analytic gradients, closed-form value functions, or finite-scenario approximations. To overcome the curse of dimensionality in fixed-resolution DA profiles, ARBO-DART starts from a coarse partition of DA commitments and progressively refines charge and discharge blocks where additional temporal resolution is most needed, as judged by the corresponding RT policy. Numerical experiments across realistic DA price curves reveal the effectiveness of ARBO-DART in recovering economically meaningful DA bidding structures while being several times faster relative to fixed-resolution",
+  "authors": [
+    "Thiha Aung",
+    "Mike Ludkovski"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2608.00911v1",
+  "published": "2026-08-02T00:31:54Z",
+  "source": "arxiv",
+  "title": "Battery Storage Co-Optimization in Day-Ahead and Real-Time Markets with Bayesian Optimization",
+  "updated": "2026-08-02T00:31:54Z"
+}

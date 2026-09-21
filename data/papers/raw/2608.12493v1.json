@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.12493v1",
+  "abstract": "We develop a geometric theory of arbitrage-free implied variance surface dynamics. Smile dynamics are formulated as transport flows on the admissible class of static-arbitrage-free surfaces: spot movements generate transport vector fields, and the transport velocity field v(k) unifies all classical stickiness regimes. The skew-stickiness ratio (SSR) is the zeroth-order transport coefficient; higher-order coefficients govern ATM skew, curvature, and higher smile derivatives. A local jet transport corollary extends the theory to arbitrary log-moneyness and identifies v(k) nonparametrically from market data. Under explicit regularity conditions, the flow preserves butterfly and calendar arbitrage-freeness locally. Sticky-strike, sticky-delta, SSR, local volatility, and rough volatility all arise as special cases within this framework. Empirically, we apply a sequential forward-substitution estimator to five years of SPX implied-volatility data across seven tenors from one month to two years. Three findings emerge. First, SPX exhibits super-skew behavior: the SSR coefficient declines monotonically from 1.44 at one month toward 1.01 at two years. Second, self-similar transport is rejected at all tenors; the skew-transport coefficient changes sign between the six- and nine-month tenors. Third, the velocity profile varies significantly with moneyness at intermediate tenors and evolves from U-shaped at short maturities to monotonically decreasing at long maturities. Out-of-sample, the full three-parameter model outperforms SSR on curvature dynamics by 17-21% at medium tenors.",
+  "authors": [
+    "Charlie Che",
+    "Pradeepta Das"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.MF"
+  ],
+  "id": "2608.12493v1",
+  "published": "2026-08-12T18:16:58Z",
+  "source": "arxiv",
+  "title": "Beyond the Skew-Stickiness Ratio: Transport Geometry of Spot-Driven Variance Surface Dynamics",
+  "updated": "2026-08-12T18:16:58Z"
+}

@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.27295v1",
+  "abstract": "This paper develops a unified framework for assessing systemic risk and identifying contagion channels in the global banking system using a Temporal Heterogeneous Multiplex Graph Neural Network. We construct a harmonised quarterly panel combining bank fundamentals, CDS spreads, and macroeconomic indicators, and represent these data as dynamic multiplex networks linking banks through financial similarity and liquidity co-movement, augmented with country-level macroeconomic relationships. The model integrates graph convolutional layers with recurrent GRU dynamics and incorporates a learnable fusion gate to capture time-varying reliance on alternative contagion channels. Empirical results show that the framework outperforms conventional econometric, machine learning, and graph-based benchmarks for short-term changes in CDS spreads. Beyond forecasting, we provide an interpretable framework to quantify bank-level systemic importance via stress testing, assess country-level spillovers under macroeconomic shocks, and uncover transmission pathways through edge perturbation analysis. Robustness tests confirm the stability of both predictive accuracy and systemic risk rankings.",
+  "authors": [
+    "Nneka Umeorah",
+    "Tolulope Fadina"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2608.27295v1",
+  "published": "2026-08-27T16:01:11Z",
+  "source": "arxiv",
+  "title": "A Temporal Multiplex Graph Neural Network for Systemic Risk Transmission in Global Banking",
+  "updated": "2026-08-27T16:01:11Z"
+}

@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.08825v1",
+  "abstract": "Foundation models for time series forecasting demonstrate impressive zero-shot generalization but often underperform on specialized domains such as high-frequency finance. We present a comprehensive study of hybrid neural-classical correction for adapting frozen TimesFM (200M parameters) to stock return prediction during the volatile opening trading hour. We compare two neural correction architectures - AttnCorrect (multi-head self-attention, approximately 471K parameters) and GatedLinear (low-rank bilinear projection with gating, approximately 49K parameters) - each augmented with Random Forest residual learning. Through systematic ablation across 10 major technology stocks (NVDA, MSFT, AAPL, GOOG, GOOGL, AMZN, META, AVGO, TSLA, NFLX) spanning 2 million data points, we reveal critical insights: (1) The hybrid neural-classical approach achieves 0.597 pooled correlation and 6.4x mean per-day correlation improvement over frozen TimesFM; (2) Classical residual learning (Random Forest) provides the largest single-component contribution, matching or exceeding the neural correction component; (3) Simpler neural architectures surprisingly outperform complex ones when classical residual learning is removed; (4) Self-attention provides the largest neural-only contribution. GatedLinear+RF achieves best overall performance with 9x fewer neural parameters than AttnCorrect+RF. We report three complementary correlation metrics - mean per-day, cross-day cumulative, and pooled - to provide a complete picture of predictive quality. Our results provide practical guidance: effective foundation model adaptation requires careful integration of neural and classical components, with classical methods playing a crucial complementary role.",
+  "authors": [
+    "Kasun Dewage",
+    "Suranadi De Silva",
+    "Shankhadeep Mondal"
+  ],
+  "categories": [
+    "cs.LG",
+    "cs.AI",
+    "q-fin.ST"
+  ],
+  "id": "2608.08825v1",
+  "published": "2026-08-09T17:15:20Z",
+  "source": "arxiv",
+  "title": "Hybrid Neural-Classical Correction for Frozen Time Series Foundation Models: A Comprehensive Ablation Study on High-Frequency Stock Prediction",
+  "updated": "2026-08-09T17:15:20Z"
+}

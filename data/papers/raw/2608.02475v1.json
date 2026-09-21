@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.02475v1",
+  "abstract": "The objective of this paper is to provide a methodology for applying the DeTEcT framework to modelling token economies, to formalise the configuration of the simulation environment, and to introduce an event analysis framework. A token economy is an economic system that has a unique mechanism for controlling its monetary supply, and a medium, in the form of a token or currency, for the valuation of goods and services, the settlement of transactions, and the storage of value. We show the key decisions that must be made when modelling an economy with the DeTEcT framework and showcase some numerical methods that can be used in conjunction with the framework to perform economic simulations. We also propose a framework for analysing and measuring the impacts of events on an economy, while also developing a procedure to measure the significance of these impacts. Throughout the paper, we use Bitcoin as a case study to demonstrate how to apply the frameworks and tools we proposed here. We show how a model of Bitcoin token economy can be set up, and how to measure the impacts of Bitcoin's endogenous policies (i.e., BIPs) on the wealth distribution of its economic participants.",
+  "authors": [
+    "Rem Sadykhov",
+    "Geoffrey Goodell",
+    "Philip Treleaven"
+  ],
+  "categories": [
+    "q-fin.GN",
+    "cs.CE",
+    "q-fin.CP"
+  ],
+  "id": "2608.02475v1",
+  "published": "2026-08-03T16:43:28Z",
+  "source": "arxiv",
+  "title": "Methodology for Modelling Token Economies and Performing Event Impact Analysis with DeTEcT",
+  "updated": "2026-08-03T16:43:28Z"
+}

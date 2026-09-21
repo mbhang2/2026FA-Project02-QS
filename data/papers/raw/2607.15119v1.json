@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.15119v1",
+  "abstract": "We introduce a thermodynamic theory of voting and show that it provides a good description of distribution of party votes in EU elections. The theory traces parallels between system energies of coupled nonlinear oscillators and party vote fractions. Such a classical system evolution is characterized by the conservation of total energy and probability norm that leads to the Rayleigh-Jeans (RJ) thermalization and condensation at low energy states. A similar thermalization also describes the wealth inequality in society. This feature belongs to the phenomena of constraint driven condensation known in statistical mechanics. We show that the RJ theory well depicts the Lorenz and Pareto curves obtained from the EU vote results. The theory also recovers the dispersion of votes between candidates of first round presidential elections in France.",
+  "authors": [
+    "Klaus M. Frahm",
+    "Dima L. Shepelyansky"
+  ],
+  "categories": [
+    "cond-mat.stat-mech",
+    "econ.GN",
+    "nlin.CD",
+    "physics.soc-ph",
+    "q-fin.ST"
+  ],
+  "id": "2607.15119v1",
+  "published": "2026-07-16T15:27:45Z",
+  "source": "arxiv",
+  "title": "Thermodynamic theory of voting and EU elections",
+  "updated": "2026-07-16T15:27:45Z"
+}

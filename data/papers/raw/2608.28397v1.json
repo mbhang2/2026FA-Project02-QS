@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.28397v1",
+  "abstract": "We develop a market-informed valuation framework for guaranteed minimum maturity benefit (GMMB) riders with rational surrender under the Heston stochastic-local volatility (SLV) model. The guarantee is written on the fee-deducted account value and is considered both in its terminal-only form and in the presence of early surrender rights. The Heston SLV specification combines stochastic volatility with a leverage function calibrated to a prescribed local-volatility surface. The leverage surface is obtained through a forward Markovian-projection equation so that, at the model level, the SLV dynamics are constrained to the same one-dimensional marginals as the corresponding local-volatility (LV) model. The latter is used only as a one-factor benchmark, allowing us to isolate the effect of stochastic volatility on continuation values and surrender decisions while preserving the same option-calibrated local-volatility target. We derive the associated backward pricing equations and propose a hybrid tree/finite-difference algorithm for the SLV model with a calibrated leverage function. Synthetic experiments and a market-informed case study show that SLV and LV valuations are numerically close for terminal-only guarantees, as expected from the common marginal target, whereas materially larger differences can arise once surrender is allowed. These differences are reflected in guarantee values, fair insurance fees and volatility-dependent surrender regions. The results indicate that matching one-date marginals implied by vanilla-option prices does not eliminate model risk for insurance liabilities whose value depends on conditional continuation dynamics and endogenous surrender decisions.",
+  "authors": [
+    "Ludovic Goudenege",
+    "Andrea Molent",
+    "Xiao Wei",
+    "Antonino Zanette"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2608.28397v1",
+  "published": "2026-08-28T14:50:09Z",
+  "source": "arxiv",
+  "title": "Market-Informed Valuation of GMMB Riders with Surrender Options under a Heston Stochastic-Local Volatility Model",
+  "updated": "2026-08-28T14:50:09Z"
+}

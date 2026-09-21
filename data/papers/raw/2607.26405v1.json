@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.26405v1",
+  "abstract": "Most currency pairs lack a direct liquid market, so international foreign exchange relies on routing transactions through a dominant vehicle currency. Multi-currency automated market makers (AMMs) offer an alternative by sharing liquidity across many currency pairs, facilitating direct cross-currency trade while exploiting liquidity consolidation. This paper studies a multi-currency pool design that minimizes trading cost. Under a constant-mean AMM architecture, equilibrium trading costs reflect the trade-off between reduced price impact from consolidated liquidity and increased impermanent loss from joint return risk. This work derives closed-form costs, characterizes optimal pool weights, and shows that the optimized multi-currency pool dominates the status quo over a range of market parameters. It then formulates the system-level problem of partitioning currencies into multi-currency pools, which is solved using a hierarchical agglomerative clustering algorithm. Empirically, using exchange rate and trade data for 43 currencies over 2008-2023, the algorithm runs in 1.6 seconds and produces pools with geographic and economic structure. Notably, this reduces realized costs by ~13% relative to the status quo of vehicle-currency routing, with gains stable through episodes of global financial stress.",
+  "authors": [
+    "Reina Ke Xin Li",
+    "Andreas Park",
+    "Andreas Veneris",
+    "Srisht Fateh Singh"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2607.26405v1",
+  "published": "2026-07-29T02:36:36Z",
+  "source": "arxiv",
+  "title": "Multi-Currency AMMs for Decentralized FOREX Markets: Feasibility & Optimal Design",
+  "updated": "2026-07-29T02:36:36Z"
+}

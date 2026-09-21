@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.27076v1",
+  "abstract": "Algorithmic trading now represents a market exceeding $20 billion, where even marginal gains in signal robustness can translate into economically significant returns. Existing evaluations of equity prediction models do not explicitly target regime robustness during hyperparameter selection. Five model classes are trained on daily observations from approximately 300 large-cap US equities over eleven years, with Bayesian optimisation configured to target trading performance across three statistically different market regimes. Regime-robust hyperparameter selection is associated with out-of-sample generalisation, as signal precision remains above the random baseline across all four quarters of the test period, and portfolio performance slowly degrades under simulated input noise before collapsing beyond a defined threshold. No individual tabular deep learning architecture outperforms gradient-boosted trees, but combining XGBoost and TabNet using rank aggregation produces a Hybrid ensemble with an annualised return of 51.26%, a Sharpe ratio of 2.44, and a statistically significant CAPM alpha of 0.423 (p = 0.011). A near-zero beta indicates this outperformance is driven by stock selection, not market exposure. Alternative data plays a secondary role once technical and fundamental features are accounted for, as well as contributing more strongly on the short side than the long, and varies by model class. An interactive application makes these results explorable in real time, with live data integration the remaining step toward practical deployment.",
+  "authors": [
+    "Joshua Le Grice"
+  ],
+  "categories": [
+    "cs.LG",
+    "q-fin.CP",
+    "q-fin.TR"
+  ],
+  "id": "2608.27076v1",
+  "published": "2026-08-27T13:01:32Z",
+  "source": "arxiv",
+  "title": "Tabular Deep Learning for Algorithmic Trading: Cross-Regime Bayesian Optimisation for Equity Signal Generation",
+  "updated": "2026-08-27T13:01:32Z"
+}

@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.00647v1",
+  "abstract": "A physically backed leveraged event position requires real credit: if collateral C receives leverage L, the protocol supplies (L-1)C and uses the combined amount to acquire recognized event exposure. This paper develops a venue-agnostic on-chain credit architecture for that capital layer and an endogenous model of its capital market. It separates traders, Senior Credit LPs, market makers, liquidators, and Liquidation Backstop Providers; formalizes pool and debt shares, utilization- and risk-sensitive interest, collateral-locked position accounts, venue capabilities, market-maker commitments, withdrawal queues, isolated pools, non-redeemable reserves, and a deterministic loss waterfall; and models endogenous provider participation, leverage demand, liquidity withdrawal, liquidator entry, reserve replenishment, runs, and common-factor contagion. Formal results establish balanced real- and integer-unit accounting, settlement-confirmed debt priority, trader residual ownership, idempotent partial settlement, non-dilutive share issuance, junior-before-Senior impairment, loss-participating withdrawal queues, utilization-equilibrium conditions, and loss-allocation and contagion bounds. The release preserves 28 exact fixtures and 31,082 deterministic checks and adds fixed-seed agent-based experiments with 70,207,488 scalar invariant evaluations and zero failures. The experiments show that layered protection reduces but does not eliminate Senior loss, that 5x leverage materially increases capital pressure, and that market-maker capacity can raise aggregate shortfall if admission expands too quickly. Results are synthetic mechanism comparisons under author-specified behavior, not forecasts of APY, defaults, venue liquidity, or production safety.",
+  "authors": [
+    "Maksym Nechepurenko"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.CP",
+    "q-fin.RM"
+  ],
+  "id": "2608.00647v1",
+  "published": "2026-08-01T13:07:12Z",
+  "source": "arxiv",
+  "title": "Axient: On-Chain Credit and Loss Allocation for Leveraged Event Markets: A Venue-Agnostic Protocol for Traders, Credit Providers, Market Makers, and Liquidation Backstops",
+  "updated": "2026-08-01T13:07:12Z"
+}

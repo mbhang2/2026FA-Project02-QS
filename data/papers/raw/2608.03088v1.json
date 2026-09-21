@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.03088v1",
+  "abstract": "We introduce a new density-based goodness of fit test for ergodic Markov processes. Our test compares the data against the class of models specified in the null hypothesis, and rejects if no model in the class yields a stationary density that matches with the data. No alternative needs to be specified in order to implement the test. Although our test compares densities, estimation of smoothing parameters is not required, and the test has nontrivial power against $1/\\sqrt{n}$ local alternatives. The test provides new perspectives on some existing problems in econometric and financial modeling.",
+  "authors": [
+    "Vance Martin",
+    "Yoshihiko Nishiyama",
+    "John Stachurski",
+    "Yiran Xie"
+  ],
+  "categories": [
+    "stat.ME",
+    "q-fin.ST"
+  ],
+  "id": "2608.03088v1",
+  "published": "2026-08-04T04:01:35Z",
+  "source": "arxiv",
+  "title": "A New Approach to Goodness of Fit for Ergodic Markov Processes",
+  "updated": "2026-08-04T04:01:35Z"
+}

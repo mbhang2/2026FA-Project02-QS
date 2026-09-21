@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.20224v1",
+  "abstract": "Option-implied rates are often treated as frictionless because completed boxes deliver riskless payoffs. I show that this interpretation requires option- and benchmark-side implementation wedges to offset. Using SPX and RUT options from 2012-2025, I find a 2-3 bp unannualized increase in the option funding basis when maturity first crosses December 31. The effect behaves as a fixed price wedge, strengthens in the mid-2010s, survives alternative contracts and benchmarks, appears independently in government-bond CIP, and is reproduced in an independently constructed option panel. Put-call parity can identify discount rates precisely without establishing their economic purity.",
+  "authors": [
+    "Useong Shin"
+  ],
+  "categories": [
+    "q-fin.GN",
+    "q-fin.MF",
+    "q-fin.PR",
+    "q-fin.ST",
+    "q-fin.TR"
+  ],
+  "id": "2609.20224v1",
+  "published": "2026-08-21T19:08:51Z",
+  "source": "arxiv",
+  "title": "The Year-End Toll: Frictions Embedded in Option-Implied Rates",
+  "updated": "2026-08-21T19:08:51Z"
+}

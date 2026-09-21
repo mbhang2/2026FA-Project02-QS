@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.28323v1",
+  "abstract": "We derive a mesoscopic model for optimal execution with limit orders that incorporates microstructural features of passive price impact. Our framework is based on two empirical observables: the approximately exponential decay of limit-order fill probabilities with distance from the midprice, and the short-term linear response of price changes to order flow imbalance. Combining these ingredients, we obtain a reduced-form passive impact rate that decays exponentially with quote distance. The model describes passive execution at a tactical level, where fills arise from a sequence of quote adjustments that balance execution probability, adverse selection, and opportunity cost. We formulate and solve an optimal liquidation problem in which the trader controls the aggressiveness of passive sell quotes. This generates a trade-off between higher fill intensity and larger accumulated impact on the one hand, and lower impact but greater non-execution risk on the other. Empirical calibration using NASDAQ equities and public FX supports the empirical foundations of the model. We also analyse extensions with heterogeneous decay rates, transient impact, and target execution schedules.",
+  "authors": [
+    "Alexander Barzykin",
+    "Robert Boyce",
+    "Eyal Neuman",
+    "Sturmius Tuschmann"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2607.28323v1",
+  "published": "2026-07-30T14:57:03Z",
+  "source": "arxiv",
+  "title": "Optimal Execution with Passive Market Impact",
+  "updated": "2026-07-30T14:57:03Z"
+}

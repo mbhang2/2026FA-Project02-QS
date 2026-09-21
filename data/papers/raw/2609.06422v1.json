@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.06422v1",
+  "abstract": "We introduce ALM-GARCH, an asymmetric long-memory GARCH model in which positive and negative innovations enter conditional variance with different injection amplitudes and kernel offsets. These departures define testable level and memory channels relative to a nested symmetric benchmark. Positive Harris recurrence holds for interior configurations under a Foster-Lyapunov condition. Across five equity indices and Bitcoin, joint symmetry is rejected throughout, driven primarily by the level channel. The memory channel is supported for the Nikkei 225, KOSPI, and Bitcoin but is weakly identified when the positive branch is nearly inactive. Out-of-sample performance is broadly comparable to standard benchmarks.",
+  "authors": [
+    "Kennedy Titus Kayaki",
+    "Kyungsub Lee"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2609.06422v1",
+  "published": "2026-09-06T06:46:28Z",
+  "source": "arxiv",
+  "title": "Asymmetric Long-Memory GARCH: Sign-Dependent Kernel Injection in a Two-Dimensional Markov Chain",
+  "updated": "2026-09-06T06:46:28Z"
+}

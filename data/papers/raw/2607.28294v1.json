@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.28294v1",
+  "abstract": "This paper develops bootstrap inference for autoregressive conditional duration (ACD) models observed over a fixed calendar span, so that the number of durations is random. We study recursive schemes that either fix the calendar span or the realized event count. For the fixed-count bootstrap, we establish consistency when the duration tail index satisfies $\u03ba\\geq1$. When $0<\u03ba<1$, classical consistency fails because the estimator has a mixed-normal limit, but the bootstrap reproduces its conditional Gaussian component. Consequently, basic percentile intervals remain first-order valid and bootstrap $t$-statistics are asymptotically standard normal. Monte Carlo experiments show accurate finite-sample inference across finite- and infinite-mean regimes and robustness to non-exponential innovations. An application to cryptocurrency ETF transaction durations finds strong persistence and illustrates the practical difference between fixed-count and random-count inference.",
+  "authors": [
+    "Giuseppe Cavaliere",
+    "Thomas Mikosch",
+    "Anders Rahbek",
+    "Frederik Vilandt"
+  ],
+  "categories": [
+    "econ.EM",
+    "math.ST",
+    "q-fin.ST"
+  ],
+  "id": "2607.28294v1",
+  "published": "2026-07-30T14:38:37Z",
+  "source": "arxiv",
+  "title": "Bootstrap inference in autoregressive duration models",
+  "updated": "2026-07-30T14:38:37Z"
+}

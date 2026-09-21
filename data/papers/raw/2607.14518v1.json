@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.14518v1",
+  "abstract": "Basket option pricing often relies on Monte Carlo estimation, for which quantum amplitude estimation (QAE) provides a quadratic speed-up. However, the practical benefit of QAE can be limited by the depth of the state-preparation circuit. We propose a structure-aware quantum state-preparation framework for QAE-based basket option pricing. The framework uses tensor-train (TT) rank information to design shallow variational state-preparation circuits. In the independent regime, TT ranks remove unnecessary entangling links from a hardware-efficient ansatz. In correlated basket settings, we instead prepare asset-wise marginals locally and train a compact latent block to match the basket cumulative distribution function. The Basket-CDF objective targets the basket pushforward distribution rather than the full joint state, directly aligning state preparation with basket-dependent payoffs. Numerical experiments show that the proposed circuits replace the exponential state-preparation depth scaling of exact amplitude loading with linear scaling, while maintaining low-percent basket-pricing errors. Additional sampling-based training experiments and an end-to-end QAE integration study support compatibility with sample-estimated training and standard QAE-based pricing workflows.",
+  "authors": [
+    "Dongwoo Kim",
+    "Zhenyu Cui",
+    "Daniel K. Park",
+    "Chihoon Lee"
+  ],
+  "categories": [
+    "quant-ph",
+    "q-fin.CP"
+  ],
+  "id": "2607.14518v1",
+  "published": "2026-07-16T03:14:53Z",
+  "source": "arxiv",
+  "title": "Structure-Aware Variational State Preparation for Quantum Basket Option Pricing",
+  "updated": "2026-07-16T03:14:53Z"
+}

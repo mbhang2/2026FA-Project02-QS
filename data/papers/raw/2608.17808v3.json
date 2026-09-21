@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.17808v3",
+  "abstract": "We develop simulation-based policy iteration for continuous-time portfolio choice with predictable returns and convex constraints. Each outer step re-evaluates a fixed-latent open-loop backpropagation-through-time (OL-BPTT) adjoint after deployment and solves the constrained update. Shifted-adjoint cancellation controls the adjoint--HJB Hamiltonian-gradient discrepancy by the policy-improvement residual. For CRRA portfolios, exact HJB policy iteration identifies the optimal reduced value factor, while population OL-BPTT iteration converges globally when the adjoint update is directionally improving and approximate stationarity is asymptotically HJB-compatible. A theorem-matched occupation audit yields maximal $95\\%$ upper endpoints of $0.066$ for the primitive directional ratio and $0.074$ for a stronger norm-relative ratio, both against the half-step threshold $0.75$. In the high-precision $50$--$50$ occupancy/broad-anchor design of a three-factor, fifty-asset benchmark, current-policy re-evaluation outperforms matched pooled refinement under the on-policy and broad evaluation laws.",
+  "authors": [
+    "Jeonggyu Huh",
+    "Yeoneung Kim",
+    "Seungwon Jeong"
+  ],
+  "categories": [
+    "math.OC",
+    "q-fin.CP",
+    "q-fin.PM"
+  ],
+  "id": "2608.17808v3",
+  "published": "2026-08-18T14:05:51Z",
+  "source": "arxiv",
+  "title": "Self-Consistent Adjoint Policy Iteration for Constrained Dynamic Portfolio Choice",
+  "updated": "2026-09-07T06:01:47Z"
+}

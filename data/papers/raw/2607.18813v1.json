@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.18813v1",
+  "abstract": "The distribution of a normal mean-variance mixture depends on the law of its positive mixing variable. We compare six parametric mixing laws with a grid nonparametric maximum likelihood estimator under the same determinant identification constraint. The mixing mean $m=\\E(Z)$ is estimated and is not fixed at one. A paired block bootstrap is used to compare multivariate holdout log scores. The models that cannot be distinguished from the model with the largest score define a finite ambiguity set. We then consider a cumulative prospect problem on a common portfolio direction. For each model in the set, the NMVM representation gives a scalar projected return and a corresponding prospect-value function of the exposure. The distributionally robust decision maximizes the lower envelope of these functions. We prove existence of a solution, give the candidate points for the piecewise smooth problem, derive a reference-gap scaling result, and construct an interval branch-and-bound certificate for the finite-scenario optimum. In an application to 30 stock returns, the mixture models give higher holdout density scores than the multivariate Gaussian model. Several parametric and semi-parametric models, however, remain in the ambiguity set. The worst-case model is therefore determined at the portfolio optimization stage rather than selected in advance from a point estimate of the holdout score.",
+  "authors": [
+    "Nuerxiati Abudurexiti"
+  ],
+  "categories": [
+    "q-fin.MF",
+    "q-fin.PM",
+    "q-fin.ST"
+  ],
+  "id": "2607.18813v1",
+  "published": "2026-07-21T07:49:31Z",
+  "source": "arxiv",
+  "title": "Mixing-Law Uncertainty in Multivariate Normal Mean-Variance Mixtures: Semi-parametric Estimation and Robust Cumulative-Prospect Decisions",
+  "updated": "2026-07-21T07:49:31Z"
+}

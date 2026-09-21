@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.20093v1",
+  "abstract": "We test whether five widely promoted retail signal families - trend, oscillator, candlestick, volume, and calendar rules - deliver a positive, economically meaningful, net-of-cost, and survivable edge. Practical viability is the conjunction of three predeclared gates: statistical edge after multiplicity correction, economic viability after trading costs, and finite-bankroll survival under leverage. Exposure-matched benchmarks, stationary-bootstrap confidence intervals, hierarchical Benjamini-Yekutieli control, one-sided claim-exclusion tests, and equivalence tests distinguish positive evidence, statistically refuted materiality, and unresolved cases. Four of six candidates - oscillator, volume, calendar, and candlestick - are REFUTED, ruled out on statistical and/or economic materiality grounds; trend and a momentum calibration benchmark are INCONCLUSIVE, with confidence intervals too wide at this sample size to resolve the claim; none is SUPPORTED. Cross-sectional tests use point-in-time membership and delisting corrections. The momentum benchmark itself does not clear the statistical gate and is classified INCONCLUSIVE, not REFUTED - the critical validity signature that a genuinely uncertain positive control is never falsely falsified by this design. Under FINRA- and ESMA-anchored leverage and margin scenarios, survival is not the binding constraint for any tested family at the US headline scenario, though it becomes discriminating for trend and oscillator under the higher-leverage EU CFD scenario. The results reject specific promoted deployability claims where confidence bounds rule out the declared effect threshold and classify the remaining cases as unresolved rather than treating non-significance as proof.",
+  "authors": [
+    "Adam Darmanin"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "q-fin.RM",
+    "q-fin.TR"
+  ],
+  "id": "2607.20093v1",
+  "published": "2026-07-22T12:47:56Z",
+  "source": "arxiv",
+  "title": "Retail Trader's Ruin: An Anatomy of Popular Signal Failure",
+  "updated": "2026-07-22T12:47:56Z"
+}

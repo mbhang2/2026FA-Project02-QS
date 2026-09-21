@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.06048v1",
+  "abstract": "Using official government data sets of USA and France we analyze the occurrence/frequency/popularity distributions of given names on a time scale of more than 100 years. These distributions are characterized through the Lorenz and Pareto curves broadly used in the analysis of wealth inequality in the world. These curves remain stable during the considered time period with the Gini coefficient remaining in the narrow range 0.85-0.95. As for the case of wealth inequality, we show that the distributions of names are well described by the Rayleigh-Jeans (RJ) thermalization and condensation phenomenon well studied in various physical systems. The RJ thermalization results from two integrals of motion being analogous to energy and probability norm conservation in physical systems with energy states corresponding to popularity levels of names. Time correlations between names are also determined showing their stability until the middle of the twentieth century and a significant change after that.",
+  "authors": [
+    "Klaus M. Frahm",
+    "Dima L. Shepelyansky"
+  ],
+  "categories": [
+    "cond-mat.stat-mech",
+    "nlin.CD",
+    "physics.soc-ph",
+    "q-fin.ST"
+  ],
+  "id": "2608.06048v1",
+  "published": "2026-08-06T13:57:41Z",
+  "source": "arxiv",
+  "title": "Thermodynamic statistics of given names in USA and France",
+  "updated": "2026-08-06T13:57:41Z"
+}

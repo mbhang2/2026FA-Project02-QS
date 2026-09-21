@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.00631v1",
+  "abstract": "Leveraged event positions combine a repayable loan with an outcome claim that may become non-tradable before oracle payout is final. This paper specifies Axient, a physically backed margin layer for binary event markets that separates leverage maturity from claim maturity and makes the hard-flat decision under explicit execution uncertainty. The model distinguishes quoted book proceeds, matched proceeds, settled proceeds, and redemption. At decision time, the protocol selects the smallest sale whose lower settled-proceeds envelope covers an upper bound on debt at the settlement horizon plus a buffer. We prove robust ex-ante debt clearing, pathwise debt-extinguishment and debt-free-finality invariants, maximal residual spot exposure, payout-vector and dispute-duration invariance of lender principal after debt extinction, and an impossibility boundary when execution, signer control, settlement, or market closure leave the registered operating set. We also derive a book-dependent leverage envelope, aggregate hard-flat capacity without double-counting shared liquidity, and scenario-conditional reserve bounds. A deterministic verifier covers step books, partial fills, settlement delay, adversarial book transformations, shared-book liquidation, reserve allocation, zero liquidity, and multiple payout vectors. The operating and stress sets are author-specified; empirical calibration is separate. The contribution is a conditional mechanism-design result and reference-implementation boundary, not a production-safety claim.",
+  "authors": [
+    "Maksym Nechepurenko"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.RM"
+  ],
+  "id": "2608.00631v1",
+  "published": "2026-08-01T12:39:57Z",
+  "source": "arxiv",
+  "title": "Axient: Debt-Free Finality for Leveraged Binary Event Markets",
+  "updated": "2026-08-01T12:39:57Z"
+}

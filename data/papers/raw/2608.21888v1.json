@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.21888v1",
+  "abstract": "At 15-minute horizons, directional mean reversion is far stronger and more pervasive in cryptocurrency markets than in US equities: scored under one matched, strictly out-of-sample protocol, 90% of 183 Binance pairs carry significant directional reversal against 2.7% of 187 US stocks and ETFs, in every focal coin-year since 2021. The signal lives in signs, not magnitudes: lag-one return autocorrelation is near zero on the major coins, yet simply betting against the previous candle captures most of the effect. US-listed funds whose net asset value is a crypto or metal price inherit their underlying's reversal, including its absence, from their first months of trading; stocks merely correlated with the same underlyings inherit nothing: descriptive evidence that a wrapper's tape reads like the process it wraps, not the venue it prints on. On the originating tape, the reversal concentrates after moves driven by aggressive taker flow and grows with flow intensity, while the order-book depth a move consumes conditions nothing: a conditioning consistent with compensated liquidity provision, not a test that selects it. The gross edge peaks near 1.3 bp per trade against a 5 bp round-trip cost: large enough to detect, too small to clear benchmark spot capture costs. The contrast survives an artifact battery, an exact permutation null, and a frozen six-month holdout, with a class-mean AUC gap of +0.031 as designed and +0.011 (95% CI [+0.008, +0.014]) under the most conservative accounting, clear of zero either way.",
+  "authors": [
+    "Nadav A. Kitron",
+    "Jonathan M. Wengrowicz"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.ST"
+  ],
+  "id": "2608.21888v1",
+  "published": "2026-08-22T10:06:04Z",
+  "source": "arxiv",
+  "title": "Short-horizon mean reversion in cryptocurrency markets: a matched cross-market measurement",
+  "updated": "2026-08-22T10:06:04Z"
+}

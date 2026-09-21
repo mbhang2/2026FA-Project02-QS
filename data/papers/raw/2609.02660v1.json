@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.02660v1",
+  "abstract": "Trade durations in high-frequency foreign exchange data exhibit increased occurrence near integer values. To address this empirical phenomenon, we propose the granularity-adjusted autoregressive conditional duration (GA-ACD) model. It is based on a novel two-component mixture distribution consisting of a standard generalized gamma component for regular durations and a second component that locally redistributes probability mass around integer values to capture heaping. Conditional dynamics are modeled within a score-driven framework, allowing the scale parameter to vary over time in response to past durations, and enabling maximum likelihood estimation of all model parameters. A simulation study shows that ignoring heaping leads to biased parameter estimates and distorted inference regarding both the distribution and the dynamics of durations. An empirical analysis demonstrates that integer-duration clustering is pervasive across major currency pairs and that the GA-ACD model outperforms the standard generalized gamma ACD model.",
+  "authors": [
+    "Vladim\u00edr Hol\u00fd"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2609.02660v1",
+  "published": "2026-09-02T14:35:03Z",
+  "source": "arxiv",
+  "title": "Modeling Trade Durations under Temporal Granularity Effects in Forex Markets",
+  "updated": "2026-09-02T14:35:03Z"
+}

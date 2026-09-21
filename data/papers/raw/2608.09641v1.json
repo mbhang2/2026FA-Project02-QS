@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.09641v1",
+  "abstract": "In this paper we investigate the information content of the lower part of the spectrum of financial correlation matrices, as a source of information on market synchronization. In a financial context, a classical application of Principal Component Analysis and Random Matrix Theory identifies the largest eigenvalues as indicators of dominant market factors and synchronization patterns. We complement this perspective by showing that the smallest eigenvalues also contain relevant information about the effective structure of financial markets. The paper presents the methodological proposal and validates its effectiveness through comprehensive real data experiments in both descriptive and predictive settings.",
+  "authors": [
+    "Rosanna Grassi",
+    "Caterina Pastorino",
+    "Pierpaolo Uberti"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "q-fin.MF"
+  ],
+  "id": "2608.09641v1",
+  "published": "2026-08-10T14:22:04Z",
+  "source": "arxiv",
+  "title": "Lower spectrum of financial correlation matrices: a new perspective on market synchronization",
+  "updated": "2026-08-10T14:22:04Z"
+}

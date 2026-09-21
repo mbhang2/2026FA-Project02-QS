@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.28230v2",
+  "abstract": "Observed risk-taking behavior is often rationalized through expected-utility curvature, yet the curvature required to fit choices in one context can differ sharply from the curvature required in another, a tension highlighted by calibration critiques of expected-utility theory. Finite multiplicative systems often cease to evolve when a lower continuation threshold is reached, whereas standard growth-optimal benchmarks assume uninterrupted continuation. We study a finite-horizon binary multiplicative process in which a fixed exposure is chosen ex ante and paths crossing an absorbing boundary are assigned a residual value. Exact lattice propagation yields the optimal exposure as a function of initial log distance to the boundary, horizon, and residual ratio. Costly absorption compresses exposure below the no-boundary Kelly fraction near the boundary. When interpreted through an unconstrained constant-relative-risk-aversion benchmark, this compression appears as elevated risk aversion. As the residual value approaches the boundary, a local above-Kelly reversal can occur. In this minimal finite-horizon setting, absorbing-boundary geometry is therefore sufficient to generate state-dependent risk-averse-looking behavior without heterogeneous primitive preference parameters.",
+  "authors": [
+    "Ling Zhang",
+    "Boyan Xing",
+    "Zhenyu She",
+    "Zixiang Xu"
+  ],
+  "categories": [
+    "econ.GN",
+    "q-fin.ST"
+  ],
+  "id": "2607.28230v2",
+  "published": "2026-07-30T14:00:40Z",
+  "source": "arxiv",
+  "title": "Boundary-Induced Apparent Risk Aversion in Nonergodic Multiplicative Growth",
+  "updated": "2026-08-03T08:31:12Z"
+}

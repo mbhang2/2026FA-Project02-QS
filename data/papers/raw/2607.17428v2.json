@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.17428v2",
+  "abstract": "Automated market makers (AMMs) for prediction markets descend from market scoring rules, where a mechanism operator subsidizes a market to aggregate beliefs about uncertain events. The existing literature has focused on bounding the total worst-case loss to the subsidizer, but has not addressed how that loss is distributed across price states or over time. We use the framework of loss-versus-rebalancing (LVR) to study this distribution and introduce \\textit{uniform AMMs}, defined by the property that instantaneous LVR is proportional to pool value and independent of the current token price. In a static setting, we show that for a broad class of \\textit{win-martingales} -- processes that converge to 0 or 1 at a fixed resolution time -- there exists a pricing function that achieves uniform LVR under that process, and conversely, that any sufficiently regular pricing function induces a win-martingale under which it is uniform. We then extend the framework to dynamic liquidity management, showing that liquidity levels can be adjusted over time to implement a prescribed target expected cumulative loss schedule. This theory is illustrated with canonical examples of win-martingales and pricing functions. Our results can inform AMM designers and liquidity providers on how the inevitable cost of subsidizing price discovery can be shaped and controlled across both price and time.",
+  "authors": [
+    "Ciamac C. Moallemi",
+    "Dan Robinson",
+    "Brian Zhu"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2607.17428v2",
+  "published": "2026-07-19T22:35:00Z",
+  "source": "arxiv",
+  "title": "Uniform-Loss Automated Market Making for Prediction Markets",
+  "updated": "2026-07-23T12:13:27Z"
+}

@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.06267v1",
+  "abstract": "Investment performance is commonly presented either as a conventional cumulative-return chart, which fixes a historical starting date and traces performance forward, or as a trailing-return table, which fixes the current endpoint but reports only a small set of prespecified horizons. These two displays have complementary limitations: fixed-start comparisons are conditional on the selected origin, whereas trailing returns provide only discrete snapshots of the underlying fixed-endpoint return function. We present the Return-to-Present (RTP) curve as a continuous fixed-endpoint representation that brings these perspectives together by holding the evaluation date fixed while allowing the hypothetical historical purchase date to vary over the available history. Familiar 1-month, 3-month, 6-month, 1-year, and longer trailing returns therefore become selected points on a continuous curve. When multiple investments are overlaid, RTP directly displays entry-date sensitivity, persistent relative advantage, crossings, and the timing and magnitude of separation without requiring selection of a single historical origin. The same endpoint-based construction naturally accommodates investments with unequal inception dates, recurring purchases, and retrospective portfolio rotation decisions in which sale and replacement-purchase dates may differ. We illustrate these uses with real investment data and discuss its relationship to momentum. RTP does not define a new return measure; its contribution is a simple graphical organization of familiar realized returns for historical comparison and decision support rather than prediction or statistical inference.",
+  "authors": [
+    "Lei Liu"
+  ],
+  "categories": [
+    "stat.AP",
+    "q-fin.ST"
+  ],
+  "id": "2609.06267v1",
+  "published": "2026-09-05T21:28:26Z",
+  "source": "arxiv",
+  "title": "From Discrete Trailing Returns to a Continuous Graphical Profile: Return-to-Present Curves",
+  "updated": "2026-09-05T21:28:26Z"
+}

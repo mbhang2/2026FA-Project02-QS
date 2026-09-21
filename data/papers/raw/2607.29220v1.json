@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.29220v1",
+  "abstract": "Implied volatility surface forecasting is essential for option valuation, hedging,and risk management, but remains difficult because future surfaces are stochastic while pricing inputs must satisfy static no-arbitrage shape restrictions. We propose a decoupled generative refinement framework for IVS forecasting as an operational risk surface modeling problem. The first stage uses a conditional diffusion model to learn the conditional distribution of future surfaces. The generated ensemble captures predictive distributional variation, and its median provides a robust representative surface for subsequent refinement. The second stage introduces a Surface Aware Attention Module (SAAM), a cross sectional refinement operator that improves fit to market observations and staticno-arbitrage diagnostics for the representative surface. This design separates distribution learning from surface refinement, allowing the diffusion model to capture stochastic market dynamics while SAAM controls static no-arbitrage residual violations on the final surface. We evaluate the framework on CSI 300 index options from June 2020 to September 2024 under daily and minute level forecasting protocols. The diffusion stage improves forecasting accuracy and produces predictive intervals that vary across moneyness, maturity, and sampling frequency. The refinement stage improves fitting accuracy against market observations and reduces measured static no-arbitrage residual violations, with stronger gains at the minute level. Attention diagnostics suggest that SAAM performs adaptive cross sectional refinement rather than fixed local smoothing",
+  "authors": [
+    "Lifeng Hao",
+    "Shaolin Ji"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2607.29220v1",
+  "published": "2026-07-31T09:46:02Z",
+  "source": "arxiv",
+  "title": "Decoupled Probabilistic Forecasting and Arbitrage-Aware Refinement of Implied Volatility Surfaces",
+  "updated": "2026-07-31T09:46:02Z"
+}

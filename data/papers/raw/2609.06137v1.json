@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.06137v1",
+  "abstract": "Pathwise differentiation of Monte Carlo estimators fails at payoff discontinuities, producing zero or biased sensitivities for barriers, autocallables, and digital options. The industry workaround --- smoothing the indicator functions --- introduces bias and requires per-product calibration. We derive a correction formula that restores unbiased Greeks without smoothing. For a payoff $F(Z,\u03b8)$ that is piecewise smooth with discontinuities on surfaces $\\{g_i = 0\\}$, we show that the sensitivity decomposes into a pathwise term (computed by standard AAD) plus a sum of boundary corrections, each involving the payoff jump, the Gaussian density at the boundary, and the sensitivity of the boundary to the parameter. The correction is computed by Newton root-finding in the normal-random space, with the jump evaluated by two forward replays of the pricing kernel. The implementation uses AADC (\\texttt{pip install aadc}), whose tape replay and automatic discontinuity tracking make the method fully automatic --- the quant writes standard pricing code, and the correction driver identifies and handles all discontinuities. We prove the formula for arbitrary compositions of smooth functions and indicator functions (not just outer products), covering real autocallable payoff structures with recursive alive/dead logic. Benchmarks on QuantLib models (GBM, Heston, Hull-White) show all Greeks within 0.1--4\\% of analytic or bump-and-revalue references.",
+  "authors": [
+    "Evgeny Lakshtanov"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.PR"
+  ],
+  "id": "2609.06137v1",
+  "published": "2026-09-05T15:20:50Z",
+  "source": "arxiv",
+  "title": "Unbiased Monte Carlo Greeks for Discontinuous Payoffs",
+  "updated": "2026-09-05T15:20:50Z"
+}

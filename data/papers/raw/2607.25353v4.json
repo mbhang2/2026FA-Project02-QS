@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.25353v4",
+  "abstract": "Index put prices are the market's quotes for crash insurance, and a put's value equals the probability of a crash times the expected shortfall given one. The market therefore prices the product of likelihood and depth, not the factors, and finitely many bid and ask quotes leave a range of ways to split it. Fitting one density hides that range, and bounds computed one factor at a time can combine into scenarios that no single risk-neutral distribution could produce. We characterize the set of probability and loss pairs that one distribution can generate while pricing every quote inside its spread, with depth as their ratio, and call its boundary the risk-neutral crash frontier. Partitioning the state space at the quoted strikes and the threshold, with one coordinate for mass at the threshold, makes the set the exact projection of a finite linear system, with no price grid. Linear programs trace the frontier and price any portfolio of digital and put payoffs sharply, each bound certified by a static super-replicating portfolio of cash, forward, and quoted options. In weekly SPX cross sections from 2013 to 2023, a median 37 percent of the scenarios that separate bounds admit are jointly infeasible. Extending the quote set from the eight strikes nearest the threshold to the complete put wing shrinks it by a further 5.4 to 18.2 percent.",
+  "authors": [
+    "Jirong Zhuang"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2607.25353v4",
+  "published": "2026-07-28T06:57:40Z",
+  "source": "arxiv",
+  "title": "The Risk-Neutral Crash Frontier: Sharp Joint Bounds on Crash Probability and Conditional Depth from Option Bid-Ask Quotes",
+  "updated": "2026-09-18T07:06:38Z"
+}

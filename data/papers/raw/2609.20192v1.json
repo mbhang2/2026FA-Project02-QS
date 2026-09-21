@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.20192v1",
+  "abstract": "Fundamental-value anchoring of resting liquidity is a causal stabiliser of an order-book market: while the anchor holds, even a heavily leveraged book stays quiet. We take that anchor strength as a continuous control and characterise the endogenous liquidity crises that appear once it is nearly removed. In a single continuous-double-auction market driven by anchored noise traders, chartist herders, a population of funding-constrained market makers, and leveraged holders subject to margin calls, no exogenous shock is injected, so that any crisis is self-generated. Weakening the anchor turns on both classical leverage stylised facts: the return tail exponent falls from about 6.5 to 2.3 and the integrated volatility autocorrelation roughly doubles, although the clustering is short-memory rather than the long-memory of real markets. Isolating the crisis as a matched-herding levered-minus-unlevered book-depletion increment, we find it confined to a narrow region of weak anchor and intermediate herding, in which more leverage always deepens the crisis. Its onset is governed not by leverage alone but by the margin buffer, the price fall a holder can absorb before a forced sale, set jointly by leverage and the maintenance margin: the two-parameter leverage-margin plane collapses, to leading order, onto this single buffer, so that tightening the maintenance margin is as destabilising as raising leverage. The onset is a smooth, sub-critical crossover: the ignition probability rises gradually, a run-length test reveals no latent sharp tipping, and a branching-ratio proxy stays bounded well below unity.",
+  "authors": [
+    "Jan Novotny"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "physics.soc-ph",
+    "q-fin.CP"
+  ],
+  "id": "2609.20192v1",
+  "published": "2026-07-24T20:00:54Z",
+  "source": "arxiv",
+  "title": "Herding and Liquidity in Order-Book Markets. III. Leverage and the Onset of Endogenous Liquidity Crises under Weak Anchoring",
+  "updated": "2026-07-24T20:00:54Z"
+}

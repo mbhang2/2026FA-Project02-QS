@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.22864v1",
+  "abstract": "In this paper we propose a new formulation of the Bayesian Filter as used in the discrete-time Markov-Switching-Multifractal (MSM) model of volatility based on existing permutation symmetry within the likelihood structure. We show both analytically and empirically that such a formulation leads to a reduction in time complexity from $O(D^k)$ to $O(k^D)$ thereby significantly reducing the computational bottleneck associated with dimensionality. We compare the agreement between the naive and sector filters and find that while there are significant disagreements, the ground-truth recovery of the latter seems to improve on the former.",
+  "authors": [
+    "Daniyal Ali Hameedi"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "stat.ME"
+  ],
+  "id": "2608.22864v1",
+  "published": "2026-08-24T06:50:13Z",
+  "source": "arxiv",
+  "title": "From Exponential to Polynomial: An Exact Filter for High-Dimensional MSM Models",
+  "updated": "2026-08-24T06:50:13Z"
+}

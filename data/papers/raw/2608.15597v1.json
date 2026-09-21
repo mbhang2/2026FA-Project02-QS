@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.15597v1",
+  "abstract": "Indonesia has established a regulated carbon market supported by national registry infrastructure and the IDXCarbon exchange. Carbon units can be issued, recorded, traded, and retired within this framework. IDXCarbon currently uses a private blockchain for its trading infrastructure. This creates an opportunity to examine how Indonesian carbon credits could also be represented and traded through public blockchain infrastructure. This study proposes an architecture for tokenizing Indonesian carbon credits as real-world assets (RWAs), with particular focus on Sertifikat Pengurangan Emisi Gas Rumah Kaca (SPE-GRK). The proposed architecture retains the Sistem Registri Unit Karbon (SRUK) as the authoritative source of carbon-unit status. It introduces a public-blockchain layer for token representation and programmable transactions. The architecture is designed to support lifecycle management, token-based asset representation, public observability of token activity, interoperability, wallet-based transactions, and programmable settlement. The architecture consists of four layers: the authoritative carbon layer, the registry interoperability and tokenization layer, the public-blockchain RWA layer, and the market and application layer. Access to the tokenized carbon assets remains regulated. Token issuance and transfers are linked to participant eligibility and registry status. Retirement also remains dependent on the authoritative carbon registry. The proposed architecture provides a framework for introducing public-blockchain RWA infrastructure into Indonesia's existing carbon market while maintaining SRUK authority and existing market-integrity controls.",
+  "authors": [
+    "Rischan Mafrur",
+    "Fadli Ikhsan Pratama",
+    "Khadijah"
+  ],
+  "categories": [
+    "cs.CE",
+    "q-fin.CP"
+  ],
+  "id": "2608.15597v1",
+  "published": "2026-08-16T07:34:39Z",
+  "source": "arxiv",
+  "title": "Toward Decentralized Carbon Trading in Indonesia: A Public-Blockchain Architecture for Tokenized Real-World Assets",
+  "updated": "2026-08-16T07:34:39Z"
+}

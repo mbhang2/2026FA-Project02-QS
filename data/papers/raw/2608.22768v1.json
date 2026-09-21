@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.22768v1",
+  "abstract": "The stability of markets hosting leveraged exchange-traded products is governed not by any single product's loop gain but by the spectral radius of a loop-gain matrix, and scalar per-product monitoring underestimates system feedback by construction. Recent work measures the self-reinforcement of a leveraged fund's daily close rebalancing through a scalar loop gain and treats cross-asset spillovers as bias. We model complexes on correlated underlyings as a coupled feedback system with matrix gain L and show that scalar monitoring has two blind spots: (i) cycle amplification, since rho(L) >= max_i l_ii for nonnegative coupling, strict under two-way coupling; and (ii) transmitted displacement, which arises already under one-way coupling and is invisible to the receiver's own gain. We give a reduced-form estimator of L requiring only prices and public fund assets -- no signed order flow -- via cross-asset overnight reversals, reporting its measurement-convention sensitivity explicitly. In simulation the spectral radius is recovered with RMSE 0.005 at T=250, a lead-lag confounder yields a 2% false-alarm rate, and in a calibrated blind-spot configuration the scalar monitor reports \"safe\" and the matrix monitor \"unsafe\" on 100% of paths. In the 2026 Korean single-stock LETF episode we detect transmission from the SK Hynix complex into Samsung Electronics' closing price (DiD z=-2.82; exact randomization p=0.0055 against 182 control pairs), scaling with the sender's rebalancing capital; conservatively, about 41% of Samsung's closing displacement variance is imported -- invisible to its own \"moderate\" gain of 0.24. The same estimator returns nulls for the U.S. MSTR-Bitcoin-Coinbase complex, whose capital is comparable but whose closing venue is far deeper. Monitoring should be organized around the (complex x venue) matrix, not around products.",
+  "authors": [
+    "Jihwan Woo"
+  ],
+  "categories": [
+    "physics.soc-ph",
+    "eess.SP",
+    "q-fin.TR"
+  ],
+  "id": "2608.22768v1",
+  "published": "2026-08-24T03:43:09Z",
+  "source": "arxiv",
+  "title": "The Loop-Gain Matrix: Coupled Rebalancing Feedback and the Blind Spots of Scalar Stability Monitoring",
+  "updated": "2026-08-24T03:43:09Z"
+}

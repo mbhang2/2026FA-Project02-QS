@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.06618v1",
+  "abstract": "Current portfolio construction methods are either agnostic to the effects of idiosyncratic shocks (standard factor models) or to the latent data structure driving systematic returns (recent graph-based approaches). This presents an opportunity to combine the complementary market aspects captured by the factor and graph domains, allowing asset allocations to operate directly on the underlying market structure, rather than on its observed co-movement or its finite-sample artefacts. In this work, we introduce the Mutually-INformed Graph-Locality and Exposures framework (MINGLE), which mutually regularises the factor and graph domains by redefining graph locality through systematic factor exposure profiles, rather than via observed co-movements. This is formalised through a unified Alternating Direction Method of Multipliers (ADMM) framework that jointly learns a latent factor representation and its induced graph topology directly from market returns. The resulting exposure-similarity graph aligns more closely with established economic sectors than conventional correlation-based graphs. Portfolios constructed from this representation are shown to consistently outperform their correlation-based counterparts across a range of volatility regimes and transaction cost levels. For rigour, paired statistical testing confirms that these gains stem from the reconciliation of the graph and factor domains.",
+  "authors": [
+    "Sara Chehab",
+    "Giorgos Iacovides",
+    "Parisa Yazdanparast",
+    "Danilo Mandic"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "cs.LG",
+    "q-fin.ST"
+  ],
+  "id": "2608.06618v1",
+  "published": "2026-08-06T22:07:26Z",
+  "source": "arxiv",
+  "title": "Beyond Co-Movement: Locality by Exposures Enables a Joint Factor-Graph Framework for Portfolio Diversification",
+  "updated": "2026-08-06T22:07:26Z"
+}

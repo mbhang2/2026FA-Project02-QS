@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.26174v1",
+  "abstract": "Bitcoin's future fluctuations are a substantial concern for investments and risk management. Investors and financial institutions require accurate forecasts of these price movements to hedge and optimize portfolios. This study aims to answer the question of whether Bitcoin's price will rise beyond 5% within the next 7 days by utilizing on-chain, market, and sentiment data from February 2018 to December 2025. The proposed model consists of a multi-scale temporal convolutional network with InceptionTCN blocks, CNN channel attention, adaptive average pooling, and a pairwise ranking loss. Dilated convolutions with bottleneck and fusion layers are employed to efficiently capture features over horizons from 1 to 4 days. Given the class imbalance in the dataset, AUC is used instead of accuracy and other classification metrics to reflect the model's performance better. Subsequently, a profit-optimized decision threshold is also applied to align model selection with financial objectives. The proposed model is compared with 5 other baselines: ImprovedTCN_GRU, LSTM, TCN, XGBoost, and Random Forest. Results indicate that the proposed model achieved an AUC of 0.6316 and a profit of 1.703, outperforming all baseline models. Using a novel deep learning model would assist investors in making better financial decisions.",
+  "authors": [
+    "Parsa Yousefnezhad",
+    "Gholamreza Mansourfar",
+    "Mohammadreza Feizi Derakhshi"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "q-fin.TR"
+  ],
+  "id": "2608.26174v1",
+  "published": "2026-07-25T06:45:21Z",
+  "source": "arxiv",
+  "title": "Forecasting Economically Significant Bitcoin Moves: A Multi-Scale TCN with Profit-Optimized Thresholds",
+  "updated": "2026-07-25T06:45:21Z"
+}

@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.04569v1",
+  "abstract": "Herein, we propose a quantum circuit learning framework for modeling the realized volatility (RV) of Bitcoin and investigate the statistical properties of the predicted time series through multifractal analysis. Unlike conventional GARCH-type models, which require a pre-specified functional form for the volatility process, a parameterized quantum circuit directly approximates the volatility function from empirical data, eliminating the need for explicit model selection. Using five-minute Bitcoin price data, we construct daily RV, train a single-qubit parameterized quantum circuit, and generate a long synthetic time series from the optimized quantum circuit. Multifractal Detrended Fluctuation Analysis is applied to calculate the generalized Hurst exponent $h(q)$, the singularity spectrum $f(\u03b1)$, and the multifractal scaling exponent $\u03c4(q)$. The predicted return series exhibits $h(2)\\approx 0.5$, consistent with near-random dynamics, and both the predicted and the empirical return series display multifractality that partially persists after random shuffling. The increment series of RV shows pronounced anti-persistence with $h(2)\\approx 0.05$--$0.1$, consistent with the rough volatility hypothesis. These results demonstrate that a simple single-qubit parameterized quantum circuit captures qualitatively some observed properties in Bitcoin volatility dynamics.",
+  "authors": [
+    "Tetsuya Takaishi"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2609.04569v1",
+  "published": "2026-09-03T23:53:28Z",
+  "source": "arxiv",
+  "title": "Quantum Circuit Learning for Volatility Modeling: Multifractal Analysis of Realized Volatility Time Series",
+  "updated": "2026-09-03T23:53:28Z"
+}

@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.00438v1",
+  "abstract": "Unlike the classical Heston model, Fourier pricing under the rough Heston model requires solving a fractional Riccati equation at every quadrature point. Since the required resolution varies with model parameters and quadrature point, a single uniform time discretization can be inefficient. We develop single- and multilevel Gauss-Laguerre quadrature methods that balance the time discretization and Fourier quadrature errors. Both methods scale the laguerre weight to the estimated Fourier integrand decay. The single-level method allocates a prescribed tolerance between the two errors. The multilevel method splits the integrand into a level-zero term and level differences, selecting quadrature points separately at each level. Suppose that the Fourier integrand discretization error is $O(\u0394t^p)$, that evaluating the characteristic function once costs $O(\u0394t^{-\u03b2})$, and that the algebraic Gauss-Laguerre quadrature error is $O(N^{-s_{SL}/2})$, where $s_{SL}$ is the smoothness index. Under this estimate and assumptions on the regularity and decay of level differences, we prove that the proposed single-level method requires $O(\u03b5^{-(\u03b2/p+2/s_{SL})})$ computational work to achieve accuracy $\u03b5$, whereas the proposed multilevel method requires $O(\u03b5^{-\u03b2/p})$ computational work. We also study root-exponential Gauss-Laguerre error models for practical multilevel quadrature allocation. Numerical experiments support the observed fractional Riccati and Fourier integrand convergence rates and root-exponential quadrature behavior, and show substantial reductions in quadrature cost from the proposed scaling. The multilevel method provides clear computational savings over the single-level method. We further benchmark the multilevel fractional Riccati method against the BL2 Markovian approximation and report lower total CPU time in the tested configurations.",
+  "authors": [
+    "Chiheb Ben Hammouda",
+    "Abderrahmene Ben Romdhane",
+    "Michael Samet",
+    "Raul F. Tempone"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "math.NA"
+  ],
+  "id": "2609.00438v1",
+  "published": "2026-08-31T22:23:39Z",
+  "source": "arxiv",
+  "title": "Single- and Multilevel Quadrature with Error Control for Fourier Pricing under the Rough Heston Model",
+  "updated": "2026-08-31T22:23:39Z"
+}

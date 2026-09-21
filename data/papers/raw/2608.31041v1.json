@@ -1,0 +1,22 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.31041v1",
+  "abstract": "Quantitative trading is moving from isolated predictive models toward agentic workflows that combine reasoning, tool use, memory, and feedback. This survey reviews agentic quantitative trading across five stages: factor mining, signal discovery, portfolio construction, order execution, and risk management. We further examine agentic quant trading systems through architecture, coordination, and adaptation, while comparing benchmarks across strategy construction, offline trading, live market evaluation, and reliability assessment. Our review finds that current systems remain concentrated on signal discovery, while complete integration with portfolio construction, execution, and risk control is still uncommon. Multi-agent systems also rely heavily on aggregation despite increasingly diverse workflow structures. Benchmark evidence further shows that strong model or forecasting capability does not reliably translate into trading performance under live market conditions and reliability controls. We conclude with future directions for more complete trading workflows, stronger coordination, and evaluation matched to the capability being assessed.",
+  "authors": [
+    "Fengrui Hua",
+    "Hengyi Yang",
+    "Xinlei Hao",
+    "Haohan Zhang",
+    "Bokai Cao",
+    "Yiyan Qi",
+    "Jia Li",
+    "Jian Guo"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2608.31041v1",
+  "published": "2026-08-31T16:19:09Z",
+  "source": "arxiv",
+  "title": "Agentic Quantitative Trading: A Survey of Workflows, Systems, and Evaluation",
+  "updated": "2026-08-31T16:19:09Z"
+}

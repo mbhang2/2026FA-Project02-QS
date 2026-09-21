@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.28847v1",
+  "abstract": "Algorithmic credit scoring must satisfy fairness and explanation requirements, yet prevailing predictive-parity criteria assess only outcomes at the decision point. They can therefore overlook whether rejected applicants face unequal burdens in reaching future approval, a phenomenon we call masked inequality. We develop an effort-centric framework that measures an applicant's effort as the minimum weighted cost of feasible changes required to cross the approval boundary. The framework distinguishes feature-independent actions from additive structural shifts that propagate through a causal model and defines parity by comparing average minimum effort across protected groups. We derive tractable local expressions for general differentiable classifiers and exact expressions for logistic regression, embed them in an in-processing fairness objective, and bound changes in portfolio credit risk. The same optimisation yields actionable pathways to approval. Using mortgage data with continuous and discrete features, we find that rejected female applicants require greater effort even when standard predictive-parity criteria are satisfied. Feature-independent regularisation reduces the effort gap by more than 50\\% with modest predictive changes. Causal regularisation yields reductions above 90\\% at the tested positive penalty weights, but with larger predictive and risk-return trade-offs. Expected and unexpected losses remain broadly stable under feature-independent regularisation and increase under causal regularisation; RAROC declines but remains positive. These results show that effort parity complements predictive fairness by revealing and mitigating hidden barriers to future credit access while making the associated operational trade-offs explicit.",
+  "authors": [
+    "Shiqi Fang",
+    "Zexun Chen",
+    "Jake Ansell"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "q-fin.GN",
+    "q-fin.RM",
+    "stat.CO"
+  ],
+  "id": "2607.28847v1",
+  "published": "2026-07-30T21:19:36Z",
+  "source": "arxiv",
+  "title": "Effort-Centric Fairness in Lending Decisions",
+  "updated": "2026-07-30T21:19:36Z"
+}

@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.02311v2",
+  "abstract": "Agentic AI is gaining acceptance in asset management, but governance has not kept pace: 88\\% of surveyed finance professionals report no operational governance framework for agentic AI, and only 24 of 75 large U.S. money managers disclosing AI use in Form ADV filings report a formal governance policy. We argue this gap is architectural: governance built for static validation does not survive continuously retrained agentic policies. We propose a four-layer framework (Policy, Engineering, Composition, Systemic) grounded in two distinct kinds of evidence, kept explicitly separate: two calibrated synthetic illustrations (a regret-covariance drift monitor; a crowding simulation showing joint drawdown risk rising from 39.2\\% to 79.3\\%), and three real, documented cases (a deployed LLM-embedding trading strategy, a \\$45 billion discretionary fund's forced-deleveraging blowup, and a tribunal ruling holding an airline liable for its chatbot). The synthetic examples demonstrate computability from observable data; the cases demonstrate that the failure modes are not hypothetical. We provide a 90-day implementation sequence spanning trading and payments/customer-facing systems.",
+  "authors": [
+    "Irene Aldridge",
+    "Steve Krawciw"
+  ],
+  "categories": [
+    "econ.EM",
+    "q-fin.RM",
+    "q-fin.ST"
+  ],
+  "id": "2608.02311v2",
+  "published": "2026-08-03T14:36:11Z",
+  "source": "arxiv",
+  "title": "AI Governance for Institutional Readiness in Finance",
+  "updated": "2026-08-10T16:12:52Z"
+}

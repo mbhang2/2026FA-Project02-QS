@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.02917v1",
+  "abstract": "Automated market makers (AMMs) are typically interpreted and evaluated as decentralized exchanges. Herein, we take the perspective envisioned by Balancer that an AMM can also be viewed as a portfolio technology that programmatically enforces an economic mandate. In particular, we follow the geometric mean market maker (G3M) invariant employed by that protocol in order to enforce a target-weighted portfolio. We introduce a multi-asset fee structure to the G3M under which competitive arbitrage implements a band-rebalancing strategy with mis-weighting bounded ex ante, allowing compliance with the mandate to be verified directly from the pool's observable holdings. We then compare simulated G3M portfolios against the realized performance of VBIAX, EQL, and EDOW on annualized returns and tracking error against the portfolio mandate. Across these historical case studies, and using arbitrage-only order flow, the G3M is found to outperform the incumbent funds in both metrics for certain fee ranges.",
+  "authors": [
+    "Zachary Feinstein",
+    "Ionut Florescu",
+    "Sean O'Leary"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.MF",
+    "q-fin.PM"
+  ],
+  "id": "2608.02917v1",
+  "published": "2026-08-03T22:12:19Z",
+  "source": "arxiv",
+  "title": "Mandate without Managers: Automated Market Makers as Verifiable Portfolio Products",
+  "updated": "2026-08-03T22:12:19Z"
+}

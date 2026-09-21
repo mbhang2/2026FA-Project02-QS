@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.20020v1",
+  "abstract": "Hedge ratios, factor models and diversified portfolios all rest on an estimate of which firms move together. That estimate is not stable: firms migrate between the groupings the market treats as coherent, and when enough migrate the organizing axes of the cross-section turn. We measure the rate of that turning as the mean squared sine of the principal angles between subdominant eigenspaces of consecutive twelve-month S&P 500 correlation matrices. A typical month rewrites a fifth of the structure and carries four-fifths forward. That rate is priced: it couples to the aggregate variance risk premium at t = 5.40, no level measure correlates above 0.32, and the implied-correlation surface spans at most 6.7 percent of it. Only the persistent component is priced - the premium compensates the pace of revision, not the distance traveled. The mechanism is prepayment: implied variance rises on impact, volatility follows two to three quarters later (simulated-null p < 0.03 at h = 1-9), and the premium converges as it arrives. Three pre-registered boundaries hold: no timing alpha, no crash protection, and a downside version inseparable from intensity. The premium is, in part, rent on exposure held over a map still being redrawn.",
+  "authors": [
+    "Lucas Carvalho"
+  ],
+  "categories": [
+    "q-fin.MF",
+    "q-fin.PR",
+    "q-fin.ST"
+  ],
+  "id": "2608.20020v1",
+  "published": "2026-08-20T13:31:24Z",
+  "source": "arxiv",
+  "title": "The Reconfiguration Premium: Co-movement Structure as an Unspanned Dimension of the Variance Risk Premium",
+  "updated": "2026-08-20T13:31:24Z"
+}

@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.29468v1",
+  "abstract": "We study the quadratic tracking problem of a general stochastic target process with absolutely continuous controls, with and without terminal constraint. We derive explicit, non-asymptotic upper bounds in terms of a Besov-type modulus of the target. These bounds yield sharp explicit rates that specialize to the square-root order for semimartingale targets. We then apply these results to a generalized Obizhaeva--Wang execution model with random terminal inventory. We first develop a Hilbert-space approach to characterize its optimal strategy, which includes jumps. To avoid such trading spikes, one regularizes the problem by a quadratic trading-rate penalty with coefficient $\\varepsilon$. We then show that the regularized optimal execution cost---and therefore the excess price impact cost of the regularized optimal strategy---converges at the sharp rate $O(\\sqrt{\\varepsilon})$. Since the regularized optimal strategy is not available in closed form, we further construct a nearly optimal strategy which is readily implementable and shares the same approximation rate.",
+  "authors": [
+    "Marcel Nutz",
+    "Moritz Voss"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.MF"
+  ],
+  "id": "2608.29468v1",
+  "published": "2026-08-29T23:47:21Z",
+  "source": "arxiv",
+  "title": "The Convergence Rate of Stochastic Tracking with Application to Optimal Execution",
+  "updated": "2026-08-29T23:47:21Z"
+}

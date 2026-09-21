@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.23808v2",
+  "abstract": "Backtests of trading strategies are often selected after many parameter trials. A strong historical result can therefore reflect search luck rather than a persistent signal. Standard summaries such as return, Sharpe ratio, and drawdown do not record how many candidates were tried, whether the selected rule survives out-of-sample validation, or whether the available history is long enough to support the result. This paper describes the MinervaScore, a post-selection robustness grade for trading strategies. The score combines four established validation quantities: Deflated Sharpe Ratio, Probability of Backtest Overfitting, Superior Predictive Ability, and Minimum Track Record Length, with a regime-stability diagnostic. These components are converted into signed margins from their admissibility thresholds, aggregated into a raw score, and then mapped to a 0-100 display. The display is tied to a binary Robustness Seal: scores of 80 or higher are shown only when all five gates pass. The calibration uses 359,062 production backtest records. The score is intended to rank statistical support, not to estimate the probability of future profit. In synthetic markets with known ground truth, the MinervaScore separates true signal from lucky backtest outcomes, with an AUROC of 0.989 at the headline difficulty. Its improvement over the GT-Score proxy and the gates-passed baseline is modest, and it remains close to the corrected DSR-alone baseline. In a pre-registered test on unseen real-market data, the score showed no significant forward relationship in a population with limited surviving edge (Spearman rho_s = 0.013, one-sided permutation p = 0.40). We therefore present the MinervaScore as an auditable validation and reporting layer, rather than as evidence of demonstrated real-market predictability.",
+  "authors": [
+    "Maria Laura Santoni",
+    "Vincent Jouanne",
+    "Matthew L. Scullin"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2608.23808v2",
+  "published": "2026-08-24T20:17:28Z",
+  "source": "arxiv",
+  "title": "Equity Strategy Backtesting: Luck or Edge? The MinervaScore as a Statistical Robustness Grade",
+  "updated": "2026-08-26T07:17:15Z"
+}

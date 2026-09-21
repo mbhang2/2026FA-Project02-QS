@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.20415v1",
+  "abstract": "By Godunov's theorem, linear second-order finite-difference schemes for the Fokker-Planck equation cannot preserve positivity. The Diagonal Frog (DF) framework previously bypassed this barrier using eventual positivity, but required a strict minimum time step. This paper resolves the small-step limitation using a nonlinear extension of the DF solvers. We split the second-order directional operator into a monotone M-matrix core and an antidiffusive flux correction. A Zalesak-type limiter is then applied iteratively within the implicit banded solve. The resulting Flux-Corrected DF (FCDF) schemes (variants A and B) are unconditionally positive across all time steps. Because the limiter acts on fluxes rather than point values, these schemes conserve discrete mass exactly and maintain second-order accuracy. Crucially, the limiter activates only within unresolved layers. This ensures the global $L_1$ convergence remains second-order uniformly in the cell P\u00e9clet number, avoiding the first-order degradation seen in the Chang-Cooper scheme. The method's Picard iteration is contractive under a purely convective step restriction. To support arbitrary step sizes, we develop an active-set reformulation. This solves the system using a semismooth Newton iteration, where computational cost scales only with the number of nodes where positivity binds. Finally, we introduce a defect-corrected time stepping approach that restores second-order time accuracy. Numerical experiments on Ornstein-Uhlenbeck and advection-dominated benchmarks confirm our claims.",
+  "authors": [
+    "Andrey Itkin"
+  ],
+  "categories": [
+    "math.NA",
+    "cs.CE",
+    "physics.comp-ph",
+    "q-fin.CP"
+  ],
+  "id": "2607.20415v1",
+  "published": "2026-07-22T17:53:40Z",
+  "source": "arxiv",
+  "title": "Flux-Corrected Diagonal Frog: second order and positivity at all time steps",
+  "updated": "2026-07-22T17:53:40Z"
+}

@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.29423v1",
+  "abstract": "The factor HJM stochastic volatility model introduced by Sepp and Rakhmonov (2025) obtains tractable swaption pricing by freezing the nonlinear swap-rate loading along a deterministic expected-state path. This removes the dependence of conditional swap-rate variance on the current yield-curve state. We introduce a first-order Taylor correction to the loading that adds no calibration parameters. Conditional on retaining the frozen annuity-measure drift, we show that the first variation of the swap-rate transform is affine in the centered rate states and reduces to one-dimensional equations in volatility. For quadratic-drift lognormal stochastic volatility, these equations yield a finite-dimensional ODE representation and a direct log-volatility formulation. Calibrations to independently generated nonlinear-model prices show substantially lower stochastic volatility parameter bias and held-out pricing error, with only modest changes in local calibration identifiability.",
+  "authors": [
+    "Bram Brongers"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2608.29423v1",
+  "published": "2026-08-29T20:01:54Z",
+  "source": "arxiv",
+  "title": "Improving Swaption Calibration in Factor HJM Stochastic Volatility Models: A First-Order Correction to Frozen Swap-Rate Loadings",
+  "updated": "2026-08-29T20:01:54Z"
+}

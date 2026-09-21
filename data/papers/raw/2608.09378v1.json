@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.09378v1",
+  "abstract": "Stablecoins have rapidly emerged as an important class of digital assets and a component of the digital financial ecosystem. Despite their growing importance, the statistical properties of stablecoin transaction activity remain largely unexplored. To the best of our knowledge, this is the first study to investigate scaling behavior in stablecoin transaction data, focusing on USDT and USDC. We analyze approximately 370 million USDT and USDC transactions recorded on the Ethereum blockchain across six periods spanning June 2024 to February 2026. Based on interactions between Externally Owned Accounts (EOAs) and Smart Contracts (SCs), we classify transactions into four categories: EOA-EOA, EOA-SC, SC-EOA, and SC-SC. Using maximum-likelihood estimation of power-law exponents, we find that transaction value distributions exhibit heavy-tailed scaling for both stablecoins across all periods and interaction categories. We identify two distinct scaling regimes: EOA-involved categories cluster around 1.45-1.60, whereas SC-SC transactions exhibit higher exponents of approximately 1.72-1.73. Sensitivity analysis confirms that this separation is robust across periods, stablecoins, and fitting sample sizes. Counterfactual analysis shows that changes in category weights alone cannot explain the observed variation in the overall exponent. Across different sample sizes, the counterfactual path accounts for only about 10%-35% of the total temporal range observed in the actual data. Overall, our results indicate two broadly differentiated scaling regimes in the tail of stablecoin transaction values. Power-law tail behavior is observed throughout stablecoin transaction activity, but the exponent depends on whether transactions are driven by EOAs or SCs. These findings provide a basis for further research on scaling behavior and transaction heterogeneity in blockchain-based financial systems.",
+  "authors": [
+    "Kundan Mukhia",
+    "Sabat Rai",
+    "Vivek Shrivastav",
+    "Imran Ansari",
+    "Md. Nurujjaman"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2608.09378v1",
+  "published": "2026-08-10T09:56:54Z",
+  "source": "arxiv",
+  "title": "Scaling laws of Stablecoin Transactions: Evidence from USDT and USDC on the Ethereum blockchain",
+  "updated": "2026-08-10T09:56:54Z"
+}

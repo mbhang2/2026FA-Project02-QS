@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.20293v1",
+  "abstract": "Borrowed from non-equilibrium statistical mechanics, the generalized Langevin equation (GLE) is imported as a framework for stochastic volatility to address the structural limitations of fractional Brownian motion (fBm), the standard engine of rough volatility. The fBm forces a single parameter to set two logically independent properties at once: how volatility scales and how it remembers. The GLE separates them using a memory kernel $K$, a potential $U$, and a noise covariance $C$. Memory becomes a measurable object, and an asymmetric potential supplies a lever on variance skew that the price-variance correlation cannot reach. Physical-measure tests on public datasets decisively reject two constrained corners of the class, a memoryless leverage effect and time-reversal symmetry, while the central rough scaling constraint is left identification-limited rather than refuted. The paper reports these limits honestly, and validation on industry-grade data remains a valuable direction. The risk-neutral construction and the joint SPX--VIX calibration will be developed in a companion paper.",
+  "authors": [
+    "Andrey Itkin"
+  ],
+  "categories": [
+    "q-fin.MF",
+    "physics.data-an",
+    "q-fin.CP",
+    "q-fin.PR"
+  ],
+  "id": "2609.20293v1",
+  "published": "2026-07-31T06:04:05Z",
+  "source": "arxiv",
+  "title": "Beyond Rough Volatility: Decoupling Memory and Scaling via a Generalized Langevin Equation",
+  "updated": "2026-07-31T06:04:05Z"
+}

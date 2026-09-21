@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.00616v2",
+  "abstract": "We propose an arbitrage-aware latent flow-matching framework for unconditional implied volatility surface generation. The method first compresses high-dimensional surfaces into a low-dimensional latent space using a variational autoencoder regularized by differentiable calendar-spread, call-spread and butterfly-arbitrage penalties. A flow-matching model then learns to transport a Gaussian prior toward the empirical latent distribution, and generated latent samples are decoded back into volatility surfaces. We evaluate the approach using marginal and surface-level Wasserstein distances, smile and skew diagnostics, pointwise quantile surfaces, financially interpretable shape metrics, and static no-arbitrage tests. The proposed model closely reproduces the empirical distribution and the main maturity-moneyness structures, achieves the best performance in the extreme Q99 regime, and generates 90.8% of surfaces satisfying all tested static no-arbitrage conditions. Overall, the results show that latent flow matching provides a favorable balance between distributional similarity, tail preservation, and financial consistency without requiring post-sampling reweighting.",
+  "authors": [
+    "Oscar Brooks",
+    "Dusica Bajalica",
+    "Yating Liu",
+    "Imen Ben Tahar"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.MF"
+  ],
+  "id": "2608.00616v2",
+  "published": "2026-08-01T12:11:09Z",
+  "source": "arxiv",
+  "title": "Latent Flow Matching for Arbitrage-Aware Implied Volatility Surface Generation",
+  "updated": "2026-08-04T09:42:10Z"
+}

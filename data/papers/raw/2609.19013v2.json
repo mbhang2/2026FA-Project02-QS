@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.19013v2",
+  "abstract": "Public blockchains can make many trading venues simultaneously visible and mechanically reachable, yet an order still has to pay to activate each additional venue: technological connectivity need not translate into economically integrated execution. Automated-market-maker (AMM) pools make this gap directly measurable, because exact pre-trade venue states, transaction-level routing costs, and realized venue use can be reconstructed jointly from public blockchain records. Using 13,768 sampled family-transactions from 29 Ethereum and Base token-pair families and 71 sibling pools, we document a sharp compression from gross to net execution opportunity: the equal-chain lower bound on gross multi-venue gains is 34.85%, while the corresponding upper bound after measured access costs is 6.89%, as access costs eliminate 80.45% of point-identified states with positive gross gains. Realized routing shows a distinct second contrast: actual multi-pool activation occurs in only 1.203% of the opportunity population, yet among 170 eligible realized integrated routes, observed allocation captures 94.8% of aggregate feasible gain. Holding recipient orders and exact venue states fixed, replacing the Ethereum routing-cost regime with Base's lower-cost regime materially expands executable integration under both state populations. For digital-market design, the results imply that blockchain scaling, cross-venue connectivity, and displayed liquidity do not by themselves establish economically integrated execution: integration is an order-specific property that depends on transaction-level access costs.",
+  "authors": [
+    "Wen-Ting Wang"
+  ],
+  "categories": [
+    "stat.CO",
+    "q-fin.ST"
+  ],
+  "id": "2609.19013v2",
+  "published": "2026-07-18T23:32:44Z",
+  "source": "arxiv",
+  "title": "Routing Frictions and Executable Liquidity in Fragmented Markets",
+  "updated": "2026-09-17T01:59:50Z"
+}

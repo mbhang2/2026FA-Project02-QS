@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.28399v1",
+  "abstract": "In financial markets, a sequential policy that reacts systematically to price movements may become predictable to other market participants. This paper studies whether large language model (LLM) agents exhibit such directional structure through RetailAgent, an experimental framework in which an LLM observes anonymized intraday equity price histories and permitted state, then repeatedly chooses long (hold the stock) or flat (stay out) before the subsequent interval return is revealed. We compare returns during long and flat intervals along the same stock's intraday path after removing the overall fraction of long decisions. This exposure-matched measure reveals persistent negative timing across modality, horizon, state, and model family. Shuffling saved action sequences substantially attenuates the effect, showing that alignment between actions and subsequent returns drives the negative score. Feeding self-authored memories into decisions further increases policy persistence, while timing becomes more negative among stock-days on which the agent uses both actions. These results reveal stable, recoverable directional structure in sequential LLM financial decisions and a behavioral signal for studying how another participant could respond to a predictable policy.",
+  "authors": [
+    "Yupeng Zhang",
+    "Liuyuan Jiang",
+    "Hongyi Huang",
+    "Bingheng Li",
+    "Lisha Chen"
+  ],
+  "categories": [
+    "cs.AI",
+    "q-fin.TR"
+  ],
+  "id": "2608.28399v1",
+  "published": "2026-08-28T14:53:08Z",
+  "source": "arxiv",
+  "title": "RetailAgent: Structured Adverse Timing in Self-Conditioned Multimodal LLM Trading Agents",
+  "updated": "2026-08-28T14:53:08Z"
+}

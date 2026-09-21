@@ -1,0 +1,21 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.00988v1",
+  "abstract": "We develop an exactly solvable nonlinear time-series model by incorporating the square-root price-impact law into the Lillo--Mike--Farmer (LMF) model to resolve the diffusive price-dynamics paradox under predictable market-order flow. In financial market microstructure, it is well established that the price dynamics are approximately described by Brownian motion at long times. However, it is also well-known that market-order flow is clearly predictable due to long-range correlations, as mathematically formulated by the LMF model. Since market orders have a positive price impact in general, predictable market-order flow seems to contradict Brownian price dynamics. In this work, we resolve this diffusive price-dynamics paradox by developing nonlinear time-series models that generalize the LMF model based on the square-root price-impact law. Our time-series models can be mathematically mapped onto the L\u00e9vy-walk framework---an exactly solvable class of non-Markovian stochastic processes developed in statistical physics. We prove that the price dynamics are diffusive at long times under the square-root law even under predictable market-order flow. Our work highlights the crucial practical importance of the square-root law in understanding the microstructural foundation of the Efficient Market Hypothesis.",
+  "authors": [
+    "Yuki Sato",
+    "Shunta Fujiwara",
+    "Kiyoshi Kanazawa"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cond-mat.stat-mech",
+    "econ.GN",
+    "q-fin.GN",
+    "q-fin.MF"
+  ],
+  "id": "2608.00988v1",
+  "published": "2026-08-02T04:38:31Z",
+  "source": "arxiv",
+  "title": "Exactly solvable model for the diffusive price-dynamics paradox under long-range correlated market-order flow",
+  "updated": "2026-08-02T04:38:31Z"
+}

@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.24410v1",
+  "abstract": "Estimating the covariance structure of financial assets typically relies on historical returns, making risk models dependent on noisy and asset-specific time series. We propose the Characteristic-Driven Dynamic Factor Model (CD-DFM), a non-linear latent factor model that instead constructs a representation of the asset cross-section directly from observable firm characteristics, primarily company fundamentals. The learned latent space jointly determines interpretable factor exposures and a forward covariance estimator, and is trained end to end on an objective that combines a Stein covariance loss with a factor reconstruction term, targeting the out-of-sample second moments used in risk management. Because the latent representation, i.e. the encoder depends only on characteristics, previously unseen assets can be embedded at inference time without retraining. Experiments on S&P 500 equities show that CD-DFM produces economically structured latent representations, interpretable factor portfolios, and competitive covariance forecasts despite relying on substantially lower-frequency information than return-based approaches. Among the benchmarked methods, it is the only model that simultaneously combines characteristic-driven representations, factor interpretability, competitive covariance calibration, and zero-shot onboarding of unseen assets.",
+  "authors": [
+    "Alexandre Alouadi",
+    "Charles-Albert Lehalle"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "q-fin.RM"
+  ],
+  "id": "2607.24410v1",
+  "published": "2026-07-27T13:26:53Z",
+  "source": "arxiv",
+  "title": "The Fundamental Structure of Risk: From Characteristics to Covariance",
+  "updated": "2026-07-27T13:26:53Z"
+}

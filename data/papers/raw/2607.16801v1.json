@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.16801v1",
+  "abstract": "Simulating dependent Bernoulli outcomes with prescribed means and pairwise Pearson correlations is a common task in risk modeling. A familiar approach is the Gaussian-threshold workflow for binary outcomes, often viewed as a Bernoulli analogue of the Gaussian copula construction. We show that setting latent Gaussian correlations equal to target Bernoulli correlations is generally incorrect after thresholding, and that pairwise tetrachoric calibration is exact only when the calibrated latent matrix is positive semidefinite. We therefore formulate the problem directly over the joint Bernoulli probability mass function. Given target means and pairwise correlations, we impose normalization, nonnegativity, mean constraints, and pairwise cross-moment constraints as a linear program over the $2^N$ atomic probabilities. The resulting PMF formulation either returns an exact law matching the requested first and second moments or certifies infeasibility. A convex-hull characterization further shows that every feasible target admits a law supported on at most $1+N+\\binom{N}{2}$ states, while every infeasible target admits a separating quadratic certificate. We then develop a truncated-moment completion scheme that fits a reduced cross-moment table and generates samples by sequential conditioning, together with a sparse-support working-set refinement that can reduce memory usage on structured instances, although the worst-case complexity remains exponential. Together, these constructions provide an exact PMF-based framework for feasibility and simulation at moderate dimension and structured alternatives when the full atomic representation is impractical, while clarifying the limits of Gaussian-threshold constructions.",
+  "authors": [
+    "Chi Heem Wong",
+    "Zied Ben Chaouch"
+  ],
+  "categories": [
+    "cs.CE",
+    "q-fin.CP",
+    "q-fin.RM",
+    "stat.CO"
+  ],
+  "id": "2607.16801v1",
+  "published": "2026-07-18T12:48:31Z",
+  "source": "arxiv",
+  "title": "A Practical Guide to Simulating Correlated Binary Outcomes",
+  "updated": "2026-07-18T12:48:31Z"
+}

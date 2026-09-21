@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.26245v1",
+  "abstract": "OpenMarket began as an attempt to trade Polymarket's BTC 15-minute binary markets against Binance BTC/USDT order flow. The attempt did not produce a tradable edge: out-of-sample, a walk-forward logistic model over 43 microstructure features does not beat, and slightly underperforms, the probability already implied by Polymarket's own order book, and simulated trading nets -0.116 normalized payoff units per attempted trade under stated fee and slippage assumptions. We release the synchronized corpus and infrastructure that attempt produced and, to our knowledge, the first public millisecond-level Polymarket BTC / Binance BTC-USDT paired corpus with explicit pairing metadata. The frozen archive (tag v0.5.2) contains 727,098,247 deduplicated rows across 202 archival snapshots, with event data on 54 observed Polymarket days (57 Binance days) between 2026-02-12 and 2026-05-15, including 2,936,031 explicit lead-lag pairs, alongside a reproducible Rust pipeline for collection, millisecond pairing, Parquet export, and walk-forward calibration. Initial analyses establish Polymarket stylized facts (one-tick top-of-book spreads) and characterize cross-venue timing: an apparent 16 ms median lag on venue source clocks, with relative clock drift bounded to at most 6 ms over the archive but a remaining single-vantage constant-offset ambiguity of approximately plus or minus 99 ms. A synchronization-free event study, measured only on the collector clock, independently shows that Polymarket quotes respond to large Binance moves after a median 347 ms. We position this work as a data-and-methods release whose central empirical result is a null out-of-sample forecasting result.",
+  "authors": [
+    "Gregory Young"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2607.26245v1",
+  "published": "2026-07-28T20:28:16Z",
+  "source": "arxiv",
+  "title": "OpenMarket: A Synchronized Polymarket-Binance Dataset for High-Frequency Prediction-Market Research",
+  "updated": "2026-07-28T20:28:16Z"
+}

@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.23053v1",
+  "abstract": "Tick-level trade-and-quote data for the Tokyo Stock Exchange is distributed through the Nikkei NEEDS service as thousands of zipped CSV archives spanning four data types with era-dependent schemas and Japanese-language layouts. We present tse_tick, an open-source Python library that converts these raw archives into clean, typed Polars DataFrames and a Hive-partitioned Parquet store queryable through DuckDB. The library offers two access paths sharing one parse-and-clean core: a one-shot reader that returns a ticker- and time-filtered DataFrame directly from raw ZIP files, and a two-stage ingest-then-query pipeline with resume-safe, memory-aware parallel ingestion, part-pruning, and a materialized intraday time key for row-group pruning. The engineering, more than the parsing, is what the library contributes: ingestion runs in per-date atomic units whose completion is recorded by coverage markers rather than inferred from file existence, writes stream in bounded morsels so that peak memory is independent of trading-day size (24.5 GB to 2.4 GB on the worst measured day), a RAM-aware process pool sizes itself to available memory, and part-pruning opens only the archive parts a ticker can occupy. Full English and Japanese column definitions ship for all four types, and a translation layer maps yfinance, Polygon, and ccxt names onto their tse_tick equivalents. In benchmarks on a commodity 16-thread workstation, parsing a representative 4.8-million-row archive part, one of a trading day's nine parts, is 59.8x faster than the original pandas prototype (34.3x against an engine-matched pandas baseline), and a single-ticker time-window query from the store completes roughly 410x faster than a pandas scan of the equivalent CSV. tse_tick is available on PyPI (pip install tse-tick) under the MIT license.",
+  "authors": [
+    "Kazumi Li",
+    "Masataka Hayashi",
+    "Teruo Nakatsuma",
+    "Peter Romero"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2608.23053v1",
+  "published": "2026-08-24T09:56:18Z",
+  "source": "arxiv",
+  "title": "tse_tick: A Python Library for Parsing and Querying Nikkei NEEDS Tick Data from the Tokyo Stock Exchange",
+  "updated": "2026-08-24T09:56:18Z"
+}

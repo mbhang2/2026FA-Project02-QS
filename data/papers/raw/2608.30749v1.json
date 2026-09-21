@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.30749v1",
+  "abstract": "We introduce ISCOS, a cross-entropy importance-sampling calibration method for rare credit-portfolio losses. We derive Gaussian and Gaussian--inverse-Gamma proposals and analyse the propagation of finite-COS approximation errors to the fitted parameters. Numerical experiments for Gaussian and Student t-copula credit portfolios show the efficiency of this method.",
+  "authors": [
+    "Fang Fang",
+    "Xiaoyu Shen",
+    "Qinling Wang"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2608.30749v1",
+  "published": "2026-08-31T13:17:17Z",
+  "source": "arxiv",
+  "title": "Importance Sampling Enhanced with the COS Method for the Portfolio Risk Allocation",
+  "updated": "2026-08-31T13:17:17Z"
+}

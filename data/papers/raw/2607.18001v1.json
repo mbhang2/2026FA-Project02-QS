@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.18001v1",
+  "abstract": "Market-neutral portfolios aim to generate consistent returns while offsetting systematic market risk. Traditional approaches based on factor models or convex optimization often underperform during market regime shifts or when structural assumptions break down. We propose AlphaZeroBeta, a deep reinforcement learning framework designed to deliver benchmark-relative alpha (excess returns) with near-zero beta (market neutrality). AlphaZeroBeta combines a composite reward function that balances risk-adjusted excess return, benchmark correlation, and transaction costs with a CNN-GRU policy trained end-to-end via Recurrent PPO and evaluated through a rolling walk-forward protocol. Backtests covering 2014-2024 across seven equity indices show that the model achieves higher Sharpe ratios than the baselines while maintaining near-zero benchmark correlations and competitive drawdowns.",
+  "authors": [
+    "Boris Belyakov"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "q-fin.CP"
+  ],
+  "id": "2607.18001v1",
+  "published": "2026-07-20T14:33:47Z",
+  "source": "arxiv",
+  "title": "AlphaZeroBeta: Deep Reinforcement Learning for Market-Neutral Portfolios",
+  "updated": "2026-07-20T14:33:47Z"
+}

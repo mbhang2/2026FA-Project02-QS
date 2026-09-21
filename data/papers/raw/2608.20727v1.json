@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.20727v1",
+  "abstract": "Tests of conditional mean independence can lose power when departures are confined to a bounded part of a multivariate predictor space and the relevant spatial scale is unknown. We propose a Multiscale Ball Conditional Mean Independence (MBCMI) test that aggregates support-weighted local mean contrasts in an outcome variable across balls centered on each data point in a predictor set. Fixed-grid theory identifies the population target, establishes consistency for grid-visible alternatives, and derives a Pitman local-power limit governed by the ball-smoothed mean departure. For serial data, feasible recursive-sign-bootstrap validity for stable finite-order autoregressions with conditionally sign-symmetric innovations is established. Application-aligned serial null experiments reject 4.25% of the time. MBCI is demonstrated to be strongest for local and radial signals. Predictor-law experiments show that these conclusions are not an artefact of independent Gaussian covariates. In monthly U.S. finance data, cross-fitted residual MBCMI tests remove every full-sample rejection, suggesting contemporaneous conditional-mean dependence rather than evidence of distinctive nonlinear structure.",
+  "authors": [
+    "Simon Rudkin",
+    "Wanling Rudkin"
+  ],
+  "categories": [
+    "stat.ME",
+    "q-fin.ST"
+  ],
+  "id": "2608.20727v1",
+  "published": "2026-08-21T04:16:46Z",
+  "source": "arxiv",
+  "title": "A Multiscale Ball Test for Conditional Mean Independence",
+  "updated": "2026-08-21T04:16:46Z"
+}

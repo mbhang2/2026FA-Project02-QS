@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.19227v1",
+  "abstract": "Market microstructure simulation aims to model how liquidity, prices, and order flow evolve in electronic financial markets. Since market data reveal only one realized trajectory, many important questions are inherently counterfactual and require realistic trajectory-level simulation. Existing financial generative models, however, often model order events and market states, such as the LOB, in isolation, overlooking the dynamic interaction between order flow and liquidity in market microstructure. We propose the \\textbf{M3} (\\underline{M}arket \\underline{M}icrostructure \\underline{M}odel), a state-event generative foundation model for market microstructure dynamics. \\textbf{M3} learns to generate future order-flow trajectories, while accounting for the evolving interaction between order events and limit-order-book liquidity. Trained on large-scale order-level real stock market data, \\textbf{M3} exhibits predictable scaling behavior, reproduces key market stylized facts, and enables practical simulation-based applications including forecasting, stress testing, and market-impact analysis. These results suggest a scalable foundation-model paradigm for counterfactual market simulation at the microstructure level.",
+  "authors": [
+    "Yanzhi Zhang",
+    "Yu Ma",
+    "Yilin Cheng",
+    "Jian Li",
+    "Yitong Duan"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.LG"
+  ],
+  "id": "2608.19227v1",
+  "published": "2026-07-29T12:46:38Z",
+  "source": "arxiv",
+  "title": "M3: A State-Event Generative Foundation Model for Market Microstructure Dynamics",
+  "updated": "2026-07-29T12:46:38Z"
+}

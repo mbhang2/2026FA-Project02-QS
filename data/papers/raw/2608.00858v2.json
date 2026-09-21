@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.00858v2",
+  "abstract": "Public data do not identify high-frequency trading (HFT), and standard proxies do not separate liquidity-supplying from liquidity-demanding strategies. We overcome this measurement challenge by training machine learning models on proprietary Nasdaq data to map observed HFT activity to public intraday variables. Applying this mapping, we generate daily measures of liquidity-supplying and liquidity-demanding HFT for all U.S. stocks from 2010 to 2023. The measures largely subsume standard proxies and capture time-series variation that those proxies miss. Using proprietary Euronext Paris data, we provide evidence that the approach generalizes across markets and remains predictive years after training. The 14-year panel lets us study HFT and market quality over time. Supply-side HFT is consistently associated with greater pre-announcement information acquisition, more informed trading, and lower bid-ask spreads, while demand-side HFT is associated with the opposite patterns. During COVID-19, HFT-supplied liquidity remained resilient and its association with lower spreads strengthened.",
+  "authors": [
+    "Gbenga Ibikunle",
+    "Ben Moews",
+    "Dmitriy Muravyev",
+    "Khaladdin Rzayev"
+  ],
+  "categories": [
+    "q-fin.GN",
+    "q-fin.TR"
+  ],
+  "id": "2608.00858v2",
+  "published": "2026-08-01T20:34:08Z",
+  "source": "arxiv",
+  "title": "Data-Driven Measures of High-Frequency Trading",
+  "updated": "2026-09-01T11:38:12Z"
+}

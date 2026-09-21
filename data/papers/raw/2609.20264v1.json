@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.20264v1",
+  "abstract": "In staggered treatment-adoption designs, later-treated units are valid controls for an earlier-treated cohort only until their own treatment begins, so the admissible donor set contracts with event time. Fixing the donor pool at the longest horizon discards temporarily eligible donors, whereas re-estimating synthetic-control weights independently at each horizon can make the counterfactual unstable as donor composition changes. We propose Risk-Set Transported Synthetic Control with Difference-in-Differences Adjustment (RT-SC-DiD). For each cohort and event-time horizon, the estimator fits weights on the currently untreated donors while shrinking them toward a transported reference that reallocates the weight of exiting donors to similar surviving donors. A DiD baseline correction removes persistent level differences. We characterize distortion from horizon-by-horizon reoptimization, derive the loading change induced by naive deletion and renormalization, and give a conditional recursive bound for error propagation under an explicitly assumed regularity condition on the transport map. We also introduce donor-support diagnostics and a donor-only placebo procedure for selecting the transport penalty. In an 80-replication pilot comparison and a separate 40-replication-per-value sensitivity analysis, intermediate transport regularization reduces average RMSE relative to independent horizon-specific estimation and strong anchoring. This evidence supports the method's bias-variance motivation but is not a proved guarantee. RT-SC-DiD is intended for settings where later-treated units provide useful short-horizon information and donor support contracts materially over time. Existing staggered synthetic-control and synthetic difference-in-differences methods do not, to our knowledge, explicitly regularize within-cohort weight sequences toward transported references as risk sets contract.",
+  "authors": [
+    "Mojtaba Eslami"
+  ],
+  "categories": [
+    "stat.AP",
+    "cs.AI",
+    "econ.EM",
+    "q-fin.ST",
+    "stat.ME"
+  ],
+  "id": "2609.20264v1",
+  "published": "2026-07-29T01:10:54Z",
+  "source": "arxiv",
+  "title": "Risk-Set Transported Synthetic Control with Difference-in-Differences Adjustment under Staggered Treatment Adoption",
+  "updated": "2026-07-29T01:10:54Z"
+}

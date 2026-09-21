@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.12583v1",
+  "abstract": "Diffusion generative models have rapidly emerged as powerful tools for modeling complex financial data. Their appeal is both structural and practical: they offer stable likelihood-based training, strong mode coverage, flexible conditioning, and a stochastic-differential-equation formulation that aligns naturally with the It\u00f4 calculus and stochastic control frameworks widely used in finance. This survey reviews the growing literature on diffusion-family generative models for financial applications. We organize prior work primarily by financial data type, covering time series, limit order books, tabular data, and other structured financial objects, while discussing the modeling goals and application contexts that arise within each category. To the best of our knowledge, this is the first survey dedicated specifically to diffusion-family models for financial data. For more detailed information, we have open-sourced a repository https://github.com/ZhuoHan1998/Diffusion-Models-In-Finance.",
+  "authors": [
+    "Zhuohan Wang",
+    "Carmine Ventre"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2608.12583v1",
+  "published": "2026-08-12T20:53:02Z",
+  "source": "arxiv",
+  "title": "Diffusion Models in Finance: A Survey",
+  "updated": "2026-08-12T20:53:02Z"
+}

@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.30867v1",
+  "abstract": "We propose a neural calibration method to construct a recombining binomial tree directly from a set of given option prices. Rather than estimating a continuous option pricing function or a local volatility surface as an intermediate object, a neural network is used to deform a benchmark lattice. This leads to a discrete pricing model which is guaranteed to be arbitrage-free, complete, easy to interpret, and can be used directly for pricing and to find replicating trading strategies. Calibration is formulated as a penalized optimization problem that combines a repricing error with an admissibility penalty, and an optional spatial regularization term based on implied local volatilities. Numerical experiments on synthetic and SPX market data show that the proposed approach yields accurate repricing and is very competitive when compared to recently proposed other neural calibration methods. It preserves the computational advantages of lattice-based valuation and hedging. In particular, the calibrated tree can be reused to price contracts that allow early exercise, and could even be calibrated directly with American option prices.",
+  "authors": [
+    "Andrea Molent",
+    "Michel Vellekoop"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2608.30867v1",
+  "published": "2026-08-31T14:30:29Z",
+  "source": "arxiv",
+  "title": "Neural Calibration of a Complete Market Model",
+  "updated": "2026-08-31T14:30:29Z"
+}

@@ -1,0 +1,23 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.19394v1",
+  "abstract": "We introduce Deep-MKV-TS, a path-dependent McKean-Vlasov framework for financial scenario generation. The stochastic dynamics are chosen by matching selected path and volatility features of generated scenarios to those observed in the data. Starting from an interpretable reference model, Deep-MKV-TS preserves the reference drift and adjusts its volatility, while a regularization penalty limits unnecessary departures from the calibrated dynamics. We solve the resulting control problem using a neural, sample-based implementation of the stochastic maximum principle. We validate the method against an exactly computable oracle. On Heston and Heston-mixture models, Deep-MKV-TS substantially reduces path-dependent and volatility-related deficiencies of the reference model. In delayed-volatility experiments, the correction remains effective as the forecasting horizon increases, while direct training becomes less reliable. On held-out intraday equity-index futures, the corrected model improves conditional forecasts relative to the reference and reaches a level of performance comparable to flexible generative and historical baselines. The resulting scenarios also support greater exposure than the reference under a fixed drawdown-risk target. These results show that path-dependent McKean-Vlasov control can enrich an interpretable reference model without replacing it.",
+  "authors": [
+    "Samer El Boustany",
+    "Th\u00e9o Basseras",
+    "Samy Mekkaoui",
+    "Alexandre Alouadi",
+    "Yadh Hafsi",
+    "Huy\u00ean Pham"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.CE",
+    "cs.LG",
+    "math.OC"
+  ],
+  "id": "2608.19394v1",
+  "published": "2026-08-19T19:24:47Z",
+  "source": "arxiv",
+  "title": "Deep-MKV-TS: Path-Dependent McKean--Vlasov Control for Financial Time Series Generation",
+  "updated": "2026-08-19T19:24:47Z"
+}

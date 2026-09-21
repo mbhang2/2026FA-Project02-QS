@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.27063v1",
+  "abstract": "This study develops an agent-based financial market model to explain stock-price momentum and reversal through the joint effects of local herding and delayed information diffusion. Investors form heterogeneous Gaussian beliefs about the next-period price, choose among buying, selling, and remaining inactive, and revise their action probabilities in response to neighboring investors. The local interaction structure is represented by von Neumann and Moore lattices and is later replaced by Erd\u0151s--R\u00e9nyi and Watts--Strogatz networks for robustness. A separate information process updates investor beliefs through a finite-speed diffusion mechanism, allowing informational adjustment to be distinguished from behavioral imitation. The simulations show that stronger herding produces spatially clustered trading, larger price fluctuations, and more pronounced excess kurtosis in returns. Faster information diffusion reduces the time required for prices to approach the signal-implied value, whereas the combination of information diffusion and social reinforcement generates overshooting and subsequent reversal. An empirical application to China's A-share market compares conventional CSAD and LSV measures with a rolling tail-based herding indicator obtained after Johnson $S_U$ transformation. The indicators display similar time variation and rise during major market disruptions. These findings identify information delay, local social reinforcement, and the eventual decay of herding as complementary mechanisms behind momentum and reversal.",
+  "authors": [
+    "Jiahao Weng"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2607.27063v1",
+  "published": "2026-07-29T15:53:27Z",
+  "source": "arxiv",
+  "title": "Herding, Momentum, and Reversal in China's A-Share Market: An Agent-Based Network Model with Information Diffusion",
+  "updated": "2026-07-29T15:53:27Z"
+}

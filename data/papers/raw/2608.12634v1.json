@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.12634v1",
+  "abstract": "Shariah-compliant equity screening provides a transparent setting in which institutional rules determine who may own a stock. A binary label identifies current eligibility but not whether the feasible investor base is fragmented across standards or close to changing. We define this instability as classification uncertainty and formalize its investor-base consequence through permitted investor mass. In a 1999-2024 CRSP-Compustat panel of 13,188 securities classified under seven researcher-emulated Shariah rulebooks, screening-rule disagreement and proximity to active boundaries rank next-month screen-implied transitions. U.S. Fama-MacBeth diagnostics do not support an unconditional equal-weighted permission premium, and a September 2023 DJIM/S&P methodology change produces no robust matched repricing. The central event evidence uses 25 official Securities Commission Malaysia lists. The 410 inclusions already trading before the preceding review have positive but imprecise matched returns. Applying the pre-event turnover floor yields 295 inclusions with 1.76 percentage points over $[0,10]$ trading days ($p_{\\mathrm{date}}=0.008$; $p_{\\mathrm{wild}}=0.017$) and 2.25 points over $[0,20]$ ($p_{\\mathrm{date}}=0.018$; $p_{\\mathrm{wild}}=0.035$). Leave-one-date-out, first-inclusion-only, and mid-review placebo checks are supportive, although a joint 20-day pre-event test rejects. Ownership and demand-pressure diagnostics do not identify a unique marginal buyer or clean causal demand shock. The evidence supports treating classification risk as a portfolio-monitoring state. Official Shariah permission is associated with price effects in a recognized local market among sufficiently tradable securities; formal eligibility alone is insufficient.",
+  "authors": [
+    "Abdulrahman Qadi",
+    "Akash Sharma",
+    "Francesca Medda"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "q-fin.GN",
+    "q-fin.RM"
+  ],
+  "id": "2608.12634v1",
+  "published": "2026-08-12T22:49:26Z",
+  "source": "arxiv",
+  "title": "The Price of Permission: Classification Uncertainty in Constrained Capital Markets",
+  "updated": "2026-08-12T22:49:26Z"
+}

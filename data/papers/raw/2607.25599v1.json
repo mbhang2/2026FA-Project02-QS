@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.25599v1",
+  "abstract": "We develop an analytic Fourier cosine (COS) method for the valuation of compound options. By deriving closed-form expressions for the cosine coefficients at all compound stages, the proposed method eliminates the need for numerical quadrature in intermediate exercise stages while retaining the convergence properties of the underlying COS approximation. The formulation extends to multi-stage compound structures and a broader class of payoffs, and remains applicable to a wide class of stochastic models characterized by known characteristic functions, including jump-diffusion dynamics. Numerical experiments demonstrate improved computational efficiency compared with quadrature-based implementations while maintaining high accuracy. Applications to staged real-option problems further illustrate the flexibility of the method in handling nested decision structures under different uncertainty dynamics.",
+  "authors": [
+    "Zhipeng Huang",
+    "Cornelis W. Oosterlee"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.CE",
+    "q-fin.MF",
+    "q-fin.PR"
+  ],
+  "id": "2607.25599v1",
+  "published": "2026-07-28T11:29:58Z",
+  "source": "arxiv",
+  "title": "An Analytic COS Method for Compound Option Valuation",
+  "updated": "2026-07-28T11:29:58Z"
+}

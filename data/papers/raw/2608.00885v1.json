@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.00885v1",
+  "abstract": "At the scale of seconds the observed mid carries a stationary, mean-reverting error around a latent efficient price. We build an order book whose own flow produces that error and solve for the trading rule that maximises the long-run average profit rate net of the bid-ask spread. In a liquid large-tick asset the spread is one tick or two, and it is exactly the parity of the mid on the half-tick grid: tight at a half-integer, open at an integer. One coordinate therefore carries the problem: the gap $G$ between the mid and the efficient price; the price is an exogenous Brownian martingale, and $G$ is observable. The mid is a pure jump process whose move intensities lean toward the efficient price. Under one balanced-response condition, which equalises the book's corrective drift across parities, mean reversion of $G$ is a theorem: its conditional mean and stationary covariance are exactly those of an Ornstein-Uhlenbeck process with reversion rate $\u03b1$ and stationary standard deviation $s_G$. Its paths are not: the mid jumps. Passage times are therefore evaluated on the Gaussian diffusion those two moments define, at an error we bound on the reward side and leave heuristic on the timing side. A symmetric band of half-width $\u03b8$ buys when the gap reaches $-\u03b8$, sells at $+\u03b8$, and holds inside; on the surrogate it is optimal among all admissible strategies, on the jump process itself that reduction remains a conjecture. With $\u03c6$ the tight-book half-spread, the optimal half-width and its profit rate are $\u03b8^*(\u03b8^*-\u03c6)=s_G^2$ and $R^*=\u03b1s_G\\sqrt{2/\u03c0}\\,e^{-\u03b8^{*2}/2s_G^2}$. Threshold times margin equals the stationary variance of the gap. Trading as soon as the gap covers the spread earns zero: all profit is the option value of waiting.",
+  "authors": [
+    "Lucas Rabechini Amaral"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.MF"
+  ],
+  "id": "2608.00885v1",
+  "published": "2026-08-01T22:23:23Z",
+  "source": "arxiv",
+  "title": "Optimal Trading of Microstructure Mean Reversion",
+  "updated": "2026-08-01T22:23:23Z"
+}

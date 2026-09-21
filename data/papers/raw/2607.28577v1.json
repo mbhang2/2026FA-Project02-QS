@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.28577v1",
+  "abstract": "Production forecasting systems retrain models regularly, but a retrained candidate does not necessarily outperform a continuously maintained incumbent that has continued to learn. We introduce Shadow Before Swap (SBS), a deployment policy that warm-refits a challenger off the serving path, evaluates it against the maintained incumbent on the same next week of delayed labels, and promotes it only after a fixed paired negative-log-likelihood (NLL) advantage. In historical replay over two nonoverlapping Binance episodes spanning 48 UTC weeks, three seeds, eight underlyings, and two perpetual-futures contract types, SBS reduces NLL by 0.1472% relative to calendar replacement, 0.0755% relative to schedule-matched automatic promotion, and 0.0428% relative to continuous maintenance. The corresponding episode-stratified four-week block intervals are 0.1139%-0.1754%, 0.0521%-0.0980%, and 0.0301%-0.0554%, respectively. SBS promotes 114 of 528 challengers, reducing deployed model changes by 78.4% while improving the serving trajectory. The effect remains directionally consistent across seeds, trial budgets, promotion margins, an earlier 20-asset panel, and a topology-matched supervised objective. SBS thus provides a practical deployment policy that improves probabilistic forecasts while limiting consequential model-state transitions.",
+  "authors": [
+    "Aditya Dutta"
+  ],
+  "categories": [
+    "cs.CE",
+    "q-fin.TR"
+  ],
+  "id": "2607.28577v1",
+  "published": "2026-07-30T17:38:45Z",
+  "source": "arxiv",
+  "title": "Train Often, Deploy Selectively: Forward-Gated Model Replacement in Crypto Markets",
+  "updated": "2026-07-30T17:38:45Z"
+}

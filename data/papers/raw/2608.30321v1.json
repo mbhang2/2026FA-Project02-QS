@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.30321v1",
+  "abstract": "Loss-versus-Rebalancing (LVR) is the dominant adverse-selection cost borne by liquidity providers on automated market makers. Under geometric Brownian motion, arbitrage profit scales with the probability of a profitable block, which vanishes as the block time $\u0394t \\to 0$; this is the standing argument for ever-shorter blocks. Modeling the reference price instead as a jump-diffusion, I show that the constant-product LVR rate splits into a diffusion channel carrying the known multiplier $F(\u03b3/(\u03c3\\sqrt{\u0394t}))$ and a jump channel $\u03bbV \\cdot G(\u03b3;m,\u03b4^2)$ carrying no $\u0394t$, the two interacting only through an explicitly bounded remainder. The block schedule therefore governs only one channel. For symmetric jump laws the jump channel is moreover an exact lower bound, $\\ell(\u0394t) \\ge \u03bbV G > 0$, so the rate does not vanish as $\u0394t \\to 0$, and descends slowly, as $\\sqrt{\u0394t}$. At Ethereum's calibrated 12-second slot the rate is 471 bp/yr against a floor of 125, so only three quarters of LP loss is schedule-addressable. At Solana's 400 ms slot the jump channel already dominates. Netting the rate against per-block consensus cost, the LP-side optimal block time is invariant in pool size and in every jump parameter $(\u03bb,m,\u03b4)$: jumps shift the level of LP loss but not the planner's marginal tradeoff. Volatility, the fee tier, and consensus cost set the optimum, near 8 s. However, LVR is only one input to block-time welfare, so this bounds the LP-side contribution rather than settling the design question.",
+  "authors": [
+    "Nils Bundi"
+  ],
+  "categories": [
+    "q-fin.MF",
+    "math.PR",
+    "q-fin.TR"
+  ],
+  "id": "2608.30321v1",
+  "published": "2026-08-31T06:36:20Z",
+  "source": "arxiv",
+  "title": "Optimal Block Time for AMM Liquidity Providers under Jump-Diffusion Prices",
+  "updated": "2026-08-31T06:36:20Z"
+}

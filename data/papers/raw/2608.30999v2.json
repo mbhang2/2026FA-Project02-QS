@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.30999v2",
+  "abstract": "Market-order flow in financial markets exhibits long-range correlations. This is a widely known stylised fact of financial markets. A popular hypothesis for this stylised fact comes from the Lillo-Mike-Farmer (LMF) order-splitting theory. However, quantitative tests of this theory have historically relied on proprietary datasets with trader identifiers, limiting reproducibility and cross-market validation. We investigate whether it can be recovered from anonymous public data using synthetic metaorder reconstruction. Using transaction and quote data for the largest 239 stocks by market capitalisation on the JSE as of 13 March 2026 with the data range being 1 January 2023 until 31 December 2025, we conduct a grid search over reconstruction parameters and evaluate each configuration against established metaorder stylised facts and the LMF relation. Configurations selected to minimise errors across the metaorder impact stylised facts reproduce the targeted aggregate properties but yield a poor LMF relation. Configurations selected to minimise the LMF discrepancy recover the relation by construction while retaining several broad impact features, although some stock-level execution and decay fits are weaker. These asymmetric results show that recovering aggregate impact stylised facts alone is insufficient to identify LMF-consistent order splitting, while the LMF-targeted result establishes compatibility within the reconstruction class rather than an independent test. The findings support consistency with, rather than direct validation of, the LMF theory using anonymous market data.",
+  "authors": [
+    "Ezra Goliath",
+    "Tim Gebbie"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2608.30999v2",
+  "published": "2026-08-31T15:50:21Z",
+  "source": "arxiv",
+  "title": "Metaorder modelling and identification from public data",
+  "updated": "2026-09-01T16:12:51Z"
+}

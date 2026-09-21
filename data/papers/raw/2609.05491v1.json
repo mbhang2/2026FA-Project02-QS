@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.05491v1",
+  "abstract": "The computation of Black-Scholes implied volatility is a fundamental task in quantitative finance, underpinning option valuation, model calibration and risk management. Although implied volatility is routinely used in practice, the inversion of the Black-Scholes pricing formula remains a challenging numerical problem, particularly in asymptotic regimes corresponding to extreme option prices, strikes or maturities, where the inverse map becomes highly sensitive to perturbations of the price. In this paper, we introduce a new family of asymptotically-informed neural-network architectures for implied-volatility computation. Exploiting the distinct behaviours of the Black-Scholes pricing function in different volatility regimes, we propose a family of architectures that learn a trainable partition of the price-log-moneyness domain through a system of gating functions and combines specialised local approximations of the implied-volatility function within each region. Extensive numerical experiments demonstrate that the proposed models consistently outperform standard feed-forward neural networks across a wide range of parameter domains, often by several orders of magnitude in relative accuracy while maintaining excellent generalisation properties. Furthermore, the neural-network outputs provide highly accurate initial guesses for a third-order Householder scheme, allowing near machine-precision implied-volatility computations after only two refinement iterations.",
+  "authors": [
+    "Samira Amiriyan",
+    "Youness Boutaib"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.LG",
+    "stat.ML"
+  ],
+  "id": "2609.05491v1",
+  "published": "2026-08-25T15:28:14Z",
+  "source": "arxiv",
+  "title": "Asymptotically-informed neural networks for Black-Scholes implied volatility computation",
+  "updated": "2026-08-25T15:28:14Z"
+}

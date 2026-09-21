@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2608.00127v1",
+  "abstract": "How deep and how long should the drawdowns of a systematic trading strategy run, given its Sharpe ratio and the statistical structure of its returns? Building on the drawdown framework of Rej, Seager and Bouchaud (2017), we develop the answer in three steps. We first reframe their closed-form results as a transparent Monte-Carlo experiment, validate it against their analytic benchmarks, and extend the mapping from drawdowns to four decision-relevant measures: maximum drawdown, maximum loss, final negative time and longest recovery time. We then relax the Gaussian assumption, holding the true Sharpe and volatility fixed while varying skewness, fat tails, volatility clustering and Sharpe-estimation uncertainty across strategy archetypes; the four measures move differently, so a single Gaussian table mis-warns. We finally replace short-memory persistence with fractional Brownian motion and show that the apparent amplification of drawdown risk under persistence is, for maximum-drawdown depth, almost entirely self-similar dispersion scaling (T^(H-1/2)) rather than path geometry: a failure of square-root-of-time calibration, not intrinsic danger. We provide reproducible lookup tables and a practical calibration recipe.",
+  "authors": [
+    "Francesco Landolfi"
+  ],
+  "categories": [
+    "q-fin.RM",
+    "q-fin.PM",
+    "q-fin.ST"
+  ],
+  "id": "2608.00127v1",
+  "published": "2026-07-31T13:06:34Z",
+  "source": "arxiv",
+  "title": "Drawdown Risk Beyond Brownian Motion: A Monte-Carlo Framework, Non-Gaussian Extensions, and Long Memory",
+  "updated": "2026-07-31T13:06:34Z"
+}

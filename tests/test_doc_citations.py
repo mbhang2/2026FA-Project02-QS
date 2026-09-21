@@ -65,11 +65,6 @@ ABSENT_BY_DESIGN: dict[str, str] = {
         "cited precisely to say it is NOT the name. An `__init__.py` there "
         "makes `tests.alternatives` a package that shadows the real one, which "
         "is why the directory is `tests/l1_engine/`.",
-    "data/papers/registry.json":
-        "designed, not built. The record of which papers have been pulled, "
-        "screened, written up and run (`docs/design/paper-retrieval.md` section "
-        "2). Deliberately NOT a fingerprinted artifact: it is bookkeeping, and "
-        "the frozen thing is the hypothesis file it leads to.",
     "data/papers/manual/":
         "designed, not built. The manual-deposit path for SSRN, which has no "
         "public API and whose terms do not permit scraping "

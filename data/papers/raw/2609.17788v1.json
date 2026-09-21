@@ -1,0 +1,23 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.17788v1",
+  "abstract": "We present SAiFE_gym, a Python module that provides a collection of simulation environments for studying trading problems in Constant Product Markets (CPMs) with Concentrated Liquidity (CL). These markets give Liquidity Providers (LPs) granular control over how their capital is allocated and enable them to adjust their range of liquidity provision dynamically based on market conditions, which in turn, dictates how they earn fees. We decompose the microstructure of CPMs with CL in interactive components that allow researchers and practitioners to capture various economic settings. We employ a vectorized approach to optimize our environments, making them scalable for high dimensional Reinforcement Learning (RL) workflows that best describe sequential decision problems. We demonstrate the benefits of our environments by evaluating the performance of RL agents in CPMs with CL under uncertainty in market parameters.",
+  "authors": [
+    "Georgios Chionas",
+    "Charalampos Kleitsikas",
+    "Stefanos Leonardos",
+    "Leandro S\u00e1nchez-Betancourt",
+    "Carmine Ventre"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cs.AI",
+    "cs.LG",
+    "q-fin.CP",
+    "q-fin.MF"
+  ],
+  "id": "2609.17788v1",
+  "published": "2026-09-15T19:53:47Z",
+  "source": "arxiv",
+  "title": "SAiFE-gym: Model-based Environments for Automated Market Making with Concentrated Liquidity",
+  "updated": "2026-09-15T19:53:47Z"
+}

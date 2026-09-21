@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.12227v1",
+  "abstract": "Commodity futures are shaped by harvest cycles, weather shocks, storage conditions, and seasonal demand, but it remains unclear whether recurring patterns yield robust out-of-sample trading profits. Existing research documents return seasonality in commodity futures as well as more complex seasonal structure, while leaving less evidence on how alternative seasonal models compare under common implementation constraints. This article compares dummy-variable regression (DVR), Singular Spectrum Analysis (SSA), and robust low-rank SSA (RLSSA) within a unified trading framework, including a volatility-normalised specification. Using monthly delivery-avoidance returns for 15 liquid commodity futures, the models are estimated on rolling ten-year windows and evaluated from 2016 to 2024 with transaction costs, an equal-weight long benchmark, and Maximum Entropy Bootstrap (MEB) assessment. Across 500 MEB paths, the benchmark has the strongest average full-period profile, with a cumulative return of 16.81%, a Sharpe ratio of 0.191, and a maximum drawdown of -0.414. Classical SSA has the strongest average model outcomes, but negative median cumulative returns and deep drawdowns indicate substantial path sensitivity. Volatility normalisation reduces the average DVR short loss but generally weakens SSA-based portfolios. None of the 18 approximate paired MEB Sharpe tests rejects after within-family Holm adjustment. Because MEB preserves each contract's temporal rank ordering, the assessment is conditional on observed timing rather than a timing-randomised seasonal null. The evidence does not establish robust benchmark outperformance and shows that model performance varies materially across market subperiods.",
+  "authors": [
+    "Ralph Kosch",
+    "Robin Forsberg"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "q-fin.ST"
+  ],
+  "id": "2609.12227v1",
+  "published": "2026-09-10T21:36:48Z",
+  "source": "arxiv",
+  "title": "Seasonal Trading in Commodity Futures: Evidence from Regression and Singular Spectrum Signals",
+  "updated": "2026-09-10T21:36:48Z"
+}

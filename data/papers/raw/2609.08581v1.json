@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.08581v1",
+  "abstract": "Formulaic alpha discovery is a pool-dependent symbolic search problem in which informative feedback is observed primarily when a complete expression is evaluated. This delayed feedback creates two coupled difficulties: the retained alpha pool does not preserve the full history of realized evaluation feedback, and the value of an intermediate construction action is uncertain because its consequence depends on the formula eventually completed. We introduce AlphaRJM, which addresses these difficulties through Reward-Jump Memory, an event-driven latent state that remains fixed during token construction and updates only at terminal evaluation events using the realized pool reward and evaluation outcome, and an action-conditioned SDE return critic that represents future discounted discovery returns with stochastic particles. The particles guide action selection through their mean and uncertainty and are learned using a distributional Bellman objective combining energy-distance matching, mean calibration, and jump regularization. Empirically, AlphaRJM delivers strong and stable gains across multiple equity universes, forecasting horizons, and random seeds, while ablations confirm the complementary roles of persistent evaluation history, stochastic return modeling, and distributional supervision.",
+  "authors": [
+    "Sayan Dhan",
+    "Selvaraju Natarajan"
+  ],
+  "categories": [
+    "cs.LG",
+    "q-fin.CP",
+    "stat.ML"
+  ],
+  "id": "2609.08581v1",
+  "published": "2026-09-08T11:17:07Z",
+  "source": "arxiv",
+  "title": "AlphaRJM: Reward-Jump Memory for Stochastic Return-Guided Alpha Discovery",
+  "updated": "2026-09-08T11:17:07Z"
+}

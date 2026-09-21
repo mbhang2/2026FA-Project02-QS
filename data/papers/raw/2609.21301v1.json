@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.21301v1",
+  "abstract": "The standard Euler discretization schemes for numerical option pricing under stochastic volatility models are known to exhibit high biases and potential unreliability. The alternative use of the exact (unbiased) simulation approach invariably involves numerical evaluation of integrated variance (and / or volatility) conditional on terminal variance (volatility) value. To resolve the technical challenge, most simulation schemes either employ the tedious Fourier inversion of conditional characteristic function or numerical approximation by moment matched distribution. We propose a general framework of constructing efficient and reliable simulation schemes for stochastic volatility models via the Strang operator splitting approximation. The simulation procedure completely circumvents the necessity of evaluation of conditional integrated variance (and / or) volatility. Our simulation schemes compete favorably well with most existing exact simulation schemes and the biased Euler schemes in terms of accuracy, efficiency, reliability and ease of implementation. Extensive numerical tests were conducted to illustrate the versatility and success of our operator splitting approach for most common stochastic volatility models, such as the Heston-type models, lifted Heston model, Hull-White model, and Barndorff-Nielsen and Shephard model. We also establish the proof of second-order convergence of the operator splitting schemes.",
+  "authors": [
+    "Lilian Hu",
+    "Congxin He",
+    "Yue Kuen Kwok",
+    "Gongqiu Zhang"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2609.21301v1",
+  "published": "2026-09-18T04:23:36Z",
+  "source": "arxiv",
+  "title": "Simulation of stochastic volatility models via operator splitting schemes",
+  "updated": "2026-09-18T04:23:36Z"
+}

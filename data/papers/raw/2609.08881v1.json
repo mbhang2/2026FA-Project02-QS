@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.08881v1",
+  "abstract": "We develop a theoretical model that endogenizes the regulator's decision to impose short-selling bans to prevent large stock price declines. Empirically, we test the model's predictions using the cross-sectional variation in short-selling restrictions implemented across European countries in 2020. Consistent with our model, we find that bans had a detrimental effect on liquidity and failed to support the average price levels, but were effective in limiting large price drawdowns. Finally, we show that the effectiveness of the bans depends on the share of informed stockholders, a central variable in our framework, thus informing the design of more effective regulatory responses.",
+  "authors": [
+    "Pasquale Della Corte",
+    "Robert Kosowski",
+    "Dimitris Papadimitriou",
+    "Nikolaos P. Rapanos"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2609.08881v1",
+  "published": "2026-09-08T15:21:57Z",
+  "source": "arxiv",
+  "title": "The Double-Edged Sword of Short-Selling Bans",
+  "updated": "2026-09-08T15:21:57Z"
+}

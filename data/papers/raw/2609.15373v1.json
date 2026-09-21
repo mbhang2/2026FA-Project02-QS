@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.15373v1",
+  "abstract": "An Oracle result is not yet a protocol payout, a redeemable position is not yet collateral in a holder's account, and a redemption event is not a complete measure of economic entitlement. This companion paper develops an event-sourced framework for Polymarket conditions from preparation through protocol finality and observed holder realization. The empirical design uses three Conditional Tokens Framework event families derived from a pinned contract application binary interface (ABI): ConditionPreparation, ConditionResolution, and PayoutRedemption. It separates the contract-wide acquisition universe from the frozen Polymarket adapter-question cohort. The exact bridge contains 108,638 linked conditions. Of these, 99,283 have an observed protocol-resolution event by the fixed snapshot at Polygon block 90,114,204 (2026-07-12T17:11:41Z). Among resolved exact-linked conditions, 92,158 have an observed redemption of any amount and 91,817 have an observed positive-payout redemption; condition-specific Kaplan-Meier medians from first protocol resolution are 182 and 200 seconds respectively. The exact-linked payout taxonomy contains 53,847 canonical (0,1) vectors, 45,024 canonical (1,0) vectors, 410 fifty-fifty vectors, two other valid vectors, and 9,355 conditions with no observed resolution. Cross-contract Oracle-adapter-protocol ordering is reported conservatively: 823 conditions have an interval-qualified terminal generation, 48 have multiple candidate generations, 91,638 have no compatible terminal generation in the frozen evidence, and 16,129 are right-censored or otherwise unevaluable. The formal results show that Oracle finality does not identify protocol finality, protocol finality does not identify holder realization, and redemption events alone do not identify the fraction of entitlement redeemed without an independent balance-consistent entitlement denominator.",
+  "authors": [
+    "Maksym Nechepurenko"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2609.15373v1",
+  "published": "2026-09-14T10:58:51Z",
+  "source": "arxiv",
+  "title": "Resolution Is Not Settlement, Part II: Protocol Finality and Observed Redemption on Polymarket",
+  "updated": "2026-09-14T10:58:51Z"
+}

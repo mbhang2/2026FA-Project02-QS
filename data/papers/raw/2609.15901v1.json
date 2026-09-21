@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.15901v1",
+  "abstract": "We study strategic trading around index reconstitution in a continuous-time, multiasset game with transient cross-asset price impact and heterogeneous beliefs about future index membership. Opportunistic traders position before a public announcement, adjust to the revealed composition, and trade around an indexer following a prescribed execution schedule. Under a no-price-manipulation condition, we construct a subgame-perfect Nash equilibrium on every finite horizon. The affine feedback policies are computed from a non-standard matrix Riccati equation and linear ordinary differential equations whose number and dimensions do not grow with the number of traders. Aggregate inventories and price impact depend on beliefs only through the population-average belief, while differences in beliefs affect individual inventory positions. Under mean-field scaling, we construct a mean-field equilibrium and obtain quantitative convergence and approximate-Nash bounds. Numerical illustrations show how competition and impact decay determine the balance between adverse price displacement from anticipatory trading and savings in the indexer's execution costs when opportunists trade against its orders during implementation.",
+  "authors": [
+    "Lukas-Benedikt Fiechtner",
+    "Jose Blanchet"
+  ],
+  "categories": [
+    "math.OC",
+    "q-fin.MF",
+    "q-fin.TR"
+  ],
+  "id": "2609.15901v1",
+  "published": "2026-09-14T17:18:55Z",
+  "source": "arxiv",
+  "title": "Strategic Index Reconstitution: Differential Games, Closed-Loop Equilibria and Mean-Field Dynamics",
+  "updated": "2026-09-14T17:18:55Z"
+}

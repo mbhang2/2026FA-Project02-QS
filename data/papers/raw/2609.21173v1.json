@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.21173v1",
+  "abstract": "The actor model - state isolation, data-race freedom, deadlock resistance, and sequential single-message reasoning - has long been dismissed as unsuitable for high-frequency trading (HFT): actors seem to imply many threads, a mailbox per actor, and a heap-allocated message plus a context switch per interaction, overhead incompatible with a microsecond budget. This paper argues the dismissal is wrong for co-located actors, and supports it both analytically and with a deployed, measured implementation: kaspar-hft, an open-source C++20 framework. Four extensions adapt the model for HFT: fast_send, a synchronous delivery mechanism in which the sending thread runs the receiver's handler inline and returns the reply as a value; actor groups, which co-schedule actors on one thread behind a shared mailbox; per-actor selectable mailbox queues; and a memory pool. fast_send has receiver transparency: the handler cannot tell whether delivery was synchronous or asynchronous, or which thread runs it. A grouped synchronous chain runs on one thread, cutting scheduler context switches from O(N) to O(1), and a thread-local call-chain test catches cyclic invocation before any lock is taken. Microbenchmarks put the synchronous round trip at tens of nanoseconds. On a live CME market-data feed (ES, NQ, ZN futures), socket-to-book latency decomposes into a ~7 microsecond decode-and-book floor plus a per-message slope; the framework's own contribution is under 1% of the floor. The tail is set not by the actor machinery but by the market's non-Poisson, clustered arrival process, characterized in a companion paper. The shared-queue group also yields a production/simulation duality: the same actor code runs unchanged in live trading and deterministic backtest.",
+  "authors": [
+    "Vincent Maciejewski"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cs.DC"
+  ],
+  "id": "2609.21173v1",
+  "published": "2026-09-18T00:36:06Z",
+  "source": "arxiv",
+  "title": "Adapting the Actor Model of Concurrency for High-Frequency Trading: Synchronous Message Delivery (fast_send) and a Tick-to-Book Latency Study",
+  "updated": "2026-09-18T00:36:06Z"
+}

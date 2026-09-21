@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.13715v1",
+  "abstract": "We consider two canonical market-microstructure regularities: the long-memory of trade signs and the square-root law of meta-order impact. The point is not to propose new empirical laws, but to separate the clocks on which existing laws are defined. The sign-memory law is an event-time statement about the ordering and fragmentation of hidden orders. The square-root impact law is an operational-time statement about front motion in a locally linear latent order book. Starting from a discrete-time random-walk bid/ask reaction--diffusion order book with a separate event clock, we identify an event-time imbalance reduction, derive the operational-time front and impact equations in the locally linear regime, and then subordinate both sign and impact observables to calendar time. Fractional or tempered clock effects enter through this event-to-calendar projection, not through a different operational-time impact mechanism. This gives a compact clock-aware framework in which event-time sign persistence, operational-time square-root impact, and anomalous calendar-time effects appear as distinct but compatible consequences of a common order-book representation.",
+  "authors": [
+    "Christopher Angstmann",
+    "Tim Gebbie"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cond-mat.stat-mech",
+    "math-ph",
+    "q-fin.MF"
+  ],
+  "id": "2609.13715v1",
+  "published": "2026-09-12T05:00:57Z",
+  "source": "arxiv",
+  "title": "Event-Time Order-Flow Memory, Operational-Time Impact, and Subordinated Market Observables",
+  "updated": "2026-09-12T05:00:57Z"
+}

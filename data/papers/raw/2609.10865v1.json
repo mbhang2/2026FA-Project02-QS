@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.10865v1",
+  "abstract": "Constructing a confidence interval for the difference between two independent binomial proportions involves a nuisance direction that is not identified by the estimand. The one-sample Wilson score interval inverts a scalar score test, but has no direct bivariate analogue isolating the difference: inverting the joint normal approximation yields an elliptical region in the unit square, whereas the estimand \\(p_1-p_2\\) is one-dimensional. We define the Elliptically Optimal (EO) confidence interval as the range of \\(p_1-p_2\\) over this region and solve the resulting optimization problem in closed form, obtaining explicit bounds in six mutually exclusive and exhaustive cases. The solution admits a compact characterization: the EO interval is the score interval obtained by maximizing over the nuisance variance rather than estimating it. It is therefore the shortest interval obtained by projecting the elliptical region, and inherits its coverage guarantee. We derive the exact coverage excess, \\(2[\u03a6(z\\mathcal{R})-\u03a6(z)]\\), where \\(\\mathcal{R}\\) is the ratio of the least-favourable to the true standard deviation. The excess vanishes on an explicit line through the parameter space, is bounded by \\(\u03b1\\), and is invariant under proportional scaling of the sample sizes. Exact enumeration of the binomial coverage shows that the Wald interval, whose variance estimator is downward biased by a factor \\(1-1/n\\) under balanced allocation, falls below nominal coverage almost everywhere. The EO interval never under-covers under the normal approximation and always yields admissible, non-degenerate bounds. Its price is over-coverage when both proportions are extreme, which we quantify exactly.",
+  "authors": [
+    "Nawaf Mohammed"
+  ],
+  "categories": [
+    "math.ST",
+    "q-fin.ST",
+    "stat.CO",
+    "stat.ME"
+  ],
+  "id": "2609.10865v1",
+  "published": "2026-09-09T22:06:19Z",
+  "source": "arxiv",
+  "title": "The Elliptically Optimal Confidence Interval: A Bivariate Extension of Wilson's Score Method",
+  "updated": "2026-09-09T22:06:19Z"
+}

@@ -1,0 +1,21 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.13402v3",
+  "abstract": "We develop a diffusion-model framework for dynamic implied-volatility surface generation and evaluate its economic usefulness through data-driven hedging. The framework consists of two models. AD-Seq-Vol jointly learns the conditional evolution of the underlying asset return and the high-dimensional implied-volatility surface, generating adapted multi-period scenarios by sequentially updating the realized market history. AD-Seq-Vol-FT further incorporates option-market structure through post-training penalties for violations of static no-arbitrage conditions. Using daily SPX option data from 2000 to 2023, we show that the proposed models generate coherent surface trajectories while capturing both cross-sectional and temporal dependence. AD-Seq-Vol produces fewer and less severe static-arbitrage violations than the training data and the GAN-based benchmark, while AD-Seq-Vol-FT reduces these violations to nearly zero. We then integrate the generated conditional scenarios into an optimization-based hedging framework. Compared to a range of classical and data-driven benchmarks, the diffusion-based hedges maintain tracking errors near zero, substantially reduce tail risk, and exhibit particularly stable performance during the COVID-19 market disruption. These results establish Adaptive Sequential Diffusion Models as a promising class of market-consistent and economically useful financial scenario generators. Our code is available at: https://github.com/yinbinhan/volatility-surface-simulation.",
+  "authors": [
+    "Yinbin Han",
+    "Jack Yuxiang Zhang",
+    "Manuel Torres",
+    "Fernando Acero",
+    "Renyuan Xu"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.PM",
+    "q-fin.RM"
+  ],
+  "id": "2609.13402v3",
+  "published": "2026-09-11T18:10:13Z",
+  "source": "arxiv",
+  "title": "Diffusion models for dynamic volatility surface generation and data-driven hedging",
+  "updated": "2026-09-17T05:11:16Z"
+}

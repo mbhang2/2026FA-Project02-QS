@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.09405v1",
+  "abstract": "The Log S-fBM model, introduced by Wu et al., is a stochastic volatility model whose log volatility is a stationary fractional Brownian motion (S-fBM): a stationary Gaussian process with power-decaying autocovariance driven by the Hurst exponent $H$, and variance scaled by an intermittency coefficient. A key property is that it reconciles rough volatility, where $H$ is typically near $0.1$ (see Gatheral et al.), with multifractal volatility, where $H$ is close to $0$ as in Bacry, Muzy et al.: the model's volatility measure converges to a multifractal random measure as $H\\to0$. Numerical findings in Wu et al. show intermittency of order $0.02$ across financial assets, motivating a small intermittency approximation of log volatility moments for calibration via the general method of moments (GMM). In this work, we conduct a statistical analysis of the Log S-fBM model. We derive scaling properties of the S-fBM process and the Log S-fBM integrated volatility measure, present deviation inequalities with tail distributions sensitive to $H$ and intermittency, and develop a hypothesis test for the null Hurst exponent, i.e.\\ rough versus multifractal dynamics. Finally, we revisit scale invariance of the log volatility increment process via explicit small-intermittency formulas, reproducing analogous properties in both regimes.",
+  "authors": [
+    "Othmane Zarhali",
+    "Emmanuel Bacry",
+    "Jean-Fran\u00e7ois Muzy"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2609.09405v1",
+  "published": "2026-09-08T20:00:10Z",
+  "source": "arxiv",
+  "title": "The Log S-fBM model: Statistical analysis",
+  "updated": "2026-09-08T20:00:10Z"
+}

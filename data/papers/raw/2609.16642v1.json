@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.16642v1",
+  "abstract": "Public evidence can become sufficient to settle a prediction-market contract before the venue records its first determination, but the relevant boundary depends on the applicable rule version, exact release object, source hierarchy, correction history, and unfinished contract conditions. This paper defines two Kalshi clocks: first decidability, the earliest contemporaneous singleton in the rule-evidence mapping, and stable decidability, the retrospective earliest time after which the same singleton remains unchanged through finalization. A completed retrospective identification test establishes a narrow feasibility result. In a frozen blind pilot, all 25 identities and blinding checks passed and current rule text was recovered for all 25; no exact or bounded historical rule version and no exact or bounded official source-release object was recovered. The full historical recovery covered 152,694 ordinary tickers, 11,530 exact event identities, and 6,540 read-only official requests, with zero historically eligible events and zero historically eligible tickers. This is an observability result, not a claim that no market was decidable or that public evidence never existed. A completed prospective infrastructure shakedown established observation capability for three source programmes across 25 markets, with integrity revalidation of 781,266 lifecycle frames, 22 closed lower-bounded reconnect receipts, no unresolved reconnect gap, no due-but-missed official release, and an inactive price layer. Production evidence enrollment is active. The prospective sample is constructed only at enrollment close from prospectively frozen identities and pre-outcome fields; its frozen target size is selected mechanically under the registered full, reduced, exploratory, or no-go support disposition. No contractual-decidability clock, human-adjudication, price, or cross-venue result is reported here.",
+  "authors": [
+    "Maksym Nechepurenko"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cs.CY"
+  ],
+  "id": "2609.16642v1",
+  "published": "2026-09-15T05:03:22Z",
+  "source": "arxiv",
+  "title": "From Public Evidence to Contractual Outcome: First and Stable Decidability on Kalshi",
+  "updated": "2026-09-15T05:03:22Z"
+}

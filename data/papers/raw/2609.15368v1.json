@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.15368v1",
+  "abstract": "Prediction-market resolution is often reduced to a terminal outcome and one timestamp. That representation is inadequate for leveraged event claims because rule versioning, request creation, proposal, dispute, reset, Oracle finality, and adapter terminality are distinct states with different observation precision and balance-sheet consequences. We reconstruct those states for Polymarket using Oracle request generations as the unit of adjudication. The population is frozen at Polygon block 79,721,080 and contains 185,550 initialized adapter-question instances and 350,703 decoded adapter logs. Exact requester-filtered extraction yields 504,332 decoded Oracle lifecycle events: 184,148 request creations, 159,447 proposals, 1,604 disputes, and 159,133 settlements. The accounting closes as 182,671 questions with at least one request plus 1,477 successor generations. Immutable chain identity and deployed request semantics provide exact linkage; unfinished histories remain right-censored. Request age is not semantic resolution age. Median request-to-first-proposal time is 182 seconds on the legacy route but 176,388-744,151 seconds on modern routes; post-reset successor proposals arrive within 300-2,909 seconds at the median. This descriptive contrast does not establish causal efficiency. Exact stable-ID metadata linkage recovers 104,032 of 185,550 questions (56.07%), leaves 81,518 unmatched, and produces no ambiguous exact match. External-source publication and contractual-decidability clocks remain unmeasured population-wide and are not replaced by mechanism timestamps. The results establish an event-sourced account of Oracle adjudication, semantic governance, and adapter terminality. Companion Part II reconstructs Conditional Tokens payout recording and observed redemption, preserving the boundary between adjudication, protocol settlement, and holder realization.",
+  "authors": [
+    "Maksym Nechepurenko"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2609.15368v1",
+  "published": "2026-09-14T10:55:20Z",
+  "source": "arxiv",
+  "title": "Resolution Is Not Settlement, Part I: Oracle Adjudication and Semantic Governance on Polymarket",
+  "updated": "2026-09-14T10:55:20Z"
+}

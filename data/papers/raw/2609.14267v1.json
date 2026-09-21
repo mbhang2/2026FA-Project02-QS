@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.14267v1",
+  "abstract": "This paper proposes an investment strategy through resource allocation into Kalshi Crypto Event Contracts in order to effectively hedge exposure to spot asset volatility. Using Bitcoin as a proof of concept, we treat corresponding Kalshi markets on the asset's future price as option contracts, and through construction of different portfolio allocations present a framework for which event contracts can be effectively utilized by retail investors in order to control risk framework without reducing underlying exposure to spot volatility. We showcase this information through analysis of three separate Kalshi event contracts, all relating to a different underlying market regime (i.e bullish, bearish, flat), and provide a comprehensive risk profile for each regime. Results show that a dynamic Kalshi/Bitcoin hedging strategy outperforms more simplistic portfolios across all regimes, supporting our initial hypothesis. We discuss further considerations which can erode profits in the future (i.e. fees), and provide direction for future research.",
+  "authors": [
+    "Prashanth Bhaskara",
+    "Aadit Jerfy"
+  ],
+  "categories": [
+    "cs.CE",
+    "q-fin.TR"
+  ],
+  "id": "2609.14267v1",
+  "published": "2026-09-13T04:01:16Z",
+  "source": "arxiv",
+  "title": "Public Opinion as an Option: Leveraging Prediction Markets to Hedge Exposure to Spot Crypto Volatility",
+  "updated": "2026-09-13T04:01:16Z"
+}

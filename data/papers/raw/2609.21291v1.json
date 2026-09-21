@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.21291v1",
+  "abstract": "We develop an efficient Monte Carlo simulation scheme for pricing options under the Ornstein-Uhlenbeck driven stochastic volatility model via the operator splitting approach. With an ingenious splitting of the governing stochastic differential equations, our operator splitting scheme admits analytic solutions in all sub-steps, so its implementation is simplified to require simulation of a few normal variates. This resolves the two typical numerical challenges in other simulation schemes, namely, sampling of conditional integrated variance and pathwise inverse integral transform of characteristic functions. There are three pioneering simulation schemes that attempt to overcome the above two numerical challenges. These include the Hilbert interpolation scheme of Zeng et al. (2023), Karhunen-Lo`eve expansion scheme of Choi (2025) and moment matching scheme based on the Inverse Gaussian distribution of Brignone and Sgarra (2026). We performed numerical tests to compare accuracy-speed performance of pricing options using our operator splitting scheme with these three pioneering schemes. We found that our scheme competes favorably well in terms of accuracy-speed tradeoff among all these schemes, in particular for pricing path dependent options with a large number of monitoring instants. The performance of our scheme can be well enhanced by martingale-preserving control variates and variance reduction via conditioning.",
+  "authors": [
+    "Congxin He",
+    "Yue Kuen Kwok"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2609.21291v1",
+  "published": "2026-09-18T04:06:27Z",
+  "source": "arxiv",
+  "title": "Efficient simulation schemes for pricing options under the Ornstein--Uhlenbeck driven stochastic volatility model",
+  "updated": "2026-09-18T04:06:27Z"
+}

@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.10407v1",
+  "abstract": "Decentralized exchanges record trading and liquidity provision on public blockchains, but empirical analysis requires interpreting these records and linking them to execution metadata. dexamine is a Python package that parses Uniswap v2 and v3 events on Ethereum. It converts transaction receipt logs into observations of trades and liquidity changes, with token quantities, pool state, transaction order, and gas information. The package separates data retrieval, contract metadata, protocol interpretation, and output construction. The repository provides recorded Ethereum responses and an offline reproducible example, and version 1 has been used to construct data for an empirical study of price discovery in decentralized markets.",
+  "authors": [
+    "Magnus Hansson"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cs.SE"
+  ],
+  "id": "2609.10407v1",
+  "published": "2026-09-09T16:25:36Z",
+  "source": "arxiv",
+  "title": "dexamine: A Python package for Uniswap event data on Ethereum",
+  "updated": "2026-09-09T16:25:36Z"
+}

@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.14859v1",
+  "abstract": "Retail proprietary-trading firms sell a two-stage product: a paid evaluation that must reach a profit target before breaching a trailing drawdown, then a funded account that must survive a minimum window and a consistency rule before a payout. We show the geometry of this contract creates incentives that differ by stage and make passing a poor standalone signal of skill. Under end-of-day trailing the evaluation rewards a fast, lumpy cadence while the funded account punishes it, by a factor of nine in the joint gate. The evaluation is defeatable at zero skill: position sizing alone yields a pass probability near 0.40, against a measured cohort rate of 0.168. Pass probability rises with skill, but a real edge and aggressive sizing move it by nearly the same amount, so a pass rate confounds the two. Under a simplified contract model the seller's margin is bounded by the gap between perceived and actual gate probabilities, the probability analogue of shrouding a price component; the observed design, a permeable marketed evaluation and a hard payout gate, is consistent with that. Across the sector, pass rates are published far more often than payout rates. The same geometry produces negative expected value: within the measured strategy universe, no configuration at observed drifts clears break-even on any account sourced. Break-even lies between a 40.5% and 41.5% win rate at 1:1.5 net of costs, against a driftless 40.0%. The delta-neutral construction firms prohibit is approximately expected-value neutral at the observed payout ceiling. Every account-level result is reported against a zero-edge control.",
+  "authors": [
+    "Nicholas Hall"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.GN"
+  ],
+  "id": "2609.14859v1",
+  "published": "2026-09-14T00:16:17Z",
+  "source": "arxiv",
+  "title": "Gate Design and Stage-Dependent Incentives in Retail Proprietary-Trading Evaluations: Why Passing Is Not Standalone Evidence of Skill, and Why the Product Fails to Pay Under Measured Trading Constraints",
+  "updated": "2026-09-14T00:16:17Z"
+}

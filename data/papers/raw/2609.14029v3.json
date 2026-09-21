@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.14029v3",
+  "abstract": "Special Markowitz (SM) regularises returns and covariance jointly, relative to a reference state (mu_ref, Sigma_ref). Each eigendirection of the whitened relative operator carries a signed spectral potential Phi_k, with persistence factor psi_k = exp(-Phi_k) > 0. Positive potentials attenuate empirical deviations from the reference geometry, zero potential preserves them, and negative potentials amplify them. The persistence factor psi_k governs both the return signal and the covariance deviation: the regularised deviation from the reference is psi_k times the empirical deviation. The logarithmic potential coordinate is characterised by a multiplicative composition law on the multiplicative group of positive real numbers; the Stein loss is characterised as the unique free-energy density (within a natural class) compatible with the resulting coupling. The SM pressure functional is additive across modes the defining property of Special Markowitz.",
+  "authors": [
+    "David Reinhardt"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "q-fin.RM",
+    "q-fin.ST"
+  ],
+  "id": "2609.14029v3",
+  "published": "2026-09-12T16:31:09Z",
+  "source": "arxiv",
+  "title": "Special Markowitz: Thermodynamic Formalism for the Joint Regularisation of Returns and Covariance",
+  "updated": "2026-09-17T20:06:37Z"
+}

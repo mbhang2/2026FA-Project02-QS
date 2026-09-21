@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.00475v1",
+  "abstract": "Timing-based tilts across asset classes can drive much of the risk and return of a diversified cross-asset portfolio. The standard approach forecasts returns and then optimizes weights. We instead study an end-to-end AI-based policy that maps market states directly to portfolio weights, and we then ask when this one-step modeling approach outperforms simple rules-based strategies. We train these policies on the sixteen most liquid CME futures, where an edge is unlikely to be due to illiquidity, using a differentiable Sharpe ratio loss function, and we benchmark them against equal weighting, risk parity, and time-series momentum. The learned policies rank above the rules on the pooled cross-asset portfolio and in several sub-asset classes, but not uniformly. In gross terms, an LSTM and a transformer-based architecture perform comparably out-of-sample, but diverge when we consider transaction costs. The transformer generates the stronger learned policy, trades far less than the LSTM, and matches or exceeds equal weighting through moderate cost.",
+  "authors": [
+    "Austin Pollok",
+    "Kevin Robik"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "q-fin.PM",
+    "q-fin.TR"
+  ],
+  "id": "2607.00475v1",
+  "published": "2026-07-01T05:49:41Z",
+  "source": "arxiv",
+  "title": "End-to-End Parametric Portfolio Policies for Cross-Asset Futures Timing: When Do AI Models Beat Simple Rules?",
+  "updated": "2026-07-01T05:49:41Z"
+}

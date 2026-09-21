@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2605.13998v1",
+  "abstract": "Generating realistic synthetic option prices requires implied volatility as an input, yet implied volatility is itself derived from observed option prices, creating a circular dependency that limits synthetic data for machine-learning and risk-analysis applications. We break this circularity with a pipeline in which implied volatility emerges as an output of a structural model of equity returns. A Jump Hidden Markov Model produces multi-asset price paths with realistic stylized facts and cross-asset tail dependence; a modified Heston variance process, whose mean-reversion target depends on regime state, days to expiration, moneyness, and a market-mood indicator, converts those paths into implied-volatility paths; and a recombining binomial lattice prices American options from the resulting surface. Initializing variance at its mean-reversion target for each strike-expiration pair lets smile, skew, and term structure emerge without external calibration. We calibrate the shape function through a hierarchy spanning a parametric baseline, a globally shared neural surrogate, and a sector-specific neural surrogate fit to a multi-ticker, multi-sector option ladder. A temporal holdout on a multi-day capture isolated scheduled corporate events as the dominant source of test-time generalization error, and calendar-derived earnings-distance and same-sector peer-coupling features recovered the anticipatory portion of that signal. We then apply the framework as a synthetic-data generator on real near-the-money put and call contracts, forward-simulating price paths, and recovering path-conditional implied volatility, finite-difference American Greeks, and terminal short-premium profit and loss from one coherent simulation, and confirm cross-ticker robustness by re-running on a second underlying from a different sector and volatility regime. The framework is released as an open-source Julia package.",
+  "authors": [
+    "Julia Sun",
+    "Zheyu Jin",
+    "Jiawei Zhang",
+    "Jeffrey D. Varner"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.LG"
+  ],
+  "id": "2605.13998v1",
+  "published": "2026-05-13T18:07:14Z",
+  "source": "arxiv",
+  "title": "Synthetic American Option Pricing via Jump-HMM-Driven Heston Implied Volatility",
+  "updated": "2026-05-13T18:07:14Z"
+}

@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.03858v1",
+  "abstract": "We propose a multivariate generalisation of the Lo-MacKinlay (1988) variance ratio that decomposes long-horizon equity-return dynamics into separate return-channel and volatility-channel memory components across the cross-section of asset returns. The framework identifies a parsimonious five-factor model - capturing persistent, antipersistent, and multi-scale memory in returns and volatility - that fits four U.S. portfolio panels (the Fama-French 49-industry universe, its pre/post-1998 halves, and the Fama-French 100 size x book-to-market sort) and a European replication (Fama-French Europe 25), recovering seven stylised facts of long-horizon equity dynamics simultaneously across all five panels. Three findings carry economic content. (i) The same five-factor decomposition fits all five panels, indicating a cross-sectional structure robust to industry vs. size-and-value sorts, to sub-periods, and to U.S. vs. developed-European markets. (ii) U.S. equity volatility memory underwent a regime transition in the late 1980s - not at the static 1998 split-half boundary - with the slowest component of the volatility cascade lengthening from approximately two to four years; a 1000-replicate rolling-window bootstrap localises the transition with strictly non-overlapping 90% confidence bands separating pre- and post-transition windows. (iii) The cross-sectional loadings driving return-channel long memory are economically distinct from those driving volatility-channel cascade memory: a cross-channel beta-inversion test finds no panel with the positive alignment a single shared loading predicts, rejecting the shared-loading hypothesis toward anti-alignment on the two largest panels at Bonferroni p = 0.0004. Characteristics that predict return-momentum patterns therefore need not predict volatility-persistence patterns.",
+  "authors": [
+    "Anders G Fr\u00f8seth"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "physics.soc-ph",
+    "q-fin.PM"
+  ],
+  "id": "2607.03858v1",
+  "published": "2026-07-04T12:57:40Z",
+  "source": "arxiv",
+  "title": "A Spectral Generalisation of the Variance Ratio: Eigenstructure of Long-Horizon Portfolio Covariance and a Multi-Memory Factor Model of U.S. Equity Returns",
+  "updated": "2026-07-04T12:57:40Z"
+}

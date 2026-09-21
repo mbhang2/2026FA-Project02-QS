@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2606.29591v1",
+  "abstract": "SPY's lag-1 return autocorrelation ($\\hat\u03c1(1)=-0.081$, $z=-7.4$) is among the most significant regularities in empirical equity finance, yet the standard variance-ratio (VR) test cannot determine whether it reflects directional reversal or magnitude shrinkage - phenomena with entirely different trading implications. We develop the Fourier-Residue Identity (FRI), which decomposes return autocorrelation into a sign ($k=2$) and a magnitude ($k=4$) channel, each independently testable and neither redundant. Applied to six US instruments over 1993--2026 and a 21-instrument cross-asset panel, the FRI delivers a sharp microstructure diagnosis. The lag-1 autocorrelation in SPY is driven entirely by magnitude: the FRI sign test is insignificant ($p=0.11$) while the full test achieves $p<10^{-12}$. A large move yesterday predicts a smaller move today regardless of direction - the fingerprint of bid-ask bounce and non-synchronous constituent staleness, not directional reversal. At lag 3, a significant directional reversal ($p=0.02$) invisible to the scalar ACF reveals a separate partial-price-adjustment channel. We prove the Fejer identity VR(q)=1+2C_q (confirmed to <0.001 on all series), giving the Lo-MacKinlay test a spectral interpretation, and introduce a subsample diagnostic R_N=G_{N/2}/G_N that classifies equity autocorrelation as structural (R_N->1) rather than sampling noise (R_N->sqrt(2)). The cross-asset panel shows mean reversion confined to exchange-traded equities and sovereign bonds; credit ETFs, commodities, FX, and crypto are indistinguishable from random walks. All estimators pass 27 unit tests; Monte Carlo confirms correct 5% size under GARCH.",
+  "authors": [
+    "Victoria Portnaya"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2606.29591v1",
+  "published": "2026-06-28T20:22:00Z",
+  "source": "arxiv",
+  "title": "The Bounce Has No Direction: Sign, Magnitude, and the Microstructure of Equity Return Predictability",
+  "updated": "2026-06-28T20:22:00Z"
+}

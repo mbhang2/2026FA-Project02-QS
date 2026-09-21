@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.08907v1",
+  "abstract": "Agent-based models of markets readily produce emergent instabilities, but telling a genuine collective effect apart from a parameter artefact takes discipline. We apply Bouchaud's phase-diagram method to a continuous-double-auction order-book model. The method is to map the full phase diagram, test its robustness to rule changes, and rule out degenerate and numerical origins before we call any feature a tipping point. The model has fundamental-anchored zero-intelligence liquidity and a mid-anchored chartist herding layer, controlled by the fraction $\\varphi$ and the strength $\u03ba$ of herders. A 7x6 grid (336 runs, each with a scrambled-sign null) locates an emergent liquidity-stress crossover. The order parameter, the fraction of events with a one-sided book, rises to about 0.34 at $(\\varphi,\u03ba)=(0.9,1.0)$, is zero across all 42 scrambled cells, and forms a smooth crossover rather than a discontinuous Dark Corner. The dry-up is rule-robust (it recurs under an order-flow-imbalance rule), horizon-robust (about 0.32-0.35 across a 16x range of momentum window), and has a monotone onset boundary $\\varphi^*(\u03ba) = \\{0.55, 0.45, 0.36\\}$. We then decompose the mechanism at a matched directional-bias amplitude (mean |p_buy - 0.5| about 0.269). Price-momentum herding carries a large, comparator-robust reflexive component (+0.29; buying begets buying), whereas the order-flow rule's component is about 0 and comparator-dependent. The RMS-mispricing gradient is a placement artefact, largest at $\u03ba=0$. A companion two-market analysis finds no directional cross-market contagion across a signal-only herding link.",
+  "authors": [
+    "Jan Novotny"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.CP"
+  ],
+  "id": "2607.08907v1",
+  "published": "2026-07-09T20:06:45Z",
+  "source": "arxiv",
+  "title": "Herding and Liquidity in Order-Book Markets. I. A Robust Liquidity-Stress Crossover and its Reflexive Mechanism",
+  "updated": "2026-07-09T20:06:45Z"
+}

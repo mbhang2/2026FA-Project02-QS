@@ -119,9 +119,19 @@ def parse_feed(xml: bytes) -> list[dict]:
 
 
 def search(categories, since: str | None, max_results: int,
-           page_size: int = 100) -> list[dict]:
-    """Paged arXiv search, newest first, rate-limited."""
+           page_size: int = 100, terms_any: tuple[str, ...] = ()) -> list[dict]:
+    """Paged arXiv search, newest first, rate-limited.
+
+    `terms_any` ANDs a topic filter onto the category sweep -- any of the terms,
+    matched in title or abstract. A sweep of recent q-fin returns overwhelmingly
+    methods papers (200 fetched, 15 testable here, 0 worth a campaign), because
+    the categories describe a field rather than a claim. Naming the topic is how
+    you reach papers that assert something a strategy could act on.
+    """
     terms = " OR ".join(f"cat:{c}" for c in categories)
+    if terms_any:
+        topic = " OR ".join(f'abs:"{t}" OR ti:"{t}"' for t in terms_any)
+        terms = f"({terms}) AND ({topic})"
     if since:
         # arXiv wants YYYYMMDDTTTT; the day boundary is good enough here.
         stamp = since.replace("-", "")
@@ -190,16 +200,21 @@ def main() -> int:
     ap.add_argument("--category", action="append", default=None,
                     help=f"repeatable; default {' '.join(DEFAULT_CATEGORIES)}")
     ap.add_argument("--since", default=None, help="YYYY-MM-DD submitted-after bound")
+    ap.add_argument("--term", action="append", default=None,
+                    help="repeatable topic filter, matched in title or abstract; "
+                         "ANDed onto the categories. Any of the terms matches.")
     ap.add_argument("--max-results", type=int, default=50)
     ap.add_argument("--dry-run", action="store_true",
                     help="fetch and report, write nothing")
     a = ap.parse_args()
 
     cats = tuple(a.category) if a.category else DEFAULT_CATEGORIES
-    query = f"cats={','.join(cats)} since={a.since or 'any'}"
+    terms = tuple(a.term or ())
+    query = (f"cats={','.join(cats)} since={a.since or 'any'}"
+             + (f" terms={'|'.join(terms)}" if terms else ""))
     print(f"querying arXiv: {query}  max={a.max_results}", flush=True)
     try:
-        papers = search(cats, a.since, a.max_results)
+        papers = search(cats, a.since, a.max_results, terms_any=terms)
     except Exception as exc:                                   # noqa: BLE001
         sys.exit(f"arXiv query failed: {type(exc).__name__}: {exc}")
     print(f"  {len(papers)} returned")

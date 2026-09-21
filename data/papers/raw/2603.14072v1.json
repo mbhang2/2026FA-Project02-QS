@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2603.14072v1",
+  "abstract": "We address the attribution problem for apparent slow collective dynamics: is the observed persistence intrinsic, or inherited from a persistent driver? For the leading eigenvalue fraction $\u03c8_1=\u03bb_{\\max}/N$ of S\\&P 500 60-day rolling correlation matrices ($237$ stocks, 2004--2023), a VIX-coupled Ornstein--Uhlenbeck model reduces the effective relaxation time from $298$ to $61$ trading days and improves the fit over bare mean reversion by $\u0394$BIC$=109$. On the decomposition sample, an informational residual of $\\log(\\mathrm{VIX})$ alone retains most of that gain ($\u0394$BIC$=78.6$), whereas a mechanical VIX proxy alone does not improve the fit. Autocorrelation-matched placebo fields fail ($\u0394$BIC$_{\\max}=2.7$), disjoint weekly reconstructions still favor the field-coupled model ($\u0394$BIC$=140$--$151$), and six anchored chronological holdouts preserve the out-of-sample advantage. Quiet-regime and field-stripped residual autocorrelation controls show the same collapse of persistence. Stronger hidden-variable extensions remain only partially supported. Within the tested stochastic class, conditioning on the observed VIX proxy absorbs most of the apparent slow dynamics.",
+  "authors": [
+    "Yuda Bi",
+    "Vince D Calhoun"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cond-mat.stat-mech",
+    "cs.LG"
+  ],
+  "id": "2603.14072v1",
+  "published": "2026-03-14T18:37:40Z",
+  "source": "arxiv",
+  "title": "Conditioning on a Volatility Proxy Compresses the Apparent Timescale of Collective Market Correlation",
+  "updated": "2026-03-14T18:37:40Z"
+}

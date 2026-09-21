@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2607.04280v1",
+  "abstract": "Three quantitative predictions have been advanced for the square-root law (SRL) of market impact, $I/\u03c3_D = c\\,(Q/V_D)^\u03b4$ with $\u03b4\\approx 0.5$: GGPS ($\u03b4=\u03b2-1$), FGLW ($\u03b4=\u03b1-1$), and LOB walking ($\u03b4=1/(1+\u03b3)$). Using a minimal limit-order-book model populated by heterogeneous interacting agents and calibrated against the Tokyo Stock Exchange benchmark ($\\langle\u03b4\\rangle = 0.489$~\\citep{satoStrictUniversalitySquareRoot2025}), we test all three on identical simulated data and find that none matches the per-stock measured $\u03b4$: GGPS and FGLW over-predict by factors of two and four respectively, while LOB walking under-predicts. The model reproduces $\\langle\u03b4\\rangle = 0.539\\pm 0.048$ across 2000 independently parameterised stocks. To identify which mechanisms are causally responsible, we perform counterfactual ablation by selectively suppressing each component. Removing order splitting collapses $\u03b4$ from $0.549$ to $0.324$; removing liquidity replenishment by market makers drops it to $0.386$; perturbations that leave both intact (momentum trading, price limits, splitting rule, background liquidity) move $\u03b4$ by less than $10\\%$. Order splitting and liquidity replenishment are thus jointly identified as the necessary mechanisms for the SRL within this model, with the simulated SRL depending on neither the metaorder size tail nor the visible book shape in isolation.",
+  "authors": [
+    "Yang Zhou",
+    "Jianwen Chen",
+    "Ruipeng Wei"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "econ.TH",
+    "q-fin.MF",
+    "q-fin.TR"
+  ],
+  "id": "2607.04280v1",
+  "published": "2026-07-05T12:47:17Z",
+  "source": "arxiv",
+  "title": "Order Splitting and Liquidity Replenishment Are Jointly Necessary for the Square-Root Law of Market Impact:",
+  "updated": "2026-07-05T12:47:17Z"
+}

@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2606.08586v1",
+  "abstract": "Anomaly detection methods in financial time series score statistically unusual observations in observable data, not topologically misexpected persistent deviations in the latent structure of co-movement. This study constructs a stock-level topological anomaly score jointly conditioned on market-level topological structure and cross-sectional peer context, and tests whether its history carries predictive content for return curves. Intraday data for ten liquid S&P 500 constituents (April 2025--March 2026) are embedded via Takens delay embedding, graphed by BallMapper, and scored by three decoder-conditional variational autoencoder variants. Predictive content is assessed by penalised function-on-function regression and confirmed across all assets, intraday bar frequencies, and scoring variants, revealing a consistent temporal fingerprint -- gradual accumulation of return impact, a frequent early reversal of its direction, and broadly distributed predictive content weighted toward recent anomaly history. When the reversal occurs depends on market regime; how evenly the anomaly history contributes to prediction depends on bar frequency.",
+  "authors": [
+    "Krzysztof Ozimek"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2606.08586v1",
+  "published": "2026-06-07T11:55:03Z",
+  "source": "arxiv",
+  "title": "Cross-sectional topological anomaly scores and intraday return predictability in the S&P 500: A BallMapper, decoder-conditional VAE, and Function-on-Function regression approach",
+  "updated": "2026-06-07T11:55:03Z"
+}

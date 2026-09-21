@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2604.26063v1",
+  "abstract": "Traditional moving average convergence divergence (MACD) trading rules are often constrained by signal lag and susceptibility to false signals. To address these limitations, this study develops a volume-price-adjusted MACD (VP-MACD) framework that incorporates volume, volatility, and intraday price structure into the conventional indicator, and introduces a sensitivity parameter to allow earlier trade entry and improve responsiveness to market movements. Using the S&P 500, Nasdaq-100, and Dow Jones Industrial Average as representative U.S. equity indices, the model is calibrated over historical records from 2018 to 2022 and evaluated out of sample over 2023 to February 2026. The results indicate that the proposed framework generally delivers better economic performance than the baseline MACD strategy in terms of profitability, risk-adjusted return, and downside-risk control, while generating fewer but more selective trading signals. These findings suggest that incorporating additional market information into technical trading rules may enhance signal quality in U.S. equity index markets.",
+  "authors": [
+    "Luyun Lin",
+    "Lixing Lin",
+    "Zhen Zhang",
+    "Moxuan Zheng",
+    "Yiqing Wang"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.ST"
+  ],
+  "id": "2604.26063v1",
+  "published": "2026-04-28T18:59:42Z",
+  "source": "arxiv",
+  "title": "A Volume-Price-Adjusted MACD Trading Strategy with Sensitivity Calibration for U.S. Equity Indices",
+  "updated": "2026-04-28T18:59:42Z"
+}

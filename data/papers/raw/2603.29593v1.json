@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2603.29593v1",
+  "abstract": "The proliferation of diverse, high-leverage trading instruments in modern financial markets presents a complex, \"noisy\" environment, leading to a critical question: which trading strategies are evolutionarily viable? To investigate this, we construct a large-scale agent-based model, \"MAS-Utopia,\" comprising 10,000 agents with five distinct archetypes. This society is immersed in five years of high-frequency data under a counterfactual baseline: zero transaction friction and a robust Unconditional Basic Income (UBI) safety net. The simulation reveals a powerful evolutionary convergence. Strategies that attempt to fight the market's current - namely Mean-Reversion (\"buy-the-dip\") - prove structurally fragile. In contrast, the Trend-Following archetype, which adapts to the market's flow, emerges as the dominant phenotype. Translating this finding, we architect an LLM-driven system that emulates this successful logic. Our findings offer profound implications, echoing the ancient wisdom of \"Be Water\": for investors, it demonstrates that survival is achieved not by rigid opposition, but by disciplined alignment with the prevailing current; for markets, it critiques tools that encourage contrarian gambling; for society, it underscores the stabilizing power of economic safety nets.",
+  "authors": [
+    "Yijia Chen"
+  ],
+  "categories": [
+    "physics.soc-ph",
+    "q-fin.CP"
+  ],
+  "id": "2603.29593v1",
+  "published": "2026-03-31T11:13:07Z",
+  "source": "arxiv",
+  "title": "Be Water: An Evolutionary Proof for Trend-Following",
+  "updated": "2026-03-31T11:13:07Z"
+}

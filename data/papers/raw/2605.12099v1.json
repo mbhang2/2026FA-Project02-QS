@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2605.12099v1",
+  "abstract": "We present a new class of Bayesian dynamic models for bivariate price-realized volatility time series in financial forecasting. A novel dynamic gamma process model adopted for realized volatility is integrated with traditional Bayesian dynamic linear models (DLMs) for asset price series. This represents reduced-form volatility leverage and feedback effects through use of realized volatility proxies in conditional DLMs for prices or returns, coupled with the synthesis of higher frequency data to track and anticipate volatility fluctuations. Analysis is computationally straightforward, extending conjugate-form Bayesian analyses for sequential filtering and model monitoring with simple and direct simulation for forecasting. A main applied setting is equity return forecasting with daily prices and realized volatility from high-frequency, intraday data. Detailed empirical studies of multiple S&P sector ETFs highlight the improvements achievable in asset price forecasting relative to standard models and deliver contextual insights on the nature and practical relevance of volatility leverage and feedback effects. The analytic structure and negligible extra computational cost will enable scaling to higher dimensions for multivariate price series forecasting for decouple/recouple portfolio construction and risk management applications.",
+  "authors": [
+    "Patrick Woitschig",
+    "Mike West"
+  ],
+  "categories": [
+    "stat.ME",
+    "q-fin.ST"
+  ],
+  "id": "2605.12099v1",
+  "published": "2026-05-12T13:15:09Z",
+  "source": "arxiv",
+  "title": "Bayesian Dynamic Modeling of Realized Volatility in Financial Asset Price Forecasting",
+  "updated": "2026-05-12T13:15:09Z"
+}

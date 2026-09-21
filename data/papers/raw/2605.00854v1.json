@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2605.00854v1",
+  "abstract": "This paper proposes a simple and parsimonious discrete-time simulation model to describe the endogenous formation and periodic collapse of financial bubbles. While existing literature has extensively explored the statistical properties of locally explosive bubble dynamics, capturing the micro-level interplay of investor herd behavior and panic selling within a unified framework remains a challenge. Our model addresses this by introducing a cubic function of market momentum to determine the balance of trading directions. This mechanism drives both trend-following behavior during the bubble phase and sudden market crashes when the momentum exceeds a critical threshold. Furthermore, inspired by the self-exciting nature of the Hawkes process, the model endogenizes``market frenzy\" by linking trading frequency directly to the accumulated momentum. Simulation results demonstrate that this minimal setup successfully replicates the complex, nonlinear dynamics of bubbles, including simultaneous surges in liquidity and price, followed by dramatic crashes.",
+  "authors": [
+    "Naohiro Yoshida"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "math.PR"
+  ],
+  "id": "2605.00854v1",
+  "published": "2026-04-21T00:17:00Z",
+  "source": "arxiv",
+  "title": "Dynamics of Periodic Bubbles and Crashes: Modeling Market Overheating and Panic Selling via Cubic Momentum",
+  "updated": "2026-04-21T00:17:00Z"
+}

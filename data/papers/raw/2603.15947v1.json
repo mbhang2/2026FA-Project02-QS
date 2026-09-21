@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2603.15947v1",
+  "abstract": "We study cubic cardinality-constrained portfolio optimization, a higher-order extension of the standard Markowitz formulation where three-way sector co-movement terms augment the quadratic risk-return objective. Classical heuristics like simulated annealing (SA) and tabu search require Rosenberg quadratization of these cubic interactions. This inflates the variable count from n to 5n and introduces penalty terms that substantially distort the augmented search landscape. In contrast, Hyper-Adaptive Momentum Dynamics (HAMD) operates directly on the native higher-order objective using a hybrid pipeline combining continuous Hamiltonian search, exact cardinality-preserving projection, and iterated local search (ILS). On a cubic portfolio benchmark under matched 60-second CPU budgets, HAMD achieves substantially lower decoded native cubic objective values than SA and tabu search, yielding single-seed relative improvements of 87.9%, 71.2%, 59.5%, and 46.9% at n = 200, 300, 500, and 1000. In a detailed three-seed study at n = 200, HAMD attains a median native objective of 195.65 (zero variance), while SA and tabu yield 1208.07. Decoded-feasibility analysis shows SA satisfies all exact cardinality and Rosenberg auxiliary constraints, yet decodes to a native objective 80-88% worse than HAMD, demonstrating a surrogate-distortion effect rather than simple infeasibility. Exact calibration on small instances (n = 20, 25, 30) confirms HAMD finds the provably global optimum in 9/9 trials. These results demonstrate that native higher-order search offers a substantial advantage over quadratized surrogate optimization for constrained cubic portfolio problems.",
+  "authors": [
+    "Greg Serbarinov"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.MF",
+    "q-fin.PM",
+    "q-fin.RM"
+  ],
+  "id": "2603.15947v1",
+  "published": "2026-03-16T21:53:00Z",
+  "source": "arxiv",
+  "title": "Hyper-Adaptive Momentum Dynamics for Native Cubic Portfolio Optimization: Avoiding Quadratization Distortion in Higher-Order Cardinality-Constrained Search",
+  "updated": "2026-03-16T21:53:00Z"
+}

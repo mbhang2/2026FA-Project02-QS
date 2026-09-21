@@ -773,6 +773,39 @@ the bottom of its campaign either way, so the gate is unaffected and only the
 ordering among hopeless candidates is wrong. Asserted in
 `tests/test_idle_charge.py` so it is a documented limit rather than a surprise.
 
+**A second bound, found by running it (2026-09-21): the charge is absolute and the
+metric is scale-invariant, so it is inert against high-turnover strategies.**
+
+`IDLE_CHARGE` is 0.18 index points a session, which is economically right -- carry
+on posted margin does not depend on how much a strategy makes. Sortino, however, is
+invariant to the scale of the return series. So the charge's *relative* weight is
+set by the strategy's own P&L magnitude, and that varies by two orders of magnitude
+between campaigns:
+
+| campaign | champion net | idle charge | charge as share of net |
+|---|---|---|---|
+| `nq-orderflow-02` | -68 pts | 36.0 pts | **53%** |
+| `nq-flowcont-01` | -10,920 pts | 60.5 pts | **0.55%** |
+
+Against `nq-orderflow-02`'s low-turnover candidates the charge dominated and the
+reward hack died. Against `nq-flowcont-01`'s -- 25,000 round turns, P&L in the
+thousands -- it is noise, and that campaign's `corr(sessions with exposure, score)`
+was **-0.977**, the same sign and nearly the same magnitude as the unconstrained
+arm's -0.935.
+
+**That is not proof the hack returned**, because in that campaign session count and
+holding period were collinear at `corr = -0.993`, so participation and horizon
+cannot be separated. What is certain is that the charge was not constraining
+anything there.
+
+The synthetic fixtures behind Amendment 3 all used per-session returns of order 1.0
+-- `nq-orderflow-02`'s scale -- which is why this was not found before it was
+implemented. **The charge is validated in the regime it was calibrated on and
+should not be assumed to hold outside it.** Whether the right response is to scale
+the charge by something other than contracts, or to accept that a strategy whose
+per-session P&L is thousands of points has genuinely negligible carry, is open and
+is not a question to answer from one campaign.
+
 ### What this does not claim
 
 It does not make the metric unhackable; it closes one corner case that was found

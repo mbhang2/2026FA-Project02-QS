@@ -1,0 +1,148 @@
+{
+  "schema": "campaign-validation/1",
+  "campaign_id": "nq-flowcont-5m",
+  "winner_digest": "57fd4c8fc7447f90",
+  "winner_campaign_index": null,
+  "train": {
+    "profile": "nq-train",
+    "primary": -0.13699716578315613,
+    "score": {
+      "downside_sessions": 164,
+      "kurtosis": -0.7135588420049359,
+      "metric": "sortino_per_session",
+      "n_sessions": 384,
+      "net_pnl": -83.10000000000002,
+      "primary": -0.13699716578315613,
+      "reject_reason": "",
+      "rejected": false,
+      "sharpe": -0.10205363142210204,
+      "significance": -2.68458521900966,
+      "skew": 0.4181776663347682,
+      "sortino": -0.13699716578315613,
+      "trade_count": 768
+    },
+    "diagnostics": {
+      "avg_holding_period_ns": 54845655189.86849,
+      "best_session_share": 0.013119604216326956,
+      "by_hour_utc": {
+        "00": 51.599999999999746,
+        "01": 5.050000000000001,
+        "02": -1.9500000000000002,
+        "22": -54.49999999999978,
+        "23": -83.29999999999914
+      },
+      "by_month": {
+        "2024-07": 0.7500000000000155,
+        "2024-08": 6.099999999999998,
+        "2024-09": 2.199999999999982,
+        "2024-10": 26.7999999999999,
+        "2024-11": 0.250000000000012,
+        "2024-12": 5.600000000000003,
+        "2025-01": -6.8999999999999915,
+        "2025-02": -1.2499999999999827,
+        "2025-03": -32.80000000000008,
+        "2025-04": -27.90000000000005,
+        "2025-05": -19.15000000000004,
+        "2025-06": -35.55000000000006,
+        "2025-07": -11.950000000000015,
+        "2025-08": -2.14999999999999,
+        "2025-09": 10.700000000000015,
+        "2025-10": -10.799999999999992,
+        "2025-11": 6.300000000000013,
+        "2025-12": 6.6500000000000075
+      },
+      "by_weekday": {
+        "Fri": 24.499999999999957,
+        "Mon": -3.700000000000005,
+        "Sun": -13.900000000000178,
+        "Thu": 11.399999999999947,
+        "Tue": -21.050000000000036,
+        "Wed": -80.34999999999977
+      },
+      "commission": 153.60000000000002,
+      "fill_model_spread": null,
+      "gross_pnl": 70.5,
+      "max_drawdown": -199.8913928253558,
+      "n_sessions": 384,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.0323,
+        "exposure_share": 1.0,
+        "return_dispersion": 0.0141,
+        "trades_per_session": 0.046
+      },
+      "profit_concentration_top5pct": 0.24923063893965416,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 384,
+      "trade_count": 768,
+      "turnover_contracts_per_session": 4.0,
+      "win_rate": 0.3411458333333333
+    }
+  },
+  "validation": {
+    "profile": "nq-validation",
+    "primary": -0.2178564804675991,
+    "outcome": "completed",
+    "score": {
+      "downside_sessions": 37,
+      "kurtosis": -0.7548068453952221,
+      "metric": "sortino_per_session",
+      "n_sessions": 86,
+      "net_pnl": -42.4,
+      "primary": -0.2178564804675991,
+      "reject_reason": "",
+      "rejected": false,
+      "sharpe": -0.17445997349734568,
+      "significance": -2.0203178866279257,
+      "skew": 0.3384195569031039,
+      "sortino": -0.2178564804675991,
+      "trade_count": 172
+    },
+    "diagnostics": {
+      "avg_holding_period_ns": 21042646316.936047,
+      "best_session_share": 0.06447682634681318,
+      "by_hour_utc": {
+        "00": -12.349999999999996,
+        "22": -36.1500000000001,
+        "23": 6.100000000000014
+      },
+      "by_month": {
+        "2026-01": -4.65,
+        "2026-02": -2.4999999999999916,
+        "2026-03": -11.699999999999989,
+        "2026-04": -23.050000000000043,
+        "2026-05": -0.4999999999999951
+      },
+      "by_weekday": {
+        "Fri": -3.45,
+        "Mon": -17.00000000000002,
+        "Sun": -30.05000000000002,
+        "Thu": 15.149999999999961,
+        "Tue": 4.9,
+        "Wed": -11.950000000000005
+      },
+      "commission": 34.4,
+      "fill_model_spread": null,
+      "gross_pnl": -8.0,
+      "max_drawdown": -74.06326703725978,
+      "n_sessions": 86,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.0124,
+        "exposure_share": 1.0,
+        "return_dispersion": 0.014,
+        "trades_per_session": 0.046
+      },
+      "profit_concentration_top5pct": 0.2579030069912518,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 86,
+      "trade_count": 172,
+      "turnover_contracts_per_session": 4.0,
+      "win_rate": 0.32558139534883723
+    },
+    "git_sha": "15c1a54299d4378569223c88dd8effcd5e18daaa"
+  },
+  "rule_a_sortino_positive": false,
+  "rule_c_decay": -0.08085931468444296,
+  "note": "Section 5. Rule (a) Sortino > 0 and rule (b) the max_of_m test at L2 are pass conditions; rule (c), the train-to-validation change, is committee evidence and NOT a threshold -- it is reported unjudged, including when validation beats train. This run has purpose 'check' and is not a trial: it does not count toward N. The multiplicity of one validation look per campaign is corrected at L2 by max_of_m, not here."
+}

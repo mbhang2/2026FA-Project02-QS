@@ -1,0 +1,70 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics",
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Code uses only closed bars (history[-1], history[-2]), respects session boundaries, makes no attempt to access scoring infrastructure, and relies on the harness to enforce actionable-bar timing. No lookahead, future-dated state, or peeking detected.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "The best candidate's primary metric (Sortino: -0.137) is negative, indicating the strategy loses money on a risk-adjusted basis. The gate rejects this with p=0.9995, meaning the observed result is far worse than the null distribution (null_max_mean: -0.058, observed_best: -0.137). This is not a marginal case; the strategy underperforms the null by a substantial margin.",
+        "Validation performance deteriorates sharply: train Sortino is -0.137, validation Sortino is -0.218, a degradation of -0.081 (rule_c). The strategy performs worse out-of-sample, not better, which is the opposite of what would support a discovery.",
+        "The denominator for the Sortino ratio is weak: only 37 downside sessions in the validation set (86 total sessions). With so few downside observations, the Sortino estimate is unreliable and the ratio is estimated from a thin tail.",
+        "Net PnL is negative on both train (-83.1) and validation (-42.4). The strategy loses money in absolute terms, not just on risk-adjusted metrics.",
+        "The gate verdict is explicit: 'accepted_any': false, 'verdict': 'REJECT'. The null hypothesis test decisively rejects this candidate."
+      ],
+      "confidence_note": "I cannot see the strategy code or the full distribution of all 50 candidates' scores, but the statistical evidence on this axis is unambiguous: negative returns, failed gate test, deteriorating validation performance, and weak denominator for the risk metric.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "The strategy violates the core hypothesis constraint: average holding period is 54.8 seconds on train (21.0 seconds on validation), not 5+ minutes as required. The hypothesis explicitly states 'Signal measured over 5 minutes. Position held at least 5 minutes. Both are part of the claim and neither is a parameter to tune.' The docstring acknowledges this is a 5m signal but the code implements fixed 4.0-point targets that exit in ~1 minute on average.",
+        "Commission (0.20 per round turn) is the binding constraint and the strategy does not survive it. Gross P&L is +70.5 points across 768 trades; commission paid is 153.6 points. Net result is -83.1 points. The strategy loses money after costs. The hypothesis pre-registration states 'That it survives its own costs. Flow signals fire often, and something that pays before commission and not after is not an effect.'",
+        "The docstring's own analysis reveals the strategy is not working: 'we're still negative' and 'we're not capturing the full move.' The author hypothesized that extending the target to 4.0 points and tightening entry would improve from -0.1437 to -0.12 to -0.10 range. The actual result is -0.137 on train and -0.218 on validation, confirming the strategy does not work.",
+        "The strategy does not implement the 5-minute holding period specified in the hypothesis. The code uses fixed profit targets (4.0 points) and stops (1.5 points) that exit positions in minutes, not the 5+ minute holds required. The avg_holding_period_ns of 54.8 seconds is 5.5x shorter than the minimum 5-minute requirement.",
+        "Validation performance is substantially worse than training (-0.218 vs -0.137), and the strategy loses money on the validation set (net -42.4 points on 172 trades with 34.4 points commission). This indicates overfitting to the training period and no genuine edge."
+      ],
+      "confidence_note": "The economic evidence is complete and unambiguous: the strategy loses money after commission, holds positions for ~1 minute instead of the required 5+ minutes, and fails on validation. The docstring itself documents that the approach is not working. No hidden costs or measurement issues obscure the verdict.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Severe deterioration on validation: train sortino -0.137 vs validation -0.218, a degradation of -0.081. The strategy performs substantially worse on held-out data, suggesting overfitting or sample-specific behavior.",
+        "Extreme concentration by weekday on training data: Wednesday alone accounts for -80.35 out of -42.4 total PnL on validation (188% of losses), indicating the strategy's behavior is heavily regime-dependent and not robust across market conditions.",
+        "Extreme concentration by hour on training data: hours 22-23 UTC account for -137.8 out of total losses across the full dataset, while hour 00 is +51.6. This narrow time-window dependence suggests the strategy is fitted to specific market microstructure that may not persist.",
+        "High profit concentration: top 5% of sessions account for 25.8% of validation profits (and 24.9% on train), indicating results are driven by a small number of outlier sessions rather than consistent behavior.",
+        "Negative Sharpe (-0.174) and Sortino (-0.218) on validation with 37 downside sessions out of 86 (43% loss rate), combined with max drawdown of -74%, indicates the strategy is not robust\u2014it loses money more often than it wins.",
+        "Null reference divergence shows trades_per_session differs by 4.6%, suggesting the strategy's trading frequency or selection is sensitive to sample conditions."
+      ],
+      "confidence_note": "I cannot see out-of-sample results beyond validation or the specific parameter values and filters used; however, the validation deterioration and extreme time/weekday concentration on the training set are concrete evidence of fragility within the data provided.",
+      "error": null
+    }
+  ],
+  "model": "claude-haiku-4-5",
+  "model_served": "claude-haiku-4-5",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

@@ -65,6 +65,20 @@ ABSENT_BY_DESIGN: dict[str, str] = {
         "cited precisely to say it is NOT the name. An `__init__.py` there "
         "makes `tests.alternatives` a package that shadows the real one, which "
         "is why the directory is `tests/l1_engine/`.",
+    "scripts/fetch_papers.py":
+        "designed, not built. `docs/design/paper-retrieval.md` specifies the "
+        "arXiv fetch stage; no code exists yet, and repo-layout.md records "
+        "paper retrieval as loop-side work that is absent from the tree. "
+        "`test_the_allowlist_has_not_rotted` removes this entry the day it is "
+        "written.",
+    "data/papers/manifest.json":
+        "designed, not built. The frozen corpus snapshot a campaign would cite, "
+        "specified in `docs/design/paper-retrieval.md` section 2 -- the reason "
+        "retrieval cannot happen inside a scored run.",
+    "data/papers/manual/":
+        "designed, not built. The manual-deposit path for SSRN, which has no "
+        "public API and whose terms do not permit scraping "
+        "(`docs/design/paper-retrieval.md` stage 0).",
     "config/calendar.yaml":
         "the name the v4 plan used, quoted in `docs/datasets/nq-es-qqq.md` as "
         "history. The file is `config/calendars/nq-trades.yaml` and always was "

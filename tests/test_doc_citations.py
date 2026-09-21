@@ -71,10 +71,11 @@ ABSENT_BY_DESIGN: dict[str, str] = {
         "paper retrieval as loop-side work that is absent from the tree. "
         "`test_the_allowlist_has_not_rotted` removes this entry the day it is "
         "written.",
-    "data/papers/manifest.json":
-        "designed, not built. The frozen corpus snapshot a campaign would cite, "
-        "specified in `docs/design/paper-retrieval.md` section 2 -- the reason "
-        "retrieval cannot happen inside a scored run.",
+    "data/papers/registry.json":
+        "designed, not built. The record of which papers have been pulled, "
+        "screened, written up and run (`docs/design/paper-retrieval.md` section "
+        "2). Deliberately NOT a fingerprinted artifact: it is bookkeeping, and "
+        "the frozen thing is the hypothesis file it leads to.",
     "data/papers/manual/":
         "designed, not built. The manual-deposit path for SSRN, which has no "
         "public API and whose terms do not permit scraping "

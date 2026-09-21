@@ -482,9 +482,19 @@ has had no sanity check before it reaches the loop.
 
 ## Amendment 3 — 2026-09-20 — the idle-capital charge, and why the metric was hackable
 
-**Status: DRAFT, not in force.** Written while `nq-orderflow-01` is running and
-before any code changes. Nothing below applies to `nq-mvp-01` or
-`nq-orderflow-01`; both were scored under `MAR = 0` and stay that way.
+**Status: IN FORCE from commit `012c26b`, 2026-09-20.** Written while
+`nq-orderflow-01` was still running and implemented after it finished. It does
+**not** apply to `nq-mvp-01` or `nq-orderflow-01`: both were scored under
+`MAR = 0` and stay that way, and `nq-orderflow-01` is kept deliberately as the
+unconstrained arm.
+
+Two things found during implementation are recorded below under *What
+implementation changed*, because both were reward hacks inside the fix and
+neither was anticipated here.
+
+Re-scoring `nq-orderflow-01`'s 50 trials under the charge inverts the campaign:
+the winner moves from trial 16 (8 exposed sessions) to trial 4 (208), and
+`corr(exposed, score)` from **-0.935 to +0.762**.
 
 ### What went wrong
 
@@ -739,6 +749,29 @@ reassembled per-session vector carries the charge.
   (4) and the decision not to adopt a participation floor (5) are the two places
   where a second opinion is most worth having, since both were reasonable
   alternatives.
+
+### What implementation changed — two hacks inside the fix
+
+**The charge has to be per contract.** A flat charge in index points is diluted by
+position size: P&L scales with contracts and a fixed charge does not, so at 100
+contracts a 0.18 charge moved a score from -0.3554 to -0.0676 -- within a rounding
+error of no charge at all. Sizing up escapes the idle cost, which is the same
+corner case wearing a different hat. `position_scale` charges per contract of peak
+position, restoring scale invariance exactly: double the position and P&L, margin
+and the charge all double.
+
+**Peak position, not largest fill.** The first fallback for blotters that never
+record a non-zero position used the largest single fill, and it broke
+trade-splitting invariance -- chopping one trade into two halves the largest fill
+without changing the capital committed. There is no fallback now; a blotter with no
+recorded position gets a scale of 1.0.
+
+**A known bound.** The charge does not reverse the incentive for a *low-dispersion
+heavy loser*, because it competes with the downside deviation and cannot outweigh a
+per-session loss several times its size. Such a strategy scores near -1 and is at
+the bottom of its campaign either way, so the gate is unaffected and only the
+ordering among hopeless candidates is wrong. Asserted in
+`tests/test_idle_charge.py` so it is a documented limit rather than a surprise.
 
 ### What this does not claim
 

@@ -74,6 +74,36 @@ three does not cost hours one and two. Use `caffeinate -i` on a laptop.
 Docs, `scripts/`, `audit/` and `tests/` are safe to edit — nothing a trial spawns
 imports them.
 
+**And do not add, remove or edit ANY file under a fingerprinted artifact path**,
+even one this campaign does not use. `ARTIFACT_GLOBS` (`src/core/scoring/
+integrity.py`) covers whole directories — `config/*.yaml`, `config/prompts/*.md`,
+`config/hypotheses/*.md`, `data/calibration/*.json` and a few named files — and
+the check compares the **whole set** at load against after the run. A file
+appearing or disappearing anywhere in those globs invalidates the trial that was
+in flight:
+
+```
+config/hypotheses/Test1.md: absent -> f06a6289ea3f
+The score this run produced was not produced by the artifacts the row names.
+```
+
+That happened during `nq-orderflow-02`: an unrelated hypothesis file was dropped
+into `config/hypotheses/` at trial 15 and cost that trial. The guard is right --
+it refuses to attribute a score to an artifact state that did not hold for the
+whole run -- but it is **broader than the dependency**: the campaign only reads
+its own hypothesis, and a second file in the directory cannot affect its result.
+
+Two practical consequences:
+
+- Copy candidate hypotheses somewhere outside `config/` until you mean to
+  register them. `/tmp`, a scratch dir, anywhere untracked and unfingerprinted.
+- Once a stray file is there, **leave it** until the campaign ends. Deleting it
+  is a second transition and costs a second trial.
+
+An invalidated trial is recorded with `outcome: invalidated_artifacts_mutated`
+and no score. It still occupies one of the N, which is correct -- the data was
+looked at.
+
 **On a machine short of memory, supervise it instead of babysitting it:**
 
 ```

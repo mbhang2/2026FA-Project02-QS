@@ -72,8 +72,10 @@ manual-deposit path: a human drops a PDF into `data/papers/manual/` with a small
 metadata sidecar. Automating it is not a technical problem to solve, it is a
 licence we do not have.
 
-Output: `data/papers/raw/<id>.json`, and `data/papers/manifest.json` recording the
-query, the UTC date, and every id returned. Idempotent and resumable.
+Output: `data/papers/raw/<id>.json`, and a row per paper appended to
+`data/papers/registry.json` with the query and UTC date it came from. Idempotent
+and resumable -- a paper already in the registry is not re-fetched, and its
+`status` is left alone.
 
 ### Stage 1 — screen for feasibility, and for **adaptability**
 
@@ -133,8 +135,8 @@ compresses because his loop re-embeds the paper per step, we compress because th
 hypothesis is the pre-registered question and a question should be short enough to
 hold in mind.
 
-The file cites the paper id and the corpus manifest digest, so the chain from
-result back to source is complete.
+The file cites the paper id and its registry row, so the chain from result back to
+source is complete without the corpus itself having to be frozen.
 
 ## 4. What this costs in N — the rule that is easy to get wrong
 

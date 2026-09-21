@@ -1,0 +1,70 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics",
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The strategy accesses only closed bars via ctx.history() and ctx.bars subscriptions; all calculations use completed bar data (delta, volume, close, high, low) from lookback windows; no future-dated state is carried on self; no access to scoring infrastructure or evaluation context.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "The best candidate's primary metric (Sortino = -0.297) is negative, indicating the strategy loses money on a risk-adjusted basis. The gate rejects it with p=0.335, well above any significance threshold.",
+        "The validation split shows severe degradation: train Sortino = -0.297, validation Sortino = -0.787, a decline of -0.49. The strategy performs substantially worse out-of-sample, suggesting overfitting or instability.",
+        "Net PnL is deeply negative: -$10,920 on train, -$21,541 on validation. The strategy is not profitable; it is a consistent loss-maker across both splits.",
+        "Validation diagnostics show profit concentration at 1.0 (best_session_share = 1.0), meaning all profits come from a single session. This is a degenerate concentration that makes the metric unreliable.",
+        "The gate's null_max_mean is -0.299 and observed_best is -0.297, placing the candidate barely above the null distribution's mean. The candidate is not distinguishable from random noise.",
+        "All 50 candidates in the correction table have FAR = 0.5 and zero discoveries under BH or Holm. This indicates the entire campaign found no signal; the best result is indistinguishable from the null."
+      ],
+      "confidence_note": "I cannot see the strategy code or how many prior campaigns preceded this one, but the statistical evidence is unambiguous: negative returns, failed gate test, severe validation degradation, and degenerate concentration all point to a non-discovery.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "The strategy tests the OPPOSITE direction from the hypothesis. The hypothesis asserts 'aggressive flow continues' \u2014 that positive delta predicts higher prices and negative delta predicts lower prices. The code enters LONG when `fast_imbalance > buy_threshold_adjusted` (positive delta) and SHORT when `fast_imbalance < -sell_threshold_adjusted` (negative delta). This is correct directionally. However, the economic result is catastrophic: net P&L of -10,920 points on 25,499 trades, with commission of 5,901 points consuming 54% of gross losses. The strategy is losing money systematically in both directions, which means the flow-continuation hypothesis is falsified on this data. A strategy that loses this badly is not an implementation of the hypothesis; it is evidence the hypothesis is wrong.",
+        "The result is entirely explained by costs. Gross P&L is -5,019 points; commission paid is 5,901 points. The strategy would need to generate +881 points of gross profit just to break even. Instead it generates -5,019 points gross. Commission per round turn is 0.20 points (0.1 per side \u00d7 2 fills). With 25,499 trades, the strategy is paying roughly 2,550 round turns of commission. The hypothesis requires an edge larger than the spread plus commission to survive; this strategy has no edge at all \u2014 it has a loss that commission then amplifies.",
+        "The validation split shows severe degradation and consistent losses across all hours and months. Train Sortino: -0.297; validation Sortino: -0.787 (a 0.49-point drop). Validation net P&L: -21,541 points on 46,434 trades. The by_hour_utc breakdown shows losses in every single hour from 00 to 23 UTC, ranging from -327 to -1,334 points per hour. The by_month breakdown shows losses in every month tested (Jan through May 2026), from -953 to -8,008 points. This is not a signal that works sometimes; it is a systematic loss.",
+        "The strategy is not testing the hypothesis; it is testing whether order flow predicts price movement in the direction the flow came from. The hypothesis is that continuation happens. The data shows it does not \u2014 or if it does, the effect is smaller than the cost of trading on it. A strategy that loses money on both long and short signals has not found an edge in either direction; it has found that the hypothesis is false on this instrument at this horizon."
+      ],
+      "confidence_note": "The docstring is verbose but does not state a developed hypothesis distinct from the original \u2014 it describes parameter choices and trial history rather than a refined claim about what the strategy is testing. The code implements the stated logic correctly (buy on positive imbalance, sell on negative), so the mismatch is not between docstring and code, but between the hypothesis (flow continues) and the economic reality (flow does not predict price movement profitably). The validation evidence is clear and consistent: losses across all time periods, all hours, and both directions, with commission consuming more than half the gross loss. This is not a borderline case or a question of whether the edge is real; the strategy loses money systematically.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Severe degradation on validation split: Sortino drops from -0.297 (train) to -0.787 (validation), a deterioration of -0.49. The strategy is substantially worse out-of-sample, not better.",
+        "Validation performance is deeply negative across all time periods: by_hour_utc shows losses in every single hour (range -327 to -1334); by_month shows losses in all 5 validation months (range -953 to -8008); by_weekday shows losses on all 6 days. No regime where it performs acceptably.",
+        "Validation net PnL is -21,541 on 46,434 trades with 44% win rate and -0.79 Sortino. Commission alone is 10,510, leaving gross PnL of -11,031. The strategy is losing money systematically.",
+        "Profit concentration on validation is extreme: best_session_share = 1.0 and profit_concentration_top5pct = 1.0, meaning all profits (if any existed) come from a single session. This indicates the result is not robust to session variation.",
+        "Null reference divergence is substantial: trades_per_session differs by 12.4x, exposure_share by 0.78, return_dispersion by 0.72, and holding period by 0.099. The strategy behaves very differently from the reference, suggesting it may be exploiting artifacts rather than genuine signal.",
+        "High kurtosis (-0.85) and negative skew (-0.25) on validation indicate fat left tail and asymmetric downside risk, consistent with a strategy that fails under stress."
+      ],
+      "confidence_note": "This audit sees only the validation split performance and cannot assess out-of-sample generalization beyond it; however, the validation split itself shows the strategy is substantially worse than training, with losses distributed across all time periods and extreme concentration in a single session.",
+      "error": null
+    }
+  ],
+  "model": "claude-haiku-4-5",
+  "model_served": "claude-haiku-4-5",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

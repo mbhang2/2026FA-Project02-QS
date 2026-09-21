@@ -237,6 +237,13 @@ def stage_register(name: str, hypothesis: pathlib.Path) -> None:
     agent_cfg["b_null"] = B_NULL
     agent_cfg["model_served_at_registration"] = served["served"]
     agent_cfg["commission_per_contract"] = profile["commission_per_contract"]
+    # Amendment 3. In the record because the campaign is scored with it, so a
+    # reader cannot tell what the numbers mean without it -- and because the
+    # record digest then covers it, which is what stops it changing mid-campaign
+    # the way the hypothesis cannot.
+    from src.core.scoring.metrics import IDLE_CHARGE
+
+    agent_cfg["idle_charge"] = cc.get("idle_charge", IDLE_CHARGE)
 
     d.mkdir(parents=True, exist_ok=True)
     record = CampaignRecord(

@@ -10,6 +10,29 @@
       "final_position": 1,
       "rows": 461,
       "score_exact": {
+        "metric": "sortino_per_session",
+        "primary": "-0x1.d4eab2d1b54efp-2",
+        "significance": "-0x1.5ac4c5d11fe04p+1",
+        "sharpe": "-0x1.eb7e6b443a728p-2",
+        "sortino": "-0x1.d4eab2d1b54efp-2",
+        "skew": "-0x1.f5afe4d207da7p-1",
+        "kurtosis": "0x1.ea7b6704559dcp-1",
+        "n_sessions": 35,
+        "net_pnl": "-0x1.86e147ae147aep+5",
+        "trade_count": 230,
+        "rejected": false,
+        "reject_reason": "",
+        "downside_sessions": 20
+      },
+      "sessions_left_open": 28,
+      "spec": {
+        "n_sessions": 175,
+        "seed": 1,
+        "signal_strength": 0.0,
+        "ticks_per_session": 390,
+        "vol_per_tick": 0.15
+      },
+      "superseded_score_exact_amendment3": {
         "downside_sessions": 20,
         "kurtosis": "0x1.ed8e58e2ac120p-1",
         "metric": "sortino_per_session",
@@ -23,14 +46,6 @@
         "skew": "-0x1.f44b9d617c2e6p-1",
         "sortino": "-0x1.cfeede2030f75p-2",
         "trade_count": 230
-      },
-      "sessions_left_open": 28,
-      "spec": {
-        "n_sessions": 175,
-        "seed": 1,
-        "signal_strength": 0.0,
-        "ticks_per_session": 390,
-        "vol_per_tick": 0.15
       }
     },
     {
@@ -43,6 +58,29 @@
       "final_position": 0,
       "rows": 702,
       "score_exact": {
+        "metric": "sortino_per_session",
+        "primary": "-0x1.cf7dd186e7a86p-3",
+        "significance": "-0x1.56c1ae9c85da1p+0",
+        "sharpe": "-0x1.8e929b2cda7eep-3",
+        "sortino": "-0x1.cf7dd186e7a86p-3",
+        "skew": "-0x1.4ff29d9357d56p-1",
+        "kurtosis": "0x1.98d459a499d00p-5",
+        "n_sessions": 35,
+        "net_pnl": "-0x1.c8a3d70a3d70ap+3",
+        "trade_count": 351,
+        "rejected": false,
+        "reject_reason": "",
+        "downside_sessions": 21
+      },
+      "sessions_left_open": 28,
+      "spec": {
+        "n_sessions": 175,
+        "seed": 1,
+        "signal_strength": 0.0,
+        "ticks_per_session": 390,
+        "vol_per_tick": 0.15
+      },
+      "superseded_score_exact_amendment3": {
         "downside_sessions": 21,
         "kurtosis": "0x1.2924ccafee940p-5",
         "metric": "sortino_per_session",
@@ -56,14 +94,6 @@
         "skew": "-0x1.4ecef06e85ac6p-1",
         "sortino": "-0x1.aeaef37f31563p-3",
         "trade_count": 351
-      },
-      "sessions_left_open": 28,
-      "spec": {
-        "n_sessions": 175,
-        "seed": 1,
-        "signal_strength": 0.0,
-        "ticks_per_session": 390,
-        "vol_per_tick": 0.15
       }
     },
     {
@@ -76,6 +106,29 @@
       "final_position": -1,
       "rows": 923,
       "score_exact": {
+        "metric": "sortino_per_session",
+        "primary": "0x1.55fd100f21244p+1",
+        "significance": "0x1.f9cecf5d00508p+3",
+        "sharpe": "0x1.dfa742684f3c2p-1",
+        "sortino": "0x1.55fd100f21244p+1",
+        "skew": "-0x1.25a24c76ce919p-1",
+        "kurtosis": "-0x1.eb39db7457500p-3",
+        "n_sessions": 35,
+        "net_pnl": "0x1.158a3d70a3d71p+7",
+        "trade_count": 461,
+        "rejected": false,
+        "reject_reason": "",
+        "downside_sessions": 7
+      },
+      "sessions_left_open": 19,
+      "spec": {
+        "n_sessions": 175,
+        "seed": 1,
+        "signal_strength": 0.5,
+        "ticks_per_session": 390,
+        "vol_per_tick": 0.15
+      },
+      "superseded_score_exact_amendment3": {
         "downside_sessions": 7,
         "kurtosis": "-0x1.ea47f8bc90230p-3",
         "metric": "sortino_per_session",
@@ -89,14 +142,6 @@
         "skew": "-0x1.263c5ad0dbae8p-1",
         "sortino": "0x1.5d6176b2b67ddp+1",
         "trade_count": 461
-      },
-      "sessions_left_open": 19,
-      "spec": {
-        "n_sessions": 175,
-        "seed": 1,
-        "signal_strength": 0.5,
-        "ticks_per_session": 390,
-        "vol_per_tick": 0.15
       }
     },
     {
@@ -109,6 +154,29 @@
       "final_position": 0,
       "rows": 1162,
       "score_exact": {
+        "metric": "sharpe_per_session",
+        "primary": "0x1.86540ba103480p+0",
+        "significance": "0x1.20a6d3ffe6cc4p+3",
+        "sharpe": "0x1.86540ba103480p+0",
+        "sortino": "0x1.e3190e9941c10p+2",
+        "skew": "-0x1.3a4f137bca102p-1",
+        "kurtosis": "-0x1.3503196b9e8e0p-4",
+        "n_sessions": 35,
+        "net_pnl": "0x1.c3c28f5c28f5cp+7",
+        "trade_count": 581,
+        "rejected": false,
+        "reject_reason": "2 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+        "downside_sessions": 2
+      },
+      "sessions_left_open": 20,
+      "spec": {
+        "n_sessions": 175,
+        "seed": 1,
+        "signal_strength": 0.5,
+        "ticks_per_session": 390,
+        "vol_per_tick": 0.15
+      },
+      "superseded_score_exact_amendment3": {
         "downside_sessions": 2,
         "kurtosis": "-0x1.0eea9ffb251a0p-4",
         "metric": "sharpe_per_session",
@@ -122,14 +190,6 @@
         "skew": "-0x1.3c4bc0b54495cp-1",
         "sortino": "0x1.eda84927b059dp+2",
         "trade_count": 581
-      },
-      "sessions_left_open": 20,
-      "spec": {
-        "n_sessions": 175,
-        "seed": 1,
-        "signal_strength": 0.5,
-        "ticks_per_session": 390,
-        "vol_per_tick": 0.15
       }
     },
     {
@@ -142,6 +202,29 @@
       "final_position": 0,
       "rows": 1164,
       "score_exact": {
+        "metric": "sharpe_per_session",
+        "primary": "0x1.2dcc4e5db820ep+0",
+        "significance": "0x1.be5d88a4caa4bp+2",
+        "sharpe": "0x1.2dcc4e5db820ep+0",
+        "sortino": "0x1.90126a6172f1cp+2",
+        "skew": "-0x1.2c781e478cb05p-2",
+        "kurtosis": "-0x1.2141ccc7c93bdp+0",
+        "n_sessions": 35,
+        "net_pnl": "0x1.c0b851eb851ecp+7",
+        "trade_count": 582,
+        "rejected": false,
+        "reject_reason": "4 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+        "downside_sessions": 4
+      },
+      "sessions_left_open": 23,
+      "spec": {
+        "n_sessions": 175,
+        "seed": 3,
+        "signal_strength": 0.75,
+        "ticks_per_session": 390,
+        "vol_per_tick": 0.15
+      },
+      "superseded_score_exact_amendment3": {
         "downside_sessions": 4,
         "kurtosis": "-0x1.21169730df029p+0",
         "metric": "sharpe_per_session",
@@ -155,14 +238,6 @@
         "skew": "-0x1.2bddfd4bd7475p-2",
         "sortino": "0x1.9b821b57d2e8fp+2",
         "trade_count": 582
-      },
-      "sessions_left_open": 23,
-      "spec": {
-        "n_sessions": 175,
-        "seed": 3,
-        "signal_strength": 0.75,
-        "ticks_per_session": 390,
-        "vol_per_tick": 0.15
       }
     },
     {
@@ -175,6 +250,29 @@
       "final_position": -1,
       "rows": 1415,
       "score_exact": {
+        "metric": "sharpe_per_session",
+        "primary": "0x1.6de8822b61f55p+0",
+        "significance": "0x1.0e97c11366190p+3",
+        "sharpe": "0x1.6de8822b61f55p+0",
+        "sortino": "0x1.30de29c7af8ccp+3",
+        "skew": "-0x1.8baafc97d71efp-2",
+        "kurtosis": "-0x1.c5cb54615d564p-1",
+        "n_sessions": 35,
+        "net_pnl": "0x1.3c9999999999ap+8",
+        "trade_count": 707,
+        "rejected": false,
+        "reject_reason": "3 below-MAR session(s) is under the pre-registered 5; scored on Sharpe instead",
+        "downside_sessions": 3
+      },
+      "sessions_left_open": 21,
+      "spec": {
+        "n_sessions": 175,
+        "seed": 3,
+        "signal_strength": 0.75,
+        "ticks_per_session": 390,
+        "vol_per_tick": 0.15
+      },
+      "superseded_score_exact_amendment3": {
         "downside_sessions": 3,
         "kurtosis": "-0x1.c75852e47cab4p-1",
         "metric": "sharpe_per_session",
@@ -188,14 +286,6 @@
         "skew": "-0x1.8b34579e46b30p-2",
         "sortino": "0x1.39e84fcdab641p+3",
         "trade_count": 707
-      },
-      "sessions_left_open": 21,
-      "spec": {
-        "n_sessions": 175,
-        "seed": 3,
-        "signal_strength": 0.75,
-        "ticks_per_session": 390,
-        "vol_per_tick": 0.15
       }
     },
     {
@@ -208,6 +298,30 @@
       "final_position": -1,
       "rows": 979,
       "score_exact": {
+        "metric": "sortino_per_session",
+        "primary": "-inf",
+        "significance": "-inf",
+        "sharpe": "0x1.57757da1e27fdp-3",
+        "sortino": "0x0.0p+0",
+        "skew": "-0x1.8e5e7a75b65b1p-2",
+        "kurtosis": "-0x1.7d255fa928ff0p-1",
+        "n_sessions": 24,
+        "net_pnl": "0x1.375c28f5c28f6p+4",
+        "trade_count": 489,
+        "rejected": true,
+        "reject_reason": "24 sessions is below the pre-registered floor of 30",
+        "downside_sessions": 0
+      },
+      "sessions_left_open": 18,
+      "spec": {
+        "early_close_rate": 0.15,
+        "n_sessions": 120,
+        "seed": 17,
+        "signal_strength": 0.3,
+        "ticks_per_session": 780,
+        "vol_per_tick": 0.15
+      },
+      "superseded_score_exact_amendment3": {
         "downside_sessions": 0,
         "kurtosis": "-0x1.7ce9b48e8e318p-1",
         "metric": "sortino_per_session",
@@ -221,15 +335,6 @@
         "skew": "-0x1.8ff5539ecb561p-2",
         "sortino": "0x0.0p+0",
         "trade_count": 489
-      },
-      "sessions_left_open": 18,
-      "spec": {
-        "early_close_rate": 0.15,
-        "n_sessions": 120,
-        "seed": 17,
-        "signal_strength": 0.3,
-        "ticks_per_session": 780,
-        "vol_per_tick": 0.15
       }
     },
     {
@@ -242,6 +347,30 @@
       "final_position": 1,
       "rows": 1293,
       "score_exact": {
+        "metric": "sortino_per_session",
+        "primary": "-inf",
+        "significance": "-inf",
+        "sharpe": "0x1.b546c66616a62p-1",
+        "sortino": "0x0.0p+0",
+        "skew": "-0x1.3327815747dbbp-2",
+        "kurtosis": "-0x1.2693038d647d7p+0",
+        "n_sessions": 24,
+        "net_pnl": "0x1.7b47ae147ae14p+6",
+        "trade_count": 646,
+        "rejected": true,
+        "reject_reason": "24 sessions is below the pre-registered floor of 30",
+        "downside_sessions": 0
+      },
+      "sessions_left_open": 15,
+      "spec": {
+        "early_close_rate": 0.15,
+        "n_sessions": 120,
+        "seed": 17,
+        "signal_strength": 0.3,
+        "ticks_per_session": 780,
+        "vol_per_tick": 0.15
+      },
+      "superseded_score_exact_amendment3": {
         "downside_sessions": 0,
         "kurtosis": "-0x1.26ab81066fe4ep+0",
         "metric": "sortino_per_session",
@@ -255,20 +384,11 @@
         "skew": "-0x1.30d1f01b54589p-2",
         "sortino": "0x0.0p+0",
         "trade_count": 646
-      },
-      "sessions_left_open": 15,
-      "spec": {
-        "early_close_rate": 0.15,
-        "n_sessions": 120,
-        "seed": 17,
-        "signal_strength": 0.3,
-        "ticks_per_session": 780,
-        "vol_per_tick": 0.15
       }
     }
   ],
   "generator": "irregular (the default since Task 17)",
   "how_to_rebaseline": "A digest moving means behaviour moved. Name which cases moved and why, in the commit, before regenerating. If the reason is 'the generator changed', that is a data change and belongs in its own commit.",
-  "note": "Golden blotters on the **irregular** generator -- variable session lengths with early closes, empty intervals, volatility clustering. The set in pre_context_refactor.json pins uniform=True and is the long-lived behaviour reference carried since Task 5; this one covers the path that actually found defects. Task 17 surfaced four of them here and none of them on the uniform path, so leaving the irregular path without a golden set left the more productive half unprotected.",
+  "note": "Golden blotters on the **irregular** generator -- variable session lengths with early closes, empty intervals, volatility clustering. The set in pre_context_refactor.json pins uniform=True and is the long-lived behaviour reference carried since Task 5; this one covers the path that actually found defects. Task 17 surfaced four of them here and none of them on the uniform path, so leaving the irregular path without a golden set left the more productive half unprotected.\n\nScore references re-baselined at pre-registration Amendment 3: sessions with no position now carry an idle-capital charge, so every score on every dataset moves. Blotter digests are unchanged and were asserted before regenerating -- the engine did not move, only the metric. superseded_*_amendment3 keeps the pre-charge values so the change is auditable rather than silent.",
   "strategy": "src/strategies/current.py::MomentumStrategy"
 }

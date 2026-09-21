@@ -234,4 +234,17 @@ campaign:
 
   q: 0.05
 
+  # Pre-registration Amendment 3. Index points charged against a session in which
+  # no position was held, pro-rated by the fraction of the session that WAS held.
+  # A cost of capital: ~$20,000 of initial margin at ~4.5% over 252 days at $20 a
+  # point. It exists because MAR = 0 over the full calendar made sitting out
+  # profitable for a losing strategy -- sortino goes as 1/sqrt(n), so flat
+  # sessions drag a negative score toward zero and the agent learns to stop
+  # trading. nq-mvp-01 ended on 3 trades in 384 sessions; nq-orderflow-01 on 8.
+  #
+  # Derived, never fitted. Set 0.0 to score the way the first two campaigns were
+  # scored -- which is the ONLY comparison it should be used for, since nothing
+  # after this amendment is comparable to anything before it.
+  idle_charge: 0.18
+
 ledger: runs/ledger.jsonl

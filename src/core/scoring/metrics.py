@@ -29,6 +29,7 @@ Conventions, all deliberate and all stated in `docs/design/metric.md`:
 
 from __future__ import annotations
 
+import bisect
 import inspect
 import math
 from collections import defaultdict
@@ -51,6 +52,22 @@ MIN_SESSIONS = 30
 # the fallback path carries its own name so it is calibrated against its own
 # null rather than Sortino's.
 MIN_DOWNSIDE_SESSIONS = 5
+
+# Pre-registration Amendment 3. A session in which no position was held is
+# charged this many index points, pro-rated by the fraction of the session that
+# WAS held. It is a cost of capital -- roughly $20,000 of initial margin at ~4.5%
+# over 252 days at $20 a point -- and it exists because `MAR = 0` over the full
+# calendar made sitting out *profitable*: `sortino` goes as `1/sqrt(n)` for a
+# fixed set of trades, so padding the return vector with flat sessions drags a
+# negative score toward zero. An agent optimising that learns to stop trading,
+# which is exactly what `nq-mvp-01` (3 trades in 384 sessions) and
+# `nq-orderflow-01` (8) did.
+#
+# Derived, not fitted. Plausible inputs -- margin $15k-$30k, rates 4-5% -- span
+# 0.12 to 0.30, and the measured window in which the incentive points at
+# participation without rewarding churn is 0.10 to 0.30. Re-derive if rates move;
+# never re-fit to a result.
+IDLE_CHARGE = 0.18
 
 # The sentinel. -inf rather than None so any comparison against a threshold
 # rejects, however careless the caller.
@@ -90,11 +107,135 @@ def session_calendar(dataset, sessions: Iterable[int]) -> list[SessionSpan]:
     return sorted(out, key=lambda x: x.start_ts)
 
 
+def _held_intervals(rows: Sequence[BlotterRow], end_ts: Ts) -> list[tuple[Ts, Ts]]:
+    """Intervals `[opened, flat)` during which a position was held.
+
+    Unlike `_holding_periods`, which returns durations and **drops a position
+    still open at the end of the data** -- its loop only appends on a return to
+    flat. Dropping it would hand the strategy free exposure for every session
+    after it stopped closing, so an open position is carried to `end_ts`.
+    """
+    out: list[tuple[Ts, Ts]] = []
+    opened: Ts | None = None
+    for row in rows:
+        if opened is None and row.position_after != 0:
+            opened = row.ts
+        elif opened is not None and row.position_after == 0:
+            out.append((opened, row.ts))
+            opened = None
+    if opened is not None:
+        out.append((opened, max(opened, end_ts)))
+    return out
+
+
+def session_exposure(
+    blotter: Blotter,
+    calendar: Sequence[SessionSpan],
+) -> list[float]:
+    """Fraction of each session during which a position was held, in [0, 1].
+
+    **Time-weighted, and that is the point.** Counting "a session with at least
+    one fill" as exposed -- which is what `sessions_with_exposure` reports -- lets
+    one lot held for a minute stand in for a whole session, so a strategy can
+    dodge the idle charge entirely while being effectively flat. At a 6.5-hour
+    session that minute is 0.3% of the day and is charged 99.7% of the rate here.
+
+    Exposure is clipped per session, deliberately unlike P&L, which
+    `session_returns` attributes wholly to the session a position was closed in.
+    That asymmetry is intended: P&L attribution is limited by what a blotter can
+    support, exposure is not, and pretending otherwise would make an overnight
+    hold free in the session it was carried through.
+
+    Invariant under the sign-flip null -- flipping a round turn changes its P&L,
+    never its timestamps -- which is why one vector is correct for the observed
+    series and for every draw.
+    """
+    if not calendar:
+        return []
+    spans = sorted(calendar, key=lambda s: s.start_ts)
+    intervals = _held_intervals(blotter.rows, spans[-1].end_ts)
+    starts = [s.start_ts for s in spans]
+    out = [0.0] * len(spans)
+    for lo, hi in intervals:
+        if hi <= lo:
+            continue
+        # Only the sessions this interval can touch, so a long hold over a long
+        # calendar does not cost a full scan per interval.
+        i = bisect.bisect_right(starts, lo) - 1
+        if i < 0:
+            i = 0
+        while i < len(spans) and spans[i].start_ts <= hi:
+            span = spans[i]
+            a, b = max(lo, span.start_ts), min(hi, span.end_ts)
+            if b > a:
+                out[i] += float(b - a)
+            i += 1
+    for i, span in enumerate(spans):
+        total = float(span.end_ts - span.start_ts)
+        out[i] = min(1.0, out[i] / total) if total > 0 else 0.0
+    order = {s.session: i for i, s in enumerate(spans)}
+    return [out[order[s.session]] for s in calendar]
+
+
+def position_scale(blotter: Blotter) -> float:
+    """Peak contracts held, which is what the capital is sized for.
+
+    **The idle charge is per contract, and it has to be.** A flat charge in index
+    points is diluted by size: P&L scales with contracts and a fixed charge does
+    not, so a strategy escapes the charge entirely by trading bigger -- at 100
+    contracts a 0.18 charge moves the score from -0.0645 to -0.0676 instead of
+    -0.3554. That is a new reward hack in place of the one being closed, and it
+    is what `test_scaling_every_position_by_a_constant_does_not_change_the_score`
+    exists to catch.
+
+    Scaling by peak position restores that invariance exactly: double every
+    position and P&L, margin and the charge all double, leaving the ratio alone.
+    Peak rather than average because margin is posted for the largest position
+    taken, not the typical one.
+
+    **Position, not fill size.** The largest single fill was tried as a fallback
+    for blotters that never record a non-zero position, and it is wrong: splitting
+    one trade into two halves halves the largest fill without changing the capital
+    committed, which broke trade-splitting invariance. Peak position is invariant
+    to how a trade is chopped up, which is the property wanted here.
+
+    A blotter that never records a non-zero position -- a synthetic P&L-only
+    fixture, or a strategy that never traded -- has no scale to measure and gets
+    1.0. For the strategy that never traded it changes nothing: every session is
+    charged the same amount, the return vector has no dispersion, and
+    `score_returns` rejects it at any scale.
+    """
+    peak = max((abs(r.position_after) for r in blotter.rows), default=0)
+    return float(peak) if peak > 0 else 1.0
+
+
+def idle_charges(
+    blotter: Blotter,
+    calendar: Sequence[SessionSpan],
+    *,
+    idle_charge: float = IDLE_CHARGE,
+    notional_base: float = 1.0,
+) -> list[float]:
+    """The per-session charge vector: `-idle_charge * contracts * (1 - exposure)`.
+
+    Computed once and used by both `session_returns` and the sign-flip null. A
+    charge the observed series pays and the null does not moves a measured p from
+    0.0367 to 0.1813, because the null is handed free upside on sessions that
+    never carried a bet.
+    """
+    if idle_charge <= 0:
+        return [0.0] * len(calendar)
+    scale = position_scale(blotter)
+    return [-idle_charge * scale * (1.0 - f) / notional_base
+            for f in session_exposure(blotter, calendar)]
+
+
 def session_returns(
     blotter: Blotter,
     calendar: Sequence[SessionSpan],
     *,
     notional_base: float = 1.0,
+    idle_charge: float = IDLE_CHARGE,
 ) -> list[float]:
     """One observation per session in the calendar, flat sessions included.
 
@@ -118,7 +259,10 @@ def session_returns(
         if s is None:
             continue
         per[s].append(row.realized_pnl - row.commission)
-    return [math.fsum(per[s.session]) / notional_base for s in calendar]
+    charges = idle_charges(blotter, calendar, idle_charge=idle_charge,
+                           notional_base=notional_base)
+    return [math.fsum(per[s.session]) / notional_base + c
+            for s, c in zip(calendar, charges)]
 
 
 def _session_of(ts: Ts, calendar: Sequence[SessionSpan]) -> int | None:

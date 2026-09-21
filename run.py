@@ -59,6 +59,7 @@ from src.core.scoring import integrity  # noqa: E402
 # reach this reference. That closes the cheapest version of the attack and not
 # the general one -- these functions call into `metrics` by attribute, so the
 # fingerprint below is what actually covers it.
+from src.core.scoring.metrics import IDLE_CHARGE
 from src.core.scoring.scorer import score, score_diagnostics  # noqa: E402
 from src.core.types import HoldoutLocked, Split  # noqa: E402
 
@@ -555,13 +556,21 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
         )
     integrity.check(SCORING_AT_IMPORT, integrity.fingerprint())
     integrity.check_artifacts(ARTIFACTS_AT_IMPORT, integrity.artifact_digests())
+    # Pre-registration Amendment 3. Read from the config, not left to the
+    # default, for the reason Task 60 cost 206,710 fills' worth of commission: a
+    # value declared in run.yaml that never reaches the code is a value the whole
+    # record claims and nothing charges. Scoring and diagnostics must be handed
+    # the same one or the diagnostics describe a different return vector.
+    idle_charge = cfg.get("campaign", {}).get("idle_charge", IDLE_CHARGE)
     result = score(scored_blotter, period=period,
-                   notional_base=profile.get("notional_base", 1.0))
+                   notional_base=profile.get("notional_base", 1.0),
+                   idle_charge=idle_charge)
     engine.record.score = result.as_dict()
     engine.record.diagnostics = score_diagnostics(
         scored_blotter,
         period,
         notional_base=profile.get("notional_base", 1.0),
+        idle_charge=idle_charge,
         fill_model_spread=(
             _fill_model_spread(cfg, profile, seed, strategy, split, engine)
             if profile.get("record_fill_spread")

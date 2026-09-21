@@ -50,8 +50,17 @@ def test_round_turns_reconstruct_the_session_returns_exactly():
     b = _blotter([(0, 3.0, 0.1), (2, -1.0, 0.1), (2, 0.5, 0.1)])
     turns = rt.round_turns(b, cal)
     assert len(turns) == 3
+    # Against the UNCHARGED vector: round turns decompose trading P&L, and the
+    # idle charge is not trading P&L. Comparing to the charged vector would be
+    # asking the decomposition to account for a cost of capital it never saw.
     assert sum(t.gross - t.cost for t in turns) == pytest.approx(
-        sum(metrics.session_returns(b, cal)))
+        sum(metrics.session_returns(b, cal, idle_charge=0.0)))
+    # And the charged vector differs from it by exactly the charge, which pins
+    # the other half: the charge is additive and touches nothing else.
+    charged = sum(metrics.session_returns(b, cal))
+    assert charged == pytest.approx(
+        sum(metrics.session_returns(b, cal, idle_charge=0.0))
+        + sum(metrics.idle_charges(b, cal)))
 
 
 def test_a_round_turn_is_attributed_to_the_session_it_CLOSED_in():
@@ -116,10 +125,15 @@ def test_every_session_in_the_calendar_is_in_the_return_vector():
     # Enumerated with `score_returns`, not `metrics.sortino`, because that is what
     # the sample applies -- the whole rule including the Sortino/Sharpe fallback.
     turns = rt.round_turns(b, cal)
+    # The enumeration starts from the idle-charge vector, not from zeros, because
+    # that is what the null now scores -- every draw pays the same charge on the
+    # sessions it sat out. Starting from zeros would enumerate a different set and
+    # the test would be pinning a vector nothing computes.
+    charges = metrics.idle_charges(b, cal)
     achievable = set()
     for s0 in (-1, 1):
         for s1 in (-1, 1):
-            vec = [0.0] * 50
+            vec = list(charges)
             for sign, t in zip((s0, s1), turns):
                 vec[t.session] += sign * t.gross - t.cost
             achievable.add(round(score_returns(vec).primary, 10))

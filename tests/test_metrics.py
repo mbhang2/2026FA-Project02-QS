@@ -116,8 +116,13 @@ def test_splitting_every_trade_in_half_does_not_change_the_score():
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("k", [2, 5, 10])
 def test_scaling_every_position_by_a_constant_does_not_change_the_score(k):
+    """`scaled()` scales size and P&L but leaves `position_after` alone, so the
+    idle charge cannot see the change. Measured with the charge off; the version
+    that scales the position properly is
+    `test_trading_bigger_does_not_dilute_the_idle_charge`."""
     b, cal = sample()
-    a, c = score(b, period=cal), score(scaled(b, size_k=k), period=cal)
+    a = score(b, period=cal, idle_charge=0.0)
+    c = score(scaled(b, size_k=k), period=cal, idle_charge=0.0)
     assert a.primary == pytest.approx(c.primary)
     assert a.sharpe == pytest.approx(c.sharpe)
     assert c.net_pnl == pytest.approx(a.net_pnl * k)
@@ -128,10 +133,77 @@ def test_scaling_every_position_by_a_constant_does_not_change_the_score(k):
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("k", [0.5, 2.0, 100.0])
 def test_scaling_the_price_process_does_not_change_the_score(k):
+    """The ratio mechanics, with the idle charge off.
+
+    The charge is a cost in absolute index points, so like the per-contract fee
+    below it is a scale-breaking term -- see the next test, which asserts that
+    deliberately. This one is about the ratio, so it is measured without it.
+    """
     b, cal = sample()
-    a, c = score(b, period=cal), score(scaled(b, price_k=k), period=cal)
+    a = score(b, period=cal, idle_charge=0.0)
+    c = score(scaled(b, price_k=k), period=cal, idle_charge=0.0)
     assert a.primary == pytest.approx(c.primary)
     assert a.sharpe == pytest.approx(c.sharpe)
+
+
+@pytest.mark.parametrize("k", [2.0, 100.0])
+def test_the_idle_charge_is_a_scale_breaking_term_and_the_test_says_so(k):
+    """Same exemption as the per-contract fee, asserted rather than discovered.
+
+    The charge is a fixed number of index points, so against a price process a
+    hundred times larger it is a hundredth of the relative cost and the score
+    rises toward the uncharged value. That is correct for a cost expressed in
+    points and wrong to leave implicit, because the same arithmetic against
+    POSITION size would be a reward hack -- trade bigger, dilute the charge --
+    which is why `position_scale` exists and why the next test exists.
+    """
+    b, cal = sample()
+    small = score(b, period=cal).primary
+    large = score(scaled(b, price_k=k), period=cal).primary
+    assert small != pytest.approx(large)
+    free = score(scaled(b, price_k=k), period=cal, idle_charge=0.0).primary
+    assert abs(large - free) < abs(small - score(b, period=cal, idle_charge=0.0).primary)
+
+
+def test_trading_bigger_does_not_dilute_the_idle_charge():
+    """The reward hack `position_scale` closes.
+
+    P&L scales with contracts and a flat charge does not, so without scaling the
+    charge by position a strategy escapes it by sizing up -- measured, at 100
+    contracts a 0.18 charge moved a score from -0.3554 to -0.0676, which is
+    within a rounding error of having no charge at all. Charging per contract
+    restores the invariance exactly: double the position and P&L, margin and the
+    charge all double.
+    """
+    cal = calendar(40)
+
+    def run(contracts):
+        """Open and close a position in each of the first 20 sessions, so
+        `position_after` is a real sequence rather than the closing-rows-only
+        shape `blotter_from` produces."""
+        import random
+        rng = random.Random(9)
+        b, seq = Blotter(), 0
+        for sess in range(20):
+            base = sess * DAY + 3600 * 1_000_000_000
+            seq += 1
+            b.add(BlotterRow(seq=seq, ts=base, order_id=seq, side=Side.BUY,
+                             price=100.0, size=contracts,
+                             position_after=contracts, commission=0.02 * contracts,
+                             realized_pnl=0.0))
+            seq += 1
+            b.add(BlotterRow(seq=seq, ts=base + 1000, order_id=seq, side=Side.SELL,
+                             price=100.0, size=contracts, position_after=0,
+                             commission=0.02 * contracts,
+                             realized_pnl=rng.gauss(0.3, 2.0) * contracts))
+        return b
+
+    one, two = run(1), run(2)
+    assert max(abs(r.position_after) for r in two.rows) == 2, "fixture is wrong"
+    assert score(one, period=cal).primary == pytest.approx(
+        score(two, period=cal).primary), (
+        "doubling every position changed the score; the idle charge is not "
+        "scaling with contracts and can be diluted by trading bigger")
 
 
 def test_a_per_contract_fee_is_a_scale_breaking_term_and_the_test_says_so():

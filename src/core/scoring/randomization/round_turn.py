@@ -147,6 +147,7 @@ def null_sample(
     b: int = B_DEFAULT,
     seed: int = 17,
     notional_base: float = 1.0,
+    idle_charge: float | None = None,
 ) -> list[float]:
     """`b` Sortinos under the sign-flip null. This is `null_samples[i]`.
 
@@ -176,9 +177,19 @@ def null_sample(
       inflated the p-value. `score_returns` routes those to the Sharpe leg
       instead, which is exactly what it exists for.
     """
+    # The idle charge must reach the null identically, or the observed series
+    # pays a cost the draws do not and the p-value moves (measured: 0.0367 ->
+    # 0.1813). It is computed from the blotter here because `null_from_turns`
+    # takes triples rather than a blotter, and passed through as a vector.
+    from ..metrics import IDLE_CHARGE, idle_charges
+
+    charge = IDLE_CHARGE if idle_charge is None else idle_charge
     return null_from_turns(round_turns(blotter, calendar),
                            [c.session for c in calendar],
-                           b=b, seed=seed, notional_base=notional_base)
+                           b=b, seed=seed, notional_base=notional_base,
+                           charges=idle_charges(blotter, calendar,
+                                                idle_charge=charge,
+                                                notional_base=notional_base))
 
 
 def null_from_turns(
@@ -188,6 +199,7 @@ def null_from_turns(
     b: int = B_DEFAULT,
     seed: int = 17,
     notional_base: float = 1.0,
+    charges: Sequence[float] | None = None,
 ) -> list[float]:
     """The same null, from round turns and a session list rather than a blotter.
 
@@ -219,6 +231,15 @@ def null_from_turns(
     slot = np.array([index[s] for s in sess], dtype=np.int64)
     n_sessions = len(sessions)
 
+    charge_vec = None
+    if charges is not None:
+        if len(charges) != n_sessions:
+            raise ValueError(
+                f"charges has {len(charges)} entries for {n_sessions} sessions; "
+                "the null must carry the same per-session charge as the observed "
+                "series or the p-value is not comparing like with like")
+        charge_vec = np.asarray(charges, dtype=float)
+
     rng = np.random.default_rng(seed)
     out: list[float] = []
     # Chunked: the full (b, n_turns) sign matrix would be gigabytes at realistic
@@ -233,6 +254,10 @@ def null_from_turns(
         np.add.at(acc, (np.arange(c)[:, None], slot[None, :]), contrib)
         if notional_base != 1.0:
             acc /= notional_base
+        if charge_vec is not None:
+            # Already divided by notional_base by `idle_charges`, so it is added
+            # after the division above rather than before it.
+            acc += charge_vec
         for row in acc:
             out.append(score_returns(row.tolist()).primary)
         done += c

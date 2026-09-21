@@ -19,6 +19,7 @@ from typing import Sequence
 
 from . import metrics
 from .metrics import (
+    IDLE_CHARGE,
     MIN_DOWNSIDE_SESSIONS,
     MIN_SESSIONS,
     REJECT,
@@ -52,6 +53,7 @@ def score(
     notional_base: float = 1.0,
     min_sessions: int = MIN_SESSIONS,
     min_downside_sessions: int = MIN_DOWNSIDE_SESSIONS,
+    idle_charge: float = IDLE_CHARGE,
 ) -> ScoreTuple:
     """Sortino on per-session returns, with Sharpe and the shape moments beside it.
 
@@ -77,7 +79,8 @@ def score(
             reject_reason="no session calendar supplied; per-session returns are undefined",
         )
 
-    returns = metrics.session_returns(blotter, period, notional_base=notional_base)
+    returns = metrics.session_returns(blotter, period, notional_base=notional_base,
+                                      idle_charge=idle_charge)
     net = blotter.realized_pnl - blotter.commission
     trades = sum(1 for r in blotter.rows if r.realized_pnl != 0.0)
     return score_returns(
@@ -187,9 +190,11 @@ def score_diagnostics(
     *,
     notional_base: float = 1.0,
     fill_model_spread: float | None = None,
+    idle_charge: float = IDLE_CHARGE,
 ) -> Diagnostics:
     """Recorded per run, never terms in the objective. See `metrics.Diagnostics`."""
-    returns = metrics.session_returns(blotter, period, notional_base=notional_base)
+    returns = metrics.session_returns(blotter, period, notional_base=notional_base,
+                                      idle_charge=idle_charge)
     return metrics.diagnostics(
         blotter, period, returns, fill_model_spread=fill_model_spread
     )

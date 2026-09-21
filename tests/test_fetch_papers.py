@@ -111,3 +111,9 @@ def test_portfolio_management_is_not_a_default_category():
 def test_the_rate_limit_is_what_arxiv_asks_for():
     assert fp.RATE_LIMIT_S >= 3.0
     assert "2026FA-Project02" in fp.USER_AGENT
+
+
+def test_the_endpoint_is_https():
+    """arXiv redirects http -> https, so the http form works -- it just makes a
+    plaintext round trip and puts the query on the wire before the redirect."""
+    assert fp.ARXIV_API.startswith("https://")

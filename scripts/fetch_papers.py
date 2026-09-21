@@ -42,7 +42,10 @@ PAPERS = ROOT / "data" / "papers"
 RAW = PAPERS / "raw"
 REGISTRY = PAPERS / "registry.json"
 
-ARXIV_API = "http://export.arxiv.org/api/query"
+# https, not http. arXiv 301s http -> https anyway, so the plaintext form
+# costs an extra round trip and puts the query on the wire in the clear
+# before the redirect. Their own docs give the http form; this is better.
+ARXIV_API = "https://export.arxiv.org/api/query"
 ATOM = "{http://www.w3.org/2005/Atom}"
 
 # arXiv asks for one request per three seconds and a descriptive agent. Both are

@@ -27,20 +27,36 @@ interface. Nothing in `src/core/` needs to know retrieval happened.
                                                      nq_campaign.py --stage register
 ```
 
-## 2. The constraint that shapes everything: a scored run may not reach the network
+## 2. The query need not be reproducible; the *provenance* must be
 
-Scored runs are reproducible or they are nothing. An arXiv query returns different
-results tomorrow, so a live query inside a trial would make the trial
-irreproducible in the one way `ledger_check` cannot detect -- the code and the
-artifacts would hash identically and the *inputs* would differ.
+**Decided 2026-09-20 (Michael).** An arXiv query returning different results
+tomorrow is fine. What has to survive is the chain from a result back to the paper
+that suggested it, and that is a *registry*, not a frozen corpus snapshot.
 
-Therefore retrieval is an **offline stage that freezes its output into a committed
-artifact**, exactly as `data/manifest.json` freezes the bucket. The corpus manifest
-records the query, the date, and the resulting ids. A campaign cites a corpus
-snapshot the way it cites a calendar.
+`data/papers/registry.json` -- one row per paper ever pulled:
 
-`data/papers/manifest.json` belongs in `ARTIFACT_GLOBS` for the same reason
-`config/prompts/*.md` is already there: it is an artifact that shaped the result.
+| field | why |
+|---|---|
+| `id`, `source`, `title`, `date_pulled` | what it is and when we saw it |
+| `feasibility` | `direct` / `adaptable` / `infeasible`, with the reason |
+| `adaptation` | what had to change to make it testable here, if anything |
+| `status` | `unread` / `screened` / `hypothesis_written` / `campaign_run` |
+| `campaign_ids` | which campaigns it produced, if any |
+| `outcome` | what those campaigns found |
+
+This is **project bookkeeping, not a scored artifact**, and it deliberately does
+*not* go in `ARTIFACT_GLOBS`. An earlier draft of this document put a corpus
+manifest there by analogy with `config/prompts/*.md`, and the analogy is wrong: the
+prompt is fingerprinted because it shapes what the agent produces *during* a
+campaign. The corpus only shaped *which question was asked*, and the question is
+already frozen -- as the hypothesis file, with its digest in `campaign.json`. One
+frozen thing is enough.
+
+**One caution about the `outcome` column.** A registry that records which papers
+produced good results is useful -- it stops us re-testing -- and it is also a
+selection surface. Choosing the next paper because papers *like* it scored well is
+selection on our data, and that does touch N. Recording outcomes is right; steering
+retrieval by them is a look. Keep the column, and rank on the paper's properties.
 
 ## 3. The four stages
 
@@ -59,31 +75,33 @@ licence we do not have.
 Output: `data/papers/raw/<id>.json`, and `data/papers/manifest.json` recording the
 query, the UTC date, and every id returned. Idempotent and resumable.
 
-### Stage 1 — screen for feasibility against OUR data
+### Stage 1 — screen for feasibility, and for **adaptability**
 
-**This is the highest-value filter and it is specific to us.** Most quant finance
-papers are daily, cross-sectional, multi-asset equity studies. We have one futures
-instrument, tick resolution, trades with an aggressor side, no book and no quotes,
-384 intraday sessions.
+**Three-way, not a binary gate** (Michael, 2026-09-20). The question is not "does
+this paper's data contract match ours" but "can it be made to".
 
-`config/hypotheses/Test1.md` is the worked example of what happens without this
-filter: a careful 3,147-line distillation of a real paper, requiring 15 JSE
-equities ranked by ADV over a six-year daily backtest, sitting in our hypothesis
-directory and testable on nothing we own.
+| verdict | meaning | example |
+|---|---|---|
+| **direct** | runs on our data as written | an intraday futures order-flow study |
+| **adaptable** | runs after a stated change | equities -> futures: a technical rule on prices is instrument-agnostic. Daily bars -> we hold ticks and can aggregate to any timeframe. |
+| **infeasible** | no change makes it testable | cross-sectional arbitrage, pairs, dispersion -- they need a universe and we have one instrument. Anything needing quotes, book depth, fundamentals or an options surface. |
 
-The screen is a hard gate with a stated reason, not a score:
+**Adaptability has a sample-size trap.** We can build daily bars from ticks, but the
+train split is 384 sessions -- so a daily strategy gets **384 observations**, and a
+paper wanting a six-year daily backtest cannot run here even though the timeframe is
+constructible. Screen on the *number of observations the claim needs*, not only on
+whether the bars can be built. (Our metric is already per-session, so a daily
+strategy maps onto it cleanly: one decision per session, 384 of them.)
 
-| question | infeasible if |
-|---|---|
-| instruments | needs a cross-section |
-| resolution | needs daily bars only, or needs sub-tick |
-| data kind | needs quotes, book depth, fundamentals, options surface |
-| horizon | needs multi-year holding |
-| sample | needs more sessions than the split has |
+**An adaptation changes the claim, and the hypothesis must say so.** Testing an
+equity daily mean-reversion rule on intraday NQ futures is not testing the paper's
+result. The distilled hypothesis states the adaptation explicitly so the economics
+auditor can judge whether the developed strategy is still inside the guardrail --
+and so nobody later reports "this paper says X works" when we tested a modified X on
+different data.
 
-Infeasible papers are **kept with their reason**, not dropped. "Nothing discarded"
-is the standing rule, and the reasons are themselves a map of what data we would
-need to buy.
+Infeasible papers are **kept with their reason**. "Nothing discarded" is the standing
+rule, and the reasons are a map of what data we would need to buy.
 
 ### Stage 2 — rerank on relevance
 
@@ -139,20 +157,58 @@ and campaigns are looks. Global N is 622 today. A pipeline that makes it easy to
 a campaign a day makes N grow fast, and the L2 correction is over campaigns. Cheap
 hypotheses are not free.
 
-## 5. Open decisions
+## 5. Who edits the hypothesis, and when
 
-1. **Who authors the hypothesis.** The pre-registration's prompt block currently
-   tells the agent "a human wrote this before the campaign was registered". An
-   agent-written hypothesis is still a valid pre-registration provided it is
-   **frozen and committed before the campaign runs** -- that is the property that
-   matters, not the authorship. But it is a change to what §1 claims and needs an
-   amendment rather than a quiet edit.
-2. **Whether papers are read in full or by abstract.** Abstracts are cheap and
-   often enough to screen; the distillation probably needs the method section.
-   A two-tier fetch (abstract for all, full text for the shortlist) is the obvious
-   compromise and keeps the PDF pile small.
-3. **Corpus refresh cadence.** Every refresh is a new manifest digest and therefore
-   a new artifact state. Monthly is probably right; per-campaign is churn.
+**Decided 2026-09-20 (Michael):** a human writes the initial version; the agent
+refines per trial; the agent applies new papers per campaign. That is the right
+shape, and it is already *mostly* how the system works -- but "the agent edits the
+hypothesis per trial" has to mean the working hypothesis, not the registered file,
+or the campaign aborts.
+
+`stage_run` re-verifies `hypothesis_digest` on every resume and exits if the file
+moved. That check was added deliberately: a registered question that drifts to fit
+the data is not a pre-registration.
+
+So, three levels:
+
+| scope | what changes | where it lives |
+|---|---|---|
+| **per trial** | the agent's *developed* hypothesis -- it narrows, picks a normalisation, settles on a horizon | the strategy's module docstring. Already read by the economics auditor, whose first question is whether the developed hypothesis is still inside the family the original named (Amendment 2). |
+| **per campaign** | a new question, possibly from a new paper | a **new** hypothesis file, committed, registered as a new campaign |
+| **never** | the registered file, while its campaign runs | refused by the digest check |
+
+The agent already gets the latitude wanted here; it is recorded in the strategy
+source rather than by rewriting the question. That is the stronger arrangement,
+because at the end you can still say exactly what was registered and exactly how far
+the agent moved from it -- both are on disk, and the distance between them is what
+the committee judges.
+
+**Authorship of a new campaign's hypothesis is the open part.** An agent-written
+hypothesis is a valid pre-registration provided it is frozen and committed before
+the campaign runs -- that property is about ordering, not authorship. But §1 of the
+pre-registration currently tells the agent "a human wrote this", and that sentence
+would become false. It needs an amendment, not a quiet edit.
+
+## 6. Token budget — not about cost
+
+The distilled hypothesis is budgeted at **800-1,500 tokens** even though tokens may
+be effectively free (the gateway serves several models; local and Gemini capacity
+has been mentioned). Cost was never the binding constraint. Three others are:
+
+- **Latency.** The proposal call is part of a ~5 min/trial budget, 50 times a
+  campaign. Prompt size is wall clock.
+- **Context dilution.** Measured on `nq-orderflow-02`: ~32,000 prompt tokens, of
+  which the hypothesis is ~840 (2.6%) and `docs/agent/strategy-api.md` is ~11,700.
+  A 15,300-token hypothesis would be a third of the prompt and would crowd the
+  interface reference and the champion source. Retrieval degrades with length
+  regardless of what the tokens cost.
+- **The pre-registration property.** A question you cannot hold in your head is a
+  specification, not a registered question.
+
+Free tokens also do not mean an unlimited **context window**, and a local model
+likely has a smaller one than the gateway's hosted models. Whatever model is used
+must still be preflighted and named in the record -- Task 37 lost 35 trials to a
+silent fallback.
 
 ## 6. What this will not do
 

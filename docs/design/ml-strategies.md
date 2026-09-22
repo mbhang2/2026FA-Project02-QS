@@ -365,20 +365,41 @@ than a research gamble.
 
 ---
 
-## 10. Open, for review
+## 10. Settled — 2026-09-21, with Michael
 
-1. **What counts as the fit slice in a non-campaign run?** A smoke run on train has
-   no campaign directory to write weights into.
-2. ~~**Does the early-stop slice need pre-registering as a calendar?**~~
-   **Resolved 2026-09-21:** no. The engine enforces only the fit/scored boundary,
-   which is a deterministic function of the train calendar (the last S sessions).
-   Early stopping happens inside the fit window and is declared in the strategy's
-   record, not in a calendar — so the fingerprinted artifact set is unchanged.
-   **S is the number that needs pre-registering**, and it should be fixed before the
-   first ML campaign rather than chosen per campaign.
-3. **How is a fitted champion carried across campaigns at L2?** Weights are larger
-   than sources and the champion advances on strict improvement.
-4. ~~**Should `fit()` receive the data, or a loader?**~~ **Resolved 2026-09-21:**
-   neither. It accumulates through the walk (section 2b) and the fit/predict
-   consistency check (section 2c) does the work the loader restriction was meant to
-   do. The engine-owned feature pass is recorded as rejected in section 2d.
+1. **Weights on a non-campaign run go to `runs/weights/`.** A campaign trial writes
+   to `runs/campaigns/<id>/weights/`, but `smoke`, `check` and `replay` runs have no
+   campaign directory. `runs/sources/` and `runs/fills/` already exist for exactly
+   that case, so weights sit beside them. Consistency, not a decision.
+2. **The early-stop slice needs no calendar.** The engine enforces only the
+   fit/scored boundary, a deterministic function of the train calendar. Early
+   stopping happens inside the fit window and is declared in the strategy's record,
+   so the fingerprinted artifact set is unchanged.
+3. **A fitted champion carries its weights.** `champion.py` becomes source *and*
+   weights, copied together on a strict improvement. They must move as a pair or
+   the champion silently becomes a differently-trained model between trials -- the
+   same failure as a stale `hypothesis_digest`, and just as quiet.
+4. **`fit()` receives neither a slice nor a loader.** It accumulates through the
+   walk (2b), and the fit/predict consistency check (2c) does the work a loader
+   restriction was meant to do. The engine-owned feature pass is rejected in 2d.
+5. **S = 100.** The scored window is the last 100 sessions of train, leaving 284 to
+   fit on. Pre-registered rather than chosen per campaign, because a scored-window
+   length picked per campaign is a tunable that shapes results.
+
+   **Revisit when more data lands.** At roughly 1,500 sessions, S = 384 would make
+   ML trials scored on the same window as the four campaigns already run, which is
+   worth more than the extra fitting days. Changing S is a pre-registration
+   amendment, not a config edit.
+
+## 11. Still open
+
+Nothing blocking implementation. Two things to decide before the **first registered
+ML campaign**, neither of which affects the code:
+
+- **Amendment 4 to the pre-registration.** This document changes what a trial means
+  for a fitted strategy and adds a fit/scored boundary inside train. Both are
+  pre-registration-level and belong in an amendment, not here.
+- **Whether the agent may propose fitted strategies at all, or only a human.** The
+  proposer prompt says nothing about fitting, and an agent that writes `fit()`
+  without understanding the one-configuration rule will spend N quickly. Worth
+  deciding deliberately rather than discovering.

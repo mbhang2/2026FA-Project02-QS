@@ -156,19 +156,60 @@ This is the part that cannot be solved with engineering, only with a rule.
 A strategy today is one look at the data. A fitted model looks thousands of times
 while training, and the counter would still say one.
 
-**Proposed rule: a trial is one fitted configuration.** All fitting is confined to
-the fit slice. **No internal model selection may touch anything the gate later
-scores** — no early stopping against validation, no hyperparameter search against
-validation, no picking the best of several seeds by their score on anything but the
-early-stop slice.
+**Proposed rule: a trial is one fitted configuration, one seed, no internal
+selection.** All fitting is confined to the fit slice.
 
-Two honest notes:
+### Early stopping is allowed; model selection is not
 
-- **Hyperparameter search across trials is still search.** An agent that proposes
-  the same architecture with a different learning rate fifty times has run fifty
-  trials, and the ledger counts fifty. That is correct and it is expensive.
+The distinction is sharp and it is the whole rule:
+
+| | |
+|---|---|
+| **Early stopping** — choosing *when* to stop **one** training run | **allowed.** That is what the early-stop slice is for. |
+| **Model selection** — choosing *between* configurations, seeds or architectures | **not allowed inside a trial.** Each is its own trial. |
+
+An earlier draft of this section permitted "picking the best of several seeds by
+their score on the early-stop slice", which contradicts the rule above it. That
+permission is withdrawn, and here is the arithmetic that withdraws it.
+
+A trial that grid-searches twenty learning rates inside `fit()` and keeps the best
+has evaluated twenty configurations. Across a campaign of fifty trials that is
+**1,000 configurations, and the ledger records 50.** `max_of_n` would then be
+correcting for a twentieth of the search actually performed — which is not a
+conservative approximation, it is the failure the correction exists to prevent,
+arriving inside a single row where nothing can see it.
+
+The same argument applies to seeds. Best-of-five-seeds is a five-point search whose
+result correlates with the score, however innocent it looks.
+
+**This is expensive, and the expense is the honest cost of fitted strategies
+here.** Ordinary ML practice grid-searches as a matter of course. In this loop every
+grid point is a look at the data, so a twenty-point sweep is twenty trials, not one
+well-tuned trial. An agent that wants to tune must spend N to do it.
+
+### Where an architecture change belongs
+
+Whether GRU → LSTM is a trial or a campaign follows from what the hypothesis
+claims, the same way direction and horizon do:
+
+- Hypothesis names the *phenomenon* ("order flow predicts returns") → architecture
+  is an implementation choice, and each one is a **trial** inside the campaign.
+- Hypothesis names the *architecture* ("sequential models capture structure static
+  ones miss") → the architecture is the claim, and each is its own **campaign**,
+  corrected by `max_of_m` at L2.
+
+Both are counted. Only the correction differs.
+
+### Two further notes
+
 - **Redrawing the split does not reset the counter.** The 772 looks already spent
   were on data that overlaps any new partition, so N carries over.
+- **Nothing here is enforceable by the engine**, and that should be said plainly. A
+  strategy that grid-searches inside `fit()` looks identical to one that does not.
+  The fit-window rule in section 2a is structural; this one is not, and it relies
+  on the proposing agent's prompt, the recorded training recipe, and the economics
+  auditor reading the source. That asymmetry is worth knowing rather than assuming
+  away.
 
 ---
 

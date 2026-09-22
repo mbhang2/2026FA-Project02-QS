@@ -65,11 +65,6 @@ ABSENT_BY_DESIGN: dict[str, str] = {
         "cited precisely to say it is NOT the name. An `__init__.py` there "
         "makes `tests.alternatives` a package that shadows the real one, which "
         "is why the directory is `tests/l1_engine/`.",
-    "runs/weights/":
-        "designed, not built. Where a fitted strategy's weights land on a "
-        "non-campaign run (`docs/design/ml-strategies.md` section 10), beside the "
-        "`runs/sources/` and `runs/fills/` that already serve smoke, check and "
-        "replay runs. No fitted strategy exists yet, so nothing has written one.",
     "data/papers/manual/":
         "designed, not built. The manual-deposit path for SSRN, which has no "
         "public API and whose terms do not permit scraping "

@@ -22,6 +22,19 @@ profiles:
   # shipping syntax errors into the loop. Fixed: validation only, no arguments
   # that change any of it, holdout unreachable. Every invocation still emits a
   # ledger record.
+  # Synthetic, fitted, and fast. `tests/test_run_end_to_end.py` runs `run.py`
+  # through this to assemble a real ledger row -- the one thing the rest of the
+  # suite never does, and the reason three wiring bugs reached a live run.
+  harness-fitted:
+    dataset: synthetic
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    fit_sessions: 20
+    notional_base: 1.0
+    commission_per_contract: 0.10
+
   agent:
     dataset: synthetic-check
     split: validation

@@ -289,10 +289,16 @@ def attach_weights(record: dict, engine, ledger_path: Path) -> dict:
         # arrives with phase 2, when an L2 champion crosses splits.
         record["weights_source"] = ""
         return record
-    path = store_weights(
-        ledger_path, record.get("strategy_digest", ""),
-        engine.strategy.save_weights(),
-    )
+    # **The digest is computed here, not read off the record.** `_row` adds
+    # `strategy_digest` when it assembles the final row, which happens AFTER
+    # every `attach_weights` call site. Reading it from the record found "" and
+    # `store_weights` bailed on its `not digest` guard -- so a fitted run
+    # trained, handed its weights across the boundary, and dropped them, with
+    # `weights_source: ""` as the only trace. Silent, and it survived the whole
+    # test suite because no unit test builds a record through `_row`. Caught by
+    # the first real-NQ smoke.
+    digest = record.get("strategy_digest") or strategy_digest(STRATEGY_PATH)
+    path = store_weights(ledger_path, digest, engine.strategy.save_weights())
     record["weights_source"] = path
     # Recorded by digest in the row, the way `fill_log_digest` is -- and
     # deliberately NOT added to ARTIFACT_GLOBS.

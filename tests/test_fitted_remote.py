@@ -319,3 +319,43 @@ def test_loading_weights_means_the_run_cannot_also_fit(tmp_path):
         assert engine._loaded_weights and engine._has_fit
         assert remote.save_weights() == blob, (
             "the validation run is not carrying the champion's parameters")
+
+
+# --------------------------------------------------------------------------- #
+# 7. the weights actually reach the disk
+# --------------------------------------------------------------------------- #
+def test_attach_weights_does_not_depend_on_a_digest_the_record_lacks(tmp_path):
+    """**Regression: a fitted run trained, crossed the boundary, and dropped its
+    weights on the floor.**
+
+    `_row` adds `strategy_digest` when it assembles the final ledger row, which
+    is after every `attach_weights` call site. Reading the digest off the record
+    therefore found "", `store_weights` returned "" from its `not digest` guard,
+    and the row carried `weights_source: ""`. Nothing raised. The whole suite
+    passed, because no unit test builds a record through `_row` -- it took the
+    first real-NQ smoke to surface it.
+    """
+    import run as runpy
+
+    class Engine:
+        _has_fit = True
+        _loaded_weights = False
+        fit_sessions = 284
+        weights_path = None
+
+        class strategy:
+            @staticmethod
+            def save_weights():
+                return b"3.5\n"
+
+    ledger = tmp_path / "ledger.jsonl"
+    ledger.write_text("")
+    record = runpy.attach_weights({}, Engine(), ledger)   # no strategy_digest
+
+    assert record["weights_source"], (
+        "a fitted run recorded no weights source; the weights were computed, "
+        "handed across the boundary, and silently discarded")
+    written = tmp_path / "weights"
+    files = list(written.glob("*.weights"))
+    assert len(files) == 1 and files[0].read_bytes() == b"3.5\n"
+    assert record["fit_sessions"] == 284

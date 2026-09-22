@@ -1056,8 +1056,8 @@ what was and was not achieved.**
 `OrderType`, `TimeInForce`, `OrderStatus`, `LifecycleKind`, `Tick`, `Bar`,
 `BarEvent`, `TickEvent`, `FillEvent`, `LifecycleEvent`, `Order`, `OrderView`,
 `BracketSpec`, `Submit`/`Modify`/`Cancel`, `Blotter`/`BlotterRow`, `ScoreTuple`,
-`DataCapabilities`, `Subscription`, the `Strategy` / `TickStrategy` protocols, and
-the `LookaheadError` / `HoldoutLocked` exceptions. Immutable and dataset-agnostic.
+`DataCapabilities`, `Subscription`, the `Strategy` / `TickStrategy` /
+`FittedStrategy` protocols, and the `LookaheadError` / `HoldoutLocked` exceptions. Immutable and dataset-agnostic.
 It sits at the top of `src/core/` rather than inside one subpackage because all
 three import it and none owns it.
 
@@ -1069,10 +1069,29 @@ validates against it before the walk and a test asserts the methods it declares
 are exactly the ones the engine calls — it carried a signature that had been
 wrong for four tasks because nothing imported it.
 
+**`FittedStrategy`** adds `fit()`, `save_weights()` and `load_weights()` for a
+strategy whose behaviour depends on parameters fitted to data
+(`docs/design/ml-strategies.md`). It is checked by `validate_fitted_strategy`
+rather than `validate_strategy`, because `fit()` takes no context and the latter's
+arity check and error message are both about contexts. The engine calls only
+`fit()`; the weight methods are the harness's half of the contract and have their
+own staleness test — which earned its keep immediately by catching that
+`load_weights` was declared, documented as the protection that stops
+`--stage validate` refitting on the validation split, and not implemented.
+
 **`src/strategies/current.py`** is the only writable tree — the agent's file.
 `run.py` imports it by name and looks for `STRATEGY`, `Strategy` or
 `MomentumStrategy`. Its current contents are a momentum placeholder that is also
 the shape the worked examples in `docs/agent/strategy-api.md` follow.
+
+**`src/strategies/fitted_reference.py`** is the calibration reference for fitted
+strategies, and is not a candidate. It accumulates one feature across the fit
+window, fits a single threshold to it — the 80th percentile of absolute delta —
+and trades that threshold afterwards. Deliberately not a model library: what needs
+proving is the chain (fit called once at the window's edge on self-accumulated
+data, weights surviving a file round trip, the scored window excluding the fit
+window, a later run loading rather than refitting), and a logistic regression would
+test the same chain while making the failures harder to read.
 
 **`src/strategies/ported_buy_and_hold.py`** and
 **`src/strategies/ported_momentum.py`** are Task 40's ports of

@@ -70,27 +70,105 @@ be uncontaminated.
 So: weights are loaded by digest at validation and holdout, and a missing digest is
 an error rather than a licence to refit.
 
-### 2b. Features must be computed on the causal path
+### 2b. The fit phase is warmup, generalised
 
-The engine makes lookahead **impossible to express**: the walk cannot see forward,
-`open_ts` and `close_ts` are both on the bar so a join cannot silently take the
-wrong one, and orders are T+1 eligible.
+**Decided with Michael, 2026-09-21.** The strategy does not receive the fit window
+as an array. It **accumulates it through the ordinary walk**, bar by bar, with its
+actions ignored — which is what `warmup_sessions` already does today, and what every
+NQ profile already runs with (`warmup_sessions: 1`). At the end of the window the
+engine signals the boundary, `fit()` is called once, and the model is frozen.
 
-None of that reaches feature engineering. A strategy that computes a mean over the
-whole fit window and uses it as a feature has learned a relationship that will not
-exist at prediction time — the single commonest way an ML backtest flatters itself,
-and one our safeguards do not currently touch.
+This makes the data boundary **structural rather than trusted**. There is no array
+handed over with an instruction to use only the first 284 rows: the strategy cannot
+accumulate the early-stop or validation days because the engine does not walk them
+during the accumulation phase.
 
-**The fix is to require features to be computed by the same code that runs live,
-bar by bar, through the same interface.** If feature computation must go through
-the causal path, a full-sample statistic is not discouraged, it is *unexpressible*.
-That restores the guarantee rather than replacing it with a promise.
+Four assertions, all cheap, all in the engine:
 
-The exception, stated so it is deliberate: a transform **fitted** on the fit slice
-and then **frozen** — a scaler's mean and variance, say — is legitimate and
-necessary. The rule is that it is fitted once, inside the fit window, and applied
-unchanged everywhere after. Fitting a parameter is allowed; constructing a feature
-from data the bar could not have seen is not.
+- `fit()` is called **exactly once**, at the boundary.
+- **No orders are accepted before it.** Warmup already ignores actions and counts
+  them (`warmup_actions_ignored`), so this is nearly free.
+- `fit()` **refuses after the window closes**, which is section 2a's rule and is
+  what stops `--stage validate` retraining on the validation split.
+- A sample of fit-window bars is **replayed through the live path** and its features
+  compared against what `fit()` was trained on. See below.
+
+### 2c. The fit/predict consistency check
+
+An earlier draft of this document said features "must be computed on the causal
+path", and proposed that the engine orchestrate feature computation itself so
+lookahead would be unexpressible. **That was aiming at the wrong target.**
+
+The danger is not that a strategy can see the whole fit window. Fitting a scaler on
+that window and freezing it is legitimate and necessary. The danger is that
+**feature computation differs between fit time and predict time**:
+
+| feature | at fit time | live | verdict |
+|---|---|---|---|
+| `(x − μ) / σ`, scaler frozen at fit | frozen μ, σ | same frozen μ, σ | **legitimate** |
+| volume rank among all fit-window days | rank of 284 | rank of days so far | **skew — caught** |
+| next-day return | computable | does not exist | **skew — caught** |
+
+All three "see all the data". Only the first is sound. A restriction on the handoff
+cannot tell them apart; a comparison of the two computations can.
+
+**So: replay a sample of fit-window bars through the live path and require the
+features to match.** A mismatch fails the trial rather than producing a flattering
+number. This is training/serving skew, which is a known production failure, turned
+into a mechanical check.
+
+A strategy may therefore compute fit-time features however it likes — vectorised,
+pandas, whatever is fast — provided the per-bar path it will use live produces the
+same numbers. If it implements *only* the per-bar path, the engine builds the matrix
+by replaying it: slower, and nothing extra for the author to write.
+
+### 2d. Why not have the engine own feature computation
+
+Recorded because it was the earlier proposal and was rejected on three grounds:
+
+- **Code safety.** It requires new engine code *in the scored path*, which is the
+  riskiest place in this repository to add any. The warmup route reuses machinery
+  that already exists and is already tested.
+- **Difficulty.** The engine would need to know feature schemas, assemble matrices
+  and handle shape variation — heavy coupling between engine and strategy.
+- **Error-proneness.** An engine bug affects every strategy; a strategy bug affects
+  one trial. Putting the complexity in the engine maximises the blast radius.
+
+It bought one property — causality by construction — that section 2c obtains more
+cheaply.
+
+---
+
+### 2e. What the trial is scored on
+
+**Fit on the early part of train, score on the later part. Walk-forward is
+deferred.**
+
+A model fitted on train days 1–284 and scored on days 1–384 is scored in sample and
+the number is meaningless. So the scored window is the post-fit stretch only.
+
+Today that is about 100 sessions against the 384 a non-fitted strategy gets, which
+is noisy and not comparable. **More data resolves this directly**, and it is the
+reason to prefer the simple split: at roughly 1,500 sessions one could fit on 1,100
+and score on **384** — the exact window the four existing campaigns used, keeping ML
+and non-ML trials comparable. That property is worth more than it looks and
+walk-forward does not have it.
+
+**Walk-forward — refit periodically, score each out-of-fit stretch — is the standard
+answer and is deferred**, for reasons that are practical rather than statistical:
+
+- It **breaks the one-trial-one-weights-digest story** that section 3 depends on. K
+  refits means K weight sets in a single row.
+- K refits multiply the cost of every trial, in a campaign that is already 50 of
+  them.
+- **Fold-boundary leakage is the classic silent failure** of walk-forward
+  implementations: it inflates results and is hard to see.
+- It averages over old regimes, where scoring the most recent stretch tests what
+  would actually be deployed.
+
+It does not inflate N — one configuration refitted on a rolling window is one
+strategy — so the objection is complexity, not honesty. Revisit it when there is a
+reason beyond "it is standard".
 
 ---
 
@@ -138,10 +216,27 @@ It also changes a **pre-registered, fingerprinted** calendar, making every campa
 so far incomparable with everything after, and it subdivides L2 — which nothing
 fits on, since L2 evaluates campaign winners and does not train them.
 
-**Proposed:** `train` 384 → **fit 284 / early-stop 100**. Validation 86 and holdout
-73 untouched. The L1/L2/holdout flow is unchanged: campaigns search on train,
-each campaign's winner gets one run on validation, and the holdout opens once, by a
-human, with a recorded reason.
+**Proposed:** `train` splits into a **fit window** and a **scored window**, with the
+scored window being the last S sessions. Validation 86 and holdout 73 untouched.
+
+    train 384  ->  fit 1-284      scored 285-384      (S = 100 today)
+    train 1500 ->  fit 1-1116     scored 1117-1500    (S = 384, once data allows)
+
+**Early stopping lives inside the fit window and is the strategy's business.** An
+earlier draft of this section said `train` split into "fit 284 / early-stop 100",
+which collides with section 2e: the early-stop slice and the scored window were the
+same 100 days, so a model would have been selected against the very data it was then
+scored on. That is the inflation this whole document exists to avoid, introduced by
+a careless split.
+
+The engine enforces one boundary only — **fit window versus scored window** — and
+that is the boundary that matters, because it is the one the score depends on. A
+strategy that wants to early-stop carves a slice off the **end of its own fit
+window** and declares the split in its record. Selecting against fit-window data
+cannot contaminate the score, so the engine has no reason to police it.
+
+A strategy that trains for fixed epochs needs no early-stop slice at all and gets
+the whole fit window.
 
 If a larger L2 or holdout is wanted, that is a **statistical power** decision
 affecting every campaign and should be taken on its own merits — bundling it here
@@ -274,11 +369,16 @@ than a research gamble.
 
 1. **What counts as the fit slice in a non-campaign run?** A smoke run on train has
    no campaign directory to write weights into.
-2. **Does the early-stop slice need pre-registering as a calendar**, or is it a
-   deterministic function of the train calendar? The latter is cheaper and keeps
-   the artifact set unchanged.
+2. ~~**Does the early-stop slice need pre-registering as a calendar?**~~
+   **Resolved 2026-09-21:** no. The engine enforces only the fit/scored boundary,
+   which is a deterministic function of the train calendar (the last S sessions).
+   Early stopping happens inside the fit window and is declared in the strategy's
+   record, not in a calendar — so the fingerprinted artifact set is unchanged.
+   **S is the number that needs pre-registering**, and it should be fixed before the
+   first ML campaign rather than chosen per campaign.
 3. **How is a fitted champion carried across campaigns at L2?** Weights are larger
    than sources and the champion advances on strict improvement.
-4. **Should `fit()` receive the data, or a loader?** Handing it the whole fit slice
-   makes full-sample statistics expressible again; handing it a bar-by-bar iterator
-   does not, but is harder to write against.
+4. ~~**Should `fit()` receive the data, or a loader?**~~ **Resolved 2026-09-21:**
+   neither. It accumulates through the walk (section 2b) and the fit/predict
+   consistency check (section 2c) does the work the loader restriction was meant to
+   do. The engine-owned feature pass is recorded as rejected in section 2d.

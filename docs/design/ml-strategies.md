@@ -399,7 +399,50 @@ than a research gamble.
    worth more than the extra fitting days. Changing S is a pre-registration
    amendment, not a config edit.
 
-## 11. Still open
+## 11. The remote boundary — found during implementation, 2026-09-22
+
+**A fitted strategy cannot yet run through the scored path, and the reason is
+structural rather than a missing line.**
+
+`run.py` does not hand the engine the strategy object. It hands it a
+`RemoteStrategy` proxy, and the real strategy lives in a **child process** —
+that separation is what keeps agent-written code away from the harness, and it is
+load-bearing for isolation rather than incidental. The proxy forwards the
+callbacks the child understands: `load`, `stop`, `setup`, `on_bars`, `on_tick`,
+`on_fill`, `on_lifecycle`.
+
+It does not forward `fit`, `save_weights` or `load_weights`. So `hasattr(strategy,
+"fit")` is False in the engine, the fitted path never engages, and a profile with
+`fit_sessions` set fails with *"RemoteStrategy is not a fitted strategy"*.
+
+Everything in sections 1–10 is right and tested; it is tested **in-process**, which
+is how `Engine.for_test` runs. The gap is only between the engine and the child.
+
+**What closing it needs**, and why it is not a five-minute change:
+
+- Three new message kinds in `src/core/engine/remote/child.py`, and matching
+  methods on `RemoteStrategy`.
+- `_surface.py` regenerated, since it is generated from the surface that crosses.
+- A decision about where `fit()` executes. It must be **in the child**, because
+  that is where the accumulated state lives — which means the child does the
+  training, under the child's CPU and memory limits, and a training run that
+  exceeds them has to fail legibly rather than as a timeout.
+- The weight methods take a path. The child can write it directly if the path is
+  on shared filesystem, which it is; but that is a new thing the sandboxed process
+  is allowed to write, and the write-path allowlist
+  (`scripts/check_agent_paths.py`) has an opinion about that.
+
+**This is the isolation boundary.** It is the mechanism that stops a strategy
+reaching the scorer, the splits or the ledger, and the reason
+`tests/test_boundary.py` walks it by AST and by `sys.modules`. Widening it deserves
+its own review rather than being folded into a late-night session — which is why
+this section is a finding and not a patch.
+
+Until then, fitted strategies work through `Engine.for_test` and not through
+`run.py`, and `config/run.yaml`'s `nq-train-fitted` profile is written but will
+fail if used.
+
+## 12. Still open
 
 Nothing blocking implementation. Two things to decide before the **first registered
 ML campaign**, neither of which affects the code:

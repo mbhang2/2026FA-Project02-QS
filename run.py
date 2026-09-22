@@ -454,6 +454,14 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
                 split=split,
                 fill_model=fill_model,
                 warmup_sessions=warmup_sessions,
+                # A fitted strategy accumulates the first `fit_sessions` of the
+                # split and fits at its edge; a run that instead LOADS a champion's
+                # weights passes `weights_path` and sets no fit window. Both come
+                # from the committed profile, like every other evaluation
+                # condition, and neither is a command-line argument -- the reason
+                # `run.py`'s docstring gives at length.
+                fit_sessions=profile.get("fit_sessions", 0),
+                weights_path=profile.get("weights_path"),
                 seed=seed,
                 wall_clock_budget_s=profile.get("wall_clock_budget_s"),
                 # **The profile's cost model, which this did not read until

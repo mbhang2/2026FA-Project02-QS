@@ -56,8 +56,8 @@ class Fitted:
         self.sessions_seen_at_fit = len(self.seen)
         self.mean = sum(self.seen) / len(self.seen)
 
-    def save_weights(self, path): path.write_text(str(self.mean))
-    def load_weights(self, path): self.mean = float(path.read_text())
+    def save_weights(self): return str(self.mean).encode()
+    def load_weights(self, blob): self.mean = float(blob.decode())
 
 
 def _run(strategy, fit_sessions, n_sessions=40):
@@ -171,10 +171,9 @@ def test_the_fitted_contract_is_checked_at_wiring_time():
 def test_weights_round_trip(tmp_path):
     s = Fitted()
     _run(s, fit_sessions=10)
-    f = tmp_path / "w.txt"
-    s.save_weights(f)
+    blob = s.save_weights()
     other = Fitted()
-    other.load_weights(f)
+    other.load_weights(blob)
     assert other.mean == s.mean
 
 
@@ -203,19 +202,22 @@ def test_store_weights_mirrors_store_source(tmp_path):
     ledger.write_text("")
     s = Fitted()
     _run(s, fit_sessions=10)
-    rel = store_weights(ledger, "abc123", s)
+    rel = store_weights(ledger, "abc123", s.save_weights())
     assert rel, "store_weights returned nothing for a fitted strategy"
     out = tmp_path / "weights" / "abc123.weights"
     assert out.exists() and out.read_text() == str(s.mean)
 
 
-def test_store_weights_is_silent_for_a_plain_strategy(tmp_path):
-    """Returns "" rather than raising, so every run path can call it unguarded."""
+def test_store_weights_is_silent_when_there_is_nothing_to_store(tmp_path):
+    """Returns "" rather than raising, so every run path can call it unguarded.
+
+    A plain strategy has no weights to hand over, so the caller passes none --
+    `attach_weights` reaches this only for a run that actually fitted."""
     from src.core.runlog import store_weights
 
-    class Plain: pass
     ledger = tmp_path / "ledger.jsonl"; ledger.write_text("")
-    assert store_weights(ledger, "abc123", Plain()) == ""
+    assert store_weights(ledger, "abc123", b"") == ""
+    assert store_weights(ledger, "", b"some weights") == ""
 
 
 def test_weights_are_not_written_when_the_run_never_fitted(tmp_path):
@@ -225,9 +227,9 @@ def test_weights_are_not_written_when_the_run_never_fitted(tmp_path):
 
     ledger = tmp_path / "ledger.jsonl"; ledger.write_text("")
 
-    class NeverSaves:
-        def save_weights(self, path): pass      # writes nothing
-    assert store_weights(ledger, "abc123", NeverSaves()) == ""
+    # An empty blob is recorded as absent rather than as an empty file a later
+    # run would happily load as a trained model.
+    assert store_weights(ledger, "abc123", b"") == ""
     assert not (tmp_path / "weights" / "abc123.weights").exists()
 
 
@@ -308,7 +310,7 @@ def test_a_run_given_weights_loads_them_and_never_fits(tmp_path):
     Engine.for_test(ds(200), trained, split=Split.TRAIN, fit_sessions=60,
                     fill_model="unfavorable", seed=1).run()
     w = tmp_path / "champion.weights"
-    trained.save_weights(w)
+    w.write_bytes(trained.save_weights())
 
     loaded = FittedReference()
     eng = Engine.for_test(ds(200), loaded, split=Split.VALIDATION,
@@ -338,7 +340,7 @@ def test_fitting_and_loading_in_the_same_run_is_refused(tmp_path):
     trained = FittedReference()
     Engine.for_test(ds(200), trained, split=Split.TRAIN, fit_sessions=60,
                     fill_model="unfavorable", seed=1).run()
-    w = tmp_path / "w.weights"; trained.save_weights(w)
+    w = tmp_path / "w.weights"; w.write_bytes(trained.save_weights())
     with pytest.raises(TypeError, match="either fits or loads"):
         Engine.for_test(ds(200), FittedReference(), split=Split.TRAIN,
                         fit_sessions=60, weights_path=w,

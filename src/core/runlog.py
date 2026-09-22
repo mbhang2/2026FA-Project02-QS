@@ -302,7 +302,7 @@ def store_source(ledger_path: Path, digest: str,
         return str(out)
 
 
-def store_weights(ledger_path: Path, digest: str, strategy) -> str:
+def store_weights(ledger_path: Path, digest: str, blob: bytes) -> str:
     """Keep a fitted strategy's weights beside the ledger, addressed by its digest.
 
     Mirrors `store_source`: same directory convention, same digest, same relative
@@ -316,16 +316,29 @@ def store_weights(ledger_path: Path, digest: str, strategy) -> str:
     failure `code_fingerprint` and `artifact_digests` exist to prevent everywhere
     else. See `docs/design/ml-strategies.md`.
 
-    Returns "" for a strategy that is not fitted, or one whose `save_weights` wrote
-    nothing -- a missing file is recorded as absent rather than as an empty one.
+    Takes the bytes rather than the strategy. The strategy runs in a child process
+    that cannot write, so it hands its parameters back and the parent -- the only
+    process with filesystem access on the scored path -- decides where they go.
+    That also means the digest below describes exactly the bytes that crossed.
+
+    **This function must never deserialize the blob.** It writes and it hashes.
+    Parsing weights in this process would mean unpickling bytes chosen inside the
+    sandbox, *outside* the sandbox: a worse hole than the one the boundary closes.
+    `tests/test_fitted_remote.py` guards it by source inspection.
+
+    Returns "" for an empty blob -- absent is recorded as absent rather than as an
+    empty file a later run would load as a trained model.
     """
-    save = getattr(strategy, "save_weights", None)
-    if save is None or not digest:
+    if not blob or not digest:
         return ""
     out = ledger_path.parent / "weights" / f"{digest}.weights"
     out.parent.mkdir(parents=True, exist_ok=True)
     if not out.exists():
-        save(out)
+        # Atomic, so a crash mid-write cannot leave a truncated file that a
+        # later run would load as a complete model.
+        tmp = out.with_suffix(".weights.partial")
+        tmp.write_bytes(blob)
+        tmp.replace(out)
     if not out.exists():
         return ""
     try:

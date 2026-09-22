@@ -313,7 +313,14 @@ TICK_CALLBACKS = _callbacks_of(TickStrategy)
 # window -- while the weight methods take a path. So they cannot go through
 # `validate_strategy`, whose arity check and whose error message are both
 # specifically about "exactly one argument (the context)".
-FIT_ARITY: dict[str, int] = {"fit": 0, "save_weights": 1, "load_weights": 1}
+# `save_weights()` takes nothing and RETURNS bytes; `load_weights(blob)` takes
+# them. Not a path on either side: the strategy runs in a child process that is
+# denied `file-write*`, so a strategy asked to write its own weights could not.
+# The parent owns every write, which is also what makes the recorded digest
+# describe exactly what crossed. See `docs/design/ml-strategies.md` section 11.
+FIT_ARITY: dict[str, int] = {"fit": 0, "save_weights": 0, "load_weights": 1}
+
+_MISSING = object()
 
 
 def validate_strategy(strategy: Any, *, needs_ticks: bool = False) -> None:
@@ -371,10 +378,28 @@ def validate_fitted_strategy(strategy: Any) -> None:
     """
     problems: list[str] = []
     for name, arity in FIT_ARITY.items():
-        fn = getattr(strategy, name, None)
-        if fn is None:
+        fn = getattr(strategy, name, _MISSING)
+        if fn is _MISSING:
+            # **`fit()` is what makes a strategy fitted; the weight methods are
+            # how one is carried between runs.** Requiring all three made a class
+            # with `fit()` and no `save_weights` read as ordinary: the fit window
+            # was never carved out, `fit()` was never called, and the model was
+            # scored with whatever its constructor left behind -- silently, and
+            # the row looked real. It also barred `RemoteFittedStrategy`, which
+            # forwards `fit` and deliberately not the weight methods, because a
+            # campaign fits and scores inside one run and persists nothing.
+            #
+            # So: `fit` is required, the weight methods are validated when they
+            # exist, and `load_weights` is required only by a run that was given
+            # weights to load -- checked at the load site, where the path is.
+            if name != "fit":
+                continue
             problems.append(f"  {name}() is missing")
             continue
+        # Declared but unusable is always an error, even for the optional two.
+        # `load_weights = None` is a typo or an abandoned stub, not a considered
+        # decision to omit the method, and the distinction is the whole reason
+        # this reads through a sentinel rather than through `getattr(..., None)`.
         if not callable(fn):
             problems.append(f"  {name} is {type(fn).__name__}, not a method")
             continue
@@ -543,9 +568,13 @@ class Engine:
         # `scored_sessions()`. That exclusion is what stops Amendment 3's idle
         # charge billing every session the strategy was required not to trade in.
         self.fit_sessions = fit_sessions
+        # Kept so the run record can say which weights file was loaded
+        # rather than re-deriving it from the profile at write time.
+        self.weights_path = weights_path
         self._fit_cache: set[int] | None = None
         self._warm: set[int] = set()
-        self._needs_fit = all(hasattr(strategy, m) for m in FIT_ARITY)
+        # `fit` alone, not all three -- see `validate_fitted_strategy`.
+        self._needs_fit = hasattr(strategy, "fit")
         self._has_fit = False
         self._loaded_weights = False
         if self._needs_fit:
@@ -568,7 +597,17 @@ class Engine:
                         "not a licence to refit on this split. See "
                         "docs/design/ml-strategies.md."
                     )
-                strategy.load_weights(wp)
+                if not hasattr(strategy, "load_weights"):
+                    # The one run that genuinely requires the method, so the one
+                    # place it is required. A proxy that forwards only `fit`
+                    # reaches here exactly when a profile asks it to carry a
+                    # champion's weights across splits, which is phase 2.
+                    raise TypeError(
+                        f"weights_path {wp} was given but the strategy defines "
+                        "no load_weights(). A run cannot carry weights it has no "
+                        "way to read. See docs/design/ml-strategies.md section 11."
+                    )
+                strategy.load_weights(wp.read_bytes())
                 self._loaded_weights = True
                 self._has_fit = True
                 if fit_sessions:

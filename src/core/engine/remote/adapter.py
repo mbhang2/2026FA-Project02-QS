@@ -17,6 +17,7 @@ under `sandbox-exec`, which is deprecated and cannot set a memory ceiling at all
 
 from __future__ import annotations
 
+import base64
 import os
 import platform
 import subprocess
@@ -259,6 +260,7 @@ class RemoteStrategy:
     cpu_seconds: int | None = 1800
     memory_bytes: int | None = 4 * 1024 * 1024 * 1024
     sandbox: bool = True
+    weights_cap_bytes: int = 64 * 1024 * 1024
 
     messages: int = field(default=0, init=False)
     bytes_out: int = field(default=0, init=False)
@@ -274,7 +276,15 @@ class RemoteStrategy:
     _setup_ctx: object = field(default=None, init=False, repr=False)
     _setup_bytes: int = field(default=0, init=False, repr=False)
     _mechanism: str = field(default="", init=False, repr=False)
+    _capabilities: tuple = field(default=(), init=False, repr=False)
+    _saved: bool = field(default=False, init=False, repr=False)
+    _last_reply: dict = field(default_factory=dict, init=False, repr=False)
     completed_callbacks: int = field(default=0, init=False)
+
+    # Overridden by RemoteFittedStrategy. Compared against what the child reports
+    # the loaded class actually defines; a disagreement is an error, not a
+    # preference. See `_check_capabilities`.
+    _fitted: bool = False
 
     # -- lifecycle --------------------------------------------------------- #
     def start(self) -> None:
@@ -311,6 +321,40 @@ class RemoteStrategy:
         self._to_child, self._from_child = to_child_w, to_parent_r
         self._exchange({"kind": "load", "path": str(self.strategy_path),
                         "class": self.class_name})
+        self._capabilities = tuple(self._last_reply.get("capabilities", ()))
+        self._check_capabilities()
+
+    def _check_capabilities(self) -> None:
+        """What the profile claimed against what the class actually defines.
+
+        The parent chooses a proxy class from `fit_sessions` before the child
+        exists, so the choice is a claim about code the parent has not read. Both
+        directions of disagreement are errors, but only one is quiet:
+
+        - profile says fitted, class is not -> the run would carve a fit window
+          out of the score for a strategy that never fits. Loud enough on its own,
+          but there is no reason to wait for it.
+        - profile is silent, class *has* `fit()` -> the ordinary proxy is built,
+          `hasattr(proxy, "fit")` is False, the engine never engages the fitted
+          path, `fit()` is never called, and the model trades with whatever its
+          constructor left in place. Nothing raises. The row looks real.
+
+        The second is the reason this method exists.
+        """
+        has_fit = "fit" in self._capabilities
+        if self._fitted and not has_fit:
+            raise HarnessFailed(
+                f"{self.strategy_path} was run as a fitted strategy "
+                f"(fit_sessions was set) but the loaded class defines no fit(). "
+                f"It defines: {list(self._capabilities) or 'none of the three'}."
+            )
+        if has_fit and not self._fitted:
+            raise HarnessFailed(
+                f"{self.strategy_path} defines fit() but the profile did not set "
+                "fit_sessions, so it would be run as an ordinary strategy: fit() "
+                "would never be called and the model would be scored untrained. "
+                "Set fit_sessions, or remove fit() from the class."
+            )
 
     def _limits(self) -> None:                          # pragma: no cover
         """In the child, after fork, before exec.
@@ -470,6 +514,7 @@ class RemoteStrategy:
             raise StrategyTimedOut(
                 f"the strategy took longer than {self.timeout_s}s in one callback"
             )
+        self._last_reply = reply
         if not reply.get("ok", False):
             raise StrategyRaised(reply.get("error", "the strategy raised"),
                                  reply.get("traceback", ""))
@@ -647,6 +692,69 @@ class RemoteStrategy:
 
     def on_tick(self, ctx) -> None:
         self._apply(ctx, self._exchange(self._snapshot(ctx, "on_tick")))
+
+
+@dataclass
+class RemoteFittedStrategy(RemoteStrategy):
+    """A proxy that also forwards `fit`. Nothing else differs.
+
+    **Why a subclass and not three more methods on `RemoteStrategy`.** That class
+    is the proxy for *every* strategy. The engine decides a strategy is fitted
+    with `all(hasattr(strategy, m) for m in FIT_ARITY)`, so methods added there
+    unconditionally would make every ordinary strategy look fitted and carve a fit
+    window out of every score. Here the ordinary proxy is untouched and a
+    non-fitted run gains no surface at all.
+
+    All three cross. `fit` runs the training; `save_weights` returns the
+    parameters as bytes and `load_weights` takes them back, neither touching a
+    path -- the child is denied `file-write*`, so a strategy handed a path to
+    write could not use it. The parent stays the only writer, which is also what
+    lets the recorded digest describe exactly what crossed. Section 11 of
+    `docs/design/ml-strategies.md` has the controls and what they each answer.
+    """
+
+    _fitted: bool = True
+
+    def save_weights(self) -> bytes:
+        """Bytes out of the child; the caller writes them.
+
+        The cap is checked on the encoded payload before it is decoded, so a
+        child that claims a gigabyte cannot make the parent allocate one. It is
+        generous for a CPU model and small enough that exceeding it is a bug
+        worth hearing about rather than a limit to tune around.
+        """
+        if self._saved:
+            raise HarnessFailed(
+                "save_weights() was called twice in one run. Weights are the "
+                "output of the single fit this run is allowed; a second call "
+                "would record a model the scored window did not test.")
+        self._exchange({"kind": "save_weights"})
+        encoded = self._last_reply.get("blob", "")
+        if len(encoded) > self.weights_cap_bytes:
+            raise HarnessFailed(
+                f"the strategy returned {len(encoded)} bytes of weights, over "
+                f"the {self.weights_cap_bytes}-byte cap.")
+        self._saved = True
+        return base64.b64decode(encoded)
+
+    def load_weights(self, blob: bytes) -> None:
+        if len(blob) > self.weights_cap_bytes:
+            raise HarnessFailed(
+                f"the weights file is {len(blob)} bytes, over the "
+                f"{self.weights_cap_bytes}-byte cap.")
+        self._exchange({"kind": "load_weights",
+                        "blob": base64.b64encode(blob).decode()})
+
+    def fit(self) -> None:
+        """Train, in the child, once.
+
+        Takes no ctx and returns no actions -- the engine calls this at the edge
+        of the fit window and a strategy may not trade from it. The child holds
+        the accumulated fit window; nothing after that window has been delivered
+        to it yet, so a label needing a future bar is uncomputable there rather
+        than merely forbidden.
+        """
+        self._exchange({"kind": "fit"})
 
 
 def _resolve(spelling: str, subs) -> str:

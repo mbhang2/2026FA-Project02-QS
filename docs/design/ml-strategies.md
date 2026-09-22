@@ -446,8 +446,8 @@ fail if used.
 
 **Correcting this section's fourth bullet first.** It says the child "can write it
 directly if the path is on shared filesystem, which it is". It cannot.
-`config/strategy.sb:15` denies `file-write*`, and the Linux path binds `/`
-read-only. `scripts/check_agent_paths.py` was never the binding constraint here;
+`config/strategy.sb` denies `file-write*` at line 15, and the Linux path
+binds `/` read-only. `scripts/check_agent_paths.py` was never the binding constraint here;
 the sandbox is. An abandoned attempt at the writable bind survived as dead code in
 `adapter.py` until commit `e9a3b1d`.
 

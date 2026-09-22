@@ -15,6 +15,7 @@ is a boundary that changes results.
 
 from __future__ import annotations
 
+import base64
 import importlib.util
 import os
 import sys
@@ -82,6 +83,13 @@ from src.core.types import (  # noqa: E402
     Bar, FillEvent, LifecycleEvent, OrderView, Side, Subscription, Tick,
     TickEvent,
 )
+
+# The fitted protocol, spelled here rather than imported. This process must not
+# import the engine -- that separation is the isolation -- so the names are
+# duplicated and `tests/test_boundary.py` asserts they still match
+# `engine.FIT_ARITY`. A drift between the two would mean the child advertises a
+# capability the engine does not enforce, or misses one it does.
+FIT_METHODS = ("fit", "save_weights", "load_weights")
 
 
 class WindowTooShort(RuntimeError):
@@ -529,7 +537,16 @@ def main() -> None:
         if kind == "load":
             try:
                 strategy = load(message["path"], message["class"])
-                send(write_fd, {"reply": "done", "ok": True, "actions": []})
+                # **What the class actually defines, not what the profile
+                # claims.** The parent picks a proxy class from the profile's
+                # `fit_sessions` before this process exists; it cross-checks the
+                # choice against this list. The silent failure it catches is a
+                # profile that omits `fit_sessions` for a class that *has*
+                # `fit()`: the fitted path would never engage, the model would
+                # score with unfitted parameters, and the row would look real.
+                caps = [m for m in FIT_METHODS if hasattr(strategy, m)]
+                send(write_fd, {"reply": "done", "ok": True, "actions": [],
+                                "capabilities": caps})
             except Exception as exc:                          # noqa: BLE001
                 send(write_fd, {"reply": "done", "ok": False, "actions": [],
                                 "error_kind": "strategy_raised",
@@ -539,6 +556,49 @@ def main() -> None:
         if kind == "stop":
             send(write_fd, {"reply": "done", "ok": True, "actions": []})
             return
+        if kind == "save_weights":
+            # Bytes back over the pipe. This process cannot write, so it hands
+            # the parameters to the parent and the parent decides where they go.
+            try:
+                blob = strategy.save_weights()
+                if not isinstance(blob, (bytes, bytearray)):
+                    raise TypeError(
+                        f"save_weights() returned {type(blob).__name__}, not "
+                        "bytes. It hands the parameters over; it does not write "
+                        "them anywhere.")
+                send(write_fd, {"reply": "done", "ok": True, "actions": [],
+                                "blob": base64.b64encode(bytes(blob)).decode()})
+            except Exception as exc:                          # noqa: BLE001
+                send(write_fd, {"reply": "done", "ok": False, "actions": [],
+                                "error_kind": "strategy_raised",
+                                "error": f"{type(exc).__name__}: {exc}",
+                                "traceback": traceback.format_exc()})
+            continue
+        if kind == "load_weights":
+            try:
+                strategy.load_weights(base64.b64decode(message["blob"]))
+                send(write_fd, {"reply": "done", "ok": True, "actions": []})
+            except Exception as exc:                          # noqa: BLE001
+                send(write_fd, {"reply": "done", "ok": False, "actions": [],
+                                "error_kind": "strategy_raised",
+                                "error": f"{type(exc).__name__}: {exc}",
+                                "traceback": traceback.format_exc()})
+            continue
+        if kind == "fit":
+            # **The one callback with no context.** `fit()` reads the state the
+            # strategy accumulated for itself across the fit window; it is handed
+            # no ctx and it may not trade, which is why `FIT_ARITY` maps it to 0
+            # and why it is not in the `_snapshot` path with the others. Training
+            # happens here, in the sandboxed child, under this process's rlimits.
+            try:
+                strategy.fit()
+                send(write_fd, {"reply": "done", "ok": True, "actions": []})
+            except Exception as exc:                          # noqa: BLE001
+                send(write_fd, {"reply": "done", "ok": False, "actions": [],
+                                "error_kind": "strategy_raised",
+                                "error": f"{type(exc).__name__}: {exc}",
+                                "traceback": traceback.format_exc()})
+            continue
 
         # rolling windows, maintained here so the parent sends only what is new
         for sid, window in message.get("windows", {}).items():

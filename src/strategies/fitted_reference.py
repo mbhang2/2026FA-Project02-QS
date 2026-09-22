@@ -82,8 +82,14 @@ class FittedReference:
         ordered = sorted(self._seen)
         self.threshold = float(ordered[int(0.80 * (len(ordered) - 1))])
 
-    def save_weights(self, path) -> None:
-        path.write_text(f"{self.threshold!r}\n")
+    def save_weights(self) -> bytes:
+        """Hand the parameters over; the harness decides where they live.
 
-    def load_weights(self, path) -> None:
-        self.threshold = float(path.read_text().strip())
+        Bytes rather than a path because this object runs in a child process
+        that is denied `file-write*`. A strategy cannot persist itself, and the
+        API should not pretend otherwise.
+        """
+        return f"{self.threshold!r}\n".encode()
+
+    def load_weights(self, blob: bytes) -> None:
+        self.threshold = float(blob.decode().strip())

@@ -49,7 +49,8 @@ sys.path.insert(0, str(REPO_ROOT))
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine, git_sha  # noqa: E402
 from src.core.engine.remote import (  # noqa: E402
-    HarnessFailed, RemoteFailure, RemoteStrategy, isolation_for,
+    HarnessFailed, RemoteFailure, RemoteFittedStrategy, RemoteStrategy,
+    isolation_for,
 )
 from src.core.runlog import (  # noqa: E402
     LedgerRun, append_ledger, store_fill_log, store_source, store_weights,
@@ -247,6 +248,22 @@ def attach_fill_log(record: dict, engine, ledger_path: Path) -> dict:
 
 
 
+def _proxy_for(profile: dict):
+    """Which proxy class stands in for the strategy in this process.
+
+    From the profile, because the class has to be chosen before the child exists
+    to load it. That makes it a claim about code this process has not read, so
+    `RemoteStrategy._check_capabilities` verifies it against what the child
+    reports the class actually defines, in both directions, right after `load`.
+
+    A run that LOADS weights sets no fit window and does not fit, so it wants the
+    ordinary proxy: `Engine` marks it already-fitted and `_fit_now` refuses.
+    """
+    if profile.get("weights_path"):
+        return RemoteStrategy
+    return RemoteFittedStrategy if profile.get("fit_sessions", 0) else RemoteStrategy
+
+
 def attach_weights(record: dict, engine, ledger_path: Path) -> dict:
     """Put a fitted strategy's weights where a later run can load them.
 
@@ -256,11 +273,27 @@ def attach_weights(record: dict, engine, ledger_path: Path) -> dict:
     """
     if not getattr(engine, "_has_fit", False):
         return record
+    record["fit_sessions"] = engine.fit_sessions
+    if getattr(engine, "_loaded_weights", False):
+        # Loaded, not fitted: the weights on disk are the ones this run was
+        # given, and rewriting them under this run's digest would mint a second
+        # copy of a champion's model addressed by the wrong trial.
+        record["weights_source"] = str(engine.weights_path or "")
+        return record
+    if not hasattr(engine.strategy, "save_weights"):
+        # **Phase 1: the strategy fitted, but nothing can be persisted.**
+        # `RemoteFittedStrategy` forwards `fit` and deliberately not
+        # `save_weights` -- a campaign fits and scores inside one run and never
+        # needs weights on disk. The row still records that a fit happened and
+        # over how many sessions, which is what Amendment 4 counts. Persistence
+        # arrives with phase 2, when an L2 champion crosses splits.
+        record["weights_source"] = ""
+        return record
     path = store_weights(
-        ledger_path, record.get("strategy_digest", ""), engine.strategy
+        ledger_path, record.get("strategy_digest", ""),
+        engine.strategy.save_weights(),
     )
     record["weights_source"] = path
-    record["fit_sessions"] = engine.fit_sessions
     # Recorded by digest in the row, the way `fill_log_digest` is -- and
     # deliberately NOT added to ARTIFACT_GLOBS.
     #
@@ -439,7 +472,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
         # which put strategy code in the harness's address space before the
         # engine existed. Findings 2 and 3 of the second adversarial pass were
         # both that sharing; this is the change that ends it.
-        with RemoteStrategy(
+        with _proxy_for(profile)(
             STRATEGY_PATH,
             class_name="Strategy",
             action_cap=profile.get("action_cap", 64),
@@ -644,7 +677,7 @@ def _fill_model_spread(cfg, profile, seed, strategy, split, engine) -> float:
     # is one trial recorded in one row -- but it must not share the address
     # space, and `load_strategy()` here was the last place on this path that
     # would have put strategy code in it.
-    with RemoteStrategy(
+    with _proxy_for(profile)(
         STRATEGY_PATH,
         class_name="Strategy",
         action_cap=profile.get("action_cap", 64),

@@ -379,7 +379,11 @@ class RemoteStrategy:
         """
         import shutil
 
-        writable = REPO_ROOT / "runs"
+        # No writable bind. An earlier draft reserved `runs/` as one so the child
+        # could save model weights itself; it is denied on purpose. Weights come
+        # back over the pipe and the parent writes them, so the digest describes
+        # bytes the parent received rather than a file the child could rewrite
+        # after the fact. See docs/design/ml-strategies.md section 11.
         if shutil.which("bwrap"):
             self._mechanism = "bubblewrap: --ro-bind / /, --unshare-net"
             return [

@@ -442,6 +442,104 @@ Until then, fitted strategies work through `Engine.for_test` and not through
 `run.py`, and `config/run.yaml`'s `nq-train-fitted` profile is written but will
 fail if used.
 
+### The way through — 2026-09-22
+
+**Correcting this section's fourth bullet first.** It says the child "can write it
+directly if the path is on shared filesystem, which it is". It cannot.
+`config/strategy.sb:15` denies `file-write*`, and the Linux path binds `/`
+read-only. `scripts/check_agent_paths.py` was never the binding constraint here;
+the sandbox is. An abandoned attempt at the writable bind survived as dead code in
+`adapter.py` until commit `e9a3b1d`.
+
+**The principle: do not widen the boundary for a capability the first campaign
+does not need.**
+
+The three methods are not one feature. `fit` is needed by the first fitted
+campaign. `save_weights` and `load_weights` are needed only when a champion
+crosses from train to validation at L2. Splitting them splits the risk, and the
+half that carries all of the risk turns out to be the half we can defer.
+
+#### Phase 1 — forward `fit` only. No new write surface at all.
+
+- One new message kind, `fit`, with no payload. The child calls `strategy.fit()`
+  (no ctx, per `FIT_ARITY`) and replies with no actions.
+- `RemoteFittedStrategy(RemoteStrategy)` carries the method, so the ordinary proxy
+  stays byte-for-byte what it is today and a non-fitted run gains no surface at
+  all.
+- **Selection is cross-checked against the code.** The child's `load` reply reports
+  which of the three methods the loaded class actually defines; `start()` raises if
+  that disagrees with the class `run.py` constructed. This catches the silent
+  direction: a profile that omits `fit_sessions` for a class that *has* `fit()`
+  would otherwise score a model whose parameters were never fitted, and it would
+  look like a real result.
+- The reply may carry a **weights digest** — 64 hex characters the child computes
+  over its own fitted parameters. No bytes cross and nothing is written, but the
+  row gains the evidence a later refit can be checked against. A child that lies
+  about its own hash defeats only our determinism check; it cannot corrupt
+  anything, because nothing downstream trusts the value.
+
+That is sufficient for an entire fitted campaign: fit `[0, 284)`, score
+`[284, 384)`, one run, one split, nothing persisted.
+
+#### Phase 2 — persistence, and only when L2 needs the crossing
+
+Weights return as bytes over the pipe that already carries child-to-parent data,
+and the parent writes them. This adds no new *primitive* — the child could always
+send bytes — it adds a new thing the parent does with what it receives, and that
+is what needs bounding. Each control answers one specific way it could go wrong:
+
+1. **The path is parent-chosen.** The child supplies no filename, no path
+   fragment, nothing that reaches a filesystem call. `store_weights` derives the
+   path from a digest the parent computes over the bytes it received.
+2. **The parent never deserializes the blob.** It writes bytes and hashes bytes.
+   No `pickle.loads`, no `torch.load`, no `np.load(allow_pickle=True)` — each is
+   arbitrary code execution *outside* the sandbox, which would be a worse hole
+   than the one being closed. Only the child deserializes, on `load_weights`,
+   inside the sandbox where untrusted code was already assumed to run. Guarded by
+   a source-grep test in the style of `tests/test_global_n.py`.
+3. **Size cap checked before allocation.** The declared length is refused over the
+   cap before the parent reads, or a child can exhaust the parent's memory.
+4. **One blob per run**, mirroring the engine's refusal of a second `fit()`.
+5. **Refused from a non-fitted run** as a protocol violation, so the message type
+   exists only where it was declared.
+6. **Atomic write**, temp then rename; and on `load_weights` the parent verifies
+   the file's digest against the one recorded on the row before sending, so a
+   tampered weights file cannot silently change a scored result.
+
+#### What this does not defend against
+
+Weights are opaque parameters, so a child could encode something other than a
+model in them and read it back in a later run. That channel is inherent to
+persistence and no amount of inspection closes it. What bounds it is not the
+sandbox but the pre-registration: the fit window is registered (Amendment 4), the
+engine refuses a second `fit()`, the scored calendar excludes the fit window, and
+a blob crosses runs only where a human wired `weights_path` into a profile.
+Residual, and accepted deliberately rather than overlooked.
+
+#### How we will know the boundary still held
+
+Tests, not assertion:
+
+- the existing sandbox test — a child attempting `open(path, "w")` still raises
+- a non-fitted remote strategy has no `save_weights`, and a weights message from
+  one is refused
+- the written path derives from the parent's digest and from nothing in the message
+- an oversized blob is refused before allocation
+- `load_weights` refuses a blob whose digest does not match the row
+- the source-grep guard from control 2
+
+#### The alternative considered: refit instead of persist
+
+Deterministic CPU training is the default (§6), so refitting reproduces the
+identical model and no weights need to cross at all. This is the *safest* option
+and it is not dismissed on safety. It is dismissed because it moves the cost
+rather than removing it: a validation run would have to fit on train sessions it
+does not otherwise receive — `sessions_for` hands a run its own split plus warmup
+— so the engine would need a fit window drawn from a different split than the
+scored one. That is a change to the gate tier instead of the isolation tier, which
+is not obviously the better trade. Worth revisiting if phase 2 proves awkward. For
+phase 1 it is moot, because nothing crosses.
+
 ## 12. Still open
 
 Nothing blocking implementation. Two things to decide before the **first registered

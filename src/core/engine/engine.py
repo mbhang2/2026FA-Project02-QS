@@ -309,6 +309,12 @@ def _callbacks_of(proto) -> tuple[str, ...]:
 REQUIRED_CALLBACKS = _callbacks_of(Strategy)
 TICK_CALLBACKS = _callbacks_of(TickStrategy)
 
+# `fit()` takes nothing -- it reads what the strategy accumulated during the fit
+# window -- while the weight methods take a path. So they cannot go through
+# `validate_strategy`, whose arity check and whose error message are both
+# specifically about "exactly one argument (the context)".
+FIT_ARITY: dict[str, int] = {"fit": 0, "save_weights": 1, "load_weights": 1}
+
 
 def validate_strategy(strategy: Any, *, needs_ticks: bool = False) -> None:
     """Check the loaded strategy against `types.Strategy` before the walk starts.
@@ -350,6 +356,39 @@ def validate_strategy(strategy: Any, *, needs_ticks: bool = False) -> None:
             + "\n".join(problems)
             + "\n\nEvery callback takes the context and returns nothing. See "
             "docs/agent/strategy-api.md."
+        )
+
+
+def validate_fitted_strategy(strategy: Any) -> None:
+    """Check a fitted strategy against `types.FittedStrategy` before the walk.
+
+    Separate from `validate_strategy` rather than a flag on it, because the arity
+    differs -- `fit()` takes nothing and the weight methods take a path -- and
+    because that function's error message is written about callbacks taking the
+    context. A strategy must pass both.
+
+    Design: `docs/design/ml-strategies.md`.
+    """
+    problems: list[str] = []
+    for name, arity in FIT_ARITY.items():
+        fn = getattr(strategy, name, None)
+        if fn is None:
+            problems.append(f"  {name}() is missing")
+            continue
+        if not callable(fn):
+            problems.append(f"  {name} is {type(fn).__name__}, not a method")
+            continue
+        try:
+            inspect.signature(fn).bind(*(object(),) * arity)
+        except TypeError as exc:
+            problems.append(
+                f"  {name}{inspect.signature(fn)} does not take exactly "
+                f"{arity} argument(s): {exc}")
+    if problems:
+        raise TypeError(
+            f"{type(strategy).__name__} declared itself fitted but does not match "
+            "the contract:\n" + "\n".join(problems)
+            + "\n\nSee docs/design/ml-strategies.md."
         )
 
 
@@ -409,6 +448,14 @@ class Engine:
         split: Split = Split.VALIDATION,
         fill_model: FillModel | str = "unfavorable",
         warmup_sessions: int = 0,
+        # The first `fit_sessions` of the split are accumulation: bars delivered,
+        # actions ignored, excluded from the score. Only a fitted strategy may
+        # set it. See `docs/design/ml-strategies.md`.
+        fit_sessions: int = 0,
+        # Weights to load instead of fitting. This is how a validation or holdout
+        # run carries a champion: it loads what the training run produced rather
+        # than refitting on the split it is about to be scored against.
+        weights_path: Any = None,
         # Price units are the dataset's own. The synthetic generator works in
         # units where a bracket is ~0.75, so the default commission is scaled to
         # be a small fraction of a target rather than larger than one -- a cost
@@ -480,6 +527,70 @@ class Engine:
         self.action_cap_hits = 0
         self.actions_dropped = 0
         self.warmup_actions_ignored = 0
+
+        # A fitted strategy accumulates a prefix of the split and fits at its edge.
+        #
+        # **Not the warmup window, though the first draft of this used it.**
+        # `sessions_for` returns `(range(start, b.start), range(b.start, b.stop))`:
+        # warmup is the sessions *before* the split, borrowed as context. TRAIN is
+        # the first split, so it has none -- `warmup_sessions(TRAIN, 10)` is empty,
+        # and campaigns run on TRAIN. Using warmup as the fit window would have
+        # fitted on nothing there, and on data outside the split everywhere else.
+        #
+        # So the fit window is its own thing: the first `fit_sessions` of the
+        # split. It behaves like warmup in the two ways that matter -- bars are
+        # delivered, actions are ignored -- and, like warmup, it is excluded from
+        # `scored_sessions()`. That exclusion is what stops Amendment 3's idle
+        # charge billing every session the strategy was required not to trade in.
+        self.fit_sessions = fit_sessions
+        self._fit_cache: set[int] | None = None
+        self._warm: set[int] = set()
+        self._needs_fit = all(hasattr(strategy, m) for m in FIT_ARITY)
+        self._has_fit = False
+        self._loaded_weights = False
+        if self._needs_fit:
+            validate_fitted_strategy(strategy)
+            if weights_path is not None:
+                # **The load path, and the reason section 2a exists.**
+                # `--stage validate` carries a winner to the validation split by
+                # writing its SOURCE and running it. A fitted strategy that fitted
+                # there would train on the split it is about to be scored against,
+                # silently and flatteringly. So a run given weights loads them and
+                # is marked already-fitted: `_fit_now` then refuses, and there is
+                # no fit window to reach in the first place.
+                from pathlib import Path as _P
+
+                wp = _P(str(weights_path))
+                if not wp.exists():
+                    raise FileNotFoundError(
+                        f"weights_path {wp} does not exist. A run that needs "
+                        "weights must load them; a missing file is an error and "
+                        "not a licence to refit on this split. See "
+                        "docs/design/ml-strategies.md."
+                    )
+                strategy.load_weights(wp)
+                self._loaded_weights = True
+                self._has_fit = True
+                if fit_sessions:
+                    raise TypeError(
+                        "weights_path and fit_sessions were both given. A run "
+                        "either fits or loads; doing both would discard the loaded "
+                        "weights and retrain on this split."
+                    )
+            elif self.fit_sessions <= 0:
+                raise TypeError(
+                    f"{type(strategy).__name__} is a fitted strategy but "
+                    "fit_sessions=0 and no weights_path was given, so it would "
+                    "neither fit nor load. It would trade on an unfitted model, "
+                    "which is a silently meaningless run. See "
+                    "docs/design/ml-strategies.md."
+                )
+        elif fit_sessions:
+            raise TypeError(
+                f"fit_sessions={fit_sessions} was given but "
+                f"{type(strategy).__name__} is not a fitted strategy, so the "
+                "window would remove sessions from the score for no reason."
+            )
         self._fills_since_callback: list = []
         self.tick_history: HistoryView = HistoryView()
         self._tick_subscribed = False
@@ -596,7 +707,8 @@ class Engine:
         return self._book.views()
 
     def _run_inner(self) -> None:
-        warm = set(self.dataset.warmup_sessions(self.split, self.warmup_sessions))
+        warm = self._warm = set(
+            self.dataset.warmup_sessions(self.split, self.warmup_sessions))
 
         # A factory, not a list. See SetupContext: eagerly materialising the
         # training split costs nothing on synthetic data and is on the order of
@@ -658,9 +770,16 @@ class Engine:
             self.dataset.ticks(self.split, warmup=self.warmup_sessions)
         ):
             if session is not None:
-                self._close_session(session, seq + 1, actionable=session not in warm)
+                self._close_session(session, seq + 1,
+                                    actionable=self._is_actionable(session))
             session = batch[0].session
-            actionable = session not in warm
+            actionable = self._is_actionable(session)
+            if actionable and self._needs_fit and not self._has_fit:
+                # The edge of the warmup window, crossed exactly once. Everything
+                # before it was accumulation with actions ignored; everything after
+                # is scored. `fit()` is called here and refused afterwards -- see
+                # `_fit_now` for why that refusal is load-bearing.
+                self._fit_now()
             self._open_session(session, Tick(batch[0].ts, batch[0].price,
                                              batch[0].size, session, seq + 1,
                                              batch[0].side))
@@ -719,7 +838,8 @@ class Engine:
                 i = nxt
 
         if session is not None:
-            self._close_session(session, self.n_ticks, actionable=session not in warm)
+            self._close_session(session, self.n_ticks,
+                                actionable=self._is_actionable(session))
 
         self.blotter.final_position = self.position
         self.blotter.final_price = self.last_price
@@ -1425,12 +1545,70 @@ class Engine:
             "agree": rebuilt.digest() == self.blotter.digest(),
         }
 
+    def _fit_now(self) -> None:
+        """Call `fit()` once, at the edge of the warmup window, and never again.
+
+        **The refusal is the point, not the call.** `nq_campaign.py --stage validate`
+        carries a campaign winner to the validation split by writing its *source*
+        and running it. For a strategy that is only a file that is complete; for a
+        fitted one, a `fit()` that ran there would retrain **on the validation
+        split**. Nothing would fail, nothing would be logged, and the resulting
+        number would be flattering and meaningless -- on the one split that exists
+        to be uncontaminated.
+
+        So a second call raises. A run that needs weights it has not got must load
+        them, and a missing weights file is an error rather than a licence to refit.
+        """
+        if self._has_fit:
+            raise RuntimeError(
+                "fit() has already been called for this run. A fitted strategy fits "
+                "once, at the edge of its warmup window, on the data it accumulated "
+                "there. Refitting mid-run means the trades before and after came "
+                "from different models, and refitting on a later split means "
+                "training on data the run is about to be scored against. Load "
+                "weights instead. See docs/design/ml-strategies.md."
+            )
+        self._has_fit = True
+        self.strategy.fit()
+
+    def _split_sessions(self) -> list[int]:
+        """Every session of the served split, fit window included."""
+        own = getattr(self.dataset, "scored_sessions", None)
+        if own is not None:
+            return list(own(self.split, self.warmup_sessions))
+
+        from ..data.dataset import sessions_for
+
+        _, live = sessions_for(self.dataset.calendar(), self.split,
+                               self.warmup_sessions)
+        return list(live)
+
+    def _fit_set(self) -> set[int]:
+        """The first `fit_sessions` of the split, cached.
+
+        Computed from the split rather than from warmup, because warmup lives
+        *before* the split and TRAIN -- where campaigns run -- has none.
+        """
+        if self._fit_cache is None:
+            self._fit_cache = (set(self._split_sessions()[:self.fit_sessions])
+                               if self.fit_sessions > 0 else set())
+        return self._fit_cache
+
+    def _is_actionable(self, session: int) -> bool:
+        """Warmup is context from before the split; the fit window is a prefix of
+        it. Both deliver bars and ignore actions, for different reasons."""
+        return session not in self._warm and session not in self._fit_set()
+
     def scored_sessions(self) -> list[int]:
         """The actionable sessions of the served split, in the dataset's own
         session-id space -- the observation unit the metric scores on.
 
         Warmup sessions are excluded: the strategy saw their bars but could not
-        act, so they are not observations.
+        act, so they are not observations. **The fit window is excluded for the
+        same reason** -- a fitted strategy is required not to trade there, and
+        leaving those sessions in the calendar would have Amendment 3's idle
+        charge bill every one of them, making the score an artefact of how long
+        the model trained for.
 
         A dataset that numbers its sessions by something other than position says
         so by defining `scored_sessions`. The NQ adapter does: `Tick.session`
@@ -1441,14 +1619,8 @@ class Engine:
         wrong in a way that nothing downstream could notice. The synthetic
         dataset numbers by position and needs no such method.
         """
-        own = getattr(self.dataset, "scored_sessions", None)
-        if own is not None:
-            return list(own(self.split, self.warmup_sessions))
-
-        from ..data.dataset import sessions_for
-
-        _, live = sessions_for(self.dataset.calendar(), self.split, self.warmup_sessions)
-        return list(live)
+        fit = self._fit_set()
+        return [x for x in self._split_sessions() if x not in fit]
 
     def session_calendar(self):
         from ..scoring.metrics import session_calendar

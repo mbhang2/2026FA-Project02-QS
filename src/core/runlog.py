@@ -302,6 +302,38 @@ def store_source(ledger_path: Path, digest: str,
         return str(out)
 
 
+def store_weights(ledger_path: Path, digest: str, strategy) -> str:
+    """Keep a fitted strategy's weights beside the ledger, addressed by its digest.
+
+    Mirrors `store_source`: same directory convention, same digest, same relative
+    path returned. `runs/weights/` for a non-campaign run, and
+    `runs/campaigns/<id>/weights/` for a trial, because the ledger path differs and
+    nothing else has to know.
+
+    **The weights are half the strategy.** A fitted strategy's source describes how
+    to fit; the weights are what it fitted to. Hashing only the source would let two
+    runs with identical code and different training hash the same, which is the
+    failure `code_fingerprint` and `artifact_digests` exist to prevent everywhere
+    else. See `docs/design/ml-strategies.md`.
+
+    Returns "" for a strategy that is not fitted, or one whose `save_weights` wrote
+    nothing -- a missing file is recorded as absent rather than as an empty one.
+    """
+    save = getattr(strategy, "save_weights", None)
+    if save is None or not digest:
+        return ""
+    out = ledger_path.parent / "weights" / f"{digest}.weights"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    if not out.exists():
+        save(out)
+    if not out.exists():
+        return ""
+    try:
+        return str(out.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(out)
+
+
 def store_fill_log(ledger_path: Path, digest: str, fills) -> str:
     """Keep the run's fills beside the ledger, addressed by their digest."""
     import gzip

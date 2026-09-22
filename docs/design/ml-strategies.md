@@ -181,8 +181,16 @@ runs/campaigns/<id>/sources/<strategy_digest>.py      today
 runs/campaigns/<id>/weights/<strategy_digest>.<ext>   proposed
 ```
 
-and the digest joins `ARTIFACT_GLOBS`, so a mid-run change invalidates the trial
-exactly as a rewritten prompt or hypothesis does.
+**They are recorded in the row by digest, and deliberately NOT added to
+`ARTIFACT_GLOBS`.** An earlier draft of this section said the opposite, and it was
+wrong: that set is compared at load and again after the run, so anything appearing
+inside it mid-run invalidates the trial — and weights are *written* during the run,
+at the fit boundary. Globbing them would make every fitted trial invalidate itself,
+the same failure a stray file in `config/hypotheses/` caused on `nq-orderflow-02`.
+
+The right precedent is `fill_log_digest`: an **output**, addressed by digest in the
+row, verifiable afterwards. A validation or holdout run that *loads* weights is the
+other case, and there the digest recorded here is what it must match.
 
 **A hash of the weights is necessary and not sufficient.** Weights trained on
 train+validation hash exactly like weights trained on train alone. So the row also

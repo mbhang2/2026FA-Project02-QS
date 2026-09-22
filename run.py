@@ -52,7 +52,8 @@ from src.core.engine.remote import (  # noqa: E402
     HarnessFailed, RemoteFailure, RemoteStrategy, isolation_for,
 )
 from src.core.runlog import (  # noqa: E402
-    LedgerRun, append_ledger, store_fill_log, store_source, strategy_digest,
+    LedgerRun, append_ledger, store_fill_log, store_source, store_weights,
+    strategy_digest,
 )
 from src.core.scoring import integrity  # noqa: E402
 # Bound here, at import, so a later `sys.modules[...].score = evil` does not
@@ -244,6 +245,40 @@ def attach_fill_log(record: dict, engine, ledger_path: Path) -> dict:
         )
     return record
 
+
+
+def attach_weights(record: dict, engine, ledger_path: Path) -> dict:
+    """Put a fitted strategy's weights where a later run can load them.
+
+    Only if it actually fitted. A fitted strategy whose run crashed before the fit
+    boundary has no weights, and writing an empty file would be worse than writing
+    none: a later load would succeed and produce an untrained model.
+    """
+    if not getattr(engine, "_has_fit", False):
+        return record
+    path = store_weights(
+        ledger_path, record.get("strategy_digest", ""), engine.strategy
+    )
+    record["weights_source"] = path
+    record["fit_sessions"] = engine.fit_sessions
+    # Recorded by digest in the row, the way `fill_log_digest` is -- and
+    # deliberately NOT added to ARTIFACT_GLOBS.
+    #
+    # That set is compared at load and again after the run, so anything appearing
+    # inside it mid-run invalidates the trial. Weights are WRITTEN during the run,
+    # at the fit boundary, so globbing them would make every fitted trial
+    # invalidate itself -- the same failure a stray file in config/hypotheses/
+    # caused on nq-orderflow-02. Weights are an output here, not an input.
+    #
+    # A validation or holdout run that LOADS weights is the other case, and there
+    # the digest in this row is what it must match.
+    if path:
+        import hashlib
+
+        f = REPO_ROOT / path
+        if f.exists():
+            record["weights_digest"] = hashlib.sha256(f.read_bytes()).hexdigest()[:16]
+    return record
 
 
 def check_warmup_against_embargo(profile_name: str, warmup: int, dataset) -> None:
@@ -442,6 +477,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
     except _Abandoned:
         record = engine.record.as_dict()
         attach_fill_log(record, engine, ledger_path)
+        attach_weights(record, engine, ledger_path)
         run_log.update(record)
         print(f"abandoned: {engine.record.error}", file=sys.stderr)
         print(f"ledger       {ledger_path}", file=sys.stderr)
@@ -464,6 +500,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
         )
         if rec:
             attach_fill_log(record, engine, ledger_path)
+            attach_weights(record, engine, ledger_path)
         run_log.update(record)
         print(f"{exc.kind}: {exc}", file=sys.stderr)
         if getattr(exc, "child_traceback", ""):
@@ -479,6 +516,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
         )
         if rec:
             attach_fill_log(record, engine, ledger_path)
+            attach_weights(record, engine, ledger_path)
         run_log.update(record)
         print(f"INVALIDATED: {exc}", file=sys.stderr)
         return 4
@@ -495,6 +533,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
         )
         if rec:
             attach_fill_log(record, engine, ledger_path)
+            attach_weights(record, engine, ledger_path)
         run_log.update(record)
         raise
 
@@ -579,6 +618,7 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     ).as_dict()
     record = engine.record.as_dict()
     attach_fill_log(record, engine, ledger_path)
+    attach_weights(record, engine, ledger_path)
     return record
 
 

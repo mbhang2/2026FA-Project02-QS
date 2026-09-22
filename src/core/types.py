@@ -723,3 +723,41 @@ class TickStrategy(Strategy, Protocol):
     """A strategy that declared `ctx.subscribe("tick")`, and so must handle them."""
 
     def on_tick(self, ctx: Any) -> None: ...
+
+
+class FittedStrategy(Strategy, Protocol):
+    """A strategy whose behaviour depends on parameters fitted to data.
+
+    Design: `docs/design/ml-strategies.md`. The shape is deliberately small: three
+    methods on top of `Strategy`, and every guarantee that matters is enforced by
+    the engine rather than promised here.
+
+    **The fit phase is warmup, generalised.** The strategy does not receive the fit
+    window as an array. It accumulates it through the ordinary walk, bar by bar,
+    with its actions ignored -- exactly what `warmup_sessions` already does -- and
+    `fit()` is called once when the engine reaches the boundary. That makes the data
+    boundary structural: a strategy cannot accumulate the scored window because the
+    engine has not walked it yet.
+
+    **`fit()` is called exactly once and refuses afterwards.** The engine asserts
+    this, and it is not a nicety. `scripts/nq_campaign.py --stage validate` carries a
+    campaign winner to the validation split by writing its *source* and running it;
+    for a fitted strategy, a `fit()` that ran there would retrain **on the validation
+    split** -- silently, with a flattering result, on the one split that exists to be
+    uncontaminated.
+
+    **Weights are an artifact, not state.** `save_weights` and `load_weights` exist
+    so the thing that shaped the result can be hashed and carried, the same way the
+    source is. A fitted champion is source *and* weights, and they move as a pair or
+    the champion quietly becomes a differently-trained model between trials.
+
+    What this Protocol cannot express, and the engine therefore checks separately:
+    that features are computed the same way at fit time and at prediction time. A
+    strategy holding the whole fit window can compute a rank among all of it, which
+    is not the rank among days-seen-so-far that it would get live. See
+    `docs/design/ml-strategies.md` section 2c.
+    """
+
+    def fit(self) -> None: ...
+    def save_weights(self, path: Any) -> None: ...
+    def load_weights(self, path: Any) -> None: ...

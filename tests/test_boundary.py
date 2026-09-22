@@ -48,6 +48,7 @@ from src.core.types import (  # noqa: E402
     OrderType,
     Side,
     Split,
+    FittedStrategy,
     Strategy,
     TickStrategy,
 )
@@ -459,13 +460,26 @@ def callbacks_the_engine_calls() -> set[str]:
 
 
 def protocol_callbacks() -> set[str]:
+    """Everything the three Protocols declare between them.
+
+    Only `fit` is taken from `FittedStrategy`, because only `fit` is called by the
+    engine. `save_weights` and `load_weights` are called by the harness -- `run.py`
+    and `runlog.store_weights` -- and asserting the engine calls them would be
+    false. `test_the_weight_methods_are_used_by_the_harness` covers their staleness
+    instead, so nothing declared goes unchecked.
+
+    `FittedStrategy` is also deliberately absent from
+    `test_every_declared_callback_takes_exactly_the_context`: its methods are not
+    context callbacks, which is the same reason
+    `engine.validate_fitted_strategy` is separate from `validate_strategy`.
+    """
     out = set()
     for proto in (Strategy, TickStrategy):
         out |= {
             n for n, v in vars(proto).items()
             if not n.startswith("_") and callable(v)
         }
-    return out
+    return out | {"fit"}
 
 
 def test_the_protocol_declares_exactly_what_the_engine_calls():
@@ -473,19 +487,62 @@ def test_the_protocol_declares_exactly_what_the_engine_calls():
     declared = protocol_callbacks()
     assert called, "the AST scan found nothing; the engine was restructured"
     assert called == declared, (
-        f"the engine calls {sorted(called)} but types.Strategy/TickStrategy "
-        f"declare {sorted(declared)}. The protocol is the only statement of the "
-        "contract in the code; a stale one is worse than none."
+        f"the engine calls {sorted(called)} but "
+        f"types.Strategy/TickStrategy/FittedStrategy declare {sorted(declared)}. "
+        "The protocol is the only statement of the contract in the code; a stale "
+        "one is worse than none."
     )
 
 
 def test_every_declared_callback_takes_exactly_the_context():
+    """`FittedStrategy` is excluded on purpose: `fit()` takes nothing and the
+    weight methods take a path, so they are not callbacks and are checked by
+    `test_the_fitted_protocol_matches_the_arities_the_engine_enforces` instead."""
     for proto in (Strategy, TickStrategy):
         for name, fn in vars(proto).items():
             if name.startswith("_") or not callable(fn):
                 continue
             params = [p for p in inspect.signature(fn).parameters if p != "self"]
             assert params == ["ctx"], f"{proto.__name__}.{name}{params}"
+
+
+WEIGHT_CALLERS = (
+    "run.py",
+    "src/core/runlog.py",      # save: store_weights, beside store_source
+    "src/core/engine/engine.py",   # load: the engine owns the fit-or-load decision
+)
+
+
+def test_the_weight_methods_are_used_by_the_harness():
+    """`save_weights` and `load_weights` are declared but are not engine callbacks,
+    so the protocol-equality test above cannot see them. A declaration nothing calls
+    is exactly the staleness this file exists to catch -- and it caught one: the
+    load path was designed, documented as the protection that stops `--stage
+    validate` refitting on the validation split, and not implemented.
+    """
+    harness = "".join((REPO_ROOT / f).read_text() for f in WEIGHT_CALLERS)
+    for name in ("save_weights", "load_weights"):
+        assert name in harness, (
+            f"FittedStrategy declares {name} and nothing in "
+            f"{', '.join(WEIGHT_CALLERS)} calls it")
+
+
+def test_the_fitted_protocol_matches_the_arities_the_engine_enforces():
+    """`FittedStrategy` and `engine.FIT_ARITY` are two statements of one contract
+    and must not drift. The engine validates against FIT_ARITY; a reader reads the
+    Protocol."""
+    from src.core.engine.engine import FIT_ARITY
+
+    declared = {n: v for n, v in vars(FittedStrategy).items()
+                if not n.startswith("_") and callable(v)}
+    assert set(declared) == set(FIT_ARITY), (
+        f"FittedStrategy declares {sorted(declared)} but the engine enforces "
+        f"{sorted(FIT_ARITY)}")
+    for name, fn in declared.items():
+        params = [p for p in inspect.signature(fn).parameters if p != "self"]
+        assert len(params) == FIT_ARITY[name], (
+            f"FittedStrategy.{name}{params} against FIT_ARITY[{name!r}]="
+            f"{FIT_ARITY[name]}")
 
 
 @pytest.mark.parametrize(

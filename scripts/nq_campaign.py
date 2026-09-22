@@ -100,6 +100,7 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None):
 # --------------------------------------------------------------------------- #
 
 VALIDATION_PROFILE = "nq-validation"
+VALIDATION_PROFILE_FITTED = "nq-validation-fitted"
 
 
 def _winner(rows: list[dict]) -> dict | None:
@@ -159,17 +160,48 @@ def stage_validate(name: str) -> None:
             "the L2 correction does not know about -- delete the file deliberately "
             "if you really mean to discard the first look and record why.")
 
+    # **A fitted champion is source AND weights; carrying only the source
+    # carries half of it.** For an unfitted strategy the source IS the whole
+    # strategy, which is why this stage only ever swapped `current.py`. A fitted
+    # one learned its parameters on train, and a validation run that re-derived
+    # them would be fitting on the split it is about to be scored against.
+    #
+    # So the weights travel the way the source does: a fixed path whose contents
+    # are swapped in and removed again in the `finally`. The durable copy stays
+    # in the campaign's `weights/` directory, addressed by digest; this is a
+    # transient and is gitignored.
+    #
+    # The profile changes with it, because `weights_path` cannot sit on
+    # `nq-validation` unconditionally -- the engine treats a weights file that is
+    # not there as an error rather than as permission to refit.
+    weights_rel = win.get("weights_source") or ""
+    weights_src = (ROOT / weights_rel) if weights_rel else None
+    if weights_src is not None and not weights_src.exists():
+        sys.exit(
+            f"{name}: the winner recorded weights at {weights_rel} and the file "
+            "is not there. A fitted champion cannot be validated without the "
+            "parameters it fitted, and refitting on the validation split is the "
+            "one thing this stage exists to prevent.")
+
+    profile = VALIDATION_PROFILE_FITTED if weights_src else VALIDATION_PROFILE
+    live_weights = ROOT / "runs" / "current.weights"
+
     strategy_path = ROOT / "src" / "strategies" / "current.py"
     original = strategy_path.read_text()
     strategy_path.write_text(source)
+    if weights_src:
+        live_weights.parent.mkdir(parents=True, exist_ok=True)
+        live_weights.write_bytes(weights_src.read_bytes())
+        print(f"{name}: carrying weights from {weights_rel}")
     try:
         proc = subprocess.run(
             [sys.executable, "run.py", "--human", "--quiet",
-             "--purpose", "check", "--profile", VALIDATION_PROFILE,
+             "--purpose", "check", "--profile", profile,
              "--ledger", str(out)],
             capture_output=True, text=True, cwd=str(ROOT))
     finally:
         strategy_path.write_text(original)
+        live_weights.unlink(missing_ok=True)
 
     vrows = [json.loads(x) for x in out.read_text().splitlines() if x.strip()] \
         if out.exists() else []
@@ -191,7 +223,7 @@ def stage_validate(name: str) -> None:
         "winner_campaign_index": win.get("campaign_index"),
         "train": {"profile": record.profile, "primary": train_score,
                   "score": win.get("score"), "diagnostics": win.get("diagnostics")},
-        "validation": {"profile": VALIDATION_PROFILE, "primary": vscore,
+        "validation": {"profile": profile, "primary": vscore,
                        "outcome": v.get("outcome"), "score": v.get("score"),
                        "diagnostics": v.get("diagnostics"),
                        "git_sha": v.get("git_sha")},

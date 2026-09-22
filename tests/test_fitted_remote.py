@@ -246,3 +246,76 @@ def test_the_engine_hands_load_weights_bytes_not_a_path():
     assert "strategy.load_weights(wp.read_bytes())" in source, (
         "the engine passes something other than bytes to load_weights; the "
         "child cannot open a path")
+
+
+# --------------------------------------------------------------------------- #
+# 6. the champion handoff -- section 5's validation look, for a fitted winner
+# --------------------------------------------------------------------------- #
+def test_the_validation_profiles_differ_only_by_the_weights():
+    """`nq-validation-fitted` exists because `weights_path` cannot sit on
+    `nq-validation` unconditionally: the engine treats a missing weights file as
+    an error, correctly, since absence is not permission to refit. But every
+    other evaluation condition has to match, or the fitted champion is scored
+    under different costs than the unfitted one and the two are not comparable --
+    the failure Task 61 found when validation silently charged 0.01 against
+    train's 0.10."""
+    import yaml
+
+    profiles = yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text())["profiles"]
+    plain, fitted = profiles["nq-validation"], profiles["nq-validation-fitted"]
+    differ = {k for k in set(plain) | set(fitted) if plain.get(k) != fitted.get(k)}
+    assert differ == {"weights_path"}, (
+        f"the two validation profiles differ in {differ}; they may differ only "
+        "in the weights")
+
+
+def test_the_validate_stage_carries_weights_and_cleans_up():
+    """The gap this closed. `stage_validate` swapped only `current.py`, so a
+    fitted champion arrived at validation with its source and none of its learned
+    parameters."""
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert 'win.get("weights_source")' in source, (
+        "stage_validate does not read the winner's weights; a fitted champion "
+        "would be validated without the parameters it fitted")
+    assert "VALIDATION_PROFILE_FITTED" in source
+    assert "live_weights.unlink(missing_ok=True)" in source, (
+        "the transient weights file is not removed; a later unfitted validate "
+        "would find a stale champion's parameters sitting there")
+
+
+def test_a_champion_that_lost_its_weights_file_is_refused():
+    """Refitting on the validation split is the one thing this stage exists to
+    prevent, so a recorded-but-missing weights file must stop the run rather
+    than fall back to the unfitted profile."""
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert "is not there. A fitted champion cannot be validated" in source
+
+
+def test_loading_weights_means_the_run_cannot_also_fit(tmp_path):
+    """`weights_path` and `fit_sessions` together would discard the loaded model
+    and retrain on the split being scored. The engine refuses the combination;
+    this is the assertion that it still does after the API change."""
+    path = _write(tmp_path, FITTED)
+    with RemoteFittedStrategy(path, "Strategy", sandbox=False) as remote:
+        engine = Engine.for_test(ds(n_sessions=60, ticks_per_session=120),
+                                 remote, split=Split.VALIDATION,
+                                 warmup_sessions=1, fit_sessions=5, seed=1)
+        engine.run()
+        blob = remote.save_weights()
+    w = tmp_path / "champion.weights"
+    w.write_bytes(blob)
+
+    with RemoteFittedStrategy(path, "Strategy", sandbox=False) as remote:
+        with pytest.raises(TypeError, match="either fits or loads"):
+            Engine.for_test(ds(n_sessions=60, ticks_per_session=120), remote,
+                            split=Split.VALIDATION, warmup_sessions=1,
+                            fit_sessions=5, weights_path=w, seed=1)
+
+    with RemoteFittedStrategy(path, "Strategy", sandbox=False) as remote:
+        engine = Engine.for_test(ds(n_sessions=60, ticks_per_session=120), remote,
+                                 split=Split.VALIDATION, warmup_sessions=1,
+                                 weights_path=w, seed=1)
+        engine.run()
+        assert engine._loaded_weights and engine._has_fit
+        assert remote.save_weights() == blob, (
+            "the validation run is not carrying the champion's parameters")

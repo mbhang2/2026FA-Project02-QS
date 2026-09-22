@@ -154,6 +154,26 @@ profiles:
   # The first real end-to-end run: reference strategy, real NQ data, the
   # pre-registered validation split. A plumbing check at full scale, not a
   # result -- run it with `--purpose smoke`.
+  # Same as `nq-validation` in every evaluation condition, plus the weights the
+  # champion fitted. A separate profile rather than a key on `nq-validation`
+  # because the engine treats a `weights_path` that does not exist as an error
+  # -- correctly, since a missing file is not a licence to refit on the
+  # validation split -- so the plain profile cannot carry the key unconditionally.
+  #
+  # `weights_path` and `fit_sessions` are mutually exclusive: a run either fits
+  # or loads. This one loads, which is the entire point. See Amendment 4.
+  nq-validation-fitted:
+    dataset: nq
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 3600
+    notional_base: 1.0
+    commission_per_contract: 0.10
+    record_fill_spread: false
+    weights_path: runs/current.weights
+
   nq-validation:
     dataset: nq
     split: validation

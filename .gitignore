@@ -115,3 +115,9 @@ loop/candidates/
 # history to save 12 MB is not a trade worth making.
 docs/reviews/*/arm-*-runs.json
 docs/reviews/*/_sources/
+
+# The champion's weights, swapped in by `nq_campaign.py --stage validate` the
+# way `current.py`'s contents are, and deleted in the same `finally`. Ignored so
+# a crashed validate leaves an untracked file rather than a staged one. The
+# durable copy lives in the campaign's `weights/` directory, addressed by digest.
+runs/current.weights

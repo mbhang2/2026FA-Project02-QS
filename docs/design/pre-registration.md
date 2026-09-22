@@ -813,3 +813,89 @@ by watching an agent walk into it. `MIN_SESSIONS = 30` counts **calendar**
 sessions and so is satisfied trivially by any NQ run — it has never been a
 participation floor, whatever its comment implies, and this amendment does not
 make it one.
+
+## Amendment 4 — 2026-09-22 — what a trial is when the strategy is fitted
+
+**Status: REGISTERED, NOT YET IN FORCE.** No fitted campaign has run; the
+`nq-train-fitted` profile cannot execute until the remote boundary is widened
+(`docs/design/ml-strategies.md` §11). In force from the first campaign whose
+profile carries `fit_sessions > 0`. Nothing before that commit is affected.
+
+A fitted strategy chooses its parameters from the data. That adds three degrees
+of freedom an unfitted strategy does not have -- architecture, hyperparameters,
+and where the fit window ends -- and each one is a way of looking at the data.
+The pre-registration has to say which looks are counted before any of them is
+taken.
+
+### 1. A trial is one scored run of the dataset
+
+One run that produces a score is one trial, one ledger row, one look. Not the
+`(architecture, hyperparameters, fit window)` triple: a triple that is never run
+is not a look, and a triple run twice is two.
+
+- Each hyperparameter configuration that is scored is its own trial.
+- A refit that is scored is a new trial.
+- The weights digest is recorded on the row (`weights_digest`, `weights_source`,
+  `fit_sessions`) but is not itself counted. Weights are **not** in
+  `ARTIFACT_GLOBS`: that set is compared before and after the run and weights are
+  written mid-run, so including them would make every fitted trial invalidate
+  itself.
+- Within a campaign, N counts that campaign's own scored runs. Validation and
+  holdout passes are governed by §5 and §8 and are unchanged by this amendment.
+
+### 2. The fit window: `fit_sessions` = 284
+
+Fit on sessions `[0, 284)` of the train split, score on `[284, 384)`. One hundred
+scored sessions. Frozen into `campaign.json` at registration, before trial 0.
+
+Named as the config field on purpose. `docs/design/ml-strategies.md` uses `S` for
+the **scored** window (`S = 100`); an earlier draft of this amendment used `S` for
+the fit window. The split itself was never in dispute -- fit 1-284, score 285-384
+-- only the letter, so the letter is dropped here and `fit_sessions` is what is
+registered.
+
+Warmup is unchanged and is **before** the split; the fit window is a prefix of
+the split, not of the dataset, and the scored calendar excludes it.
+
+**The cost, recorded rather than discovered later.** One hundred scored sessions
+instead of 384. Sortino's sampling error goes roughly as `1/sqrt(n)`, so the score
+carries about `sqrt(384/100) = 1.96x` the noise an unfitted trial's does. That is
+comfortably above `MIN_SESSIONS = 30`, but it makes the `max_of_n` bar harder to
+clear honestly, and a fitted campaign should be expected to accept less often than
+an unfitted one for that reason alone. It is the price of holding out a fit
+window, it is accepted here, and it is **not** grounds for shrinking
+`fit_sessions` after seeing a score.
+
+### 3. Hyperparameters are trials, so the grid lives inside N
+
+Each configuration scored spends one of the campaign's looks. At the default
+`N = 50` a ten-point grid leaves five ideas. Either register a larger N for a
+fitted campaign or shrink the grid. Running the grid outside the ledger and
+bringing only the winner in is the failure this whole document exists to prevent.
+
+### 4. Refitting is a trial; loading is not a refit
+
+`load_weights` raises `FileNotFoundError` rather than quietly refitting when the
+file is absent -- the message says it is "not a licence to refit". A second
+`fit()` inside one run is refused by the engine. Both are already enforced in
+`src/core/engine/engine.py` and covered by `tests/test_fitted_strategy.py`.
+
+### N is campaign-scoped — restated because it was misstated
+
+The N that enters a correction is the campaign's own registered N, default 50.
+`runlog.global_n()` (772 at the time of writing) is the honesty number for
+disclosure and is **not** a bar. This is already enforced, not merely intended:
+`tests/test_global_n.py` asserts that nothing under `src/core/scoring/` and
+nothing in `campaign.py` so much as mentions `global_n`, on the stated ground
+that a bar over every trial the project ever ran would be "a bar for a family
+nobody selected over, and it would grow every night whether or not this campaign
+looked at anything". A fitted campaign's grid therefore competes against that
+campaign's own N and does not tax any other campaign.
+
+### What would invalidate this amendment
+
+- Moving `fit_sessions` after seeing a score computed under it.
+- Running hyperparameter configurations outside the ledger and registering only
+  the survivors.
+- Fitting on any session at or beyond index 284 of the train split.
+- Any reading of the holdout beyond the single look in §8.

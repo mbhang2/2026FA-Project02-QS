@@ -122,6 +122,51 @@ pandas, whatever is fast — provided the per-bar path it will use live produces
 same numbers. If it implements *only* the per-bar path, the engine builds the matrix
 by replaying it: slower, and nothing extra for the author to write.
 
+### 2f. Labels, features, and the rows that are not usable — 2026-09-22
+
+Settled with Michael. A supervised strategy needs labels, and a label is a
+statement about what happened *after* a bar. That is not leakage; it is what
+supervised learning is. Training on days 1-284 uses the future relative to each
+bar in that window, because otherwise there is nothing to learn from.
+
+**The rule: a row whose label or whose features would need a bar the strategy does
+not hold is NaN, and NaN rows are dropped from training.**
+
+It applies at both ends, and for the same reason:
+
+- **The start of the fit window.** A feature with a lookback -- a 20-bar CVD slope,
+  a session's volume profile before enough of the session exists -- cannot be
+  computed for the first bars. Those rows are NaN on the feature side.
+- **The end of the fit window.** A label with a forward horizon `H` cannot be
+  computed for the last `H` bars, because the bars it needs are in the *scored*
+  window. Those rows are NaN on the label side.
+
+So the usable training set is the interior of the fit window, and both edges are
+dropped by the same mechanism rather than by two separate hand-written trims. In
+the literature the second case is *purging*; naming it after the mechanism rather
+than after the horizon means a variable-horizon label -- an unconfirmed swing
+point, say -- is handled without anyone having to reason about its maximum
+lookforward.
+
+**Why this is a fact and not a policy.** Nothing has to mask the future. At
+`fit()` the engine has delivered exactly `[0, fit_sessions)` and nothing beyond it,
+so a label needing a later bar is uncomputable, not merely forbidden. Same during
+the scored window: at bar `t`, bars `t+1 … t+H` have not been delivered. A
+strategy that wanted to cheat has nothing to cheat with. `engine.py` calls
+`_fit_now()` at the first actionable session, which is that boundary.
+
+**The hazard, and it is the only one here: NaN must never silently become 0.**
+`fillna(0)`, `np.nan_to_num` and several sklearn imputers will turn "I do not know"
+into "the return was exactly zero", which is a fabricated label that trains the
+model toward flat. A fitted strategy should assert in `fit()` that the count of
+usable rows is roughly what the window size and horizon imply. If it is not,
+something filled them.
+
+**At inference, a NaN feature means do not trade.** The scored window has history
+behind it so lookback features are available, but the rule has to be stated: a
+strategy that cannot compute its features emits no order rather than an order on a
+zero.
+
 ### 2d. Why not have the engine own feature computation
 
 Recorded because it was the earlier proposal and was rejected on three grounds:

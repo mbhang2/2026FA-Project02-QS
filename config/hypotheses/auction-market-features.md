@@ -52,10 +52,34 @@ this feed carries:
 - **Tape velocity** — trades and volume per unit time against the session's own
   recent rate.
 
-The first three need volume-at-price within a session, which is a volume profile
-built from ticks. It is real feature engineering and it does not exist yet.
-Delta and cumulative delta come directly from `bar.delta`; unknown-aggressor
-volume is in `bar.unknown_volume` and belongs in neither side.
+The first three need volume-at-price within a session. That is a volume profile,
+and `src/core/features/volume_profile.py` computes one: `SessionProfile` takes
+`(price, size)` incrementally and answers `vpoc()`, `value_area()` and
+`low_volume_nodes()` from what it has been given so far. Delta and cumulative
+delta come directly from `bar.delta`; unknown-aggressor volume is in
+`bar.unknown_volume` and belongs in neither side.
+
+**What feeds it is an open question, and it is part of this hypothesis rather
+than of a strategy.** A profile built at a different resolution is a different
+feature, so the choice is registered here and not made inside `current.py`.
+
+- **Ticks** are exact. `ctx.subscribe("tick")` delivers every trade, and on NQ
+  that is roughly 369,000 callbacks a session -- 141.6M across the split, each
+  one a pipe round-trip to the strategy's process. Whether that fits
+  `nq-train-fitted`'s 7,200s budget is **unmeasured**.
+- **Fine time bars** are cheaper and nearly as good. Any interval is
+  subscribable, including sub-second, and each bar carries `high`, `low`,
+  `volume` and the signed split. At one second an NQ bar spans a price level or
+  three, so distributing its volume across its own range is close to the true
+  histogram rather than a crude stand-in. At thirty seconds it is not.
+
+**Queued before this campaign is registered:** build the profile from ticks, 1s,
+5s and 30s bars over a handful of real NQ sessions; compare VPOC, Value Area
+bounds and LVN locations against the tick-built version as ground truth; and time
+each through the real remote boundary against the budget. If ticks fit, use
+ticks -- there is no reason to approximate something computable exactly. If they
+do not, the measurement names the cheapest resolution indistinguishable from
+them, and **that number is written into this file** before trial 0.
 
 ## The target, and why not swing points
 

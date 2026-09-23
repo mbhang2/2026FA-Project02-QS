@@ -67,8 +67,35 @@ def campaign_cfg() -> dict:
 
 
 def run_facts(profile: dict, n_sessions: int) -> str:
+    """The operational facts of *this* run, for the proposing agent.
+
+    **It must describe the run the agent is actually in.** A fitted campaign
+    withholds the first `fit_sessions` of the split for training and scores only
+    what is left, so an agent told the split's full length is told the wrong
+    number -- and an agent never told a fit window exists will not use one,
+    because `strategy-api.md` 7c says a `fit()` proposal is refused unless the
+    campaign registered it. Neither failure raises; both just produce ordinary
+    strategies in a campaign that registered for something else.
+    """
+    fit = int(profile.get("fit_sessions", 0) or 0)
+    scored = n_sessions - fit
+    fitted_block = ""
+    if fit:
+        fitted_block = (
+            f"**This is a fitted campaign.** The first {fit} sessions of the "
+            f"split are a FIT WINDOW: bars are delivered and your orders are "
+            f"ignored, exactly as during warmup, and your `fit()` is called once "
+            f"at the edge of it. You are scored on the remaining {scored} "
+            f"sessions only, which you have never seen when `fit()` runs. You "
+            f"may define `fit`, `save_weights` and `load_weights` -- see section "
+            f"7c of the API document above.\n\n"
+            f"Fewer scored sessions means a noisier score: {scored} against the "
+            f"{n_sessions} an unfitted campaign gets is roughly "
+            f"{(n_sessions / scored) ** 0.5:.2f}x the sampling error. That is "
+            f"arithmetic about the window, not a comment on your proposal.\n\n")
     return (
-        f"Dataset: real NQ futures trades, {n_sessions} sessions on the "
+        fitted_block
+        + f"Dataset: real NQ futures trades, {scored} scored sessions on the "
         f"pre-registered {profile['split']} split.\n\n"
         f"Fill model: {profile['fill_model']} -- a fill requires a trade "
         "strictly through your limit, so you pay the spread on every entry and "
@@ -82,18 +109,22 @@ def run_facts(profile: dict, n_sessions: int) -> str:
         f"History window: {profile.get('history_window', 512)} bars.\n")
 
 
-def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None):
+def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
+              profile_name: str = PROFILE):
     from src.core.loop import hypothesis as H
     from src.core.loop.llm import LLMAgent
 
     c = cfg()
-    profile = c["profiles"][PROFILE]
+    profile = c["profiles"][profile_name]
     return LLMAgent(
         model=MODEL, temperature=0.7, max_tokens=16_384, show_history=True,
         # None is a real state, not a missing argument: `hypothesis_path` is
         # optional on the record, and a campaign that registered without a
         # question runs without one rather than borrowing another campaign's.
         hypothesis=H.load(hypothesis) if hypothesis is not None else None,
+        # 384 is the train split's length, not a constant: `run_facts`
+        # subtracts the profile's fit window from it, so a fitted campaign's
+        # agent is told the scored count rather than the split count.
         champion=champion, run_facts=run_facts(profile, 384))
 
 
@@ -249,7 +280,8 @@ def stage_validate(name: str) -> None:
 
 # --------------------------------------------------------------------------- #
 
-def stage_register(name: str, hypothesis: pathlib.Path) -> None:
+def stage_register(name: str, hypothesis: pathlib.Path,
+                   profile_name: str = PROFILE) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -262,8 +294,8 @@ def stage_register(name: str, hypothesis: pathlib.Path) -> None:
     served = LLMAgent(model=MODEL, temperature=0.7, max_tokens=16_384).preflight()
     print(f"  asked {served['requested']!r}  served {served['served']!r}")
 
-    cc, profile = campaign_cfg(), cfg()["profiles"][PROFILE]
-    agent_cfg = agent_for(None, hypothesis).config()
+    cc, profile = campaign_cfg(), cfg()["profiles"][profile_name]
+    agent_cfg = agent_for(None, hypothesis, profile_name).config()
     agent_cfg["null_source"] = cc["null_source"]
     agent_cfg["correction"] = cc["correction"]
     agent_cfg["b_null"] = B_NULL
@@ -279,7 +311,12 @@ def stage_register(name: str, hypothesis: pathlib.Path) -> None:
 
     d.mkdir(parents=True, exist_ok=True)
     record = CampaignRecord(
-        campaign_id=name, profile=PROFILE, budget=cc["n_trials"], q=cc["q"],
+        campaign_id=name, profile=profile_name, budget=cc["n_trials"],
+        q=cc["q"],
+        # Frozen before trial 0, like the budget and the q. A campaign that
+        # turns this on partway through because the unfitted trials looked poor
+        # is a different experiment from the one registered.
+        allow_fitted_proposals=cc.get("allow_fitted_proposals"),
         agent="src.core.loop.llm.LLMAgent", dataset="nq-trades", split="train",
         hypothesis_path=str(hypothesis.relative_to(ROOT)),
         hypothesis_digest=agent_cfg["hypothesis"]["digest"],
@@ -355,13 +392,18 @@ def stage_run(name: str) -> None:
             "A campaign answers the question it registered. Restore the file, or "
             "register a new campaign for the new question.")
 
-    agent = agent_for(champion if champion.exists() else None, hyp_path)
+    # From the record, not from PROFILE: a fitted campaign registered against
+    # `nq-train-fitted` and its agent has to be told the fit window and the
+    # scored count, which `run_facts` reads off that profile.
+    agent = agent_for(champion if champion.exists() else None, hyp_path,
+                      record.profile)
     t0 = time.monotonic()
     for i in range(start, record.budget):
         agent.champion = champion if champion.exists() else None
         source = agent.propose(rows)
         row = run_trial(source, profile=record.profile, ledger=ledger,
-                        campaign_id=record.campaign_id, index=i)
+                        campaign_id=record.campaign_id, index=i,
+                        allow_fitted=record.allow_fitted_proposals)
         drain = getattr(agent, "drain_log", None)
         if drain is not None:
             # Kept in a sidecar, because `run.py` owns the ledger row and this is
@@ -556,6 +598,12 @@ def main() -> int:
                     help="path to the hypothesis markdown; --stage register only, "
                          "and it is written into campaign.json. Later stages read "
                          "it from there and ignore this flag.")
+    ap.add_argument("--profile", default=PROFILE,
+                    help=f"run profile; --stage register only, and it is written "
+                         f"into campaign.json. Default {PROFILE}. Use "
+                         f"nq-train-fitted for a campaign whose strategies fit, "
+                         f"which withholds a fit window from the score. Later "
+                         f"stages read it from the record and ignore this flag.")
     a = ap.parse_args()
     if a.stage == "register":
         hyp = a.hypothesis.resolve()
@@ -565,12 +613,19 @@ def main() -> int:
             sys.exit(f"{hyp} is outside the repository. A campaign's question has "
                      "to be a committed file, or the record points at nothing a "
                      "reader can check.")
-        stage_register(a.name, hyp)
+        profiles = cfg()["profiles"]
+        if a.profile not in profiles:
+            sys.exit(f"unknown profile {a.profile!r}. config/run.yaml has: "
+                     f"{', '.join(sorted(profiles))}")
+        stage_register(a.name, hyp, a.profile)
     else:
         # Refused rather than ignored. Silently accepting it on a run stage is how
         # someone believes they changed the question and did not.
         if a.hypothesis.resolve() != DEFAULT_HYPOTHESIS.resolve():
             sys.exit(f"--hypothesis applies to --stage register only; "
+                     f"--stage {a.stage} reads it from campaign.json.")
+        if a.profile != PROFILE:
+            sys.exit(f"--profile applies to --stage register only; "
                      f"--stage {a.stage} reads it from campaign.json.")
         {"run": stage_run, "nulls": stage_nulls,
          "validate": stage_validate, "report": stage_report}[a.stage](a.name)

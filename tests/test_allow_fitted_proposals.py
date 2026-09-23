@@ -182,3 +182,74 @@ def test_the_flag_and_the_profile_are_two_gates_in_series(tmp_path):
     assert row.get("outcome") != "completed", (
         "a fitted strategy ran under a profile with no fit_sessions; fit() would "
         "never have been called and the model would be scored untrained")
+
+
+# --------------------------------------------------------------------------- #
+# the campaign driver: does any of this reach a real campaign?
+# --------------------------------------------------------------------------- #
+def _nq_campaign():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "nq_campaign", REPO_ROOT / "scripts" / "nq_campaign.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_the_agent_is_told_when_it_is_in_a_fitted_campaign():
+    """**The failure this prevents is silent in both directions.**
+
+    An agent told the split's full length is told the wrong session count, and an
+    agent never told a fit window exists will not use one -- `strategy-api.md`
+    7c says a `fit()` proposal is refused unless the campaign registered it. So
+    a fitted campaign whose `run_facts` does not say so gets ordinary strategies
+    and a wrong session count, and nothing raises.
+    """
+    import yaml
+
+    m = _nq_campaign()
+    profiles = yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text())["profiles"]
+
+    plain = m.run_facts(profiles["nq-train"], 384)
+    assert "384 scored sessions" in plain
+    assert "fitted campaign" not in plain.lower(), (
+        "an unfitted campaign's agent is being told about a fit window")
+
+    fitted = m.run_facts(profiles["nq-train-fitted"], 384)
+    assert "This is a fitted campaign" in fitted
+    assert "284 sessions" in fitted, "the fit window's size is not stated"
+    assert "100 scored sessions" in fitted, (
+        "the agent is told the split's length rather than what it is scored on")
+    assert "fit()" in fitted and "save_weights" in fitted
+
+
+def test_the_scored_count_is_derived_and_not_hardcoded():
+    """384 is the train split's length. The scored count is that minus the fit
+    window, and a fitted campaign that reported 384 would be describing a run
+    nobody is having."""
+    m = _nq_campaign()
+    made_up = {"split": "train", "fill_model": "unfavorable",
+               "commission_per_contract": 0.10, "fit_sessions": 300}
+    facts = m.run_facts(made_up, 384)
+    assert "84 scored sessions" in facts and "300 sessions" in facts
+
+
+def test_the_registration_freezes_the_flag_and_the_profile():
+    """Both travel in `campaign.json`, so later stages read the decision rather
+    than re-deciding it from a module constant."""
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert "allow_fitted_proposals=cc.get(\"allow_fitted_proposals\")" in source, (
+        "the campaign record does not freeze the proposal flag")
+    assert "profile=profile_name" in source, (
+        "the record hardcodes PROFILE, so a fitted campaign cannot be registered")
+
+
+def test_the_run_stage_passes_the_flag_and_the_records_profile():
+    """The two places the wiring would go dead without anything raising."""
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert "allow_fitted=record.allow_fitted_proposals" in source, (
+        "run_trial is called without the gate, so a fitted proposal would run "
+        "in a campaign that did not register one")
+    assert "record.profile)" in source, (
+        "the agent is built from PROFILE rather than from the record, so a "
+        "fitted campaign's agent would be given the unfitted run facts")

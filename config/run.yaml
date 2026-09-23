@@ -129,12 +129,12 @@ profiles:
   #
   # Added in Task 54 to MEASURE per-trial cost. A scored campaign against this
   # profile is governed by the pre-registration, not by this file existing.
-  # NOT YET USABLE -- see docs/design/ml-strategies.md section 11. run.py runs the
-  # strategy in a child process and hands the engine a RemoteStrategy proxy, which
-  # does not forward fit()/save_weights()/load_weights(), so this profile fails
-  # with "RemoteStrategy is not a fitted strategy". Fitted strategies currently
-  # work through Engine.for_test only. Left here because the numbers are right and
-  # the wiring is what will use them.
+  # USABLE since 2026-09-22. It was not: run.py hands the engine a RemoteStrategy
+  # proxy that forwarded none of fit()/save_weights()/load_weights(), and this
+  # profile died with "RemoteStrategy is not a fitted strategy". Closed by
+  # RemoteFittedStrategy -- docs/design/ml-strategies.md section 11, "The way
+  # through". Smoked against real NQ the same day: 284 sessions fitted, 100
+  # scored, threshold 160.0 contracts of delta, weights written and digested.
   #
   # A fitted-strategy profile: the first 284 train sessions are the fit window
   # (bars delivered, actions ignored, excluded from the score) and the last 100

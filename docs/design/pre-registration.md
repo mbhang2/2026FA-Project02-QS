@@ -816,10 +816,16 @@ make it one.
 
 ## Amendment 4 — 2026-09-22 — what a trial is when the strategy is fitted
 
-**Status: REGISTERED, NOT YET IN FORCE.** No fitted campaign has run; the
-`nq-train-fitted` profile cannot execute until the remote boundary is widened
-(`docs/design/ml-strategies.md` §11). In force from the first campaign whose
-profile carries `fit_sessions > 0`. Nothing before that commit is affected.
+**Status: REGISTERED, NOT YET IN FORCE.** In force from the first campaign whose
+profile carries `fit_sessions > 0`; nothing before that commit is affected. No
+such campaign has been registered, because no ML strategy has been written -- not
+because anything blocks one. The remote boundary this originally waited on was
+closed on 2026-09-22 (`docs/design/ml-strategies.md` §11) and `nq-train-fitted`
+has since been run against real NQ.
+
+**This amendment needs no separate registration step.** It takes force when a
+fitted campaign is registered, and `campaign.json` freezes `fit_sessions` before
+trial 0 the way it freezes the budget and the q.
 
 A fitted strategy chooses its parameters from the data. That adds three degrees
 of freedom an unfitted strategy does not have -- architecture, hyperparameters,

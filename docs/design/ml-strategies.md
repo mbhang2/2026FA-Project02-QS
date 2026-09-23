@@ -483,9 +483,10 @@ reaching the scorer, the splits or the ledger, and the reason
 its own review rather than being folded into a late-night session — which is why
 this section is a finding and not a patch.
 
-Until then, fitted strategies work through `Engine.for_test` and not through
-`run.py`, and `config/run.yaml`'s `nq-train-fitted` profile is written but will
-fail if used.
+**Closed 2026-09-22** by the subsection below. Fitted strategies run through
+`run.py`, and `nq-train-fitted` was smoked against real NQ the same day: 284
+sessions fitted, 100 scored, weights written and digested. What follows is kept
+as written -- the finding is why the design took the shape it did.
 
 ### The way through — 2026-09-22
 

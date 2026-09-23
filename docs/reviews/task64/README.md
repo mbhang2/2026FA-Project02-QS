@@ -32,11 +32,19 @@ different quantity.
 
 ## 2. The measurement
 
-**C = 1,000 campaigns x N = 50 trials, q = 0.05.** C chosen against measured
-throughput, not guessed: one candidate costs **0.631 s** to run and **~1.2 s**
-for b = 10,000 sign-flip resamples, so 50,000 candidates at 6 workers is about
-**4.2 hours**. At a true rate near 0.05 that gives a Wilson interval of roughly
-+/-0.014, against Task 38's +/-0.024.
+**C = 1,000 campaigns x N = 50 trials, q = 0.05.** At a true rate near 0.05 that
+gives a Wilson interval of roughly +/-0.014, against Task 38's +/-0.024.
+
+**Throughput, measured rather than guessed — and the first measurement of it was
+wrong.** A single unloaded candidate costs **0.631 s** to run and **~1.2 s** for
+b = 10,000 sign-flip resamples. Two `--stage verify` runs then took 158 s and
+151 s for four campaigns, at nominal 6 and 10 workers, which looked like a wall
+and implied 11 hours. It was not a wall: `pool.map` over **four** campaigns uses
+four workers whatever the pool size, and CPU sat at 377% in both. Per campaign
+under 4-way concurrency is therefore ~150 s, and the aggregate rate at 8 workers
+is what the run stage prints every 25 campaigns rather than what this paragraph
+predicts. Recorded because a throughput number nobody checked is how C gets
+chosen badly.
 
 N = 50 rather than Task 38's 10 because 50 is what `config/run.yaml` registers
 and what every NQ campaign has run.

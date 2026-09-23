@@ -184,33 +184,69 @@ The null is not too *wide* -- it is narrower than the observed. It is
 mis-**centred**, sitting systematically above what the strategy achieved. That is
 a sufficient explanation for p-values at 0.9997 and for a 25x conservative gate.
 
-### The mechanism, in the code
+### The mechanism — corrected 2026-09-23
 
-`round_turns()` builds each excursion as:
+**An earlier version of this section said the cause was the fill model's spread
+sitting inside `gross`, and proposed separating it per round turn. That was
+wrong, and it is left corrected here rather than quietly rewritten.** Every
+measurement above stands; only the attribution was mistaken.
 
-    gross += row.realized_pnl      # the fill price is already inside this
-    cost  += row.commission        # only commission is separated
+`round_turns()` does build each excursion as
 
-`gross` is realized P&L, so an unfavourable fill model's **spread cost is baked
-into it**. Only commission is pulled out. The replication is then:
+    gross += row.realized_pnl      # cost is not separated from this
+    cost  += row.commission        # only commission is
 
-    replicated = sign * gross - cost
+and the replication is `sign * gross - cost`. But there is **no spread component
+inside `gross` to separate**, because the fill model does not charge one.
+`fills.py` distinguishes the two models by a single boolean:
 
-so when `sign = -1` a round turn that *paid* the spread becomes one that *earned*
-it. Under `fill_model: unfavorable` every round turn pays the spread twice, which
-gives `gross` a systematically negative mean; flipping it hands half the
-replications a gain that was never available. The null drifts upward by roughly
-that amount, which is the -0.2170 above.
+    class FavorableFill:    strict = False   # fills if a trade occurs AT the limit or better
+    class UnfavorableFill:  strict = True    # fills only if a trade occurs strictly THROUGH
 
-**This is the same error the file already identified and fixed for commission**,
-and reasons about at length:
+Both fill a limit order at `order.limit_price` -- the same price. The unfavourable
+model does not give you a worse fill; it changes **which fills happen at all**.
+You still fill when price runs through your stop, and you miss fills where price
+only touched your target.
 
-> A round turn that lost 0.5 points net *paid commission to do it*. Flipping the
-> net figure hands the null a 0.5-point gain that never paid to trade... So the
-> sign lands on the gross and the cost is charged again.
+So the systematic negative in `gross` is **adverse selection**, and it is not a
+line item. It is a property of which round turns exist and how they resolved.
+There is nothing to subtract.
 
-The fix was applied to commission. Spread was never separated out, so the same
-argument never reached it.
+**The correct statement.** The sign-flip null assumes a round turn's gross P&L is
+symmetric about zero under the no-edge hypothesis. Under strict-through fills it
+is not: edgeless trading has *negative* expected gross, because the fills you get
+are adversely selected. Flipping a variable with a negative mean produces a
+distribution centred above it, by roughly twice that mean. That is the -0.2170.
+
+**Why the obvious repair is fatal.** Demeaning before the flip --
+`sign * (g - mu) + mu - cost` -- centres the null correctly only if `mu` is pure
+adverse-selection drift. It is not: `mu` also contains any real edge. A strategy
+with genuine skill would have that skill preserved inside its own null, and the
+test would destroy itself. An unbiased estimate of the drift has to come from
+somewhere the edge cannot reach.
+
+### What this leaves, and it is a decision rather than a patch
+
+1. **Route anything that matters to the conditional null.** Already the
+   documented design: `round_turn.py` says a result worth claiming "is re-run
+   under the conditional null rather than claimed from this one." `rotation.py`
+   re-runs the strategy against altered data, so adverse selection is incurred in
+   both arms and the asymmetry does not arise. Hours per campaign instead of
+   seconds.
+2. **Estimate the drift from an edge-free reference and re-centre.** Principled,
+   and the dangerous option: a reference that is wrong in the generous direction
+   moves the gate toward manufacturing discoveries, which is the failure this
+   project is built to prevent. It would need its own measurement before it could
+   be trusted.
+3. **Accept it and document the screen as a screen.** The cheap null is
+   conservative; that is the price of being cheap.
+
+This is closer to (1) than to a bug: the architecture already anticipated that
+the cheap null cannot do everything, which is why the expensive one exists. What
+is new is the **magnitude**. A screen running 25x conservative discards real
+candidates before they ever reach the confirmatory null, and nobody had measured
+that. The four NQ campaigns were all screened, none was re-run under the
+conditional null, and every one of them REJECTed.
 
 ### Why it is not contradicted by the 2026-09-22 calibration
 
@@ -231,15 +267,17 @@ But it does reframe evidence. Four NQ campaigns have returned REJECT, and a gate
 running 25x conservative makes those rejections much weaker evidence that the
 hypotheses lacked edge than they appeared to be.
 
-### What a fix would need, and why it is not in this commit
+### What is not in this commit
 
-Separating spread per round turn requires the engine to record the spread
-component of each fill. It does not: `record_fill_spread` runs a **twin engine**
-under a different fill model and reports the aggregate effect, which is a
-diagnostic and not a per-fill decomposition. Adding one touches the scored path,
-which is the riskiest place in this repository to change anything, and it would
-move every existing score.
+No change to the null, the correction or the metric. This is a measurement and a
+diagnosis; acting on either touches the scored path, moves every existing score,
+and requires deciding what happens to the four campaigns already screened under
+the current null.
 
-So this section is a finding, not a patch. It needs its own task, its own
-pre-registration, and a decision about what happens to the four campaigns already
-scored under the current null.
+**The one thing already settled, 2026-09-23, with Michael: the screen is too
+conservative to leave as it is.** A cheap null that discards 25 candidates for
+every one a nominal gate would discard is not a screen, it is a second gate
+nobody registered. What replaces it -- routing to the conditional null,
+re-centring against an edge-free reference, or changing what the screen is
+allowed to decide -- is the next task, and it gets its own pre-registration
+before anything runs.

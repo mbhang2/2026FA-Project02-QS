@@ -88,6 +88,24 @@ campaigns with a positive best, and unscorable counts.
   dangerous direction and would take precedence over everything else in this
   file.
 
+## 4a. R = 50 as a paired second arm — added before running, 2026-09-23
+
+Michael asked why not R = 50 as well. The answer is that it costs **nothing**:
+R = 50 is a prefix of R = 150, so taking the first 50 rotations of each candidate
+gives a second arm on the same candidates, the same rotations and the same
+observed best, with only the null sample size moving.
+
+That is the contrast `correction.resampling_bias` claims to describe -- +0.011 at
+R = 50, zero past 150 -- and it was measured "on known normal nulls". This
+measures it on the nulls we actually use. Task 38 ran the same paired contrast
+for `conditional` and found the predicted improvement did not appear: R = 50 gave
+0.0575 and R = 150 gave 0.0600, moving the estimate *up* by one campaign in four
+hundred.
+
+Reported for both arms: `reject_rate`, `accept_rate` with Wilson intervals, and
+the **discordant counts** -- campaigns accepted at one R and not the other --
+which is where a paired contrast carries its information.
+
 ## 5. Running it
 
     python docs/reviews/task66/fwer_rotation.py --stage verify

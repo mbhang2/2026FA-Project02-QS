@@ -905,3 +905,58 @@ campaign's own N and does not tax any other campaign.
   the survivors.
 - Fitting on any session at or beyond index 284 of the train split.
 - Any reading of the holdout beyond the single look in §8.
+
+---
+
+## Ideas recorded, not adopted
+
+Kept because the reasoning is worth more than the decision, and because an idea
+rejected without its reasons gets re-proposed every few months.
+
+### A random-trading null — Michael, 2026-09-22
+
+**The construction.** For each session draw an even trade count between 2 and
+some cap; pair the trades into round turns; give each pair a direction by coin
+flip; repeat across all sessions and then many times over. That distribution is
+the null.
+
+**Not adopted as the null, for one decisive reason: it does not hold the trade
+count fixed.** §3b's null sign-flips the candidate's *own* round turns, which
+preserves how often it traded, when, at what size and what it paid, and destroys
+only whether it was right. Drawing a fresh trade count destroys the cost
+structure too, and cost is what this instrument's results are made of.
+
+The arithmetic is the failure. Suppose the null averages 50 trades a session and
+the candidate takes 8. The null pays 50 trades of commission and sits far below
+zero on that alone; the candidate clears it with no edge of any kind. That is
+`nq-orderflow-01`'s champion -- 8 exposed sessions out of 384 -- passing again,
+which is precisely the reward hack Amendment 3 exists to close. A null that
+reintroduces it through a different door is worse than no change.
+
+It is also not per-candidate. The project already has a shared null
+(`tabulated`) and already instruments what that costs: `null_reference_divergence`
+exists because a candidate far from the reference has a null the table does not
+describe.
+
+**It is probably not cheaper either**, which was its original motivation.
+Sign-flip is close to minimal -- multiply gross by -1, re-charge commission,
+reassemble, score. Sampling entry and exit times and pricing them is more work
+per replication, not less. It is cheaper only if tabulated once and shared, which
+is the option above with the limitation above.
+
+**Where it is better than what we have, and this is the part worth keeping.**
+§3b's own file says the sign-flip null "tests directional skill, NOT
+profitability -- and that is a trap", and that the `sortino > 0` floor "is the
+thing that stops this". That floor is an arbitrary constant: zero has no
+particular claim to being the right bar.
+
+*Beats random trading of comparable activity* is a better-motivated floor than
+*beats zero*. It is economically meaningful, it is cheap when tabulated once, and
+a floor does not need to be per-candidate the way a p-value does -- a sanity bar
+may use a shared reference.
+
+**What adopting it would take**, if it is ever picked up: an amendment that
+states the construction exactly (the cap, the entry-time distribution and the
+size rule are all free parameters until they are written down), measures the
+floor's effect on the four campaigns already run, and says plainly that it
+**supplements the directional test and never replaces it**.

@@ -123,3 +123,123 @@ Results land in `docs/reviews/task64/fwer.json`. The raw per-campaign records go
 to the job scratch directory and are **not** committed: they regenerate from this
 document's seeds, and `.gitignore` already excludes `docs/reviews/*/arm-*-runs.json`
 for the same reason Task 57's 431 MB did not go into history.
+
+---
+
+## 6. The result, and what it turned out to mean — 2026-09-23
+
+**FWER = 0.0020, 95% CI [0.0005, 0.0073].** C = 1,000 campaigns x N = 50 trials,
+50,000 isolated runs, 5.53 h, zero unscorable trials, `code_fingerprint`
+unchanged across the run.
+
+| | |
+|---|---|
+| `reject_rate` (the correction) | 0.0020, CI [0.0005, 0.0073] |
+| `accept_rate` (the gate) | 0.0020, CI [0.0005, 0.0073] |
+| campaigns with a positive best | 852 / 1,000 |
+
+Against a nominal `q = 0.05` the gate is about **25x conservative**. Both numbers
+were fixed in `3cd6e4d` before anything ran, per section 3, and both are reported
+here as promised.
+
+### The `sortino > 0` floor is not what is doing the work
+
+852 of 1,000 campaigns produce a positive best score, and `reject_rate` equals
+`accept_rate` exactly. So every campaign the gate stops is stopped by the
+**correction**, not by the profitability floor. This matters because
+`round_turn.py` describes that floor as "the thing that stops" the null's
+inability to see profitability. At this operating point it stops almost nothing.
+
+### The p-values are not uniform, they are piled at 1
+
+| percentile | 1st | 5th | 10th | 25th | 50th |
+|---|---|---|---|---|---|
+| p | 0.157 | 0.564 | 0.813 | 0.979 | **0.9997** |
+
+Smallest p across 1,000 campaigns: 0.0495. A calibrated null gives roughly
+uniform p-values. These say the observed best is almost always far below the
+simulated maximum.
+
+### Why — one hypothesis tested and falsified, one found
+
+**Falsified: cross-candidate correlation.** The 50 candidates in a campaign share
+a dataset, so their scores should be positively correlated, and `max_of_n`
+resamples each null independently -- destroying that dependence and inflating the
+simulated maximum. Measured over 12 campaigns keeping all 50 scores: **mean
+pairwise correlation +0.013**, median +0.015. The effect is not there. Within-
+campaign spread is 0.1671 against an across-campaign spread of means of 0.0306,
+so the shared dataset explains very little.
+
+**Found: each candidate scores below its own null.**
+
+| | |
+|---|---|
+| observed mean | **-0.2869** |
+| mean of its own null | **-0.0699** |
+| gap | **-0.2170** |
+| candidates below their own null's mean | **95.0%** (570 / 600) |
+| observed std / null std | 1.32 |
+
+The null is not too *wide* -- it is narrower than the observed. It is
+mis-**centred**, sitting systematically above what the strategy achieved. That is
+a sufficient explanation for p-values at 0.9997 and for a 25x conservative gate.
+
+### The mechanism, in the code
+
+`round_turns()` builds each excursion as:
+
+    gross += row.realized_pnl      # the fill price is already inside this
+    cost  += row.commission        # only commission is separated
+
+`gross` is realized P&L, so an unfavourable fill model's **spread cost is baked
+into it**. Only commission is pulled out. The replication is then:
+
+    replicated = sign * gross - cost
+
+so when `sign = -1` a round turn that *paid* the spread becomes one that *earned*
+it. Under `fill_model: unfavorable` every round turn pays the spread twice, which
+gives `gross` a systematically negative mean; flipping it hands half the
+replications a gain that was never available. The null drifts upward by roughly
+that amount, which is the -0.2170 above.
+
+**This is the same error the file already identified and fixed for commission**,
+and reasons about at length:
+
+> A round turn that lost 0.5 points net *paid commission to do it*. Flipping the
+> net figure hands the null a 0.5-point gain that never paid to trade... So the
+> sign lands on the gross and the cost is charged again.
+
+The fix was applied to commission. Spread was never separated out, so the same
+argument never reached it.
+
+### Why it is not contradicted by the 2026-09-22 calibration
+
+That run measured the per-test rate at 0.0465, right at nominal, and it stands.
+It constructed round turns as `rng.gauss(0.0, 1.0)` -- i.i.d. and symmetric.
+Sign-flipping is exactly correct for that construction by definition, so uniform
+p-values were guaranteed. It measured the null's calibration **under its own
+assumptions**. This run measures it against real strategy output, where the
+assumption fails, and fails by 0.217.
+
+### What this costs, and what it does not
+
+The direction is the safe one: a null that is too generous makes the gate **harder
+to pass**, so this loses power rather than manufacturing discoveries. Nothing
+accepted under it is suspect.
+
+But it does reframe evidence. Four NQ campaigns have returned REJECT, and a gate
+running 25x conservative makes those rejections much weaker evidence that the
+hypotheses lacked edge than they appeared to be.
+
+### What a fix would need, and why it is not in this commit
+
+Separating spread per round turn requires the engine to record the spread
+component of each fill. It does not: `record_fill_spread` runs a **twin engine**
+under a different fill model and reports the aggregate effect, which is a
+diagnostic and not a per-fill decomposition. Adding one touches the scored path,
+which is the riskiest place in this repository to change anything, and it would
+move every existing score.
+
+So this section is a finding, not a patch. It needs its own task, its own
+pre-registration, and a decision about what happens to the four campaigns already
+scored under the current null.

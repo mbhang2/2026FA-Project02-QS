@@ -1,0 +1,24 @@
+{
+  "campaigns": 1000,
+  "trials_per_campaign": 50,
+  "q": 0.05,
+  "null_source": "round_turn_mc",
+  "correction": "max_of_n",
+  "idle_charge": 0.18,
+  "reject_rate": 0.002,
+  "reject_ci": [
+    0.000548632102457155,
+    0.007262958889587807
+  ],
+  "accept_rate": 0.002,
+  "accept_ci": [
+    0.000548632102457155,
+    0.007262958889587807
+  ],
+  "campaigns_with_a_positive_best": 852,
+  "best_score_median": 0.07630002771881547,
+  "best_score_min": -0.09954906091410926,
+  "best_score_max": 0.581666431424038,
+  "unscorable_trials": 0,
+  "code_fingerprint": "e759db8ed95392f9b08bbcaaac818c23ae1cbcbce92c20ef2db209c57b2d373a"
+}

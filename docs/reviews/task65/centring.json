@@ -1,0 +1,15 @@
+{
+  "candidates_usable": 100,
+  "candidates_total": 100,
+  "R": 150,
+  "rotation": {
+    "fraction_below": 0.56,
+    "mean_gap": 0.0004798608630957482,
+    "dispersion_ratio": 2.6484531556503894
+  },
+  "sign_flip": {
+    "fraction_below": 0.91,
+    "mean_gap": -0.22611911958972988,
+    "dispersion_ratio": 1.544896829385936
+  }
+}

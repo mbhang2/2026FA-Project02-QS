@@ -76,3 +76,66 @@ measurements and this document does not claim them.
     python docs/reviews/task65/centring.py
 
 Results to `docs/reviews/task65/centring.json`.
+
+---
+
+## 6. The result — 2026-09-23
+
+**Rotation is calibrated. Sign-flip sits 1.81 standard deviations below its own
+null.** 100 candidates, 15,100 isolated runs, 77.1 minutes, 100/100 usable.
+
+### The pre-registered numbers
+
+| arm | `fraction_below` | `mean_gap` |
+|---|---|---|
+| **rotation** | **0.560** | **+0.0005** |
+| sign-flip | 0.910 | -0.2261 |
+
+Centred is 0.50 and 0. Rotation is there. Sign-flip is not, and it reproduces
+Task 64's independent measurement (0.95, -0.2170) closely enough to confirm the
+two harnesses measure the same thing -- which is what makes the paired comparison
+worth anything.
+
+### The standardised version, which is the one that settles it
+
+`fraction_below` and `mean_gap` describe location. Whether a null is the right
+*width* needs `z = (observed - null mean) / null std`, one per candidate. A
+calibrated null gives `z` with mean 0, standard deviation 1, and about 5% of
+candidates beyond +/-1.96.
+
+| | rotation | sign-flip | calibrated |
+|---|---|---|---|
+| z mean | **-0.041** | **-1.810** | 0 |
+| z std | **1.048** | 1.403 | 1 |
+| \|z\| > 1.96 | **4.0%** | 45.0% | ~5% |
+| z < -1.96 | 1.0% | **45.0%** | ~2.5% |
+| z > +1.96 | 3.0% | **0.0%** | ~2.5% |
+
+Rotation is calibrated in location and in scale. Sign-flip is not off by a
+little: the typical candidate scores **1.81 sigma below the mean of its own
+null**, 45% are beyond -1.96 sigma, and **not one candidate in a hundred** landed
+beyond +1.96 sigma. A null that no candidate can exceed is a null that cannot
+reject, which is Task 64's FWER of 0.0020 stated a second way.
+
+### The dispersion column was a red herring, and is recorded as one
+
+Section 3 listed `dispersion_ratio` as context rather than a test, which was
+correct but for a reason that only became clear afterwards: it divides the
+spread of observed scores *across* candidates by the average width of a null
+*within* a candidate. Those are different quantities, and candidates differ
+structurally -- trade frequency, holding period, exposure -- in ways a
+per-candidate null is not meant to absorb. Rotation's 2.65 looked alarming and
+means nothing. The `z` table above is the quantity that answers the question.
+
+### What this establishes, and what it does not
+
+**Establishes:** the conditional null is centred and correctly scaled per
+candidate on this data under this metric, and the sign-flip null is neither.
+Task 64's remedy -- stop letting the cheap null decide, route to the conditional
+one -- rests on an assumption that has now been checked rather than hoped for.
+
+**Does not establish:** anything about FWER at N = 50. Per-candidate calibration
+is necessary for a calibrated gate and not sufficient; `max_of_n` over 50
+rotation nulls is a further step with its own behaviour, and this measurement
+says nothing about it. Nor about power, nor about whether 100 candidates on one
+dataset generalise. Section 4 said this in advance and it still holds.

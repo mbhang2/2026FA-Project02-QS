@@ -533,6 +533,159 @@ while finding it out from a `ContextError` is not.
 
 ---
 
+## 7c. Fitted strategies — when your parameters come from the data
+
+Everything above assumes you choose your numbers and write them down. A **fitted**
+strategy computes them from data instead: a threshold from a percentile, a
+regression's coefficients, a model's weights.
+
+**You may only write one if the campaign registered it.** A proposal defining
+`fit()` under a campaign whose `allow_fitted_proposals` is not `true` is refused
+before your file is written and before the run starts — it never reaches the
+data. If you are not told the campaign is a fitted one, write an ordinary
+strategy.
+
+### The three extra methods
+
+| Method | When it fires | Notes |
+|---|---|---|
+| `fit(self)` | once, at the edge of the fit window | **no `ctx`**, and you cannot trade from it |
+| `save_weights(self) -> bytes` | when the harness records the run | return your parameters |
+| `load_weights(self, blob: bytes)` | when a run is given weights to load | takes them back |
+
+`fit()` is the only one the engine calls during the walk. It takes no context
+because there is no instant to stand in — it happens *between* sessions.
+
+### How you get the training data: you already have it
+
+There is no array handed to you. **The fit window is warmup, generalised.** The
+engine walks the first `fit_sessions` sessions of the split exactly as it walks
+any other — `on_bars` fires, you accumulate whatever you need on `self` — and
+your orders are **ignored**, the way they are during warmup. When the engine
+reaches the edge of that window it calls `fit()` once, and everything after is
+scored.
+
+```python
+# tests/examples/06_fitted_threshold.py
+"""A fitted strategy: the threshold comes from the fit window, not from me.
+
+Accumulates absolute delta through the fit window the way warmup accumulates,
+fits one number at its edge, and trades that number afterwards. The smallest
+thing that is genuinely fitted -- no library, no training loop, no
+hyperparameter.
+"""
+
+
+class Strategy:
+    def __init__(self):
+        self.seen = []
+        self.threshold = None
+
+    def setup(self, ctx):
+        ctx.subscribe("5m")
+
+    def on_bars(self, ctx):
+        history = ctx.history("5m")
+        if not history:
+            return
+        bar = history[-1]
+        # Accumulate on every bar, fit window included. Orders here are ignored
+        # until the window is past, the same as during warmup.
+        self.seen.append(abs(bar.delta))
+
+        if self.threshold is None or not ctx.actionable:
+            return
+        if ctx.position or ctx.working_order_ids:
+            return
+        if abs(bar.delta) < self.threshold:
+            return
+        if bar.delta > 0:
+            ctx.buy(size=1, stop_offset=4.0, target_offset=4.0, tag="fitted-long")
+        else:
+            ctx.sell(size=1, stop_offset=4.0, target_offset=4.0, tag="fitted-short")
+
+    def on_fill(self, ctx):
+        pass
+
+    def on_lifecycle(self, ctx):
+        pass
+
+    def fit(self):
+        """One parameter, from what was accumulated. Called once, by the engine."""
+        if not self.seen:
+            raise RuntimeError("fit() ran with nothing accumulated")
+        ordered = sorted(self.seen)
+        self.threshold = float(ordered[int(0.8 * (len(ordered) - 1))])
+
+    def save_weights(self) -> bytes:
+        """The parameters, not the accumulation buffer."""
+        return repr(self.threshold).encode()
+
+    def load_weights(self, blob: bytes) -> None:
+        self.threshold = float(blob)
+```
+
+### `fit()` is called exactly once, and refused afterwards
+
+A second call raises. This is not tidiness: a campaign winner is carried to the
+validation split by re-running its source there, and a `fit()` that ran again
+would retrain **on the split it is about to be graded on**. Nothing would look
+wrong and the number would be meaningless.
+
+For the same reason, a run that is *given* weights loads them and never fits.
+
+### Weights are bytes, not files
+
+`save_weights` returns bytes and `load_weights` takes bytes. Neither takes a
+path, because **your process cannot write to disk** (§7a) — the harness writes
+them for you and records the digest.
+
+Return the parameters, not your accumulation buffers. `self.seen` above has 284
+sessions of data in it and none of it is the model.
+
+### Labels and features: what to do at the edges
+
+If you are training on "what happened after this bar", you need bars after it.
+That is not cheating — it is what training *is*, and the engine has already made
+it safe: at `fit()` you hold exactly the fit window and nothing beyond it, so a
+label that needs a later bar **cannot be computed**. It is absent, not forbidden.
+
+The rule that follows:
+
+> A row whose label **or whose features** would need a bar you do not hold is
+> unusable. Drop it.
+
+That bites at both ends. The first rows of the window have no lookback, so a
+20-bar feature is missing there. The last rows have no lookforward, so a
+10-bar-ahead label is missing there. Drop both.
+
+**Never turn a missing value into zero.** `fillna(0)`, `np.nan_to_num` and
+several imputers will quietly convert "I do not know" into "the return was
+exactly zero" — a fabricated label that teaches the model to sit still. Assert in
+`fit()` that the number of usable rows is roughly what your window and horizon
+imply; if it is far off, something filled them.
+
+**At prediction time, a feature you cannot compute means do not trade.** Emit no
+order rather than an order built on a zero.
+
+### Features you can import
+
+`src.core.features` holds libraries the engine never calls and you may use:
+
+- `src.core.features.volume_profile.SessionProfile` — volume at price for one
+  session: `vpoc()`, `value_area()`, `low_volume_nodes()`, plus
+  `distance_from_vpoc()` and `value_area_position()`.
+
+Everything there answers from what you have added **so far**, which is what makes
+it safe mid-session. Call `reset()` on a session boundary; a profile carried
+across sessions is a different feature. All of it returns `None` when there is
+nothing to compute, never `0.0` — handle the `None`.
+
+The scoring modules remain unreachable (§7): you can know your P&L, never the
+number you are graded on.
+
+---
+
 ## 8. What will make a run fail
 
 Searchable, because a failure message is the fastest way to learn an interface.

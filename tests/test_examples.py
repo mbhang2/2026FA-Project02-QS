@@ -39,6 +39,34 @@ SPEC = SyntheticSpec(
 )
 
 
+# A fitted example needs sessions to spare: the fit window is carved out of the
+# split, so the 24-session SPEC above would leave nothing to score. Bigger, and
+# a validation split wide enough to hold a window and still trade after it.
+FITTED_SPEC = SyntheticSpec(
+    n_sessions=60, ticks_per_session=390, vol_per_tick=0.15, seed=1,
+    train_frac=0.5, validation_frac=0.3,
+)
+FITTED_WINDOW = 6
+
+
+def is_fitted(strategy) -> bool:
+    """Does this example fit? Asked of the object, so it is true for a proxy
+    exactly when it is true for the class the proxy stands in for."""
+    return hasattr(strategy, "fit")
+
+
+def bench(strategy) -> tuple:
+    """The dataset and engine kwargs an example should be run against.
+
+    A fitted example cannot run under the plain bench: `Engine` refuses
+    `fit_sessions=0` for a strategy that fits, and refuses a fit window for one
+    that does not. One helper so the two run-tests below cannot disagree.
+    """
+    if is_fitted(strategy):
+        return SyntheticDataset(FITTED_SPEC), {"fit_sessions": FITTED_WINDOW}
+    return SyntheticDataset(SPEC), {}
+
+
 def example_paths() -> list[Path]:
     return sorted(p for p in EXAMPLES_DIR.glob("*.py") if not p.name.startswith("_"))
 
@@ -91,8 +119,9 @@ def test_example_is_in_the_doc_byte_for_byte(path: Path):
 @pytest.mark.parametrize("path", example_paths(), ids=lambda p: p.stem)
 def test_example_runs_and_trades(path: Path):
     strategy = load_strategy_class(path)()
+    dataset, extra = bench(strategy)
     engine = Engine.for_test(
-        SyntheticDataset(SPEC), strategy, split=Split.VALIDATION, warmup_sessions=1
+        dataset, strategy, split=Split.VALIDATION, warmup_sessions=1, **extra
     )
     record = engine.run()
 
@@ -130,11 +159,20 @@ def test_example_runs_on_the_path_the_scored_run_actually_uses(path: Path):
     from src.core.engine.remote import RemoteStrategy
     from src.core.runlog import RunTicket
 
+    from src.core.engine.remote import RemoteFittedStrategy
+
     ticket = RunTicket.for_test()
-    with RemoteStrategy(path, "Strategy") as strategy:
-        engine = Engine(SyntheticDataset(SPEC), strategy, ticket=ticket,
+    # Which proxy, decided the way `run.py` decides it: from whether the example
+    # fits. A fitted class behind the plain proxy is refused at load, which is
+    # the check that stops a model being scored untrained.
+    fitted = is_fitted(load_strategy_class(path)())
+    proxy = RemoteFittedStrategy if fitted else RemoteStrategy
+    dataset = SyntheticDataset(FITTED_SPEC if fitted else SPEC)
+    extra = {"fit_sessions": FITTED_WINDOW} if fitted else {}
+    with proxy(path, "Strategy") as strategy:
+        engine = Engine(dataset, strategy, ticket=ticket,
                         split=Split.VALIDATION, warmup_sessions=1,
-                        fill_model="unfavorable", seed=1)
+                        fill_model="unfavorable", seed=1, **extra)
         record = engine.run()
     assert record.outcome == "completed", record.error
     assert record.fills > 0
@@ -168,9 +206,10 @@ def test_example_is_deterministic(path: Path):
     example is not reproducible it is teaching the wrong thing."""
     digests = []
     for _ in range(2):
+        strategy = load_strategy_class(path)()
+        dataset, extra = bench(strategy)
         engine = Engine.for_test(
-            SyntheticDataset(SPEC), load_strategy_class(path)(),
-            split=Split.VALIDATION, warmup_sessions=1,
+            dataset, strategy, split=Split.VALIDATION, warmup_sessions=1, **extra
         )
         engine.run()
         digests.append(engine.blotter.digest())

@@ -82,6 +82,18 @@ class CampaignRecord:
     # existed, and a record whose digest moved for a reason unrelated to its
     # contents is a tamper alarm that cries wolf.
     agent_config: dict | None = None
+    # **May the proposing agent write a strategy that fits?** `None` and `False`
+    # both mean no; only an explicit `True` allows it. `None` rather than `False`
+    # as the default is load-bearing: `digest()` drops None keys, so a record
+    # committed before this field existed hashes to the same value it always did.
+    # A `False` default would move every one of them and `CampaignRecord.read`
+    # would raise `CampaignTampered` on records nobody touched.
+    #
+    # Frozen into the record before trial 0, like the budget and the q. The
+    # question it settles is pre-registered, not decided while looking at
+    # results: "we allowed ML once the unfitted trials looked poor" is a
+    # different experiment from the one that was registered.
+    allow_fitted_proposals: bool | None = None
 
     def digest(self) -> str:
         payload = json.dumps({k: v for k, v in asdict(self).items() if v is not None},
@@ -148,14 +160,49 @@ class CampaignResult:
         return [r for r in self.rows if r.get("outcome") not in known]
 
 
+def declares_fit(source: str) -> bool:
+    """Does this proposal define a `fit` method, i.e. is it a fitted strategy?
+
+    By AST rather than by `"fit" in source`, which matches a comment, a docstring
+    and the word "profit". A proposal is refused on this answer, so a wrong answer
+    either blocks honest work or lets a fitted strategy through a campaign that
+    did not register one.
+
+    Syntactically invalid source is not a fitted strategy -- it is a broken one,
+    and `run.py` gives a better error for that than this function could.
+    """
+    import ast
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return False
+    return any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+               and node.name == "fit"
+               for node in ast.walk(tree))
+
+
 def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
-              index: int) -> dict:
+              index: int, allow_fitted: bool | None = None) -> dict:
     """One proposal, one isolated run, one ledger row. Returns the row.
 
     The strategy file is written, `run.py` is invoked exactly as a human would
     invoke it, and the row is read back. Nothing about the trial is an argument:
     dataset, split, seed and fill model all come from the committed profile.
     """
+    if declares_fit(source) and not allow_fitted:
+        # Refused before `current.py` is touched and before `run.py` is invoked,
+        # so the proposal never reaches the data. It is NOT a ledger row and does
+        # not count toward N: N is looks taken at the data, and this took none.
+        # It does spend one of the campaign's budget slots, which is visible in
+        # the returned history.
+        return {"outcome": "refused_fitted", "campaign_id": campaign_id,
+                "campaign_index": index, "score": None,
+                "error": "the proposal defines fit(), and this campaign did not "
+                         "register allow_fitted_proposals: true. A fitted "
+                         "strategy chooses its parameters from data, which is a "
+                         "different experiment from the one registered."}
+
     strategy_path = REPO_ROOT / "src" / "strategies" / "current.py"
     original = strategy_path.read_text()
     before = _line_count(ledger)
@@ -192,7 +239,8 @@ def run_campaign(agent, record: CampaignRecord, *, ledger: Path,
     for i in range(record.budget):
         source = agent.propose(history)
         row = run_trial(source, profile=record.profile, ledger=ledger,
-                        campaign_id=record.campaign_id, index=i)
+                        campaign_id=record.campaign_id, index=i,
+                        allow_fitted=record.allow_fitted_proposals)
         # What it cost to get that proposal. The stub has no log and no cost;
         # an LLM agent has tokens, latency, repair attempts and a bill, and an
         # overnight campaign's bill should be readable off the record rather

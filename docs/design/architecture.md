@@ -1050,6 +1050,43 @@ what was and was not achieved.**
 
 ---
 
+## 5e. `src/core/features/` — feature libraries the engine never calls
+
+| file | what it is |
+|---|---|
+| `src/core/features/volume_profile.py` | `SessionProfile` — volume at price for one session: VPOC, Value Area, Low Volume Nodes, and the derived `distance_from_vpoc` / `value_area_position` a model consumes |
+
+**Nothing here runs in the scored path.** §2d of `docs/design/ml-strategies.md`
+rejected engine-owned feature computation and that rejection stands: the engine
+does not know this package exists. A strategy imports it and calls it, so a bug
+here costs one trial rather than every trial.
+
+**It lives under `src/core/` for identity, not ownership.** A helper under
+`src/strategies/` would be invisible to every mechanism that says what a trial
+was — `strategy_digest` hashes `src/strategies/current.py` alone, `ARTIFACT_GLOBS`
+names that same single file, and `SOURCE_GLOBS` is `src/core/**/*.py` plus
+`run.py`. Two trials with identical `current.py` and different feature code would
+carry the same digest and the same fingerprint while behaving differently. Here
+the code is inside `code_fingerprint`, so `ledger_check` can ask whether a row's
+fingerprint is reachable in history. It is also outside `AGENT_ALLOWLIST`, so the
+proposing agent cannot edit a feature definition underneath a campaign that is
+measuring it.
+
+Three properties every feature in this package holds, because each is a way one
+silently corrupts a result:
+
+- **Causal.** Everything answers from what has been added so far. A session's
+  finished VPOC is not knowable while the session runs, and a feature built from
+  one is future data wearing a feature's clothes.
+- **Deterministic.** Integer bin arithmetic over integer volumes, so no float
+  accumulation and no ordering sensitivity; tie-breaks are stated rather than
+  incidental.
+- **Absent rather than zero.** An empty profile returns `None`. A price of `0.0`
+  for "nothing traded" is a fabricated feature — §2f's label hazard in its
+  feature form.
+
+---
+
 ## 6. `src/core/types.py` and `src/strategies/`
 
 **`src/core/types.py`** holds every shared value type: `Ts`, `Side`, `Split`,

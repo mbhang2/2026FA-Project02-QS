@@ -264,6 +264,25 @@ datasets:
 campaign:
   n_trials: 50
 
+  # May the proposing agent write a strategy that FITS -- one whose parameters
+  # come from the data rather than from whoever wrote it?
+  #
+  # `false` is the default and the conservative answer. A fitted proposal is
+  # refused before `current.py` is touched and before `run.py` runs, so it never
+  # reaches the data and never counts toward N.
+  #
+  # What this does NOT control, because the architecture already does: the agent
+  # cannot move the fit window. `fit_sessions` lives in a profile, profiles live
+  # in this file, and `scripts/check_agent_paths.py` allows the agent to write
+  # only `src/strategies/`. The one knob where a bad choice produces a
+  # FLATTERING score rather than a bad one is out of its reach structurally,
+  # which is why this flag can be a simple yes/no.
+  #
+  # Frozen into `campaign.json` before trial 0. Turning it on partway through
+  # because the unfitted trials looked poor is a different experiment from the
+  # one that was registered.
+  allow_fitted_proposals: false
+
   # TWO AXES, not one. `max_of_n` is a correction; `round_turn_mc` is a null
   # source. See pre-registration.md 3a -- including which combinations are
   # coherent, and the fact that the measured FWER of 0.060 describes the PAIR

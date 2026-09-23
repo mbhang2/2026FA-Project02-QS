@@ -79,15 +79,27 @@ def run_facts(profile: dict, n_sessions: int) -> str:
         f"History window: {profile.get('history_window', 512)} bars.\n")
 
 
-def agent_for(champion: pathlib.Path | None):
+def agent_for(name: str | None, champion: pathlib.Path | None):
     from src.core.loop import hypothesis as H
+    from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
     c = cfg()
     profile = c["profiles"][PROFILE]
+    # The campaign record is the authority on which question this campaign
+    # runs under: research campaigns register a hypothesis written from their
+    # retrieval (scripts/research_campaign.py), and a run that instead used
+    # this script's constant would propose against the wrong question while
+    # the record said another -- so derive from the record, and fall back to
+    # the MVP's committed hypothesis only for a campaign that records none.
+    hypothesis_path = HYPOTHESIS
+    if name:
+        record, _ = CampaignRecord.read(OUT / name / "campaign.json")
+        if record.hypothesis_path:
+            hypothesis_path = ROOT / record.hypothesis_path
     return LLMAgent(
         model=MODEL, temperature=0.7, max_tokens=16_384, show_history=True,
-        hypothesis=H.load(HYPOTHESIS), champion=champion,
+        hypothesis=H.load(hypothesis_path), champion=champion,
         run_facts=run_facts(profile, 384))
 
 
@@ -107,7 +119,7 @@ def stage_register(name: str) -> None:
     print(f"  asked {served['requested']!r}  served {served['served']!r}")
 
     cc, profile = campaign_cfg(), cfg()["profiles"][PROFILE]
-    agent_cfg = agent_for(None).config()
+    agent_cfg = agent_for(None, None).config()
     agent_cfg["null_source"] = cc["null_source"]
     agent_cfg["correction"] = cc["correction"]
     agent_cfg["b_null"] = B_NULL
@@ -151,7 +163,7 @@ def stage_run(name: str) -> None:
         return
     print(f"{name}: resuming at trial {start} of {record.budget}", flush=True)
 
-    agent = agent_for(champion if champion.exists() else None)
+    agent = agent_for(name, champion if champion.exists() else None)
     t0 = time.monotonic()
     for i in range(start, record.budget):
         agent.champion = champion if champion.exists() else None

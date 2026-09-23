@@ -175,6 +175,17 @@ ARTIFACT_GLOBS = (
                                      # experiments, and their scores are not
                                      # comparable. The file's commit date is
                                      # the pre-registration, as for a calendar.
+    "config/research/*.md",          # the research brief (Task 47): the human
+                                     # direction whose retrieval and hypothesis
+                                     # a research campaign is built from. An
+                                     # artifact for the same reason, so an edit
+                                     # mid-campaign invalidates the trial.
+    "config/retrievals/*.json",      # the frozen retrieved set (Task 47): the
+                                     # papers a research hypothesis was written
+                                     # from. The campaign answers from this
+                                     # snapshot of the literature, and its
+                                     # digest is in the campaign record the way
+                                     # a null table's is.
     "data/calibration/*.json",       # every null table, tagged or not
     "data/manifest.json",            # the bucket fingerprint
     "data/nq-contract-selection.json",

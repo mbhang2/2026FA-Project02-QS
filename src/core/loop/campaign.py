@@ -74,6 +74,21 @@ class CampaignRecord:
     # check, which is the same alarm an edited budget rings.
     hypothesis_path: str | None = None
     hypothesis_digest: str | None = None
+    # The research stage that produced the hypothesis (Task 47): the research
+    # brief and the frozen retrieval set, by path and digest, plus the research
+    # agent's own configuration. All three None for a campaign whose hypothesis
+    # a human wrote from scratch -- and `digest()` drops None keys, so adding
+    # these fields does not move the digest of any record committed before they
+    # existed. Editing the brief or the retrieval mid-campaign changes its
+    # digest and the record then fails its own check, exactly as an edited
+    # hypothesis or budget does: the commit dates of these files are the
+    # pre-registration, and the campaign answers from one snapshot of the
+    # literature.
+    research_prompt_path: str | None = None
+    research_prompt_digest: str | None = None
+    retrieval_path: str | None = None
+    retrieval_digest: str | None = None
+    research_config: dict | None = None
     # Everything a non-deterministic agent needs pinned (Task 36): model id,
     # temperature and sampling parameters, whatever seed the API accepts, the
     # prompt template digest, what the agent is shown, and the invocation

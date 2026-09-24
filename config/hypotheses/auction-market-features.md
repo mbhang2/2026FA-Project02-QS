@@ -149,6 +149,7 @@ deliverable is the loop and its gate, not the strategy.
 ## What to expect, so a thin result is not misread
 
 The scored window is 100 sessions rather than 384 (Amendment 4), which is roughly
-**1.96×** the sampling noise of an unfitted trial. A fitted campaign should be
-expected to accept less often for that reason alone. That is arithmetic about the
-window, not a verdict on the features.
+**1.96×** the sampling noise of an unfitted trial. A result that reads as weak may
+be the window's width rather than the features' -- the same signal measured over
+384 sessions would read about twice as sharply. That is arithmetic about the
+window, not a statement about the features.

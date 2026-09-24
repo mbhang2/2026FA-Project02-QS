@@ -8,8 +8,7 @@ agent, for the three reasons that file gives.
 is 284 sessions of one-second bars -- roughly 14 million rows. Holding feature
 vectors to fit at the end would exhaust the child process's memory limit. So the
 normal equations are accumulated instead: `XtX += x x'` and `Xty += x y` as each
-label becomes available, and `fit()` solves the ridge system from those. Memory
-is O(H * d) regardless of how long the fit window is.
+label becomes available, and `fit()` solves the ridge system from those. Memory is O(HORIZON_STEPS * d) regardless of how long the fit window is.
 
 That also purges the edges for free. A row at the end of the fit window never
 gets a label, because the bar that would supply it is in the scored window and
@@ -29,9 +28,9 @@ N_FEATURES = len(FEATURES)
 
 # -- hyperparameters. Each value tried is its own trial under Amendment 4. ---- #
 INTERVAL = "1s"          # registered by docs/reviews/task67; ticks are over budget
-HORIZON = 300            # label lookahead, in bars -> five minutes
+DECIDE_EVERY = 60        # one decision a minute; commission dominates at 1s
+HORIZON_STEPS = 5        # label lookahead, in decisions -> five minutes
 WARMUP_BARS = 600        # per session, before the profile means anything
-DECIDE_EVERY = 60        # consider a trade at most once a minute; commission dominates
 RIDGE_LAMBDA = 1.0
 EDGE_POINTS = 1.5        # predicted move that justifies paying the round turn
 STOP_POINTS = 8.0
@@ -53,8 +52,8 @@ class Strategy:
         self.session_open = None
         self.tick_count_sum = 0
 
-        # the label buffer: H bars of (features, price, session)
-        self.pending: deque = deque(maxlen=HORIZON + 1)
+        # the label buffer: one entry per DECISION, not per bar
+        self.pending: deque = deque(maxlen=HORIZON_STEPS + 1)
 
         # the normal equations, which is all training data ever becomes
         self.XtX = np.zeros((N_FEATURES + 1, N_FEATURES + 1))
@@ -82,14 +81,26 @@ class Strategy:
         self.tick_count_sum += bar.tick_count
         self.bars_in_session += 1
 
+        # **Features are computed at the decision cadence, not per bar, and that
+        # is a cost decision AND a correctness one.** `value_area()` and
+        # `low_volume_nodes()` walk the profile's price levels, ~80 us and ~40 us
+        # at a mid-session NQ profile of a few hundred levels. Per 1s bar that is
+        # roughly 12 s a session, about 4,600 s over the split, on top of the
+        # 1,726 s of delivery Task 67 measured -- against a 7,200 s budget. Once a
+        # minute it is negligible.
+        #
+        # It also aligns training with inference: the model is fitted on the same
+        # kind of row it later predicts on, rather than on bars it never sees a
+        # decision at.
+        if self.bars_in_session % DECIDE_EVERY:
+            return
+
         x = self._features(bar)
         self._retire_labels(bar)
         if x is not None:
             self.pending.append((x, bar.close, bar.session))
 
         if self.weights is None or not ctx.actionable or x is None:
-            return
-        if self.bars_in_session % DECIDE_EVERY:
             return
         if ctx.position or ctx.working_order_ids:
             return
@@ -163,7 +174,7 @@ class Strategy:
         Refused across a session boundary: a five-minute forward return that
         spans an overnight gap is not the quantity this is trying to predict.
         """
-        if self.weights is not None or len(self.pending) <= HORIZON:
+        if self.weights is not None or len(self.pending) <= HORIZON_STEPS:
             return
         x, price, session = self.pending[0]
         if session != bar.session:
@@ -187,7 +198,8 @@ class Strategy:
         if self.rows_used < 1000:
             raise RuntimeError(
                 f"fit() reached with {self.rows_used} usable rows, which is far "
-                f"below what a {HORIZON}-bar horizon over the fit window implies. "
+                f"below what a {HORIZON_STEPS}-step horizon over the fit window "
+                f"implies. "
                 f"{self.rows_dropped} were dropped at session boundaries. Either "
                 "the window is too short or the features are returning None "
                 "everywhere -- do not fit a model to this.")

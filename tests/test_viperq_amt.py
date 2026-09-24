@@ -32,7 +32,7 @@ def scaled_for_synthetic(monkeypatch):
     the horizon so the shape is exercised; the registered values are for real
     data and are asserted separately."""
     monkeypatch.setattr(V, "WARMUP_BARS", 20)
-    monkeypatch.setattr(V, "HORIZON", 10)
+    monkeypatch.setattr(V, "HORIZON_STEPS", 3)
     monkeypatch.setattr(V, "DECIDE_EVERY", 5)
 
 
@@ -79,7 +79,7 @@ def test_no_training_row_is_ever_stored():
     normal equations survive, so the buffer stays bounded by the horizon."""
     s = V.Strategy()
     run(s)
-    assert len(s.pending) <= V.HORIZON + 1
+    assert len(s.pending) <= V.HORIZON_STEPS + 1
     assert s.XtX.shape == (V.N_FEATURES + 1, V.N_FEATURES + 1)
 
 

@@ -250,7 +250,7 @@ def test_the_run_stage_passes_the_flag_and_the_records_profile():
     assert "allow_fitted=record.allow_fitted_proposals" in source, (
         "run_trial is called without the gate, so a fitted proposal would run "
         "in a campaign that did not register one")
-    assert "record.profile)" in source, (
+    assert "record.profile, model)" in source, (
         "the agent is built from PROFILE rather than from the record, so a "
         "fitted campaign's agent would be given the unfitted run facts")
 
@@ -336,3 +336,26 @@ def test_a_fitted_seed_into_an_unfitted_profile_is_refused_without_writing():
     assert time.monotonic() - t0 < 10, "the refusal waited on something remote"
     assert "has no fit window" in r.stdout + r.stderr
     assert not d.exists(), "a refused registration wrote a campaign directory"
+
+
+# --------------------------------------------------------------------------- #
+# N and the model are per-campaign decisions, frozen at registration
+# --------------------------------------------------------------------------- #
+def test_n_and_model_are_refused_on_every_stage_but_register():
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert "--n and --model apply to --stage register only" in source
+
+
+def test_run_and_report_read_the_model_from_the_record_not_the_constant():
+    """Registering one model and running or auditing under another would make
+    agent_config describe a campaign that never happened. Both later stages
+    have to read it back."""
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert source.count('(record.agent_config or {}).get("model", MODEL)') >= 2, (
+        "run or report still uses the MODEL constant instead of the record")
+
+
+def test_the_budget_flag_overrides_the_config_default():
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert 'cc = {**cc, "n_trials": n_trials}' in source
+    assert '"--n must be positive' in source

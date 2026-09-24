@@ -111,14 +111,14 @@ def run_facts(profile: dict, n_sessions: int) -> str:
 
 
 def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
-              profile_name: str = PROFILE):
+              profile_name: str = PROFILE, model: str = MODEL):
     from src.core.loop import hypothesis as H
     from src.core.loop.llm import LLMAgent
 
     c = cfg()
     profile = c["profiles"][profile_name]
     return LLMAgent(
-        model=MODEL, temperature=0.7, max_tokens=16_384, show_history=True,
+        model=model, temperature=0.7, max_tokens=16_384, show_history=True,
         # None is a real state, not a missing argument: `hypothesis_path` is
         # optional on the record, and a campaign that registered without a
         # question runs without one rather than borrowing another campaign's.
@@ -283,7 +283,9 @@ def stage_validate(name: str) -> None:
 
 def stage_register(name: str, hypothesis: pathlib.Path,
                    profile_name: str = PROFILE,
-                   seed: pathlib.Path | None = None) -> None:
+                   seed: pathlib.Path | None = None,
+                   n_trials: int | None = None,
+                   model: str = MODEL) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -310,11 +312,18 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                 "than crashing trial 0.")
 
     print("preflight ...", flush=True)
-    served = LLMAgent(model=MODEL, temperature=0.7, max_tokens=16_384).preflight()
+    served = LLMAgent(model=model, temperature=0.7, max_tokens=16_384).preflight()
     print(f"  asked {served['requested']!r}  served {served['served']!r}")
 
     cc = campaign_cfg()
-    agent_cfg = agent_for(None, hypothesis, profile_name).config()
+    # N and the model are per-campaign decisions frozen here, like the q. The
+    # config carries defaults; a flag at registration is the decision, and the
+    # record is what every later stage reads.
+    if n_trials is not None:
+        if n_trials < 1:
+            sys.exit(f"--n must be positive, got {n_trials}")
+        cc = {**cc, "n_trials": n_trials}
+    agent_cfg = agent_for(None, hypothesis, profile_name, model).config()
     agent_cfg["null_source"] = cc["null_source"]
     agent_cfg["correction"] = cc["correction"]
     agent_cfg["b_null"] = B_NULL
@@ -431,8 +440,11 @@ def stage_run(name: str) -> None:
     # From the record, not from PROFILE: a fitted campaign registered against
     # `nq-train-fitted` and its agent has to be told the fit window and the
     # scored count, which `run_facts` reads off that profile.
+    # Model from the record too. Registering one model and running another
+    # would make agent_config describe a campaign that never happened.
+    model = (record.agent_config or {}).get("model", MODEL)
     agent = agent_for(champion if champion.exists() else None, hyp_path,
-                      record.profile)
+                      record.profile, model)
     t0 = time.monotonic()
     for i in range(start, record.budget):
         agent.champion = champion if champion.exists() else None
@@ -600,7 +612,9 @@ def stage_report(name: str) -> None:
     print("  committee ...", flush=True)
     try:
         from audit.committee.review import review
-        cv = review(tier2, source=best_source, model=MODEL, hypothesis=hyp_text)
+        cv = review(tier2, source=best_source,
+                    model=(record.agent_config or {}).get("model", MODEL),
+                    hypothesis=hyp_text)
     except Exception as exc:                                      # noqa: BLE001
         # Recorded, not swallowed. A committee that failed to run is a different
         # state from one that had nothing to veto, and the MVP rule "no veto =
@@ -634,6 +648,14 @@ def main() -> int:
                     help="path to the hypothesis markdown; --stage register only, "
                          "and it is written into campaign.json. Later stages read "
                          "it from there and ignore this flag.")
+    ap.add_argument("--n", type=int, default=None,
+                    help="trials in this campaign; --stage register only, frozen "
+                         "into campaign.json. Default is campaign.n_trials in "
+                         "config/run.yaml.")
+    ap.add_argument("--model", default=MODEL,
+                    help=f"the proposing model; --stage register only, frozen "
+                         f"into campaign.json and read back by run and report. "
+                         f"Default {MODEL}.")
     ap.add_argument("--seed", type=pathlib.Path, default=None,
                     help="a strategy file to start trial 0 from; --stage register "
                          "only. Copied to champion.py and recorded by digest. "
@@ -668,7 +690,7 @@ def main() -> int:
             except ValueError:
                 sys.exit(f"{seed} is outside the repository; a seed has to be a "
                          "committed file or the record points at nothing.")
-        stage_register(a.name, hyp, a.profile, seed)
+        stage_register(a.name, hyp, a.profile, seed, a.n, a.model)
     else:
         # Refused rather than ignored. Silently accepting it on a run stage is how
         # someone believes they changed the question and did not.
@@ -681,6 +703,9 @@ def main() -> int:
         if a.seed is not None:
             sys.exit(f"--seed applies to --stage register only; "
                      f"--stage {a.stage} reads champion.py from the campaign.")
+        if a.n is not None or a.model != MODEL:
+            sys.exit(f"--n and --model apply to --stage register only; "
+                     f"--stage {a.stage} reads both from campaign.json.")
         {"run": stage_run, "nulls": stage_nulls,
          "validate": stage_validate, "report": stage_report}[a.stage](a.name)
     return 0

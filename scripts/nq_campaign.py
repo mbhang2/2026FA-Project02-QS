@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import pathlib
 import sys
@@ -281,7 +282,8 @@ def stage_validate(name: str) -> None:
 # --------------------------------------------------------------------------- #
 
 def stage_register(name: str, hypothesis: pathlib.Path,
-                   profile_name: str = PROFILE) -> None:
+                   profile_name: str = PROFILE,
+                   seed: pathlib.Path | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -290,11 +292,28 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         sys.exit(f"{d / 'campaign.json'} already exists. A pre-registration is "
                  "written once.")
 
+    # **Everything local is checked before anything remote.** The preflight
+    # below is a network round trip to the model; a seed that cannot match the
+    # profile, or an unknown profile, is refused for free ahead of it.
+    profile = cfg()["profiles"][profile_name]
+    seed_text = None
+    if seed is not None:
+        from src.core.loop.campaign import declares_fit
+        seed_text = seed.read_text()
+        fitted_profile = bool(profile.get("fit_sessions", 0))
+        if declares_fit(seed_text) != fitted_profile:
+            sys.exit(
+                f"{seed} {'defines' if declares_fit(seed_text) else 'does not define'} "
+                f"fit(), but {profile_name} "
+                f"{'has' if fitted_profile else 'has no'} fit window. A seed that "
+                "does not match the profile is refused at registration rather "
+                "than crashing trial 0.")
+
     print("preflight ...", flush=True)
     served = LLMAgent(model=MODEL, temperature=0.7, max_tokens=16_384).preflight()
     print(f"  asked {served['requested']!r}  served {served['served']!r}")
 
-    cc, profile = campaign_cfg(), cfg()["profiles"][profile_name]
+    cc = campaign_cfg()
     agent_cfg = agent_for(None, hypothesis, profile_name).config()
     agent_cfg["null_source"] = cc["null_source"]
     agent_cfg["correction"] = cc["correction"]
@@ -339,6 +358,16 @@ def stage_register(name: str, hypothesis: pathlib.Path,
               "prices that -- 80% power at a signal strength of 0.287 against "
               "0.242 for the conditional null."),
         written_at=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"))
+    # **Seeding is optional, and both branches are the design.** With --seed,
+    # trial 0's agent starts from a human-written strategy and edits it. Without,
+    # champion.py is absent and the agent writes from scratch -- which must keep
+    # working, because a proposer that can only edit is not a proposer. The
+    # record says which happened.
+    if seed_text is not None:
+        (d / "champion.py").write_text(seed_text)
+        record.seed_path = str(seed.relative_to(ROOT))
+        record.seed_digest = hashlib.sha256(seed_text.encode()).hexdigest()[:16]
+        print(f"  seeded champion from {record.seed_path}  ({record.seed_digest})")
     digest = record.write(d / "campaign.json")
     print(f"  registered {name}  N={cc['n_trials']}  q={cc['q']}  "
           f"null_source={cc['null_source']}  correction={cc['correction']}")
@@ -605,6 +634,11 @@ def main() -> int:
                     help="path to the hypothesis markdown; --stage register only, "
                          "and it is written into campaign.json. Later stages read "
                          "it from there and ignore this flag.")
+    ap.add_argument("--seed", type=pathlib.Path, default=None,
+                    help="a strategy file to start trial 0 from; --stage register "
+                         "only. Copied to champion.py and recorded by digest. "
+                         "Omit and the agent writes from scratch, which must keep "
+                         "working.")
     ap.add_argument("--profile", default=PROFILE,
                     help=f"run profile; --stage register only, and it is written "
                          f"into campaign.json. Default {PROFILE}. Use "
@@ -624,7 +658,17 @@ def main() -> int:
         if a.profile not in profiles:
             sys.exit(f"unknown profile {a.profile!r}. config/run.yaml has: "
                      f"{', '.join(sorted(profiles))}")
-        stage_register(a.name, hyp, a.profile)
+        seed = None
+        if a.seed is not None:
+            seed = a.seed.resolve()
+            if not seed.exists():
+                sys.exit(f"--seed {a.seed} does not exist")
+            try:
+                seed.relative_to(ROOT)
+            except ValueError:
+                sys.exit(f"{seed} is outside the repository; a seed has to be a "
+                         "committed file or the record points at nothing.")
+        stage_register(a.name, hyp, a.profile, seed)
     else:
         # Refused rather than ignored. Silently accepting it on a run stage is how
         # someone believes they changed the question and did not.
@@ -634,6 +678,9 @@ def main() -> int:
         if a.profile != PROFILE:
             sys.exit(f"--profile applies to --stage register only; "
                      f"--stage {a.stage} reads it from campaign.json.")
+        if a.seed is not None:
+            sys.exit(f"--seed applies to --stage register only; "
+                     f"--stage {a.stage} reads champion.py from the campaign.")
         {"run": stage_run, "nulls": stage_nulls,
          "validate": stage_validate, "report": stage_report}[a.stage](a.name)
     return 0

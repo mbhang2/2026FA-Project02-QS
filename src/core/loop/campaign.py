@@ -94,6 +94,16 @@ class CampaignRecord:
     # results: "we allowed ML once the unfitted trials looked poor" is a
     # different experiment from the one that was registered.
     allow_fitted_proposals: bool | None = None
+    # **Where trial 0's starting point came from, if it was given one.** A
+    # campaign may begin from a human-written champion -- the division Michael
+    # set out: human writes the initial version, the agent edits per trial -- or
+    # from nothing, in which case the agent writes from scratch. Both are valid
+    # and the record has to say which happened, because a campaign that started
+    # from a working fitted strategy and one that had to invent it are not the
+    # same experiment. None for no seed; `digest()` drops None, so records that
+    # predate this field keep their hash.
+    seed_path: str | None = None
+    seed_digest: str | None = None
 
     def digest(self) -> str:
         payload = json.dumps({k: v for k, v in asdict(self).items() if v is not None},

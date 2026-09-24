@@ -283,3 +283,56 @@ def test_the_config_default_is_on_and_the_gate_still_bites(tmp_path):
     row = run_trial(FITTED, profile="harness", ledger=ledger,
                     campaign_id="c", index=0, allow_fitted=False)
     assert row["outcome"] == "refused_fitted"
+
+
+# --------------------------------------------------------------------------- #
+# seeding: optional, recorded, and checked before anything remote
+# --------------------------------------------------------------------------- #
+def test_a_seed_is_optional_and_the_record_says_which_happened():
+    """Both branches are the design. A campaign may start from a human-written
+    champion or from nothing, and a campaign that began from a working fitted
+    strategy is not the same experiment as one that had to invent it."""
+    rec = CampaignRecord(campaign_id="x", budget=3, profile="harness", q=0.05)
+    assert rec.seed_path is None and rec.seed_digest is None
+    # None is dropped from the digest, so records predating the field keep theirs
+    d0 = rec.digest()
+    rec2 = CampaignRecord(campaign_id="x", budget=3, profile="harness", q=0.05,
+                          seed_path="src/strategies/viperq_amt.py",
+                          seed_digest="abc123")
+    assert rec2.digest() != d0
+
+
+def test_the_seed_is_checked_against_the_profile_before_the_preflight():
+    """A seed that cannot match the profile is pure local logic and must be
+    refused for free -- not after a network round trip to the model, which is
+    what the preflight is."""
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    check = source.index("declares_fit(seed_text) != fitted_profile")
+    preflight = source.index(".preflight()")
+    assert check < preflight, (
+        "the seed/profile check runs after the model preflight; a mismatched "
+        "seed waits on the network before being refused")
+
+
+def test_seed_is_refused_on_every_stage_but_register():
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert "--seed applies to --stage register only" in source
+
+
+def test_a_fitted_seed_into_an_unfitted_profile_is_refused_without_writing():
+    """Verified end to end by subprocess so the ordering is real and not a
+    source-grep promise. Must exit nonzero, fast, and leave no campaign dir."""
+    import subprocess, time
+    name = "zz-seed-test"
+    d = REPO_ROOT / "runs" / "campaigns" / name
+    assert not d.exists(), f"{d} already exists; pick another name"
+    t0 = time.monotonic()
+    r = subprocess.run(
+        [sys.executable, "scripts/nq_campaign.py", "--stage", "register",
+         "--name", name, "--profile", "nq-train",
+         "--seed", "src/strategies/viperq_amt.py"],
+        capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=30)
+    assert r.returncode != 0
+    assert time.monotonic() - t0 < 10, "the refusal waited on something remote"
+    assert "has no fit window" in r.stdout + r.stderr
+    assert not d.exists(), "a refused registration wrote a campaign directory"

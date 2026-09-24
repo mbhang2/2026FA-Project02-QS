@@ -238,7 +238,7 @@ def test_the_registration_freezes_the_flag_and_the_profile():
     """Both travel in `campaign.json`, so later stages read the decision rather
     than re-deciding it from a module constant."""
     source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
-    assert "allow_fitted_proposals=cc.get(\"allow_fitted_proposals\")" in source, (
+    assert 'allow_fitted_proposals=bool(cc.get("allow_fitted_proposals"))' in source, (
         "the campaign record does not freeze the proposal flag")
     assert "profile=profile_name" in source, (
         "the record hardcodes PROFILE, so a fitted campaign cannot be registered")
@@ -253,3 +253,33 @@ def test_the_run_stage_passes_the_flag_and_the_records_profile():
     assert "record.profile)" in source, (
         "the agent is built from PROFILE rather than from the record, so a "
         "fitted campaign's agent would be given the unfitted run facts")
+
+
+def test_permission_without_a_fit_window_is_recorded_as_no():
+    """**Permission and capability are different things.**
+
+    The config says whether the agent may fit; the profile says whether there is
+    a window to fit in. A fitted proposal in a campaign with `fit_sessions: 0`
+    passes the proposal gate and is then refused by the engine for having no
+    window -- a wasted trial rather than a useful refusal. So the record freezes
+    the AND of the two, and says what the campaign actually allowed rather than
+    what was asked for.
+    """
+    source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert 'and bool(profile.get("fit_sessions", 0))' in source, (
+        "registration freezes the config flag alone, so an unfitted campaign "
+        "would let the agent spend trials on proposals the engine must refuse")
+
+
+def test_the_config_default_is_on_and_the_gate_still_bites(tmp_path):
+    """Turning the default on must not turn the gate off. A campaign that
+    registered `False` -- which is every unfitted one -- still refuses."""
+    import yaml
+
+    cfg = yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text())
+    assert cfg["campaign"]["allow_fitted_proposals"] is True
+
+    ledger = tmp_path / "ledger.jsonl"; ledger.write_text("")
+    row = run_trial(FITTED, profile="harness", ledger=ledger,
+                    campaign_id="c", index=0, allow_fitted=False)
+    assert row["outcome"] == "refused_fitted"

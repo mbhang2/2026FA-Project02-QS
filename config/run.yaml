@@ -267,9 +267,16 @@ campaign:
   # May the proposing agent write a strategy that FITS -- one whose parameters
   # come from the data rather than from whoever wrote it?
   #
-  # `false` is the default and the conservative answer. A fitted proposal is
-  # refused before `current.py` is touched and before `run.py` runs, so it never
-  # reaches the data and never counts toward N.
+  # `true` since 2026-09-23. A fitted proposal is refused before `current.py`
+  # is touched and before `run.py` runs, so when this is off one never reaches
+  # the data and never counts toward N.
+  #
+  # **Permission, not instruction, and only meaningful where the profile can
+  # honour it.** What gets frozen into `campaign.json` is this AND the profile's
+  # fit window: a campaign registered against a profile with `fit_sessions: 0`
+  # records `false` however this is set, because a fitted proposal there would
+  # pass this gate and then be refused by the engine for having no window to fit
+  # in -- a wasted trial rather than a useful refusal.
   #
   # What this does NOT control, because the architecture already does: the agent
   # cannot move the fit window. `fit_sessions` lives in a profile, profiles live
@@ -281,7 +288,7 @@ campaign:
   # Frozen into `campaign.json` before trial 0. Turning it on partway through
   # because the unfitted trials looked poor is a different experiment from the
   # one that was registered.
-  allow_fitted_proposals: false
+  allow_fitted_proposals: true
 
   # TWO AXES, not one. `max_of_n` is a correction; `round_turn_mc` is a null
   # source. See pre-registration.md 3a -- including which combinations are

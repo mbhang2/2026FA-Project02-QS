@@ -316,7 +316,14 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         # Frozen before trial 0, like the budget and the q. A campaign that
         # turns this on partway through because the unfitted trials looked poor
         # is a different experiment from the one registered.
-        allow_fitted_proposals=cc.get("allow_fitted_proposals"),
+        # Permission AND capability. The config says whether the agent may
+        # fit; the profile says whether there is a window to fit in. A campaign
+        # with no window records `false` however the config is set, because a
+        # fitted proposal there passes this gate and is then refused by the
+        # engine -- a wasted trial rather than a useful refusal. The record
+        # carries what the campaign actually allowed, not what was asked for.
+        allow_fitted_proposals=bool(cc.get("allow_fitted_proposals"))
+        and bool(profile.get("fit_sessions", 0)),
         agent="src.core.loop.llm.LLMAgent", dataset="nq-trades", split="train",
         hypothesis_path=str(hypothesis.relative_to(ROOT)),
         hypothesis_digest=agent_cfg["hypothesis"]["digest"],

@@ -906,6 +906,88 @@ campaign's own N and does not tax any other campaign.
 - Fitting on any session at or beyond index 284 of the train split.
 - Any reading of the holdout beyond the single look in §8.
 
+## Amendment 5 — 2026-09-24 — report the score with and without the idle charge
+
+**Status: REGISTERED, NOT YET IMPLEMENTED.** Written while `nq-ml-02` is running
+and to be implemented after it finishes -- nothing in `src/core` changes under a
+live campaign. It applies to `nq-ml-02`'s validation stage and to every
+validation and holdout look after it, because it changes what is *reported* and
+not what is *decided*.
+
+### What is settled
+
+**The gate is unchanged.** §5 rule (a), §8, and every correction continue to use
+`primary` -- Sortino on per-session returns with the idle charge applied, `MAR =
+0`. That is the number the champion was selected on, the number train and
+validation are compared on, and the number the committee is shown first.
+
+**A second number is reported beside it: the same Sortino with the charge set
+to zero**, computed from the same blotter and the same calendar. Field name
+`primary_uncharged`, alongside `primary`, in the ledger row and in
+`validation.json` for both splits.
+
+**The coefficient stays at 0.18.** Michael raised making it a per-campaign input
+expressed as a desired trading frequency; not adopted, see below.
+
+### Why both, rather than dropping the charge out of sample
+
+Michael's objection is right and is the reason for this amendment: **a reader who
+sees a holdout Sortino and does not know the charge is inside it is misled.** In
+real market conditions no line item called "idle charge" appears on a statement.
+
+But removing it out of sample would break two things Amendment 3 and Task 61
+already paid for:
+
+1. **Comparability.** Costed differently, the cheaper split looks like the
+   better one -- Task 61 found validation silently charged 0.01 against train's
+   0.10 and the decay measurement was meaningless. Drop the charge at validation
+   and every champion "improves" out of sample by exactly the charge.
+2. **Selection under one objective, judgement under another.** The champion was
+   chosen under the charged metric. Scoring it uncharged evaluates a different
+   objective than the one that picked it.
+
+And the charge is not a fiction. It is the **funding cost of committed margin** --
+$20,000 at ~4.5% over 252 days at $20 a point -- which a fund charges every
+allocation whether or not it traded today. It is a real cost that does not
+appear on a brokerage statement, which is precisely the kind of thing a second
+labelled number is for.
+
+So: gate on the charged number, report the uncharged one beside it, label both.
+
+### Why the coefficient stays fixed, and why not a frequency target
+
+`campaign.idle_charge` is already a config value; what protects it is not the
+absence of a knob but that it is **frozen into `campaign.json` at registration**
+-- adjustable before, immovable after, re-derived from margin and rates and
+never re-fitted to a result.
+
+A desired-frequency interface on top of it was considered and not adopted. There
+is no known map from "one trade a day" to a charge value: Amendment 3 measured
+the window in which the incentive points at participation without rewarding
+churn as 0.10 to 0.30, a range and not a curve, and the response depends on the
+strategy. Backing a charge out of a target frequency would turn an economic
+constant into a behavioural one. A floor on activity was separately measured in
+Amendment 3 §5 and the agent parked on it.
+
+**The proposing agent may never see or adjust the charge.** That is not a design
+preference; an agent that can move its own penalty is optimising the penalty,
+which is the failure Amendment 3 exists to close.
+
+### Recorded as worth adding, not adopted here
+
+Realised trading frequency against the hypothesis's stated expectation, as a
+**diagnostic** the committee is shown. Information without a lever.
+
+### What implementation needs
+
+- `run.py`: at the validate and holdout call sites, a second `score()` on the
+  same blotter with `idle_charge=0.0`; `primary_uncharged` on the record.
+- `scripts/nq_campaign.py stage_validate`: both fields for both splits in
+  `validation.json`, and the printed line shows both.
+- A test that the two differ by exactly the charge's contribution on a blotter
+  with known idle sessions, and are equal on one with none.
+- `docs/agent/` unchanged: the agent is not told either number's composition.
+
 ---
 
 ## Ideas recorded, not adopted

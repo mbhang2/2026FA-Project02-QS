@@ -1004,12 +1004,18 @@ a lot, on few days.** Its leading trial at the time of writing scores +1.78 on
 250 in 14, 221 in 10. The average of ~2.5 trades a day was an artefact of
 clustering.
 
-The charge does not stop this and may reward it. It puts ≈ -0.18 on each idle
-session; 86 near-identical small losses have almost no variance among
-themselves, so the charge **stabilises Sortino's denominator** while the 14
-active sessions carry the mean. That is the signature already visible in the
-rows -- Sortino 11x Sharpe, 92 sessions below MAR -- and it is recorded here as
-a mechanism hypothesis, not a measurement. Measuring it is Task 69, below.
+The charge does not stop this. **Task 69 measured why, the same day, and the
+mechanism written in this amendment's first draft was wrong** -- it is left
+visible in the git history and corrected here. The draft said 86 near-identical
+idle losses would dominate the downside sum of squares and stabilise the
+denominator. They contribute 0-1.1% of it: (−0.18)² is 0.032 against tens of
+points squared from an active losing session. What actually happens is
+**padding**: downside deviation is `sqrt(sum_sq / n)`, the idle sessions add
+almost nothing to `sum_sq` but count fully in `n`, and `sqrt(100/14) = 2.67`.
+Trial 2's +1.78 is **+0.67** with the downside taken over its own trading days.
+That is Amendment 3's 1/√n effect arriving through the denominator, and no
+coefficient on the charge can reach it -- the charge acts on the numerator and
+does that job (uncharged is higher on every trial). `docs/reviews/task69/`.
 
 ### What is settled
 
@@ -1054,6 +1060,11 @@ floor is applied once, at scoring, before anything else.
 Five of six. Recorded before implementation so nobody can say the floor was
 set after seeing which champions it removed: 70 and 80 remove the same five.
 
+**Task 69 also gives the floor a quantitative reading.** The padding inflation
+is bounded by `sqrt(N / exposed)`: a candidate exposed in 70 of 100 sessions is
+inflated by at most **1.20×**, one exposed in 14 by **2.67×**. The floor is not a
+behavioural preference; it caps a measured distortion of the metric.
+
 ### Residual, named
 
 **Token trades.** One minimum-size trade a day clears any exposure floor. The
@@ -1063,14 +1074,14 @@ still applies to the rest of the session, `sessions_with_exposure` and
 visible. A stronger defence -- weighting exposure by size or by session P&L
 share -- is possible and not adopted here.
 
-### Task 69, proposed
+### Task 69 — done, same day
 
-Measure whether a uniform idle charge inflates Sortino for clustered strategies:
-take the fill logs of `nq-ml-02`'s trials, decompose downside deviation into the
-idle-session and active-session contributions, and compare Sortino under the
-charge against Sortino with idle sessions excluded from the denominator. Cheap
--- arithmetic on artefacts already on disk -- and it decides whether Amendment
-3's construction has a defect independent of the floor.
+Measured on ten `nq-ml-02` trials replayed from fill logs (replay reproduces the
+ledger on 10/10). Result above. Amendment 3's construction has **no defect on the
+numerator** and a **structural limit on the denominator** that the floor bounds
+and no coefficient can remove. An active-sessions-only denominator was
+considered and not adopted: it makes a strategy that trades once and wins look
+infinitely good, which is why the metric is defined over the whole calendar.
 
 ### What implementation needs
 

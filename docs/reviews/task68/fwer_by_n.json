@@ -1,0 +1,40 @@
+{
+  "null_source": "rotation",
+  "correction": "max_of_n",
+  "R": 150,
+  "q": 0.05,
+  "idle_charge": 0.18,
+  "series": [
+    {
+      "N": 10,
+      "campaigns": 100,
+      "accept_rate": 0.03,
+      "accept_ci": [
+        0.010254338223414816,
+        0.08452078080402699
+      ],
+      "reject_rate": 0.03
+    },
+    {
+      "N": 20,
+      "campaigns": 100,
+      "accept_rate": 0.04,
+      "accept_ci": [
+        0.015663050551848016,
+        0.09837217232607373
+      ],
+      "reject_rate": 0.04
+    },
+    {
+      "N": 50,
+      "campaigns": 100,
+      "accept_rate": 0.06,
+      "accept_ci": [
+        0.02778574526665662,
+        0.12476968531222507
+      ],
+      "reject_rate": 0.06
+    }
+  ],
+  "all_intervals_overlap": true
+}

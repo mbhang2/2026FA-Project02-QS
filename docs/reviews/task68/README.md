@@ -74,3 +74,51 @@ and Task 59 measured power only for the sign-flip null. Not claimed here.
     python docs/reviews/task68/fwer_n.py --stage run --n 10
     python docs/reviews/task68/fwer_n.py --stage run --n 20
     python docs/reviews/task68/fwer_n.py --stage report
+
+---
+
+## 6. The result — 2026-09-24
+
+Two legs, C = 100 each, R = 150, 453,000 runs, 1.55 h + ~3.2 h. Zero
+unscorable trials in either.
+
+| N | C | accept rate | 95% CI | p median |
+|---|---|---|---|---|
+| 10 | 100 | **0.0300** | [0.0103, 0.0845] | 0.582 |
+| 20 | 100 | **0.0400** | [0.0157, 0.0984] | — |
+| 50 (Task 66) | 100 | **0.0600** | [0.0278, 0.1248] | 0.439 |
+
+**All three intervals overlap and all three contain 0.05.** That is the first
+outcome section 3 named: the correction is consistent with N-invariance on this
+metric across the range we would operate in, and an ML campaign at N = 10-20
+inherits Task 66's calibration rather than needing its own.
+
+### The ordering, named rather than waved away
+
+The point estimates are **monotone in N**: 0.030, 0.040, 0.060. Section 3 said
+in advance that if the three points came back looking suspiciously ordered, the
+honest next step is more campaigns rather than a claim. They have.
+
+What the data can and cannot say about it: those are 3, 4 and 6 events out of
+100. A monotone ordering of three such counts happens by chance about a third of
+the time, and every pairwise interval overlaps by a wide margin. So the ordering
+is **not evidence of a trend** at this precision -- but C = 100 per leg could not
+have detected a modest one, and "not detected" is a property of the measurement
+rather than of `max_of_n`.
+
+If a future result rests on the correction being exactly N-invariant rather than
+approximately so, the leg to extend is this one, at larger C. Nothing in the
+next campaign rests on that.
+
+### What it means for the ML campaign
+
+At N = 10 and N = 20 the measured rates are **at or below nominal** -- 0.030 and
+0.040 against q = 0.05. An ML campaign at either N runs, if anything, slightly
+conservative. Routing to the conditional null at those N is sound on error
+control; power is Task 59's question and is not addressed here.
+
+### Corroborating detail
+
+Positive best in 38 / 100 campaigns at N = 10 and 85 / 100 at N = 50. The best
+of ten draws is positive less often than the best of fifty -- the selection
+effect `max_of_n` exists to correct for, showing up exactly where it should.

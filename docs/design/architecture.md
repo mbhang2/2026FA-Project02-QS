@@ -1130,6 +1130,26 @@ data, weights surviving a file round trip, the scored window excluding the fit
 window, a later run loading rather than refitting), and a logistic regression would
 test the same chain while making the failures harder to read.
 
+**`src/strategies/viperq_amt.py`** is the human-authored champion for the first
+fitted campaign, implementing
+`config/hypotheses/auction-market-features.md` — ViperQ's Auction Market Theory
+feature set (arXiv 2609.13825) against a supervised forward-return target rather
+than its PPO agent. It is a starting point for the agent to edit, not a result.
+
+Two things about it are worth reading even if the strategy is replaced.
+
+**It never stores a training row.** The fit window is 284 sessions of
+one-second bars, roughly 14 million of them, and holding feature vectors to fit
+at the end would exhaust the child's memory limit. It accumulates the normal
+equations instead — `XtX += x x'`, `Xty += x y` as each label matures — and
+`fit()` solves the ridge system from those, in O(H·d) memory regardless of how
+long the window is.
+
+**That purges the edges by construction.** A row near the end of the fit window
+never matures, because the bar that would label it belongs to the scored window
+and has not been delivered. §2f's rule falls out of the delivery order rather
+than being enforced by a trim somebody has to remember to write.
+
 **`src/strategies/ported_buy_and_hold.py`** and
 **`src/strategies/ported_momentum.py`** are Task 40's ports of
 `nalin_l1.strategy.reference_strategies.BuyAndHold` and

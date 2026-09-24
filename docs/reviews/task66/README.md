@@ -111,3 +111,69 @@ which is where a paired contrast carries its information.
     python docs/reviews/task66/fwer_rotation.py --stage verify
     python docs/reviews/task66/fwer_rotation.py --stage run
     python docs/reviews/task66/fwer_rotation.py --stage report
+
+---
+
+## 6. The result — 2026-09-23
+
+**FWER 0.0600, CI [0.0278, 0.1248], at R = 150.** 100 campaigns x 50 trials x 150
+rotations, 755,000 runs, 7.69 hours, zero unscorable trials.
+
+| arm | accept | 95% CI | reject | p median |
+|---|---|---|---|---|
+| rotation, R = 150 | **0.0600** | [0.0278, 0.1248] | 0.0600 | 0.439 |
+| rotation, R = 50 | 0.0700 | [0.0343, 0.1375] | 0.0700 | 0.415 |
+| sign-flip (Task 64, C = 1,000) | **0.0020** | [0.0005, 0.0073] | 0.0020 | **0.9997** |
+
+Campaigns with a positive best: 85 of 100.
+
+### The correction is fine. The null was the whole problem.
+
+Same N, same `max_of_n`, same metric, same generator, same idle charge. The only
+thing that differs between the top row and the bottom is which null the
+candidates are judged against, and the error rate moves **thirty-fold**.
+
+This is the first outcome section 4 named: *near 0.05 -- routing is sound, and
+Task 64's conservatism is a property of the cheap null rather than of the
+correction.* It rules out the second: the problem is not `max_of_n` at N = 50.
+
+Two things corroborate it rather than merely agreeing with it. The p-value median
+is **0.439** where sign-flip's was 0.9997 -- roughly uniform, which is what a
+calibrated null looks like from the outside. And 0.060 is the **same figure Task
+38 measured** for `conditional` + `max_of_n`, at N = 10 and before the idle
+charge existed. Two different N, two different metrics, the same rate.
+
+### R = 50 against R = 150, and the bias grid holds
+
+`correction.resampling_bias` predicts R = 50 over-rejects by **+0.011** relative
+to a large R, measured there on known normal nulls. Here, on the nulls we
+actually use: **+0.010**.
+
+That is a close agreement and it should not be over-read. The arms are paired --
+same campaigns, same rotations, only the prefix length differs -- and the
+information in a paired contrast is in the discordant campaigns, of which there
+were three: one accepted only at R = 150, two only at R = 50. **McNemar exact,
+two-sided: p = 1.0000.** The point estimates move in the predicted direction and
+the paired evidence cannot distinguish the difference from zero.
+
+Task 38 reached exactly this position on the same contrast for `conditional` --
+one discordant campaign, McNemar p = 1.0000 -- and the honest reading is the same
+now as then: R = 150 is retained because the bias is *known to be zero* there
+rather than because R = 50 was shown to be worse.
+
+### What this establishes, and what it does not
+
+**Establishes:** `rotation` + `max_of_n` at the N and the metric we operate
+controls FWER at approximately the nominal rate. Routing candidates to the
+conditional null rests on a measured property rather than an assumed one, and
+Task 64's 0.0020 is attributable to the sign-flip null alone.
+
+**Does not establish:** a precise value. C = 100 was chosen as a coarse read and
+the interval [0.028, 0.125] is consistent with 0.05 and also with 0.10. It
+separates near-nominal from 0.0020 decisively and pins nothing. Extending C is a
+later decision and the harness resumes from disk.
+
+**Does not establish power**, which is the reason to route and was already
+measured: Task 59 puts `round_turn_mc` at 80% power for a signal strength of
+0.287 against the conditional null's 0.242, and at strength 0.15 the two are
+0.100 against 0.533. That contrast, not this one, is the case for routing.

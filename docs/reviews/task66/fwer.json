@@ -1,0 +1,43 @@
+{
+  "campaigns": 100,
+  "trials_per_campaign": 50,
+  "q": 0.05,
+  "null_source": "rotation",
+  "correction": "max_of_n",
+  "idle_charge": 0.18,
+  "campaigns_with_a_positive_best": 85,
+  "unscorable_trials": 0,
+  "task64_signflip_accept_rate": 0.002,
+  "R150": {
+    "reject_rate": 0.06,
+    "reject_ci": [
+      0.02778574526665662,
+      0.12476968531222507
+    ],
+    "accept_rate": 0.06,
+    "accept_ci": [
+      0.02778574526665662,
+      0.12476968531222507
+    ],
+    "p_median": 0.4393560643935606,
+    "p_min": 0.017598240175982403
+  },
+  "R50": {
+    "reject_rate": 0.07,
+    "reject_ci": [
+      0.034318824364064096,
+      0.13749671006529757
+    ],
+    "accept_rate": 0.07,
+    "accept_ci": [
+      0.034318824364064096,
+      0.13749671006529757
+    ],
+    "p_median": 0.41455854414558546,
+    "p_min": 0.018598140185981403
+  },
+  "discordant": {
+    "accepted_at_150_only": 1,
+    "accepted_at_50_only": 2
+  }
+}

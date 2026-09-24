@@ -182,3 +182,74 @@ def test_an_out_of_range_fraction_is_refused():
     for bad in (0, 1.5, -0.1):
         with pytest.raises(ValueError, match="fraction"):
             p.value_area(bad)
+
+
+# --------------------------------------------------------------------------- #
+# add_bar: the construction the hypothesis registered, in one place
+# --------------------------------------------------------------------------- #
+def test_a_bar_spreads_its_volume_over_the_levels_it_touched():
+    p = SessionProfile(0.25)
+    p.add_bar(100.0, 100.5, 10)          # three levels
+    assert {p.price_of(k): v for k, v in sorted(p._bins.items())} == {
+        100.0: 4, 100.25: 3, 100.5: 3}
+
+
+def test_volume_is_conserved_when_it_does_not_divide_evenly():
+    """The remainder goes to the lowest levels rather than being dropped.
+    `total_volume` has to equal what was actually traded, or the profile is
+    describing a session that did not happen."""
+    for volume in range(1, 40):
+        p = SessionProfile(0.25)
+        p.add_bar(100.0, 100.75, volume)   # four levels
+        assert p.total_volume == volume, volume
+
+
+def test_a_bar_that_never_moved_puts_everything_on_one_level():
+    p = SessionProfile(0.25)
+    p.add_bar(100.0, 100.0, 7)
+    assert p.vpoc() == 100.0 and p.total_volume == 7
+
+
+def test_bar_fed_and_tick_fed_profiles_agree_when_the_bar_did_not_move():
+    """The approximation vanishes in the limit. A one-second NQ bar often spans
+    a single level, which is why 1s reproduces the tick profile to about 3%."""
+    bar = SessionProfile(0.25)
+    tick = SessionProfile(0.25)
+    for price, size in ((100.0, 5), (100.25, 9), (100.0, 2)):
+        tick.add(price, size)
+    bar.add_bar(100.0, 100.0, 7)          # the two 100.0 trades
+    bar.add_bar(100.25, 100.25, 9)
+    assert bar._bins == tick._bins
+
+
+def test_add_bar_refuses_what_it_cannot_represent():
+    p = SessionProfile(0.25)
+    with pytest.raises(ValueError, match="volume"):
+        p.add_bar(100.0, 100.5, 0)
+    with pytest.raises(ValueError, match="below low"):
+        p.add_bar(100.5, 100.0, 10)
+
+
+def test_the_review_script_and_the_library_agree():
+    """**Why this test exists.** The spreading rule was measured in
+    `docs/reviews/task67/fidelity.py` and then moved here. If the two drifted,
+    the resolution decision would have been made about a construction no
+    strategy uses."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "t67", REPO_ROOT / "docs" / "reviews" / "task67" / "fidelity.py")
+    t67 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(t67)
+
+    class FakeTick:
+        def __init__(self, ts, price, size):
+            self.ts, self.price, self.size = ts, price, size
+
+    ticks = [FakeTick(0, 100.0, 5), FakeTick(10**8, 100.25, 9),
+             FakeTick(2 * 10**8, 100.5, 3), FakeTick(10**9 + 1, 100.25, 7)]
+    from_script = t67.bar_profile(ticks, 10**9, 0)
+
+    mine = SessionProfile(0.25)
+    mine.add_bar(100.0, 100.5, 17)      # first second: three levels, 17 contracts
+    mine.add_bar(100.25, 100.25, 7)     # second second
+    assert mine._bins == from_script._bins

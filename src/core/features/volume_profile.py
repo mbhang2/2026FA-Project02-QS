@@ -59,6 +59,47 @@ class SessionProfile:
         self._bins[key] += size
         self._total += size
 
+    def add_bar(self, low: float, high: float, volume: int) -> None:
+        """One bar's volume, spread evenly over the price levels it touched.
+
+        **The construction registered by
+        `config/hypotheses/auction-market-features.md`, and it lives here so
+        every strategy uses the same one.** Two campaigns that each invented
+        their own spreading rule would be computing different features under one
+        name, and nothing downstream would notice.
+
+        Ticks are exact and do not fit the budget -- measured in
+        `docs/reviews/task67/`: 8,338 s for the 384-session split against a
+        7,200 s budget, against 1,726 s for one-second bars, which reproduce the
+        tick-built profile to a total variation distance of about 0.03. So the
+        profile is fed bars, and a bar is an interval over which the true
+        distribution of volume across its price levels is unknown.
+
+        **Even is the honest default.** It assumes nothing about where inside the
+        bar the volume fell, which is the only thing an OHLCV bar entitles you
+        to assume. Weighting toward the close, or triangularly toward the
+        typical price, would be a claim about intra-bar dynamics that this data
+        does not support -- and at one second an NQ bar spans a price level or
+        three, so the choice barely moves the profile anyway. At thirty seconds
+        it would, which is the other reason the hypothesis registers 1s.
+
+        The remainder from an uneven division goes to the lowest levels rather
+        than being dropped, so `total_volume` still equals the volume that was
+        actually traded.
+        """
+        if volume <= 0:
+            raise ValueError(f"volume must be positive, got {volume}")
+        if high < low:
+            raise ValueError(f"high {high} is below low {low}")
+        lo = int(round(low / self.tick_size))
+        hi = int(round(high / self.tick_size))
+        levels = hi - lo + 1
+        share, remainder = divmod(volume, levels)
+        for i, key in enumerate(range(lo, hi + 1)):
+            v = share + (1 if i < remainder else 0)
+            if v:
+                self.add(self.price_of(key), v)
+
     def reset(self) -> None:
         """A new session. Call on the session boundary, not on the first bar of
         one -- a profile carried across sessions is a different feature and not

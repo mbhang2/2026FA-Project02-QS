@@ -676,6 +676,24 @@ order rather than an order built on a zero.
   session: `vpoc()`, `value_area()`, `low_volume_nodes()`, plus
   `distance_from_vpoc()` and `value_area_position()`.
 
+  Feed it with **`add_bar(low, high, volume)`**, not with your own spreading
+  rule. It puts a bar's volume evenly across the price levels the bar touched,
+  which is the construction that was measured and registered; a hand-rolled
+  variant is a different feature under the same name. `add(price, size)` is
+  there for a genuine per-trade source.
+
+  Feed it from **one-second bars** unless you have a reason not to. Ticks are
+  exact and do not fit the wall-clock budget -- measured at roughly five times
+  the cost of `1s` for the whole split, which is over budget before your
+  strategy does any work. `1s` reproduces the tick-built profile to about 3%.
+
+  **`vpoc()` is a fragile number.** It is the argmax of a histogram, and on NQ
+  the top two price levels are often nearly tied -- measured gaps of 9.8%, 5.7%
+  and 0.7% of the peak on three sessions. At 0.7% it flips between levels for
+  reasons that are not market structure. `value_area()` and
+  `value_area_position()` are quantile-like and far steadier; prefer them, and
+  prefer `distance_from_vpoc()` over the raw level.
+
 Everything there answers from what you have added **so far**, which is what makes
 it safe mid-session. Call `reset()` on a session boundary; a profile carried
 across sessions is a different feature. All of it returns `None` when there is

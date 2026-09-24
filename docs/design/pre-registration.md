@@ -988,6 +988,103 @@ Realised trading frequency against the hypothesis's stated expectation, as a
   with known idle sessions, and are equal on one with none.
 - `docs/agent/` unchanged: the agent is not told either number's composition.
 
+## Amendment 6 — 2026-09-24 — an exposure floor as an eligibility condition
+
+**Status: REGISTERED, NOT YET IMPLEMENTED.** Written while `nq-ml-02` runs and
+to be implemented after it. **It does not apply to `nq-ml-02`**, which was
+registered under the rules as they stood; in force from the next registered
+campaign. The idle charge (Amendment 3) stays exactly as it is.
+
+### What was found
+
+Amendment 3 closed "trade rarely": the charge moved the orderflow champion from
+8 exposed sessions to 184. `nq-ml-02` shows the hack in a second form -- **trade
+a lot, on few days.** Its leading trial at the time of writing scores +1.78 on
+245 trades in **14 of 100** scored sessions. Others: 162 trades in 6 sessions,
+250 in 14, 221 in 10. The average of ~2.5 trades a day was an artefact of
+clustering.
+
+The charge does not stop this and may reward it. It puts ≈ -0.18 on each idle
+session; 86 near-identical small losses have almost no variance among
+themselves, so the charge **stabilises Sortino's denominator** while the 14
+active sessions carry the mean. That is the signature already visible in the
+rows -- Sortino 11x Sharpe, 92 sessions below MAR -- and it is recorded here as
+a mechanism hypothesis, not a measurement. Measuring it is Task 69, below.
+
+### What is settled
+
+**A candidate is scoreable only if it was exposed in at least
+`min_exposed_fraction` of its scored sessions.** Below the floor it is
+`rejected`, with a reason, exactly the way `MIN_SESSIONS = 30` already works:
+not scored low, not scored at all, never champion-eligible, never seen by the
+correction. The ledger row carries the count and the floor.
+
+**Default `min_exposed_fraction = 0.70`**, at the permissive end of the 70-80%
+Michael specified. A cliff is what an agent parks on, and a lower cliff is less
+parking pressure; a hypothesis that is genuinely daily declares a higher floor.
+**Per campaign, frozen into `campaign.json` at registration** -- the same
+treatment as `idle_charge` and `allow_fitted_proposals` -- so a rare-event
+hypothesis can register 0.05 and a daily one 0.90, which is the answer to
+Amendment 3 §5's objection that a floor makes a genuinely rare phenomenon
+unrepresentable. The hypothesis file says what is rare; the floor is not global.
+
+**Why an eligibility condition and not a penalty.** Michael proposed a large
+per-day penalty. It reaches the same outcome and was declined for three reasons:
+a penalty's magnitude has no derivation where the charge's does; a very large
+penalty puts every candidate it touches at a score the correction and the null
+cannot compare meaningfully; and a penalty at any magnitude is still a cliff, so
+the parking behaviour is identical. `rejected` gives the outcome without the
+side effects and is honest about being a constraint.
+
+**The floor is on the candidate, not on the null.** `round_turn_mc` resamples a
+candidate's own round turns; a rejected candidate has no null computed. The
+floor is applied once, at scoring, before anything else.
+
+### What every champion to date looks like against it
+
+| campaign | exposed | of | fraction | at 0.70 |
+|---|---|---|---|---|
+| nq-mvp-01 | 3 | 384 | 0.01 | rejected |
+| nq-orderflow-01 | 8 | 384 | 0.02 | rejected |
+| nq-orderflow-02 | 184 | 384 | 0.48 | rejected |
+| nq-flowcont-01 | 48 | 384 | 0.12 | rejected |
+| nq-flowcont-5m | 384 | 384 | 1.00 | passes |
+| nq-ml-02, leading trial | 14 | 100 | 0.14 | rejected |
+
+Five of six. Recorded before implementation so nobody can say the floor was
+set after seeing which champions it removed: 70 and 80 remove the same five.
+
+### Residual, named
+
+**Token trades.** One minimum-size trade a day clears any exposure floor. The
+defences are the ones in place: the token pays commission every day, the charge
+still applies to the rest of the session, `sessions_with_exposure` and
+`profit_concentration_top5pct` are shown to the committee, and the parking is
+visible. A stronger defence -- weighting exposure by size or by session P&L
+share -- is possible and not adopted here.
+
+### Task 69, proposed
+
+Measure whether a uniform idle charge inflates Sortino for clustered strategies:
+take the fill logs of `nq-ml-02`'s trials, decompose downside deviation into the
+idle-session and active-session contributions, and compare Sortino under the
+charge against Sortino with idle sessions excluded from the denominator. Cheap
+-- arithmetic on artefacts already on disk -- and it decides whether Amendment
+3's construction has a defect independent of the floor.
+
+### What implementation needs
+
+- `metrics.py`: `MIN_EXPOSED_FRACTION = 0.70`; `score()` rejects below it with
+  a reason naming the count and the floor, beside the `MIN_SESSIONS` check.
+- `run.py`: the value from the profile or campaign config, passed through like
+  `idle_charge`.
+- `nq_campaign.py`: `--min-exposed` at registration, frozen into the record,
+  refused on other stages.
+- Tests: a blotter exposed in 69 of 100 sessions is rejected and 70 is not; the
+  rejection reason names both numbers; the null is not computed for a rejected
+  candidate.
+- `docs/agent/` unchanged. The agent is not told the floor.
+
 ---
 
 ## Ideas recorded, not adopted

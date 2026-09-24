@@ -120,9 +120,10 @@ def test_fit_refuses_a_window_that_produced_almost_nothing():
 def test_weights_round_trip_as_bytes():
     s = V.Strategy()
     s.weights = np.arange(V.N_FEATURES + 1, dtype=float)
+    s.edge = 0.25
     other = V.Strategy()
     other.load_weights(s.save_weights())
-    assert np.array_equal(s.weights, other.weights)
+    assert np.array_equal(s.weights, other.weights) and other.edge == 0.25
 
 
 def test_load_refuses_a_blob_of_the_wrong_shape():
@@ -139,3 +140,25 @@ def test_the_registered_interval_is_the_one_task67_measured():
     """1s, not ticks. Ticks are exact and were measured over budget; the
     hypothesis registers 1s and the strategy has to match it."""
     assert V.INTERVAL == "1s"
+
+
+def test_the_edge_is_fitted_and_frozen_with_the_weights():
+    """The first smoke traded twice in a hundred sessions because a fixed
+    1.5-point edge was above anything the model predicted. The edge is now a
+    quantile of |prediction| over a reservoir of training rows -- scale-free,
+    set once in fit(), and saved with the coefficients."""
+    s = V.Strategy()
+    run(s)
+    assert s.edge is not None and s.edge > 0
+    assert 0 < len(s.reservoir) <= V.RESERVOIR
+    blob = s.save_weights()
+    assert len(blob) == (V.N_FEATURES + 2) * 8
+
+
+def test_the_reservoir_stays_bounded():
+    """Algorithm R keeps the sample uniform in O(RESERVOIR) memory, so the
+    no-stored-rows property holds however long the window is."""
+    s = V.Strategy()
+    run(s)
+    assert len(s.reservoir) <= V.RESERVOIR
+    assert s.rows_seen == s.rows_used

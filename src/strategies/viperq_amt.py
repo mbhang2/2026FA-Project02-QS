@@ -32,7 +32,8 @@ DECIDE_EVERY = 60        # one decision a minute; commission dominates at 1s
 HORIZON_STEPS = 5        # label lookahead, in decisions -> five minutes
 WARMUP_BARS = 600        # per session, before the profile means anything
 RIDGE_LAMBDA = 1.0
-EDGE_POINTS = 1.5        # predicted move that justifies paying the round turn
+TRADE_FRACTION = 0.05    # act on the top 5% of decisions by |prediction|
+RESERVOIR = 4_000        # training rows kept, uniformly at random, to set the edge
 STOP_POINTS = 8.0
 TARGET_POINTS = 8.0
 SIZE = 1
@@ -61,7 +62,20 @@ class Strategy:
         self.rows_used = 0
         self.rows_dropped = 0
 
+        # **A uniform sample of training rows, to set the trade threshold.** The
+        # first version used a fixed 1.5-point edge; the fitted model's
+        # predictions never reached it and the smoke traded twice in a hundred
+        # sessions. A quantile of |prediction| is scale-free: whatever the
+        # model's outputs turn out to be, the strategy acts on the top
+        # TRADE_FRACTION of them. Reservoir sampling (Algorithm R) keeps the
+        # sample uniform over the whole window in O(RESERVOIR) memory, so the
+        # no-stored-rows property above survives.
+        self.reservoir: list = []
+        self.rows_seen = 0
+        self._rng = np.random.default_rng(64_001)
+
         self.weights = None      # set by fit(), frozen after
+        self.edge = None         # set by fit(), frozen after
 
     # -- the walk ------------------------------------------------------------ #
     def setup(self, ctx) -> None:
@@ -106,10 +120,10 @@ class Strategy:
             return
 
         predicted = float(np.dot(self.weights, np.append(x, 1.0)))
-        if predicted > EDGE_POINTS:
+        if predicted > self.edge:
             ctx.buy(size=SIZE, stop_offset=STOP_POINTS,
                     target_offset=TARGET_POINTS, tag="amt-long")
-        elif predicted < -EDGE_POINTS:
+        elif predicted < -self.edge:
             ctx.sell(size=SIZE, stop_offset=STOP_POINTS,
                      target_offset=TARGET_POINTS, tag="amt-short")
 
@@ -188,6 +202,16 @@ class Strategy:
         self.rows_used += 1
         self.pending.popleft()
 
+        # Algorithm R: every row has probability RESERVOIR / rows_seen of being
+        # in the sample, whatever the window length.
+        self.rows_seen += 1
+        if len(self.reservoir) < RESERVOIR:
+            self.reservoir.append(row)
+        else:
+            j = int(self._rng.integers(0, self.rows_seen))
+            if j < RESERVOIR:
+                self.reservoir[j] = row
+
     def fit(self) -> None:
         """Ridge, solved from the accumulated normal equations. Called once.
 
@@ -207,15 +231,25 @@ class Strategy:
         ridge[-1, -1] = 0.0                      # never penalise the intercept
         self.weights = np.linalg.solve(self.XtX + ridge, self.Xty)
 
+        # The edge is the (1 - TRADE_FRACTION) quantile of |prediction| over the
+        # reservoir: a threshold in the model's own units, chosen on the fit
+        # window and frozen with the weights. Not a cost floor -- whether the
+        # trades it admits survive commission is what the score is for.
+        preds = np.abs(np.asarray(self.reservoir) @ self.weights)
+        self.edge = float(np.quantile(preds, 1.0 - TRADE_FRACTION))
+
     # -- the parameters, as bytes; the harness owns the filesystem ----------- #
     def save_weights(self) -> bytes:
-        if self.weights is None:
+        """Coefficients, intercept, then the edge -- the edge is a fitted
+        parameter and travels with the rest."""
+        if self.weights is None or self.edge is None:
             raise RuntimeError("save_weights() before fit()")
-        return self.weights.astype(np.float64).tobytes()
+        return np.append(self.weights, self.edge).astype(np.float64).tobytes()
 
     def load_weights(self, blob: bytes) -> None:
         w = np.frombuffer(blob, dtype=np.float64)
-        if w.size != N_FEATURES + 1:
+        if w.size != N_FEATURES + 2:
             raise ValueError(
-                f"weights are {w.size} long, expected {N_FEATURES + 1}")
-        self.weights = w.copy()
+                f"weights are {w.size} long, expected {N_FEATURES + 2}")
+        self.weights = w[:-1].copy()
+        self.edge = float(w[-1])

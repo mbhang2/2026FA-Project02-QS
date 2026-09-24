@@ -73,7 +73,23 @@ feature, so the choice is registered here and not made inside `current.py`.
   three, so distributing its volume across its own range is close to the true
   histogram rather than a crude stand-in. At thirty seconds it is not.
 
-**Queued before this campaign is registered:** build the profile from ticks, 1s,
+**Settled 2026-09-23 by `docs/reviews/task67/`: one-second bars.** Ticks were
+measured at 8,338s for the 384-session split against a 7,200s budget -- over
+before the strategy does any work -- while 1s costs 1,726s and reproduces the
+tick-built profile to a total variation distance of about 0.03. 5s and 30s are
+cheaper and further away. `ctx.subscribe("1s")`, and each bar's volume is spread
+evenly across the price levels its own high-low range touched.
+
+**A caution on VPOC itself, found while measuring.** It is an argmax over a
+histogram whose top two bins are often near-tied: on the sessions measured the
+peak beat its runner-up by 9.8%, 5.7% and 0.7%. At 0.7% the VPOC is close to a
+coin flip between two price levels and will move for reasons that are not market
+structure. A model given it as an input will fit some of that. Value Area bounds
+are quantile-like and stable by comparison -- VA-high reproduced to 0.40 ticks at
+1s. Prefer the Value Area position and the distance-from-VPOC over the raw VPOC
+level, and treat VPOC instability as a known property rather than a surprise.
+
+**The original framing, kept because the reasoning is the record:** build the profile from ticks, 1s,
 5s and 30s bars over a handful of real NQ sessions; compare VPOC, Value Area
 bounds and LVN locations against the tick-built version as ground truth; and time
 each through the real remote boundary against the budget. If ticks fit, use

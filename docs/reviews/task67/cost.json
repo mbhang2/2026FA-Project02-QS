@@ -1,0 +1,34 @@
+{
+  "sessions_measured": 3,
+  "budget_s": 7200,
+  "rows": [
+    {
+      "subscription": "tick",
+      "seconds": 65.1376757081598,
+      "per_session": 21.7125585693866,
+      "full_split_s": 8337.622490644455,
+      "fits_7200s_budget": false
+    },
+    {
+      "subscription": "1s",
+      "seconds": 13.481392250396311,
+      "per_session": 4.49379741679877,
+      "full_split_s": 1725.6182080507278,
+      "fits_7200s_budget": true
+    },
+    {
+      "subscription": "5s",
+      "seconds": 5.5173108745366335,
+      "per_session": 1.8391036248455446,
+      "full_split_s": 706.2157919406891,
+      "fits_7200s_budget": true
+    },
+    {
+      "subscription": "30s",
+      "seconds": 2.63430745806545,
+      "per_session": 0.8781024860218167,
+      "full_split_s": 337.1913546323776,
+      "fits_7200s_budget": true
+    }
+  ]
+}

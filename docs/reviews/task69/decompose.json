@@ -1,0 +1,112 @@
+[
+  {
+    "trial": 0,
+    "active_sessions": 88,
+    "n_sessions": 100,
+    "sortino_ledger": -0.3782043354523489,
+    "sortino_charged_replay": -0.3782043354523489,
+    "reproduces": true,
+    "sortino_uncharged": -0.37451800188162465,
+    "sortino_active_only_dd": -0.3547875828211258,
+    "dd_share_idle": 2.636693003418861e-06
+  },
+  {
+    "trial": 1,
+    "active_sessions": 53,
+    "n_sessions": 100,
+    "sortino_ledger": 0.004899254072436431,
+    "sortino_charged_replay": 0.004899254072436431,
+    "reproduces": true,
+    "sortino_uncharged": 0.01635563958211355,
+    "sortino_active_only_dd": 0.003566820501390312,
+    "dd_share_idle": 6.150991849290712e-05
+  },
+  {
+    "trial": 2,
+    "active_sessions": 14,
+    "n_sessions": 100,
+    "sortino_ledger": 1.780712819389064,
+    "sortino_charged_replay": 1.780712819389064,
+    "reproduces": true,
+    "sortino_uncharged": 1.9546880864715417,
+    "sortino_active_only_dd": 0.6700203817018651,
+    "dd_share_idle": 0.011128687082318924
+  },
+  {
+    "trial": 3,
+    "active_sessions": 6,
+    "n_sessions": 100,
+    "sortino_ledger": -0.15879834296155937,
+    "sortino_charged_replay": -0.15879834296155937,
+    "reproduces": true,
+    "sortino_uncharged": -0.1412826029701948,
+    "sortino_active_only_dd": -0.03890339060766365,
+    "dd_share_idle": 0.0003032607052706777
+  },
+  {
+    "trial": 4,
+    "active_sessions": 37,
+    "n_sessions": 100,
+    "sortino_ledger": 0.3785242620850026,
+    "sortino_charged_replay": 0.3785242620850026,
+    "reproduces": true,
+    "sortino_uncharged": 0.4232542481091391,
+    "sortino_active_only_dd": 0.23035280999710386,
+    "dd_share_idle": 0.000915691200158682
+  },
+  {
+    "trial": 5,
+    "active_sessions": 14,
+    "n_sessions": 100,
+    "sortino_ledger": 0.3815607609587582,
+    "sortino_charged_replay": 0.3815607609587582,
+    "reproduces": true,
+    "sortino_uncharged": 0.42297100989026837,
+    "sortino_active_only_dd": 0.142857960960246,
+    "dd_share_idle": 0.0012735447682178287
+  },
+  {
+    "trial": 6,
+    "active_sessions": 19,
+    "n_sessions": 100,
+    "sortino_ledger": -0.14401101498963245,
+    "sortino_charged_replay": -0.14401101498963245,
+    "reproduces": true,
+    "sortino_uncharged": -0.12998925061811697,
+    "sortino_active_only_dd": -0.06277829161081269,
+    "dd_share_idle": 0.00017029050778273418
+  },
+  {
+    "trial": 7,
+    "active_sessions": 12,
+    "n_sessions": 100,
+    "sortino_ledger": 0.9294143158936136,
+    "sortino_charged_replay": 0.9294143158936136,
+    "reproduces": true,
+    "sortino_uncharged": 0.9949514054154937,
+    "sortino_active_only_dd": 0.32238416752725213,
+    "dd_share_idle": 0.0026386116419453483
+  },
+  {
+    "trial": 8,
+    "active_sessions": 14,
+    "n_sessions": 100,
+    "sortino_ledger": 1.1880596724454362,
+    "sortino_charged_replay": 1.1880596724433696,
+    "reproduces": true,
+    "sortino_uncharged": 1.291297791604415,
+    "sortino_active_only_dd": 0.4458348667334293,
+    "dd_share_idle": 0.0058395425905841255
+  },
+  {
+    "trial": 9,
+    "active_sessions": 10,
+    "n_sessions": 100,
+    "sortino_ledger": -0.09206045824325587,
+    "sortino_charged_replay": -0.09206045824325587,
+    "reproduces": true,
+    "sortino_uncharged": -0.07803631928345953,
+    "sortino_active_only_dd": -0.029114726820851106,
+    "dd_share_idle": 0.00018228927045623234
+  }
+]

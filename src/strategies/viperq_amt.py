@@ -24,7 +24,8 @@ import numpy as np
 
 # -- the registered feature set ---------------------------------------------- #
 FEATURES = ("dist_vpoc", "va_pos", "at_lvn", "cvd_div", "tape_velocity")
-N_FEATURES = len(FEATURES)
+N_FEATURES = 5           # == len(FEATURES); a literal because the agent's static
+                         # check (E011) forbids any call at module level
 
 # -- hyperparameters. Each value tried is its own trial under Amendment 4. ---- #
 INTERVAL = "1s"          # registered by docs/reviews/task67; ticks are over budget
@@ -45,12 +46,12 @@ class Strategy:
         from src.core.features.volume_profile import SessionProfile
 
         self.profile = SessionProfile(TICK_SIZE)
-        self.session = None
+        self.session: int | None = None
         self.bars_in_session = 0
 
         # session state for the features
         self.cum_delta = 0
-        self.session_open = None
+        self.session_open: float | None = None
         self.tick_count_sum = 0
 
         # the label buffer: one entry per DECISION, not per bar
@@ -74,8 +75,8 @@ class Strategy:
         self.rows_seen = 0
         self._rng = np.random.default_rng(64_001)
 
-        self.weights = None      # set by fit(), frozen after
-        self.edge = None         # set by fit(), frozen after
+        self.weights: np.ndarray | None = None   # set by fit(), frozen after
+        self.edge: float | None = None           # set by fit(), frozen after
 
     # -- the walk ------------------------------------------------------------ #
     def setup(self, ctx) -> None:
@@ -114,16 +115,19 @@ class Strategy:
         if x is not None:
             self.pending.append((x, bar.close, bar.session))
 
-        if self.weights is None or not ctx.actionable or x is None:
+        if self.weights is None or self.edge is None:
+            return                            # not fitted yet: fit window
+        if not ctx.actionable or x is None:
             return
         if ctx.position or ctx.working_order_ids:
             return
 
         predicted = float(np.dot(self.weights, np.append(x, 1.0)))
-        if predicted > self.edge:
+        edge = self.edge
+        if predicted > edge:
             ctx.buy(size=SIZE, stop_offset=STOP_POINTS,
                     target_offset=TARGET_POINTS, tag="amt-long")
-        elif predicted < -self.edge:
+        elif predicted < -edge:
             ctx.sell(size=SIZE, stop_offset=STOP_POINTS,
                      target_offset=TARGET_POINTS, tag="amt-short")
 

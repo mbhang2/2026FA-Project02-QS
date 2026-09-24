@@ -359,3 +359,37 @@ def test_the_budget_flag_overrides_the_config_default():
     source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
     assert 'cc = {**cc, "n_trials": n_trials}' in source
     assert '"--n must be positive' in source
+
+
+def test_a_seed_that_fails_the_agents_static_check_is_refused_at_registration(tmp_path):
+    """**nq-ml-01 lost 13 of 20 trials to this.** The seed had `len()` at module
+    level; every agent edit inherited it, failed E011, exhausted its repairs,
+    and was recorded as crashed without the engine ever running. The smoke did
+    not catch it because the smoke bypasses the agent. Registration now runs
+    the seed through the same check the agent's output gets."""
+    import subprocess
+    bad = tmp_path / "bad_seed.py"
+    bad.write_text(
+        "N = len((1, 2, 3))\n"        # a module-level call: E011
+        "class Strategy:\n"
+        "    def setup(self, ctx): ctx.subscribe('5m')\n"
+        "    def on_bars(self, ctx): pass\n"
+        "    def on_fill(self, ctx): pass\n"
+        "    def on_lifecycle(self, ctx): pass\n"
+        "    def fit(self): pass\n"
+        "    def save_weights(self): return b''\n"
+        "    def load_weights(self, b): pass\n")
+    # the seed must be inside the repo, per the --seed rule; copy it in and clean up
+    inside = REPO_ROOT / "src" / "strategies" / "_zz_bad_seed_test.py"
+    inside.write_text(bad.read_text())
+    try:
+        r = subprocess.run(
+            [sys.executable, "scripts/nq_campaign.py", "--stage", "register",
+             "--name", "zz-bad-seed", "--profile", "nq-train-fitted",
+             "--seed", str(inside)],
+            capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=60)
+    finally:
+        inside.unlink(missing_ok=True)
+    assert r.returncode != 0
+    assert "static check" in (r.stdout + r.stderr)
+    assert not (REPO_ROOT / "runs" / "campaigns" / "zz-bad-seed").exists()

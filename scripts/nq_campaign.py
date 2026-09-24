@@ -310,6 +310,20 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                 f"{'has' if fitted_profile else 'has no'} fit window. A seed that "
                 "does not match the profile is refused at registration rather "
                 "than crashing trial 0.")
+        # **The seed has to pass the agent's own static check.** The agent edits
+        # this file and every edit inherits whatever is already in it; a seed
+        # that fails E011 or mypy fails on every trial, the repair loop cannot
+        # fix what it did not write, and the budget is spent on
+        # `static_check_unrepaired`. nq-ml-01 lost 13 of 20 trials to a `len()`
+        # call at module level in the seed. The smoke did not catch it because
+        # the smoke bypasses the agent.
+        from src.core.loop.llm import LLMAgent
+        ok, why = LLMAgent._static_ok(LLMAgent.__new__(LLMAgent), seed_text)
+        if not ok:
+            sys.exit(
+                f"{seed} fails the agent's static check, so every trial that "
+                f"edits it would too:\n  {why[:600]}\nFix the seed and register "
+                "again.")
 
     print("preflight ...", flush=True)
     served = LLMAgent(model=model, temperature=0.7, max_tokens=16_384).preflight()

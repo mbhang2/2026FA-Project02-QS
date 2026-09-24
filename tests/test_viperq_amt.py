@@ -162,3 +162,13 @@ def test_the_reservoir_stays_bounded():
     run(s)
     assert len(s.reservoir) <= V.RESERVOIR
     assert s.rows_seen == s.rows_used
+
+
+def test_the_seed_passes_the_agents_static_check():
+    """The check the agent's proposals are held to. A seed that fails it fails
+    on every trial -- nq-ml-01 lost 13 of 20 to `N_FEATURES = len(FEATURES)`.
+    The engine smoke cannot catch this; only this check can."""
+    from src.core.loop.llm import LLMAgent
+    src = (REPO_ROOT / "src" / "strategies" / "viperq_amt.py").read_text()
+    ok, why = LLMAgent._static_ok(LLMAgent.__new__(LLMAgent), src)
+    assert ok, why

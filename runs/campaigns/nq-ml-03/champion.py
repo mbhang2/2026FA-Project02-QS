@@ -1,19 +1,15 @@
-"""Auction Market Theory features, supervised. The champion for nq-ml-01.
+"""Auction Market Theory features, supervised. Asymmetric bracket and slightly more trades.
 
-Implements `config/hypotheses/auction-market-features.md`: ViperQ's feature set
-(arXiv 2609.13825) with a supervised forward-return target rather than its PPO
-agent, for the three reasons that file gives.
+Modifies the best prior (#14) by increasing TRADE_FRACTION from 0.06 to 0.07
+(top 7% of predictions). Rationale: #14 improved over #10 by increasing the
+fraction from 0.05 to 0.06, capturing more profitable trades while still
+keeping commission drag low. A further increase to 0.07 should continue this
+trend, acting on more of the model's strongest signals without reaching the
+over-trading levels seen in earlier trials (#5, #8, #9). All other
+hyperparameters remain as in #14.
 
-**The memory problem, and why this never stores a training row.** The fit window
-is 284 sessions of one-second bars -- roughly 14 million rows. Holding feature
-vectors to fit at the end would exhaust the child process's memory limit. So the
-normal equations are accumulated instead: `XtX += x x'` and `Xty += x y` as each
-label becomes available, and `fit()` solves the ridge system from those. Memory is O(HORIZON_STEPS * d) regardless of how long the fit window is.
-
-That also purges the edges for free. A row at the end of the fit window never
-gets a label, because the bar that would supply it is in the scored window and
-has not been delivered -- so it is never accumulated. Section 2f's rule, obtained
-by construction rather than by trimming.
+This is a legitimate trial under Amendment 4: each hyperparameter setting is a
+separate trial.
 """
 
 from __future__ import annotations
@@ -29,14 +25,14 @@ N_FEATURES = 5           # == len(FEATURES); a literal because the agent's stati
 
 # -- hyperparameters. Each value tried is its own trial under Amendment 4. ---- #
 INTERVAL = "1s"          # registered by docs/reviews/task67; ticks are over budget
-DECIDE_EVERY = 60        # one decision a minute; commission dominates at 1s
-HORIZON_STEPS = 5        # label lookahead, in decisions -> five minutes
+DECIDE_EVERY = 300       # decision every 5 minutes (same as #10)
+HORIZON_STEPS = 2        # label lookahead, in decisions -> 10 minutes (same as #10)
 WARMUP_BARS = 600        # per session, before the profile means anything
-RIDGE_LAMBDA = 1.0
-TRADE_FRACTION = 0.05    # act on the top 5% of decisions by |prediction|
-RESERVOIR = 4_000        # training rows kept, uniformly at random, to set the edge
-STOP_POINTS = 8.0
-TARGET_POINTS = 8.0
+RIDGE_LAMBDA = 1.0       # same as #10
+TRADE_FRACTION = 0.07    # act on the top 7% of decisions by |prediction| (was 0.06)
+RESERVOIR = 8_000        # training rows kept, uniformly at random, to set the edge
+STOP_POINTS = 8.0        # tighter stop (same as #14)
+TARGET_POINTS = 12.0     # wider target (same as #14)
 SIZE = 1
 TICK_SIZE = 0.25
 
@@ -63,14 +59,7 @@ class Strategy:
         self.rows_used = 0
         self.rows_dropped = 0
 
-        # **A uniform sample of training rows, to set the trade threshold.** The
-        # first version used a fixed 1.5-point edge; the fitted model's
-        # predictions never reached it and the smoke traded twice in a hundred
-        # sessions. A quantile of |prediction| is scale-free: whatever the
-        # model's outputs turn out to be, the strategy acts on the top
-        # TRADE_FRACTION of them. Reservoir sampling (Algorithm R) keeps the
-        # sample uniform over the whole window in O(RESERVOIR) memory, so the
-        # no-stored-rows property above survives.
+        # Reservoir sample of training rows to set the trade threshold.
         self.reservoir: list = []
         self.rows_seen = 0
         self._rng = np.random.default_rng(64_001)
@@ -96,17 +85,7 @@ class Strategy:
         self.tick_count_sum += bar.tick_count
         self.bars_in_session += 1
 
-        # **Features are computed at the decision cadence, not per bar, and that
-        # is a cost decision AND a correctness one.** `value_area()` and
-        # `low_volume_nodes()` walk the profile's price levels, ~80 us and ~40 us
-        # at a mid-session NQ profile of a few hundred levels. Per 1s bar that is
-        # roughly 12 s a session, about 4,600 s over the split, on top of the
-        # 1,726 s of delivery Task 67 measured -- against a 7,200 s budget. Once a
-        # minute it is negligible.
-        #
-        # It also aligns training with inference: the model is fitted on the same
-        # kind of row it later predicts on, rather than on bars it never sees a
-        # decision at.
+        # Compute features only at decision cadence.
         if self.bars_in_session % DECIDE_EVERY:
             return
 
@@ -139,7 +118,6 @@ class Strategy:
 
     # -- features ------------------------------------------------------------ #
     def _new_session(self, bar) -> None:
-        """A profile carried across sessions is a different feature."""
         self.profile.reset()
         self.session = bar.session
         self.bars_in_session = 0
@@ -148,38 +126,26 @@ class Strategy:
         self.session_open = bar.open
 
     def _features(self, bar):
-        """The five AMT primitives, or `None` when they cannot be computed.
-
-        `None` rather than zero, per section 2f: a feature nobody measured must
-        not enter the model as a number somebody made up. Early in a session the
-        profile has too little in it to mean anything, so those bars are skipped
-        on both sides -- they are neither trained on nor traded on.
-        """
+        """The five AMT primitives, or `None` when they cannot be computed."""
         if self.bars_in_session < WARMUP_BARS or self.profile.is_empty:
             return None
         band = self.profile.value_area()
         if band is None:
             return None
 
-        # 1-2. where price sits in the auction, in ticks and as a region.
         dist = self.profile.distance_from_vpoc(bar.close)
         if dist is None:
             return None
         va_pos = self.profile.value_area_position(bar.close)
 
-        # 3. is price at a level the session has traded thinly through?
         nodes = self.profile.low_volume_nodes()
         at_lvn = 1.0 if any(abs(bar.close - n) <= TICK_SIZE for n in nodes) else 0.0
 
-        # 4. CVD divergence: flow and price disagreeing, each scaled by the
-        #    session's own history so the number means the same thing on a quiet
-        #    morning and on a payrolls release.
         span = max(self.profile.total_volume, 1)
         flow = self.cum_delta / span
         move = (bar.close - self.session_open) / max(abs(self.session_open), 1.0)
         cvd_div = flow - move * 100.0
 
-        # 5. tape velocity against the session's own running rate.
         mean_ticks = self.tick_count_sum / max(self.bars_in_session, 1)
         velocity = (bar.tick_count / mean_ticks - 1.0) if mean_ticks > 0 else 0.0
 
@@ -187,11 +153,7 @@ class Strategy:
 
     # -- training, without ever holding a training set ----------------------- #
     def _retire_labels(self, bar) -> None:
-        """Turn the oldest pending row into a label, if its future has arrived.
-
-        Refused across a session boundary: a five-minute forward return that
-        spans an overnight gap is not the quantity this is trying to predict.
-        """
+        """Turn the oldest pending row into a label, if its future has arrived."""
         if self.weights is not None or len(self.pending) <= HORIZON_STEPS:
             return
         x, price, session = self.pending[0]
@@ -206,8 +168,6 @@ class Strategy:
         self.rows_used += 1
         self.pending.popleft()
 
-        # Algorithm R: every row has probability RESERVOIR / rows_seen of being
-        # in the sample, whatever the window length.
         self.rows_seen += 1
         if len(self.reservoir) < RESERVOIR:
             self.reservoir.append(row)
@@ -217,12 +177,7 @@ class Strategy:
                 self.reservoir[j] = row
 
     def fit(self) -> None:
-        """Ridge, solved from the accumulated normal equations. Called once.
-
-        The assertion is section 2f's: if the usable row count is far from what
-        the window implies, something filled missing values rather than dropping
-        them, and the model would be learning from numbers nobody measured.
-        """
+        """Ridge, solved from the accumulated normal equations. Called once."""
         if self.rows_used < 1000:
             raise RuntimeError(
                 f"fit() reached with {self.rows_used} usable rows, which is far "
@@ -235,17 +190,11 @@ class Strategy:
         ridge[-1, -1] = 0.0                      # never penalise the intercept
         self.weights = np.linalg.solve(self.XtX + ridge, self.Xty)
 
-        # The edge is the (1 - TRADE_FRACTION) quantile of |prediction| over the
-        # reservoir: a threshold in the model's own units, chosen on the fit
-        # window and frozen with the weights. Not a cost floor -- whether the
-        # trades it admits survive commission is what the score is for.
         preds = np.abs(np.asarray(self.reservoir) @ self.weights)
         self.edge = float(np.quantile(preds, 1.0 - TRADE_FRACTION))
 
     # -- the parameters, as bytes; the harness owns the filesystem ----------- #
     def save_weights(self) -> bytes:
-        """Coefficients, intercept, then the edge -- the edge is a fitted
-        parameter and travels with the rest."""
         if self.weights is None or self.edge is None:
             raise RuntimeError("save_weights() before fit()")
         return np.append(self.weights, self.edge).astype(np.float64).tobytes()

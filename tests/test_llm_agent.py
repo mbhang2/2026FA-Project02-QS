@@ -283,3 +283,25 @@ def test_every_call_records_the_model_that_answered_it():
     agent = _agent()
     agent._pending.append(c)
     assert agent.drain_log()["models_served"] == ["gemini-3.1-pro-preview"]
+
+
+def test_the_history_names_a_proposal_that_traded_identically_to_an_earlier_one():
+    """nq-ml-02: trials 2 and 16 differed by 146 source lines and had
+    byte-identical fill logs. The agent was never told, and spent the trial.
+    The history line now says so. It is operational fact about the agent's own
+    past, not the gate -- the gate-word whitelist is checked separately."""
+    from src.core.loop.llm import LLMAgent
+    a = LLMAgent.__new__(LLMAgent)
+    a.history_full_sources = 0
+    a.show_history = True
+    rows = [
+        {"outcome": "completed", "score": {"primary": 0.1, "trade_count": 5, "n_sessions": 100}, "fill_log_digest": "aaa"},
+        {"outcome": "completed", "score": {"primary": 0.2, "trade_count": 7, "n_sessions": 100}, "fill_log_digest": "bbb"},
+        {"outcome": "completed", "score": {"primary": 0.1, "trade_count": 5, "n_sessions": 100}, "fill_log_digest": "aaa"},
+    ]
+    text = a._history_block(rows)
+    l0, l1, l2 = [l for l in text.splitlines() if l.strip().startswith("#")]
+    assert "IDENTICAL TRADES TO #0" in l2
+    assert "IDENTICAL" not in l0 and "IDENTICAL" not in l1
+    for gate_word in ("p=", "p-value", "verdict", "correction", "accept", "reject-the-null"):
+        assert gate_word not in text.lower(), gate_word

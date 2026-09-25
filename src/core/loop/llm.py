@@ -354,6 +354,14 @@ class LLMAgent:
         # the correction computes. A blacklist over a row shape that grows
         # leaks the first field somebody adds.
         lines, sources = [], []
+        # **Tell the agent when a proposal traded identically to an earlier one.**
+        # nq-ml-02 produced two such pairs -- 146 and 172 changed source lines,
+        # byte-identical fill logs, the same score to four decimals. The agent
+        # narrated changes that never took effect and spent two of twenty trials
+        # re-scoring known candidates, because nothing told it. This is
+        # operational fact about its own history, not the gate: no p, no verdict,
+        # no N, no correction. The whitelist above stands.
+        first_seen: dict[str, int] = {}
         for i, row in enumerate(history):
             score = row.get("score") or {}
             primary = score.get("primary")
@@ -366,6 +374,13 @@ class LLMAgent:
                 bits.append(f"NOT SCORED: {score.get('reject_reason')}")
             else:
                 bits.append(f"NO SCORE: {str(row.get('error'))[:120]}")
+            digest = row.get("fill_log_digest")
+            if digest:
+                if digest in first_seen:
+                    bits.append(f"IDENTICAL TRADES TO #{first_seen[digest]} "
+                                "-- your edit changed nothing the engine could see")
+                else:
+                    first_seen[digest] = i
             lines.append("  ".join(bits))
 
         scored = [(i, r) for i, r in enumerate(history)

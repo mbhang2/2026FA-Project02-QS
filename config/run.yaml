@@ -304,6 +304,16 @@ campaign:
   # one that was registered.
   allow_fitted_proposals: true
 
+  # Amendment 6. A candidate is scoreable only if it was exposed in at least
+  # this fraction of its scored sessions; below it, `rejected` the way
+  # MIN_SESSIONS already rejects -- never seen by the correction. Task 69
+  # measured why: idle sessions pad Sortino's denominator by sqrt(N/exposed),
+  # 2.67x at 14 of 100 and 1.20x at 70 of 100. Frozen into campaign.json at
+  # registration; `--min-exposed` overrides it there for a hypothesis that is
+  # genuinely rare (0.05) or genuinely daily (0.90). The floor never applies
+  # inside a null.
+  min_exposed_fraction: 0.70
+
   # TWO AXES, not one. `max_of_n` is a correction; `round_turn_mc` is a null
   # source. See pre-registration.md 3a -- including which combinations are
   # coherent, and the fact that the measured FWER of 0.060 describes the PAIR

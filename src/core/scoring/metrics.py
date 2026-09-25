@@ -53,6 +53,16 @@ MIN_SESSIONS = 30
 # null rather than Sortino's.
 MIN_DOWNSIDE_SESSIONS = 5
 
+# Amendment 6. The fraction of scored sessions a candidate must have been
+# exposed in to be scoreable at all. The DEFAULT HERE IS THE CONFIG'S, not the
+# function's: `score()` takes `min_exposed_fraction=None` (no floor) so the
+# conditional null, the calibration rig and the power sweep -- all of which
+# call score() -- do not start rejecting inside a null. Only run.py's scored
+# path passes the config value. Task 69 measured why the floor is needed: a
+# candidate exposed in 14 of 100 sessions has its Sortino inflated ~2.7x by
+# idle sessions padding the denominator; at 70 of 100 the bound is 1.20x.
+MIN_EXPOSED_FRACTION = 0.70
+
 # Pre-registration Amendment 3. A session in which no position was held is
 # charged this many index points, pro-rated by the fraction of the session that
 # WAS held. It is a cost of capital -- roughly $20,000 of initial margin at ~4.5%
@@ -228,6 +238,16 @@ def idle_charges(
     scale = position_scale(blotter)
     return [-idle_charge * scale * (1.0 - f) / notional_base
             for f in session_exposure(blotter, calendar)]
+
+
+def sessions_exposed(blotter: Blotter, calendar: Sequence[SessionSpan]) -> int:
+    """How many calendar sessions the strategy held a position in at all.
+
+    The same time-weighted exposure the idle charge uses, counted as "any" per
+    session. Diagnostics report it as `sessions_with_exposure`; Amendment 6's
+    floor gates on it.
+    """
+    return sum(1 for e in session_exposure(blotter, calendar) if e > 0)
 
 
 def session_returns(

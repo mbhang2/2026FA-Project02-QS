@@ -295,7 +295,8 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                    profile_name: str = PROFILE,
                    seed: pathlib.Path | None = None,
                    n_trials: int | None = None,
-                   model: str = MODEL) -> None:
+                   model: str = MODEL,
+                   min_exposed: float | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -347,6 +348,10 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         if n_trials < 1:
             sys.exit(f"--n must be positive, got {n_trials}")
         cc = {**cc, "n_trials": n_trials}
+    if min_exposed is not None:
+        if not (0.0 < min_exposed <= 1.0):
+            sys.exit(f"--min-exposed must be in (0, 1], got {min_exposed}")
+        cc = {**cc, "min_exposed_fraction": min_exposed}
     agent_cfg = agent_for(None, hypothesis, profile_name, model).config()
     agent_cfg["null_source"] = cc["null_source"]
     agent_cfg["correction"] = cc["correction"]
@@ -376,6 +381,7 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         # carries what the campaign actually allowed, not what was asked for.
         allow_fitted_proposals=bool(cc.get("allow_fitted_proposals"))
         and bool(profile.get("fit_sessions", 0)),
+        min_exposed_fraction=cc.get("min_exposed_fraction"),
         agent="src.core.loop.llm.LLMAgent", dataset="nq-trades", split="train",
         hypothesis_path=str(hypothesis.relative_to(ROOT)),
         hypothesis_digest=agent_cfg["hypothesis"]["digest"],
@@ -680,6 +686,10 @@ def main() -> int:
                     help=f"the proposing model; --stage register only, frozen "
                          f"into campaign.json and read back by run and report. "
                          f"Default {MODEL}.")
+    ap.add_argument("--min-exposed", type=float, default=None,
+                    help="Amendment 6 exposure floor for this campaign, in (0, 1]; "
+                         "--stage register only, frozen into campaign.json. Default "
+                         "is campaign.min_exposed_fraction in config/run.yaml.")
     ap.add_argument("--seed", type=pathlib.Path, default=None,
                     help="a strategy file to start trial 0 from; --stage register "
                          "only. Copied to champion.py and recorded by digest. "
@@ -714,7 +724,7 @@ def main() -> int:
             except ValueError:
                 sys.exit(f"{seed} is outside the repository; a seed has to be a "
                          "committed file or the record points at nothing.")
-        stage_register(a.name, hyp, a.profile, seed, a.n, a.model)
+        stage_register(a.name, hyp, a.profile, seed, a.n, a.model, a.min_exposed)
     else:
         # Refused rather than ignored. Silently accepting it on a run stage is how
         # someone believes they changed the question and did not.
@@ -727,9 +737,9 @@ def main() -> int:
         if a.seed is not None:
             sys.exit(f"--seed applies to --stage register only; "
                      f"--stage {a.stage} reads champion.py from the campaign.")
-        if a.n is not None or a.model != MODEL:
-            sys.exit(f"--n and --model apply to --stage register only; "
-                     f"--stage {a.stage} reads both from campaign.json.")
+        if a.n is not None or a.model != MODEL or a.min_exposed is not None:
+            sys.exit(f"--n, --model and --min-exposed apply to --stage register only; "
+                     f"--stage {a.stage} reads them from campaign.json.")
         {"run": stage_run, "nulls": stage_nulls,
          "validate": stage_validate, "report": stage_report}[a.stage](a.name)
     return 0

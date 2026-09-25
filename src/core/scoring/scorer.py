@@ -54,6 +54,7 @@ def score(
     min_sessions: int = MIN_SESSIONS,
     min_downside_sessions: int = MIN_DOWNSIDE_SESSIONS,
     idle_charge: float = IDLE_CHARGE,
+    min_exposed_fraction: float | None = None,
 ) -> ScoreTuple:
     """Sortino on per-session returns, with Sharpe and the shape moments beside it.
 
@@ -83,6 +84,29 @@ def score(
                                       idle_charge=idle_charge)
     net = blotter.realized_pnl - blotter.commission
     trades = sum(1 for r in blotter.rows if r.realized_pnl != 0.0)
+    # Amendment 6: exposed in too few of the scored sessions -> not scored at
+    # all, the way MIN_SESSIONS already works. Default None so the conditional
+    # null, the calibration rig and the power sweep -- which all call score() --
+    # never reject inside a null; only run.py's scored path passes the floor.
+    # Applied to the candidate once, here; the null resamples one that passed.
+    if min_exposed_fraction is not None:
+        exposed = metrics.sessions_exposed(blotter, period)
+        need = min_exposed_fraction * len(period)
+        if exposed < need:
+            return ScoreTuple(
+                primary=REJECT,
+                sharpe=0.0,
+                skew=0.0,
+                kurtosis=0.0,
+                n_sessions=len(period),
+                net_pnl=net,
+                trade_count=trades,
+                rejected=True,
+                reject_reason=(
+                    f"exposed in {exposed} of {len(period)} scored sessions, "
+                    f"under the registered floor of {min_exposed_fraction:.0%} "
+                    f"(Amendment 6)"),
+            )
     return score_returns(
         returns, net_pnl=net, trade_count=trades, min_sessions=min_sessions,
         min_downside_sessions=min_downside_sessions,

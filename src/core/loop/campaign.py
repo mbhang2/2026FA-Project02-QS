@@ -104,6 +104,9 @@ class CampaignRecord:
     # predate this field keep their hash.
     seed_path: str | None = None
     seed_digest: str | None = None
+    # Amendment 6's exposure floor, frozen at registration. None for records
+    # that predate it; `digest()` drops None so their hashes do not move.
+    min_exposed_fraction: float | None = None
 
     def digest(self) -> str:
         payload = json.dumps({k: v for k, v in asdict(self).items() if v is not None},

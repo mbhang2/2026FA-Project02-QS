@@ -653,9 +653,14 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     # record claims and nothing charges. Scoring and diagnostics must be handed
     # the same one or the diagnostics describe a different return vector.
     idle_charge = cfg.get("campaign", {}).get("idle_charge", IDLE_CHARGE)
+    # Amendment 6. None when the config does not set it -> no floor. Passed to
+    # BOTH score() calls below: a candidate rejected on exposure must not carry
+    # an uncharged figure either.
+    min_exposed = cfg.get("campaign", {}).get("min_exposed_fraction")
     result = score(scored_blotter, period=period,
                    notional_base=profile.get("notional_base", 1.0),
-                   idle_charge=idle_charge)
+                   idle_charge=idle_charge,
+                   min_exposed_fraction=min_exposed)
     engine.record.score = result.as_dict()
     # **Amendment 5: the same Sortino with the charge at zero, reported beside
     # the gate's number and never used by the gate.** Same blotter, same
@@ -666,7 +671,8 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     # 61). So both are recorded, and `primary` stays what it was.
     uncharged = score(scored_blotter, period=period,
                       notional_base=profile.get("notional_base", 1.0),
-                      idle_charge=0.0)
+                      idle_charge=0.0,
+                      min_exposed_fraction=min_exposed)
     engine.record.score["primary_uncharged"] = (
         None if uncharged.rejected else uncharged.primary)
     engine.record.diagnostics = score_diagnostics(

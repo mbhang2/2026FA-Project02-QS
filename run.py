@@ -248,6 +248,23 @@ def attach_fill_log(record: dict, engine, ledger_path: Path) -> dict:
 
 
 
+def _attach_weights_safely(record: dict, engine, ledger_path: Path) -> dict:
+    """`attach_weights` for the failure handlers in `_walk`.
+
+    Those handlers exist to turn a failure into a row with an outcome. A second
+    exception raised while assembling that row escapes them and the row is
+    written from an empty record -- the Task 36 load-failure hole, in a new
+    place. So on a failure path the weights are best-effort: if persisting them
+    fails, the row says so and keeps the outcome it already had.
+    """
+    try:
+        return attach_weights(record, engine, ledger_path)
+    except Exception as exc:  # noqa: BLE001 -- recorded, never raised from a handler
+        record["weights_source"] = ""
+        record["weights_error"] = f"{type(exc).__name__}: {exc}"[:400]
+        return record
+
+
 def _proxy_for(profile: dict):
     """Which proxy class stands in for the strategy in this process.
 
@@ -279,6 +296,15 @@ def attach_weights(record: dict, engine, ledger_path: Path) -> dict:
     if not getattr(engine, "_has_fit", False):
         return record
     record["fit_sessions"] = engine.fit_sessions
+    if not getattr(engine, "_fit_completed", False):
+        # `fit()` was entered and raised. There are no weights, and the child
+        # that would have produced them is gone -- asking it anyway raised
+        # `HarnessFailed` from inside the crash handler, past every handler,
+        # and the ledger got a row with no outcome (2026-09-25). The crash is
+        # the row's story; this just says the fit never finished.
+        record["weights_source"] = ""
+        record["fit_completed"] = False
+        return record
     if getattr(engine, "_loaded_weights", False):
         # Loaded, not fitted: the weights on disk are the ones this run was
         # given, and rewriting them under this run's digest would mint a second
@@ -552,7 +578,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
         )
         if rec:
             attach_fill_log(record, engine, ledger_path)
-            attach_weights(record, engine, ledger_path)
+            _attach_weights_safely(record, engine, ledger_path)
         run_log.update(record)
         print(f"{exc.kind}: {exc}", file=sys.stderr)
         if getattr(exc, "child_traceback", ""):
@@ -568,7 +594,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
         )
         if rec:
             attach_fill_log(record, engine, ledger_path)
-            attach_weights(record, engine, ledger_path)
+            _attach_weights_safely(record, engine, ledger_path)
         run_log.update(record)
         print(f"INVALIDATED: {exc}", file=sys.stderr)
         return 4
@@ -585,7 +611,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
         )
         if rec:
             attach_fill_log(record, engine, ledger_path)
-            attach_weights(record, engine, ledger_path)
+            _attach_weights_safely(record, engine, ledger_path)
         run_log.update(record)
         raise
 

@@ -140,3 +140,43 @@ def test_a_load_run_carries_weights_through_run_py(tmp_path):
         "the load run was routed to the plain proxy and refused by its own guard")
     # it loaded rather than fitted: no fit window was carved out of the split
     assert not row.get("fit_sessions"), row.get("fit_sessions")
+
+
+FIT_RAISES_MODULE = '''"""TRANSIENT: written by tests/test_run_end_to_end.py, restored in its finally."""
+from src.strategies.fitted_reference import FittedReference
+
+
+class Strategy(FittedReference):
+    def __init__(self):
+        super().__init__(interval="5m", stop=4.0, target=4.0, size=1)
+
+    def fit(self):
+        raise RuntimeError("deliberate: not enough rows to fit")
+'''
+
+
+def test_a_fit_that_raises_is_a_crashed_row_not_an_empty_one(tmp_path):
+    """2026-09-25: this exact run produced a row with no `outcome` at all. The
+    crash handler asked the dead child to save weights, the pipe raised, and
+    the second exception escaped every handler. A crashed fit is a trial that
+    counts; a row with no outcome is one that leaves N without a trace."""
+    strategy = REPO_ROOT / "src" / "strategies" / "current.py"
+    backup = strategy.read_text()
+    ledger = tmp_path / "ledger.jsonl"
+    try:
+        strategy.write_text(FIT_RAISES_MODULE)
+        proc = subprocess.run(
+            [sys.executable, "run.py", "--human", "--quiet",
+             "--purpose", "check", "--profile", "harness-fitted",
+             "--ledger", str(ledger)],
+            capture_output=True, text=True, cwd=str(REPO_ROOT))
+    finally:
+        strategy.write_text(backup)
+    assert strategy.read_text() == backup, "current.py was not restored"
+    rows = [json.loads(x) for x in ledger.read_text().splitlines() if x.strip()]
+    assert rows, "the run wrote no ledger row"
+    row = rows[-1]
+    assert row.get("outcome") == "crashed", (row.get("outcome"), proc.stderr[-2000:])
+    assert "deliberate: not enough rows to fit" in (row.get("error") or "")
+    assert row.get("fit_completed") is False
+    assert proc.returncode == 5, proc.returncode

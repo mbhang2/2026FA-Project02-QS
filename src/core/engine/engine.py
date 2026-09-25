@@ -576,6 +576,15 @@ class Engine:
         # `fit` alone, not all three -- see `validate_fitted_strategy`.
         self._needs_fit = hasattr(strategy, "fit")
         self._has_fit = False
+        # `_has_fit` is set BEFORE `fit()` is called, so that a re-entrant call
+        # raises; `_fit_completed` is set only AFTER it returns. The distinction
+        # is what `run.py`'s `attach_weights` needs: a strategy that raised
+        # inside `fit()` has `_has_fit` and no weights, and asking its dead
+        # child to `save_weights()` from inside the crash handler raised a
+        # second exception past every handler -- a row with no outcome, found
+        # 2026-09-25 by running a fitted strategy on a synthetic window too
+        # short for it.
+        self._fit_completed = False
         self._loaded_weights = False
         if self._needs_fit:
             validate_fitted_strategy(strategy)
@@ -610,6 +619,7 @@ class Engine:
                 strategy.load_weights(wp.read_bytes())
                 self._loaded_weights = True
                 self._has_fit = True
+                self._fit_completed = True
                 if fit_sessions:
                     raise TypeError(
                         "weights_path and fit_sessions were both given. A run "
@@ -1609,6 +1619,7 @@ class Engine:
             )
         self._has_fit = True
         self.strategy.fit()
+        self._fit_completed = True
 
     def _split_sessions(self) -> list[int]:
         """Every session of the served split, fit window included."""

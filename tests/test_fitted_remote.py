@@ -339,6 +339,7 @@ def test_attach_weights_does_not_depend_on_a_digest_the_record_lacks(tmp_path):
 
     class Engine:
         _has_fit = True
+        _fit_completed = True        # fit() returned; the real engine sets this after it
         _loaded_weights = False
         fit_sessions = 284
         weights_path = None
@@ -359,3 +360,49 @@ def test_attach_weights_does_not_depend_on_a_digest_the_record_lacks(tmp_path):
     files = list(written.glob("*.weights"))
     assert len(files) == 1 and files[0].read_bytes() == b"3.5\n"
     assert record["fit_sessions"] == 284
+
+
+def test_a_fit_that_raised_leaves_its_row_an_outcome_not_a_second_exception(tmp_path):
+    """**Regression, 2026-09-25: a fitted strategy that raised inside `fit()` wrote
+    a ledger row with no outcome.**
+
+    `_has_fit` is set before `fit()` is called so a re-entrant call raises. After
+    a crash inside `fit()` it is therefore True, `attach_weights` asked the dead
+    child for `save_weights()`, the pipe raised `HarnessFailed` from inside the
+    crash handler, and the row was written from an empty record -- the Task 36
+    load-failure hole, in a new place. Found by running `viperq_amt` on a
+    synthetic fit window too short for it.
+    """
+    import run as runpy
+
+    class Engine:
+        _has_fit = True
+        _fit_completed = False       # entered fit(), never returned from it
+        _loaded_weights = False
+        fit_sessions = 20
+        weights_path = None
+
+        class strategy:
+            @staticmethod
+            def save_weights():
+                raise AssertionError("must not be asked: the child is gone")
+
+    record = {"outcome": "crashed"}
+    out = runpy.attach_weights(record, Engine(), tmp_path / "ledger.jsonl")
+    assert out["outcome"] == "crashed"
+    assert out["fit_completed"] is False and out["weights_source"] == ""
+
+    class Exploding(Engine):
+        _fit_completed = True
+
+        class strategy:
+            @staticmethod
+            def save_weights():
+                raise RuntimeError("the pipe failed")
+
+    # The handler-side wrapper: whatever goes wrong persisting weights on a
+    # failure path is recorded on the row, never raised past the handler.
+    record = {"outcome": "crashed"}
+    out = runpy._attach_weights_safely(record, Exploding(), tmp_path / "ledger.jsonl")
+    assert out["outcome"] == "crashed"
+    assert "the pipe failed" in out["weights_error"]

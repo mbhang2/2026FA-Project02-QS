@@ -651,6 +651,16 @@ class ScoreTuple:
     # has a floor on it and a reader cannot otherwise tell a trial that cleared
     # the floor comfortably from one that cleared it by a session.
     downside_sessions: int = 0
+    # **Amendment 6's count, on the rows that PASS as well as the ones that do
+    # not.** The amendment says the row carries the count and the floor; it did
+    # so only inside `reject_reason`, so nq-ml-03's fifteen scored rows recorded
+    # nothing and a reader could not tell a candidate that cleared the floor by
+    # thirty sessions from one that cleared it by one. `-1` means the floor was
+    # not applied at all -- the nulls, the calibration rig and the power sweep
+    # all call `score()` without one -- and is distinct from `0`, which is a
+    # real count.
+    sessions_exposed: int = -1
+    min_exposed_fraction: float = 0.0
 
     @property
     def significance(self) -> float:

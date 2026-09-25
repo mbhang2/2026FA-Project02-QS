@@ -79,3 +79,37 @@ def test_config_default_and_record_field():
     from src.core.loop.campaign import CampaignRecord
     r = CampaignRecord(campaign_id="x", budget=1, profile="harness", q=0.05)
     assert r.min_exposed_fraction is None            # digest-safe for old records
+
+
+# --------------------------------------------------------------------------- #
+# Amendment 6 says "the ledger row carries the count and the floor". Until
+# 2026-09-25 it did so only inside `reject_reason`, so nq-ml-03's fifteen SCORED
+# rows recorded nothing and a reader could not tell a candidate that cleared the
+# floor by thirty sessions from one that cleared it by one.
+# --------------------------------------------------------------------------- #
+def test_a_row_that_clears_the_floor_still_records_how_close_it_came():
+    b, cal = run(10_000)                       # trades every scored session
+    exposed = M.sessions_exposed(b, cal)
+    s = score(b, period=cal, min_exposed_fraction=0.70)
+    assert s.rejected is False
+    assert s.sessions_exposed == exposed, "the count must survive on a passing row"
+    assert s.min_exposed_fraction == 0.70
+
+
+def test_a_rejected_row_carries_the_count_as_a_field_not_only_as_prose():
+    b, cal = run(5)
+    exposed = M.sessions_exposed(b, cal)
+    s = score(b, period=cal, min_exposed_fraction=0.70)
+    assert s.rejected is True
+    assert s.sessions_exposed == exposed and s.min_exposed_fraction == 0.70
+    assert f"exposed in {exposed} of" in s.reject_reason, "the prose half stays"
+
+
+def test_no_floor_means_not_measured_and_is_distinct_from_zero():
+    """`score()` is called without a floor by the conditional null, the
+    calibration rig and the power sweep. Those rows must not claim an exposure
+    of 0, which is a real count."""
+    b, cal = run(5)
+    s = score(b, period=cal)
+    assert s.sessions_exposed == -1, "-1 means the floor was never applied"
+    assert s.min_exposed_fraction == 0.0

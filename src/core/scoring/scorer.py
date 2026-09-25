@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import inspect
 import math
+from dataclasses import replace
 from typing import Sequence
 
 from . import metrics
@@ -89,11 +90,17 @@ def score(
     # null, the calibration rig and the power sweep -- which all call score() --
     # never reject inside a null; only run.py's scored path passes the floor.
     # Applied to the candidate once, here; the null resamples one that passed.
+    exposed = -1
     if min_exposed_fraction is not None:
+        # Computed once, before the branch, so the number reaches the row
+        # whichever way the branch goes. It used to live inside the rejection
+        # and the passing rows carried nothing.
         exposed = metrics.sessions_exposed(blotter, period)
         need = min_exposed_fraction * len(period)
         if exposed < need:
             return ScoreTuple(
+                sessions_exposed=exposed,
+                min_exposed_fraction=min_exposed_fraction,
                 primary=REJECT,
                 sharpe=0.0,
                 skew=0.0,
@@ -107,10 +114,14 @@ def score(
                     f"under the registered floor of {min_exposed_fraction:.0%} "
                     f"(Amendment 6)"),
             )
-    return score_returns(
+    out = score_returns(
         returns, net_pnl=net, trade_count=trades, min_sessions=min_sessions,
         min_downside_sessions=min_downside_sessions,
     )
+    if min_exposed_fraction is None:
+        return out
+    return replace(out, sessions_exposed=exposed,
+                   min_exposed_fraction=min_exposed_fraction)
 
 
 def score_returns(

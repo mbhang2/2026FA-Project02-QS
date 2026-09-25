@@ -53,6 +53,7 @@ class Strategy:
         self.cum_delta = 0
         self.session_open: float | None = None
         self.tick_count_sum = 0
+        self.volume_sum = 0
 
         # the label buffer: one entry per DECISION, not per bar
         self.pending: deque = deque(maxlen=HORIZON_STEPS + 1)
@@ -94,6 +95,7 @@ class Strategy:
         self.profile.add_bar(bar.low, bar.high, bar.volume)
         self.cum_delta += bar.delta
         self.tick_count_sum += bar.tick_count
+        self.volume_sum += bar.volume
         self.bars_in_session += 1
 
         # **Features are computed at the decision cadence, not per bar, and that
@@ -145,6 +147,7 @@ class Strategy:
         self.bars_in_session = 0
         self.cum_delta = 0
         self.tick_count_sum = 0
+        self.volume_sum = 0
         self.session_open = bar.open
 
     def _features(self, bar):
@@ -179,9 +182,20 @@ class Strategy:
         move = (bar.close - self.session_open) / max(abs(self.session_open), 1.0)
         cvd_div = flow - move * 100.0
 
-        # 5. tape velocity against the session's own running rate.
-        mean_ticks = self.tick_count_sum / max(self.bars_in_session, 1)
-        velocity = (bar.tick_count / mean_ticks - 1.0) if mean_ticks > 0 else 0.0
+        # 5. tape velocity against the session's own running rate. The
+        #    hypothesis registers this as "trades AND volume per unit time";
+        #    this read `bar.tick_count` only and never `bar.volume`, which the
+        #    economics committee seat caught. Both halves are normalised by the
+        #    session's own running mean and averaged, so the feature keeps its
+        #    scale and the code does what the registered wording says. A burst
+        #    of many small trades and one of few large ones are different tape,
+        #    and only the pair tells them apart.
+        bars = max(self.bars_in_session, 1)
+        mean_ticks = self.tick_count_sum / bars
+        mean_volume = self.volume_sum / bars
+        v_trades = (bar.tick_count / mean_ticks - 1.0) if mean_ticks > 0 else 0.0
+        v_volume = (bar.volume / mean_volume - 1.0) if mean_volume > 0 else 0.0
+        velocity = 0.5 * (v_trades + v_volume)
 
         return np.array([dist / 100.0, float(va_pos), at_lvn, cvd_div, velocity])
 
@@ -192,7 +206,13 @@ class Strategy:
         Refused across a session boundary: a five-minute forward return that
         spans an overnight gap is not the quantity this is trying to predict.
         """
-        if self.weights is not None or len(self.pending) <= HORIZON_STEPS:
+        # **`<`, not `<=`.** Retirement runs BEFORE the append, so a row put in
+        # at decision k is the head once the deque holds HORIZON_STEPS entries,
+        # at decision k + HORIZON_STEPS. The old `<=` waited one decision longer
+        # and labelled at k + HORIZON_STEPS + 1 -- a 6-minute forward return
+        # where this file says 5, and 15 minutes where nq-ml-03's champion said
+        # 10. Found by the economics committee seat reading the source.
+        if self.weights is not None or len(self.pending) < HORIZON_STEPS:
             return
         x, price, session = self.pending[0]
         if session != bar.session:

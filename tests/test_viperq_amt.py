@@ -172,3 +172,75 @@ def test_the_seed_passes_the_agents_static_check():
     src = (REPO_ROOT / "src" / "strategies" / "viperq_amt.py").read_text()
     ok, why = LLMAgent._static_ok(LLMAgent.__new__(LLMAgent), src)
     assert ok, why
+
+
+# --------------------------------------------------------------------------- #
+# the two bugs the economics committee seat found by reading the source
+# (nq-ml-03, 2026-09-25). Both were in the human-written seed and were inherited
+# unchanged by the agent through 20 trials, because the score cannot see either.
+# --------------------------------------------------------------------------- #
+def test_a_row_is_labelled_exactly_horizon_steps_later_not_one_later():
+    """`_retire_labels` runs BEFORE the append, so the guard has to be `<`.
+
+    With `<=` a row entered at decision k was labelled at k + HORIZON_STEPS + 1:
+    a 6-minute forward return where the file says 5, and 15 minutes where
+    nq-ml-03's champion said 10. The label horizon is the registered quantity
+    (`config/hypotheses/auction-market-features.md`, "forward return over a
+    fixed horizon H"), so being off by one is answering a different question.
+    """
+    from collections import deque
+
+    import src.strategies.viperq_amt as V
+
+    H = V.HORIZON_STEPS
+    pending: deque = deque(maxlen=H + 1)
+    labelled: dict[int, int] = {}
+    for k in range(1, 4 * H + 10):
+        # the guard, copied from `_retire_labels`
+        if pending and not (len(pending) < H):
+            labelled.setdefault(pending[0], k)
+            pending.popleft()
+        pending.append(k)
+
+    first = min(labelled)
+    assert labelled[first] - first == H, (
+        f"a row entered at decision {first} was labelled at {labelled[first]}, "
+        f"a gap of {labelled[first] - first} decisions where HORIZON_STEPS is {H}")
+    assert max(len(pending), 0) <= H, "the deque must never reach its maxlen"
+
+
+def test_the_guard_is_strictly_less_than():
+    """The one character the test above is about, pinned in the source so a
+    future edit back to `<=` fails here and names the reason."""
+    src = (REPO_ROOT / "src" / "strategies" / "viperq_amt.py").read_text()
+    assert "len(self.pending) < HORIZON_STEPS" in src
+    assert "len(self.pending) <= HORIZON_STEPS" not in src
+
+
+def test_tape_velocity_reads_volume_as_well_as_trade_count():
+    """The hypothesis registers the feature as "trades **and** volume per unit
+    time". It computed `bar.tick_count` only and never touched `bar.volume`, so
+    a burst of many small trades and one of few large ones were the same number.
+    """
+    src = (REPO_ROOT / "src" / "strategies" / "viperq_amt.py").read_text()
+    body = src[src.index("# 5. tape velocity"):src.index("return np.array(")]
+    assert "bar.volume" in body, "tape velocity still ignores volume"
+    assert "bar.tick_count" in body, "tape velocity must keep the trade-rate half"
+    assert "self.volume_sum" in body, "it must normalise by the session's own rate"
+
+    # accumulated every bar and reset with the session, like tick_count_sum
+    assert "self.volume_sum += bar.volume" in src
+    assert src.count("self.volume_sum = 0") == 2, (
+        "volume_sum must be initialised and reset per session, exactly like "
+        "tick_count_sum")
+
+
+def test_the_registered_feature_wording_is_what_the_code_does():
+    """The pair that made both bugs invisible: the hypothesis is prose, the code
+    is code, and nothing compares them. This is that comparison, for the one
+    feature where it was wrong."""
+    hyp = (REPO_ROOT / "config" / "hypotheses" /
+           "auction-market-features.md").read_text().lower()
+    assert "trades and volume per unit time" in hyp
+    src = (REPO_ROOT / "src" / "strategies" / "viperq_amt.py").read_text()
+    assert "bar.volume" in src and "bar.tick_count" in src

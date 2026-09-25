@@ -1204,7 +1204,66 @@ credited as such in `docs/design/architecture.md`.
 
 ---
 
-## Known gap in Amendment 6's implementation — found 2026-09-25, not yet fixed
+## Two corrections made after nq-ml-03, and disclosed as a human search step
+
+**2026-09-25, after the committee's verdict was read.** Both are result-informed
+human edits to a strategy file, which is the thing this document exists to make
+visible rather than invisible.
+
+### The two bugs, and whose they are
+
+`nq-ml-03`'s economics auditor read the champion's source and found two places
+where the code does not implement the registered hypothesis. Both were verified
+against the source rather than taken on the auditor's word, and **both originate
+in the human-written seed** (`src/strategies/viperq_amt.py`), not in anything the
+agent wrote. The agent inherited them unchanged through 20 trials of `nq-ml-03`
+and 20 of `nq-ml-02`.
+
+1. **The label horizon was off by one.** `_retire_labels` runs before the
+   append, so the guard `len(pending) <= HORIZON_STEPS` labelled a row entered
+   at decision *k* at decision *k + H + 1*. The seed's own comment says five
+   minutes and it was six; `nq-ml-03`'s champion said ten and it was fifteen.
+   The horizon is the registered quantity — "forward return over a fixed horizon
+   H" — so the two campaigns answered a question adjacent to the registered one.
+2. **`tape_velocity` never read `bar.volume`.** The hypothesis registers the
+   feature as "trades **and** volume per unit time"; the code used
+   `bar.tick_count` only, so many small trades and few large ones were the same
+   number.
+
+### Why a human fixed them rather than the proposer
+
+The proposer could have: both files are its to edit, and both contradict a
+hypothesis it is shown on every call. It never did, across 40 trials, and the
+reason is structural — **it is told one thing, the score, and the score cannot
+see either bug.** A fifteen-minute label is not worse than a ten-minute one,
+only different. Nothing in the loop compares the code against the registered
+question, and that is the gap these two bugs measure.
+
+**This is the layered design working and then reaching its limit.** The metric
+could never have caught either; the committee caught both by reading source,
+after the campaign, where the finding is too late to help the search.
+
+### What is owed for making the edit
+
+A human editing a strategy after seeing results is a search step. Recorded here
+rather than absorbed: the next campaign starts from a seed corrected on evidence
+produced by `nq-ml-03`, and **no result from it may be compared to `nq-ml-02` or
+`nq-ml-03` as though the three were the same experiment.** The two earlier
+campaigns stand as run, with their horizon as it was.
+
+### The structural fix, not yet built
+
+Committee findings never reach the proposer. Mid-campaign they cannot — the
+committee is part of the gate. **Between campaigns they can**: "your code
+computes a fifteen-minute label where the hypothesis registers ten" contains no
+threshold, no p-value, no N and no verdict, so it is admissible under §3's rule
+about what the agent may see. That is the mechanism that would let the loop
+catch its own conformance bugs instead of relying on a human reading a verdict,
+and it is the one worth building before the next seed acquires a third.
+
+---
+
+## Amendment 6's disclosure gap — found 2026-09-25, fixed the same day
 
 Amendment 6 says "**The ledger row carries the count and the floor**". It does
 not, on a row that passes. `scorer.score()` computes `sessions_exposed` only
@@ -1218,12 +1277,17 @@ rejection works and is reasoned, and no candidate is mis-scored. What is missing
 is the number on the rows that passed, which is exactly the number a reader
 needs to judge how close the floor is biting.
 
-**Not fixed while `nq-ml-03` runs.** `src/core/scoring/` and `run.py` are inside
-`code_fingerprint`; editing either mid-campaign restates the fingerprint every
-committed row recorded and invalidates the trials in flight. The fix is to
-compute `exposed` once, before the branch, and put it in the `ScoreTuple` on
-both paths. It lands after the campaign finishes, and the rows already written
-keep their gap rather than being back-filled.
+**Fixed after the campaign and its validation look, not during.**
+`src/core/scoring/` and `run.py` are inside `code_fingerprint`, so editing either
+mid-campaign restates the fingerprint every committed row recorded; validation
+also has to run under the same fingerprint as the trials it validates, which is
+why the fix waited for that too. `exposed` is now computed once, before the
+branch, and `ScoreTuple` carries `sessions_exposed` and `min_exposed_fraction`
+on both paths. `-1` means the floor was never applied — the nulls, the
+calibration rig and the power sweep all call `score()` without one — and is
+distinct from a real count of `0`. **`nq-ml-03`'s rows keep their gap rather
+than being back-filled**, because rewriting a committed row to look better
+informed is the failure this whole document is against.
 
 ## Ideas recorded, not adopted
 

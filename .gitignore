@@ -102,3 +102,12 @@ CLAUDE_TASK.md
 
 # the agentic loop writes per-candidate working state here
 loop/candidates/
+
+Gowtam_L1/
+
+# the researcher's provenance log is generated on every run; the durable output
+# is the emitted hypothesis .md files under config/hypotheses/, which stay tracked
+Gowtam_hypothesis/output/
+
+.parquet
+.pkl

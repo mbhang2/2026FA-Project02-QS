@@ -40,11 +40,18 @@ sys.path.insert(0, str(ROOT))
 
 import yaml  # noqa: E402
 
-PROFILE = "nq-train"
+DEFAULT_PROFILE = "nq-train"
 OUT = ROOT / "runs" / "campaigns"
 MODEL = "claude-haiku-4-5"
-HYPOTHESIS = ROOT / "config" / "hypotheses" / "intraday-continuation.md"
+DEFAULT_HYPOTHESIS = ROOT / "config" / "hypotheses" / "intraday-continuation.md"
 B_NULL = 10_000
+
+# The `CampaignRecord.dataset` label. `profile["dataset"]` names the run.yaml
+# dataset block (`nq`, `xauusd`); the record labels the adapters' own names
+# (`nq-trades`, `xauusd`), which is what the calendar path and `summarise()`
+# derive from. Kept explicit rather than built by constructing a dataset, which
+# would demand R2 credentials at `register` time.
+DATASET_RECORD_NAMES = {"nq": "nq-trades", "xauusd": "xauusd"}
 
 
 def cfg() -> dict:
@@ -65,35 +72,33 @@ def campaign_cfg() -> dict:
 
 def run_facts(profile: dict, n_sessions: int) -> str:
     return (
-        f"Dataset: real NQ futures trades, {n_sessions} sessions on the "
-        f"pre-registered {profile['split']} split.\n\n"
-        f"Fill model: {profile['fill_model']} -- a fill requires a trade "
+        f"Dataset: {profile.get('instrument', 'real market data')}, "
+        f"{n_sessions} sessions on the pre-registered {profile['split']} split.\n\n"
+        f"Fill model: {profile['fill_model']} -- a fill requires a price move "
         "strictly through your limit, so you pay the spread on every entry and "
         "exit.\n\n"
-        f"Commission: {profile['commission_per_contract']} index points per "
-        "contract per side. NQ is $20 a point, so a round trip costs about "
-        "$4.00 a contract. At high turnover this dominates: the baseline "
-        "strategy on this split traded 103,355 times and paid more in "
-        "commission than it made gross.\n\n"
+        f"Commission: {profile['commission_per_contract']} per unit per side. "
+        f"{profile.get('cost_note', '')}\n\n"
         f"Action cap: {profile.get('action_cap', 64)} per session. "
         f"History window: {profile.get('history_window', 512)} bars.\n")
 
 
-def agent_for(champion: pathlib.Path | None):
+def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path,
+              profile_name: str):
     from src.core.loop import hypothesis as H
     from src.core.loop.llm import LLMAgent
 
     c = cfg()
-    profile = c["profiles"][PROFILE]
+    profile = c["profiles"][profile_name]
     return LLMAgent(
         model=MODEL, temperature=0.7, max_tokens=16_384, show_history=True,
-        hypothesis=H.load(HYPOTHESIS), champion=champion,
-        run_facts=run_facts(profile, 384))
+        hypothesis=H.load(hypothesis), champion=champion,
+        run_facts=run_facts(profile, profile.get("fact_sessions", 0)))
 
 
 # --------------------------------------------------------------------------- #
 
-def stage_register(name: str) -> None:
+def stage_register(name: str, hypothesis: pathlib.Path, profile_name: str) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -106,8 +111,9 @@ def stage_register(name: str) -> None:
     served = LLMAgent(model=MODEL, temperature=0.7, max_tokens=16_384).preflight()
     print(f"  asked {served['requested']!r}  served {served['served']!r}")
 
-    cc, profile = campaign_cfg(), cfg()["profiles"][PROFILE]
-    agent_cfg = agent_for(None).config()
+    cc, profile = campaign_cfg(), cfg()["profiles"][profile_name]
+    dataset_name = DATASET_RECORD_NAMES.get(profile["dataset"], profile["dataset"])
+    agent_cfg = agent_for(None, hypothesis, profile_name).config()
     agent_cfg["null_source"] = cc["null_source"]
     agent_cfg["correction"] = cc["correction"]
     agent_cfg["b_null"] = B_NULL
@@ -116,16 +122,18 @@ def stage_register(name: str) -> None:
 
     d.mkdir(parents=True, exist_ok=True)
     record = CampaignRecord(
-        campaign_id=name, profile=PROFILE, budget=cc["n_trials"], q=cc["q"],
-        agent="src.core.loop.llm.LLMAgent", dataset="nq-trades", split="train",
-        hypothesis_path=str(HYPOTHESIS.relative_to(ROOT)),
+        campaign_id=name, profile=profile_name, budget=cc["n_trials"], q=cc["q"],
+        agent="src.core.loop.llm.LLMAgent", dataset=dataset_name,
+        split=profile["split"],
+        hypothesis_path=str(hypothesis.relative_to(ROOT)),
         hypothesis_digest=agent_cfg["hypothesis"]["digest"],
         agent_config=agent_cfg,
         note=("MVP campaign, governed by docs/design/pre-registration.md. Real "
-              "NQ train split. The model proposes one strategy at a time and "
-              "edits the champion; the null is the sign-flip over round turns "
-              "(section 3b), NOT the conditional null, so the measured FWER of "
-              "0.060 does not describe this campaign."),
+              f"{dataset_name} {profile['split']} split. The model proposes one "
+              "strategy at a time and edits the champion; the null is the "
+              "sign-flip over round turns (section 3b), NOT the conditional "
+              "null, so the measured FWER of 0.060 does not describe this "
+              "campaign."),
         written_at=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"))
     digest = record.write(d / "campaign.json")
     print(f"  registered {name}  N={cc['n_trials']}  q={cc['q']}  "
@@ -138,6 +146,12 @@ def stage_run(name: str) -> None:
 
     d = OUT / name
     record, _ = CampaignRecord.read(d / "campaign.json")
+    # The hypothesis is read back from the pre-registered record, not from a
+    # fresh CLI flag: `run` must investigate what `register` committed, so a
+    # re-run can never silently run a different question than the one hashed
+    # into the record.
+    hyp = ROOT / record.hypothesis_path if record.hypothesis_path \
+        else DEFAULT_HYPOTHESIS
     ledger = d / "ledger.jsonl"
     champion = d / "champion.py"
     state = d / "state.json"
@@ -151,7 +165,7 @@ def stage_run(name: str) -> None:
         return
     print(f"{name}: resuming at trial {start} of {record.budget}", flush=True)
 
-    agent = agent_for(champion if champion.exists() else None)
+    agent = agent_for(champion if champion.exists() else None, hyp, record.profile)
     t0 = time.monotonic()
     for i in range(start, record.budget):
         agent.champion = champion if champion.exists() else None
@@ -202,8 +216,9 @@ def stage_nulls(name: str) -> None:
     if (d / "nulls.json").exists():
         print(f"{name}: nulls already computed")
         return
+    record, _ = CampaignRecord.read(d / "campaign.json")
     rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines() if x.strip()]
-    profile = cfg()["profiles"][PROFILE]
+    profile = cfg()["profiles"][record.profile]
     commission = profile["commission_per_contract"]
 
     # The same dataset the trials ran on, built the same way `run.py` builds it,
@@ -245,7 +260,7 @@ def stage_report(name: str) -> None:
     samples = json.loads((d / "nulls.json").read_text())["samples"]
 
     result = CampaignResult(record=record, record_digest=digest, rows=rows)
-    summary = summarise(result, dataset="nq-trades", null_samples=samples, q=record.q)
+    summary = summarise(result, dataset=record.dataset, null_samples=samples, q=record.q)
 
     # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
     # same route every other campaign's do rather than through this script.
@@ -293,9 +308,23 @@ def main() -> int:
     ap.add_argument("--stage", required=True,
                     choices=("register", "run", "nulls", "report"))
     ap.add_argument("--name", required=True)
+    ap.add_argument("--profile", default=DEFAULT_PROFILE,
+                    help="run.yaml profile the campaign searches on "
+                         "(default: nq-train). Locked into the record at "
+                         "`register` and read back for `run`/`nulls`/`report`.")
+    ap.add_argument("--hypothesis", type=pathlib.Path, default=DEFAULT_HYPOTHESIS,
+                    help="hypothesis file locked in at `register` time, and read "
+                         "back from the record for `run` (default: "
+                         "config/hypotheses/intraday-continuation.md)")
     a = ap.parse_args()
-    {"register": stage_register, "run": stage_run,
-     "nulls": stage_nulls, "report": stage_report}[a.stage](a.name)
+    if a.stage == "register":
+        stage_register(a.name, a.hypothesis, a.profile)
+    elif a.stage == "run":
+        stage_run(a.name)  # hypothesis + profile re-read from the record
+    elif a.stage == "nulls":
+        stage_nulls(a.name)
+    else:
+        stage_report(a.name)
     return 0
 
 

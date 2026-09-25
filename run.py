@@ -222,6 +222,10 @@ def build_dataset(cfg: dict, name: str, seed: int):
             region_name="auto",
         )
         return NQDataset(client, os.environ["R2_BUCKET"], NQSpec(**spec))
+    if kind == "xauusd":
+        from src.core.data.xauusd import XAUUSDDataset, XAUUSDSpec
+
+        return XAUUSDDataset(XAUUSDSpec(**spec))
     sys.exit(f"no adapter for dataset kind {kind!r} yet")
 
 

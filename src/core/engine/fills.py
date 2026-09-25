@@ -22,6 +22,7 @@ from ..types import (
 )
 
 TRADES_ONLY = DataCapabilities(has_trades=True, has_quotes=False, has_book=False)
+QUOTES_ONLY = DataCapabilities(has_trades=False, has_quotes=True, has_book=False)
 
 
 class FillModel(Protocol):
@@ -103,7 +104,34 @@ class UnfavorableFill(_TradeBased):
     strict = True
 
 
-FILL_MODELS = {"favorable": FavorableFill, "unfavorable": UnfavorableFill}
+class QuoteFavorableFill(_TradeBased):
+    """The favorable model over a quotes feed (mid-price ticks). Diagnostic.
+
+    Same mechanics as the trades model; it differs only in what capability it
+    declares it needs. A market order still fills at the tick's mid -- the
+    bid/ask spread is not walked -- which is why the profile folds the
+    half-spread into `commission_per_contract`.
+    """
+
+    name = "quotes-favorable"
+    requires = QUOTES_ONLY
+    strict = False
+
+
+class QuoteUnfavorableFill(_TradeBased):
+    """The loop's quotes model: fill only strictly through the limit price."""
+
+    name = "quotes-unfavorable"
+    requires = QUOTES_ONLY
+    strict = True
+
+
+FILL_MODELS = {
+    "favorable": FavorableFill,
+    "unfavorable": UnfavorableFill,
+    "quotes-favorable": QuoteFavorableFill,
+    "quotes-unfavorable": QuoteUnfavorableFill,
+}
 
 
 def get_fill_model(name: str) -> FillModel:

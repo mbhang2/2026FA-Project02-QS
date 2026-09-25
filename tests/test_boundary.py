@@ -630,10 +630,18 @@ def test_the_shipped_profiles_satisfy_it():
     for name, profile in cfg["profiles"].items():
         warmup = profile.get("warmup_sessions", 0)
         spec = cfg["datasets"][profile["dataset"]]
-        if spec["kind"] == "synthetic":
-            dataset = run.build_dataset(cfg, profile["dataset"], profile["seed"])
-            run.check_warmup_against_embargo(name, warmup, dataset)
-            embargo = dataset.calendar().embargo_sessions
+        if spec["kind"] in ("synthetic", "xauusd"):
+            # Both are buildable without credentials: synthetic is generated and
+            # xauusd is local Parquet (no R2). XAUUSD still needs the corpus on
+            # disk, so if that sibling worktree is absent the check falls back to
+            # the committed value below rather than erroring.
+            try:
+                dataset = run.build_dataset(cfg, profile["dataset"], profile["seed"])
+                run.check_warmup_against_embargo(name, warmup, dataset)
+                embargo = dataset.calendar().embargo_sessions
+            except FileNotFoundError:
+                assert spec["kind"] == "xauusd"
+                embargo = None
         else:
             manifest = json.loads((REPO_ROOT / "data" / "manifest.json").read_text())
             dates = [
@@ -645,10 +653,17 @@ def test_the_shipped_profiles_satisfy_it():
                 dates,
             )
             embargo = calendar.embargo_sessions
-            assert warmup <= embargo, (
-                f"profile {name}: warmup_sessions={warmup} exceeds the "
-                f"pre-registered embargo of {embargo}"
-            )
+        if embargo is None:
+            # xauusd with the corpus absent: read the declared embargo from the
+            # committed pre-registration, which is the fact this test checks.
+            import yaml as _yaml
+            doc = _yaml.safe_load(
+                (REPO_ROOT / "config" / "calendars" / "xauusd.yaml").read_text())
+            embargo = int(doc["embargo_sessions"])
+        assert warmup <= embargo, (
+            f"profile {name}: warmup_sessions={warmup} exceeds the "
+            f"pre-registered embargo of {embargo}"
+        )
         assert embargo > 0, (
             f"profile {name} runs on a dataset with no embargo, so the check "
             "above proved nothing"

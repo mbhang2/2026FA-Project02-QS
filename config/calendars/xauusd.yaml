@@ -1,0 +1,54 @@
+# Pre-registered train / validation / holdout split for the XAUUSD spot dataset.
+#
+# THE PRE-REGISTRATION DATE IS THE COMMIT DATE OF THIS FILE.
+#
+# There is deliberately no `pre_registered:` field that could disagree with the
+# date `git log --follow --diff-filter=A` reports, for the same reason the NQ
+# calendar omits it: the commit date is the date and cannot disagree with itself.
+#
+# The dataset is local Parquet, one file per trading day, `Gowtam_L1/Data/raw/
+# Ticks/{YYYY}/{MM}/{DD}.parquet`, 2020-01-01 through 2026-02-13 (1,590 sessions).
+# Boundaries are DATES; the adapter resolves each onto the session list, so a
+# boundary on a weekend or holiday is not an error.
+#
+# Session counts as written (computed from the corpus before committing):
+#   train       1,290 sessions   (2020-01-01 .. 2024-12-20)
+#   validation    145 sessions   (2025-01-10 .. 2025-07-31)
+#   holdout       128 sessions   (2025-08-20 .. 2026-02-13)
+#   10-session embargo falls in the gap on each side (14 and 13 sessions), and no
+#   split serves the gap, so a train observation never touches a validation one.
+#
+# Reasoning, mirroring the NQ calendar rather than inventing a policy:
+#   * train holds five years (2020-2024) so the loop has room to overfit, which
+#     is its job -- the holdout is what catches the overfit.
+#   * validation is the 2025 calendar year minus January's embargo gap.
+#   * holdout is entirely the recent tail (2025-08-20 .. 2026-02-13), post-cutoff,
+#     so memorisation is distinguishable from a real result.
+#
+# This feed is quotes, not trades, and the edge case that matters is different
+# from NQ's early closes: a spot gold "session" is 23 hours of quotes, so the
+# adapter's session bounds are the ticks that actually happened, and the embargo
+# in *sessions* still means what it says.
+dataset: xauusd
+embargo_sessions: 10
+splits:
+  train:
+    start: 2020-01-01
+    end: 2024-12-20
+    reason: >
+      Five full years of the pre-registered train split. Enough room for the
+      loop to search; expected to be overfit by selection, which is what the
+      holdout is for.
+  validation:
+    start: 2025-01-10
+    end: 2025-07-31
+    reason: >
+      First half of 2025, buffered from train by the embargo. The split a
+      promoted candidate is eventually judged on.
+  holdout:
+    start: 2025-08-20
+    end: 2026-02-13
+    reason: >
+      The recent tail, entirely post-cutoff. Opened once, deliberately, with the
+      reason recorded in the ledger. Confirmatory, not primary: 128 sessions
+      cannot carry a statistical argument on their own.

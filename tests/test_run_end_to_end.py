@@ -100,3 +100,43 @@ def test_the_profiles_cost_model_reaches_the_row(tmp_path):
             assert declared[train] == declared[val], (
                 f"{train} charges {declared[train]} and {val} charges "
                 f"{declared[val]}; the cheaper split will look like the better one")
+
+
+def test_a_load_run_carries_weights_through_run_py(tmp_path):
+    """**The path nq-ml-02's validation stage died on.** `_proxy_for` returned the
+    plain proxy for a weights-loading profile, and the plain proxy's capability
+    check refused a class that defines fit(). The fit half of the path was
+    tested end to end; the load half was not. This is the load half: fit on one
+    profile, carry the bytes, load under a profile with weights_path and no
+    fit_sessions, all through run.py."""
+    strategy = REPO_ROOT / "src" / "strategies" / "current.py"
+    backup = strategy.read_text()
+    wdir = REPO_ROOT / ".scratch" / "test-weights"; wdir.mkdir(parents=True, exist_ok=True)
+    wpath = wdir / "harness-fitted-load.weights"
+    fit_ledger = tmp_path / "fit.jsonl"; load_ledger = tmp_path / "load.jsonl"
+    try:
+        strategy.write_text(FITTED_MODULE)
+        r1 = subprocess.run([sys.executable, "run.py", "--human", "--quiet",
+                             "--purpose", "check", "--profile", "harness-fitted",
+                             "--ledger", str(fit_ledger)],
+                            capture_output=True, text=True, cwd=str(REPO_ROOT))
+        assert r1.returncode == 0, r1.stderr[-2000:]
+        fit_row = [json.loads(x) for x in fit_ledger.read_text().splitlines() if x.strip()][-1]
+        src = Path(fit_row["weights_source"]); src = src if src.is_absolute() else REPO_ROOT / src
+        wpath.write_bytes(src.read_bytes())
+
+        r2 = subprocess.run([sys.executable, "run.py", "--human", "--quiet",
+                             "--purpose", "check", "--profile", "harness-fitted-load",
+                             "--ledger", str(load_ledger)],
+                            capture_output=True, text=True, cwd=str(REPO_ROOT))
+    finally:
+        strategy.write_text(backup)
+        wpath.unlink(missing_ok=True)
+    assert strategy.read_text() == backup
+    assert r2.returncode == 0, (r2.stdout[-2000:], r2.stderr[-2000:])
+    row = [json.loads(x) for x in load_ledger.read_text().splitlines() if x.strip()][-1]
+    assert row.get("outcome") == "completed", row.get("error")
+    assert "defines fit()" not in (row.get("error") or ""), (
+        "the load run was routed to the plain proxy and refused by its own guard")
+    # it loaded rather than fitted: no fit window was carved out of the split
+    assert not row.get("fit_sessions"), row.get("fit_sessions")

@@ -35,6 +35,20 @@ profiles:
     notional_base: 1.0
     commission_per_contract: 0.10
 
+  # The load half of the fitted path, on synthetic data. `weights_path` is a
+  # fixed file the end-to-end test writes before running; the engine refuses to
+  # start if it is absent, which is the point. No fit_sessions: a run either
+  # fits or loads.
+  harness-fitted-load:
+    dataset: synthetic
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    weights_path: .scratch/test-weights/harness-fitted-load.weights
+    notional_base: 1.0
+    commission_per_contract: 0.10
+
   agent:
     dataset: synthetic-check
     split: validation

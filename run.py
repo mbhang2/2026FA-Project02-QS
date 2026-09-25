@@ -256,12 +256,17 @@ def _proxy_for(profile: dict):
     `RemoteStrategy._check_capabilities` verifies it against what the child
     reports the class actually defines, in both directions, right after `load`.
 
-    A run that LOADS weights sets no fit window and does not fit, so it wants the
-    ordinary proxy: `Engine` marks it already-fitted and `_fit_now` refuses.
+    A run that LOADS weights also needs the fitted proxy -- it has to forward
+    `load_weights`, and `Engine` then marks it already-fitted so `_fit_now`
+    refuses. The first version of this function returned the ordinary proxy for
+    a load run, and nq-ml-02's validation stage failed at load with the fitted
+    proxy's own capability check: "defines fit() but the profile did not set
+    fit_sessions". The guard was right; the routing was wrong. No look at the
+    validation split was taken -- the strategy never started.
     """
-    if profile.get("weights_path"):
-        return RemoteStrategy
-    return RemoteFittedStrategy if profile.get("fit_sessions", 0) else RemoteStrategy
+    if profile.get("weights_path") or profile.get("fit_sessions", 0):
+        return RemoteFittedStrategy
+    return RemoteStrategy
 
 
 def attach_weights(record: dict, engine, ledger_path: Path) -> dict:

@@ -107,6 +107,11 @@ class CampaignRecord:
     # Amendment 6's exposure floor, frozen at registration. None for records
     # that predate it; `digest()` drops None so their hashes do not move.
     min_exposed_fraction: float | None = None
+    # Amendment 7: was each proposal run once on synthetic data before its
+    # trial, with a bounded repair on a crash or a no-op edit? Registered, not
+    # decided at trial time, because it changes how the budget is spent. None
+    # for records that predate it; `digest()` drops None.
+    probe_before_trial: bool | None = None
 
     def digest(self) -> str:
         payload = json.dumps({k: v for k, v in asdict(self).items() if v is not None},

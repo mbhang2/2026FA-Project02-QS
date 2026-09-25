@@ -173,6 +173,34 @@ engine in it, and the trial is `run_trial`, which has both.
 
 ---
 
+### The second exception — the synthetic probe (Amendment 7, 2026-09-25)
+
+Off unless a campaign registers it with `--probe`. When on, a statically-clean
+proposal is run once on a **synthetic** profile before its trial (`agent`, or
+`harness-fitted` if it declares `fit()`), and the agent is told three things:
+crashed (with the traceback tail), how many trades, and whether its fills were
+byte-identical to the current strategy's. On a crash or a no-op edit it may
+revise, bounded at `max_probe_repairs`. `src/core/loop/probe.py` is the whole of
+it; `tests/test_probe.py` pins the three properties that make it admissible:
+
+- **Synthetic only.** Both probe profiles name `SyntheticDataset` at
+  `signal_strength: 0`. The Task 23 binary-search attack still works against
+  the probe and recovers a number about seeded noise. That is why this is a
+  second exception and not a reversal of the first: the static check leaks
+  nothing because it executes nothing; the probe leaks nothing about NQ because
+  it never touches NQ.
+- **A whitelist channel.** `ProbeResult` has no field for a score or a P&L.
+- **Informs, never gates.** Every exit proceeds to the trial on the last good
+  file. Nothing in it can produce a blocked proposal, so the paragraph above
+  this one -- a runtime failure is a trial -- is untouched. Probe rows are
+  `purpose: check` in the campaign's `probe-ledger.jsonl`, never in the trial
+  ledger.
+
+What it is for: `nq-ml-02` spent two of twenty trials on edits with
+byte-identical fill logs, and the fact was reproducible on synthetic data in
+under a second. The design is Gowtam's worker loop -- write, run, read the
+traceback, fix -- with the running moved from the model to the harness.
+
 ## The load-failure hole, found by the first real agent (Task 36)
 
 Worth its own section because it is the exact failure this project exists to

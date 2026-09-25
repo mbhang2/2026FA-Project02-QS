@@ -405,6 +405,18 @@ documented: `HistoryView` holds only closed observations and raises
 prompt asking an agent to avoid lookahead does not prevent lookahead; an API that
 cannot express it does.
 
+**And since 2026-09-25 that claim is measured, not inferred.**
+`tests/test_causality_probe.py` runs a strategy that records everything the
+context will tell it at every callback, on a synthetic series and again on the
+same series with every tick at or after a cutoff moved by +100 points, and
+asserts the two observation logs and the two fill logs are identical before the
+cutoff -- with a positive control that they differ after it. Any path that let a
+future tick reach the strategy early (an aggregator that peeks, a view past the
+cursor, a session boundary from the future, a fill priced off the next tick)
+fails it by name. The design is Gowtam's `assert_causal_vectorized` from
+`origin/Gowtam-L1`, which Task 45 said to promote, adapted from a vectorised
+strategy to an event-driven one.
+
 **`fills.py`.** Two trade-based models differing only in the price comparison.
 The loop scores on `unfavorable` (fill only on a trade strictly through the
 limit) because whichever model the agent is scored against is the one it learns
@@ -830,6 +842,7 @@ across hundreds of nightly trials. This is the part that was missing.
 | `src/core/loop/campaign.py` | `CampaignRecord` (pre-registered and hashed), `run_campaign`, `summarise`, and `CampaignResult.unaccounted` |
 | `src/core/loop/llm.py` | The real proposal side (Task 36): `LLMAgent`, the same one `propose(history)` method the stubs implement, plus the prompt assembly, the history whitelist, the bounded static-repair loop and the blocked-proposal path. Runs in the driver, which has network; nothing here is reachable from the strategy process, which does not |
 | `src/core/loop/hypothesis.py` | The campaign's question (Task 46): loads `config/hypotheses/*.md`, **lints it against the gate's vocabulary**, digests it, and renders the prompt block. A hypothesis is human free text flowing into a prompt that is guaranteed to say nothing about thresholds, p-values, N, validation or the holdout, and one well-meant "check it holds out of sample" breaks that silently. The lint is the mechanism rather than a note, and `block(None)` renders empty so that a campaign without one reproduces Task 36's messages byte for byte |
+| `src/core/loop/probe.py` | Amendment 7's synthetic probe: `probe_source` writes the proposal, runs `run.py` under a **synthetic** profile (`agent`, or `harness-fitted` when the file declares `fit()`), restores the file, and projects the row onto `ProbeResult` -- crashed, traceback tail, trade count, fill-log digest, and nothing else. The agent's `_after_static` repairs on a crash or a no-op edit, bounded, and **never blocks**: every exit proceeds to the trial. Not the check Task 23 rejected, because the dataset is seeded noise with no relation to the scored data; the module docstring carries the argument. The idea is Gowtam's worker loop, with the execution moved from the model to the harness |
 
 **The question is an input, and it is a file (Task 46).** Until then a campaign
 could say how it searched but not what it was searching for: the template had

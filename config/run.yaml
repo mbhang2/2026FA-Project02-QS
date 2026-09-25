@@ -314,6 +314,19 @@ campaign:
   # inside a null.
   min_exposed_fraction: 0.70
 
+  # Amendment 7 (2026-09-25): run each proposal once on a SYNTHETIC profile
+  # before its trial and tell the agent three facts -- crashed (with the
+  # traceback), how many trades, and whether its fills were byte-identical to
+  # the current strategy's -- with a bounded repair. The probe's dataset is
+  # seeded noise unrelated to the instrument, so nothing it returns is a
+  # function of the scored data; see src/core/loop/probe.py for why this is
+  # not the check Task 23 rejected. The probe informs and never gates: a file
+  # that still fails it proceeds to the trial, so N is untouched.
+  #
+  # Off by default until the amendment is signed off; `--probe` at
+  # registration turns it on for one campaign and freezes that in the record.
+  probe_before_trial: false
+
   # TWO AXES, not one. `max_of_n` is a correction; `round_turn_mc` is a null
   # source. See pre-registration.md 3a -- including which combinations are
   # coherent, and the fact that the measured FWER of 0.060 describes the PAIR

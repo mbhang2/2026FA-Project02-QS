@@ -51,9 +51,12 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING, Callable, Sequence
 
 from .hypothesis import Hypothesis, block as hypothesis_block
+
+if TYPE_CHECKING:  # pragma: no cover -- a type, never an import at run time
+    from .probe import ProbeResult
 
 from .._roots import repo_root
 
@@ -121,7 +124,7 @@ class ModelSubstituted(RuntimeError):
 class Call:
     """One API call, for the bill and for the record."""
 
-    kind: str                 # "propose" | "repair"
+    kind: str                 # "propose" | "repair" | "probe" | "probe_repair"
     ok: bool
     latency_s: float
     prompt_tokens: int = 0
@@ -183,11 +186,25 @@ class LLMAgent:
     # leaving a candidate in it would change the artifact fingerprint of every
     # subsequent run. The champion is campaign state and lives beside the ledger.
     champion: Path | None = None
+    # **Amendment 7: run the proposal on synthetic data before the trial.**
+    # `probe_before_trial` is the registered decision and goes in the record;
+    # `probe` is the callable the campaign supplies (`probe.probe_source` bound
+    # to the campaign's probe ledger). Both must be set for a probe to run, so
+    # a record that says `false` cannot be probing and an agent built without
+    # a ledger to write to cannot either. See `src/core/loop/probe.py` for what
+    # crosses back and why it is not the check Task 23 rejected.
+    probe_before_trial: bool = False
+    probe: "Callable[[str], ProbeResult] | None" = None
+    max_probe_repairs: int = 2
     # Everything below is state, not configuration.
     calls: list[Call] = field(default_factory=list, init=False, repr=False)
     _pending: list[Call] = field(default_factory=list, init=False, repr=False)
     _repairs: int = field(default=0, init=False, repr=False)
     _n: int = field(default=0, init=False, repr=False)
+    # The reference file's own probe result, keyed by a digest of its text, so
+    # "identical to the current strategy" costs one probe per champion rather
+    # than one per trial.
+    _reference_probe: dict = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.base_url = self.base_url or os.environ.get("LITELLM_BASE_URL", "")
@@ -228,6 +245,10 @@ class LLMAgent:
             "shows_the_gate": False,
             "retries_allowed": False,
             "max_repair_attempts": self.max_repair_attempts,
+            # Amendment 7. Recorded even when off, so a record that predates the
+            # field and one that declined it read differently.
+            "probe_before_trial": bool(self.probe_before_trial),
+            "max_probe_repairs": self.max_probe_repairs,
             "request_timeout_s": self.request_timeout_s,
             "proposal_wall_clock_s": self.proposal_wall_clock_s,
         }
@@ -240,10 +261,14 @@ class LLMAgent:
             "calls": [c.as_dict() for c in calls],
             "n_calls": len(calls),
             "repair_attempts": sum(1 for c in calls if c.kind == "repair"),
+            "probe_runs": sum(1 for c in calls if c.kind == "probe"),
+            "probe_repairs": sum(1 for c in calls if c.kind == "probe_repair"),
             "prompt_tokens": sum(c.prompt_tokens for c in calls),
             "completion_tokens": sum(c.completion_tokens for c in calls),
             "latency_s": round(sum(c.latency_s for c in calls), 2),
-            "blocked": bool(calls) and not calls[-1].ok,
+            # A blocked *proposal*, not a failed last call: a probe that could
+            # not run is logged ok=False and the proposal still went to trial.
+            "blocked": any(c.kind == "blocked" for c in calls),
             "models_served": sorted({c.model_served for c in calls
                                      if c.model_served}),
         }
@@ -263,7 +288,7 @@ class LLMAgent:
         for attempt in range(self.max_repair_attempts + 1):
             ok, message = self._static_ok(source)
             if ok:
-                return source
+                return self._after_static(shown, source, deadline)
             if attempt == self.max_repair_attempts:
                 return self._blocked(
                     "static_check_unrepaired",
@@ -284,6 +309,128 @@ class LLMAgent:
             except LLMError as exc:
                 return self._blocked("repair_call_failed", str(exc))
         return self._blocked("unreachable", "")   # pragma: no cover
+
+    # -- the synthetic probe (Amendment 7) ---------------------------------- #
+    def _after_static(self, shown: Sequence[dict], source: str,
+                      deadline: float) -> str:
+        """Probe a statically-clean file; repair on a crash or a no-op edit.
+
+        **The probe informs, it does not gate.** Every exit from this method
+        returns a file that passed the static check, and the trial runs on it.
+        A probe that cannot run, a repair call that fails, a repair that breaks
+        the static check, an exhausted budget -- each leaves the last good file
+        standing and lets the trial proceed. Nothing here can turn a proposal
+        into a blocked one, so nothing here changes what counts toward N.
+        """
+        if self.probe is None or not self.probe_before_trial:
+            return source
+        for attempt in range(self.max_probe_repairs + 1):
+            res = self._probe_once(source)
+            if res is None or not res.ran:
+                return source
+            same_as_reference = self._same_as_reference(res)
+            reference = self._reference_result()
+            crashed_like_reference = (
+                res.crashed and reference is not None and reference.crashed)
+            if crashed_like_reference:
+                # The file the agent was told to edit crashes on the probe too
+                # -- a fit window too short for it, a feed the synthetic set
+                # lacks. Repairing that would burn the budget on a fact about
+                # the probe rather than about the proposal.
+                return source
+            if not res.crashed and not same_as_reference:
+                return source
+            if attempt == self.max_probe_repairs or time.monotonic() > deadline:
+                return source
+            repair = self._probe_repair_text(res, same_as_reference, source)
+            try:
+                candidate = self._one(self._prompt(shown, repair=repair),
+                                      "probe_repair")
+            except ModelSubstituted:
+                raise
+            except LLMError:
+                return source
+            ok, message = self._static_ok(candidate)
+            if not ok:
+                self._pending.append(Call(
+                    kind="probe_repair", ok=False, latency_s=0.0,
+                    error=f"repair discarded, failed the static check: {message}"[:300]))
+                return source
+            source = candidate
+        return source
+
+    def _probe_once(self, source: str) -> "ProbeResult | None":
+        assert self.probe is not None
+        t0 = time.monotonic()
+        try:
+            res = self.probe(source)
+        except Exception as exc:  # noqa: BLE001 -- the probe is best-effort
+            self._pending.append(Call(kind="probe", ok=False,
+                                      latency_s=time.monotonic() - t0,
+                                      error=f"probe failed: {exc}"[:300]))
+            return None
+        note = "" if (res.ran and not res.crashed) else (res.error or "crashed")[:300]
+        self._pending.append(Call(kind="probe", ok=res.ran,
+                                  latency_s=time.monotonic() - t0, error=note))
+        return res
+
+    def _reference_source(self) -> str:
+        if self.champion is not None and self.champion.is_file():
+            return self.champion.read_text()
+        return (REPO_ROOT / "src" / "strategies" / "current.py").read_text()
+
+    def _reference_result(self) -> "ProbeResult | None":
+        """The reference file's probe, run once per distinct reference."""
+        assert self.probe is not None
+        text = self._reference_source()
+        key = hashlib.sha256(text.encode()).hexdigest()
+        if key not in self._reference_probe:
+            try:
+                self._reference_probe[key] = self.probe(text)
+            except Exception:  # noqa: BLE001
+                self._reference_probe[key] = None
+        return self._reference_probe[key]
+
+    def _same_as_reference(self, res: "ProbeResult") -> bool:
+        ref = self._reference_result()
+        return bool(ref is not None and ref.ran and not ref.crashed
+                    and res.fill_log_digest and ref.fill_log_digest
+                    and res.fill_log_digest == ref.fill_log_digest)
+
+    @staticmethod
+    def _probe_repair_text(res: "ProbeResult", same_as_reference: bool,
+                           source: str) -> str:
+        """What the agent is told. Operational facts about its own file on a
+        synthetic series: a traceback, a trade count, a byte-identity. No score,
+        no P&L -- `ProbeResult` has no field for either."""
+        head = (
+            "Before it is run for real, your file was executed once on a short "
+            "SYNTHETIC dataset: seeded noise with no relationship to the "
+            "instrument you are being scored on. It reports no score. It "
+            "reports only whether the file ran, how many trades it made there, "
+            "and whether its fills were identical to the current strategy's.\n\n"
+        )
+        if res.crashed:
+            body = (
+                f"It CRASHED on the synthetic run ({res.profile} profile): "
+                f"{res.error}\n\n"
+                + (f"Last lines of the traceback:\n\n```\n{res.traceback_tail}\n```\n\n"
+                   if res.traceback_tail else "")
+                + "If this is a genuine fault, fix exactly it and return the whole "
+                  "file again. If it can only happen on a dataset this short, or on "
+                  "a feed the synthetic data does not carry, return the file "
+                  "unchanged.\n\n"
+            )
+        else:
+            body = (
+                f"It ran ({res.trade_count} trades on the synthetic sessions) and "
+                "produced a fill log BYTE-IDENTICAL to the current strategy's. "
+                "Your edit changed nothing the engine could see there. If the "
+                "change can only take effect under conditions the synthetic data "
+                "cannot produce, return the file unchanged; otherwise revise it so "
+                "the change actually reaches the orders.\n\n"
+            )
+        return head + body + f"Previous file:\n\n```python\n{source}\n```"
 
     # -- internals ----------------------------------------------------------- #
     def _blocked(self, reason: str, detail: str) -> str:

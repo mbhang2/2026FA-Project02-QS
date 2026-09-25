@@ -296,7 +296,8 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                    seed: pathlib.Path | None = None,
                    n_trials: int | None = None,
                    model: str = MODEL,
-                   min_exposed: float | None = None) -> None:
+                   min_exposed: float | None = None,
+                   probe: bool | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -352,6 +353,10 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         if not (0.0 < min_exposed <= 1.0):
             sys.exit(f"--min-exposed must be in (0, 1], got {min_exposed}")
         cc = {**cc, "min_exposed_fraction": min_exposed}
+    if probe is not None:
+        # Amendment 7. A flag at registration, frozen below; never read from
+        # the config at run time.
+        cc = {**cc, "probe_before_trial": bool(probe)}
     agent_cfg = agent_for(None, hypothesis, profile_name, model).config()
     agent_cfg["null_source"] = cc["null_source"]
     agent_cfg["correction"] = cc["correction"]
@@ -365,6 +370,7 @@ def stage_register(name: str, hypothesis: pathlib.Path,
     from src.core.scoring.metrics import IDLE_CHARGE
 
     agent_cfg["idle_charge"] = cc.get("idle_charge", IDLE_CHARGE)
+    agent_cfg["probe_before_trial"] = bool(cc.get("probe_before_trial"))
 
     d.mkdir(parents=True, exist_ok=True)
     record = CampaignRecord(
@@ -382,6 +388,7 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         allow_fitted_proposals=bool(cc.get("allow_fitted_proposals"))
         and bool(profile.get("fit_sessions", 0)),
         min_exposed_fraction=cc.get("min_exposed_fraction"),
+        probe_before_trial=bool(cc.get("probe_before_trial")),
         agent="src.core.loop.llm.LLMAgent", dataset="nq-trades", split="train",
         hypothesis_path=str(hypothesis.relative_to(ROOT)),
         hypothesis_digest=agent_cfg["hypothesis"]["digest"],
@@ -475,6 +482,17 @@ def stage_run(name: str) -> None:
     model = (record.agent_config or {}).get("model", MODEL)
     agent = agent_for(champion if champion.exists() else None, hyp_path,
                       record.profile, model)
+    if record.probe_before_trial:
+        # Amendment 7, from the record. The probe writes `purpose: check` rows
+        # to the campaign's own probe ledger, beside the trial ledger and never
+        # in it, so `global_n()` cannot pick them up and a reader can see every
+        # synthetic run that happened.
+        import functools
+        from src.core.loop.probe import probe_source
+        agent.probe_before_trial = True
+        agent.probe = functools.partial(probe_source, ledger=d / "probe-ledger.jsonl")
+        print("  probe before trial: ON (Amendment 7); synthetic rows in "
+              "probe-ledger.jsonl", flush=True)
     t0 = time.monotonic()
     for i in range(start, record.budget):
         agent.champion = champion if champion.exists() else None
@@ -690,6 +708,11 @@ def main() -> int:
                     help="Amendment 6 exposure floor for this campaign, in (0, 1]; "
                          "--stage register only, frozen into campaign.json. Default "
                          "is campaign.min_exposed_fraction in config/run.yaml.")
+    ap.add_argument("--probe", action="store_true", default=False,
+                    help="--stage register only. Amendment 7: run each proposal "
+                         "once on a synthetic profile before its trial and let "
+                         "the agent repair a crash or a no-op edit, bounded. "
+                         "Frozen into campaign.json; later stages read it there.")
     ap.add_argument("--seed", type=pathlib.Path, default=None,
                     help="a strategy file to start trial 0 from; --stage register "
                          "only. Copied to champion.py and recorded by digest. "
@@ -724,7 +747,8 @@ def main() -> int:
             except ValueError:
                 sys.exit(f"{seed} is outside the repository; a seed has to be a "
                          "committed file or the record points at nothing.")
-        stage_register(a.name, hyp, a.profile, seed, a.n, a.model, a.min_exposed)
+        stage_register(a.name, hyp, a.profile, seed, a.n, a.model, a.min_exposed,
+                       True if a.probe else None)
     else:
         # Refused rather than ignored. Silently accepting it on a run stage is how
         # someone believes they changed the question and did not.
@@ -737,9 +761,10 @@ def main() -> int:
         if a.seed is not None:
             sys.exit(f"--seed applies to --stage register only; "
                      f"--stage {a.stage} reads champion.py from the campaign.")
-        if a.n is not None or a.model != MODEL or a.min_exposed is not None:
-            sys.exit(f"--n, --model and --min-exposed apply to --stage register only; "
-                     f"--stage {a.stage} reads them from campaign.json.")
+        if a.n is not None or a.model != MODEL or a.min_exposed is not None \
+                or a.probe:
+            sys.exit(f"--n, --model, --min-exposed and --probe apply to --stage "
+                     f"register only; --stage {a.stage} reads them from campaign.json.")
         {"run": stage_run, "nulls": stage_nulls,
          "validate": stage_validate, "report": stage_report}[a.stage](a.name)
     return 0

@@ -343,7 +343,7 @@ def test_a_fitted_seed_into_an_unfitted_profile_is_refused_without_writing():
 # --------------------------------------------------------------------------- #
 def test_n_and_model_are_refused_on_every_stage_but_register():
     source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
-    assert "--n, --model and --min-exposed apply to --stage register only" in source
+    assert "--n, --model, --min-exposed and --probe apply to --stage" in source
 
 
 def test_run_and_report_read_the_model_from_the_record_not_the_constant():

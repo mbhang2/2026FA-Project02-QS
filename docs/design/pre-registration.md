@@ -1098,6 +1098,110 @@ infinitely good, which is why the metric is defined over the whole calendar.
 
 ---
 
+## Amendment 7 — 2026-09-25 — a synthetic probe before each trial
+
+**Status: DRAFTED, NOT YET IN FORCE.** Implemented behind a per-campaign flag
+(`probe_before_trial`, default `false` in `config/run.yaml`) so that no campaign
+can run it by accident; a campaign turns it on with `--probe` at registration
+and the record freezes that. It comes into force for a campaign only when Michael
+registers one with the flag, and this section is what he is agreeing to.
+
+### What was found
+
+The proposer gets one shot per trial and no feedback until a real run has been
+spent -- 35 to 40 minutes on the fitted NQ profile. `nq-ml-02` spent two of
+twenty trials on edits that produced **byte-identical fill logs** to the
+champion: 146 and 172 changed source lines, the same score to four decimals,
+because nothing told the agent its change had not reached the orders. `nq-ml-01`
+spent thirteen of twenty on a crash class the static check has since closed. In
+both cases the fact the agent needed was reproducible on synthetic data in under
+a second.
+
+Gowtam's `loop/` driver did not have this problem because its worker could
+execute what it wrote. That is the right feedback and the wrong mechanism: the
+model does not get a shell here, for the reasons `docs/design/loop.md` and
+`scripts/agent_check.py` record.
+
+### What is settled
+
+**Before the trial, the harness runs the proposal once on a synthetic profile
+and tells the agent three facts:** whether it crashed (with the tail of the
+traceback), how many trades it made, and whether its fill log was byte-identical
+to the current strategy's. On a crash or a byte-identical result the agent may
+revise, at most `max_probe_repairs = 2` times per proposal. Then the trial runs.
+
+**The probe informs; it does not gate.** Every exit from the probe step returns a
+statically-clean file and the trial runs on it. A proposal that still crashes on
+the probe after its repairs *proceeds to the trial anyway*, crashes there, and is
+recorded as the crashed trial §3 says it is. A probe that cannot run, a repair
+call that fails, a repair that breaks the static check -- each leaves the last
+good file standing. The probe cannot produce a blocked proposal.
+
+**The profile is synthetic, seeded, and has no signal in it.** `agent` for a plain
+proposal, `harness-fitted` for one that declares `fit()`, chosen by the proposal
+and not the campaign. Both name `SyntheticDataset` at `signal_strength: 0` --
+the generator built before the first real adapter, calibrated from nothing. A
+test asserts this of both profiles and fails if either is ever pointed at a
+real dataset.
+
+**What crosses back is a whitelist by construction.** `ProbeResult` has fields
+for `crashed`, `traceback_tail`, `trade_count` and `fill_log_digest`, and no
+field for a score, a P&L, or anything per session. `run.py` computes a score for
+every row; the projection drops it. Adding a channel means adding a field to a
+dataclass whose docstring says why not.
+
+**Every probe run is recorded.** `--purpose check` rows in the campaign's own
+`probe-ledger.jsonl`, beside the trial ledger and never in it, so `global_n()`
+cannot count them and a reader can see every synthetic run that happened. The
+sidecar `agent-calls.jsonl` carries `probe_runs` and `probe_repairs` per trial.
+
+**When the reference itself crashes on the probe, the crash repair is
+disarmed.** `viperq_amt` raises on the 20-session synthetic fit window ("fit()
+reached with 0 usable rows"). A campaign seeded with it would otherwise spend two
+repair calls per trial on a fact about the probe rather than the proposal.
+
+### Why this is not the check Task 23 rejected
+
+`scripts/agent_check.py` records the attack that killed the last pre-trial
+execution check: a strategy that raises when its own P&L crosses a threshold
+turns a one-bit exit code into a score channel, and eighteen probes recover peak
+P&L to four decimals with no trial counted. The conclusion drawn was that *any
+output depending on market data can carry a score*, and the static check was
+built to execute nothing.
+
+That attack works against a probe that runs on **the data the trial is scored
+on**. It works just as well against this probe -- and what it recovers is the
+strategy's P&L on seeded noise, which has no relationship to NQ and is worth
+nothing to selection on NQ. The invariant the static check states, *no output is
+a function of NQ prices*, holds here by construction of the probe's dataset
+rather than by narrowing its channel. Narrowing the channel is still done,
+because a whitelist is cheaper to audit than an argument.
+
+### What it does and does not do to N
+
+§3 says every trial counts toward N, crashed ones included, so that a
+denominator cannot shrink by its own failures. The probe does not touch that
+rule: N is the registered budget, every slot is still spent on one scored run of
+the registered profile, and a crash in that run is still a crashed trial. What
+changes is *what the slots are spent on* -- fewer on facts reproducible in a
+second, more on looks at the data -- which is what the budget was for. If
+anything the correction becomes less conservative in the honest direction: more
+of the N counted looks are real looks.
+
+### What would invalidate this amendment
+
+- A probe profile pointed at a real dataset, or at synthetic data with
+  `signal_strength > 0`. The test in `tests/test_probe.py` is the alarm.
+- A field on `ProbeResult` that depends on prices -- a P&L, a score, a
+  per-session anything.
+- Any exit from the probe step that blocks a proposal or skips its trial.
+- Probe rows written to the trial ledger, or with `purpose: trial`.
+
+Code: `src/core/loop/probe.py`, `LLMAgent._after_static` in
+`src/core/loop/llm.py`; `tests/test_probe.py`, 19 tests. The idea is Gowtam's
+worker loop with the execution moved from the model to the harness, and is
+credited as such in `docs/design/architecture.md`.
+
 ## Ideas recorded, not adopted
 
 Kept because the reasoning is worth more than the decision, and because an idea

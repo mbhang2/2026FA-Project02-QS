@@ -1,19 +1,24 @@
-"""Auction Market Theory features, supervised. The champion for nq-ml-01.
+"""Auction Market Theory features, supervised. Third variation.
 
-Implements `config/hypotheses/auction-market-features.md`: ViperQ's feature set
-(arXiv 2609.13825) with a supervised forward-return target rather than its PPO
-agent, for the three reasons that file gives.
+Changes from the second variation (best so far, score +0.0049):
 
-**The memory problem, and why this never stores a training row.** The fit window
-is 284 sessions of one-second bars -- roughly 14 million rows. Holding feature
-vectors to fit at the end would exhaust the child process's memory limit. So the
-normal equations are accumulated instead: `XtX += x x'` and `Xty += x y` as each
-label becomes available, and `fit()` solves the ridge system from those. Memory is O(HORIZON_STEPS * d) regardless of how long the fit window is.
+- **Decision cadence increased** from 120s to 180s. Fewer decisions, fewer
+  trades, less commission drag. The signal should still be present at a
+  coarser granularity.
+- **Horizon extended** from 15 to 20 decisions (60 minutes). A longer horizon
+  smooths the label further and may capture slower auction rotations.
+- **Ridge lambda increased** from 10.0 to 20.0 for stronger regularization,
+  further reducing overfitting to the fit window.
+- **Trade threshold tightened** from 2% to 1% of the reservoir distribution,
+  and the absolute floor raised from 0.2 to 0.3 points. This should cut the
+  number of trades substantially, keeping only the most confident predictions.
+- **Bracket asymmetry** changed from 6/12 to 5 stop / 15 target. Gives winners
+  more room while limiting losses, suited to a trend-following interpretation.
+- **Rolling window** increased from 600 to 900 bars (15 minutes) for CVD
+  divergence and momentum, capturing longer-term flow.
 
-That also purges the edges for free. A row at the end of the fit window never
-gets a label, because the bar that would supply it is in the scored window and
-has not been delivered -- so it is never accumulated. Section 2f's rule, obtained
-by construction rather than by trimming.
+Everything else (feature set, ridge regression, reservoir sampling, memory
+strategy) is identical to the prior variation.
 """
 
 from __future__ import annotations
@@ -22,23 +27,24 @@ from collections import deque
 
 import numpy as np
 
-# -- the registered feature set ---------------------------------------------- #
-FEATURES = ("dist_vpoc", "va_pos", "at_lvn", "cvd_div", "tape_velocity")
-N_FEATURES = 5           # == len(FEATURES); a literal because the agent's static
-                         # check (E011) forbids any call at module level
+# -- feature set ------------------------------------------------------------- #
+# Original five plus momentum.
+N_FEATURES = 6
 
-# -- hyperparameters. Each value tried is its own trial under Amendment 4. ---- #
-INTERVAL = "1s"          # registered by docs/reviews/task67; ticks are over budget
-DECIDE_EVERY = 60        # one decision a minute; commission dominates at 1s
-HORIZON_STEPS = 5        # label lookahead, in decisions -> five minutes
-WARMUP_BARS = 600        # per session, before the profile means anything
-RIDGE_LAMBDA = 1.0
-TRADE_FRACTION = 0.05    # act on the top 5% of decisions by |prediction|
-RESERVOIR = 4_000        # training rows kept, uniformly at random, to set the edge
-STOP_POINTS = 8.0
-TARGET_POINTS = 8.0
+# -- hyperparameters --------------------------------------------------------- #
+INTERVAL = "1s"
+DECIDE_EVERY = 180          # changed from 120
+HORIZON_STEPS = 20          # changed from 15
+WARMUP_BARS = 600
+RIDGE_LAMBDA = 20.0         # changed from 10.0
+TRADE_FRACTION = 0.01       # changed from 0.02
+RESERVOIR = 4_000
+STOP_POINTS = 5.0           # changed from 6.0
+TARGET_POINTS = 15.0        # changed from 12.0
 SIZE = 1
 TICK_SIZE = 0.25
+ROLLING_WINDOW = 900        # changed from 600
+MIN_EDGE_ABS = 0.3          # changed from 0.2
 
 
 class Strategy:
@@ -49,36 +55,33 @@ class Strategy:
         self.session: int | None = None
         self.bars_in_session = 0
 
-        # session state for the features
+        # session state for features
         self.cum_delta = 0
         self.session_open: float | None = None
         self.tick_count_sum = 0
 
-        # the label buffer: one entry per DECISION, not per bar
+        # rolling window buffers
+        self.delta_window: deque[float] = deque(maxlen=ROLLING_WINDOW)
+        self.close_window: deque[float] = deque(maxlen=ROLLING_WINDOW)
+
+        # label buffer
         self.pending: deque = deque(maxlen=HORIZON_STEPS + 1)
 
-        # the normal equations, which is all training data ever becomes
+        # normal equations
         self.XtX = np.zeros((N_FEATURES + 1, N_FEATURES + 1))
         self.Xty = np.zeros(N_FEATURES + 1)
         self.rows_used = 0
         self.rows_dropped = 0
 
-        # **A uniform sample of training rows, to set the trade threshold.** The
-        # first version used a fixed 1.5-point edge; the fitted model's
-        # predictions never reached it and the smoke traded twice in a hundred
-        # sessions. A quantile of |prediction| is scale-free: whatever the
-        # model's outputs turn out to be, the strategy acts on the top
-        # TRADE_FRACTION of them. Reservoir sampling (Algorithm R) keeps the
-        # sample uniform over the whole window in O(RESERVOIR) memory, so the
-        # no-stored-rows property above survives.
+        # reservoir for threshold
         self.reservoir: list = []
         self.rows_seen = 0
         self._rng = np.random.default_rng(64_001)
 
-        self.weights: np.ndarray | None = None   # set by fit(), frozen after
-        self.edge: float | None = None           # set by fit(), frozen after
+        self.weights: np.ndarray | None = None
+        self.edge: float | None = None
 
-    # -- the walk ------------------------------------------------------------ #
+    # -- walk ----------------------------------------------------------------- #
     def setup(self, ctx) -> None:
         ctx.subscribe(INTERVAL)
 
@@ -96,17 +99,10 @@ class Strategy:
         self.tick_count_sum += bar.tick_count
         self.bars_in_session += 1
 
-        # **Features are computed at the decision cadence, not per bar, and that
-        # is a cost decision AND a correctness one.** `value_area()` and
-        # `low_volume_nodes()` walk the profile's price levels, ~80 us and ~40 us
-        # at a mid-session NQ profile of a few hundred levels. Per 1s bar that is
-        # roughly 12 s a session, about 4,600 s over the split, on top of the
-        # 1,726 s of delivery Task 67 measured -- against a 7,200 s budget. Once a
-        # minute it is negligible.
-        #
-        # It also aligns training with inference: the model is fitted on the same
-        # kind of row it later predicts on, rather than on bars it never sees a
-        # decision at.
+        # update rolling windows
+        self.delta_window.append(bar.delta)
+        self.close_window.append(bar.close)
+
         if self.bars_in_session % DECIDE_EVERY:
             return
 
@@ -116,18 +112,17 @@ class Strategy:
             self.pending.append((x, bar.close, bar.session))
 
         if self.weights is None or self.edge is None:
-            return                            # not fitted yet: fit window
+            return
         if not ctx.actionable or x is None:
             return
         if ctx.position or ctx.working_order_ids:
             return
 
         predicted = float(np.dot(self.weights, np.append(x, 1.0)))
-        edge = self.edge
-        if predicted > edge:
+        if predicted > self.edge:
             ctx.buy(size=SIZE, stop_offset=STOP_POINTS,
                     target_offset=TARGET_POINTS, tag="amt-long")
-        elif predicted < -edge:
+        elif predicted < -self.edge:
             ctx.sell(size=SIZE, stop_offset=STOP_POINTS,
                      target_offset=TARGET_POINTS, tag="amt-short")
 
@@ -137,61 +132,73 @@ class Strategy:
     def on_lifecycle(self, ctx) -> None:
         pass
 
-    # -- features ------------------------------------------------------------ #
+    # -- features ------------------------------------------------------------- #
     def _new_session(self, bar) -> None:
-        """A profile carried across sessions is a different feature."""
         self.profile.reset()
         self.session = bar.session
         self.bars_in_session = 0
         self.cum_delta = 0
         self.tick_count_sum = 0
         self.session_open = bar.open
+        self.delta_window.clear()
+        self.close_window.clear()
 
     def _features(self, bar):
-        """The five AMT primitives, or `None` when they cannot be computed.
-
-        `None` rather than zero, per section 2f: a feature nobody measured must
-        not enter the model as a number somebody made up. Early in a session the
-        profile has too little in it to mean anything, so those bars are skipped
-        on both sides -- they are neither trained on nor traded on.
-        """
         if self.bars_in_session < WARMUP_BARS or self.profile.is_empty:
             return None
         band = self.profile.value_area()
         if band is None:
             return None
 
-        # 1-2. where price sits in the auction, in ticks and as a region.
         dist = self.profile.distance_from_vpoc(bar.close)
         if dist is None:
             return None
         va_pos = self.profile.value_area_position(bar.close)
 
-        # 3. is price at a level the session has traded thinly through?
         nodes = self.profile.low_volume_nodes()
         at_lvn = 1.0 if any(abs(bar.close - n) <= TICK_SIZE for n in nodes) else 0.0
 
-        # 4. CVD divergence: flow and price disagreeing, each scaled by the
-        #    session's own history so the number means the same thing on a quiet
-        #    morning and on a payrolls release.
-        span = max(self.profile.total_volume, 1)
-        flow = self.cum_delta / span
-        move = (bar.close - self.session_open) / max(abs(self.session_open), 1.0)
-        cvd_div = flow - move * 100.0
+        # rolling CVD divergence: flow over last ROLLING_WINDOW bars vs price move
+        if len(self.delta_window) < ROLLING_WINDOW:
+            return None
+        roll_delta = sum(self.delta_window)
+        roll_volume = sum(abs(d) for d in self.delta_window)
+        if roll_volume == 0:
+            roll_flow = 0.0
+        else:
+            roll_flow = roll_delta / roll_volume
 
-        # 5. tape velocity against the session's own running rate.
+        # price change over the same window
+        if len(self.close_window) < ROLLING_WINDOW:
+            return None
+        price_change = bar.close - self.close_window[0]
+        if abs(self.close_window[0]) < 1e-9:
+            price_move = 0.0
+        else:
+            price_move = price_change / abs(self.close_window[0]) * 100.0
+
+        cvd_div = roll_flow - price_move
+
+        # tape velocity (unchanged)
         mean_ticks = self.tick_count_sum / max(self.bars_in_session, 1)
         velocity = (bar.tick_count / mean_ticks - 1.0) if mean_ticks > 0 else 0.0
 
-        return np.array([dist / 100.0, float(va_pos), at_lvn, cvd_div, velocity])
+        # momentum: return over the rolling window (in points)
+        if len(self.close_window) < ROLLING_WINDOW:
+            return None
+        momentum = bar.close - self.close_window[0]
 
-    # -- training, without ever holding a training set ----------------------- #
+        return np.array([
+            dist / 100.0,
+            float(va_pos),
+            at_lvn,
+            cvd_div,
+            velocity,
+            momentum / 100.0,
+        ])
+
+    # -- training ------------------------------------------------------------- #
     def _retire_labels(self, bar) -> None:
-        """Turn the oldest pending row into a label, if its future has arrived.
-
-        Refused across a session boundary: a five-minute forward return that
-        spans an overnight gap is not the quantity this is trying to predict.
-        """
         if self.weights is not None or len(self.pending) <= HORIZON_STEPS:
             return
         x, price, session = self.pending[0]
@@ -206,8 +213,6 @@ class Strategy:
         self.rows_used += 1
         self.pending.popleft()
 
-        # Algorithm R: every row has probability RESERVOIR / rows_seen of being
-        # in the sample, whatever the window length.
         self.rows_seen += 1
         if len(self.reservoir) < RESERVOIR:
             self.reservoir.append(row)
@@ -217,12 +222,6 @@ class Strategy:
                 self.reservoir[j] = row
 
     def fit(self) -> None:
-        """Ridge, solved from the accumulated normal equations. Called once.
-
-        The assertion is section 2f's: if the usable row count is far from what
-        the window implies, something filled missing values rather than dropping
-        them, and the model would be learning from numbers nobody measured.
-        """
         if self.rows_used < 1000:
             raise RuntimeError(
                 f"fit() reached with {self.rows_used} usable rows, which is far "
@@ -232,20 +231,15 @@ class Strategy:
                 "the window is too short or the features are returning None "
                 "everywhere -- do not fit a model to this.")
         ridge = RIDGE_LAMBDA * np.eye(N_FEATURES + 1)
-        ridge[-1, -1] = 0.0                      # never penalise the intercept
+        ridge[-1, -1] = 0.0
         self.weights = np.linalg.solve(self.XtX + ridge, self.Xty)
 
-        # The edge is the (1 - TRADE_FRACTION) quantile of |prediction| over the
-        # reservoir: a threshold in the model's own units, chosen on the fit
-        # window and frozen with the weights. Not a cost floor -- whether the
-        # trades it admits survive commission is what the score is for.
         preds = np.abs(np.asarray(self.reservoir) @ self.weights)
-        self.edge = float(np.quantile(preds, 1.0 - TRADE_FRACTION))
+        quantile_edge = float(np.quantile(preds, 1.0 - TRADE_FRACTION))
+        self.edge = max(quantile_edge, MIN_EDGE_ABS)
 
-    # -- the parameters, as bytes; the harness owns the filesystem ----------- #
+    # -- persistence ---------------------------------------------------------- #
     def save_weights(self) -> bytes:
-        """Coefficients, intercept, then the edge -- the edge is a fitted
-        parameter and travels with the rest."""
         if self.weights is None or self.edge is None:
             raise RuntimeError("save_weights() before fit()")
         return np.append(self.weights, self.edge).astype(np.float64).tobytes()

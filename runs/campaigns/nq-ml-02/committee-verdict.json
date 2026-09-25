@@ -1,0 +1,60 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: reply was not JSON: Expecting value: line 1 column 1 (char 0); ''"
+      ],
+      "confidence_note": "",
+      "error": "reply was not JSON: Expecting value: line 1 column 1 (char 0); ''"
+    },
+    {
+      "axis": "statistics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: reply was not JSON: Expecting value: line 1 column 1 (char 0); ''"
+      ],
+      "confidence_note": "",
+      "error": "reply was not JSON: Expecting value: line 1 column 1 (char 0); ''"
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: reply was not JSON: Expecting value: line 1 column 1 (char 0); ''"
+      ],
+      "confidence_note": "",
+      "error": "reply was not JSON: Expecting value: line 1 column 1 (char 0); ''"
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Train PnL is heavily concentrated in one weekday: Friday accounts for 231.9 of ~299.75 total by-weekday PnL (~77%).",
+        "Train PnL is heavily concentrated in one month: 2025-10 accounts for 177.2 of ~299.75 total by-month PnL (~59%).",
+        "The best single session accounts for 44.3% of train profit and the top 5% of sessions account for 90.1%, with only 14 of 100 sessions having any exposure.",
+        "The held-out validation split is negative (sortino -0.1845, net PnL -159.9) and its by-month PnL is negative in four of five months, so the narrow train result does not appear broad-based."
+      ],
+      "confidence_note": "I could not see per-trade timestamps or the strategy's parameter rationale, but the provided time/trade concentration metrics are sufficient to veto on robustness.",
+      "error": null
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

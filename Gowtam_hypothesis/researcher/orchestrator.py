@@ -104,6 +104,10 @@ def orchestrate(trajectories: list[Trajectory]) -> OrchestrationDecision:
     """One gateway pass over whitelisted trajectories -> the next direction.
 
     The prompt states, and the input enforces, that no gate field is present.
+    The pass runs at temperature 0 -- it is a decision, not a brainstorm -- and
+    retries once with an explicit "JSON only" instruction, because a single
+    malformed reply from a stochastic model must not cost a six-hour loop its
+    next direction.
     """
     rows = [json.dumps(
         {"outcome": t.outcome, "trades": t.trades, "sessions": t.sessions,
@@ -121,17 +125,23 @@ def orchestrate(trajectories: list[Trajectory]) -> OrchestrationDecision:
         '"families_to_drop":[],"families_to_deepen":[]}\n\n'
         "Trajectories:\n" + "\n".join(rows)
     )
-    try:
-        comp = llm.call(ORCHESTRATE_MODEL, [
-            {"role": "system",
-             "content": "You decide research direction from trajectories only. "
-                        "Never infer a significance measure. Return JSON only."},
-            {"role": "user", "content": user},
-        ], temperature=0.3, max_tokens=1024)
-    except (LLMError, ModelSubstituted) as exc:
-        raise generate.PassBlocked(f"orchestrate call failed: {exc}") from None
-
-    data = llm.extract_json(comp.text)
+    system = ("You decide research direction from trajectories only. "
+              "Never infer a significance measure. Return JSON only.")
+    data = None
+    for attempt in (0, 1):
+        prompt = user if attempt == 0 else (
+            user + "\n\nReply with the JSON object only, on one line, no "
+            "surrounding text or code fence.")
+        try:
+            comp = llm.call(ORCHESTRATE_MODEL, [
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt},
+            ], temperature=0.0, max_tokens=1024)
+        except (LLMError, ModelSubstituted) as exc:
+            raise generate.PassBlocked(f"orchestrate call failed: {exc}") from None
+        data = llm.extract_json(comp.text)
+        if data is not None:
+            break
     if data is None:
         raise generate.PassBlocked("orchestrate returned no JSON")
     return OrchestrationDecision(
@@ -224,7 +234,14 @@ def run_loop(ask: str, *, emit_fn, campaign_fn=run_campaign, max_iterations: int
                 trajectories.append(Trajectory(outcome="dry_run", score_dir="flat"))
             else:
                 trajectories.append(read_trajectory(rec.id))
-        decision = orchestrate(trajectories)
+        try:
+            decision = orchestrate(trajectories)
+        except generate.PassBlocked as exc:
+            # A blocked orchestrate pass ends the loop rather than crashing it:
+            # the research and campaigns up to here are already recorded, and a
+            # terminally non-responsive model is not a direction.
+            print(f"orchestrate pass blocked ({exc}); stopping the loop", flush=True)
+            break
         result.decisions.append(decision)
         if not decision.next_ask.strip():
             break

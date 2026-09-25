@@ -340,3 +340,27 @@ def test_the_config_declares_an_idle_charge():
     assert cfg["campaign"]["idle_charge"] == pytest.approx(IDLE_CHARGE), (
         "the configured charge and the module default disagree. One of them is "
         "what actually runs and the other is what a reader believes.")
+
+
+# --------------------------------------------------------------------------- #
+# Amendment 5: the uncharged number rides beside the charged one
+# --------------------------------------------------------------------------- #
+def test_primary_uncharged_differs_from_primary_by_exactly_the_charge():
+    """Same blotter, same calendar, charge at zero. On a run with idle sessions
+    the two must differ; on one exposed every session they must be equal. The
+    gate uses `primary`; the other is for the reader."""
+    import re
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "run.py").read_text()
+    assert 'engine.record.score["primary_uncharged"]' in src
+    assert "idle_charge=0.0" in src
+    # and it is computed from the SAME blotter the gate scored, not a re-walk
+    block = src[src.index("uncharged = score("):src.index("primary_uncharged")]
+    assert "scored_blotter" in block and "period=period" in block
+
+
+def test_validate_writes_both_numbers_for_both_splits():
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "scripts" / "nq_campaign.py").read_text()
+    assert src.count('"primary_uncharged"') >= 2, "validation.json lacks the uncharged figure for a split"
+    assert "row predates Amendment 5" in src

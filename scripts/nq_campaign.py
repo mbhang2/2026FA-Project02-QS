@@ -181,6 +181,10 @@ def stage_validate(name: str) -> None:
         sys.exit(f"{name}: the winner's source is not on disk (digest {digest}).")
 
     train_score = win["score"]["primary"]
+    # Amendment 5. Rows written before it carry no uncharged figure; that is
+    # recorded as None rather than recomputed here, because a validation
+    # artefact should read the ledger, not re-derive it.
+    train_unch = win["score"].get("primary_uncharged")
     print(f"{name}: validating winner  digest {digest}  train {train_score:+.4f}")
 
     out = d / "validation.jsonl"
@@ -248,14 +252,17 @@ def stage_validate(name: str) -> None:
             "different strategies.")
 
     vscore = (v.get("score") or {}).get("primary")
+    vscore_unch = (v.get("score") or {}).get("primary_uncharged")
     result = {
         "schema": "campaign-validation/1",
         "campaign_id": name,
         "winner_digest": digest,
         "winner_campaign_index": win.get("campaign_index"),
         "train": {"profile": record.profile, "primary": train_score,
+                  "primary_uncharged": train_unch,
                   "score": win.get("score"), "diagnostics": win.get("diagnostics")},
         "validation": {"profile": profile, "primary": vscore,
+                       "primary_uncharged": vscore_unch,
                        "outcome": v.get("outcome"), "score": v.get("score"),
                        "diagnostics": v.get("diagnostics"),
                        "git_sha": v.get("git_sha")},
@@ -275,6 +282,9 @@ def stage_validate(name: str) -> None:
     else:
         print(f"  train {train_score:+.4f}   validation {vscore:+.4f}   "
               f"change {vscore - train_score:+.4f}")
+        if vscore_unch is not None:
+            tu = f"{train_unch:+.4f}" if train_unch is not None else "n/a (row predates Amendment 5)"
+            print(f"  without idle charge: train {tu}   validation {vscore_unch:+.4f}")
         print(f"  rule (a) Sortino > 0 on validation: {result['rule_a_sortino_positive']}")
     print(f"  wrote {d / 'validation.json'}")
 

@@ -652,6 +652,18 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
                    notional_base=profile.get("notional_base", 1.0),
                    idle_charge=idle_charge)
     engine.record.score = result.as_dict()
+    # **Amendment 5: the same Sortino with the charge at zero, reported beside
+    # the gate's number and never used by the gate.** Same blotter, same
+    # calendar -- only the charge differs. A reader who sees `primary` without
+    # knowing the funding cost is inside it is misled; a gate that used this
+    # instead would judge the champion under a different objective than the
+    # one that selected it and break train-vs-validation comparability (Task
+    # 61). So both are recorded, and `primary` stays what it was.
+    uncharged = score(scored_blotter, period=period,
+                      notional_base=profile.get("notional_base", 1.0),
+                      idle_charge=0.0)
+    engine.record.score["primary_uncharged"] = (
+        None if uncharged.rejected else uncharged.primary)
     engine.record.diagnostics = score_diagnostics(
         scored_blotter,
         period,

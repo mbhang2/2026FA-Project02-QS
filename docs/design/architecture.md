@@ -88,6 +88,13 @@ files in the repo — here, `loop/`, `audit/`, `alternatives/l1_engine/` — are
 near-identical on purpose: those trees import nothing from one another, and a
 shared helper at the root under a generic name is the coupling Task 44 removed.
 
+`Gowtam_hypothesis/` is another sibling tree but not a `_roots.py` tree: it holds
+`Gowtam_hypothesis/researcher/` (the falsifiable-hypothesis front end and its
+orchestration loop) and `Gowtam_hypothesis/tests/`, and reaches the main package
+across the `parents[2]` directory boundary instead of sharing a root helper. It
+imports `src.core.loop.hypothesis` to lint before writing, but writes only under
+`config/hypotheses/`, never under `src/`.
+
 Task 44 moved three trees and broke **six** relative root walks; not one failed
 loudly, and one of them would have made every committed split read as "no
 pre-registered calendar" without raising. Under `src/core/` there were nine more,
@@ -174,6 +181,7 @@ the chronological split, the embargo and the holdout lock, so those are
 | `src/core/data/dataset.py` | The `Dataset` protocol, `SplitBounds`, `Calendar`, `HoldoutLock`, `sessions_for()`, `warmup_start()`, `calendar_path()`, `load_calendar()`, `CalendarNotWritten` |
 | `src/core/data/synthetic.py` | `SyntheticDataset` — irregular tick generator with a planted-signal switch |
 | `src/core/data/nq.py` | `NQDataset` — the R2/Databento NQ adapter, session assembly, early closes, front-month selection, local cache |
+| `src/core/data/xauusd.py` | `XAUUSDDataset` — the local-Quotes XAUUSD adapter (one Parquet file per trading day, mid-priced) |
 | `src/core/data/dbn.py` | DBN-under-zstd reading rules, in one place |
 
 **`dataset.py`.** `Calendar.__post_init__` refuses splits that are not
@@ -247,6 +255,18 @@ v3 is 3,272), and symbol identity comes from the header and never the path. The
 adapter and `scripts/inventory.py` both read through it; they used to have
 separate copies, which is exactly the thing that drifts until one is quietly
 wrong.
+
+**`xauusd.py`.** The second real adapter, and the one with no network behind it:
+local Parquet, one file per trading day, `timestamp`/`bid`/`bid_vol`/`ask`/`ask_vol`.
+It is a **quotes** feed, not trades, and says so in its capabilities — there is
+no aggressor (`Tick.side` is `None`) and no traded size, so `Tick.size` is the
+conventional unit and a bar's `volume` is a tick count. Price is the mid
+`(bid+ask)/2`, and a session is one file, its bounds the ticks the day actually
+covered. Because the feed declares `has_quotes` and not `has_trades`, the engine
+scores it with a *quotes* fill model (`quotes-unfavorable` in `fills.py`) rather
+than the trades one; that model still fills at the mid, so the bid/ask half-spread
+is folded into the profile's `commission_per_contract` instead of being walked.
+Its calendar is `config/calendars/xauusd.yaml` (1290 / 145 / 128, embargo 10).
 
 Detail and reasoning: `docs/datasets/nq-es-qqq.md`, `docs/data-inventory.md`.
 

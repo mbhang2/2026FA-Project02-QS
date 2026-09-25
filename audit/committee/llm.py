@@ -41,7 +41,17 @@ class ModelSubstituted(RuntimeError):
 class Client:
     model: str
     temperature: float = 0.0
-    max_tokens: int = 4096
+    # 16384, not 4096. nq-ml-02's committee ran on deepseek-v4-pro, and three of
+    # four seats came back empty: the model spent all 4,096 completion tokens on
+    # reasoning_content and finish_reason was "length" before the JSON verdict
+    # was written. Measured: the same economics prompt needs ~7,000 completion
+    # tokens on that model, 6,900 of them reasoning. Robustness, the shortest
+    # prompt, was the one seat that fit.
+    max_tokens: int = 16384
+    # A verdict is a short JSON object; long chains of thought are cost, not
+    # rigour. Sent when set; dropped and retried once if the endpoint rejects
+    # the parameter for a model that does not take it.
+    reasoning_effort: str | None = "low"
     timeout_s: float = 180.0
     base_url: str = ""
     calls: list = field(default_factory=list, init=False, repr=False)
@@ -61,10 +71,18 @@ class Client:
                 "max_tokens": self.max_tokens,
                 "messages": [{"role": "system", "content": system},
                              {"role": "user", "content": user}]}
-        resp = requests.post(
-            f"{self.base_url}/chat/completions", json=body,
-            headers={"Authorization": f"Bearer {os.environ['LITELLM_API_KEY']}"},
-            timeout=self.timeout_s)
+        if self.reasoning_effort:
+            body["reasoning_effort"] = self.reasoning_effort
+        headers = {"Authorization": f"Bearer {os.environ['LITELLM_API_KEY']}"}
+        resp = requests.post(f"{self.base_url}/chat/completions", json=body,
+                             headers=headers, timeout=self.timeout_s)
+        if (resp.status_code == 400 and "reasoning_effort" in body
+                and "reasoning_effort" in resp.text):
+            # The one retry this client makes, and only for a parameter the
+            # model does not accept -- not for a verdict it did not like.
+            body.pop("reasoning_effort")
+            resp = requests.post(f"{self.base_url}/chat/completions", json=body,
+                                 headers=headers, timeout=self.timeout_s)
         if resp.status_code != 200:
             raise LLMUnavailable(f"HTTP {resp.status_code}: {resp.text[:200]}")
         payload = resp.json()
@@ -76,12 +94,25 @@ class Client:
         if not _same(self.model, served):
             raise ModelSubstituted(f"asked {self.model!r}, served {served!r}")
 
-        text = payload["choices"][0]["message"]["content"]
+        choice = payload["choices"][0]
+        text = choice["message"].get("content") or ""
+        usage = payload.get("usage") or {}
+        reasoning_tokens = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
         self.calls.append({
             "model_served": served,
-            "prompt_tokens": (payload.get("usage") or {}).get("prompt_tokens"),
-            "completion_tokens": (payload.get("usage") or {}).get("completion_tokens"),
+            "prompt_tokens": usage.get("prompt_tokens"),
+            "completion_tokens": usage.get("completion_tokens"),
+            "reasoning_tokens": reasoning_tokens,
+            "finish_reason": choice.get("finish_reason"),
         })
+        if not text.strip():
+            # Say what happened, not "not JSON: ''". An auditor cut off by
+            # max_tokens and one that returned nothing are different failures
+            # and the artefact has to tell them apart.
+            raise LLMUnavailable(
+                f"empty reply: finish_reason={choice.get('finish_reason')!r}, "
+                f"completion_tokens={usage.get('completion_tokens')}, "
+                f"reasoning_tokens={reasoning_tokens}, max_tokens={self.max_tokens}")
         block = FENCE.search(text)
         raw = block.group(1) if block else text
         try:

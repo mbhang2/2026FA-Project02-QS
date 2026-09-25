@@ -267,3 +267,60 @@ def test_the_committee_imports_nothing_from_the_harness():
                 names = [node.module]
             bad = [n for n in names if n == "src" or n.startswith("src.")]
             assert not bad, f"{path.name} imports {bad} from the harness"
+
+
+# --------------------------------------------------------------------------- #
+# the client survives a reasoning model
+# --------------------------------------------------------------------------- #
+def test_an_empty_reply_names_the_cutoff_not_a_json_error(monkeypatch):
+    """nq-ml-02's committee: three seats returned '' because deepseek-v4-pro
+    spent all 4,096 completion tokens on reasoning and finish_reason was
+    'length'. The artefact said 'reply was not JSON', which is true and useless.
+    Now it says what happened."""
+    import audit.committee.llm as L
+    monkeypatch.setenv("LITELLM_BASE_URL", "http://x"); monkeypatch.setenv("LITELLM_API_KEY", "k")
+
+    class R:
+        status_code = 200; text = ""
+        def json(self):
+            return {"model": "deepseek-v4-pro",
+                    "choices": [{"finish_reason": "length",
+                                 "message": {"content": "", "reasoning_content": "x" * 5000}}],
+                    "usage": {"completion_tokens": 4096,
+                              "completion_tokens_details": {"reasoning_tokens": 4096}}}
+    import requests
+    monkeypatch.setattr(requests, "post", lambda *a, **k: R())
+    c = L.Client(model="deepseek-v4-pro")
+    with pytest.raises(L.LLMUnavailable, match="finish_reason='length'.*reasoning_tokens=4096"):
+        c.ask("s", "u")
+    assert c.calls[-1]["finish_reason"] == "length"
+    assert c.calls[-1]["reasoning_tokens"] == 4096
+
+
+def test_the_budget_and_effort_defaults_fit_a_reasoning_model():
+    import audit.committee.llm as L
+    c = L.Client.__new__(L.Client)
+    assert L.Client.__dataclass_fields__["max_tokens"].default >= 16384
+    assert L.Client.__dataclass_fields__["reasoning_effort"].default == "low"
+
+
+def test_reasoning_effort_is_dropped_once_on_a_400_that_names_it(monkeypatch):
+    import audit.committee.llm as L
+    monkeypatch.setenv("LITELLM_BASE_URL", "http://x"); monkeypatch.setenv("LITELLM_API_KEY", "k")
+    seen = []
+    class Bad:
+        status_code = 400; text = "UnsupportedParamsError: reasoning_effort is not supported"
+        def json(self): return {}
+    class Good:
+        status_code = 200; text = ""
+        def json(self):
+            return {"model": "claude-haiku-4-5",
+                    "choices": [{"finish_reason": "stop", "message": {"content": '{"verdict": "PASS"}'}}],
+                    "usage": {"completion_tokens": 10}}
+    import requests
+    def post(url, json=None, **k):
+        seen.append(dict(json)); return Bad() if "reasoning_effort" in json else Good()
+    monkeypatch.setattr(requests, "post", post)
+    out = L.Client(model="claude-haiku-4-5").ask("s", "u")
+    assert out == {"verdict": "PASS"}
+    assert len(seen) == 2 and "reasoning_effort" in seen[0] and "reasoning_effort" not in seen[1]

@@ -198,7 +198,7 @@ datasets:
 # a budget edited mid-campaign fails the record's own digest check. This file is
 # where they are written; the hashed record is where they are committed.
 campaign:
-  n_trials: 50
+  n_trials: 10
 
   # TWO AXES, not one. `max_of_n` is a correction; `round_turn_mc` is a null
   # source. See pre-registration.md 3a -- including which combinations are

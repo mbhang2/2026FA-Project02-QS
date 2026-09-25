@@ -1,0 +1,62 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics",
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not inspect SessionProfile internals or the harness's exact bar-close semantics, but no future access or evaluation peeking is visible in this source.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "The accepted candidate's primary Sortino falls from 0.2898 on train to -0.0557 on the held-out validation split (change -0.3455), and rule_a_sortino_positive_on_validation is false; the result does not survive out-of-sample.",
+        "The gate acceptance rests on a marginal p=0.0339 at q=0.05 with only 20 trials, while the validation split is negative, so the positive train statistic is not corroborated by the available held-out evidence."
+      ],
+      "confidence_note": "I could not see prior campaign count or train-session profit concentration, but the validation contradiction is sufficient for a veto on this axis.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "HORIZON_STEPS=2 is documented as a 10-minute label, but _retire_labels retires the oldest pending row only when len(pending) > HORIZON_STEPS, which first happens at the third subsequent decision; labels are therefore 15-minute returns, not the registered 10-minute horizon.",
+        "The registered tape_velocity feature is 'trades and volume per unit time', but the code computes only bar.tick_count / mean_ticks - 1.0 and never uses bar.volume, so volume per unit time is omitted."
+      ],
+      "confidence_note": "I could not see the other auditors' evidence or the full trial history, and I did not weigh validation out-of-sample because survival across periods is outside my axis.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Train PnL is concentrated in one hour: hour 14 UTC contributes 184.30 of 311.30 total (59.2%), and hour 19 adds another 90.75; many other hours are negative, so the result is not spread across the trading day.",
+        "Train PnL is concentrated in two weekdays: Fri 169.50 and Mon 159.35 together exceed the total 311.30, while Tue/Wed/Thu sum to -17.55; removing Fri and Mon flips the sign.",
+        "Train PnL is concentrated in one month: October 2025 contributes 163.95 of 311.30 (52.7%), and December is nearly flat at 3.85.",
+        "The validation split is negative overall (primary -0.0557, net PnL -110.65) and its monthly PnL is positive only in April 2026, with all other months negative, reinforcing that the result is narrow rather than broad-based."
+      ],
+      "confidence_note": "I could not see per-trade timestamps or session-level PnL beyond the aggregates, so I cannot rule out that the hour/weekday/month concentration is driven by a few individual sessions.",
+      "error": null
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

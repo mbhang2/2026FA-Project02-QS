@@ -138,3 +138,65 @@ Held for Michael. **`src/core/scoring/` and `run.py` must stay untouched until
 that look is taken**, including the Amendment 6 disclosure fix recorded in
 `pre-registration.md`: validation has to run under the same `code_fingerprint`
 as the trials it is validating.
+
+---
+
+## Validation and committee — the campaign is discarded
+
+Authorised by Michael 2026-09-25, after the tier-2 result was on the table.
+
+| | train | validation |
+|---|---|---|
+| primary (charged) | **+0.2898** | **−0.0557** |
+| uncharged | +0.3099 | −0.0491 |
+| net PnL | +311.30 | −110.65 |
+
+**Rule (a), Sortino > 0 on validation: FALSE.** Change −0.3455.
+
+**Committee: VETO**, three of four seats, on a `deepseek-v4-pro` that served
+honestly and answered every seat (the `max_tokens` defect that silenced three
+seats on `nq-ml-02` is fixed and this is the confirmation).
+
+- **leakage — PASS.** No future access or evaluation peeking visible in the
+  source. Noted it could not inspect `SessionProfile` internals.
+- **statistics — VETO.** The validation contradiction, plus "the gate
+  acceptance rests on a marginal p=0.0339 at q=0.05 with only 20 trials".
+- **economics — VETO.** Two *implementation* findings, not statistical ones:
+  `_retire_labels` pops only when `len(pending) > HORIZON_STEPS`, so the label
+  is a **15-minute** return where the hypothesis registers 10; and
+  `tape_velocity` is registered as "trades and volume per unit time" but the
+  code uses `bar.tick_count` only and never `bar.volume`. **Both are real bugs
+  in the strategy, found by reading the source.**
+- **robustness — VETO.** Concentration, on three independent cuts:
+  hour 14 UTC alone is 184.30 of 311.30 train PnL (59.2%); Friday and Monday
+  together exceed the total while Tue-Thu sum to −17.55, so dropping two
+  weekdays flips the sign; October 2025 is 52.7% of it.
+
+Tier 3: **CANNOT_TELL**, escalate, cannot promote — macOS isolation is
+`best-effort` and cannot bind a memory ceiling, unchanged and expected.
+
+### What this campaign actually demonstrated
+
+The layered design worked, for the second time and more cleanly than the first.
+Tier 2 accepted at p = 0.0339; the validation look and the committee stopped it.
+Amendment 6 removed the *concentration in sessions* hack that produced
+`nq-ml-02`'s illusory +1.78 — this winner traded all 100 sessions — and the
+robustness seat then found concentration the floor does not measure: **in the
+hour of day, the weekday, and the month.** A floor on session count is not a
+floor on breadth, and that is the finding to carry forward.
+
+### Directly relevant to the RTH question
+
+Hour 14 UTC is 09:00 CT, the first hour of the RTH session; hour 19 UTC is
+14:00 CT. Together they are 275 of 311 train points, and the rest of the
+24-hour Globex day is roughly a wash or negative. An RTH-restricted variant is
+therefore **not** a cosmetic change — it is where this candidate's PnL already
+lives, and restricting to it would make the concentration explicit instead of
+hiding it inside a full-session score.
+
+### Two real strategy bugs to fix before any re-run
+
+1. `_retire_labels` off-by-one: labels are 15-minute, the hypothesis says 10.
+2. `tape_velocity` ignores `bar.volume` entirely.
+
+Both are in the ViperQ-derived seed, so they affected `nq-ml-02` as well.

@@ -1202,6 +1202,29 @@ Code: `src/core/loop/probe.py`, `LLMAgent._after_static` in
 worker loop with the execution moved from the model to the harness, and is
 credited as such in `docs/design/architecture.md`.
 
+---
+
+## Known gap in Amendment 6's implementation — found 2026-09-25, not yet fixed
+
+Amendment 6 says "**The ledger row carries the count and the floor**". It does
+not, on a row that passes. `scorer.score()` computes `sessions_exposed` only
+inside the rejection branch, so a rejected row carries the count in its
+`reject_reason` and an accepted row carries nothing: `nq-ml-03`'s trial 0 has
+`sessions_exposed: None` with `rejected: false`, and a reader cannot tell from
+the row whether it cleared the floor by one session or by thirty.
+
+**The gate is correct; the disclosure is not.** The floor is applied, the
+rejection works and is reasoned, and no candidate is mis-scored. What is missing
+is the number on the rows that passed, which is exactly the number a reader
+needs to judge how close the floor is biting.
+
+**Not fixed while `nq-ml-03` runs.** `src/core/scoring/` and `run.py` are inside
+`code_fingerprint`; editing either mid-campaign restates the fingerprint every
+committed row recorded and invalidates the trials in flight. The fix is to
+compute `exposed` once, before the branch, and put it in the `ScoreTuple` on
+both paths. It lands after the campaign finishes, and the rows already written
+keep their gap rather than being back-filled.
+
 ## Ideas recorded, not adopted
 
 Kept because the reasoning is worth more than the decision, and because an idea

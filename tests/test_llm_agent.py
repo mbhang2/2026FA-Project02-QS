@@ -305,3 +305,26 @@ def test_the_history_names_a_proposal_that_traded_identically_to_an_earlier_one(
     assert "IDENTICAL" not in l0 and "IDENTICAL" not in l1
     for gate_word in ("p=", "p-value", "verdict", "correction", "accept", "reject-the-null"):
         assert gate_word not in text.lower(), gate_word
+
+
+def test_the_preflight_budget_covers_a_reasoning_models_thinking():
+    """**Regression, 2026-09-25: the preflight could not register any reasoning
+    model.** It sent `max_tokens: 16`, which such a model spends before emitting
+    a visible token; the gateway then reports the empty output as
+    `ContentPolicyViolationError: Response output was blocked`, which reads like
+    a refusal and is a truncation. Measured on `gemini-3.1-pro-preview`: 4 of 4
+    failures at 16, and 200 with an honest `model` field at 64.
+
+    The same shape as the committee client's `max_tokens=4096` against
+    deepseek's ~7k of `reasoning_content`, which returned `finish_reason=length`
+    and empty content on three of four seats of nq-ml-02.
+    """
+    import inspect
+
+    src = inspect.getsource(llm.LLMAgent.preflight)
+    assert '"max_tokens": 16,' not in src
+    budget = int(src.split('"max_tokens":')[1].split(",")[0].strip())
+    assert budget >= 256, (
+        f"the preflight asks for {budget} tokens; a reasoning model spends more "
+        "than that before its first visible token, and the failure arrives "
+        "disguised as a content-policy refusal")

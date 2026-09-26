@@ -569,7 +569,21 @@ class LLMAgent:
         """
         import requests
 
-        body = {"model": self.model, "max_tokens": 16, "temperature": 0,
+        # **`max_tokens` has to cover the model's reasoning, not just its
+        # answer.** At 16 the probe failed on every reasoning model: the budget
+        # is spent before a visible token is emitted, and the gateway reports
+        # the empty output as `ContentPolicyViolationError: Response output was
+        # blocked` -- which reads like a refusal and is a truncation. Measured
+        # 2026-09-25 on `gemini-3.1-pro-preview`: 4 of 4 failures at 16, 200 and
+        # an honest `model` field at 64, with temperature making no difference.
+        # This is the same defect the committee client hit at 4,096 against
+        # deepseek's ~7k of `reasoning_content`, in a smaller place, and it made
+        # every reasoning model unregistrable.
+        #
+        # 512 rather than 64: the margin is free on a one-token answer, and the
+        # point of this call is to read the `model` field rather than to be
+        # cheap.
+        body = {"model": self.model, "max_tokens": 512, "temperature": 0,
                 "messages": [{"role": "user", "content": "reply with: ok"}]}
         resp = requests.post(
             f"{self.base_url}/chat/completions", json=body,

@@ -131,6 +131,76 @@ not serving the model the record names.** Let it refuse. The gateway carries a
 wildcard fallback to `gemini-3.1-pro-preview`, and Task 37 lost 35 trials to
 exactly that. A campaign that ran on a model its record does not name is void.
 
+## 2a. Two ways the launch itself fails, both seen on 2026-09-25
+
+Neither is a bug in the harness and both cost real time, so they are here rather
+than in a review nobody reads.
+
+### The environment does not reach the subprocess
+
+`secrets/r2.env` holds bare `KEY=value` lines with **no `export`**. In zsh,
+`source secrets/r2.env` sets shell variables that `run.py` — a child process —
+never sees. `direnv`'s `dotenv_if_exists` exports them properly, so inside a
+direnv-loaded shell this never happens; it bites when you launch from a script
+or a shell where direnv did not run.
+
+The failure is loud but misleading. `run.py` refuses at startup with
+
+```
+the NQ adapter needs read-only bucket credentials in the environment;
+missing R2_ENDPOINT, R2_BUCKET. See docs/setup/R2_ACCESS.md.
+```
+
+and exits **before minting a ledger row**, so every trial comes back
+`harness_failed: run.py produced no ledger row`. `harness_failed` is not a trial
+(§3), so nothing is charged to N and nothing is lost except the proposal calls
+already paid for — five, in the instance that prompted this. It reads like the
+campaign is broken when the credentials are simply absent, and it looked partial
+because two of the five R2 variables happened to already be in the environment.
+
+```bash
+set -a; source secrets/r2.env; set +a      # or just work inside direnv
+```
+
+### The gateway serves a different model than you asked for
+
+```
+ModelSubstituted: asked the endpoint for 'deepseek-v4-pro' and it answered
+with 'gemini-3.1-pro-preview'.
+```
+
+The driver stops itself. **This is correct behaviour and the campaign is
+usually resumable** — `ModelSubstituted` is raised inside `_one`, before the
+reply is parsed and long before `run_trial` writes `current.py`, so the
+proposal that hit it leaves no ledger row and no file behind. Check
+`agent-calls.jsonl`: if every completed trial records
+`models_served: ['<the model you registered>']`, the record is not false, the
+guard fired *before* it could become one, and `--stage run` resumes at the next
+trial with the budget intact.
+
+The exception's own advice to "discard whatever has run" is for the other case —
+trials that already ran on the wrong model. Read the sidecar before acting on it.
+
+**Do not swap the model to get moving again.** It is frozen in `campaign.json`
+and `stage_run` reads it from there; a different model is a different
+experiment and needs its own registration.
+
+**Why the check exists, concretely.** The gateway's `/models` names some of its
+aliases in the id itself:
+
+```
+gpt-5-mini     (gemini-2.5-flash-lite)
+gpt-5.6-luna   (gemini-2.5-flash-lite)
+gpt-5.6-terra  (gemini-3.1-pro-preview)
+```
+
+and `gpt-5.6-luna` *also* appears unqualified. The same name can resolve two
+ways, so only the `model` field on each response says what actually answered.
+A model can also be listed and unroutable at the same time: within a minute of
+the substitution above, `deepseek-v4-pro` began returning `HTTP 404, Cannot find
+any route matching` while still appearing in the listing. That is the gateway
+being reconfigured — wait for it rather than re-registering.
+
 ## 3. The accounting — read this before you run
 
 **Commit your campaign directory.** N is the union over every committed ledger:

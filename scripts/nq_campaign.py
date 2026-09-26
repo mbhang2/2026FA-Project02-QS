@@ -48,6 +48,19 @@ MODEL = "claude-haiku-4-5"
 # campaign.json. Every later stage reads the path back out of the record, so a
 # campaign cannot be registered against one question and run against another.
 DEFAULT_HYPOTHESIS = ROOT / "config" / "hypotheses" / "intraday-continuation.md"
+# **The proposer's token budget has to cover the model's REASONING, not just
+# the file it writes.** nq-ml-05 lost 4 of its first 10 trials to "no python
+# block in the reply" at 16,384: gemini-3.1-pro-preview spends ~12,000 tokens
+# thinking before its first visible token, so a successful call used 14,994 of
+# 16,384 and any call whose reasoning ran 10% long truncated before the code
+# fence closed. Third instance of one defect -- the committee client at 4,096
+# against deepseek, the preflight at 16, this.
+#
+# 65,536 is ~4x the largest reasoning budget measured and the replies are a few
+# thousand tokens, so the ceiling stops being a variable. It is recorded in
+# every campaign record, so a campaign run under a different one is visible.
+PROPOSER_MAX_TOKENS = 65_536
+
 B_NULL = 10_000
 
 
@@ -118,7 +131,7 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
     c = cfg()
     profile = c["profiles"][profile_name]
     return LLMAgent(
-        model=model, temperature=0.7, max_tokens=16_384, show_history=True,
+        model=model, temperature=0.7, max_tokens=PROPOSER_MAX_TOKENS, show_history=True,
         # None is a real state, not a missing argument: `hypothesis_path` is
         # optional on the record, and a campaign that registered without a
         # question runs without one rather than borrowing another campaign's.
@@ -338,7 +351,8 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                 "again.")
 
     print("preflight ...", flush=True)
-    served = LLMAgent(model=model, temperature=0.7, max_tokens=16_384).preflight()
+    served = LLMAgent(model=model, temperature=0.7,
+                        max_tokens=PROPOSER_MAX_TOKENS).preflight()
     print(f"  asked {served['requested']!r}  served {served['served']!r}")
 
     cc = campaign_cfg()

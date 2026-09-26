@@ -328,3 +328,40 @@ def test_the_preflight_budget_covers_a_reasoning_models_thinking():
         f"the preflight asks for {budget} tokens; a reasoning model spends more "
         "than that before its first visible token, and the failure arrives "
         "disguised as a content-policy refusal")
+
+
+def test_a_reply_with_no_code_block_says_whether_it_was_truncated():
+    """**nq-ml-05 lost 4 of its first 10 trials and the log could not say why.**
+
+    "no python block in a 1865-character reply" is the same message whether the
+    model refused, rambled, or ran out of budget mid-fence. The third is what
+    was happening -- gemini-3.1-pro-preview spends ~12k tokens reasoning and the
+    budget was 16,384 -- and diagnosing it needed a call reproduced by hand.
+    `finish_reason` and `reasoning_tokens` are what distinguish them, the
+    committee client has recorded both since nq-ml-02, and now so does this.
+    """
+    c = llm.Call("propose", False, 1.0, completion_tokens=16384,
+                 finish_reason="length", reasoning_tokens=12004,
+                 error="no python block in the reply (finish_reason=length, "
+                       "reasoning_tokens=12004)")
+    d = c.as_dict()
+    assert d["finish_reason"] == "length" and d["reasoning_tokens"] == 12004
+
+    agent = _agent()
+    agent._pending.append(c)
+    log = agent.drain_log()
+    assert log["truncated"] is True, (
+        "a trial whose proposal was cut off mid-reply has to be visible in the "
+        "sidecar without reproducing the call")
+    assert log["reasoning_tokens"] == 12004
+
+
+def test_the_proposer_budget_clears_a_reasoning_models_appetite():
+    """16,384 was not enough for a model that thinks for 12,000 tokens."""
+    import re
+
+    src = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    m = re.search(r"PROPOSER_MAX_TOKENS = ([\d_]+)", src)
+    assert m, "the budget must be a named constant, not a literal at two call sites"
+    assert int(m.group(1).replace("_", "")) >= 32_768
+    assert "max_tokens=16_384" not in src

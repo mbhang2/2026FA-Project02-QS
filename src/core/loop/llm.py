@@ -133,6 +133,17 @@ class Call:
     # What the endpoint says it answered with. `config()["model"]` is what was
     # asked for, and a gateway is free to serve something else.
     model_served: str = ""
+    # **Why the reply was the length it was.** nq-ml-05 lost 4 of its first 10
+    # trials to "no python block in the reply" and the log could not say why,
+    # because neither of these was recorded. They are: gemini-3.1-pro-preview
+    # spends ~12,000 tokens reasoning before its first visible token, so a
+    # 16,384 budget left ~1,400 of headroom and a call whose thinking ran 10%
+    # long truncated before the code fence closed. `audit/committee/llm.py`
+    # has recorded both since the same defect silenced three of nq-ml-02's
+    # four seats; the proposer did not, and so the third instance of one bug
+    # had to be diagnosed by reproducing a call by hand.
+    finish_reason: str = ""
+    reasoning_tokens: int = 0
 
     def as_dict(self) -> dict:
         return {"kind": self.kind, "ok": self.ok,
@@ -140,6 +151,8 @@ class Call:
                 "prompt_tokens": self.prompt_tokens,
                 "completion_tokens": self.completion_tokens,
                 "model_served": self.model_served,
+                "finish_reason": self.finish_reason,
+                "reasoning_tokens": self.reasoning_tokens,
                 "error": self.error}
 
 
@@ -271,6 +284,8 @@ class LLMAgent:
             "blocked": any(c.kind == "blocked" for c in calls),
             "models_served": sorted({c.model_served for c in calls
                                      if c.model_served}),
+            "reasoning_tokens": sum(c.reasoning_tokens for c in calls),
+            "truncated": any(c.finish_reason == "length" for c in calls),
         }
 
     # -- the one method the loop calls -------------------------------------- #
@@ -650,7 +665,8 @@ class LLMAgent:
         try:
             payload = resp.json()
             usage = payload.get("usage") or {}
-            text = payload["choices"][0]["message"]["content"] or ""
+            choice = payload["choices"][0]
+            text = choice["message"]["content"] or ""
         except Exception as exc:
             self._pending.append(Call(kind, False, latency,
                                       error=f"unparseable envelope: {exc}"[:300]))
@@ -667,21 +683,35 @@ class LLMAgent:
                 "continuing would write a record that is false. Stop, wait for "
                 "the endpoint, and discard whatever has run."
             )
+        details = usage.get("completion_tokens_details") or {}
+        finish = str(choice.get("finish_reason") or "")
         call = Call(kind, True, latency,
                     prompt_tokens=int(usage.get("prompt_tokens") or 0),
                     completion_tokens=int(usage.get("completion_tokens") or 0),
-                    model_served=served)
+                    model_served=served,
+                    finish_reason=finish,
+                    reasoning_tokens=int(details.get("reasoning_tokens") or 0))
         source = extract_source(text)
         if source is None:
             # Silence and noise are the same event. An empty reply, prose with
             # no fence, a fence with nothing in it -- none of them is a
             # strategy, and none of them is a reason to ask again.
-            self._pending.append(Call(kind, False, latency,
-                                      prompt_tokens=call.prompt_tokens,
-                                      completion_tokens=call.completion_tokens,
-                                      error="no python block in the reply"))
+            self._pending.append(Call(
+                kind, False, latency,
+                prompt_tokens=call.prompt_tokens,
+                completion_tokens=call.completion_tokens,
+                model_served=served, finish_reason=finish,
+                reasoning_tokens=call.reasoning_tokens,
+                error=(f"no python block in the reply "
+                       f"(finish_reason={finish}, "
+                       f"reasoning_tokens={call.reasoning_tokens}, "
+                       f"completion_tokens={call.completion_tokens}, "
+                       f"max_tokens={self.max_tokens})")))
             raise LLMError(
-                f"no python block in a {len(text)}-character reply")
+                f"no python block in a {len(text)}-character reply: "
+                f"finish_reason={finish}, reasoning_tokens="
+                f"{call.reasoning_tokens}, completion_tokens="
+                f"{call.completion_tokens} of max_tokens={self.max_tokens}")
         self._pending.append(call)
         return source
 

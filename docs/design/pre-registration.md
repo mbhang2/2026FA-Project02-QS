@@ -1289,6 +1289,32 @@ distinct from a real count of `0`. **`nq-ml-03`'s rows keep their gap rather
 than being back-filled**, because rewriting a committed row to look better
 informed is the failure this whole document is against.
 
+### The fix was incomplete, and `nq-ml-04` is running without it
+
+**Found 2026-09-25 by reading `nq-ml-04`'s first five rows: every one of them,
+passing and rejected alike, still records `sessions_exposed: null`.**
+
+`ScoreTuple.as_dict()` serialises an **explicit key list**, and the two new
+fields were not added to it. So the count reaches the dataclass and stops there;
+the ledger row — which is what this amendment's sentence is about — carries
+nothing, exactly as before. The four tests written with the fix asserted on the
+returned `ScoreTuple`, not on a row, so they passed on a change that does not do
+what it claims.
+
+That is this project's recurring defect shape and it has its own test file
+already: `tests/test_run_end_to_end.py` exists because `commission_per_contract`
+(Task 60), the same key on `nq-validation` (Task 61) and a fitted run's weights
+(2026-09-22) were each **computed correctly and never reached their consumer**,
+each surviving a full green suite. This is the fourth instance, committed by the
+person who wrote the file documenting the other three.
+
+**Not fixed while `nq-ml-04` runs.** `src/core/types.py` is inside
+`code_fingerprint`. The fix is two lines in `as_dict()` plus a test that reads
+the field **off a ledger row produced by `run.py`**, not off a `ScoreTuple` —
+the assertion layer is the whole lesson. `nq-ml-04`'s rows will keep the gap;
+the exposed count for any row of it can still be recomputed from its stored fill
+log, so nothing is unrecoverable, only undisclosed.
+
 ## Ideas recorded, not adopted
 
 Kept because the reasoning is worth more than the decision, and because an idea

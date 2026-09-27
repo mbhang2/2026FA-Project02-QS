@@ -1,0 +1,305 @@
+"""Auction Market Theory features, supervised.
+
+Enhancements over the previous trial:
+1. Increased decision frequency to every 2.5 minutes (150s) to capture more precise entry timings.
+2. Maintained 30-minute horizon (HORIZON_STEPS=12) for label generation.
+3. Added `hours_since_open` feature to capture time-of-day regime changes.
+4. Standardized the target `y` (relative return in bps) during fit to ensure scale-invariant Ridge regularization.
+5. Adjusted TRADE_FRACTION to 0.08 to maintain high conviction with the increased evaluation frequency.
+6. Refined Stop/Target to 30.0 / 40.0 points for a balanced risk/reward.
+"""
+
+from __future__ import annotations
+
+from collections import deque
+
+import numpy as np
+
+FEATURES = (
+    "va_pos", "dist_va_high", "dist_va_low", "dist_vpoc", "at_lvn",
+    "flow", "move", "cvd_div", "st_flow", "st_move", "st_cvd_div",
+    "tape_velocity_trades", "tape_velocity_volume", "hours_since_open"
+)
+N_FEATURES = 14
+
+INTERVAL = "1s"
+DECIDE_EVERY = 150
+HORIZON_STEPS = 12
+WARMUP_BARS = 1800
+RIDGE_LAMBDA = 200.0
+TRADE_FRACTION = 0.08
+STOP_POINTS = 30.0
+TARGET_POINTS = 40.0
+SIZE = 1
+TICK_SIZE = 0.25
+
+
+class Strategy:
+    def __init__(self) -> None:
+        from src.core.features.volume_profile import SessionProfile
+
+        self.profile = SessionProfile(TICK_SIZE)
+        self.session: int | None = None
+        self.bars_in_session = 0
+
+        self.cum_delta = 0
+        self.session_open: float | None = None
+        self.tick_count_sum = 0
+        self.volume_sum = 0
+
+        self.st_delta = 0
+        self.st_volume = 0
+        self.st_tick_count = 0
+        self.last_decision_price: float | None = None
+
+        self.pending: deque = deque(maxlen=HORIZON_STEPS + 1)
+
+        self.X_train: list = []
+        self.y_train: list = []
+        self.rows_used = 0
+        self.rows_dropped = 0
+
+        self.X_mean: np.ndarray | None = None
+        self.X_std: np.ndarray | None = None
+        self.weights: np.ndarray | None = None
+        self.edge: float | None = None
+
+    def setup(self, ctx) -> None:
+        ctx.subscribe(INTERVAL)
+
+    def on_bars(self, ctx) -> None:
+        history = ctx.history(INTERVAL)
+        if not history:
+            return
+        bar = history[-1]
+
+        if bar.session != self.session:
+            self._new_session(bar)
+
+        self.profile.add_bar(bar.low, bar.high, bar.volume)
+        self.cum_delta += bar.delta
+        self.tick_count_sum += bar.tick_count
+        self.volume_sum += bar.volume
+        self.bars_in_session += 1
+
+        self.st_delta += bar.delta
+        self.st_volume += bar.volume
+        self.st_tick_count += bar.tick_count
+
+        if self.bars_in_session % DECIDE_EVERY:
+            return
+
+        x = self._features(ctx, bar)
+        
+        self.st_delta = 0
+        self.st_volume = 0
+        self.st_tick_count = 0
+        self.last_decision_price = bar.close
+
+        if self.weights is None:
+            self._retire_labels(bar)
+            time_left = ctx.session_end - ctx.ts
+            if x is not None and time_left >= 35 * 60 * 1_000_000_000:
+                self.pending.append((x, bar.close, bar.session))
+
+        if self.weights is None or self.edge is None:
+            return
+        if not ctx.actionable or x is None:
+            return
+
+        # End of session flattening
+        time_left = ctx.session_end - ctx.ts
+        if time_left < 5 * 60 * 1_000_000_000:
+            if ctx.position or ctx.working_order_ids:
+                if not ctx.find_orders(tag="eos-close"):
+                    ctx.cancel_all()
+                    if ctx.position > 0:
+                        ctx.sell(size=ctx.position, type="market", reduce_only=True, tag="eos-close")
+                    elif ctx.position < 0:
+                        ctx.buy(size=abs(ctx.position), type="market", reduce_only=True, tag="eos-close")
+            return
+
+        if ctx.position or ctx.working_order_ids:
+            return
+
+        # Do not enter new trades if there isn't enough time for the horizon to play out
+        if time_left < 35 * 60 * 1_000_000_000:
+            return
+
+        x_scaled = (x - self.X_mean) / self.X_std
+        x_scaled = np.append(x_scaled, 1.0)
+        predicted = float(np.dot(self.weights, x_scaled))
+
+        edge = self.edge
+        if predicted > edge:
+            ctx.buy(size=SIZE, stop_offset=STOP_POINTS,
+                    target_offset=TARGET_POINTS, tag="amt-long")
+        elif predicted < -edge:
+            ctx.sell(size=SIZE, stop_offset=STOP_POINTS,
+                     target_offset=TARGET_POINTS, tag="amt-short")
+
+    def on_fill(self, ctx) -> None:
+        pass
+
+    def on_lifecycle(self, ctx) -> None:
+        pass
+
+    def _new_session(self, bar) -> None:
+        self.profile.reset()
+        self.session = bar.session
+        self.bars_in_session = 0
+        self.cum_delta = 0
+        self.tick_count_sum = 0
+        self.volume_sum = 0
+        self.session_open = bar.open
+        self.st_delta = 0
+        self.st_volume = 0
+        self.st_tick_count = 0
+        self.last_decision_price = None
+        self.pending.clear()
+
+    def _features(self, ctx, bar):
+        if self.bars_in_session < WARMUP_BARS or self.profile.is_empty:
+            return None
+        
+        band = self.profile.value_area()
+        if band is None:
+            return None
+        va_low, va_high = band
+
+        va_pos = self.profile.value_area_position(bar.close)
+        if va_pos is None:
+            return None
+
+        dist_va_high_bp = (bar.close - va_high) / max(va_high, 1.0) * 10000.0
+        dist_va_low_bp = (bar.close - va_low) / max(va_low, 1.0) * 10000.0
+        
+        vpoc = self.profile.vpoc()
+        dist_vpoc_bp = 0.0
+        if vpoc is not None:
+            dist_vpoc_bp = (bar.close - vpoc) / max(vpoc, 1.0) * 10000.0
+
+        nodes = self.profile.low_volume_nodes()
+        at_lvn = 1.0 if any(abs(bar.close - n) <= 2 * TICK_SIZE for n in nodes) else 0.0
+
+        span = max(self.profile.total_volume, 1)
+        flow = self.cum_delta / span
+        move = (bar.close - self.session_open) / max(abs(self.session_open), 1.0) * 10000.0
+        cvd_div = flow - move / 100.0
+
+        bars = max(self.bars_in_session, 1)
+        mean_ticks = self.tick_count_sum / bars
+        mean_volume = self.volume_sum / bars
+        
+        st_mean_ticks = self.st_tick_count / DECIDE_EVERY
+        st_mean_volume = self.st_volume / DECIDE_EVERY
+        
+        v_trades = (st_mean_ticks / mean_ticks - 1.0) if mean_ticks > 0 else 0.0
+        v_volume = (st_mean_volume / mean_volume - 1.0) if mean_volume > 0 else 0.0
+        
+        st_span = max(self.st_volume, 1)
+        st_flow = self.st_delta / st_span
+        st_move = 0.0
+        if self.last_decision_price is not None:
+            st_move = (bar.close - self.last_decision_price) / max(abs(self.last_decision_price), 1.0) * 10000.0
+        
+        st_cvd_div = st_flow - st_move / 100.0
+
+        hours_since_open = (ctx.ts - ctx.session_start) / 3_600_000_000_000.0
+
+        return np.array([
+            float(va_pos),
+            dist_va_high_bp,
+            dist_va_low_bp,
+            dist_vpoc_bp,
+            at_lvn,
+            flow,
+            move,
+            cvd_div,
+            st_flow,
+            st_move,
+            st_cvd_div,
+            v_trades,
+            v_volume,
+            hours_since_open
+        ], dtype=np.float64)
+
+    def _retire_labels(self, bar) -> None:
+        if len(self.pending) < HORIZON_STEPS:
+            return
+        x, price, session = self.pending[0]
+        if session != bar.session:
+            self.pending.popleft()
+            self.rows_dropped += 1
+            return
+        # Use relative return in basis points
+        y = (bar.close - price) / max(price, 1.0) * 10000.0
+        self.X_train.append(x)
+        self.y_train.append(y)
+        self.rows_used += 1
+        self.pending.popleft()
+
+    def fit(self) -> None:
+        if self.rows_used < 1000:
+            raise RuntimeError(
+                f"fit() reached with {self.rows_used} usable rows, which is far "
+                f"below what a {HORIZON_STEPS}-step horizon over the fit window "
+                f"implies. "
+                f"{self.rows_dropped} were dropped at session boundaries."
+            )
+        
+        X = np.array(self.X_train, dtype=np.float64)
+        y = np.array(self.y_train, dtype=np.float64)
+        
+        self.X_mean = np.asarray(np.mean(X, axis=0), dtype=np.float64)
+        self.X_std = np.asarray(np.std(X, axis=0), dtype=np.float64) + 1e-8
+        
+        X_scaled = (X - self.X_mean) / self.X_std
+        X_scaled = np.column_stack([X_scaled, np.ones(len(X_scaled))])
+        
+        y_mean = float(np.mean(y))
+        y_std = float(np.std(y))
+        if y_std < 1e-8:
+            y_std = 1.0
+        y_scaled = (y - y_mean) / y_std
+        
+        XtX = X_scaled.T @ X_scaled
+        Xty = X_scaled.T @ y_scaled
+        
+        ridge = RIDGE_LAMBDA * np.eye(N_FEATURES + 1)
+        ridge[-1, -1] = 0.0
+        
+        self.weights = np.linalg.solve(XtX + ridge, Xty)
+        
+        preds = X_scaled @ self.weights
+        self.edge = float(np.quantile(np.abs(preds), 1.0 - TRADE_FRACTION))
+        
+        self.X_train.clear()
+        self.y_train.clear()
+
+    def save_weights(self) -> bytes:
+        if self.weights is None or self.edge is None or self.X_mean is None or self.X_std is None:
+            raise RuntimeError("save_weights() before fit()")
+        blob = np.concatenate([
+            self.X_mean,
+            self.X_std,
+            self.weights,
+            [self.edge]
+        ]).astype(np.float64).tobytes()
+        return blob
+
+    def load_weights(self, blob: bytes) -> None:
+        w = np.frombuffer(blob, dtype=np.float64)
+        expected_size = N_FEATURES + N_FEATURES + (N_FEATURES + 1) + 1
+        if w.size != expected_size:
+            raise ValueError(
+                f"weights are {w.size} long, expected {expected_size}")
+        
+        idx = 0
+        self.X_mean = w[idx : idx + N_FEATURES]
+        idx += N_FEATURES
+        self.X_std = w[idx : idx + N_FEATURES]
+        idx += N_FEATURES
+        self.weights = w[idx : idx + N_FEATURES + 1]
+        idx += N_FEATURES + 1
+        self.edge = float(w[idx])

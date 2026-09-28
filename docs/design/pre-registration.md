@@ -1319,6 +1319,86 @@ exposed counts are recomputable from their stored fill logs, so the information
 is undisclosed rather than lost, and back-filling a committed row to look better
 informed is the failure this document exists to prevent.
 
+## Amendment 8 — 2026-09-27 — a hypothesis a machine wrote
+
+**Status: DRAFTED, NOT YET IN FORCE.** `scripts/distil_paper.py` exists and can
+write one; no campaign has been registered on a machine-written question and none
+may be until Michael signs this off. It is written before the first such campaign
+rather than after, which is the only ordering that makes it a pre-registration.
+
+### What changes, and what does not
+
+Stage 3 of the retrieval pipeline turns a paper into a hypothesis file. Until now
+every hypothesis in `config/hypotheses/` was written by a human, and §6a's
+economics auditor notes the consequence in passing: judging whether a hypothesis
+is feasible at all *"is a minor question while a human writes hypotheses and
+becomes the main one when a retrieval pipeline generates them, because a
+machine-proposed hypothesis has had no sanity check before it reaches the loop."*
+
+**A pre-registration is about ordering, not authorship.** What makes
+`config/calendars/nq-trades.yaml` a pre-registration is that its commit date
+precedes every result computed against it, not that a person typed the numbers.
+The same applies here: a distilled hypothesis committed and frozen before its
+campaign runs is as binding as one a human wrote, and the digest check in
+`stage_run` enforces it identically.
+
+So the protocol does not change. What changes is that **three things become
+load-bearing that were previously conveniences.**
+
+### 1. The lint stops being advice
+
+`src.core.loop.hypothesis.lint` was built to catch a human writing "check it holds
+out of sample" by accident — one careless sentence, once. A model that learns the
+phrasing writes it *every time*, and the file is pasted verbatim into the strategy
+agent's prompt. `distil_paper.py` runs the same `findings()` the campaign runs,
+**before writing anything**, and a leak is a refusal naming every hit. A
+distillation that cannot pass is discarded, not edited into shape by the machine
+that wrote it.
+
+### 2. A human reads it before it is registered
+
+`distil_paper.py` writes the file and stops. It does not register a campaign, and
+it prints what to run next rather than running it. **The commit is the human act**,
+and it is where the sanity check §6a names actually happens: a person reads the
+question, decides it is worth several hundred looks at the data, and commits it.
+Nothing automates that step, and nothing should — a pipeline that distilled and
+registered in one command would put a machine's judgement about what is worth
+asking beyond review.
+
+### 3. The registry row says which machine wrote it
+
+`hypothesis_path`, the model, the model the endpoint actually served, the word
+count, the adapted claim, what the paper claims that we cannot test, and what the
+question sets aside. A machine-written pre-registration that does not say it was
+machine-written is the one shape of this that would be dishonest.
+
+### What is forbidden, restated because it is now cheap to do
+
+**Never distil several hypotheses and pick by running them.** §4 of
+`docs/design/paper-retrieval.md` already says it and Amendment 8 makes it
+enforceable in practice rather than in principle: distillation is now a single
+command, so generating ten questions is an afternoon. A pipeline that ran a short
+campaign on each and registered the best has taken ten campaigns' worth of looks
+and reported one, which is the exact failure the ledger exists to prevent arriving
+through a door marked "hypothesis selection". Ranking is on properties of the
+**paper** — feasibility, relevance, whether it bears on the gate — never on
+properties of our data.
+
+**And cheap hypotheses are not free.** Global N grows per campaign whether or not
+the question was easy to write, and the L2 correction is over campaigns.
+
+### What would invalidate this amendment
+
+- A campaign registered on a hypothesis that was not committed before it ran.
+- A distilled file edited after its campaign started, or a paper re-distilled
+  after its first question was tried.
+- Any selection among candidate hypotheses that consulted a score.
+- A distilled hypothesis whose registry row does not name the model that wrote it.
+
+Code: `scripts/distil_paper.py`, `config/prompts/paper-distil.md` (a fingerprinted
+artifact — it shaped the question, which shaped every score in the campaign),
+`tests/test_distil_paper.py`, 19 tests.
+
 ## Ideas recorded, not adopted
 
 Kept because the reasoning is worth more than the decision, and because an idea

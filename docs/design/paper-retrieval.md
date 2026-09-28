@@ -1,4 +1,4 @@
-# Paper retrieval — design, not yet built
+# Paper retrieval — stages 0-3 built, 2026-09-27
 
 **Status: DESIGN. No code exists.** `docs/design/repo-layout.md` records paper
 retrieval as loop-side work that does not exist anywhere in the tree; this is the
@@ -170,7 +170,13 @@ existed, and preserves a moved axis-1 label as `relevance_first_pass` rather tha
 overwriting it — a label that moves on re-scoring says something about the
 scale's stability, and that is worth keeping.
 
-### Stage 3 — distil into a hypothesis
+### Stage 3 — distil into a hypothesis — **BUILT 2026-09-27**
+
+`scripts/distil_paper.py`, governed by Amendment 8 of the pre-registration. It
+writes the file and stops: registration is a human act, and the commit is the
+pre-registration. Three refusals — the lint before writing, no writing while a
+campaign is in flight (`config/hypotheses/*.md` is fingerprinted), and never over
+an existing hypothesis.
 
 Produce a hypothesis markdown in **our** format, not a transcription of the paper.
 It must pass `src.core.loop.hypothesis.lint` and it must be **small**: measured on

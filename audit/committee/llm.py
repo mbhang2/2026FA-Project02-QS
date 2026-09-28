@@ -128,14 +128,29 @@ def _same(asked: str, served: str) -> bool:
     return a.startswith(b) or b.startswith(a)
 
 
+# **The probe's budget has to cover the model's reasoning, not just its answer.**
+# At 16 this raised on every reasoning model: the budget is spent before a visible
+# token is emitted, and the gateway reports the empty output as
+# `ContentPolicyViolationError: Response output was blocked`, which reads like a
+# refusal. Measured 2026-09-25 on gemini-3.1-pro-preview: 4 of 4 failures at 16,
+# HTTP 200 with an honest `model` field at 64.
+#
+# **Fifth site of one defect.** This client at `max_tokens=4096` (three of
+# nq-ml-02's four seats empty), `LLMAgent.preflight` at 16, the proposer at 16,384
+# (4 of nq-ml-05's first 10 trials), this function, and it is called by
+# `screen_papers.py`, `rank_papers.py` and `review.py`. Each time the visible
+# symptom pointed somewhere other than the budget.
+PREFLIGHT_MAX_TOKENS = 512
+
+
 def preflight(model: str) -> str:
     """What the endpoint actually serves. Raises rather than guessing."""
-    c = Client(model=model, max_tokens=16)
+    c = Client(model=model, max_tokens=PREFLIGHT_MAX_TOKENS)
     import requests
 
     resp = requests.post(
         f"{c.base_url}/chat/completions",
-        json={"model": model, "max_tokens": 16, "temperature": 0,
+        json={"model": model, "max_tokens": PREFLIGHT_MAX_TOKENS, "temperature": 0,
               "messages": [{"role": "user", "content": "reply with: ok"}]},
         headers={"Authorization": f"Bearer {os.environ['LITELLM_API_KEY']}"},
         timeout=60)

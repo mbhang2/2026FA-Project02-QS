@@ -324,3 +324,26 @@ def test_reasoning_effort_is_dropped_once_on_a_400_that_names_it(monkeypatch):
     out = L.Client(model="claude-haiku-4-5").ask("s", "u")
     assert out == {"verdict": "PASS"}
     assert len(seen) == 2 and "reasoning_effort" in seen[0] and "reasoning_effort" not in seen[1]
+
+
+def test_the_preflight_budget_covers_a_reasoning_models_thinking():
+    """**Fifth site of one defect, 2026-09-27.** At `max_tokens=16` this probe
+    raised on every reasoning model: the budget is spent before a visible token
+    is emitted and the gateway reports the empty output as a content-policy
+    violation, which reads like a refusal rather than a truncation.
+
+    The other four: this client at 4,096 (three of nq-ml-02's four seats came
+    back empty), `LLMAgent.preflight` at 16 (no reasoning model registrable),
+    the proposer at 16,384 (4 of nq-ml-05's first 10 trials blocked), and the
+    exposure count that reached a dataclass but not its serialiser. Fixing one
+    site is not fixing the defect.
+
+    `screen_papers.py`, `rank_papers.py` and `review.py` all call this.
+    """
+    from audit.committee import llm as C
+
+    assert C.PREFLIGHT_MAX_TOKENS >= 256, (
+        f"the probe asks for {C.PREFLIGHT_MAX_TOKENS} tokens; a reasoning model "
+        "spends more than that before its first visible token")
+    src = (REPO_ROOT / "audit" / "committee" / "llm.py").read_text()
+    assert '"max_tokens": 16,' not in src and "max_tokens=16)" not in src

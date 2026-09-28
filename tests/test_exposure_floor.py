@@ -113,3 +113,31 @@ def test_no_floor_means_not_measured_and_is_distinct_from_zero():
     s = score(b, period=cal)
     assert s.sessions_exposed == -1, "-1 means the floor was never applied"
     assert s.min_exposed_fraction == 0.0
+
+
+def test_the_count_reaches_the_SERIALISED_ROW_not_just_the_score_object():
+    """**The assertion layer is the whole lesson.**
+
+    The first attempt at this fix added `sessions_exposed` to `ScoreTuple` and
+    not to `ScoreTuple.as_dict()`, which serialises an explicit key list. The
+    count reached the object and stopped; every row of nq-ml-04 and nq-ml-06
+    recorded `sessions_exposed: null`. Four tests were written with that fix and
+    all four passed, because all four asserted on the returned `ScoreTuple`.
+
+    Amendment 6's sentence is about the ROW. So this test reads the dict.
+    """
+    b, cal = run(10_000)
+    d = score(b, period=cal, min_exposed_fraction=0.70).as_dict()
+    assert "sessions_exposed" in d and "min_exposed_fraction" in d
+    assert d["sessions_exposed"] == M.sessions_exposed(b, cal)
+    assert d["min_exposed_fraction"] == 0.70
+    assert d["rejected"] is False
+
+    b2, cal2 = run(5)
+    d2 = score(b2, period=cal2, min_exposed_fraction=0.70).as_dict()
+    assert d2["rejected"] is True
+    assert d2["sessions_exposed"] == M.sessions_exposed(b2, cal2)
+
+    # and with no floor, the row says "not measured" rather than zero
+    d3 = score(b2, period=cal2).as_dict()
+    assert d3["sessions_exposed"] == -1

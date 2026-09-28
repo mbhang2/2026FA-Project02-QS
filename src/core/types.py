@@ -691,6 +691,19 @@ class ScoreTuple:
             "rejected": self.rejected,
             "reject_reason": self.reject_reason,
             "downside_sessions": self.downside_sessions,
+            # **Amendment 6's count, and the fourth instance of one defect.**
+            # The amendment says "the ledger row carries the count and the
+            # floor". The fields were added to this dataclass on 2026-09-25 and
+            # NOT to this dict, which serialises an explicit key list -- so the
+            # count reached the object and stopped there, nq-ml-04's and
+            # nq-ml-06's rows all read `sessions_exposed: null`, and the four
+            # tests written with the fix asserted on the returned ScoreTuple
+            # rather than on a row, so they passed on a change that did not
+            # work. Task 60's commission, Task 61's validation cost and the
+            # 2026-09-22 weights drop are the same shape: computed correctly,
+            # never reached the consumer, full green suite.
+            "sessions_exposed": self.sessions_exposed,
+            "min_exposed_fraction": self.min_exposed_fraction,
         }
 
 

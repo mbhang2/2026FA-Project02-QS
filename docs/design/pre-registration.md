@@ -1308,12 +1308,16 @@ already: `tests/test_run_end_to_end.py` exists because `commission_per_contract`
 each surviving a full green suite. This is the fourth instance, committed by the
 person who wrote the file documenting the other three.
 
-**Not fixed while `nq-ml-04` runs.** `src/core/types.py` is inside
-`code_fingerprint`. The fix is two lines in `as_dict()` plus a test that reads
-the field **off a ledger row produced by `run.py`**, not off a `ScoreTuple` —
-the assertion layer is the whole lesson. `nq-ml-04`'s rows will keep the gap;
-the exposed count for any row of it can still be recomputed from its stored fill
-log, so nothing is unrecoverable, only undisclosed.
+**Fixed 2026-09-27**, once no campaign was running and no validation look was
+pending — `nq-ml-06`'s gate rejected, so none is owed. Two lines in
+`as_dict()`, and the test reads the field **off a serialised row**, not off a
+`ScoreTuple`: the assertion layer is the whole lesson, and asserting on the
+object is what let the first attempt pass while doing nothing.
+
+**The rows of `nq-ml-04`, `nq-ml-05` and `nq-ml-06` keep the gap.** Their
+exposed counts are recomputable from their stored fill logs, so the information
+is undisclosed rather than lost, and back-filling a committed row to look better
+informed is the failure this document exists to prevent.
 
 ## Ideas recorded, not adopted
 

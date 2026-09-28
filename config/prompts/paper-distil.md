@@ -26,9 +26,32 @@ So your output must never contain, in any phrasing:
 
 A machine checks your output against a list of forbidden terms and **refuses the
 file** if any appears. Write about the market, never about how the answer will be
-graded. Say "does this hold across the whole period" rather than anything about
-withheld data; say "how large is the effect" rather than anything about whether an
-effect is decisive.
+graded.
+
+**These exact words will get the file refused**, in any casing or hyphenation:
+
+> out-of-sample, out of sample, in-sample, holdout, hold-out, validation,
+> significant, significance, statistically, p-value, accept, accepted,
+> acceptance, reject, rejected, rejection, correction, multiple testing,
+> false discovery, family-wise, deflated, deflation, trials, trial count
+
+Several are ordinary English and the ban is deliberately over-broad. Rephrase
+rather than argue:
+
+| instead of | write |
+|:---|:---|
+| "does it hold out of sample" | "does it hold across the whole period" |
+| "the effect is significant" | "the effect is larger than costs" |
+| "the rule was rejected" | "the rule did not earn more than it paid" |
+| "after multiple-testing correction" | (say nothing — that is ours, not yours) |
+| "N trials were run" | (say nothing) |
+
+**This bites hardest on a paper whose own contribution is an evaluation
+protocol.** Such a paper's abstract is built from this vocabulary, and a faithful
+summary of it is exactly the file that gets refused. That is not a reason to
+water the claim down: state what the paper found *about the market* — which
+rules earned more than they cost and which did not — and leave every word about
+how it decided that out of the file.
 
 ### What we have, and what we cannot do
 

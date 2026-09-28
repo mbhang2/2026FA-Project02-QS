@@ -126,10 +126,14 @@ def test_a_distillation_that_mentions_the_gate_is_refused():
 
 
 def test_the_lint_is_the_same_one_the_campaign_runs_at_registration():
-    """A file that passes here must not fail there. Same function, not a copy."""
+    """A file that passes here must not fail there. Same function, not a copy —
+    and the repair loop and the final check go through one helper so they cannot
+    drift apart."""
     import inspect
-    src = inspect.getsource(dp.distil_one)
-    assert "from src.core.loop.hypothesis import findings" in src
+    assert ("from src.core.loop.hypothesis import findings"
+            in inspect.getsource(dp._lint_findings))
+    for fn in (dp.distil_one,):
+        assert "_lint_findings(" in inspect.getsource(fn)
 
     from src.core.loop import hypothesis as H
     got = dp.distil_one(_Fake(_ok()), PAPER, ROW)
@@ -290,3 +294,58 @@ def test_every_committed_hypothesis_still_passes_the_lint():
     from src.core.loop import hypothesis as H
     for p in (REPO_ROOT / "config" / "hypotheses").glob("*.md"):
         assert H.findings(p.read_text()) == [], p.name
+
+
+def test_the_lint_repair_is_bounded_and_carries_no_market_data():
+    """A distillation that leaks gets told which words it used and one more try.
+
+    Safe for the same reason the agent's static repair is: the findings are
+    properties of the text the model just wrote — which banned word on which
+    line — and say nothing about our data. Bounded anyway, because a model that
+    cannot state the claim without the vocabulary in three attempts is telling
+    us something worth hearing rather than working around.
+    """
+    import inspect
+    assert dp.MAX_LINT_REPAIRS == 2
+    src = inspect.getsource(dp.distil_one)
+    assert "for attempt in range(MAX_LINT_REPAIRS):" in src
+    assert "while" not in src, "bounded, not a loop until it passes"
+
+
+def test_a_repair_that_still_leaks_is_refused_rather_than_written():
+    """Three strikes and the file does not exist. The lint is the arbiter, not
+    the number of attempts."""
+    class _Stubborn:
+        def __init__(self): self.calls = 0
+        def ask(self, system, user):
+            self.calls += 1
+            return _ok(markdown=BODY.replace(
+                "## The claim", "## The claim\n\nWe check it out of sample.\n"))
+    c = _Stubborn()
+    with pytest.raises(ValueError, match="tells the strategy agent about the gate"):
+        dp.distil_one(c, PAPER, ROW)
+    assert c.calls == dp.MAX_LINT_REPAIRS + 1, "one call, then two repairs, then stop"
+
+
+def test_a_repair_that_succeeds_is_accepted():
+    class _FixesItself:
+        def __init__(self): self.calls = 0
+        def ask(self, system, user):
+            self.calls += 1
+            if self.calls == 1:
+                return _ok(markdown=BODY.replace(
+                    "## The claim", "## The claim\n\nWe check it out of sample.\n"))
+            return _ok()
+    c = _FixesItself()
+    got = dp.distil_one(c, PAPER, ROW)
+    assert c.calls == 2 and got["slug"] == "intraday-momentum-costs"
+
+
+def test_the_prompt_names_the_forbidden_words_literally():
+    """Describing the concepts was not enough: the first real distillation of a
+    paper whose contribution IS an evaluation protocol leaked 'out-of-sample'
+    and 'validation' on its first attempt."""
+    text = " ".join(dp.PROMPT.read_text().lower().split())
+    for word in ("out-of-sample", "validation", "significance", "p-value"):
+        assert word in text, word
+    assert "evaluation protocol" in text

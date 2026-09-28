@@ -78,6 +78,13 @@ MAX_WORDS = 900
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,5}$")
 
 
+def _lint_findings(md: str) -> list[str]:
+    """`hypothesis.findings`, imported here so the repair loop and the final
+    check cannot drift apart. Same function the campaign runs at registration."""
+    from src.core.loop.hypothesis import findings
+    return findings(md)
+
+
 def _client():
     """The committee's client, as stages 1 and 2 use it and for the same reason:
     a fourth copy of the same HTTP call is a fourth place for a default to drift."""
@@ -127,9 +134,39 @@ def context(paper: dict, row: dict) -> str:
     return "\n".join(parts)
 
 
+# **Bounded, and safe for the same reason the agent's static repair is.** The
+# findings are properties of the TEXT the model just wrote -- which banned word
+# appeared on which line -- and carry nothing about our market data, so iterating
+# on them leaks no selection signal. Distillation costs no N (design §4), so a
+# repair costs nothing but a call. It is bounded anyway: a model that cannot say
+# it in three attempts is telling us the claim cannot be stated without the
+# vocabulary, and that is worth hearing rather than working around.
+MAX_LINT_REPAIRS = 2
+
+
 def distil_one(client, paper: dict, row: dict) -> dict:
-    """One call, one hypothesis. Validated here; written by the caller."""
-    out = client.ask(PROMPT.read_text(), context(paper, row))
+    """One call, one hypothesis, with a bounded repair on a lint failure."""
+    user = context(paper, row)
+    out = client.ask(PROMPT.read_text(), user)
+    for attempt in range(MAX_LINT_REPAIRS):
+        leaks = _lint_findings(out.get("markdown") or "")
+        if not leaks:
+            break
+        words = sorted({f.split("'")[1] for f in leaks if "'" in f})
+        out = client.ask(PROMPT.read_text(), user + f"""
+
+### Your previous answer was refused, attempt {attempt + 1} of {MAX_LINT_REPAIRS + 1}
+
+The file you returned used {len(leaks)} forbidden term(s): {', '.join(repr(w) for w in words)}.
+
+Every one of these reaches the strategy agent and tells it how its work will be
+judged, which is the one thing it may not know. Rewrite the file WITHOUT them.
+
+Do not weaken the claim to avoid the words. State what the paper found about the
+market -- which rules earned more than they cost -- and leave out every word
+about how it decided that. If a sentence cannot be written without one of these
+terms, the sentence is about our procedure rather than about the market, and it
+does not belong in the file at all.""")
 
     slug = str(out.get("slug") or "").strip().lower()
     if not SLUG.match(slug):
@@ -148,8 +185,7 @@ def distil_one(client, paper: dict, row: dict) -> dict:
 
     # **The lint, before anything is written.** Same function the campaign runs at
     # registration, so a file that passes here cannot fail there.
-    from src.core.loop.hypothesis import findings
-    leaks = findings(md)
+    leaks = _lint_findings(md)
     if leaks:
         raise ValueError(
             "the distilled hypothesis tells the strategy agent about the gate:\n    "

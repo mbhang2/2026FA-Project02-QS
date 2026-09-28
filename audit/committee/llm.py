@@ -83,6 +83,29 @@ class Client:
             body.pop("reasoning_effort")
             resp = requests.post(f"{self.base_url}/chat/completions", json=body,
                                  headers=headers, timeout=self.timeout_s)
+        elif resp.status_code == 200 and "reasoning_effort" in body:
+            # **The same refusal, dressed as a success.** Measured 2026-09-28:
+            # an identical request to `claude-haiku-4-5` is answered by
+            # `claude-haiku-4-5@20251001` without `reasoning_effort` and by
+            # `gemini-3.1-pro-preview` with it. The gateway does not return 400
+            # for a parameter the model cannot take -- it falls through its
+            # wildcard route to a model that can, and returns HTTP 200.
+            #
+            # So the branch above never fired, and every ranking call in a
+            # 22-paper re-rank raised ModelSubstituted instead. Same retry, same
+            # justification -- a parameter the model does not accept, never a
+            # verdict it did not like -- reached by the symptom that actually
+            # occurs. If it substitutes again without the parameter, that is a
+            # real substitution and the caller hears about it.
+            try:
+                served_probe = str(resp.json().get("model") or "")
+            except Exception:                                    # noqa: BLE001
+                served_probe = ""
+            if served_probe and not _same(self.model, served_probe):
+                body.pop("reasoning_effort")
+                resp = requests.post(f"{self.base_url}/chat/completions",
+                                     json=body, headers=headers,
+                                     timeout=self.timeout_s)
         if resp.status_code != 200:
             raise LLMUnavailable(f"HTTP {resp.status_code}: {resp.text[:200]}")
         payload = resp.json()

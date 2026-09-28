@@ -347,3 +347,29 @@ def test_the_preflight_budget_covers_a_reasoning_models_thinking():
         "spends more than that before its first visible token")
     src = (REPO_ROOT / "audit" / "committee" / "llm.py").read_text()
     assert '"max_tokens": 16,' not in src and "max_tokens=16)" not in src
+
+
+def test_an_unsupported_parameter_is_retried_when_it_arrives_as_a_substitution():
+    """**Measured 2026-09-28: a refusal dressed as a success.**
+
+    An identical request to `claude-haiku-4-5` is answered by
+    `claude-haiku-4-5@20251001` without `reasoning_effort` and by
+    `gemini-3.1-pro-preview` with it. The gateway does not return 400 for a
+    parameter the model cannot take; it falls through its wildcard route to a
+    model that can and returns HTTP 200.
+
+    So the existing 400-branch never fired, and all 22 ranking calls of a
+    re-rank raised ModelSubstituted. The retry now also fires on the symptom
+    that actually occurs -- still only for a parameter the model does not
+    accept, never for a verdict it did not like, and a second substitution
+    without the parameter is a real one that reaches the caller.
+    """
+    src = (REPO_ROOT / "audit" / "committee" / "llm.py").read_text()
+    ask = src[src.index("def ask("):src.index("def preflight(")]
+    assert 'elif resp.status_code == 200 and "reasoning_effort" in body:' in ask
+    assert "not _same(self.model, served_probe)" in ask, (
+        "the retry must fire only when the model was actually substituted, not "
+        "on every 200 that carried the parameter")
+    # the parameter is dropped exactly once; there is no retry loop
+    assert ask.count('body.pop("reasoning_effort")') == 2
+    assert "while" not in ask, "one retry, not a loop"

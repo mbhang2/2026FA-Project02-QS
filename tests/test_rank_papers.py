@@ -28,6 +28,15 @@ class _Fake:
     def ask(self, system, user): self.seen = user; return self.payload
 
 
+def _ok(**kw):
+    """A payload valid on both axes, overridden per test. Axis 2 became mandatory
+    on 2026-09-27, so every payload that is meant to SUCCEED has to carry it."""
+    base = {"relevance": "low", "reason": "r", "gate_relevance": "low",
+            "gate_reason": "g"}
+    base.update(kw)
+    return base
+
+
 def test_a_level_outside_the_three_is_refused():
     for bad in ("very high", "", None, "HIGH?"):
         with pytest.raises(ValueError):
@@ -40,14 +49,15 @@ def test_high_without_a_hypothesis_edit_is_refused():
     with pytest.raises(ValueError, match="high relevance with no hypothesis_edit"):
         rp.rank_one(_Fake({"relevance": "high", "reason": "r",
                            "hypothesis_edit": None}), PAPER, ROW, "ctx")
-    ok = rp.rank_one(_Fake({"relevance": "high", "reason": "r",
-                            "hypothesis_edit": "split the rule on regime"}), PAPER, ROW, "ctx")
+    ok = rp.rank_one(_Fake(_ok(relevance="high",
+                               hypothesis_edit="split the rule on regime")),
+                     PAPER, ROW, "ctx")
     assert ok["hypothesis_edit"] == "split the rule on regime"
 
 
 def test_low_and_medium_need_no_edit():
     for lvl in ("low", "medium"):
-        got = rp.rank_one(_Fake({"relevance": lvl, "reason": "r"}), PAPER, ROW, "ctx")
+        got = rp.rank_one(_Fake(_ok(relevance=lvl)), PAPER, ROW, "ctx")
         assert got["relevance"] == lvl and got["hypothesis_edit"] is None
 
 
@@ -93,3 +103,94 @@ def test_the_prompt_forbids_ranking_by_resemblance_to_past_scores():
     assert "Do not rank a paper higher because it resembles something that scored well" in p
     for lvl in rp.LEVELS:
         assert f'"{lvl}"' in p, f"the prompt never offers {lvl!r}"
+
+
+# --------------------------------------------------------------------------- #
+# axis 2 -- does the paper bear on how we JUDGE a result? (added 2026-09-27)
+#
+# Axis 1 scored the first 224 papers and rated NONE of them high. That was the
+# scale working as written, not a bad corpus: its first criterion is "what would
+# the strategy do differently on Tuesday morning?", so a systematic falsification
+# study on five-minute bars of the same index we trade -- with its own acceptance
+# criteria, t >= 2.0, >= 30 trades per fold, year stability -- scores low, because
+# it offers no edge to act on. For a project whose deliverable is the loop and its
+# gate, that paper is among the most useful in the corpus. Axis 1 cannot say so.
+# --------------------------------------------------------------------------- #
+
+def test_the_second_axis_is_mandatory():
+    """A payload with no `gate_relevance` is refused rather than defaulted. A
+    default would silently reproduce the single-axis result on every future run."""
+    with pytest.raises(ValueError, match="gate_relevance"):
+        rp.rank_one(_Fake({"relevance": "low", "reason": "r"}), PAPER, ROW, "ctx")
+    for bad in ("very high", "", None, "HIGH?"):
+        with pytest.raises(ValueError, match="gate_relevance"):
+            rp.rank_one(_Fake({"relevance": "low", "reason": "r",
+                               "gate_relevance": bad}), PAPER, ROW, "ctx")
+
+
+def test_high_on_the_gate_axis_needs_a_named_protocol_change():
+    """The same bar as axis 1, for the same reason. A paper that would leave the
+    gate, the accounting and the falsified-families list exactly as they are is
+    not high, however well argued."""
+    with pytest.raises(ValueError, match="high gate_relevance with no protocol_edit"):
+        rp.rank_one(_Fake(_ok(gate_relevance="high", protocol_edit=None)),
+                    PAPER, ROW, "ctx")
+    got = rp.rank_one(_Fake(_ok(gate_relevance="high", bears_on="gate",
+                                protocol_edit="measure our floor against theirs")),
+                      PAPER, ROW, "ctx")
+    assert got["protocol_edit"] == "measure our floor against theirs"
+    assert got["bears_on"] == "gate"
+
+
+def test_the_axes_are_independent():
+    """The whole point: a paper with nothing to trade can still change how we
+    judge. `low` on axis 1 and `high` on axis 2 has to be expressible, and is the
+    expected shape for a falsification study on our own instrument."""
+    got = rp.rank_one(_Fake(_ok(relevance="low", acts_on=None,
+                                hypothesis_edit=None,
+                                gate_relevance="high",
+                                bears_on="falsified_family",
+                                protocol_edit="add OHLCV intraday momentum to the "
+                                              "falsified-families list")),
+                      PAPER, ROW, "ctx")
+    assert got["relevance"] == "low" and got["gate_relevance"] == "high"
+    assert got["acts_on"] is None and got["protocol_edit"]
+
+
+def test_bears_on_is_a_closed_set_or_null():
+    for bad in ("everything", "strategy", "Gate"):
+        with pytest.raises(ValueError, match="bears_on"):
+            rp.rank_one(_Fake(_ok(bears_on=bad)), PAPER, ROW, "ctx")
+    assert rp.rank_one(_Fake(_ok(bears_on=None)), PAPER, ROW, "ctx")["bears_on"] is None
+    for good in rp.BEARS_ON:
+        assert rp.rank_one(_Fake(_ok(bears_on=good)),
+                           PAPER, ROW, "ctx")["bears_on"] == good
+
+
+def test_the_prompt_defines_both_axes_and_says_they_are_independent():
+    # Whitespace-normalised: the prompt is hard-wrapped, so a phrase the test
+    # cares about can be split across a line break.
+    text = " ".join(rp.PROMPT.read_text().lower().split())
+    assert "gate_relevance" in text and "relevance" in text
+    assert "two independent axes" in text or "two separate judgements" in text
+    assert "do not average them" in text
+    # the concrete case that motivated the axis has to be in the prompt, so the
+    # model is told what axis 1 is blind to rather than left to infer it
+    assert "falsification" in text and "no edge" in text
+
+
+def test_the_resemblance_warning_covers_both_axes():
+    """Ranking by resemblance to what scored well is selection on spent data. The
+    warning predates the second axis and has to bind it too."""
+    text = " ".join(rp.PROMPT.read_text().lower().split())
+    assert "resemblance" in text
+    assert "applies to both axes without exception" in text
+
+
+def test_the_rerank_flag_adds_the_axis_without_erasing_the_first_pass():
+    src = (REPO_ROOT / "scripts" / "rank_papers.py").read_text()
+    assert '"--rerank"' in src
+    # picks papers missing the SECOND axis, not papers missing the first
+    assert 'r.get("gate_relevance") is None' in src
+    # and a moved axis-1 label is kept, because it says something about the scale
+    assert 'row["relevance_first_pass"] = was' in src

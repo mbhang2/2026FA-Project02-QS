@@ -121,6 +121,55 @@ Only feasible papers reach it. Two signals:
 An LLM reranker with a written rubric, preflighted for model identity the way
 `audit/committee` is, and its prompt committed under `config/prompts/`.
 
+### Stage 2a — the second axis, added 2026-09-27
+
+**Stage 2 as first built rated none of 224 papers `high`.** Not one paper in the
+corpus was judged worth a campaign. That looked like a bad corpus and was not: it
+is the scale working exactly as written.
+
+Its first criterion is *"what would the strategy do differently on Tuesday
+morning?"*, and it says a paper whose contribution is a model, an estimator, a
+risk measure or a description is `low` however elegant. So these scored `low`,
+correctly:
+
+| paper | what it is |
+|---|---|
+| Structural Limits of OHLCV-Based Intraday Momentum Signals in MNQ Futures | a systematic falsification study on five-minute bars of the index we trade, with its own acceptance criteria — t ≥ 2.0, ≥ 30 trades per fold, positive net after friction, year stability |
+| Sequential Structure in Intraday Futures Data: LSTM vs Gradient Boosting on MNQ | LSTM and GBM on MNQ 5-minute bars cannot beat the base rate out of sample, with four years of data and walk-forward validation |
+| A Validated Volatility-Volume-Gap Classifier for Regime Identification in MNQ Intraday Data | a validated day classifier that says plainly it cannot support a directional strategy |
+
+**Those are among the most useful papers in the corpus for what this project
+actually builds.** The deliverable is the loop and its keep-or-discard gate, not a
+profitable strategy; a second acceptance protocol on our own instrument is
+evidence about ours, and a credible negative result tells us where not to spend
+trials — which is what the falsified-families list in
+`docs/datasets/nq-es-qqq.md` is for, and trials not spent on a known answer are
+the cheapest in the project. Axis 1 is structurally blind to all of it.
+
+**Two axes, not a re-weighted one.** `relevance` keeps its meaning exactly, so
+the 224 labels already in the registry stay valid and comparable. A new
+`gate_relevance` answers a different question: does this paper bear on how we
+*judge* a result? A paper can be `low` on the first and `high` on the second, and
+for a falsification study on NQ-like data that is the expected shape.
+
+`gate_relevance` is raised by an acceptance protocol we can compare ours against,
+a multiple-testing or overfitting method, a null construction, a measurement of
+out-of-sample decay, a negative result on our instrument, or evidence about how
+an automated search behaves. It is **not** raised by elegance, by machinery we do
+not have, or by agreement with what we already do — a paper that would leave our
+protocol identical is `low`. `high` requires naming a concrete `protocol_edit` to
+the gate, the accounting or the falsified list, enforced in `rank_one` the same
+way `high` relevance requires a `hypothesis_edit`.
+
+The "do not rank by resemblance to what scored well" rule binds both axes without
+exception. Retrieval and ranking cost no N precisely because they never look at
+the market, and steering either axis by past scores would quietly spend it.
+
+`scripts/rank_papers.py --rerank` adds the axis to papers scored before it
+existed, and preserves a moved axis-1 label as `relevance_first_pass` rather than
+overwriting it — a label that moves on re-scoring says something about the
+scale's stability, and that is worth keeping.
+
 ### Stage 3 — distil into a hypothesis
 
 Produce a hypothesis markdown in **our** format, not a transcription of the paper.

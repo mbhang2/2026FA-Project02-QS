@@ -54,6 +54,10 @@ DATASET_DOC = ROOT / "docs" / "datasets" / "nq-es-qqq.md"
 
 MODEL = "claude-haiku-4-5"
 LEVELS = ("high", "medium", "low")
+# What a `gate_relevance` paper bears on. Closed set, so a row can be grouped
+# rather than read: the gate itself, how trials are counted, the falsified-families
+# list, or the behaviour of the loop.
+BEARS_ON = ("gate", "accounting", "falsified_family", "loop")
 
 
 def deferrals() -> list[str]:
@@ -132,11 +136,31 @@ def rank_one(client, paper: dict, row: dict, ctx: str) -> dict:
         # A paper worth fifty looks at the data has to change the question. If it
         # would leave the next hypothesis identical, it is not high.
         raise ValueError("high relevance with no hypothesis_edit")
+    # **Axis 2, and it is not optional.** The first 224 papers were scored on axis 1
+    # alone and it rated NONE of them high -- correctly, by its own rule, because the
+    # most useful papers in the corpus are falsification studies on our own index that
+    # offer no edge to act on. A missing axis here would silently reproduce that.
+    gate = str(out.get("gate_relevance", "")).strip().lower()
+    if gate not in LEVELS:
+        raise ValueError(
+            f"gate_relevance not one of {LEVELS}: {out.get('gate_relevance')!r}")
+    if gate == "high" and not out.get("protocol_edit"):
+        # Same bar as axis 1, for the same reason: high means it changes something.
+        # A paper that would leave the gate, the accounting and the falsified list
+        # exactly as they are is not high however well argued it is.
+        raise ValueError("high gate_relevance with no protocol_edit")
+    bears = out.get("bears_on")
+    if bears is not None and str(bears) not in BEARS_ON:
+        raise ValueError(f"bears_on not one of {BEARS_ON} or null: {bears!r}")
     return {"relevance": lvl,
             "relevance_reason": str(out.get("reason") or "").strip(),
             "acts_on": out.get("acts_on"),
             "hypothesis_edit": out.get("hypothesis_edit"),
-            "speaks_to_deferral": out.get("speaks_to_deferral")}
+            "speaks_to_deferral": out.get("speaks_to_deferral"),
+            "gate_relevance": gate,
+            "gate_reason": str(out.get("gate_reason") or "").strip(),
+            "bears_on": bears,
+            "protocol_edit": out.get("protocol_edit")}
 
 
 def main() -> int:
@@ -145,16 +169,28 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=50)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--rerank", action="store_true",
+                    help="re-score papers that already have a relevance, to add "
+                         "gate_relevance. The axis-1 label from the first pass is "
+                         "preserved as relevance_first_pass when it changes, so "
+                         "nothing is overwritten silently.")
     a = ap.parse_args()
 
     if not REGISTRY.exists():
         sys.exit(f"no registry at {REGISTRY}; run fetch_papers.py and screen_papers.py")
     reg = json.loads(REGISTRY.read_text())
-    todo = [r for r in reg["papers"].values()
-            if r.get("feasibility") in ("direct", "adaptable")
-            and r.get("relevance") is None][:a.limit]
-    if not todo:
-        print("nothing feasible and unranked"); return 0
+    feasible = [r for r in reg["papers"].values()
+                if r.get("feasibility") in ("direct", "adaptable")]
+    if a.rerank:
+        # Everything feasible that has not yet been scored on axis 2.
+        todo = [r for r in feasible if r.get("gate_relevance") is None][:a.limit]
+        if not todo:
+            print("every feasible paper already has a gate_relevance"); return 0
+    else:
+        todo = [r for r in feasible if r.get("relevance") is None][:a.limit]
+        if not todo:
+            print("nothing feasible and unranked; --rerank adds the second axis "
+                  "to papers scored before it existed"); return 0
 
     ctx = context_block()
     client, served = _client()
@@ -174,14 +210,29 @@ def main() -> int:
         results = list(pool.map(work, todo))
 
     counts: dict[str, int] = {}
+    gcounts: dict[str, int] = {}
     for pid, got, err in results:
         if err:
             print(f"  {pid}  ERROR {err}"); continue
         counts[got["relevance"]] = counts.get(got["relevance"], 0) + 1
-        print(f"  {pid}  {got['relevance']:<7} {got['relevance_reason'][:84]}")
+        gcounts[got["gate_relevance"]] = gcounts.get(got["gate_relevance"], 0) + 1
+        print(f"  {pid}  campaign={got['relevance']:<7} gate={got['gate_relevance']:<7}"
+              f" {(got['gate_reason'] or got['relevance_reason'])[:70]}")
         if not a.dry_run:
-            reg["papers"][pid].update(got)
-    print(f"\n  {counts}")
+            row = reg["papers"][pid]
+            was = row.get("relevance")
+            if was is not None and was != got["relevance"]:
+                # The first pass is part of the record. A re-rank that moved the
+                # axis-1 label says something about the scale's stability, and
+                # overwriting it would erase that.
+                row["relevance_first_pass"] = was
+            row.update(got)
+    print(f"\n  campaign axis {counts}")
+    print(f"  gate axis     {gcounts}")
+    moved = [p for p, g, e in results if not e and g
+             and reg["papers"][p].get("relevance_first_pass")]
+    if moved and not a.dry_run:
+        print(f"  axis-1 label moved on re-rank for {len(moved)}: {', '.join(moved[:6])}")
     if a.dry_run:
         print("  dry run: registry not written"); return 0
     REGISTRY.write_text(json.dumps(reg, indent=2, sort_keys=True) + "\n")

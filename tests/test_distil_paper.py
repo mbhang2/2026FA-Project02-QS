@@ -255,12 +255,18 @@ def test_the_distiller_is_not_told_how_relevant_the_paper_was():
     told "this was rated highly" writes a more confident question than the
     evidence supports."""
     fake = _Fake(_ok())
-    dp.distil_one(fake, PAPER, {**ROW, "relevance": "high",
-                                "gate_relevance": "high",
-                                "relevance_reason": "excellent",
-                                "protocol_edit": "change the floor"})
-    for leaked in ("high", "excellent", "change the floor", "relevance"):
-        assert leaked not in fake.seen, leaked
+    sentinel = "ZQ-RANKED-SENTINEL-7741"
+    dp.distil_one(fake, PAPER, {**ROW,
+                                "relevance": sentinel,
+                                "gate_relevance": sentinel,
+                                "relevance_reason": sentinel,
+                                "gate_reason": sentinel,
+                                "protocol_edit": sentinel,
+                                "hypothesis_edit": sentinel,
+                                "bears_on": sentinel})
+    # A sentinel rather than English words: the context now carries the whole
+    # paper, in which "high" and "relevance" legitimately occur.
+    assert sentinel not in fake.seen
 
 
 def test_the_prompt_tells_the_model_what_it_may_not_write():
@@ -283,7 +289,8 @@ def test_the_prompt_is_a_fingerprinted_artifact():
 def test_the_registry_row_records_the_model_that_wrote_the_question():
     """A machine-written pre-registration has to say which machine. Amendment 8."""
     src = (REPO_ROOT / "scripts" / "distil_paper.py").read_text()
-    assert '"model": MODEL, "model_served": served' in src
+    assert '"model": a.model, "model_served": served' in src
+    assert '"--model"' in src, "which model wrote the question is a choice, recorded"
     assert '"hypothesis_path"' in src
 
 
@@ -306,7 +313,9 @@ def test_the_lint_repair_is_bounded_and_carries_no_market_data():
     us something worth hearing rather than working around.
     """
     import inspect
-    assert dp.MAX_LINT_REPAIRS == 2
+    assert dp.MAX_LINT_REPAIRS >= 3, (
+        'handing the model the whole paper makes the leak MORE likely: a '
+        "falsification study's body is saturated with the banned words")
     src = inspect.getsource(dp.distil_one)
     assert "for attempt in range(MAX_LINT_REPAIRS):" in src
     assert "while" not in src, "bounded, not a loop until it passes"
@@ -349,3 +358,56 @@ def test_the_prompt_names_the_forbidden_words_literally():
     for word in ("out-of-sample", "validation", "significance", "p-value"):
         assert word in text, word
     assert "evaluation protocol" in text
+
+
+def test_the_word_budget_is_repairable_not_only_fatal():
+    """A file 29 words over is a file the model can shorten; refusing it outright
+    throws away the whole distillation. Full text made this the binding check --
+    the model writes more when it has more to write about."""
+    assert dp._too_long("word " * (dp.MAX_WORDS + 10)).endswith(
+        f"over the ceiling of {dp.MAX_WORDS}")
+    assert dp._too_long("word " * 10).endswith(f"under the floor of {dp.MIN_WORDS}")
+    assert dp._too_long("word " * 500) == ""
+    note = dp._repair_note(0, [], [], "929 words, 29 over the ceiling of 900")
+    assert "29 over" in note and "450 to 700" in note
+    assert "Cut the paper's framing, not the claim" in note
+
+
+def test_the_repair_note_reports_every_finding_not_just_the_worst():
+    """**The first version reported one category at a time and never converged.**
+    On 2605.04004v3 it went leak, then length, then missing citation over three
+    attempts, fixing one constraint and breaking another. Four checks reported
+    one at a time cannot be satisfied in three tries; four reported together can
+    be satisfied in one."""
+    n = dp._repair_note(0, ["line 3: 'validation' -- names it"],
+                        ["'0.5' appears in no source"],
+                        "929 words, 29 over", "2605.04004v3")
+    for expected in ("Forbidden terms", "'validation'",
+                     "Quantities your sources do not contain", "0.5",
+                     "Length", "929 words", "paper id", "2605.04004v3"):
+        assert expected in n, expected
+    assert "Fix **all** of the following" in n
+    # and only the categories that fired
+    only_length = dp._repair_note(0, [], [], "929 words, 29 over", "")
+    assert "Length" in only_length
+    assert "Forbidden terms" not in only_length and "paper id" not in only_length
+
+
+def test_the_missing_citation_is_repairable_too():
+    """Every check that is a property of the text is repairable. The citation is
+    the one stage 3 insists on hardest -- it is what makes a result traceable to
+    its source -- so refusing outright over a missing id wastes a distillation
+    the model could fix in one line."""
+    note = dp._repair_note(0, [], [], "", "2605.04004v3")
+    assert "The paper id `2605.04004v3` does not appear" in note
+
+    class _ForgetsThenRemembers:
+        def __init__(self): self.calls = 0
+        def ask(self, system, user):
+            self.calls += 1
+            if self.calls == 1:
+                return _ok(markdown=BODY.replace("2605.04004v3", "the source paper"))
+            return _ok()
+    c = _ForgetsThenRemembers()
+    got = dp.distil_one(c, PAPER, ROW)
+    assert c.calls == 2 and ROW["id"] in got["markdown"]

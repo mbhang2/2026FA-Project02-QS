@@ -170,6 +170,60 @@ existed, and preserves a moved axis-1 label as `relevance_first_pass` rather tha
 overwriting it — a label that moves on re-scoring says something about the
 scale's stability, and that is worth keeping.
 
+### Stage 0b — the whole paper — **BUILT 2026-09-29**
+
+Stages 1, 2 and 3 all read `abstract`, which for `2605.04004v3` is 1,274
+characters and states no rule, no threshold and no friction model.
+`scripts/fetch_fulltext.py` fetches the body: **HTML, else the LaTeX e-print,
+else the PDF**, in that order. Measured over the 22 survivors: 18 have HTML, 4
+are PDF-only, and the bodies run **20 to 245 times the abstract**.
+
+**The PDF reader lives in `.venv-tools`, not `.venv`.**
+`integrity.environment_fingerprint()` hashes every distribution importable by the
+running interpreter, so installing it in the main environment would move the
+fingerprint of every subsequent scored run for a library the engine never calls.
+It would also break the build-time/run-time separation the repo enforces.
+Verified: the fingerprint after installing is byte-identical to the one in
+`nq-ml-06`'s rows.
+
+#### What the body changed, measured
+
+| | from the abstract | from the paper |
+|---|---|---|
+| the question | "momentum signals do not earn more than they cost" | "early-session downward velocity predicts gap continuation that exceeds costs" |
+| shape | a negative claim, whose confirmation is the gate's default | a positive, falsifiable claim with a named window and a named signal |
+| words | 800-956, never converging | 550, first attempt |
+
+The abstract says fourteen families failed. The **body** says which three cleared
+the friction floor and why each then failed, and the distillation built its
+question from the strongest of those — the gap-continuation short, gross +16.53
+points — which is not derivable from the abstract at all. A campaign registered
+on the first version would have asked a question whose only informative outcome
+was falsifying the paper; the second asks something the search can actually find.
+
+#### Two things full text made worse, and what each needed
+
+**The grounding check weakened.** In 44,000 characters almost any small decimal
+appears somewhere, so the bare `0.5` that motivated `scripts/grounding.py` reads
+as grounded. The defect was a misquoted *range*, so ranges are now checked as
+**pairs**: `0.07-1.50` is in the paper, `0.5-1.5` is not, wherever its halves
+occur.
+
+**The lint got harder to satisfy.** A falsification study's body is saturated
+with the exact vocabulary the file may not contain, and the distiller has to
+write about what the paper found without reusing the words it found it in.
+`claude-haiku-4-5` could not: three repairs, reporting every finding at once,
+and it still leaked `out-of-sample` and `statistically`.
+`gemini-3.1-pro-preview` passed on the first attempt. **Which model writes the
+question is now a `--model` flag recorded on the registry row**, which Amendment 8
+requires anyway.
+
+Two smaller corrections the same day, both mine rather than the design's: the
+word ceiling was set tighter than this document's own 800-1,500 token budget, and
+the repair note reported one finding category at a time, so the model fixed one
+constraint and broke another and three rounds never converged. All four checks —
+lint, grounding, length, citation — are now reported together.
+
 ### Stage 3 — distil into a hypothesis — **BUILT 2026-09-27**
 
 `scripts/distil_paper.py`, governed by Amendment 8 of the pre-registration. It
@@ -177,6 +231,31 @@ writes the file and stops: registration is a human act, and the commit is the
 pre-registration. Three refusals — the lint before writing, no writing while a
 campaign is in flight (`config/hypotheses/*.md` is fingerprinted), and never over
 an existing hypothesis.
+
+**And a fourth refusal, added the same day it was needed.** The lint checks the
+file says nothing about the gate. Nothing checked that it says anything *true* —
+and the first real distillation, of `2605.04004v3`, wrote "gross returns in the
+**0.5-1.5** point range" where the paper says "**0.07-1.50**". A lower bound
+wrong by a factor of seven, in what would have been a pre-registered question,
+with a citation making it look sourced.
+
+`scripts/grounding.py` is the check: every quantity and quoted span in the file
+must appear in the paper or in the prompt that told the model about our data.
+Numbers compare as floats, so `2.0` matches `2`; arXiv ids are citations rather
+than quantities; years and small integers are structural. It is deterministic on
+purpose — asking a model whether another model hallucinated needs a third model.
+
+**The idea is Bryan Rodriguez's** `aider-validate`
+(`origin/feature/rag-autoresearch`), which does more: it runs an embedding
+database and an entailment model and judges whether a *sentence* is supported.
+This is the subset that is checkable without judgement, which is also the subset
+the observed defect lived in. Adopting the capability rather than the stack means
+no LanceDB, no SearXNG container, no MiniCheck server and no new dependency, and
+the offline suite stays offline.
+
+Both findings go through one bounded repair, and both refuse the write if they
+survive it. So the machine never writes a question that mentions the gate, and
+never writes a number it cannot point at.
 
 Produce a hypothesis markdown in **our** format, not a transcription of the paper.
 It must pass `src.core.loop.hypothesis.lint` and it must be **small**: measured on

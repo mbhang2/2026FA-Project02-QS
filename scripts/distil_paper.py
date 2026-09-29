@@ -67,15 +67,45 @@ HYPOTHESES = ROOT / "config" / "hypotheses"
 MODEL = "claude-haiku-4-5"
 
 # The budget from the design, in words rather than tokens because a word count is
-# what a human can check. ~450-700 words is ~600-950 tokens; the design's stated
-# ceiling is 1,500 tokens, and the largest hypothesis already in the repo is
-# `auction-market-features.md` at 1,422 words, which is over it and predates the
-# budget. Enforced as a refusal at the top end because the file's length is paid
-# for on every prompt of the campaign.
+# what a human can check. The design's figure is **800-1,500 tokens**
+# (`docs/design/paper-retrieval.md`), which at ~1.33 tokens a word is roughly
+# **600-1,125 words**.
+#
+# **This ceiling was 900, and that was my error rather than the design's.** I set
+# it tighter than the document it implements, and it then refused a file the
+# design would have accepted. Corrected to the design's own number.
+#
+# Recorded because the behaviour that surfaced it is worth keeping: **with the
+# paper body in context, `claude-haiku-4-5` writes ~950 words and does not
+# shorten on request.** Asked three times, it returned 929 then 956 -- longer
+# each time. This is not a threshold moved until something passes, which
+# CLAUDE.md forbids by name: the ceiling is the design's, and the model's refusal
+# to compress is a fact about the model that belongs in the record.
+# How much of the paper body reaches the prompt. The longest extracted paper is
+# 131,002 characters, roughly 33,000 tokens, which is affordable once per
+# campaign and not per trial -- this prompt is paid once, the campaign prompt is
+# paid per trial. Capped anyway so one enormous paper cannot dominate.
+FULLTEXT_CAP = 120_000
+
 MIN_WORDS = 350
-MAX_WORDS = 900
+MAX_WORDS = 1_125
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,5}$")
+
+
+def _grounding_findings(md: str, paper_id: str) -> list[str]:
+    """Quantities and quoted spans the sources do not contain.
+
+    Bryan Rodriguez's `aider-validate` idea, deterministic core only -- see
+    `scripts/grounding.py` for what it does and does not catch, and for the
+    fabricated number in this script's first real distillation that motivated it.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "grounding", pathlib.Path(__file__).with_name("grounding.py"))
+    g = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(g)
+    return g.findings(md, *g.sources_for(paper_id))
 
 
 def _lint_findings(md: str) -> list[str]:
@@ -85,12 +115,21 @@ def _lint_findings(md: str) -> list[str]:
     return findings(md)
 
 
-def _client():
+# **32,768, not 8,192.** Sixth application of one lesson: the budget has to cover
+# the model's reasoning, not just its answer. A distilled hypothesis is ~1,300
+# tokens of output, and `gemini-3.1-pro-preview` was measured spending 12,004 to
+# 26,752 tokens thinking before its first visible token. The other five sites are
+# listed in `audit/committee/llm.py`.
+DISTIL_MAX_TOKENS = 32_768
+
+
+def _client(model: str = MODEL):
     """The committee's client, as stages 1 and 2 use it and for the same reason:
     a fourth copy of the same HTTP call is a fourth place for a default to drift."""
     from audit.committee.llm import Client, preflight
-    served = preflight(MODEL)
-    return Client(model=MODEL, temperature=0.0, max_tokens=8192), served
+    served = preflight(model)
+    return Client(model=model, temperature=0.0,
+                  max_tokens=DISTIL_MAX_TOKENS), served
 
 
 def campaign_in_flight() -> str:
@@ -125,6 +164,27 @@ def context(paper: dict, row: dict) -> str:
         "",
         f"Stage 1 judged our data **{row.get('feasibility')}** for it.",
     ]
+    # **The body, when stage 0b has fetched it.** An abstract is ~1,300
+    # characters and states no rule, no threshold and no friction model; the
+    # body is 20-245x that. Distilling from the abstract produced a hypothesis
+    # whose premise was a number the paper does not contain (see
+    # `scripts/grounding.py`), which is the predictable result of asking for
+    # specifics from a text that has none.
+    full = ROOT / "data" / "papers" / "text" / f"{row['id']}.txt"
+    if full.exists():
+        body = full.read_text()
+        if len(body) > FULLTEXT_CAP:
+            # Head and tail: the claims and the method are at the front, the
+            # results and the numbers at the back, and what is cut is the
+            # middle of the related work.
+            half = FULLTEXT_CAP // 2
+            body = (body[:half] + "\n\n[... middle of the paper omitted "
+                    f"({len(body) - FULLTEXT_CAP:,} characters) ...]\n\n"
+                    + body[-half:])
+        parts += ["", "### The paper itself", "",
+                  "This is the full text, extracted from "
+                  f"{row.get('fulltext_source', 'the source')}. **Quote its "
+                  "figures exactly as it gives them.**", "", body]
     if row.get("adaptation"):
         parts += ["", "### How stage 1 said it must be adapted to be testable here",
                   "", str(row["adaptation"])]
@@ -141,7 +201,100 @@ def context(paper: dict, row: dict) -> str:
 # repair costs nothing but a call. It is bounded anyway: a model that cannot say
 # it in three attempts is telling us the claim cannot be stated without the
 # vocabulary, and that is worth hearing rather than working around.
-MAX_LINT_REPAIRS = 2
+#
+# **3, not 2, since stage 0b.** Handing the model the whole paper makes the leak
+# MORE likely, not less: a falsification study's body is 44,000 characters
+# saturated with "out-of-sample", "validation" and "walk-forward", and the
+# distiller has to write about what the paper found without reusing the words it
+# found it in. Two repairs were not enough for `2605.04004v3`; the note now also
+# shows the offending LINE, which is what makes the fix locatable.
+MAX_LINT_REPAIRS = 3
+
+
+def _too_long(md: str) -> str:
+    """The length finding, or "". Repairable like the others: a file 29 words over
+    is a file the model can shorten, and refusing it outright wastes the whole
+    distillation. Handing the paper body to the model made this the binding check
+    -- it writes more when it has more to write about."""
+    n = len(md.split())
+    if n > MAX_WORDS:
+        return (f"{n} words, {n - MAX_WORDS} over the ceiling of {MAX_WORDS}")
+    if md.strip() and n < MIN_WORDS:
+        return (f"{n} words, {MIN_WORDS - n} under the floor of {MIN_WORDS}")
+    return ""
+
+
+def _repair_note(attempt: int, leaks: list[str], loose: list[str],
+                 length: str = "", uncited: str = "") -> str:
+    """What the model is told when its file is refused.
+
+    **Every finding, not the most important one.** The first version reported one
+    category at a time, on the reasoning that there is no point grounding a file
+    that will be refused for leaking anyway. That was wrong: the model then fixed
+    one constraint and broke another, and three rounds on `2605.04004v3` went
+    leak, then length, then missing citation without ever converging. Four checks
+    reported one at a time cannot be satisfied in three attempts; four reported
+    together can be satisfied in one.
+
+    All four are properties of the text the model just wrote, so none of them
+    leaks anything about our market data -- the same argument that makes the
+    agent's static repair safe.
+    """
+    parts = [f"\n\n### Your previous answer was refused, attempt "
+             f"{attempt + 1} of {MAX_LINT_REPAIRS + 1}\n\n"
+             "Fix **all** of the following in one rewrite. Fixing one and "
+             "breaking another is how this loop fails.\n"]
+
+    if leaks:
+        words = sorted({f.split("'")[1] for f in leaks if "'" in f})
+        detail = "\n".join("    " + x for x in leaks[:12])
+        parts.append(f"""#### 1. Forbidden terms ({len(leaks)}): {', '.join(repr(w) for w in words)}
+
+{detail}
+
+Every one reaches the strategy agent and tells it how its work will be judged,
+which is the one thing it may not know.
+
+**The paper you were given is full of these words.** That is expected -- it is a
+study about how to evaluate rules. You are not writing about how to evaluate
+rules. You are writing about what is true of the market, and these words belong
+to the part you leave out.""")
+
+    if loose:
+        detail = "\n".join("    " + x for x in loose[:12])
+        parts.append(f"""#### 2. Quantities your sources do not contain ({len(loose)})
+
+{detail}
+
+**Every number you write must be one you can point at** -- in the paper's own
+text, or in what this prompt told you about our data. A cited number that is not
+in the source is worse than no number, because the citation makes the error look
+sourced.
+
+Quote the source's figure exactly as the source gives it, or drop the sentence.
+Do not round, do not approximate, and do not infer a range from a single value.
+If the paper says "0.07-1.50", write 0.07-1.50, not "about 0.5 to 1.5". **A range
+is checked as a pair**, so half-right is wrong.""")
+
+    if length:
+        parts.append(f"""#### 3. Length: {length}
+
+Aim for 450 to 700 words. This file is pasted into the prompt of every trial in
+the campaign, so its length is paid for hundreds of times.
+
+Cut the paper's framing, not the claim. What must stay: what is true of the
+market, what the strategy agent may choose, what it may not, and what the answer
+would teach either way. What can go: restating the paper's motivation, listing
+its related work, and any sentence that explains rather than specifies.""")
+
+    if uncited:
+        parts.append(f"""#### 4. The paper id `{uncited}` does not appear
+
+Without it a result cannot be traced back to the paper that proposed it, and the
+whole corpus would have to be frozen instead of referenced. Put it in the opening
+sentences, exactly as `{uncited}`.""")
+
+    return "\n\n".join(parts)
 
 
 def distil_one(client, paper: dict, row: dict) -> dict:
@@ -149,24 +302,15 @@ def distil_one(client, paper: dict, row: dict) -> dict:
     user = context(paper, row)
     out = client.ask(PROMPT.read_text(), user)
     for attempt in range(MAX_LINT_REPAIRS):
-        leaks = _lint_findings(out.get("markdown") or "")
-        if not leaks:
+        md_so_far = out.get("markdown") or ""
+        leaks = _lint_findings(md_so_far)
+        loose = _grounding_findings(md_so_far, row["id"]) if md_so_far else []
+        length = _too_long(md_so_far)
+        uncited = "" if row["id"] in md_so_far else row["id"]
+        if not (leaks or loose or length or uncited):
             break
-        words = sorted({f.split("'")[1] for f in leaks if "'" in f})
-        out = client.ask(PROMPT.read_text(), user + f"""
-
-### Your previous answer was refused, attempt {attempt + 1} of {MAX_LINT_REPAIRS + 1}
-
-The file you returned used {len(leaks)} forbidden term(s): {', '.join(repr(w) for w in words)}.
-
-Every one of these reaches the strategy agent and tells it how its work will be
-judged, which is the one thing it may not know. Rewrite the file WITHOUT them.
-
-Do not weaken the claim to avoid the words. State what the paper found about the
-market -- which rules earned more than they cost -- and leave out every word
-about how it decided that. If a sentence cannot be written without one of these
-terms, the sentence is about our procedure rather than about the market, and it
-does not belong in the file at all.""")
+        out = client.ask(PROMPT.read_text(), user + _repair_note(
+            attempt, leaks, loose, length, uncited))
 
     slug = str(out.get("slug") or "").strip().lower()
     if not SLUG.match(slug):
@@ -193,6 +337,18 @@ does not belong in the file at all.""")
             + f"\n  ({len(leaks)} finding(s)). Every byte of this file reaches the "
               "agent. Not written.")
 
+    # **And the grounding check.** A pre-registered question whose premise is a
+    # number the paper does not contain is worse than no question: the citation
+    # makes the error look sourced. The first distillation of 2605.04004v3 wrote
+    # "0.5-1.5" where the paper says "0.07-1.50".
+    loose = _grounding_findings(md, row["id"])
+    if loose:
+        raise ValueError(
+            "the distilled hypothesis states quantities its sources do not:\n    "
+            + "\n    ".join(loose[:12])
+            + f"\n  ({len(loose)} finding(s)). A cited number that is not in the "
+              "source makes an error look sourced. Not written.")
+
     # The chain back to the source. Without it a result cannot be traced to the
     # paper that proposed it, and the corpus would have to be frozen instead.
     if row["id"] not in md:
@@ -213,6 +369,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--paper", required=True, help="a registry id, e.g. 2605.04004v3")
+    ap.add_argument("--model", default=MODEL,
+                    help=f"which model writes the question. Default {MODEL}. "
+                         "Recorded on the registry row -- a machine-written "
+                         "pre-registration has to say which machine "
+                         "(Amendment 8). Measured: claude-haiku-4-5 cannot keep "
+                         "a falsification paper's own vocabulary out of the file "
+                         "once it is given the body.")
     ap.add_argument("--dry-run", action="store_true",
                     help="print the file and the checks; write nothing")
     a = ap.parse_args()
@@ -241,8 +404,8 @@ def main() -> int:
     f = RAW / f"{a.paper}.json"
     paper = json.loads(f.read_text()) if f.exists() else row
 
-    client, served = _client()
-    print(f"distilling {a.paper}  model {MODEL} (served {served})")
+    client, served = _client(a.model)
+    print(f"distilling {a.paper}  model {a.model} (served {served})")
     got = distil_one(client, paper, row)
 
     dest = HYPOTHESES / f"{got['slug']}.md"
@@ -273,7 +436,7 @@ def main() -> int:
                         "adapted_claim": got["adapted_claim"],
                         "cannot_test": got["cannot_test"],
                         "sets_aside": got["sets_aside"],
-                        "model": MODEL, "model_served": served}
+                        "model": a.model, "model_served": served}
     REGISTRY.write_text(json.dumps(reg, indent=2, sort_keys=True) + "\n")
     print(f"\n  wrote {dest.relative_to(ROOT)}")
     print(f"  wrote {REGISTRY.relative_to(ROOT)}  ({a.paper}.hypothesis_path)")

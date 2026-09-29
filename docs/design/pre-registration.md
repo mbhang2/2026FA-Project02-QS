@@ -1321,10 +1321,17 @@ informed is the failure this document exists to prevent.
 
 ## Amendment 8 — 2026-09-27 — a hypothesis a machine wrote
 
-**Status: DRAFTED, NOT YET IN FORCE.** `scripts/distil_paper.py` exists and can
-write one; no campaign has been registered on a machine-written question and none
-may be until Michael signs this off. It is written before the first such campaign
-rather than after, which is the only ordering that makes it a pre-registration.
+**Status: IN FORCE from 2026-09-29, signed off by Michael.** Written and
+committed **before** the first campaign on a machine-written question, which is
+the only ordering that makes it a pre-registration. The first such hypothesis is
+distilled from `2605.04004v3` on the same day; this section predates it.
+
+**What signing this off permits, stated plainly.** A campaign may be registered
+on a hypothesis file a model wrote, provided the file was linted, grounded,
+read by a human, and committed before the campaign ran. It does not permit a
+model to choose *which* question is worth asking, to register a campaign, or to
+edit a question after its campaign starts. Those remain human acts and the
+digest check enforces the last one.
 
 ### What changes, and what does not
 

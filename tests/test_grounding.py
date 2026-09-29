@@ -1,0 +1,253 @@
+"""Is every quantity in a distilled claim actually in its sources?
+
+No network, no model. The check is deterministic by design, which is the whole
+argument for it: `docs/design/architecture.md` says make the bug unrepresentable
+rather than ask a model whether it happened, and asking a model whether another
+model hallucinated needs a third check.
+
+**The defect it was built from**, in the first real distillation of
+`2605.04004v3` on 2026-09-28:
+
+| | |
+|---|---|
+| the paper | "gross return before friction is 0.07-1.50" |
+| the hypothesis | "gross returns in the 0.5-1.5 point range" |
+
+A lower bound wrong by a factor of seven, in what would have become a
+pre-registered question, and invisible to the hypothesis lint because nothing in
+it is gate vocabulary. The idea is Bryan Rodriguez's `aider-validate`; this is
+its deterministic core.
+"""
+from __future__ import annotations
+
+import importlib.util
+import json
+import pathlib
+
+import pytest
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+_spec = importlib.util.spec_from_file_location(
+    "grounding", REPO_ROOT / "scripts" / "grounding.py")
+g = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(g)
+
+PAPER = "2605.04004v3"
+
+
+# --------------------------------------------------------------------------- #
+# the defect, on the real paper
+# --------------------------------------------------------------------------- #
+def test_the_fabricated_range_is_caught_against_the_whole_paper():
+    """The exact sentence the model wrote, against the whole paper.
+
+    **And the reason ranges are checked as pairs.** Presence-grounding weakens
+    as the source grows: in 44,000 characters the bare number `0.5` appears
+    somewhere, so it reads as grounded. The defect was a misquoted RANGE, and a
+    range is a pair -- `0.07-1.50` is in the paper, `0.5-1.5` is not, wherever
+    its halves occur.
+    """
+    src = g.sources_for(PAPER)
+    assert any(len(s) > 40_000 for s in src), "the full text must be a source"
+
+    bad = ("Most simple momentum rules generate gross returns in the 0.5-1.5 "
+           "point range, which is insufficient.")
+    assert g.ungrounded_ranges(bad, *src) == ["0.5-1.5"]
+    assert g.findings(bad, *src), "the file must be refused"
+
+    good = ("Eleven families fail because gross return before friction is "
+            "0.07-1.50 points.")
+    assert g.findings(good, *src) == []
+
+
+def test_a_range_of_small_integers_is_prose_not_a_claim():
+    assert g.ungrounded_ranges("hold for 3 to 5 bars", "") == []
+    assert g.ungrounded_ranges("returns of 0.2 to 0.4 points", "") == ["0.2-0.4"]
+
+
+def test_a_descending_pair_is_not_a_range():
+    """`5-3` is a citation, a date or a subtraction."""
+    assert g.ungrounded_ranges("see 5-3 and 2024-2021", "") == []
+
+
+def test_the_papers_own_figures_are_all_grounded():
+    """A faithful distillation must not trip the check. Every figure the
+    abstract states has to read as grounded, or the check is unusable."""
+    src = g.sources_for(PAPER)
+    abstract = json.loads(
+        (REPO_ROOT / "data" / "papers" / "raw" / f"{PAPER}.json").read_text()
+    )["abstract"]
+    assert g.findings(abstract, *src) == []
+
+
+def test_the_full_text_is_what_makes_a_body_figure_groundable():
+    """Grounding against the abstract alone would flag every figure the paper
+    states in its body -- a check that punishes the faithful distillation and
+    passes the vague one. Stage 0b is what fixes that."""
+    full = REPO_ROOT / "data" / "papers" / "text" / f"{PAPER}.txt"
+    assert full.exists(), "run scripts/fetch_fulltext.py --survivors"
+    body = full.read_text()
+    assert len(body) > 20 * len(json.loads(
+        (REPO_ROOT / "data" / "papers" / "raw" / f"{PAPER}.json").read_text()
+    )["abstract"])
+    assert body in g.sources_for(PAPER)
+
+
+# --------------------------------------------------------------------------- #
+# numeric, not textual
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("claim,source", [
+    ("the floor is 2 points", "a 2.0-point friction floor"),
+    ("the floor is 2.0 points", "a 2 point friction floor"),
+    ("it returned 1.5 points", "it returned 1.50 points"),
+    ("11.82 points", "+11.82 pts"),
+    ("1,250 sessions", "1250 sessions"),
+])
+def test_formatting_never_causes_a_false_alarm(claim, source):
+    assert g.ungrounded_numbers(claim, source) == [], (claim, source)
+
+
+def test_a_different_value_is_not_grounded_however_close():
+    assert g.ungrounded_numbers("the floor is 2.1 points", "a 2.0-point floor")
+    assert g.ungrounded_numbers("it returned 11.83 points", "+11.82 pts")
+
+
+# --------------------------------------------------------------------------- #
+# what is deliberately not checked
+# --------------------------------------------------------------------------- #
+def test_an_arxiv_id_is_a_citation_not_a_quantity():
+    """Stage 3 REQUIRES the file to cite the paper id. Reading `2605.04004v3` as
+    the number 2605 would punish the one thing it insists on."""
+    assert g.ungrounded_numbers("Adapted from 2605.04004v3.", "nothing here") == []
+    assert g.ungrounded_numbers("See 2609.07989v1 and 2605.11423v3.", "") == []
+
+
+def test_a_year_needs_no_source():
+    """A hypothesis may date itself; the date is not the paper's to support."""
+    assert g.ungrounded_numbers("Written 2026. Data from 2021 to 2025.", "") == []
+
+
+def test_small_integers_are_structural_rather_than_claims():
+    """Requiring a source for every `1` and `2` in English prose is noise."""
+    assert g.ungrounded_numbers(
+        "One position at a time, with 2 exits and 3 signals.", "") == []
+    assert g.CLAIM_MIN == 10.0
+    assert g.ungrounded_numbers("947 trading days", "") == ["947"]
+
+
+def test_a_decimal_is_always_a_claim_however_small():
+    assert g.ungrounded_numbers("a threshold of 0.07", "") == ["0.07"]
+
+
+# --------------------------------------------------------------------------- #
+# quoted spans
+# --------------------------------------------------------------------------- #
+def test_a_fabricated_quote_is_caught_and_a_real_one_is_not():
+    src = "None of the fourteen families passed all five criteria."
+    assert g.ungrounded_quotes('The paper says "all fourteen families passed".', src)
+    assert g.ungrounded_quotes(
+        'The paper says "None of the fourteen families passed".', src) == []
+
+
+def test_quote_matching_ignores_whitespace_and_curly_quotes():
+    src = "gross   return\nbefore friction is low"
+    assert g.ungrounded_quotes('It notes “gross return before friction”.', src) == []
+
+
+def test_a_short_span_is_not_treated_as_a_quote():
+    """Twelve characters is the floor; below it, quoted words are emphasis."""
+    assert g.ungrounded_quotes('the so-called "edge" here', "nothing") == []
+
+
+# --------------------------------------------------------------------------- #
+# the sources
+# --------------------------------------------------------------------------- #
+def test_the_prompt_is_a_source_because_it_supplied_our_own_numbers():
+    """The prompt tells the model what our data is. A number it handed over is
+    one the model was entitled to write down, and this rule replaces a
+    hand-maintained allowlist of "our" constants, which would rot."""
+    src = g.sources_for(PAPER)
+    prompt = (REPO_ROOT / "config" / "prompts" / "paper-distil.md").read_text()
+    assert any(prompt == s for s in src)
+    assert "543" in prompt, "the prompt states our session count"
+    assert g.ungrounded_numbers("We have 543 sessions.", *src) == []
+
+
+def test_an_unknown_paper_raises_rather_than_checking_nothing():
+    with pytest.raises(KeyError):
+        g.sources_for("0000.00000v9")
+
+
+def test_findings_reports_both_kinds():
+    out = g.findings('It claims 0.5 and says "a fabricated sentence here".', "empty")
+    assert any("0.5" in f for f in out)
+    assert any("quoted" in f for f in out)
+    assert g.findings("nothing numeric", "empty") == []
+
+
+# --------------------------------------------------------------------------- #
+# the integration
+# --------------------------------------------------------------------------- #
+def test_stage_3_refuses_a_file_whose_numbers_are_not_in_the_paper():
+    import importlib.util as iu
+    sp = iu.spec_from_file_location("dp", REPO_ROOT / "scripts" / "distil_paper.py")
+    dp = iu.module_from_spec(sp); sp.loader.exec_module(dp)
+
+    from tests.test_distil_paper import BODY, ROW, PAPER as PAPER_META, _ok
+
+    class _Fabricates:
+        def __init__(self): self.calls = 0
+        def ask(self, system, user):
+            self.calls += 1
+            return _ok(markdown=BODY.replace(
+                "## The claim",
+                "## The claim\n\nGross returns sit in the 0.5-1.5 point range, "
+                "and the floor is 7.77 points.\n"))
+
+    c = _Fabricates()
+    with pytest.raises(ValueError, match="quantities its sources do not"):
+        dp.distil_one(c, PAPER_META, ROW)
+    assert c.calls == dp.MAX_LINT_REPAIRS + 1, "it gets repairs, then it is refused"
+
+
+def test_the_repair_note_tells_it_not_to_round():
+    import importlib.util as iu
+    sp = iu.spec_from_file_location("dp", REPO_ROOT / "scripts" / "distil_paper.py")
+    dp = iu.module_from_spec(sp); sp.loader.exec_module(dp)
+    note = dp._repair_note(0, [], ["'0.5' appears in no source"])
+    assert "0.5" in note
+    assert "Do not round" in note
+    assert "0.07-1.50" in note, "the note shows the real example, not an abstraction"
+    assert "a pair" in note, "a range is checked as a pair, so half-right is wrong"
+    # **Both are reported together.** Prioritising one made the loop oscillate:
+    # the model fixed the leak and broke the length, then fixed that and dropped
+    # the citation, never converging in three attempts.
+    both = dp._repair_note(0, ["line 3: 'validation' -- names the validation split"],
+                           ["'0.5' appears in no source"])
+    assert "Forbidden terms" in both and "0.5" in both
+
+
+def test_sentence_punctuation_inside_the_closing_quote_is_not_a_fabrication():
+    """**The first real distillation was refused for quoting its source
+    correctly.** American convention puts the period inside the quote:
+    `"... Falsification Study."` The paper's title has no trailing period, so the
+    span did not match and the file was rejected. Punctuation is not a claim."""
+    title = ("Structural Limits of OHLCV-Based Intraday Momentum Signals in MNQ "
+             "Futures: A Systematic Falsification Study")
+    assert g.ungrounded_quotes(f'The paper "{title}." tested fourteen families.',
+                               title) == []
+    assert g.ungrounded_quotes(f'It is called "{title}"; see it.', title) == []
+    # the real title, against the real sources
+    assert g.ungrounded_quotes(f'From "{title}."', *g.sources_for(PAPER)) == []
+    # and a genuinely different span is still caught
+    assert g.ungrounded_quotes('The paper "A Study Of Something Else Entirely".',
+                               title)
+
+
+def test_an_ungrounded_span_is_reported_in_full_not_truncated():
+    """A report that hides the span cannot be acted on. The title failure above
+    matched when tested by hand, and a 90-character cut hid the trailing period
+    that differed -- the same diagnostics gap as the proposer's finish_reason."""
+    long_span = "x" * 200
+    out = g.ungrounded_quotes(f'It says "{long_span}".', "nothing")
+    assert out and out[0] == long_span and "..." not in out[0]

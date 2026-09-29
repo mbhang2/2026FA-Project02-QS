@@ -1,0 +1,456 @@
+{
+  "best_candidate": {
+    "accepted": true,
+    "campaign_index": 7,
+    "diagnostics": {
+      "avg_holding_period_ns": 2566015372.089529,
+      "best_session_share": 0.03992418684285436,
+      "by_hour_utc": {
+        "00": -61.540000000137226,
+        "01": -73.95000000014504,
+        "02": -38.760000000129864,
+        "03": -59.22000000013678,
+        "04": -56.2800000001293,
+        "05": -89.06000000013356,
+        "06": -36.95000000015414,
+        "07": -103.71000000015302,
+        "08": -83.18000000015188,
+        "09": -83.51000000012256,
+        "10": -67.8900000001403,
+        "11": -83.28000000014534,
+        "12": -99.47000000015184,
+        "13": -37.23000000016893,
+        "14": -79.80000000015231,
+        "15": -42.47000000014271,
+        "16": -74.77000000011769,
+        "17": -62.90000000012889,
+        "18": -59.040000000115946,
+        "19": -47.46000000013691,
+        "20": -61.6200000000854,
+        "21": -8.440000000016711,
+        "23": -48.63000000008563
+      },
+      "by_month": {
+        "2024-07": -68.05000000013318,
+        "2024-08": -110.42000000016687,
+        "2024-09": -62.54000000016773,
+        "2024-10": -67.98000000017443,
+        "2024-11": -121.16000000014108,
+        "2024-12": -120.06000000013591,
+        "2025-01": -108.52000000014435,
+        "2025-02": -47.1600000001581,
+        "2025-03": -82.30000000018146,
+        "2025-04": -163.88000000019443,
+        "2025-05": -74.3700000001848,
+        "2025-06": -23.48000000017045,
+        "2025-07": -46.410000000179146,
+        "2025-08": -60.15000000015794,
+        "2025-09": -82.96000000016492,
+        "2025-10": -82.46000000018532,
+        "2025-11": -84.76000000016653,
+        "2025-12": -52.50000000017821
+      },
+      "by_weekday": {
+        "Fri": -309.440000000519,
+        "Mon": -295.38000000058764,
+        "Sun": -0.8700000000247308,
+        "Thu": -279.38000000056087,
+        "Tue": -244.87000000061536,
+        "Wed": -329.22000000056164
+      },
+      "commission": 217.36,
+      "fill_model_spread": null,
+      "gross_pnl": -1241.8000000029751,
+      "max_drawdown": -1459.160000002974,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.0015,
+        "exposure_share": 1.0,
+        "return_dispersion": 0.0166,
+        "trades_per_session": 0.6506
+      },
+      "profit_concentration_top5pct": 0.5558204940096044,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 384,
+      "trade_count": 10868,
+      "turnover_contracts_per_session": 56.604166666666664,
+      "win_rate": 0.3762421788737578
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 308,
+      "kurtosis": 4.631825127207897,
+      "metric": "sortino_per_session",
+      "n_sessions": 384,
+      "net_pnl": -1459.1600000029753,
+      "primary": -0.6543885017545402,
+      "reject_reason": "",
+      "rejected": false,
+      "sharpe": -0.8315212914975252,
+      "significance": -12.823343382743984,
+      "skew": -0.9380570073047451,
+      "sortino": -0.6543885017545402,
+      "trade_count": 10868
+    },
+    "source": "\"\"\"\nIntraday momentum strategy with ultra-high conviction entry filtering.\n\nAnalysis of prior trials:\n- Trial #0: -0.7386, 39,797 trades (baseline)\n- Trial #5: -0.6642, 24,270 trades (best, 10% improvement)\n- Trial #6: -0.7694, 15,966 trades (worse - too few trades, over-filtered)\n\nKey insight: Trial #5 achieved the best score with moderate trade count.\nTrial #6 over-filtered and made things worse. The sweet spot appears to be\naround 20-25k trades per 384 sessions (~52-65 trades/session).\n\nThe commission cost is brutal: 0.2 points round-trip per trade means we need\npositive expectancy of >0.2 points per trade just to break even. At -0.66 score\non 24k trades, we're paying ~$1,900 in commission per session.\n\nNew hypothesis - maximize signal quality without over-filtering:\n1. Keep the percentile-based range filter but use 35% (slightly lower threshold)\n   to capture more high-conviction moves without noise\n2. Require BOTH bars to show strong directional closes (>65% of range)\n3. Add a volatility regime filter: only trade when recent volatility is\n   elevated (top 30% of session ranges) - avoids low-vol choppy markets\n4. Use asymmetric brackets: tighter stop (0.30) to cut losses quickly,\n   modest target (0.80) to capture the continuation\n5. Hold for 2 bars maximum to catch the momentum but exit before reversal\n6. Add a \"strength confirmation\": current bar's momentum must exceed prior bar's\n   momentum (close - open difference)\n\nThe refined momentum hypothesis: a bar that:\n- Has range in top 35% of recent session ranges (strong volatility)\n- Session is in elevated volatility regime (top 30% of ranges)\n- Current bar closes >65% decisively in one direction\n- Prior bar also closed >55% decisively in same direction\n- Current bar's close-to-open move exceeds prior bar's move (momentum increasing)\n- Indicates strong continuation within 2 bars\n\nThis should maintain ~20-25k trades while improving signal quality.\n\"\"\"\n\nfrom __future__ import annotations\nfrom collections import deque\n\n\nclass Strategy:\n    def __init__(\n        self,\n        *,\n        interval: str = \"5m\",\n        lookback: int = 12,\n        range_percentile: float = 0.35,\n        volatility_percentile: float = 0.30,\n        close_strength: float = 0.65,\n        prior_close_strength: float = 0.55,\n        hold_bars: int = 2,\n        stop_offset: float = 0.30,\n        target_offset: float = 0.80,\n        size: int = 1,\n    ) -> None:\n        self.interval = interval\n        self.lookback = lookback\n        self.range_percentile = range_percentile\n        self.volatility_percentile = volatility_percentile\n        self.close_strength = close_strength\n        self.prior_close_strength = prior_close_strength\n        self.hold_bars = hold_bars\n        self.stop_offset = stop_offset\n        self.target_offset = target_offset\n        self.size = size\n\n        # State tracking across callbacks\n        self._session: int | None = None\n        self._bars_held: int = 0\n        self._ranges: deque[float] = deque(maxlen=lookback + 1)\n\n    def setup(self, ctx) -> None:\n        ctx.subscribe(self.interval)\n\n    def on_bars(self, ctx) -> None:\n        if not ctx.actionable:\n            return\n\n        # Reset on session change\n        if ctx.session != self._session:\n            self._session = ctx.session\n            self._bars_held = 0\n            self._ranges.clear()\n\n        history = ctx.history(self.interval)\n        if len(history) < 2:\n            return\n\n        current_bar = history[-1]\n        current_range = current_bar.high - current_bar.low\n        self._ranges.append(current_range)\n\n        # Manage existing position\n        if ctx.position:\n            self._bars_held += 1\n            if self._bars_held >= self.hold_bars:\n                ctx.close()\n                self._bars_held = 0\n            return\n\n        # Not in position; check for entry\n        if ctx.working_order_ids:\n            return\n\n        # Need sufficient history\n        if len(self._ranges) < self.lookback or len(history) < 2:\n            return\n\n        # Compute range thresholds\n        ranges_list = list(self._ranges)\n        sorted_ranges = sorted(ranges_list)\n        \n        # Percentile for exceptional moves (top 35%)\n        range_percentile_idx = max(0, int(len(sorted_ranges) * self.range_percentile))\n        threshold_range = sorted_ranges[range_percentile_idx]\n        \n        # Percentile for volatility regime (top 30%)\n        vol_percentile_idx = max(0, int(len(sorted_ranges) * self.volatility_percentile))\n        vol_threshold = sorted_ranges[vol_percentile_idx]\n\n        # Skip if session volatility is not elevated\n        recent_vol = sorted_ranges[-1] if len(sorted_ranges) > 0 else 0\n        if recent_vol < vol_threshold:\n            return\n\n        # Skip if current bar's range is not exceptional\n        if current_range < threshold_range:\n            return\n\n        # Check if bar closes decisively in one direction\n        if current_range > 0:\n            close_position_ratio = (current_bar.close - current_bar.low) / current_range\n        else:\n            return\n\n        prev_bar = history[-2]\n        prev_range = prev_bar.high - prev_bar.low\n        \n        # Calculate momentum: close-to-open change for both bars\n        current_momentum = current_bar.close - current_bar.open\n        prior_momentum = prev_bar.close - prev_bar.open\n\n        # Strong upside close: close is in upper 65% of the range\n        if close_position_ratio > self.close_strength:\n            # Confirm with momentum\n            if prev_range > 0:\n                prev_close_ratio = (prev_bar.close - prev_bar.low) / prev_range\n                # Require prior bar to also be in upper portion (moving up)\n                # and current momentum exceeds prior momentum (accelerating)\n                if (prev_close_ratio > self.prior_close_strength and \n                    prev_bar.close > prev_bar.open and\n                    current_momentum > prior_momentum and\n                    current_momentum > 0):\n                    order_id = ctx.buy(\n                        size=self.size,\n                        stop_offset=self.stop_offset,\n                        target_offset=self.target_offset,\n                        tag=\"momentum-long\",\n                    )\n                    if order_id is not None:\n                        self._bars_held = 0\n\n        # Strong downside close: close is in lower 35% of the range\n        elif close_position_ratio < (1.0 - self.close_strength):\n            # Confirm with momentum\n            if prev_range > 0:\n                prev_close_ratio = (prev_bar.close - prev_bar.low) / prev_range\n                # Require prior bar to also be in lower portion (moving down)\n                # and current momentum exceeds prior momentum (accelerating down)\n                if (prev_close_ratio < (1.0 - self.prior_close_strength) and \n                    prev_bar.close < prev_bar.open and\n                    current_momentum < prior_momentum and\n                    current_momentum < 0):\n                    order_id = ctx.sell(\n                        size=self.size,\n                        stop_offset=self.stop_offset,\n                        target_offset=self.target_offset,\n                        tag=\"momentum-short\",\n                    )\n                    if order_id is not None:\n                        self._bars_held = 0\n\n    def on_fill(self, ctx) -> None:\n        # Reset hold counter on fill\n        self._bars_held = 0\n\n    def on_lifecycle(self, ctx) -> None:\n        # Handle order lifecycle events\n        if ctx.event.kind in (\"order_rejected\", \"day_expired\", \"gtd_expired\", \"cancel_confirmed\"):\n            self._bars_held = 0\n",
+    "source_sha256": "519059bc409cf558a60197a6a030c7a56a2d0a3f343340023553972682fcd009",
+    "strategy_digest": "519059bc409cf558"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "1059d5c5a93935ca1364eadea2e39615b35199430626c548974783ca0d376ca7",
+        "path": "config/hypotheses/intraday-momentum.md"
+      },
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "model_served_at_registration": "claude-haiku-4-5",
+      "null_source": "round_turn_mc",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "research-intraday-01",
+    "budget": 10,
+    "campaign_id": "research-intraday-01",
+    "dataset": "nq-trades",
+    "profile": "nq-train",
+    "q": 0.05,
+    "record_digest": "efeaf697ad50ee37fa4b5de8cc51bcc1633e9f9b5eeb9daa4d7dc2d6b81816ee",
+    "record_digest_now": "efeaf697ad50ee37fa4b5de8cc51bcc1633e9f9b5eeb9daa4d7dc2d6b81816ee",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget of 10; no early stop on any observed result, no extension if the last trial looks promising",
+    "written_at": "2026-09-23T00:49:16+00:00"
+  },
+  "deflation_view": {
+    "best_score": -0.6543885017545402,
+    "clears_selection_bar": false,
+    "expected_max_under_null": 0.10790380637147894,
+    "margin": -0.7622923081260191,
+    "n_sessions": 384,
+    "n_trials": 10,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.5,
+      "best_label": "None:f4ddb643",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.005,
+          "index": 0,
+          "label": "None:f4ddb643",
+          "rank": 1
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "index": 1,
+          "label": "None:588f9473",
+          "rank": 2
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.00625,
+          "index": 3,
+          "label": "None:8fed4c99",
+          "rank": 3
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "index": 4,
+          "label": "None:81325da9",
+          "rank": 4
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "index": 5,
+          "label": "None:740ab672",
+          "rank": 5
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.01,
+          "index": 6,
+          "label": "None:c7b0acb0",
+          "rank": 6
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034999999999999996,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0125,
+          "index": 7,
+          "label": "None:519059bc",
+          "rank": 7
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "index": 8,
+          "label": "None:cb2fcc25",
+          "rank": 8
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045000000000000005,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.025,
+          "index": 9,
+          "label": "None:5c323b81",
+          "rank": 9
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 2,
+          "label": "None:e0ee9d3f",
+          "rank": 10
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 10,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "e39d468ad04f900462e04e2151037af79915b762911e430f07fdbb0dd227d7f5",
+  "gate": {
+    "accepted_any": true,
+    "at_floor": true,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 9,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": -0.7611544480502701,
+    "null_max_mean": -0.7841014949622384,
+    "null_max_quantiles": {
+      "0.01": -0.7497863503714801,
+      "0.05": -0.7611544480502701,
+      "0.1": -0.7666769227048185,
+      "0.2": -0.7734149635286645,
+      "0.5": -0.7849329299590369
+    },
+    "observed_best": -0.6543885017545402,
+    "p": 9.999000099990002e-05,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "ACCEPT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/research-intraday-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "074f6b05e28d3ece7c6e05771ebc88047fa67f3179c1dc2e2f2cc56b0e9fca0b",
+        "outcome": "completed",
+        "score": -0.7386289981396662,
+        "strategy_digest": "f4ddb6437a0df2ba"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "8240b4cb1452013cdcdd26e582498c792fa2891bb123b75540c78b444be49a3f",
+        "outcome": "completed",
+        "score": -0.7727042493054054,
+        "strategy_digest": "588f947303d762c6"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "5260a07b8287df45d3e0fe7ea31067949f016126bf1abf1e10f13ca687e2092c",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "e0ee9d3f9cc6f187"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "16ae93957ecca5ec4269a3de60b6b87d98f546583d17f44b4e0788bd737281dd",
+        "outcome": "completed",
+        "score": -0.8021757484021865,
+        "strategy_digest": "8fed4c99d0e74af2"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "53c896731b84adec4c51fcb4b8683b4d88c3e53f3e642eafb1bb4b1546e41535",
+        "outcome": "completed",
+        "score": -0.7522915988565705,
+        "strategy_digest": "81325da96236931f"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "c7b64d331bc9a9513808a296425cb3c154c84935ad6ee841d0a622ad76861c0b",
+        "outcome": "completed",
+        "score": -0.6642108828423666,
+        "strategy_digest": "740ab672b2dacf86"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "b367111664a654572b28a680f39f11d891e1fa12c1ee512ad02803346a8576bc",
+        "outcome": "completed",
+        "score": -0.7693504674949527,
+        "strategy_digest": "c7b0acb0b4a6faf1"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "ba336310d6bb23dc664db57dffee0602239b7e4384758c0daf8365b3b6083d76",
+        "outcome": "completed",
+        "score": -0.6543885017545402,
+        "strategy_digest": "519059bc409cf558"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "997402113ab31a218c85d56dcd886e9295e4d34ef1d14f0467041475f6dd9c8b",
+        "outcome": "completed",
+        "score": -0.7437606945545658,
+        "strategy_digest": "cb2fcc25ccdebbe3"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "2c90e0f36da6137387636b006e4c958bbd9f55fadb4e48eb25a7702c0feade7e",
+        "outcome": "completed",
+        "score": -0.6815808861873296,
+        "strategy_digest": "5c323b81f5cc0c70"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 9,
+      "crashed": 1
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 10,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": -0.7239193619848844,
+    "mean": -0.8457350763304531,
+    "min": -0.9304120033872063,
+    "n_draws": 90000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.038283339951364154
+  },
+  "provenance": {
+    "artifact_fingerprint": "d7abf4fce20d213aed38c34e11c811172049bc1c42da730161002417fb0388f9",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-momentum.md": "1059d5c5a93935ca1364eadea2e39615b35199430626c548974783ca0d376ca7",
+      "config/prompts/research-agent.md": "df104f1023841bfb163fed88c2f6911810f43b520a46ee870a03264aa8390da1",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/research/intraday-momentum.md": "01a46a5f5f29ff9392471cfefdcc8c1ac23dc96aa4e1916a582a9bae4c96abe6",
+      "config/retrievals/intraday-momentum.json": "c6039bbb395f68aa8426aa33b5f1cb7797b6bc7557b8e4e6affd125946d929a0",
+      "config/run.yaml": "c1707af24af2d02616ae761fdca09f5c83a3cc50005ccef5481d8ee6ca98c133",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "f4ddb6437a0df2ba56097ab9ee58e36eee4e4a4db7dda0eb717dfd0cc400f582"
+    },
+    "code_fingerprint": "a97eaecd5389daf4824c30a4bcaed023b05a7d019144ef9591c0d77ea16fd7e5",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "d9ad53aa9190db67d02883dd3524403d0040d8ff8d2ac29ddefbc71e316426e2",
+    "git_sha": "b54be75dedb2a7e28d8c5b91e8f97c969a6e0f1a",
+    "isolation": {
+      "address_space": {
+        "active": true,
+        "mechanism": "RLIMIT_AS"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "",
+      "filesystem": {
+        "active": true,
+        "mechanism": "read-only bind mount, unprivileged user namespace (bubblewrap)"
+      },
+      "level": "isolated",
+      "network": {
+        "active": true,
+        "mechanism": "empty network namespace (bubblewrap --unshare-net)"
+      },
+      "platform": "Linux",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.12.13",
+    "scoring_fingerprint": "3b0223eab9efd844b564dd4d59f8347bc77c5b197e7cd5a3e605a3718a683c5f"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-09-23T03:03:48+00:00"
+}

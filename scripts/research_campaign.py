@@ -59,6 +59,9 @@ sys.path.insert(0, str(ROOT))
 
 import yaml  # noqa: E402
 
+from src.core.loop.research import default_query  # noqa: E402  (the AGENTS.md
+    # rule forbids src/core importing scripts; the reverse is fine)
+
 RESEARCH_DIR = ROOT / "config" / "research"
 RETRIEVALS_DIR = ROOT / "config" / "retrievals"
 HYPOTHESES_DIR = ROOT / "config" / "hypotheses"
@@ -112,38 +115,10 @@ _STOP = frozenset("""
 def _default_query(brief_text: str) -> str:
     """Default arXiv query: the brief's most frequent content bigram.
 
-    Measured live on the API while building this: a bare multi-term `all:`
-    query is OR (noise), a long quoted sentence-phrase is an exact match that
-    never occurs (nothing), AND-ing several generic singletons pulls in papers
-    whose words coincide but whose topics do not (physics), and appending a
-    frequent filler like "open" halves the hits. The form that returned the
-    most on-topic papers for this repo's own brief was the single most frequent
-    two-word collocation -- "intraday momentum" -- so that is the default.
-    Headings are excluded (a "# Title" repeats the body and would win the
-    frequency vote).
-
-    It is still a default, not a law: `--query` overrides it, and `retrieve`
-    prints the query so the human can see and veto it before the set is frozen.
+    Delegate to the shared implementation in `src.core.loop.research`; this
+    wrapper keeps the command line and any caller of this script working.
     """
-    import re
-    from collections import Counter
-
-    body = " ".join(line for line in brief_text.splitlines()
-                    if line.lstrip() and not line.lstrip().startswith("#"))
-    flat = re.sub(r"[#*_`{}\[\]()|:\\/0-9]+", " ", body).lower()
-    tokens = [w for w in re.findall(r"[a-z]{3,}", flat) if w not in _STOP]
-    counts = Counter(tokens)
-    bigrams = Counter(f"{tokens[i]} {tokens[i + 1]}"
-                      for i in range(len(tokens) - 1))
-    if bigrams:
-        best, best_n = None, -1
-        for gram in bigrams:                 # first occurrence wins ties
-            if bigrams[gram] > best_n:
-                best, best_n = gram, bigrams[gram]
-        return f'all:"{best}"'
-    if counts:
-        return f'all:"{counts.most_common(1)[0][0]}"'
-    return 'all:"intraday"'
+    return default_query(brief_text)
 
 
 def _brief_path(name: str) -> pathlib.Path:

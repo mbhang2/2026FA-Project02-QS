@@ -1,0 +1,93 @@
+{
+  "digest": "efeaf697ad50ee37fa4b5de8cc51bcc1633e9f9b5eeb9daa4d7dc2d6b81816ee",
+  "record": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "1059d5c5a93935ca1364eadea2e39615b35199430626c548974783ca0d376ca7",
+        "path": "config/hypotheses/intraday-momentum.md"
+      },
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "model_served_at_registration": "claude-haiku-4-5",
+      "null_source": "round_turn_mc",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "budget": 10,
+    "campaign_id": "research-intraday-01",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "nq-trades",
+    "hypothesis_digest": "1059d5c5a93935ca1364eadea2e39615b35199430626c548974783ca0d376ca7",
+    "hypothesis_path": "config/hypotheses/intraday-momentum.md",
+    "note": "research-driven campaign from config/research/intraday-momentum.md, answered from the frozen retrieval config/retrievals/intraday-momentum.json. The proposing agent is shown only the linted hypothesis, never the papers. Real NQ train split; governed by docs/design/pre-registration.md.",
+    "profile": "nq-train",
+    "q": 0.05,
+    "research_config": {
+      "brief_len": 1845,
+      "documents_shown": [
+        "docs/agent/data.md"
+      ],
+      "draft_linted_against_gate_vocabulary": true,
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "implementation": "src.core.loop.research.ResearchAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 8192,
+      "model": "claude-haiku-4-5",
+      "prompt_template": "config/prompts/research-agent.md",
+      "prompt_template_digest": "df104f1023841bfb163fed88c2f6911810f43b520a46ee870a03264aa8390da1",
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "retrieval": {
+        "digest": "0f4784a6f67aeee4e9d6825545feb85ba0f14d5c32b1903dffa38e26e9bfe886",
+        "max_results": 6,
+        "n_papers": 4,
+        "name": "intraday-momentum",
+        "query": "all:\"intraday momentum\""
+      },
+      "run_facts": "Dataset: real NQ futures trades, 384 sessions on the pre-registered training split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so strategies pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side. NQ is $20 a point, so a round trip costs about $4.00 a contract and turnover is not free.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "shows_papers_that_may_mention_gate_vocabulary": true,
+      "source": {
+        "brief_digest": "01a46a5f5f29ff9392471cfefdcc8c1ac23dc96aa4e1916a582a9bae4c96abe6",
+        "brief_path": "config/research/intraday-momentum.md",
+        "retrieval_digest": "0f4784a6f67aeee4e9d6825545feb85ba0f14d5c32b1903dffa38e26e9bfe886",
+        "retrieval_path": "config/retrievals/intraday-momentum.json"
+      },
+      "temperature": 0.3
+    },
+    "research_prompt_digest": "01a46a5f5f29ff9392471cfefdcc8c1ac23dc96aa4e1916a582a9bae4c96abe6",
+    "research_prompt_path": "config/research/intraday-momentum.md",
+    "retrieval_digest": "0f4784a6f67aeee4e9d6825545feb85ba0f14d5c32b1903dffa38e26e9bfe886",
+    "retrieval_path": "config/retrievals/intraday-momentum.json",
+    "split": "train",
+    "stopping_rule": "fixed budget of 10; no early stop on any observed result, no extension if the last trial looks promising",
+    "written_at": "2026-09-23T00:49:16+00:00"
+  }
+}

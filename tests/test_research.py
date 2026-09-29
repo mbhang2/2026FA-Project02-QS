@@ -85,6 +85,21 @@ def atom_http(monkeypatch):
     return fake
 
 
+# One frozen paper, for the draft tests. `draft` now checks the draft against
+# the frozen set, so a draft agent without one is the wiring bug `check_retrieval`
+# refuses -- the default here is a real set, and a test that means to assert the
+# refusal passes `retrieval=None` explicitly.
+_DEFAULT_RETRIEVAL = RetrievalSet(
+    name="default", query='all:"technical trading"', max_results=1,
+    papers=(Paper(arxiv_id="1903.02228v3", title="Learning the dynamics",
+                  authors=("A. Writer",), published="2019-03-06T18:17:52Z",
+                  abstract="We study whether a large move continues or gives "
+                           "it back, on intraday data.",
+                  categories=("q-fin.ST",), fulltext=""),
+            ),
+    retrieved_at="2026-01-01T00:00:00Z")
+
+
 def _agent(**kw) -> ResearchAgent:
     import os
 
@@ -92,7 +107,7 @@ def _agent(**kw) -> ResearchAgent:
     os.environ.setdefault("LITELLM_API_KEY", "not-a-key-and-never-sent")
     return ResearchAgent(model="test-model",
                          brief=kw.pop("brief", "Does a large move continue, or give it back?"),
-                         retrieval=kw.pop("retrieval", None), **kw)
+                         retrieval=kw.pop("retrieval", _DEFAULT_RETRIEVAL), **kw)
 
 
 # --------------------------------------------------------------------------- #
@@ -253,6 +268,40 @@ def test_draft_returns_clean_text_when_clean():
     text = agent.draft()
     assert H.findings(text) == []
     H.lint(text)                                     # the registered-file test
+
+
+def test_draft_without_a_retrieval_set_is_refused():
+    """No frozen set is a wiring bug, not a licence to draft. A draft checked
+    against nothing passes for any claim, so `check_retrieval` refuses it."""
+    agent = _agent(retrieval=None)
+    agent._one = lambda prompt, kind: _dirty(999)   # clean, but ungroundable
+    with pytest.raises(ResearchDraftRejected) as ei:
+        agent.draft()
+    assert "no retrieval set" in str(ei.value)
+
+
+def test_draft_repairs_a_quote_not_in_the_frozen_set():
+    """A quotation the frozen papers do not contain drives the same bounded
+    repair loop as the lint, and a grounded rewrite is accepted."""
+    agent = _agent()
+    calls = []
+
+    def fake(prompt, kind):
+        calls.append(kind)
+        agent._pending.append(research.Call(kind, True, 0.1, prompt_tokens=100,
+                                            completion_tokens=5,
+                                            model_served="test-model"))
+        if len(calls) == 1:
+            return ('# Does a large move continue?\n\nAs 1234.56789 put it, '
+                    '"markets are efficient at all horizons and never trend".\n')
+        return "# Does a large move continue, or give it back?\n"
+
+    agent._one = fake
+    text = agent.draft()
+    assert calls == ["draft", "repair"]
+    assert "frozen set" not in text
+    log = agent.drain_log()
+    assert log["repair_attempts"] == 1
 
 
 def test_draft_repairs_banned_vocabulary():

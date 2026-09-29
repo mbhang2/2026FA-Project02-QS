@@ -1,0 +1,93 @@
+{
+  "digest": "b64cd624d17ae1104131dbdec16532cf4ae19da766b6cb51d14c616908d5b491",
+  "record": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "f4b0f441db09a3ff236a9513b9c6060e50690b1389b34c7eae3ccac97dfa0435",
+        "path": "config/hypotheses/half-hour-momentum.md"
+      },
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "model_served_at_registration": "claude-haiku-4-5",
+      "null_source": "round_turn_mc",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "budget": 10,
+    "campaign_id": "research-half-hour-01",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "nq-trades",
+    "hypothesis_digest": "f4b0f441db09a3ff236a9513b9c6060e50690b1389b34c7eae3ccac97dfa0435",
+    "hypothesis_path": "config/hypotheses/half-hour-momentum.md",
+    "note": "research-driven campaign from config/research/half-hour-momentum.md, answered from the frozen retrieval config/retrievals/half-hour-momentum.json. The proposing agent is shown only the linted hypothesis, never the papers. Real NQ train split; governed by docs/design/pre-registration.md.",
+    "profile": "nq-train",
+    "q": 0.05,
+    "research_config": {
+      "brief_len": 2582,
+      "documents_shown": [
+        "docs/agent/data.md"
+      ],
+      "draft_linted_against_gate_vocabulary": true,
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "implementation": "src.core.loop.research.ResearchAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 8192,
+      "model": "claude-haiku-4-5",
+      "prompt_template": "config/prompts/research-agent.md",
+      "prompt_template_digest": "df104f1023841bfb163fed88c2f6911810f43b520a46ee870a03264aa8390da1",
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "retrieval": {
+        "digest": "1f40dddf8c53a06ec1c0379dd656c4e7997a02a3626d02e3eb135b4925d37b93",
+        "max_results": 10,
+        "n_papers": 4,
+        "name": "half-hour-momentum",
+        "query": "all:\"intraday momentum\""
+      },
+      "run_facts": "Dataset: real NQ futures trades, 384 sessions on the pre-registered training split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so strategies pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side. NQ is $20 a point, so a round trip costs about $4.00 a contract and turnover is not free.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "shows_papers_that_may_mention_gate_vocabulary": true,
+      "source": {
+        "brief_digest": "b1358c0bccefd08adf4352d4f85b11c7400657220733d4226434d61c6578567b",
+        "brief_path": "config/research/half-hour-momentum.md",
+        "retrieval_digest": "1f40dddf8c53a06ec1c0379dd656c4e7997a02a3626d02e3eb135b4925d37b93",
+        "retrieval_path": "config/retrievals/half-hour-momentum.json"
+      },
+      "temperature": 0.3
+    },
+    "research_prompt_digest": "b1358c0bccefd08adf4352d4f85b11c7400657220733d4226434d61c6578567b",
+    "research_prompt_path": "config/research/half-hour-momentum.md",
+    "retrieval_digest": "1f40dddf8c53a06ec1c0379dd656c4e7997a02a3626d02e3eb135b4925d37b93",
+    "retrieval_path": "config/retrievals/half-hour-momentum.json",
+    "split": "train",
+    "stopping_rule": "fixed budget of 10; no early stop on any observed result, no extension if the last trial looks promising",
+    "written_at": "2026-09-25T00:18:23+00:00"
+  }
+}

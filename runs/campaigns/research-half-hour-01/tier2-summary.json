@@ -1,0 +1,440 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 7,
+    "diagnostics": {
+      "avg_holding_period_ns": 2913723518.9404764,
+      "best_session_share": 0.026315789473684213,
+      "by_hour_utc": {
+        "16": 0.6300000000014552,
+        "17": -0.52,
+        "20": -2.239999999962155,
+        "21": -1.3499999999839916
+      },
+      "by_month": {
+        "2024-07": 0.6300000000014552,
+        "2024-08": -1.1799999999985449,
+        "2024-09": 1.8900000000043655,
+        "2024-10": 1.3700000000043655,
+        "2024-11": -0.8199999999970897,
+        "2025-01": 2.0000000000058207,
+        "2025-02": 0.6300000000014552,
+        "2025-03": 2.000000000005821,
+        "2025-04": 0.10000000000436549,
+        "2025-05": 1.3700000000043655,
+        "2025-06": -1.9499999999985447,
+        "2025-07": -1.8599999999970895,
+        "2025-08": -2.7399999999985445,
+        "2025-09": 0.46000000000582064,
+        "2025-10": -1.6999999999985447,
+        "2025-11": -0.2999999999970897,
+        "2025-12": -3.3799999999970893
+      },
+      "by_weekday": {
+        "Fri": -2.4599999999854485,
+        "Mon": -1.0499999999869036,
+        "Thu": -0.5799999999941794,
+        "Tue": 1.7300000000160096,
+        "Wed": -1.1199999999941794
+      },
+      "commission": 1.68,
+      "fill_model_spread": null,
+      "gross_pnl": -1.7999999999447027,
+      "max_drawdown": -11.469999999981079,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.0017,
+        "exposure_share": 0.2188,
+        "return_dispersion": 0.0011,
+        "trades_per_session": 0.005
+      },
+      "profit_concentration_top5pct": 0.5,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 84,
+      "trade_count": 84,
+      "turnover_contracts_per_session": 0.4375,
+      "win_rate": 0.4523809523809524
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 46,
+      "kurtosis": 2.325192560600409,
+      "metric": "sortino_per_session",
+      "n_sessions": 384,
+      "net_pnl": -3.4799999999447024,
+      "primary": -0.042661330859461645,
+      "reject_reason": "",
+      "rejected": false,
+      "sharpe": -0.031168454741556183,
+      "significance": -0.835987938829846,
+      "skew": -0.1462196389742878,
+      "sortino": -0.042661330859461645,
+      "trade_count": 84
+    },
+    "source": "\"\"\"\nIntraday momentum: testing extended holding period with asymmetric exits.\n\nAll prior trials show persistent negative returns (-0.13 to -0.35), with the\nbest result (#4) at -0.1322 achieved by:\n1. Volatility filtering (only trade in low-vol periods)\n2. Early profit-taking (exit quickly on small wins)\n3. Aggressive position limits (max 2 bars held)\n\nKey observation: Trial #4 reduced losses by exiting FAST. But what if we're\nexiting TOO fast and missing the actual signal? The hypothesis was that the\nfirst 30m predicts the last 30m, but we've been testing it with exits that\nhappen before the last 30m window even closes.\n\nThis version tests a different thesis:\n1. The first 30m signal IS valid, but requires holding through the full\n   last 30m window to capture the move (not exiting early)\n2. Asymmetric risk: use tight stops (cut losses fast) but let winners run\n   until the last 30m bar closes\n3. Only trade in the most favorable volatility regime (bottom 20%)\n4. Reduce position size to 1 contract (minimize commission drag)\n5. Use the bracket mechanism properly: let it manage the exit, don't override\n\nThe key change from #4: instead of early profit-taking at +0.3 points,\nlet the bracket handle the exit at +0.5-0.8 points, but keep the stop\ntight at 0.3-0.4 points. This creates an asymmetric risk/reward where\nwe cut losses quickly but capture the full move if it comes.\n\nAlso: only enter trades when we're truly in low volatility (percentile < 0.2),\nnot 0.4. This is more selective and should reduce false signals.\n\"\"\"\n\nfrom __future__ import annotations\n\n\nclass Strategy:\n    def __init__(\n        self,\n        *,\n        interval: str = \"30m\",\n        size: int = 1,\n        vol_lookback: int = 5,\n        vol_percentile_threshold: float = 0.2,\n        stop_offset: float = 0.35,\n        target_offset: float = 0.65,\n    ):\n        \"\"\"\n        Args:\n            interval: Bar interval (30m for first/last 30m hypothesis)\n            size: Position size (1 contract to minimize commission)\n            vol_lookback: Bars to look back for volatility calculation\n            vol_percentile_threshold: Only trade if vol is below this percentile\n                                     (0.2 = only in bottom 20% least volatile periods)\n            stop_offset: Stop loss distance (tight, cut losses fast)\n            target_offset: Profit target distance (let winners run)\n        \"\"\"\n        self.interval = interval\n        self.size = size\n        self.vol_lookback = vol_lookback\n        self.vol_percentile_threshold = vol_percentile_threshold\n        self.stop_offset = stop_offset\n        self.target_offset = target_offset\n        \n        # Session tracking\n        self._current_session: int | None = None\n        self._session_start_ts: int | None = None\n        self._first_30m_bar: object | None = None\n        self._first_30m_signal: int | None = None\n        self._traded_this_session: bool = False\n        \n        # Volatility history for percentile calculation\n        self._vol_history: list[float] = []\n\n    def setup(self, ctx) -> None:\n        \"\"\"Subscribe to 30-minute bars.\"\"\"\n        ctx.subscribe(self.interval)\n\n    def _calculate_volatility(self, bar) -> float:\n        \"\"\"Calculate volatility as (high - low) / open.\"\"\"\n        if bar.open <= 0:\n            return 0.0\n        return (bar.high - bar.low) / bar.open\n\n    def _get_volatility_percentile(self) -> float:\n        \"\"\"\n        Get the percentile of current volatility in history.\n        Returns value in [0, 1] where 0 = lowest vol, 1 = highest vol.\n        \"\"\"\n        if len(self._vol_history) < 2:\n            return 0.5\n        \n        sorted_vols = sorted(self._vol_history)\n        current_vol = self._vol_history[-1]\n        \n        # Count how many are below current\n        below = sum(1 for v in sorted_vols if v <= current_vol)\n        percentile = below / len(sorted_vols)\n        return percentile\n\n    def on_bars(self, ctx) -> None:\n        \"\"\"\n        Trade first-30m momentum in ultra-low-volatility environments.\n        Hold through last 30m window; let bracket manage the exit.\n        \"\"\"\n        if not ctx.actionable:\n            return\n\n        # Handle session transitions\n        if ctx.session != self._current_session:\n            self._current_session = ctx.session\n            self._session_start_ts = ctx.session_start\n            self._first_30m_bar = None\n            self._first_30m_signal = None\n            self._traded_this_session = False\n            self._vol_history = []\n\n        history = ctx.history(self.interval)\n        if len(history) < 1:\n            return\n\n        current_bar = history[-1]\n        \n        # Track volatility for all bars\n        current_vol = self._calculate_volatility(current_bar)\n        self._vol_history.append(current_vol)\n        # Keep only recent history\n        if len(self._vol_history) > max(self.vol_lookback * 4, 25):\n            self._vol_history.pop(0)\n        \n        # Capture the first 30-minute bar\n        if self._first_30m_bar is None:\n            if current_bar.open_ts == self._session_start_ts:\n                self._first_30m_bar = current_bar\n                \n                # Generate signal: direction only\n                if current_bar.close > current_bar.open:\n                    self._first_30m_signal = 1  # bullish\n                elif current_bar.close < current_bar.open:\n                    self._first_30m_signal = -1  # bearish\n                return\n\n        # Check if we're in the last 30 minutes\n        time_until_close = ctx.session_end - ctx.ts\n        thirty_minutes_ns = 30 * 60 * 1_000_000_000\n        in_last_30_minutes = time_until_close <= thirty_minutes_ns\n        \n        # Entry logic: trade on last 30m bar if conditions met\n        if (\n            in_last_30_minutes\n            and self._first_30m_signal is not None\n            and not self._traded_this_session\n            and ctx.position == 0\n            and not ctx.working_order_ids\n        ):\n            # Ultra-high-conviction filter: only trade in bottom 20% volatility\n            vol_percentile = self._get_volatility_percentile()\n            \n            if vol_percentile <= self.vol_percentile_threshold:\n                # Same-direction momentum hypothesis\n                if self._first_30m_signal == 1:\n                    ctx.buy(\n                        size=self.size,\n                        stop_offset=self.stop_offset,\n                        target_offset=self.target_offset,\n                        tag=\"first-30m-bullish\",\n                    )\n                else:  # -1\n                    ctx.sell(\n                        size=self.size,\n                        stop_offset=self.stop_offset,\n                        target_offset=self.target_offset,\n                        tag=\"first-30m-bearish\",\n                    )\n                self._traded_this_session = True\n\n    def on_fill(self, ctx) -> None:\n        \"\"\"Track fills; bracket handles exits.\"\"\"\n        pass\n\n    def on_lifecycle(self, ctx) -> None:\n        \"\"\"Handle order lifecycle events.\"\"\"\n        pass\n",
+    "source_sha256": "a854104c953394a802ae4b535085d3db9afe841936b1b01453db68670d260206",
+    "strategy_digest": "a854104c953394a8"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "f4b0f441db09a3ff236a9513b9c6060e50690b1389b34c7eae3ccac97dfa0435",
+        "path": "config/hypotheses/half-hour-momentum.md"
+      },
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "model_served_at_registration": "claude-haiku-4-5",
+      "null_source": "round_turn_mc",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "research-half-hour-01",
+    "budget": 10,
+    "campaign_id": "research-half-hour-01",
+    "dataset": "nq-trades",
+    "profile": "nq-train",
+    "q": 0.05,
+    "record_digest": "b64cd624d17ae1104131dbdec16532cf4ae19da766b6cb51d14c616908d5b491",
+    "record_digest_now": "b64cd624d17ae1104131dbdec16532cf4ae19da766b6cb51d14c616908d5b491",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget of 10; no early stop on any observed result, no extension if the last trial looks promising",
+    "written_at": "2026-09-25T00:18:23+00:00"
+  },
+  "deflation_view": {
+    "best_score": -0.042661330859461645,
+    "clears_selection_bar": false,
+    "expected_max_under_null": 0.10790380637147894,
+    "margin": -0.1505651372309406,
+    "n_sessions": 384,
+    "n_trials": 10,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.5,
+      "best_label": "None:b4bb4b0f",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.005,
+          "index": 0,
+          "label": "None:b4bb4b0f",
+          "rank": 1
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "index": 1,
+          "label": "None:72e3c1bc",
+          "rank": 2
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.00625,
+          "index": 2,
+          "label": "None:ee93ef49",
+          "rank": 3
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "index": 4,
+          "label": "None:6f469194",
+          "rank": 4
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "index": 5,
+          "label": "None:312ebf34",
+          "rank": 5
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.01,
+          "index": 6,
+          "label": "None:6f3cc1e0",
+          "rank": 6
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034999999999999996,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0125,
+          "index": 7,
+          "label": "None:a854104c",
+          "rank": 7
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "index": 8,
+          "label": "None:15eb20f6",
+          "rank": 8
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045000000000000005,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.025,
+          "index": 9,
+          "label": "None:60c1b393",
+          "rank": 9
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 3,
+          "label": "None:8199e55b",
+          "rank": 10
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 10,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "8d1ff0d53ff72b971e31825a6b3982650441dba5a9cc8110e897032d64b3d2f9",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 9,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": -0.02742188159249247,
+    "null_max_mean": -0.08877837085256718,
+    "null_max_quantiles": {
+      "0.01": 0.008783849789413923,
+      "0.05": -0.02742188159249247,
+      "0.1": -0.04204839224374273,
+      "0.2": -0.06369058317051733,
+      "0.5": -0.0930782492956761
+    },
+    "observed_best": -0.042661330859461645,
+    "p": 0.10218978102189781,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/research-half-hour-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "94c5e537f05a58b4e65dde536021f50ff05f40817abfe54737528999a0cbb595",
+        "outcome": "completed",
+        "score": -0.23307355088516715,
+        "strategy_digest": "b4bb4b0f280b237f"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "5adcfb803831f09790ea8357cc0ae7068c1be12d71c11a7442720bcb89be3d44",
+        "outcome": "completed",
+        "score": -0.23874936433250474,
+        "strategy_digest": "72e3c1bc01aa44d5"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "0e41bb01f2f156ad5cb60f7367e2752fec32b111c1c0b382b436a642fa5a451e",
+        "outcome": "completed",
+        "score": -0.3058657229883448,
+        "strategy_digest": "ee93ef497afd872a"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "8199e55b84066f40"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "ee0225124596ef66d0749124284d84ab99d2c5a1f51247a4c789895e5ff40ac9",
+        "outcome": "completed",
+        "score": -0.13224288642283388,
+        "strategy_digest": "6f469194aa4f284a"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "2c89f45483074581d458e5e1a7c50a91c7da4e1618ee62b77e2ed405cc77586c",
+        "outcome": "completed",
+        "score": -0.353401390191627,
+        "strategy_digest": "312ebf34032083a4"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "e089fe5d85cf3cb7dd680572ff760a9e8c36e9f4e6c073627f740789797b5774",
+        "outcome": "completed",
+        "score": -0.3004180047825606,
+        "strategy_digest": "6f3cc1e01ccf32a9"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "140826dab3c5e5a660177d618f509dad327f5b21595c0827de505a83478778c8",
+        "outcome": "completed",
+        "score": -0.042661330859461645,
+        "strategy_digest": "a854104c953394a8"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "2a5cdd8a209484b266db82d216ec3cdc9d923e08c273d85d5238bb808a9740b6",
+        "outcome": "completed",
+        "score": -0.1169231429103332,
+        "strategy_digest": "15eb20f60461a37b"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "ab67b7faa0a52167a2804b257ceee0751bc80c47cb7b3338ca4715430cda475e",
+        "outcome": "completed",
+        "score": -0.11580947613745429,
+        "strategy_digest": "60c1b3934e5d3472"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 10
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 10,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 0.12760363498596192,
+    "mean": -0.2291919541691031,
+    "min": -0.48840491428063987,
+    "n_draws": 90000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.0900634867116936
+  },
+  "provenance": {
+    "artifact_fingerprint": "2a0d5d9e107fef0706ca39a2c57ef07cf4eec3e9b923e8bd8f6c7c148638e7fa",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/half-hour-momentum.md": "f4b0f441db09a3ff236a9513b9c6060e50690b1389b34c7eae3ccac97dfa0435",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-momentum.md": "1059d5c5a93935ca1364eadea2e39615b35199430626c548974783ca0d376ca7",
+      "config/prompts/distil-agent.md": "8310e2683d5a969064e27fe8921bba15d773c25892554148f86acbb95ae66c7f",
+      "config/prompts/research-agent.md": "df104f1023841bfb163fed88c2f6911810f43b520a46ee870a03264aa8390da1",
+      "config/prompts/screen-agent.md": "75fbefb94b2aacc3ea4386c651a2ec9c0db70eadfbaab211412d48c1b3c22821",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/research/half-hour-momentum.md": "b1358c0bccefd08adf4352d4f85b11c7400657220733d4226434d61c6578567b",
+      "config/research/intraday-momentum.md": "01a46a5f5f29ff9392471cfefdcc8c1ac23dc96aa4e1916a582a9bae4c96abe6",
+      "config/research/open-questions.md": "2982ba68e4ea773d695d4227650b51f5e886e3cfea3ef1f49b1ac36b723f0c13",
+      "config/retrievals/half-hour-momentum.json": "c4ffd2f78e28f3ab71986c0b92466dc8f2bea87fc37f60776cc5b313d87997f3",
+      "config/retrievals/intraday-momentum.json": "c6039bbb395f68aa8426aa33b5f1cb7797b6bc7557b8e4e6affd125946d929a0",
+      "config/run.yaml": "eef3fa9d2fe1c544b72e9b507922d55d1e79f2cb88cf3f9d247af0e4be482c0e",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "b4bb4b0f280b237f2ff32070f7f04e3820d8851ef593e1fa38c826dc824f7793"
+    },
+    "code_fingerprint": "3ffca2fce63cb8f40fc038a7c190df32551d9b934f6874d324b61d07569396b3",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "312a77871ed5466913059cc0b7cd7aefa8c1a58162a9345832f4332a2c4ba67a",
+    "git_sha": "a41de3e957eac4846b1db4be0e8f1acffb7db3e1",
+    "isolation": {
+      "address_space": {
+        "active": true,
+        "mechanism": "RLIMIT_AS"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "",
+      "filesystem": {
+        "active": true,
+        "mechanism": "read-only bind mount, unprivileged user namespace (bubblewrap)"
+      },
+      "level": "isolated",
+      "network": {
+        "active": true,
+        "mechanism": "empty network namespace (bubblewrap --unshare-net)"
+      },
+      "platform": "Linux",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.11.15",
+    "scoring_fingerprint": "7f98539e385be6a2f994d1a04b6f103ef95832bbd55a64a2def93255e849e4b4"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-09-25T04:00:37+00:00"
+}

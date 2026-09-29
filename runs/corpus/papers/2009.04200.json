@@ -1,0 +1,18 @@
+{
+  "abstract": "This research analyses high-frequency data of the cryptocurrency market in regards to intraday trading patterns related to algorithmic trading and its impact on the European cryptocurrency market. We study trading quantitatives such as returns, traded volumes, volatility periodicity, and provide summary statistics of return correlations to CRIX (CRyptocurrency IndeX), as well as respective overall high-frequency based market statistics with respect to temporal aspects. Our results provide mandatory insight into a market, where the grand scale employment of automated trading algorithms and the extremely rapid execution of trades might seem to be a standard based on media reports. Our findings on intraday momentum of trading patterns lead to a new quantitative view on approaching the predictability of economic value in this new digital market.",
+  "archive": "corpus",
+  "arxiv_id": "2009.04200v1",
+  "authors": [
+    "Alla A. Petukhina",
+    "Raphael C. G. Reule",
+    "Wolfgang Karl H\u00e4rdle"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "date_pulled": "2026-09-24T23:47:55+00:00",
+  "key": "2009.04200",
+  "published": "2020-09-09T10:37:58Z",
+  "query": "all:\"intraday momentum\"",
+  "title": "Rise of the Machines? Intraday High-Frequency Trading Patterns of Cryptocurrencies"
+}

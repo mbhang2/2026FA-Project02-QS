@@ -69,6 +69,11 @@ ABSENT_BY_DESIGN: dict[str, str] = {
         "the name the v4 plan used, quoted in `docs/datasets/nq-es-qqq.md` as "
         "history. The file is `config/calendars/nq-trades.yaml` and always was "
         "under that name in this repo.",
+    "runs/corpus/":
+        "the corpus registry's default home (registry.py `CORPUS_ROOT`). A "
+        "runtime directory: it only exists on a machine after the first "
+        "`fetch`, so it cannot be under the tree here. Individual rows are "
+        "always cited as placeholder shapes, e.g. `runs/corpus/papers/<base-id>.json`.",
 }
 
 _TOKEN = re.compile(r"`([^`\n]+)`")

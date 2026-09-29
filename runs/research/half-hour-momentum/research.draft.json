@@ -1,0 +1,60 @@
+{
+  "brief_digest": "b1358c0bccefd08adf4352d4f85b11c7400657220733d4226434d61c6578567b",
+  "brief_path": "config/research/half-hour-momentum.md",
+  "calls": {
+    "blocked": false,
+    "calls": [
+      {
+        "completion_tokens": 599,
+        "error": "",
+        "kind": "draft",
+        "latency_s": 9.17,
+        "model_served": "claude-haiku-4-5",
+        "ok": true,
+        "prompt_tokens": 7589
+      }
+    ],
+    "completion_tokens": 599,
+    "latency_s": 9.17,
+    "models_served": [
+      "claude-haiku-4-5"
+    ],
+    "n_calls": 1,
+    "prompt_tokens": 7589,
+    "repair_attempts": 0
+  },
+  "config": {
+    "brief_len": 2582,
+    "documents_shown": [
+      "docs/agent/data.md"
+    ],
+    "draft_linted_against_gate_vocabulary": true,
+    "endpoint": "https://llm-proxy.invalid/v1",
+    "implementation": "src.core.loop.research.ResearchAgent",
+    "max_repair_attempts": 2,
+    "max_tokens": 8192,
+    "model": "claude-haiku-4-5",
+    "prompt_template": "config/prompts/research-agent.md",
+    "prompt_template_digest": "df104f1023841bfb163fed88c2f6911810f43b520a46ee870a03264aa8390da1",
+    "request_timeout_s": 240.0,
+    "retries_allowed": false,
+    "retrieval": {
+      "digest": "1f40dddf8c53a06ec1c0379dd656c4e7997a02a3626d02e3eb135b4925d37b93",
+      "max_results": 10,
+      "n_papers": 4,
+      "name": "half-hour-momentum",
+      "query": "all:\"intraday momentum\""
+    },
+    "run_facts": "Dataset: real NQ futures trades, 384 sessions on the pre-registered training split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so strategies pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side. NQ is $20 a point, so a round trip costs about $4.00 a contract and turnover is not free.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+    "seed": null,
+    "shows_papers_that_may_mention_gate_vocabulary": true,
+    "temperature": 0.3
+  },
+  "draft_chars": 2822,
+  "draft_digest": "7532aa6aec8beadea547d9f17ba14ff5eedccc0c9c2ccf8464fdaa84cfed0227",
+  "lint": [],
+  "name": "half-hour-momentum",
+  "retrieval_digest": "1f40dddf8c53a06ec1c0379dd656c4e7997a02a3626d02e3eb135b4925d37b93",
+  "retrieval_path": "config/retrievals/half-hour-momentum.json",
+  "written_at": "2026-09-25T00:15:22+00:00"
+}

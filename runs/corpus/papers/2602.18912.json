@@ -1,0 +1,19 @@
+{
+  "abstract": "This paper investigates whether short-term market overreactions can be systematically predicted and monetized as momentum signals using high-frequency emotional information and modern machine learning methods. Focusing on Apple Inc. (AAPL), we construct a comprehensive intraday dataset that combines volatility normalized returns with transformer-based emotion features extracted from Twitter messages. Overreactions are defined as extreme return realizations relative to contemporaneous volatility and transaction costs and are modeled as a three-class prediction problem. We evaluate the performance of several nonlinear classifiers, including XGBoost, Random Forests, Deep Neural Networks, and Bidirectional LSTMs, across multiple intraday frequencies (1, 5, 10, and 15 minute data). Model outputs are translated into trading strategies and assessed using risk-adjusted performance measures and formal statistical tests. The results show that machine learning models significantly outperform benchmark overreaction rules at ultra short horizons, while classical behavioral momentum effects dominate at intermediate frequencies, particularly around 10 minutes. Explainability analysis based on SHAP reveals that volatility and negative emotions, especially fear and sadness, play a central role in driving predicted overreactions. Overall, the findings demonstrate that emotion-driven overreactions contain a predictable structure that can be exploited by machine learning models, offering new insights into the behavioral origins of intraday momentum and the interaction between sentiment, volatility, and algorithmic trading.",
+  "archive": "corpus",
+  "arxiv_id": "2602.18912v1",
+  "authors": [
+    "Szymon Lis",
+    "Robert \u015alepaczuk",
+    "Pawe\u0142 Sakowski"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.PM"
+  ],
+  "date_pulled": "2026-09-24T23:47:55+00:00",
+  "key": "2602.18912",
+  "published": "2026-02-21T17:31:02Z",
+  "query": "all:\"intraday momentum\"",
+  "title": "Overreaction as an indicator for momentum in algorithmic trading: A Case of AAPL stocks"
+}

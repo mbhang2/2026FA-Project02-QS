@@ -121,3 +121,8 @@ docs/reviews/*/_sources/
 # a crashed validate leaves an untracked file rather than a staged one. The
 # durable copy lives in the campaign's `weights/` directory, addressed by digest.
 runs/current.weights
+
+# build-time only: the PDF reader for scripts/fetch_fulltext.py.
+# Deliberately NOT in .venv -- environment_fingerprint hashes every importable
+# distribution, and the engine never calls a PDF reader.
+.venv-tools/

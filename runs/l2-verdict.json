@@ -10,8 +10,8 @@
   ],
   "b": 10000,
   "q": 0.05,
-  "observed_best": -0.05573144958405279,
-  "best_campaign": "nq-ml-03",
+  "observed_best": -0.1516320268819263,
+  "best_campaign": "nq-orderflow-01",
   "rule_a_sortino_positive": {
     "nq-flowcont-01": false,
     "nq-flowcont-5m": false,
@@ -22,7 +22,7 @@
   },
   "rule_a_pass": false,
   "incomplete": [],
-  "note": "max_of_m is max_of_n with the campaign as the unit, and that is deliberate rather than lazy: section 4 of the pre-registration chooses it over a Holm budget because it uses the actual null distribution of the maximum, and says the L2 gate INHERITS the family-wise error rate measured for that machinery (0.060, CI [0.041, 0.088] at R = 150, Task 38) rather than needing its own calibration study. A second implementation of the same simulation would be a second thing to calibrate.",
+  "note": "rule (b) rejected the null but rule (a) did not pass: the best winner's validation Sortino is not above zero. The sign-flip null tests directional skill, not profitability (section 3b), so a small p with a losing candidate is exactly the case rule (a) exists for. max_of_m is max_of_n with the campaign as the unit, and that is deliberate rather than lazy: section 4 of the pre-registration chooses it over a Holm budget because it uses the actual null distribution of the maximum, and says the L2 gate INHERITS the family-wise error rate measured for that machinery (0.060, CI [0.041, 0.088] at R = 150, Task 38) rather than needing its own calibration study. A second implementation of the same simulation would be a second thing to calibrate.",
   "per_campaign": [
     {
       "campaign_id": "nq-flowcont-01",
@@ -73,20 +73,20 @@
     "p": 9.999000099990002e-05,
     "reject": true,
     "null_max_mean": 1.337488437019097,
-    "note": "diagnostic unless statistic='standardised' set the verdict. The maximum over (observed - null mean) / null sd per campaign, which is the pivotal form step_down_max already assumes. Task 70 measured the raw maximum as valid but blind: on our six real validation nulls, whose sds differ by 20x, it named three of the six campaigns the best of M zero times in 4,000 families, and it rejected at 0.0505 against an eight-sigma planted effect in a tight-null campaign where the standardised maximum rejected at 1.0000."
+    "note": "diagnostic unless statistic='standardised' set the verdict. The maximum over (observed - null mean) / null sd per campaign, which is the pivotal form step_down_max already assumes. Task 70 measured the raw maximum as valid but blind: on our six real validation nulls, whose sds differ by 20x, it named two of the six campaigns the best of M zero times in 4,000 families and a third of them once, and it rejected at 0.0505 against an eight-sigma planted effect in a tight-null campaign where the standardised maximum rejected at 1.0000."
   },
-  "statistic": "raw",
-  "p": 0.7321267873212679,
+  "statistic": "standardised",
+  "p": 9.999000099990002e-05,
   "p_floor": 9.999000099990002e-05,
-  "at_floor": false,
-  "reject": false,
-  "null_max_mean": 0.06465253344278099,
+  "at_floor": true,
+  "reject": true,
+  "null_max_mean": 1.337488437019097,
   "null_max_quantiles": {
-    "0.5": 0.016360145783308182,
-    "0.2": 0.1776592427941225,
-    "0.1": 0.2872291670826722,
-    "0.05": 0.4210976795808024,
-    "0.01": 0.8324967358870115
+    "0.5": 1.1511325679964424,
+    "0.2": 1.885256400733226,
+    "0.1": 2.3970683106583475,
+    "0.05": 2.909370103155077,
+    "0.01": 4.1983972206753055
   },
   "raw_view": {
     "best_campaign": "nq-ml-03",
@@ -96,7 +96,7 @@
   },
   "passes": false,
   "verdict": "FAIL",
-  "disagreement": "the standardised statistic rejects where the pre-registered raw maximum does not. Task 70: the raw maximum is valid but blind -- over 4,000 simulated families on our six real validation nulls it never once named the three tight-null campaigns the best of M, and it cannot see an eight-sigma effect in one of them. This is recorded, not acted on: the statistic in force is a pre-registration decision.",
+  "disagreement": "the standardised statistic rejects and the raw one does not; the rejecting one is in force. Task 70: the raw maximum is valid but blind -- over 4,000 simulated families on our six real validation nulls it named two of the tight-null campaigns the best of M zero times and a third of them once, and it cannot see an eight-sigma effect in one of them. Which statistic decides is a pre-registration decision (Amendment 10), not this function's.",
   "schema": "l2-verdict/1",
   "declared_family": [
     "nq-flowcont-01",

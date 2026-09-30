@@ -445,8 +445,15 @@ def max_of_m(
 
     ## `statistic`: the raw maximum is valid but blind (Task 70)
 
-    The pre-registered statistic is the maximum over **raw** validation Sortino,
-    and that is the default. Task 70 measured what it costs, using the six real
+    §5 registered the maximum over **raw** validation Sortino, and **Amendment 10,
+    signed 2026-09-30, replaced it with the standardised one.** The default here
+    stays `"raw"` deliberately: this is a library default, not the protocol, and
+    `scripts/l2_gate.py` reads which statistic is in force out of the
+    pre-registration via `scripts/prereg.py` rather than relying on a default
+    anywhere. A caller who wants the gate's answer should ask the document, not
+    this signature.
+
+    Task 70 measured what the raw maximum costs, using the six real
     validation nulls, whose standard deviations differ by **20x** (0.0108 to
     0.2214) and whose means differ by **0.9 Sortino** (-0.8934 to -0.0143),
     because a sign-flip null inherits its own candidate's cost drag and turnover.
@@ -466,11 +473,12 @@ def max_of_m(
 
     `statistic="standardised"` takes the maximum over `(observed - null mean) /
     null sd` per campaign, using each campaign's own null *sample* moments --
-    the pivotal form `step_down_max` already assumes. **Both are always
-    computed**: `standardised_view` and `per_campaign` are in the output whichever
-    mode set the verdict, so the record carries what the other statistic said
-    without a rerun. Flipping the default is a pre-registration decision and is
-    not taken here.
+    the pivotal form `step_down_max` already assumes, and the one in force since
+    Amendment 10. **Both are always computed**: `standardised_view`, `raw_view`
+    and `per_campaign` are in the output whichever mode set the verdict, so the
+    record carries what the other statistic said without a rerun, and
+    `disagreement` is set whenever the two differ -- in either direction, and
+    whichever is deciding.
 
     What the raw maximum buys, stated so the trade is not hidden: when the effect
     really is in the widest-null campaign it has *more* power at a small effect
@@ -623,14 +631,22 @@ def max_of_m(
             "tests directional skill, not profitability (section 3b), so a small "
             "p with a losing candidate is exactly the case rule (a) exists for. "
             + MAX_OF_M_NOTE)
-    if statistic == "raw" and std_sim["reject"] and not sim["reject"]:
+    # Recorded in BOTH directions, and whichever statistic is in force. The
+    # asymmetric version only fired when the standardised statistic rejected and
+    # the raw one did not, so a family where the raw maximum rejects alone -- the
+    # case where raw's single-campaign behaviour flatters a wide-null campaign --
+    # went unrecorded. A disagreement is a fact about the two statistics; which
+    # one decides is a pre-registration decision, and not this function's.
+    if std_sim["reject"] != sim["reject"]:
+        rejecting, quiet = (("standardised", "raw") if std_sim["reject"]
+                            else ("raw", "standardised"))
+        in_force = "in force" if statistic == rejecting else "not in force"
         out["disagreement"] = (
-            "the standardised statistic rejects where the pre-registered raw "
-            "maximum does not. Task 70: the raw maximum is valid but blind -- "
-            "over 4,000 simulated families on our six real validation nulls it "
-            "named two of the tight-null campaigns the best of M zero times and a "
-            "third of them once, and it cannot see an eight-sigma effect in one of "
-            "them. This is "
-            "recorded, not acted on: the statistic in force is a "
-            "pre-registration decision.")
+            f"the {rejecting} statistic rejects and the {quiet} one does not; the "
+            f"rejecting one is {in_force}. Task 70: the raw maximum is valid but "
+            "blind -- over 4,000 simulated families on our six real validation "
+            "nulls it named two of the tight-null campaigns the best of M zero "
+            "times and a third of them once, and it cannot see an eight-sigma "
+            "effect in one of them. Which statistic decides is a pre-registration "
+            "decision (Amendment 10), not this function's.")
     return out

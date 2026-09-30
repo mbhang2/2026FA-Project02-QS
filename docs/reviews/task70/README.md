@@ -343,3 +343,71 @@ and no profit. The gate refuses it, correctly. What it says about the research
 question is that the obstacle on this data is costs, not signal — which is a
 different sentence from "we found nothing", and it is the one the evidence
 supports.
+
+## 15. Amendment 10 was signed — 2026-09-30
+
+Section 13 left the statistic to a human. Michael signed Amendment 10 the same
+day, with the objection in section "The argument against signing it" **standing
+rather than answered**: the statistic was chosen after seeing which campaigns it
+favours, and that stays true. The signature rests on three checkable facts, and
+it does not extend past them — if any stops being true, the question reopens:
+
+1. the direction was fixed by a simulation under a strict null, not by our
+   results;
+2. **no claim has ever been made from the L2 gate** — it has returned FAIL once
+   and gated nothing;
+3. **the change cannot flip the current verdict**, because rule (a) fails under
+   either statistic.
+
+**The reading under the new statistic, and it is still FAIL:**
+
+```
+  statistic: standardised  (Amendment 10: IN FORCE from 2026-09-30)
+
+  M                6
+  best campaign    nq-orderflow-01
+  observed best    -0.1516
+  p                0.0001   (q = 0.05)
+  rule (a) Sortino > 0 on the best   False
+  rule (b) max_of_m p <= q           True
+  VERDICT          FAIL
+
+  standardised statistic [IN FORCE]:   best nq-orderflow-01 at +17.83 sd, p = 0.0001
+  raw statistic          [diagnostic]: best nq-ml-03 at -0.0557 Sortino, p = 0.7321
+```
+
+**Rule (b) now rejects and rule (a) is the only thing refusing.** That is the
+honest state of the project: on validation we have a candidate whose direction is
+17.8 standard deviations better than its own round turns reshuffled, and which
+still loses money. The gate says no, on the profitability floor, which is exactly
+what that floor was written for.
+
+`runs/l2-verdict-raw-statistic.json` keeps the previous reading, as the amendment
+requires — the record shows the gate re-run under a different statistic and what
+each one said.
+
+### Two things the signing changed in code, beyond the statistic
+
+**`scripts/prereg.py` now answers "is amendment N in force", and it found a bug
+in the old answer.** `holdout.py` asked whether "IN FORCE" was present and "NOT IN
+FORCE" absent. **"REGISTERED, NOT YET IN FORCE"** satisfies both halves — it
+contains the first string and not the second — and Amendments 4 and 7 are written
+exactly that way. The check guarding the single irrecoverable look would have
+unlocked on a status line that says the opposite in plain English. The rule is now
+positional: a status line counts only if it *begins* with "IN FORCE", and an
+amendment with no status line at all is an unconditional dated one.
+
+**The disagreement is now recorded in both directions.** It previously fired only
+when the standardised statistic rejected and the raw one did not, which left the
+opposite case — the raw maximum rejecting alone, where its effectively
+single-campaign behaviour flatters a wide-null campaign — unrecorded.
+
+### What is now the only thing between here and the holdout
+
+Two refusals, down from three:
+
+- **Amendment 9 is not in force.** §8 requires the pass rule be written before
+  the look, and it has not been signed.
+- **L2 is FAIL.** §8 opens the holdout only if L2 accepts.
+
+The disagreement refusal no longer fires, because the document has chosen.

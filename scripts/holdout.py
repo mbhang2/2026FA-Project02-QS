@@ -38,9 +38,12 @@ They are ordered so the cheapest and most decisive come first.
    and a third of them once, and it left `nq-orderflow-01` at +17.8 sd above its
    own null while
    recording p = 0.7321 about a campaign at +0.10 sd. `max_of_m` now reports both
-   statistics and sets `disagreement` when they differ. While Amendment 10 --
-   which would settle which statistic decides -- is NOT IN FORCE, a disagreement
-   is a refusal: **there is no second look in which to try the other candidate.**
+   statistics and sets `disagreement` when they differ. **While Amendment 10 --
+   which settles which statistic decides -- is not in force**, a disagreement is a
+   refusal: there is no second look in which to try the other candidate. Once it
+   is signed the document has chosen and this refusal stops firing; the
+   disagreement stays in the verdict as a fact about the two statistics rather
+   than an open question. Signed 2026-09-30, so it no longer fires today.
 
 ## Rehearsal, and why it is not optional
 
@@ -62,6 +65,11 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+# `scripts/` too: running this file puts it on the path automatically, but the
+# tests load it by file location, where it is not.
+sys.path.insert(0, str(ROOT / "scripts"))
+
+import prereg  # noqa: E402  -- after sys.path is set above
 
 CAMPAIGNS = ROOT / "runs" / "campaigns"
 L2_VERDICT = ROOT / "runs" / "l2-verdict.json"
@@ -85,13 +93,31 @@ def _rel(path: pathlib.Path) -> str:
 
 
 def amendment_9_in_force() -> bool:
-    """Whether the pass rule exists yet. Read from the document, not a flag."""
-    text = PREREG.read_text()
-    i = text.find("## Amendment 9")
-    if i < 0:
+    """Whether the pass rule exists yet. Read from the document, not a flag.
+
+    This used to ask "'IN FORCE' present and 'NOT IN FORCE' absent", which reads
+    **"REGISTERED, NOT YET IN FORCE"** as in force -- the form Amendments 4 and 7
+    are written in. The check guarding the one irrecoverable look would have
+    unlocked on a status line that says the opposite in plain English.
+    `scripts/prereg.py` requires the status to *begin* with "IN FORCE" instead.
+
+    The text is read here and passed in, rather than letting `prereg` open its
+    own copy, so `PREREG` above stays the single place a test redirects.
+    """
+    try:
+        text = PREREG.read_text()
+    except OSError:
+        return False        # an unreadable protocol is not one anybody signed
+    return prereg.in_force(9, text)
+
+
+def _amendment_10_in_force() -> bool:
+    """Whether the L2 statistic has been settled. Same redirect as Amendment 9."""
+    try:
+        text = PREREG.read_text()
+    except OSError:
         return False
-    head = text[i:i + 600]
-    return "IN FORCE" in head and "NOT IN FORCE" not in head
+    return prereg.in_force(10, text)
 
 
 def l2_passed() -> tuple[bool, dict]:
@@ -139,17 +165,20 @@ def blocked(rehearse: bool) -> list[str]:
                    f"rule (a) {v.get('rule_a_pass')}, p {v.get('p')}). §8: opened "
                    "only if the L2 gate accepts -- otherwise the look confirms "
                    "nothing and spends 73 sessions that cannot be recovered.")
-    if v and v.get("disagreement"):
+    if v and v.get("disagreement") and not _amendment_10_in_force():
         raw = (v.get("raw_view") or {}).get("best_campaign")
         std = (v.get("standardised_view") or {}).get("best_campaign")
         out.append(
             "the L2 gate's two statistics disagree about the family. The raw "
             f"maximum, which is the one in force, names {raw}; the standardised "
             f"maximum names {std}. Task 70 measured the raw maximum as valid but "
-            "blind, and Amendment 10 -- which would settle which statistic "
-            "decides -- is DRAFTED and NOT IN FORCE. The single look must not be "
-            "spent on a candidate the gate itself cannot agree is the best of M: "
-            "there is no second look in which to try the other one.")
+            "blind, and Amendment 10 -- which settles which statistic decides -- "
+            "is not in force. The single look must not be spent on a candidate "
+            "the gate itself cannot agree is the best of M: there is no second "
+            "look in which to try the other one. Once Amendment 10 is signed the "
+            "document has chosen, and this refusal stops firing -- the "
+            "disagreement is still recorded in the verdict, as a fact about the "
+            "two statistics rather than an unresolved question.")
     if RESULT.exists():
         out.append(f"{_rel(RESULT)} already exists. The look has been "
                    "taken. There is no second one, under any justification.")

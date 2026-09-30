@@ -67,6 +67,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 CAMPAIGNS = ROOT / "runs" / "campaigns"
 VERDICT = ROOT / "runs" / "l2-verdict.json"
 
+import prereg  # noqa: E402  -- scripts/ is on sys.path above
+
 
 def _wrap(text: str, width: int) -> list[str]:
     import textwrap
@@ -208,7 +210,12 @@ def main() -> int:
                         "validation_null": sample})
 
     from src.core.scoring.correction import max_of_m
-    out = max_of_m(winners, b=B_NULL, q=a.q)
+    # Which statistic decides is read from the pre-registration, never from a
+    # flag here: Amendment 10's status line IS the switch, so the signature and
+    # the behaviour cannot drift apart.
+    statistic = "standardised" if prereg.in_force(10) else "raw"
+    print(f"\n  statistic: {statistic}  ({prereg.status(10)})")
+    out = max_of_m(winners, b=B_NULL, q=a.q, statistic=statistic)
 
     print(f"\n  M                {out['m_campaigns']}")
     print(f"  best campaign    {out.get('best_campaign')}")
@@ -230,12 +237,23 @@ def main() -> int:
             zs = "    n/a" if z is None else f"{z:+7.2f}"
             print(f"    {c['campaign_id']:24} obs {c['validation_primary']:+.4f}  "
                   f"null {c['null_mean']:+.4f} +/- {c['null_sd']:.4f}  {zs} sd")
-        sv = out.get("standardised_view") or {}
+        # Both views, each labelled by whether it is the one deciding. Printing
+        # one of them as "DIAGNOSTIC" unconditionally was wrong the moment
+        # Amendment 10 made the standardised statistic the verdict.
+        sv, rv = out.get("standardised_view") or {}, out.get("raw_view") or {}
+        live = out.get("statistic")
         if sv:
-            print(f"\n  standardised statistic (DIAGNOSTIC, not the verdict): "
-                  f"best {sv.get('best_campaign')} at "
+            tag = "IN FORCE" if live == "standardised" else "diagnostic"
+            print(f"\n  standardised statistic [{tag}]: best "
+                  f"{sv.get('best_campaign')} at "
                   f"{sv.get('observed_best_sds'):+.2f} sd, p = {sv.get('p'):.4f}, "
                   f"reject = {sv.get('reject')}")
+        if rv:
+            tag = "IN FORCE" if live == "raw" else "diagnostic"
+            print(f"  raw statistic          [{tag}]: best "
+                  f"{rv.get('best_campaign')} at "
+                  f"{rv.get('observed_best'):+.4f} Sortino, p = {rv.get('p'):.4f}, "
+                  f"reject = {rv.get('reject')}")
         if out.get("disagreement"):
             print("\n  !! THE TWO STATISTICS DISAGREE")
             for line in _wrap(out["disagreement"], 74):

@@ -1630,9 +1630,25 @@ floor's effect on the four campaigns already run, and says plainly that it
 
 ## Amendment 10 — 2026-09-30 — the L2 statistic: raw or standardised
 
-**Status: DRAFTED, NOT IN FORCE.** The statistic that decides the L2 gate stays
-`raw`, which is what §5 registered, until this section says otherwise. Nothing
-below is applied by code; `max_of_m` reports both statistics and refuses to choose.
+**Status: IN FORCE from 2026-09-30, signed off by Michael.** The statistic that
+decides the L2 gate is now the **standardised** maximum. `scripts/l2_gate.py`
+reads this section rather than carrying a flag, so the document is the switch.
+
+**Signed with the objection below standing, not answered.** Section "The argument
+against signing it" says the statistic was chosen after seeing which campaigns it
+favours, and that remains true after signing. Three facts are what the signature
+rests on and they are the ones a reader should check: the direction was fixed by a
+simulation under a strict null rather than by our results; **no claim has ever
+been made from the L2 gate**, which has returned FAIL once and never gated
+anything; and **the change cannot flip the current verdict**, because rule (a)
+fails under either statistic. If any of those three stops being true, this
+signature does not extend to that situation.
+
+**The verdict under the new statistic, recorded at signing:** still **FAIL**.
+Best of M is now `nq-orderflow-01` at +17.83 sd above its own validation null,
+rule (b) rejects at p = 0.0001, and **rule (a) fails** because its validation
+Sortino is -0.1516. The previous verdict, under the raw statistic, is kept at
+`runs/l2-verdict-raw-statistic.json` rather than overwritten.
 
 ### What was found
 

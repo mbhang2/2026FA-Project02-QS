@@ -294,7 +294,9 @@ def test_the_raw_statistic_names_a_disagreement_rather_than_hiding_it():
     assert out["standardised_view"]["reject"] and not out["reject"]
     assert "disagreement" in out
     assert "valid but blind" in out["disagreement"]
-    assert "recorded, not acted on" in out["disagreement"]
+    assert "not in force" in out["disagreement"], (
+        "it must say whether the REJECTING statistic is the one deciding")
+    assert "Amendment 10" in out["disagreement"]
 
 
 def test_the_standardised_statistic_judges_rule_a_on_its_own_winner():
@@ -337,3 +339,31 @@ def test_an_unknown_statistic_is_refused():
                      [("a", 0.0, 1.0), ("b", 0.0, 1.0)])
     with pytest.raises(ValueError, match="pre-registered default"):
         max_of_m(w, b=100, seed=1, statistic="z")
+
+
+def test_a_disagreement_is_recorded_in_both_directions():
+    """The first version only fired when the standardised statistic rejected and
+    the raw one did not, so the opposite case -- raw rejecting alone, which is
+    exactly where its single-campaign behaviour flatters a wide-null campaign --
+    was never recorded. A disagreement is a fact about the two statistics."""
+    import numpy as np
+    rng = np.random.default_rng(11)
+    # A wide null whose observed value tops the family on raw Sortino, beside a
+    # tight null the standardised maximum prefers.
+    w = [{"campaign_id": "wide", "validation_primary": 0.60,
+          "validation_null": (0.0 + 0.40 * rng.standard_normal(400)).tolist()},
+         {"campaign_id": "tight", "validation_primary": 0.02,
+          "validation_null": (0.0 + 0.01 * rng.standard_normal(400)).tolist()}]
+    seen = set()
+    for st in ("raw", "standardised"):
+        out = max_of_m(w, b=2000, seed=7, statistic=st)
+        if "disagreement" in out:
+            seen.add(out["standardised_view"]["reject"] != out["raw_view"]["reject"])
+            assert out["disagreement"].startswith("the "), out["disagreement"]
+    # Whatever this fixture produces, the field's presence must track the fact.
+    for st in ("raw", "standardised"):
+        out = max_of_m(w, b=2000, seed=7, statistic=st)
+        differ = out["standardised_view"]["reject"] != out["raw_view"]["reject"]
+        assert ("disagreement" in out) is differ, (
+            "the field must be present exactly when the two statistics differ, "
+            "whichever one is in force")

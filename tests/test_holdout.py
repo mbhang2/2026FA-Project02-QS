@@ -37,10 +37,25 @@ def _mod(monkeypatch=None, tmp_path=None):
     return mod
 
 
-def _prereg(tmp_path, in_force: bool):
+def _prereg(tmp_path, in_force: bool, a10: bool = False):
     status = "IN FORCE from 2026-09-30" if in_force else "DRAFTED, NOT IN FORCE"
+    s10 = "IN FORCE from 2026-09-30" if a10 else "DRAFTED, NOT IN FORCE"
     (tmp_path / "prereg.md").write_text(
-        f"## Amendment 9 — the holdout pass rule\n\n**Status: {status}.**\n\nrules\n")
+        f"## Amendment 9 — the holdout pass rule\n\n**Status: {status}.**\n\nrules\n"
+        f"\n## Amendment 10 — the L2 statistic\n\n**Status: {s10}.**\n\nrules\n")
+
+
+def _disagreeing_l2(tmp_path):
+    """An L2 verdict whose two statistics name different campaigns."""
+    (tmp_path / "l2-verdict.json").write_text(json.dumps({
+        "verdict": "PASS", "rule_a_pass": True, "reject": True, "p": 0.001,
+        "best_campaign": "nq-ml-03", "declared_family": ["nq-ml-03", "other"],
+        "raw_view": {"best_campaign": "nq-ml-03", "p": 0.7321, "reject": False},
+        "standardised_view": {"best_campaign": "nq-orderflow-01", "p": 0.0001,
+                              "reject": True},
+        "disagreement": "the standardised statistic rejects and the raw one "
+                        "does not",
+    }))
 
 
 def _l2(tmp_path, verdict="PASS", best="nq-ml-03"):
@@ -255,24 +270,13 @@ def test_a_disagreement_between_the_two_l2_statistics_is_a_refusal(tmp_path,
                                                                    monkeypatch):
     """There is no second look in which to try the other candidate.
 
-    Task 70 measured the raw maximum as valid but blind. Until Amendment 10 says
-    which statistic decides, a family the gate cannot agree on is not a family
-    worth spending 73 irrecoverable sessions against.
+    Task 70 measured the raw maximum as valid but blind. While Amendment 10 has
+    not said which statistic decides, a family the gate cannot agree on is not one
+    to spend 73 irrecoverable sessions against.
     """
-    mod = _mod()
-    verdict = tmp_path / "l2-verdict.json"
-    verdict.write_text(json.dumps({
-        "verdict": "PASS", "rule_a_pass": True, "reject": True, "p": 0.001,
-        "best_campaign": "nq-ml-03",
-        "raw_view": {"best_campaign": "nq-ml-03", "p": 0.7321, "reject": False},
-        "standardised_view": {"best_campaign": "nq-orderflow-01", "p": 0.0001,
-                              "reject": True},
-        "disagreement": "the standardised statistic rejects where the raw one "
-                        "does not",
-    }))
-    monkeypatch.setattr(mod, "L2_VERDICT", verdict)
-    monkeypatch.setattr(mod, "RESULT", tmp_path / "absent.json")
-    monkeypatch.setattr(mod, "amendment_9_in_force", lambda: True)
+    mod = _mod(monkeypatch, tmp_path)
+    _prereg(tmp_path, in_force=True, a10=False)
+    _disagreeing_l2(tmp_path)
 
     reasons = mod.blocked(rehearse=False)
     hit = [r for r in reasons if "two statistics disagree" in r]
@@ -283,20 +287,31 @@ def test_a_disagreement_between_the_two_l2_statistics_is_a_refusal(tmp_path,
     assert "no second look" in hit[0]
 
 
+def test_signing_amendment_10_stops_that_refusal_firing(tmp_path, monkeypatch):
+    """The refusal exists because the statistic is unsettled, not because the two
+    numbers differ. Once the document has chosen, the disagreement stays in the
+    record as a fact and stops being an open question."""
+    mod = _mod(monkeypatch, tmp_path)
+    _disagreeing_l2(tmp_path)
+
+    _prereg(tmp_path, in_force=True, a10=False)
+    assert [r for r in mod.blocked(rehearse=False) if "disagree" in r]
+
+    _prereg(tmp_path, in_force=True, a10=True)
+    assert not [r for r in mod.blocked(rehearse=False) if "disagree" in r]
+
+
 def test_agreeing_statistics_do_not_block_the_look(tmp_path, monkeypatch):
     """The refusal must be about disagreement, not about the fields existing."""
-    mod = _mod()
-    verdict = tmp_path / "l2-verdict.json"
-    verdict.write_text(json.dumps({
+    mod = _mod(monkeypatch, tmp_path)
+    _prereg(tmp_path, in_force=True, a10=False)
+    (tmp_path / "l2-verdict.json").write_text(json.dumps({
         "verdict": "PASS", "rule_a_pass": True, "reject": True, "p": 0.001,
-        "best_campaign": "nq-ml-03",
+        "best_campaign": "nq-ml-03", "declared_family": ["nq-ml-03", "other"],
         "raw_view": {"best_campaign": "nq-ml-03", "p": 0.001, "reject": True},
         "standardised_view": {"best_campaign": "nq-ml-03", "p": 0.0005,
                               "reject": True},
     }))
-    monkeypatch.setattr(mod, "L2_VERDICT", verdict)
-    monkeypatch.setattr(mod, "RESULT", tmp_path / "absent.json")
-    monkeypatch.setattr(mod, "amendment_9_in_force", lambda: True)
     assert not [r for r in mod.blocked(rehearse=False) if "disagree" in r]
 
 

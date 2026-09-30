@@ -1,0 +1,57 @@
+{
+  "schema": "holdout-result/1",
+  "rehearsal": true,
+  "taken": "2026-09-30T06:44:05+00:00",
+  "campaign": "nq-flowcont-5m",
+  "digest": "57fd4c8fc7447f90",
+  "profile": "holdout",
+  "fitted": false,
+  "reason": null,
+  "l2_verdict": "FAIL",
+  "l2_family": [
+    "nq-flowcont-01",
+    "nq-flowcont-5m",
+    "nq-ml-02",
+    "nq-ml-03",
+    "nq-orderflow-01",
+    "nq-orderflow-02"
+  ],
+  "rule_i_sortino_positive": false,
+  "rule_ii_p": null,
+  "rule_ii_reject": false,
+  "q": 0.05,
+  "confirmed": false,
+  "evidence_not_thresholds": {
+    "primary": -Infinity,
+    "primary_uncharged": null,
+    "trade_count": 0,
+    "n_sessions": 31,
+    "net_pnl": 0.0,
+    "diagnostics": {
+      "avg_holding_period_ns": 0.0,
+      "best_session_share": 0.0,
+      "by_hour_utc": {},
+      "by_month": {},
+      "by_weekday": {},
+      "commission": 0.0,
+      "fill_model_spread": null,
+      "gross_pnl": 0.0,
+      "max_drawdown": -5.579999999999999,
+      "n_sessions": 31,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.0,
+        "exposure_share": 0.0,
+        "return_dispersion": 0.0,
+        "trades_per_session": 0.0
+      },
+      "profit_concentration_top5pct": 0.0,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 0,
+      "trade_count": 0,
+      "turnover_contracts_per_session": 0.0,
+      "win_rate": 0.0
+    }
+  },
+  "note": "Amendment 9: rules (i) and (ii) are the pass conditions. Everything under evidence_not_thresholds is evidence and not a threshold -- there is no constant to tune here."
+}

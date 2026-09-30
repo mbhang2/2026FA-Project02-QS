@@ -592,6 +592,48 @@ def stage_nulls(name: str) -> None:
     print(f"{name}: nulls in {time.monotonic() - t0:.0f}s")
 
 
+def _record_outcome(name: str) -> None:
+    """The feedback edge: write this campaign's verdicts back onto the paper that
+    suggested its question, if a paper did.
+
+    **Automatic, and that placement is the point.** Stage 0b was built as a
+    standalone command, nobody triggered it, and the corpus silently went stale
+    until someone asked why a paper had no body. A feedback edge that has to be
+    remembered is one that will not happen. Best-effort: a campaign's report is
+    worth having even if the registry write fails, so this never raises.
+
+    `scripts/record_outcome.py` is the same code as a command, for backfill.
+    """
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "record_outcome", pathlib.Path(__file__).with_name("record_outcome.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        import json as _json
+        reg = _json.loads(mod.REGISTRY.read_text())
+        v = mod.verdicts_for(name)
+        if v is None:
+            return
+        pid = mod.paper_for(reg, v["hypothesis"])
+        if pid is None:
+            print("  feedback edge: no paper claims this hypothesis, so there is "
+                  "nothing to record against (human-written question)")
+            return
+        row = reg["papers"][pid]
+        ids = list(row.get("campaign_ids") or [])
+        if name not in ids:
+            ids.append(name)
+        outs = [o for o in (row.get("outcome") or [])
+                if o.get("campaign_id") != name] + [v]
+        row["campaign_ids"] = ids
+        row["outcome"] = sorted(outs, key=lambda o: o["campaign_id"])
+        mod.REGISTRY.write_text(_json.dumps(reg, indent=2, sort_keys=True) + "\n")
+        print(f"  feedback edge: recorded on paper {pid} -- {v['conclusion']}")
+    except Exception as exc:                                      # noqa: BLE001
+        print(f"  feedback edge FAILED (report stands): {type(exc).__name__}: {exc}")
+
+
 def stage_report(name: str) -> None:
     from src.core.loop.campaign import CampaignRecord, CampaignResult, summarise
 
@@ -689,6 +731,7 @@ def stage_report(name: str) -> None:
                       "no veto.")}, indent=2))
         print(f"  committee FAILED: {type(exc).__name__}: {exc}")
         print("    recorded as ERROR in committee-verdict.json -- not a pass")
+        _record_outcome(name)
         return
     (d / "committee-verdict.json").write_text(
         json.dumps(cv.as_dict(), indent=2, default=str))
@@ -697,6 +740,7 @@ def stage_report(name: str) -> None:
              if cv.verdict == "VETO" else ""))
     for v in cv.auditors:
         print(f"    {v.axis:<12} {v.verdict}")
+    _record_outcome(name)
 
 
 def main() -> int:

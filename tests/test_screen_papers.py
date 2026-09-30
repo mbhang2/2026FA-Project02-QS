@@ -78,3 +78,28 @@ def test_every_verdict_word_in_the_prompt_is_one_the_code_accepts():
     p = sp.PROMPT.read_text()
     for v in sp.VERDICTS:
         assert f"`{v}`" in p, f"the prompt never offers {v!r}"
+
+
+def test_the_screen_fetches_the_body_of_anything_it_keeps():
+    """**Stage 0b was a standalone command nobody triggered.**
+
+    It was run once by hand over the survivors that existed that morning. The
+    next screen produced five more, and nothing fetched their bodies -- silently,
+    because every consumer falls back to the abstract rather than failing. One of
+    the five was the only paper the new search rated `high`. It went unnoticed
+    until someone asked why that paper had no body.
+
+    The screen is the one place the pipeline decides a paper matters, so it is
+    where the body gets fetched. Best-effort: a network failure must not discard
+    a screen verdict that is already worth keeping.
+    """
+    src = (REPO_ROOT / "scripts" / "screen_papers.py").read_text()
+    assert "_fetch_bodies_for_new_survivors" in src
+    # fires for both feasible verdicts, and only for them
+    assert 'v["feasibility"] in ("direct", "adaptable")' in src
+    # after the registry is written, so a crash in the fetch cannot lose a verdict
+    body_call = src.index("_fetch_bodies_for_new_survivors(\n")
+    registry_write = src.index('REGISTRY.write_text(json.dumps(reg, indent=2, sort_keys=True)')
+    assert registry_write < body_call, "verdicts are saved before the network is touched"
+    # and it skips what is already there
+    assert "if not (ff.TEXT_DIR / f\"{i}.txt\").exists()" in src

@@ -1827,3 +1827,80 @@ The same three things every amendment here has required: this section says **IN
 FORCE** with a date; `scripts/l2_gate.py` passes `statistic="standardised"`; and
 the previous verdict file is **kept**, not overwritten, so the record shows that
 the gate was re-run under a different statistic and what each one said.
+
+---
+
+## Amendment 11 — 2026-09-30 — a machine may commit, inside one family
+
+**Status: IN FORCE from 2026-09-30, signed off by Michael.** This amends
+Amendment 8, which made the commit of a machine-written hypothesis the human
+act. It no longer always is. **Read the argument against it below before relying
+on anything produced under it.**
+
+### Why it was asked for
+
+The loop this project is building is not "run K hypotheses written in advance".
+It is: run a campaign, read what the campaign and its auditors said, write a
+**modified version of the same question**, run that, and repeat four or five
+times. Refinement inside one family is the thing an overnight session is for, and
+Amendment 8 put a human commit between every iteration — four interruptions in a
+five-iteration night, which means it is not an overnight session at all.
+
+### What it permits
+
+**A machine may write and commit hypothesis k+1 without a human reading it
+first**, and a campaign may be registered on it, when **all five** gates pass.
+
+| | gate | what it stops |
+|---|---|---|
+| 1 | `hypothesis.lint` passes | the question naming the gate's machinery or the closed splits. `BANNED` already forbids "validation", "holdout", "out-of-sample", "accept", "reject", "p-value", "significant", "trials", "correction" and the rest |
+| 2 | `grounding.findings` is empty | a number or a quoted span that is in no source. Stage 3 once wrote "0.5-1.5" where the paper said "0.07-1.50" |
+| 3 | a recorded diff against its parent | an unexplained rewrite. The commit carries the parent's digest, the diff, the campaign id whose outcome informed it, and every paper cited |
+| 4 | the family is unchanged | the machine choosing the research direction. It may refine the seed question; it may not replace it. A new family is still a human act |
+| 5 | no validation artefact was readable | §4. Enforced on the input side, not by asking nicely: the refiner is handed an explicit file set and **refuses to run** if a `validation*.json` is in it or on the campaign it was given |
+
+### What it does NOT permit, and this is the containment
+
+**An unreviewed machine hypothesis cannot support a claim.** It may spend
+trials; it may not produce a reportable discovery. If a family that includes an
+unreviewed hypothesis reaches L2 and passes, **the pass is held** until a human
+has read every machine-written question in it and said so in writing. §8's single
+look is not taken on a family nobody has read.
+
+That is the whole basis on which this is acceptable. **Unattended running is
+allowed; unattended claiming is not.** The machine may spend N — which is
+logged, bounded, and the honest cost of searching — but the thing this project
+exists to produce is a defensible discovery, and no discovery is defensible if
+nobody read the question.
+
+**Every machine commit is marked.** A `Machine-Written: <campaign>` trailer in
+the commit and a field in the hypothesis front matter, so `git log` answers "which
+questions did nobody read before trials were spent on them" without anybody
+having to remember.
+
+### The argument against signing it, stated fairly
+
+**Amendment 8's reasoning was right and this does not refute it.** §6a's
+feasibility sanity check happened at the commit, because that is where a human
+last looked. Moving trials in front of that check means the first human reading
+of a question can now happen after several hundred looks at the data have been
+spent on it. If the question is bad, the N is gone.
+
+The five gates are **mechanical and shallow**. A lint and a grounding check
+cannot tell whether a question is worth asking; they can only tell that it is
+well-formed and that its numbers came from somewhere. Gate 4 is the load-bearing
+one and it is the weakest: "the family is unchanged" is enforced by comparing
+against a seed file, and a sufficiently large refinement inside one family is a
+new question wearing the old title.
+
+What makes it tolerable rather than right: **N is the only thing at risk.** The
+splits are untouched, validation is unreadable by construction, the holdout keeps
+all seven of its refusals, and the containment above means nothing can be
+*claimed* from an unread question. The worst case is a wasted night, logged as a
+wasted night.
+
+### What this changes in Amendment 8
+
+Amendment 8 stands except for its requirement that the commit be human. Its other
+conditions — linted, grounded, read before a *claim* — are unchanged, and the
+"read" has moved from before the campaign to before the claim.

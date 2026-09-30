@@ -96,6 +96,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -163,7 +164,22 @@ def _main() -> int:
     if len(set(names)) != len(names):
         sys.exit(f"duplicate campaign names in the plan: {names}")
 
+    # **Its own process group, so the cue reaches the campaign as well as the
+    # driver.** An unattended session is started detached, where there is no
+    # terminal to press Ctrl-C into, so the cue arrives as a signal instead. Sent
+    # to the driver's pid alone it raises KeyboardInterrupt here while the child
+    # `run.py` carries on orphaned; sent to the GROUP it stops both. Becoming the
+    # group leader is what makes `kill -INT -<pid>` mean what it should. macOS has
+    # no `setsid(1)`, which is why this is in the program rather than the launch
+    # line.
+    try:
+        os.setpgrp()
+    except OSError:
+        pass        # already a leader, or a platform without process groups
+
     print(f"session {session}: {len(entries)} campaign(s)")
+    print(f"  pid {os.getpid()} -- the cue is:  kill -INT -{os.getpid()}\n"
+          f"  (once = go to the stop; twice = abort. Ctrl-C works if attached.)")
     print("  validation runs AT THE STOP, not per campaign (section 4)\n")
     for c in entries:
         mark = "already run" if already_run(c["name"]) else "to run"

@@ -46,9 +46,24 @@
 # ---------------------------------------------------------------------------
 # One model across all three, so the only thing varying inside the family is the
 # hypothesis. Varying the model too would confound the two and leave no way to
-# say which mattered. claude-haiku-4-5 because it produced the most diverse set
-# of prior campaigns (mvp, flowcont, orderflow), so the train-side comparisons
-# above are against the same proposer.
+# say which mattered.
+#
+# **claude-haiku-4-5 was the first choice and the gateway will not serve it.**
+# Measured 2026-09-30 and reproducible: at the real proposal prompt -- 167,489
+# characters, about 42k tokens, with the hypothesis included -- a request for
+# claude-haiku-4-5 is answered by gemini-3.1-pro-preview, while requests for
+# gemini-3.1-pro-preview and deepseek-v4-pro are answered by themselves. Below
+# roughly 157k characters haiku serves itself, which is why a small preflight and
+# a "say OK" probe both pass and tell you nothing. `ModelSubstituted` caught it
+# and refused rather than write a record naming a model that did not answer,
+# which is the guard behaving correctly; retrying and waiting did not help,
+# because this is a routing policy and not a transient fault.
+#
+# So: **deepseek-v4-pro**, which serves itself at this size and has the most
+# prior campaigns under the current gate configuration (nq-ml-02, -03, -04). The
+# train-side comparisons above were made against haiku campaigns, and that
+# comparison is weakened by this change -- said here rather than left for a
+# reader to notice.
 #
 # `min_exposed` is NOT overridden anywhere here. The registered floor is 0.70.
 # If one of these questions is genuinely rare and 0.70 rejects everything, the
@@ -65,16 +80,16 @@ campaigns:
     hypothesis: config/hypotheses/intraday-continuation.md
     profile: nq-train
     n: 20
-    model: claude-haiku-4-5
+    model: deepseek-v4-pro
 
   - name: nq-s01-absorption
     hypothesis: config/hypotheses/orderflow-absorption.md
     profile: nq-train
     n: 20
-    model: claude-haiku-4-5
+    model: deepseek-v4-pro
 
   - name: nq-s01-auction
     hypothesis: config/hypotheses/auction-market-features.md
     profile: nq-train
     n: 20
-    model: claude-haiku-4-5
+    model: deepseek-v4-pro

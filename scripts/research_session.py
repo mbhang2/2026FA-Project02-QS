@@ -153,7 +153,13 @@ def _run(argv: list[str], *, label: str) -> tuple[int, str]:
 # response to a transient substitution is to try again, not to believe it.
 TRANSIENT = ("ModelSubstituted", "ReadTimeout", "ConnectTimeout",
              "RemoteDisconnected", "ServiceUnavailable", "502", "503", "504")
-MAX_STAGE_RETRIES = 3
+# Progressive, because the substitution window is minutes long, not seconds.
+# Measured on 2026-09-30: the same 157,505-character prompt was substituted on
+# every attempt for several minutes and then served correctly by the model asked
+# for, with nothing changed. Three tries 30s apart did not outlast it. A campaign
+# is hours; waiting ten minutes for the endpoint is the cheapest thing here.
+STAGE_BACKOFF_S = (30, 120, 300, 600, 600)
+MAX_STAGE_RETRIES = len(STAGE_BACKOFF_S)
 
 
 def campaign_stage(name: str, stage: str, extra: list[str] | None = None,
@@ -168,9 +174,11 @@ def campaign_stage(name: str, stage: str, extra: list[str] | None = None,
         hit = next((t for t in TRANSIENT if t in body), None)
         if hit is None:
             return code, body
+        wait = STAGE_BACKOFF_S[min(attempt, len(STAGE_BACKOFF_S) - 1)]
         print(f"      {hit} is the endpoint's fault, not the candidate's. "
-              f"Retrying {stage}; it resumes where it stopped.", flush=True)
-        time.sleep(30)
+              f"Waiting {wait}s, then retrying {stage}; it resumes where it "
+              f"stopped.", flush=True)
+        time.sleep(wait)
     return code, body
 
 

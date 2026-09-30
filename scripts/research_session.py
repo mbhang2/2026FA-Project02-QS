@@ -110,21 +110,68 @@ SESSIONS = ROOT / "runs" / "sessions"
 PY = sys.executable
 
 
+LOGS: pathlib.Path | None = None        # set once the session is named
+
+
 def _run(argv: list[str], *, label: str) -> tuple[int, str]:
-    """One stage, streamed to a log and summarised here."""
+    """One stage. Full output to a file, one line to the console.
+
+    **The whole output is written somewhere, always.** The first version printed
+    only the last line, and session-01 died with three campaigns reporting
+    `exit 1` and no reason anywhere -- the cause was a transient model
+    substitution visible only in a traceback that had been captured and dropped.
+    Five minutes lost there; it could as easily have been eight hours. A summary
+    that replaces the evidence instead of pointing at it is the same defect this
+    project has now hit five times.
+    """
     t0 = time.monotonic()
     proc = subprocess.run(argv, capture_output=True, text=True, cwd=str(ROOT))
     mins = (time.monotonic() - t0) / 60
+    body = (proc.stdout or "") + (proc.stderr or "")
+    where = ""
+    if LOGS is not None:
+        LOGS.mkdir(parents=True, exist_ok=True)
+        f = LOGS / f"{label.replace(' ', '-').replace('/', '-')}.log"
+        f.write_text(body)
+        where = f"  -> {f.relative_to(ROOT)}"
     tail = (proc.stdout or "").strip().splitlines()
     last = tail[-1] if tail else ""
-    print(f"    {label:<34} exit {proc.returncode}  {mins:5.1f}m  {last[:70]}",
-          flush=True)
-    return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+    print(f"    {label:<34} exit {proc.returncode}  {mins:5.1f}m  {last[:60]}"
+          + (where if proc.returncode else ""), flush=True)
+    if proc.returncode:
+        # The last 12 lines inline too, because a reader watching a session
+        # should not have to go and open a file to learn what broke.
+        for line in body.strip().splitlines()[-12:]:
+            print(f"        | {line}"[:150], flush=True)
+    return proc.returncode, body
 
 
-def campaign_stage(name: str, stage: str, extra: list[str] | None = None):
-    return _run([PY, "scripts/nq_campaign.py", "--stage", stage, "--name", name,
-                 *(extra or [])], label=f"{name} {stage}")
+# Faults that are the endpoint's and not the candidate's. `--stage run` resumes
+# at the first unfilled trial, so retrying costs nothing already done -- and the
+# guards these raise must NOT be softened: `ModelSubstituted` exists because
+# continuing would write a record naming a model that did not answer. The right
+# response to a transient substitution is to try again, not to believe it.
+TRANSIENT = ("ModelSubstituted", "ReadTimeout", "ConnectTimeout",
+             "RemoteDisconnected", "ServiceUnavailable", "502", "503", "504")
+MAX_STAGE_RETRIES = 3
+
+
+def campaign_stage(name: str, stage: str, extra: list[str] | None = None,
+                   *, retries: int = 0):
+    argv = [PY, "scripts/nq_campaign.py", "--stage", stage, "--name", name,
+            *(extra or [])]
+    for attempt in range(retries + 1):
+        code, body = _run(argv, label=f"{name} {stage}"
+                          + (f" (retry {attempt})" if attempt else ""))
+        if code == 0 or attempt == retries:
+            return code, body
+        hit = next((t for t in TRANSIENT if t in body), None)
+        if hit is None:
+            return code, body
+        print(f"      {hit} is the endpoint's fault, not the candidate's. "
+              f"Retrying {stage}; it resumes where it stopped.", flush=True)
+        time.sleep(30)
+    return code, body
 
 
 def already_run(name: str) -> bool:
@@ -192,6 +239,9 @@ def _main() -> int:
 
     SESSIONS.mkdir(parents=True, exist_ok=True)
     record = SESSIONS / f"{session}.json"
+    global LOGS
+    LOGS = SESSIONS / session
+    print(f"  per-stage output goes to {LOGS.relative_to(ROOT)}/ in full")
     log: dict = {"schema": "research-session/1", "session": session,
                  "plan": str(a.plan), "declared_family": names,
                  "started": dt.datetime.now(dt.timezone.utc).isoformat(
@@ -232,7 +282,9 @@ def _main() -> int:
                     log["campaigns"][name] = "register failed"
                     continue
             for stage in ("run", "nulls", "report"):
-                code, _ = campaign_stage(name, stage)
+                code, _ = campaign_stage(
+                    name, stage,
+                    retries=MAX_STAGE_RETRIES if stage == "run" else 0)
                 if code:
                     log["campaigns"][name] = f"{stage} failed"
                     break
@@ -288,17 +340,45 @@ def _main() -> int:
     print("\nphase 3: the L2 gate over the declared family\n")
     code, out = _run([PY, "scripts/l2_gate.py", "--campaigns", ",".join(names)],
                      label="l2_gate")
+    # **The verdict file must be about THIS family, or it is not this session's
+    # result.** `runs/l2-verdict.json` is a single fixed path that every L2 run
+    # overwrites. In session-01 the gate exited 1 because no campaign had a
+    # winner, and this code then read the file left by an earlier manual run and
+    # printed `M = 6, best nq-orderflow-01` as the session's L2 outcome -- a
+    # different family's verdict, in a session record, labelled as its own. That
+    # is worse than no verdict, and it is the fifth time in this project that a
+    # number has reached a consumer it was not about.
     verdict = ROOT / "runs" / "l2-verdict.json"
-    log["l2"] = json.loads(verdict.read_text()) if verdict.exists() else \
-        {"error": out[-600:]}
-    record.write_text(json.dumps(log, indent=2) + "\n")
+    v = json.loads(verdict.read_text()) if verdict.exists() else None
+    got = sorted((v or {}).get("campaigns") or [])
+    if code != 0 or v is None or got != sorted(names):
+        log["l2"] = {
+            "error": f"the L2 gate exited {code} and no verdict about this "
+                     f"family was produced.",
+            "declared_family": sorted(names),
+            "verdict_file_family": got or None,
+            "note": ("a verdict file exists but is about a different family, so "
+                     "it is NOT this session's result and is not recorded as one"
+                     if v is not None and got != sorted(names) else
+                     "no verdict file"),
+            "stderr_tail": out[-800:],
+        }
+        print(f"    NO L2 VERDICT for this session.")
+        if v is not None and got != sorted(names):
+            print(f"      {verdict.relative_to(ROOT)} is about "
+                  f"{', '.join(got) or '(no family)'} -- a different family. "
+                  f"Not recorded as this session's.")
+        record.write_text(json.dumps(log, indent=2) + "\n")
+        v = None
+    else:
+        log["l2"] = v
+        record.write_text(json.dumps(log, indent=2) + "\n")
 
     # `_run` shows one line, and the L2 gate's most important output is not on it.
     # Four times in this project a number has been computed correctly and never
     # reached its consumer; a session log that hides the gate's own warning would
     # be the fifth.
-    v = log["l2"] if isinstance(log["l2"], dict) else {}
-    g = v.get("gate") or v
+    g = (v.get("gate") or v) if isinstance(v, dict) else {}
     if g.get("verdict") or g.get("withheld"):
         print(f"    L2 verdict        {g.get('verdict') or 'WITHHELD'}  "
               f"M = {g.get('m_campaigns')}  best {g.get('best_campaign')}  "

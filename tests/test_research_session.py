@@ -263,3 +263,41 @@ def test_the_holdout_must_be_armed_at_launch_or_it_is_only_checked():
     p4 = SRC[SRC.index("phase 4: the holdout"):]
     assert '"--check"' in p4
     assert "armed; refused by holdout.py --check" in p4
+
+
+# --------------------------------------------------------------------------- #
+# what session-01 taught, the hard way
+# --------------------------------------------------------------------------- #
+def test_a_stage_never_swallows_its_own_failure():
+    """session-01 printed three campaigns at `exit 1` with the reason nowhere: a
+    transient model substitution, captured in a traceback and dropped. A summary
+    that replaces the evidence instead of pointing at it is the defect."""
+    assert "LOGS.mkdir(parents=True, exist_ok=True)" in SRC
+    assert "f.write_text(body)" in SRC
+    assert 'print(f"        | {line}"[:150]' in SRC
+    assert "could as easily have been eight hours" in FLAT
+
+
+def test_a_transient_endpoint_fault_is_retried_and_the_guard_is_not_softened():
+    """`--stage run` resumes, so retrying costs nothing already done. What must
+    NOT happen is the guard being relaxed: ModelSubstituted exists because
+    continuing would write a record naming a model that did not answer."""
+    assert "ModelSubstituted" in SRC
+    assert "MAX_STAGE_RETRIES" in SRC
+    assert "must NOT be softened" in FLAT
+    assert "not to believe it" in FLAT
+    # only `run` is retried -- nulls and report are deterministic
+    assert 'retries=MAX_STAGE_RETRIES if stage == "run" else 0' in SRC
+
+
+def test_a_verdict_about_a_different_family_is_never_this_sessions_result():
+    """runs/l2-verdict.json is one fixed path that every L2 run overwrites. In
+    session-01 the gate exited 1 and this driver read the file an earlier manual
+    run had left, then printed `M = 6, best nq-orderflow-01` as the session's own
+    L2 outcome. A different family's verdict, in a session record, labelled as
+    its own."""
+    assert 'got != sorted(names)' in SRC
+    assert "NO L2 VERDICT for this session" in SRC
+    assert "a different family" in SRC
+    assert "verdict_file_family" in SRC
+    assert "not about" in FLAT

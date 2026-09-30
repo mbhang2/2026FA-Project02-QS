@@ -1406,6 +1406,106 @@ Code: `scripts/distil_paper.py`, `config/prompts/paper-distil.md` (a fingerprint
 artifact — it shaped the question, which shaped every score in the campaign),
 `tests/test_distil_paper.py`, 19 tests.
 
+## `max_of_m` is implemented — 2026-09-29
+
+**Not an amendment.** §4 and §5 specified this gate and nothing about it changes.
+This records that the arithmetic they name now exists, because for the whole
+project's history it did not: `max_of_m` appeared in three places as the pass
+condition at L2 and in no source file. Every campaign corrected for its own
+trials; nothing corrected for the number of campaigns.
+
+**That absence was the binding constraint on running many campaigns**, not any
+missing retrieval feature. A loop that produces a fresh hypothesis between every
+campaign multiplies campaigns, and reporting the best of M with no correction over
+M is the same forking path the within-campaign correction exists to prevent, one
+level up.
+
+`max_of_m` in `src/core/scoring/correction.py`, with `tests/test_max_of_m.py`, 14 tests
+including a measured error-control check over 600 synthetic null families.
+
+### It is the same simulation, and that is the point
+
+§4 chooses `max_of_m` over a Holm budget because it uses the actual null
+distribution of the maximum, and states that the L2 gate **inherits** the
+family-wise error rate already measured for that machinery — 0.060, CI
+[0.041, 0.088] at R = 150, Task 38 — "rather than needing its own calibration
+study". So the implementation is `max_of_n` with the campaign as the unit, and a
+test asserts the two return an identical p on the same inputs. A second
+implementation of the same statistic would be a second thing to calibrate.
+
+### Three refusals, each of which could have flattered a result
+
+**Every campaign enters the family, including the ones that did badly.** The
+multiplicity comes from having looked M times, not from having looked M times and
+liked the answer. Dropping the weak winners would shrink the family and inflate
+the maximum's significance, which is §3's "excluding the trials that failed is
+the cheapest way to shrink a denominator" at the campaign level.
+
+**Rule (a) is separate from rule (b).** §3b found a candidate losing 3,275 points
+scoring p = 0.0005 against its own null: sign-flipping a losing candidate's round
+turns makes it lose *more*, so its null sits below it and the test — which
+measures directional skill, not profitability — is satisfied. A small p with a
+losing candidate must not read as a pass, so `Sortino > 0` is checked separately
+and `passes` requires both.
+
+**An incomplete family gets no verdict at all.** If any campaign is missing its
+validation null, M is unknown, and a correction over an unknown family size is a
+correction over the campaigns that happened to be ready. `verdict` is `None` and
+the missing campaigns are named. This is deliberately stricter than `max_of_n`,
+which skips a trial whose null is empty: there an empty null is a property of a
+candidate that never traded, here a missing null is a gap in our own work.
+
+### What it does not do
+
+It does not decide promotion — §5 is a pass rule and promotion beyond the MVP
+stays a human decision on all the evidence. And it does not check §4's stopping
+rule, which is not checkable from its inputs: the protocol's defence there is
+structural, that validation is not scored during the run at all and all M winners
+are scored at the stop, at once. `max_of_m` is the arithmetic at that stop, not
+the discipline before it.
+
+### The plumbing — built the same day
+
+`scripts/l2_gate.py` supplies the two inputs the gate could not run without: a
+sign-flip null for each winner **on validation**, built with the machinery
+`stage_nulls` already uses on train but over the validation run's stored fill log
+and calendar, and an assembled family.
+
+**M is declared, never discovered.** `--campaigns` takes an explicit list and the
+script refuses to choose. A glob would decide, silently, how large a multiplicity
+it was correcting for, and every judgement inside it — is a stub campaign a look?
+a superseded one? a pilot? — would move the p with nothing in the record saying
+so. §4 says L2 runs until a human stops it; the same human says what was in the
+family, and the list is written into the verdict so it stays recoverable.
+
+Each null is cached per campaign with its seed, its fill-log digest, its profile
+and its session count, so it can be checked rather than trusted. The seed is a
+digest of the campaign name: the first version used `hash()`, which Python salts
+per process, and gave the same campaign three different seeds in three
+interpreters — invisibly, because the cache would have frozen whichever ran
+first.
+
+### The first L2 reading, on the six campaigns validated so far
+
+Run as a dry run, family not declared, so no verdict file was written:
+
+| | |
+|---|---|
+| M | 6 |
+| best winner | `nq-ml-03`, validation **−0.0557** |
+| null max mean | **+0.0647** |
+| p | **0.73** |
+| rule (a) on the best | **fails** |
+| rule (b) | fails |
+
+**Every one of the six failed rule (a): no campaign in this project's history has
+produced a winner that is profitable on validation.** The best of six is a loss,
+and the best of six *worthless* winners would have averaged a small gain. Both
+pass conditions fail, and they fail in the least ambiguous way available.
+
+That is the number the L2 gate exists to produce, and it had never been computed
+before today.
+
 ## Ideas recorded, not adopted
 
 Kept because the reasoning is worth more than the decision, and because an idea

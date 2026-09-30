@@ -272,6 +272,48 @@ hold in mind.
 The file cites the paper id and its registry row, so the chain from result back to
 source is complete without the corpus itself having to be frozen.
 
+### Stage 4 — the outcome, back onto the paper — **BUILT 2026-09-29**
+
+The loop's last edge, and it was missing. Stages 0 to 3 could say what we decided
+about a paper; nothing said what came of it. `outcome` was `null` on all 284 rows
+from the day the registry existed.
+
+`scripts/record_outcome.py` closes it. When a campaign concludes, the paper whose
+distillation produced its hypothesis gets the campaign id and a record of **every
+stage's verdict**: the tier-2 gate, whether validation came out positive, the
+tier-3 verdict, the committee's verdict and who vetoed, and a pointer to
+`runs/campaigns/<id>/`.
+
+**It records no scores, and that is the decision to understand.** §2 of this
+document explains that ranking is given campaign verdicts *without* scores,
+because picking papers that resemble what scored well is selection on data
+already spent — and retrieval, screening, ranking and distillation cost zero N
+only because none of them consults our market data. The ranker reads the
+registry. A score written here would be a back door into it, and an invisible
+one: the ranking would quietly become a function of past performance with nothing
+in its output saying so. The record's shape is a closed set of fields and a test
+asserts every value is a string, a bool or null — a float in it is a score by
+construction, whatever it is called.
+
+**Two things it refuses to decide.** It does not touch the falsified-families
+list: one rejected campaign does not falsify a family, the entries in
+`docs/datasets/nq-es-qqq.md` say things like "tested seven ways, null", and
+automating that promotion would let a single bad campaign close a line of
+research. And `conclusion` is `discarded` or `survived_all_stages`; the second is
+not a promotion, which stays a human decision because no verdict in this project
+may mean approval.
+
+**It runs automatically at the end of `--stage report`.** That placement is the
+lesson from stage 0b, which was built as a standalone command, was never
+triggered, and let the corpus silently go stale until someone asked why a paper
+rated `high` had no body. An edge that has to be remembered will not happen. The
+standalone command exists for backfill.
+
+**What it records today: nothing, correctly.** Twelve campaigns have concluded
+and none is traceable to a paper, because every hypothesis run so far was written
+by a human. The first row it can fill is the one distilled from `2605.04004v3`,
+whose campaign has not been registered.
+
 ## 4. What this costs in N — the rule that is easy to get wrong
 
 **Retrieval, screening, reranking and distillation cost zero N.** None of them

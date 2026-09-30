@@ -114,7 +114,8 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
     d = CAMPAIGNS / name
     cache = d / "validation-null.json"
     if cache.exists():
-        return json.loads(cache.read_text())["sample"]
+        c = json.loads(cache.read_text())
+        return c["sample"], c.get("rescored")
 
     from replay import load_fill_log
     from src.core.engine.reconstruct import reconstruct
@@ -147,14 +148,59 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
     # and a family assembled in a different order must too.
     import hashlib
     seed = 90_000 + int(hashlib.sha256(name.encode()).hexdigest()[:8], 16) % 10_000
-    sample = rt.null_sample(blotter, calendar, b=b, seed=seed)
+
+    # **The observed must be IN the null's support, as the no-flip draw.**
+    # This gate rebuilds nulls *now* for validation runs scored *then*, so any
+    # change to the metric between those two moments breaks comparability
+    # silently. `nq-orderflow-01` is the instance: its validation score predates
+    # the Amendment 3 idle charge reaching that path, its null was rebuilt with
+    # today's scorer, and the two came out -0.1516 on Sharpe against -0.8455 on
+    # Sortino -- a different objective and a different metric, reading as +17.8
+    # standard deviations of skill. Re-deriving the identity assignment catches
+    # every version skew of this shape, not only that one.
+    nb = profile.get("notional_base", 1.0)
+    ident = rt.identity_from_blotter(blotter, calendar, notional_base=nb)
+    observed = (v.get("validation") or {}).get("score", {}).get("primary")
+    obs_metric = (v.get("validation") or {}).get("score", {}).get("metric")
+
+    # **The gate scores the observed in the same process as the null, from the
+    # same fill log.** Using the number recorded at look-time against a null
+    # rebuilt today is precisely the bug: `nq-orderflow-01`'s stored score
+    # predates Amendment 3's idle charge reaching run.py, so it was -0.1516 on
+    # Sharpe while every possible null draw was around -0.87 on Sortino.
+    #
+    # Recomputing is NOT a second look. Section 5's "once per campaign" is about
+    # reading the split; a score is a pure function of the fill log, the calendar
+    # and the scorer, and all three are already on disk. No market data is opened
+    # here -- the same arithmetic, done once, consistently.
+    rescored = None
+    if observed is None or abs(float(observed) - ident.primary) > 1e-3 \
+            or (obs_metric and obs_metric != ident.metric):
+        rescored = {
+            "stored_primary": observed, "stored_metric": obs_metric,
+            "rescored_primary": ident.primary, "rescored_metric": ident.metric,
+            "why": ("the stored validation score and this null disagree at the "
+                    "no-flip assignment, which IS the observed under a sign-flip "
+                    "null. The run was scored by an older version of the metric "
+                    "than the one building its null -- check the run record for "
+                    "`primary_uncharged`, whose absence dates it before "
+                    "Amendment 5 and therefore before Amendment 3's idle charge "
+                    "reached that path. The RESCORED value is used, because a "
+                    "null and an observed computed under different rules cannot "
+                    "be compared at all. The stored record is untouched."),
+        }
+        print(f"    !! {name}: stored {observed} on {obs_metric} -> rescored "
+              f"{ident.primary:.6f} on {ident.metric}", flush=True)
+    sample = rt.null_sample(blotter, calendar, b=b, seed=seed,
+                            notional_base=nb)
     cache.write_text(json.dumps(
         {"source": "round_turn_mc", "split": "validation", "b": b, "seed": seed,
          "profile": profile_name, "n_sessions": len(calendar),
          "fill_log_digest": row.get("fill_log_digest"),
          "spec": "docs/design/pre-registration.md sections 4 and 5",
+         "rescored": rescored,
          "sample": sample}, indent=2))
-    return sample
+    return sample, rescored
 
 
 def main() -> int:
@@ -198,7 +244,10 @@ def main() -> int:
     for name in family:
         c = next(x for x in cands if x["campaign_id"] == name)
         try:
-            sample = build_validation_null(name)
+            sample, rescored = build_validation_null(name)
+            if rescored:
+                c["validation_primary"] = rescored["rescored_primary"]
+                c["rescored"] = rescored
         except Exception as exc:                                 # noqa: BLE001
             print(f"  {name:28} NULL FAILED  {type(exc).__name__}: {exc}"[:118])
             sample = []

@@ -59,6 +59,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import math
 import pathlib
 import subprocess
 import sys
@@ -221,6 +222,10 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
 
     Amendment 9 rule (ii). Built the way every other null in this project is:
     resample the round turns of the run that just happened.
+
+    Returns `(sample, facts)`. `facts` carries the round-turn count, which decides
+    whether rule (ii) is evaluable at all, and the **no-flip** draw, which must
+    reproduce the observed score -- see `judge`.
     """
     sys.path.insert(0, str(ROOT / "scripts"))
     from replay import load_fill_log
@@ -235,7 +240,12 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
     profile = cfg["profiles"][profile_name]
     fills = load_fill_log(row)
     if not fills:
-        return []
+        # No fills at all: no round turns, so rule (ii) is not evaluable for the
+        # same reason the activity floor exists. The shape must still match, or
+        # the caller unpacks a bare list -- which is how the first rehearsal of
+        # this path died, and why the rehearsal exists.
+        return [], {"round_turns": 0, "identity_primary": None,
+                    "identity_metric": None}
     dataset = runner.build_dataset(cfg, profile["dataset"], profile["seed"])
     dataset.unlock_holdout("scoring the pre-registered single look (Amendment 9)")
     sessions = dataset.scored_sessions(Split.HOLDOUT,
@@ -243,16 +253,59 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
     calendar = metrics.session_calendar(dataset, sessions)
     blotter = reconstruct(
         fills, commission_per_contract=profile.get("commission_per_contract", 0.01))
-    return rt.null_sample(blotter, calendar, b=B_NULL, seed=73_073)
+    nb = profile.get("notional_base", 1.0)
+    turns = rt.round_turns(blotter, calendar)
+    ident = rt.identity_from_blotter(blotter, calendar, notional_base=nb)
+    sample = rt.null_sample(blotter, calendar, b=B_NULL, seed=73_073,
+                            notional_base=nb)
+    return sample, {"round_turns": len(turns),
+                    "identity_primary": ident.primary,
+                    "identity_metric": ident.metric}
 
 
-def judge(row: dict, null: list[float]) -> dict:
-    """Amendment 9's two pass conditions, and the evidence beside them."""
+# Amendment 9: a sign-flip null over k round turns has at most 2**k distinct
+# values, so `p <= Q` is unreachable below this many -- no constant chosen by
+# anyone, just the support the test has. At Q = 0.05 it is 5.
+MIN_ROUND_TURNS = math.ceil(math.log2(1.0 / Q))
+
+
+def judge(row: dict, null: list[float], facts: dict | None = None) -> dict:
+    """Amendment 9's two pass conditions, and the evidence beside them.
+
+    Two things are checked before rule (ii) is believed, both added after
+    `nq-orderflow-01` showed what happens without them.
+
+    **The activity floor.** A sign-flip null over k round turns has at most 2**k
+    distinct values, so b = 10,000 resamples of a four-point support does not buy
+    resolution the support does not have. Below `MIN_ROUND_TURNS` rule (ii) is
+    **not evaluable** and the champion is not confirmed -- and the record says
+    "not evaluable" rather than printing a number. `nq-orderflow-01` made two
+    trades in 86 sessions and the machinery reported p = 0.0001 where the honest
+    floor was 0.25.
+
+    **The no-flip guard.** The observed score is in a sign-flip null's support, as
+    the assignment that flips nothing. If re-deriving it does not reproduce the
+    stored score in value and in metric, the two were computed under different
+    rules and no p means anything. That is how `nq-orderflow-01`'s -0.1516 on
+    Sharpe came to be compared against a null of Sortinos around -0.87, reading as
+    +17.8 standard deviations of skill that was not there.
+    """
     import numpy as np
+    facts = facts or {}
     score = row.get("score") or {}
     primary = score.get("primary")
     rule_i = primary is not None and primary > 0
-    if null:
+
+    k = facts.get("round_turns")
+    too_few = k is not None and k < MIN_ROUND_TURNS
+    ident = facts.get("identity_primary")
+    ident_metric = facts.get("identity_metric")
+    skewed = (ident is not None and primary is not None
+              and (abs(float(primary) - float(ident)) > 1e-3
+                   or (score.get("metric") and ident_metric
+                       and score.get("metric") != ident_metric)))
+
+    if null and not too_few and not skewed:
         arr = np.asarray(null, dtype=float)
         exceed = int((arr >= primary).sum())
         p = (1 + exceed) / (len(arr) + 1)
@@ -263,6 +316,19 @@ def judge(row: dict, null: list[float]) -> dict:
         "rule_i_sortino_positive": bool(rule_i),
         "rule_ii_p": p,
         "rule_ii_reject": bool(rule_ii),
+        "rule_ii_evaluable": bool(p is not None),
+        "round_turns": k,
+        "min_round_turns": MIN_ROUND_TURNS,
+        "not_evaluable_because": (
+            (f"{k} round turn(s) is under the {MIN_ROUND_TURNS} that a sign-flip "
+             f"null needs for p <= {Q} to be reachable at all (2**k >= 1/q). Not "
+             f"a threshold anybody chose -- it is the support the test has.")
+            if too_few else
+            ("the no-flip draw does not reproduce the observed score "
+             f"(observed {primary} on {score.get('metric')}, no-flip {ident} on "
+             f"{ident_metric}), so the null and the score were computed under "
+             "different rules and no p from them means anything.")
+            if skewed else None),
         "q": Q,
         "confirmed": bool(rule_i and rule_ii),
         "evidence_not_thresholds": {
@@ -348,21 +414,50 @@ def main() -> int:
     # per instance, so unlocking it costs nothing and can be repeated.
     reason = a.reason or ("REHEARSAL on synthetic data -- not the real look "
                           "(scripts/holdout.py --rehearse)")
+    # **The look is CLAIMED before it is taken.** Amendment 9: the claim lands on
+    # disk before `run.py` is invoked, and `blocked()` already treats this file
+    # existing as a refusal. So a crash, a hang or a kill after this point leaves
+    # the look spent -- which is the expensive answer and the correct one, because
+    # otherwise "it crashed" is an unlimited retry channel, and an unlimited retry
+    # channel is exactly what section 8 forbids, arriving through a door nobody
+    # has to open deliberately. The data was read; whether we managed to write
+    # down what it said is our problem, not the data's.
+    #
+    # The mitigation is `--rehearse`, which runs this identical path on synthetic
+    # data as often as you like, not a retry clause.
+    claim = {"schema": "holdout-result/1", "rehearsal": bool(a.rehearse),
+             "claimed": dt.datetime.now(dt.timezone.utc).isoformat(
+                 timespec="seconds"),
+             "campaign": campaign, "digest": champ["digest"], "profile": profile,
+             "fitted": fitted, "reason": None if a.rehearse else a.reason,
+             "status": "CLAIMED -- the run had not finished when this was written. "
+                       "If it still says this, the look was taken and the run did "
+                       "not complete. There is no second look (Amendment 9).",
+             "confirmed": None}
+    if not a.rehearse:
+        RESULT.write_text(json.dumps(claim, indent=2, default=str) + "\n")
+        print(f"\n  claimed {_rel(RESULT)} BEFORE opening the data. "
+              f"The look is now spent\n  whatever happens next.")
+
     row = run_once(champ, profile=profile, reason=reason, ledger=ledger)
-    null = holdout_null(row, profile)
-    verdict = judge(row, null)
+    null, facts = holdout_null(row, profile)
+    verdict = judge(row, null, facts)
 
     print(f"\n  score            {(row.get('score') or {}).get('primary')}")
+    print(f"  round turns      {verdict['round_turns']} "
+          f"(rule (ii) needs {verdict['min_round_turns']})")
     print(f"  null draws       {len(null)}")
     print(f"  rule (i)  Sortino > 0     {verdict['rule_i_sortino_positive']}")
-    print(f"  rule (ii) p <= {Q}        {verdict['rule_ii_reject']}  "
-          f"(p = {verdict['rule_ii_p']})")
+    if verdict["rule_ii_evaluable"]:
+        print(f"  rule (ii) p <= {Q}        {verdict['rule_ii_reject']}  "
+              f"(p = {verdict['rule_ii_p']})")
+    else:
+        print(f"  rule (ii) NOT EVALUABLE   {verdict['not_evaluable_because']}")
     print(f"  CONFIRMED        {verdict['confirmed']}")
     print("\n  Confirmed means both rules held. It is not a promotion: that is a "
           "human\n  decision and no verdict in this project means approval.")
 
-    out = {"schema": "holdout-result/1",
-           "rehearsal": bool(a.rehearse),
+    out = {**claim, "status": "COMPLETE",
            "taken": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
            "campaign": campaign, "digest": champ["digest"], "profile": profile,
            "fitted": fitted, "reason": None if a.rehearse else a.reason,

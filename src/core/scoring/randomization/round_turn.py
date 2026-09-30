@@ -192,6 +192,78 @@ def null_sample(
                                                 notional_base=notional_base))
 
 
+def identity_primary(
+    turns: Sequence[RoundTurn],
+    sessions: Sequence[int],
+    *,
+    notional_base: float = 1.0,
+    charges: Sequence[float] | None = None,
+):
+    """The **no-flip** draw: the one assignment that must reproduce the observed.
+
+    A sign-flip null is exchangeable with the observed score only if the observed
+    is *in the null's support*, and it is -- as the assignment that flips nothing.
+    So this is a complete check on whether a stored score and a freshly-built null
+    are talking about the same thing, and it costs one evaluation.
+
+    **Built after the null and the observed silently diverged on real data.**
+    `nq-orderflow-01`'s validation score was produced before the Amendment 3 idle
+    charge reached that code path -- its run record has no `primary_uncharged`
+    field, which is how you can tell -- and its validation null was rebuilt months
+    later with the current scorer, which charges. The observed came out
+    **-0.1516 on Sharpe** and every one of the four possible null draws came out
+    around **-0.87 on Sortino**: a different objective *and* a different metric.
+    The gap read as +17.8 standard deviations of skill and was an artefact.
+
+    The class of bug matters more than the instance. `l2_gate.py` rebuilds nulls
+    **now** for validation runs scored **then**, so any change to the metric
+    between those two moments breaks comparability silently, and CLAUDE.md's
+    "changing it now invalidates every calibration number in the repo" is exactly
+    that hazard. A guard that re-derives the identity assignment catches every
+    version skew, including the ones nobody thought of.
+
+    Returns the `ScoreTuple`, so the caller can compare the metric as well as the
+    number -- observed-on-Sharpe against a null of Sortinos is meaningless even
+    when both are finite.
+    """
+    import numpy as np
+
+    from ..scorer import score_returns
+
+    slot = {s: i for i, s in enumerate(sessions)}
+    acc = np.zeros(len(sessions), dtype=float)
+    for t in turns:
+        acc[slot[t.session]] += t.gross - t.cost
+    if notional_base != 1.0:
+        acc /= notional_base
+    if charges is not None:
+        acc += np.asarray(charges, dtype=float)
+    return score_returns(acc.tolist())
+
+
+def identity_from_blotter(
+    blotter: Blotter,
+    calendar: Sequence[SessionSpan],
+    *,
+    notional_base: float = 1.0,
+    idle_charge: float | None = None,
+):
+    """`identity_primary`, built the way `null_sample` builds its own inputs.
+
+    Kept beside `null_sample` and taking the same arguments on purpose: a guard
+    that constructed its charge vector differently from the null it guards would
+    be checking two things that were never the same.
+    """
+    from ..metrics import IDLE_CHARGE, idle_charges
+
+    charge = IDLE_CHARGE if idle_charge is None else idle_charge
+    return identity_primary(
+        round_turns(blotter, calendar), [c.session for c in calendar],
+        notional_base=notional_base,
+        charges=idle_charges(blotter, calendar, idle_charge=charge,
+                             notional_base=notional_base))
+
+
 def null_from_turns(
     turns: Sequence[RoundTurn],
     sessions: Sequence[int],

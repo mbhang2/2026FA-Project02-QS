@@ -31,12 +31,39 @@ A campaign whose report ran without validation gets a committee that never saw a
 validation number either, which is a real difference in what the auditors judge.
 That is the intended consequence, not a side effect.
 
+## Ctrl-C is the stop signal, and that is a protocol decision not a convenience
+
+**Section 4 lets a human stop for any reason that is not a validation result.**
+An unattended session has no fixed right length, and a plan written in advance
+has to guess one. Ctrl-C is the honest version: you stop when you decide to stop,
+and *because no validation number exists yet*, you provably cannot be stopping
+because of one. That is a better realisation of section 4 than a fixed K.
+
+So the first Ctrl-C means **"stop proposing, go to the stop"**: no new campaign
+starts, the session moves straight to phase 2 and validates every champion it
+has, then phase 3, then phase 4. A **second** Ctrl-C during those phases aborts
+outright -- otherwise there is no way out of a wedged validation run.
+
+A campaign interrupted mid-flight enters the record but **not the L2 family**:
+the family is the campaigns that reached `report` and therefore have a winner.
+The interrupted one is named in the session record as having run and produced no
+winner, so its trials are visible in the count even though it contributes no
+candidate -- the same treatment `max_of_n` gives a trial whose null is empty.
+
 ## What it will not do
 
-**It will not take the holdout look.** It prints what `scripts/holdout.py --check`
-would say and stops. §8 gives 73 sessions one look ever, and a driver that could
-spend it as the last line of an overnight script is a driver that will spend it by
-accident.
+**It will not take the holdout look unless you armed it before the session
+started.** By default phase 4 prints what `scripts/holdout.py --check` would say
+and stops, because §8 gives 73 sessions one look **ever** -- not one per session --
+and a driver that spends it as the last line of every overnight script will spend
+it by accident on the first one.
+
+`--holdout-if-l2-passes "<reason>"` arms it. The flag is deliberately only
+available **at launch**, which is the protocol-correct moment to decide: at that
+point no validation number exists, so the decision to spend the look cannot have
+been made in response to one. `holdout.py` still applies every one of its own
+refusals, including that `runs/holdout-result.json` existing is itself a refusal,
+so arming it in session two after spending it in session one changes nothing.
 
 **It will not choose the family.** The L2 family is every campaign in the plan,
 written into the plan before the session runs, which is the same rule
@@ -107,7 +134,7 @@ def registered(name: str) -> bool:
     return (CAMPAIGNS / name / "campaign.json").exists()
 
 
-def main() -> int:
+def _main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--plan", required=True, type=pathlib.Path)
@@ -115,6 +142,12 @@ def main() -> int:
                     help="skip campaigns that already have a ledger")
     ap.add_argument("--dry-run", action="store_true",
                     help="print the plan and what would run; touch nothing")
+    ap.add_argument("--holdout-if-l2-passes", metavar="REASON", default=None,
+                    help="arm the single look, BEFORE the session starts and so "
+                         "before any validation number exists. Phase 4 then runs "
+                         "scripts/holdout.py with this reason, but only if L2 "
+                         "PASSED and holdout.py's own refusals all clear. "
+                         "Omit it and phase 4 only checks.")
     a = ap.parse_args()
 
     import yaml
@@ -151,33 +184,82 @@ def main() -> int:
 
     # ---- phase 1: every campaign, through report, with NO validation --------
     print("\nphase 1: campaigns (register, run, nulls, report)\n")
+    if a.holdout_if_l2_passes:
+        print("  the holdout look is ARMED for this session: it will be taken if "
+              "L2 PASSES\n  and holdout.py's own refusals all clear. Armed now, "
+              "before any validation\n  number exists, which is the only moment "
+              "that decision can honestly be made.\n")
+    print("  Ctrl-C once = stop proposing and go to the stop (phases 2-4).\n"
+          "  Ctrl-C twice = abort.\n")
+
+    stopped_by_cue = False
+    completed: list[str] = []
     for c in entries:
+        if stopped_by_cue:
+            log["campaigns"][str(c["name"])] = "not started (human cue)"
+            continue
         name = str(c["name"])
         if a.resume and already_run(name):
             print(f"  {name}: already has a ledger, skipping")
             log["campaigns"][name] = "skipped (resume)"
             continue
-        if not registered(name):
-            extra = ["--hypothesis", str(c["hypothesis"])]
-            for flag, key in (("--profile", "profile"), ("--n", "n"),
-                              ("--model", "model"), ("--min-exposed", "min_exposed")):
-                if c.get(key) is not None:
-                    extra += [flag, str(c[key])]
-            code, _ = campaign_stage(name, "register", extra)
-            if code:
-                log["campaigns"][name] = "register failed"
-                continue
-        for stage in ("run", "nulls", "report"):
-            code, _ = campaign_stage(name, stage)
-            if code:
-                log["campaigns"][name] = f"{stage} failed"
-                break
-        else:
-            log["campaigns"][name] = "complete"
+        try:
+            if not registered(name):
+                extra = ["--hypothesis", str(c["hypothesis"])]
+                for flag, key in (("--profile", "profile"), ("--n", "n"),
+                                  ("--model", "model"),
+                                  ("--min-exposed", "min_exposed")):
+                    if c.get(key) is not None:
+                        extra += [flag, str(c[key])]
+                code, _ = campaign_stage(name, "register", extra)
+                if code:
+                    log["campaigns"][name] = "register failed"
+                    continue
+            for stage in ("run", "nulls", "report"):
+                code, _ = campaign_stage(name, stage)
+                if code:
+                    log["campaigns"][name] = f"{stage} failed"
+                    break
+            else:
+                log["campaigns"][name] = "complete"
+                completed.append(name)
+        except KeyboardInterrupt:
+            # **Section 4's stop, taken by a human who has seen no validation
+            # number** -- there are none yet, phase 2 has not run. That is the
+            # whole reason this is a legitimate stopping rule and not optional
+            # stopping: the thing that would bias it does not exist.
+            stopped_by_cue = True
+            log["campaigns"][name] = "interrupted mid-flight (human cue)"
+            print(f"\n  CUE RECEIVED during {name}. No further campaign starts.\n"
+                  f"  {name} is recorded as having run without producing a "
+                  f"winner, so its\n  trials are in the count and it is not in "
+                  f"the L2 family.\n  Going to the stop: validation, then L2, "
+                  f"then the holdout.\n", flush=True)
         record.write_text(json.dumps(log, indent=2) + "\n")
+
+    log["stopped_by_cue"] = stopped_by_cue
+    log["declared_family"] = completed
+    log["family_note"] = (
+        "the L2 family is the campaigns that reached `report` and therefore have "
+        "a winner. Campaigns that ran and produced none are in `campaigns` above "
+        "with their reason: their trials count, they contribute no candidate, and "
+        "dropping them from the family is not family-shrinking because there is "
+        "nothing of theirs to drop." if stopped_by_cue else
+        "every campaign in the plan, written before the session ran.")
+    names = completed if stopped_by_cue else names
+
+    if not names:
+        print("\n  no campaign produced a winner, so there is nothing to "
+              "validate and no family\n  to correct over. Stopping here.")
+        log["finished"] = dt.datetime.now(dt.timezone.utc).isoformat(
+            timespec="seconds")
+        record.write_text(json.dumps(log, indent=2) + "\n")
+        return 0
 
     # ---- phase 2: validation, all of them, now ------------------------------
     print("\nphase 2: validation at the stop -- every winner, in one pass\n")
+    print(f"  the family is {len(names)} campaign(s): {', '.join(names)}\n"
+          "  a second Ctrl-C from here aborts.\n")
     for name in names:
         if not already_run(name):
             print(f"  {name}: no ledger, nothing to validate")
@@ -218,16 +300,47 @@ def main() -> int:
 
     # ---- phase 4: the holdout, checked and NOT taken -----------------------
     print("\nphase 4: the holdout -- checked, never taken by a script\n")
-    _run([PY, "scripts/holdout.py", "--check"], label="holdout --check")
-    print("\n  §8 gives 73 sessions one look, ever. A driver that could spend it "
-          "as the\n  last line of an overnight script is a driver that will spend "
-          "it by accident.\n  If the check above is clear, a human runs "
-          "scripts/holdout.py --reason \"...\".")
+    code, out4 = _run([PY, "scripts/holdout.py", "--check"],
+                      label="holdout --check")
+    log["holdout_check_clear"] = (code == 0)
+    if a.holdout_if_l2_passes:
+        if code != 0:
+            print("\n  ARMED, but the check above is not clear, so nothing was "
+                  "opened.\n  Every refusal holdout.py printed still stands.")
+            log["holdout"] = "armed; refused by holdout.py --check"
+        else:
+            print("\n  ARMED and clear. Taking the single look.\n")
+            hcode, hout = _run([PY, "scripts/holdout.py",
+                                "--reason", a.holdout_if_l2_passes],
+                               label="holdout --reason")
+            log["holdout"] = ("taken" if hcode == 0 else "attempted; failed")
+            log["holdout_reason"] = a.holdout_if_l2_passes
+            print(hout[-1600:])
+    else:
+        log["holdout"] = "checked only; not armed"
+        print("\n  §8 gives 73 sessions one look, EVER -- not one per session. "
+              "This session was\n  not armed, so nothing was opened. To arm the "
+              "next one, pass\n  --holdout-if-l2-passes \"<reason>\" at launch, "
+              "which is the only moment the\n  decision can be made without a "
+              "validation number in front of you.")
 
     log["finished"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     record.write_text(json.dumps(log, indent=2) + "\n")
     print(f"\n  wrote {record.relative_to(ROOT)}")
     return 0
+
+
+def main() -> int:
+    try:
+        return _main()
+    except KeyboardInterrupt:
+        # The second cue. The first one is caught inside phase 1 and means "go to
+        # the stop"; this one means "stop now", and it must not be swallowed or
+        # there is no way out of a wedged validation run.
+        print("\n\nABORTED on a second cue. Whatever had been written stays "
+              "written;\n nothing was rolled back, because the record is "
+              "append-only.")
+        return 130
 
 
 if __name__ == "__main__":

@@ -82,13 +82,20 @@ def test_no_pass_rule_means_no_look(monkeypatch, tmp_path):
     assert not mod.blocked(rehearse=False)
 
 
-def test_the_real_amendment_9_is_not_in_force_yet():
-    """Asserted against the committed document, so the day it is signed off this
-    test fails and someone reads it."""
+def test_the_real_amendment_9_is_signed_and_the_look_is_still_shut():
+    """Signed 2026-09-30. This test used to assert the opposite and fired the day
+    it was signed, which is what it was for.
+
+    It now asserts the thing that replaces it: signing the pass rule removed ONE
+    refusal, and the look must still be blocked by something. Nobody should be
+    able to read "the pass rule is in force" as "the holdout is open"."""
     mod = _mod()
-    assert mod.amendment_9_in_force() is False, (
-        "Amendment 9 now says IN FORCE -- update this test, and re-read §8 before "
-        "anyone runs scripts/holdout.py --reason")
+    assert mod.amendment_9_in_force() is True
+    reasons = mod.blocked(rehearse=False)
+    assert not any("Amendment 9" in r for r in reasons)
+    assert reasons, (
+        "the holdout is now ONE command from being spent. If that is deliberate, "
+        "re-read §8 and Amendment 9 first; if it is not, find out what changed.")
 
 
 def test_a_failed_l2_gate_blocks_the_look(monkeypatch, tmp_path):
@@ -322,3 +329,83 @@ def test_the_docstring_counts_its_refusals_correctly():
     n = len([1 for i in range(1, 12) if f"\n{i}. **" in src])
     assert "Seven refusals" in src, "the count in the docstring"
     assert n == 7, f"the docstring lists {n} numbered refusals"
+
+
+# --------------------------------------------------------------------------- #
+# Amendment 9's four added conditions
+# --------------------------------------------------------------------------- #
+def test_rule_ii_is_not_evaluable_below_the_support_the_test_needs():
+    """A sign-flip null over k round turns has at most 2**k values, so p <= q is
+    unreachable below ceil(log2(1/q)). Not a threshold anybody chose.
+
+    nq-orderflow-01 made two trades in 86 sessions and the machinery reported
+    p = 0.0001 where the honest floor was 0.25."""
+    mod = _mod()
+    assert mod.MIN_ROUND_TURNS == 5, "ceil(log2(1/0.05))"
+    row = {"score": {"primary": 0.9, "metric": "sortino_per_session"}}
+    null = [-1.0] * 400
+    out = mod.judge(row, null, {"round_turns": 2, "identity_primary": 0.9,
+                                "identity_metric": "sortino_per_session"})
+    assert out["rule_ii_evaluable"] is False
+    assert out["rule_ii_p"] is None
+    assert out["confirmed"] is False, "rule (i) alone cannot confirm"
+    assert "2**k >= 1/q" in out["not_evaluable_because"]
+
+
+def test_five_round_turns_is_evaluable():
+    mod = _mod()
+    row = {"score": {"primary": 0.9, "metric": "sortino_per_session"}}
+    out = mod.judge(row, [-1.0] * 400, {"round_turns": 5, "identity_primary": 0.9,
+                                        "identity_metric": "sortino_per_session"})
+    assert out["rule_ii_evaluable"] is True
+    assert out["confirmed"] is True
+
+
+def test_a_null_that_cannot_reproduce_the_observed_yields_no_p():
+    """The observed IS the no-flip draw. If re-deriving it disagrees, the two were
+    computed under different rules -- which is how nq-orderflow-01's -0.1516 on
+    Sharpe came to be compared against a null of Sortinos around -0.87."""
+    mod = _mod()
+    row = {"score": {"primary": -0.1516, "metric": "sharpe_per_session"}}
+    out = mod.judge(row, [-0.9] * 400,
+                    {"round_turns": 40, "identity_primary": -0.8455,
+                     "identity_metric": "sortino_per_session"})
+    assert out["rule_ii_evaluable"] is False
+    assert out["confirmed"] is False
+    assert "different rules" in out["not_evaluable_because"]
+    assert "sharpe_per_session" in out["not_evaluable_because"]
+
+
+def test_a_metric_disagreement_alone_is_enough_to_refuse():
+    """Same number, different leg. Sortino and Sharpe are not comparable even when
+    they happen to coincide."""
+    mod = _mod()
+    row = {"score": {"primary": 0.5, "metric": "sharpe_per_session"}}
+    out = mod.judge(row, [-0.9] * 400,
+                    {"round_turns": 40, "identity_primary": 0.5,
+                     "identity_metric": "sortino_per_session"})
+    assert out["rule_ii_evaluable"] is False
+
+
+def test_the_look_is_claimed_before_the_data_is_opened():
+    """A crash after the data is read must not return the look, or "it crashed"
+    becomes an unlimited retry channel -- which is what section 8 forbids,
+    arriving through a door nobody has to open deliberately."""
+    src = (REPO_ROOT / "scripts" / "holdout.py").read_text()
+    claim = src.index("RESULT.write_text(json.dumps(claim")
+    run = src.index("row = run_once(champ")
+    assert claim < run, "the claim must land on disk BEFORE run.py is invoked"
+    flat = " ".join(src.split())
+    assert "unlimited retry channel" in flat
+    assert "CLAIMED -- the run had not finished" in src
+
+
+def test_rule_i_is_the_charged_primary_and_the_amendment_says_so():
+    text = (REPO_ROOT / "docs" / "design" / "pre-registration.md").read_text()
+    i = text.index("## Amendment 9")
+    body = text[i:text.index("## Amendment 10")]
+    flat = " ".join(body.split())
+    assert "Not `primary_uncharged`" in flat
+    assert "charged `primary`" in flat
+    assert "well, uncharged it was positive" in flat, (
+        "name the sentence the rule exists to prevent")

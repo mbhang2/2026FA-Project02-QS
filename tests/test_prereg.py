@@ -106,17 +106,28 @@ def test_the_real_documents_current_statuses():
     signed, which is the point at which somebody should be reading this list."""
     mod = _mod()
     expected = {1: True, 2: True, 3: True, 4: False, 5: False,
-                6: False, 7: False, 8: True, 9: False, 10: True}
+                6: False, 7: False, 8: True, 9: True, 10: True}
     actual = {n: ok for n, ok, _ in mod.all_amendments()}
     assert actual == expected, actual
 
 
-def test_amendment_9_is_still_not_in_force():
-    """Stated separately from the snapshot above because this one guards the
-    single look, and a reader skimming a dict of ten booleans will not see it."""
-    assert _mod().in_force(9) is False, (
-        "the holdout pass rule is signed -- if that is deliberate, this test and "
-        "the snapshot above are what you update, having read section 8 again")
+def test_amendment_9_is_in_force_and_the_holdout_is_still_shut():
+    """Amendment 9 was signed on 2026-09-30. It is stated separately from the
+    snapshot because it guards the single look, and a reader skimming ten
+    booleans will not see it.
+
+    Signing it removes ONE refusal. The look stays shut on the others, and that
+    is asserted here so nobody reads "the pass rule is in force" as "the holdout
+    is open"."""
+    import importlib.util, json, pathlib as pl
+    assert _mod().in_force(9) is True
+    spec = importlib.util.spec_from_file_location(
+        "holdout", REPO_ROOT / "scripts" / "holdout.py")
+    h = importlib.util.module_from_spec(spec); spec.loader.exec_module(h)
+    assert not any("Amendment 9" in r for r in h.blocked(rehearse=False))
+    assert h.blocked(rehearse=False), (
+        "the holdout must still be blocked by something -- if this fails, the "
+        "single look is one command away and somebody should know that")
 
 
 def test_the_document_is_the_switch_and_says_so():

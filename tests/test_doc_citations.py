@@ -57,6 +57,13 @@ TOP_LEVEL = {
 # Cited on purpose, and absent on purpose. Each entry states which, because an
 # allowlist without reasons becomes the place failures go to be forgotten.
 ABSENT_BY_DESIGN: dict[str, str] = {
+    "runs/holdout-result.json":
+        "**absent is the point.** Section 8 gives the holdout one look ever, and "
+        "Amendment 9 makes this file's existence a refusal: `holdout.py` claims "
+        "it BEFORE opening the data, so a crash still spends the look. The day "
+        "this file exists, the holdout has been read and can never be read "
+        "again. If it appears in the tree, that is not a fixable citation -- it "
+        "is the single look having been taken.",
     "research/audit_db.json":
         "tier 3's audit ledger, written on the first audit. `audit/config.py` "
         "names it as DEFAULT_LEDGER; it has never been committed, on this "

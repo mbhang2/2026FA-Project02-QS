@@ -88,15 +88,46 @@ def test_a_report_without_validation_is_an_intended_consequence():
 # --------------------------------------------------------------------------- #
 # what it refuses
 # --------------------------------------------------------------------------- #
-def test_it_never_takes_the_holdout_look():
-    """§8 gives 73 sessions one look ever. A driver that could spend it as the
-    last line of an overnight script will spend it by accident."""
+def test_the_holdout_is_never_taken_unless_it_was_armed_at_launch():
+    """This test used to assert the driver could never pass `--reason` at all.
+    That changed deliberately on 2026-09-30, at Michael's request, so an
+    unattended session can end at the holdout.
+
+    What it must still guarantee is the reason the old assertion existed: a
+    driver that spends the look as the last line of every overnight script will
+    spend it by accident on the first one. Five things stand between the flag and
+    the data, and all five are asserted here.
+    """
     phase4 = SRC[SRC.index("phase 4: the holdout"):]
+
+    # 1. default is check-only
     assert '"--check"' in phase4
-    assert "--reason" not in phase4.split("a human runs")[0], (
-        "the driver must not be able to pass --reason to holdout.py")
-    assert "never taken by a script" in FLAT
-    assert "spend it by accident" in FLAT
+    assert "checked only; not armed" in phase4
+    # 2. --reason is reachable ONLY under the armed branch
+    assert "if a.holdout_if_l2_passes:" in phase4
+    armed = phase4[phase4.index("if a.holdout_if_l2_passes:"):]
+    assert '"--reason", a.holdout_if_l2_passes' in armed
+    assert '"--reason"' not in phase4[:phase4.index("if a.holdout_if_l2_passes:")]
+    # 3. the check must clear first, inside the armed branch
+    assert "if code != 0:" in armed
+    assert "armed; refused by holdout.py --check" in armed
+    # 4. the flag carries a reason, so the record says why
+    assert "holdout_reason" in phase4
+    # 5. arming happens at launch and the file says why that matters
+    assert "one look, EVER -- not one per session" in FLAT
+    assert "before any validation number exists" in FLAT
+
+
+def test_arming_cannot_be_decided_after_seeing_a_validation_number():
+    """The flag is parsed with the rest of argv, before phase 1 runs. If it could
+    be supplied later -- a prompt, an env var read at phase 4 -- the decision to
+    spend the look could be made in response to a validation result, which is the
+    one thing §4 forbids outright."""
+    parse = SRC.index('ap.add_argument("--holdout-if-l2-passes"')
+    phase2 = SRC.index("phase 2: validation at the stop")
+    assert parse < phase2, "the flag is read at launch, before any number exists"
+    assert "input(" not in SRC, "no interactive prompt may arm it mid-session"
+    assert "os.environ" not in SRC, "no environment read may arm it mid-session"
 
 
 def test_the_family_is_the_plan_and_the_plan_is_written_first():
@@ -190,3 +221,45 @@ def test_the_l2_verdict_is_printed_and_not_left_in_a_file():
     assert "THE TWO L2 STATISTICS DISAGREE" in phase3
     assert "Amendment 10" in phase3
     assert "pre-registration decision, not this script's" in FLAT
+
+
+# --------------------------------------------------------------------------- #
+# Ctrl-C is the stop signal
+# --------------------------------------------------------------------------- #
+def test_the_first_cue_goes_to_the_stop_and_the_second_aborts():
+    """§4 lets a human stop for any reason that is not a validation result. Ctrl-C
+    is the honest version of that: at the moment it arrives, phase 2 has not run,
+    so no validation number exists and the stop provably cannot be a response to
+    one."""
+    assert "except KeyboardInterrupt:" in SRC
+    assert "stopped_by_cue = True" in SRC
+    assert "ABORTED on a second cue" in SRC
+    assert "provably cannot be stopping" in FLAT or \
+           "cannot be stopping because of one" in FLAT
+    # the first cue is caught INSIDE phase 1, not around the whole session
+    p1 = SRC.index("phase 1: campaigns")
+    p2 = SRC.index("phase 2: validation at the stop")
+    assert "except KeyboardInterrupt:" in SRC[p1:p2]
+
+
+def test_an_interrupted_campaign_is_recorded_but_not_in_the_family():
+    """The family is the campaigns that reached `report`. An interrupted one has
+    no winner to contribute, and saying so is not family-shrinking -- there is
+    nothing of its to drop."""
+    assert "interrupted mid-flight (human cue)" in SRC
+    assert '"declared_family"] = completed' in SRC
+    assert "their trials count, they contribute no candidate" in FLAT
+
+
+def test_the_holdout_must_be_armed_at_launch_or_it_is_only_checked():
+    """§8 gives 73 sessions one look EVER, not one per session. The flag exists
+    only at launch because that is the one moment the decision can be made with no
+    validation number in front of anyone."""
+    assert '"--holdout-if-l2-passes"' in SRC
+    assert "checked only; not armed" in SRC
+    assert "one look, EVER -- not one per session" in FLAT
+    assert "before any validation" in FLAT
+    # and it never bypasses holdout.py's own refusals
+    p4 = SRC[SRC.index("phase 4: the holdout"):]
+    assert '"--check"' in p4
+    assert "armed; refused by holdout.py --check" in p4

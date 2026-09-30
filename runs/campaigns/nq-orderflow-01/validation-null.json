@@ -7,6 +7,13 @@
   "n_sessions": 86,
   "fill_log_digest": "eee05b8a2f7d6dbb0457a7a246648c5e2bdb63c0ea35c88807e04acae7be9531",
   "spec": "docs/design/pre-registration.md sections 4 and 5",
+  "rescored": {
+    "stored_primary": -0.1516320268819263,
+    "stored_metric": "sharpe_per_session",
+    "rescored_primary": -0.8455065960966258,
+    "rescored_metric": "sortino_per_session",
+    "why": "the stored validation score and this null disagree at the no-flip assignment, which IS the observed under a sign-flip null. The run was scored by an older version of the metric than the one building its null -- check the run record for `primary_uncharged`, whose absence dates it before Amendment 5 and therefore before Amendment 3's idle charge reached that path. The RESCORED value is used, because a null and an observed computed under different rules cannot be compared at all. The stored record is untouched."
+  },
   "sample": [
     -0.8455065960966258,
     -0.9562753052474849,

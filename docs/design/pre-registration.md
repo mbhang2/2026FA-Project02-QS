@@ -1508,10 +1508,23 @@ before today.
 
 ## Amendment 9 — 2026-09-30 — the holdout pass rule, written before the look
 
-**Status: DRAFTED, NOT IN FORCE.** §8 requires that "the pass rule is written
-**before** it is opened", and it never was. `scripts/holdout.py` refuses to run
-until this section says IN FORCE, so the refusal is mechanical rather than
-remembered.
+**Status: IN FORCE from 2026-09-30, signed off by Michael.** §8 requires that
+"the pass rule is written **before** it is opened", and until today it never was.
+`scripts/holdout.py` reads this status through `scripts/prereg.py`, so the
+refusal was mechanical rather than remembered, and so is the unlocking.
+
+**Signed with the holdout still shut**, which is the only honest moment to sign a
+pass rule: L2 is **FAIL**, so nothing opens today, and no number was in front of
+anyone when these conditions were chosen. The rule was written first, the gate
+was run second, and the record shows that order.
+
+**Four conditions were added to the draft before signing, each because a real
+campaign showed what their absence costs.** They are in the sections below and
+none of them is a tuned constant: rule (i) is named as the *charged* primary;
+rule (ii) is **not evaluable** below five round turns, which falls out of
+`2**k >= 1/q` and not out of anyone's preference; the observed must be
+reproducible as the null's **no-flip** draw; and the look is **claimed before it
+is taken**, so a crash spends it.
 
 Nothing here weakens §8. **73 sessions, one look, ever**, and only if the L2 gate
 accepts. This adds the missing sentence: what the look has to show.
@@ -1525,12 +1538,104 @@ The champion is **confirmed** on the holdout when both hold:
 | (i) | Sortino > 0 on the holdout | the same floor as rules (a) at L1 and L2, for the same reason: the sign-flip null tests directional skill, not profitability |
 | (ii) | `round_turn_mc` p ≤ 0.05 against the champion's **own holdout null** | the test |
 
+with **b = 10,000** resamples and **q = 0.05**, so the reported p can be no
+smaller than 1 / 10,001 — and no smaller than the null's own support allows,
+which is the subject of *When rule (ii) is not evaluable* below.
+
 Both are **pass conditions**. Anything else measured on those 73 sessions —
 train-to-holdout decay, per-hour and per-weekday concentration, turnover, the
 committee's reading of any of it — is **evidence and not a threshold**, exactly as
 rule (c) is at L2. There is no constant to tune here and there will not be one:
 "within X% of validation" needs an X, and this project does not fit thresholds to
 make a curve look better.
+
+### Which number rule (i) is about
+
+**The charged `primary`** — Sortino per session with Amendment 3's idle charge
+inside it, which is the number `run.py` writes as `score.primary` and the number
+that selected the champion at L1 and L2. **Not `primary_uncharged`.** Amendment 5
+requires both be reported and this amendment does not change that: the uncharged
+figure is **evidence**, listed with the rest of it below.
+
+Stated because the ambiguity is worth exactly one sentence now and an argument
+later. A champion idle in most sessions is penalised heavily by the charge, so
+charged and uncharged can fall on opposite sides of zero, and "well, uncharged it
+was positive" is the sentence this paragraph exists to prevent.
+
+### When rule (ii) is not evaluable, and what that means
+
+The sign-flip null over **k round turns has at most 2^k distinct values.** So the
+smallest p it can produce is bounded by its own support, no matter how many
+resamples are drawn: **b = 10,000 resamples of a four-point support does not buy
+resolution the support does not have.**
+
+It follows, with no constant chosen by anyone, that
+
+> **rule (ii) cannot reject at q unless 2^k >= 1/q.**
+
+At q = 0.05 that is **k >= 5 round turns on the holdout**. Below five, `p <= 0.05`
+is unreachable, and any p reported there is an artefact of resampling a support
+too small to contain the answer.
+
+**A champion with fewer than five holdout round turns is therefore NOT
+CONFIRMED**, and the record must say *not evaluable* rather than reporting a
+number. It is not "void" and it does not entitle anyone to a second look — see
+*When the look is spent* below. This is the same shape as `MIN_SESSIONS` and
+Amendment 6's exposure floor: an eligibility condition, checked before a
+statistic is believed rather than after it is liked.
+
+**This is live, not hypothetical.** `nq-orderflow-01`'s champion made **two
+trades in 86 validation sessions**; its null had a support of **four values**, and
+the machinery reported **p = 0.0001** where the honest floor was 0.25.
+
+### The observed must be in the null's own support
+
+A sign-flip null contains the observed score as the assignment that **flips
+nothing**. If re-deriving that no-flip draw does not reproduce the stored score,
+the two were computed under different rules and comparing them is meaningless.
+
+**The check is therefore: re-derive the no-flip draw and require it to match the
+observed, in value and in metric.** If it does not, no p is reported and the
+champion is not confirmed.
+
+Found by `nq-orderflow-01`, and the class matters more than the instance. Its
+validation score was produced **before Amendment 3's idle charge reached that
+code path** — its run record has no `primary_uncharged` field, which is how you
+can date it — while its null was rebuilt months later with the current scorer.
+The observed was **-0.1516 on Sharpe**; every possible null draw was around
+**-0.87 on Sortino**. A different objective *and* a different metric. The gap
+read as **+17.8 standard deviations of skill** and was entirely an artefact.
+
+The general hazard is that a null is built **now** for a run scored **then**, so
+any change to the metric between those moments breaks comparability silently —
+which is what this document already means by "changing it now invalidates every
+calibration number in the repo". The no-flip check catches every version skew of
+that shape, including ones nobody anticipated, and costs one evaluation.
+
+### When the look is spent
+
+**The look is claimed before it is taken, not after it succeeds.** `holdout.py`
+writes its claim to `runs/holdout-result.json` **before** invoking `run.py`, and
+that file existing is already a refusal. So:
+
+| | |
+|---|---|
+| refused before the run starts | **not spent.** Nothing was opened |
+| the run starts and crashes, hangs, or is killed | **spent.** The data was opened |
+| the run completes and both rules hold | spent, **confirmed** |
+| the run completes and either rule fails, or rule (ii) is not evaluable | spent, **not confirmed** |
+
+The middle row is the one that needs defending, because it is the expensive
+answer. If a crash returned the look, then **"it crashed" becomes an unlimited
+retry channel** — and an unlimited retry channel is the thing §8 exists to
+forbid, arriving through a door nobody has to open deliberately. The holdout was
+read; whether we managed to write down what it said is our problem, not the
+data's.
+
+**The mitigation is rehearsal, not a retry clause.** `--rehearse` runs the
+identical path on the synthetic `holdout` profile as often as you like, and it
+unlocks for real so it exercises the one-way lock too. Rehearse until the
+plumbing is boring. Then take the look on a machine that will finish.
 
 ### Why a null on the holdout at all, rather than just a sign
 

@@ -411,3 +411,59 @@ Two refusals, down from three:
 - **L2 is FAIL.** §8 opens the holdout only if L2 accepts.
 
 The disagreement refusal no longer fires, because the document has chosen.
+
+## 16. RETRACTION — the +17.8 sd finding was a bug, 2026-09-30
+
+**Sections 12 and 14 above are wrong where they treat `nq-orderflow-01` as
+evidence, and section 14's conclusion is withdrawn entirely.** The sections are
+left standing rather than edited, because the record of what was believed and why
+is worth more than a tidy document.
+
+**What was actually true.** `nq-orderflow-01`'s champion made **two trades in 86
+validation sessions**. Its validation score was produced before Amendment 3's
+idle charge reached `run.py`'s scoring path — its run record carries no
+`primary_uncharged` field, which dates it — while its validation null was rebuilt
+months later with the current scorer. So the observed was **-0.1516 on the Sharpe
+fallback** and every possible null draw was **a Sortino around -0.87**: a
+different objective *and* a different metric.
+
+Three independent things were wrong at once, and each alone would have been enough:
+
+| | |
+|---|---|
+| the null and the observed measured different objectives | one carried the idle charge, the other did not |
+| they measured different **metrics** | Sharpe against Sortino, which are not comparable at any value |
+| the null had a support of **four values** | 2 round turns → 2² assignments. The honest p floor was 0.25; the machinery reported 0.0001 |
+
+**Corrected, `nq-orderflow-01` sits at +1.15 sd and the family's p is 0.6036.**
+Both statistics now agree on FAIL and there is no disagreement between them.
+
+**What survives.** Section 10's measurement is untouched — it ran on simulated
+families under a strict null with well-behaved nulls, and the raw maximum really
+is valid but blind. Amendment 10's *reasoning* stands. What does not survive is
+the live example that made it feel urgent, and **section 14's "directional skill
+without profitability" is withdrawn**: two trades is not directional skill.
+
+**What it changed in the code.**
+
+- `round_turn.identity_primary` / `identity_from_blotter` — the **no-flip draw**,
+  which is the observed's place in a sign-flip null's support. If re-deriving it
+  disagrees with the stored score, in value or in metric, the two were computed
+  under different rules and no p from them means anything.
+- `l2_gate.py` now **recomputes the observed in the same process as the null**,
+  from the same fill log, and records `rescored` when that differs from the stored
+  number. Recomputing is not a second look: §5's "once per campaign" is about
+  reading the split, and a score is a pure function of a fill log, a calendar and
+  a scorer, all three already on disk.
+- Amendment 9 gained the **activity floor** — rule (ii) is not evaluable below
+  `ceil(log2(1/q)) = 5` round turns — and the same no-flip guard, so the holdout
+  cannot inherit any of this.
+
+**The general lesson, which is the part worth keeping.** This gate builds nulls
+**now** for runs scored **then**. Any change to the metric between those two
+moments breaks comparability silently, and this document's own warning —
+"changing it now invalidates every calibration number in the repo" — is exactly
+that hazard. A number recomputed from stored inputs is trustworthy; a number
+*stored* under one version of the rules and compared against one computed under
+another is not, and nothing about it looks wrong from the outside. It looked like
+a discovery.

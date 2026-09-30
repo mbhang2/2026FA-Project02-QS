@@ -74,6 +74,41 @@ that did badly shrinks M and inflates the maximum's significance.
 hypothesis file. Amendment 8 makes the commit the human act, so a session cannot
 distil and register in one breath.
 
+## Two shapes of plan: a list, or a family
+
+**A list** names K campaigns written in advance. M is the list.
+
+**A family** names one seed question and a number of iterations, and campaign
+k+1 runs on a question refined from campaign k's own outcome. That is the L1.5
+§4 anticipated, and it is what an overnight session is actually for: run, read
+what the auditors objected to, sharpen the question, run again.
+
+```yaml
+session: session-02
+family:
+  seed: config/hypotheses/intraday-continuation.md
+  iterations: 5
+  n: 20
+  model: deepseek-v4-pro
+  prefix: nq-s02
+```
+
+**M is declared even though its members are not.** The count is fixed in the
+plan before anything runs -- five iterations, five campaigns in the family --
+while *which* questions they ask is decided as it goes. That is the honest
+statement of what is and is not pre-registered here, and it is the distinction
+§4's correction actually needs: the multiplicity is the number of looks, and the
+number of looks is written down first.
+
+**Refinement happens during phase 1, and that is what makes it legal.**
+`refine_hypothesis.py` refuses to run if any validation artefact is readable for
+the campaign it is given. During phase 1 none exists, because validation runs at
+the stop. The ordering enforces §4 rather than a promise to be careful.
+
+Each refined question is committed by the machine under **Amendment 11**, marked
+`Machine-Written`, and carries Amendment 11's containment: it may spend trials
+and may not support a claim until a human has read it.
+
 ## The plan file
 
 ```yaml
@@ -212,6 +247,25 @@ def _main() -> int:
     plan = yaml.safe_load(a.plan.read_text())
     session = str(plan.get("session") or a.plan.stem)
     entries = plan.get("campaigns") or []
+    fam = plan.get("family")
+    if fam and entries:
+        sys.exit("a plan is a list of campaigns OR a family, not both: a family "
+                 "decides its own members, so a list beside it is ambiguous.")
+    if fam:
+        iterations = int(fam.get("iterations") or 0)
+        if iterations < 2:
+            sys.exit("a family needs at least 2 iterations; one is just a "
+                     "campaign, and the list form says that more plainly.")
+        prefix = str(fam.get("prefix") or session)
+        seed = ROOT / str(fam["seed"])
+        if not seed.is_file():
+            sys.exit(f"no seed hypothesis at {fam['seed']}")
+        entries = [{"name": f"{prefix}-{k + 1:02d}",
+                    "hypothesis": str(fam["seed"]) if k == 0 else None,
+                    "profile": fam.get("profile"), "n": fam.get("n"),
+                    "model": fam.get("model"),
+                    "min_exposed": fam.get("min_exposed")}
+                   for k in range(iterations)]
     if not entries:
         sys.exit("the plan names no campaigns")
 
@@ -232,14 +286,21 @@ def _main() -> int:
     except OSError:
         pass        # already a leader, or a platform without process groups
 
-    print(f"session {session}: {len(entries)} campaign(s)")
+    print(f"session {session}: {len(entries)} campaign(s)"
+          + (f" -- a FAMILY refined from {fam['seed']}" if fam else ""))
+    if fam:
+        print(f"  M = {len(entries)} is declared; WHICH questions they ask is "
+              f"decided as it goes.\n  Each refinement is machine-committed "
+              f"under Amendment 11 and may not support a claim.")
     print(f"  pid {os.getpid()} -- the cue is:  kill -INT -{os.getpid()}\n"
           f"  (once = go to the stop; twice = abort. Ctrl-C works if attached.)")
     print("  validation runs AT THE STOP, not per campaign (section 4)\n")
     for c in entries:
         mark = "already run" if already_run(c["name"]) else "to run"
-        print(f"  {c['name']:24} {mark:12} "
-              f"{str(c.get('hypothesis','')).replace('config/hypotheses/', '')}")
+        h = c.get("hypothesis")
+        shown = (str(h).replace("config/hypotheses/", "") if h else
+                 "(refined from the campaign before it -- not written yet)")
+        print(f"  {c['name']:24} {mark:12} {shown}")
     if a.dry_run:
         print("\n  dry run: nothing was run")
         print("  the L2 family would be: " + ", ".join(names))
@@ -268,6 +329,7 @@ def _main() -> int:
 
     stopped_by_cue = False
     completed: list[str] = []
+    cur_hypothesis = (ROOT / str(fam["seed"])) if fam else None
     for c in entries:
         if stopped_by_cue:
             log["campaigns"][str(c["name"])] = "not started (human cue)"
@@ -279,6 +341,10 @@ def _main() -> int:
             continue
         try:
             if not registered(name):
+                if c.get("hypothesis") is None:
+                    log["campaigns"][name] = ("no question: the refinement "
+                                              "before it did not produce one")
+                    continue
                 extra = ["--hypothesis", str(c["hypothesis"])]
                 for flag, key in (("--profile", "profile"), ("--n", "n"),
                                   ("--model", "model"),
@@ -299,6 +365,40 @@ def _main() -> int:
             else:
                 log["campaigns"][name] = "complete"
                 completed.append(name)
+                # **Refine here, inside phase 1, and that is what makes it
+                # legal.** refine_hypothesis.py refuses if any validation
+                # artefact is readable for the campaign it is given; during
+                # phase 1 none exists, because validation runs at the stop. The
+                # ordering enforces §4 rather than a promise to be careful.
+                if fam and name != entries[-1]["name"]:
+                    nxt = next(e for e in entries
+                               if e["name"] != name
+                               and e.get("hypothesis") is None)
+                    code, out = _run(
+                        [PY, "scripts/refine_hypothesis.py",
+                         "--campaign", name, "--parent", str(cur_hypothesis),
+                         "--model", str(c.get("model") or "deepseek-v4-pro"),
+                         "--commit"],
+                        label=f"{name} refine -> next question")
+                    written = [ln.split("wrote ", 1)[1].split("  ")[0].strip()
+                               for ln in out.splitlines() if ln.startswith("wrote ")]
+                    if code or not written:
+                        log["campaigns"][name] += "; refinement FAILED"
+                        log["refinement_failed_after"] = name
+                        print(f"\n  the refinement after {name} failed, so "
+                              f"there is no question for the next campaign.\n"
+                              f"  Going to the stop with the "
+                              f"{len(completed)} campaign(s) that ran.",
+                              flush=True)
+                        stopped_by_cue = True
+                    else:
+                        nxt["hypothesis"] = written[0]
+                        cur_hypothesis = ROOT / written[0]
+                        log.setdefault("refinements", []).append(
+                            {"after": name, "wrote": written[0],
+                             "machine_written": True,
+                             "amendment": 11})
+                        print(f"      next question: {written[0]}", flush=True)
         except KeyboardInterrupt:
             # **Section 4's stop, taken by a human who has seen no validation
             # number** -- there are none yet, phase 2 has not run. That is the

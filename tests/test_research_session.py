@@ -301,3 +301,74 @@ def test_a_verdict_about_a_different_family_is_never_this_sessions_result():
     assert "a different family" in SRC
     assert "verdict_file_family" in SRC
     assert "not about" in FLAT
+
+
+# --------------------------------------------------------------------------- #
+# a family: M declared, members not
+# --------------------------------------------------------------------------- #
+def _family_plan(tmp_path, iterations=3):
+    import yaml
+    p = tmp_path / "fam.yaml"
+    p.write_text(yaml.safe_dump({
+        "session": "s-fam",
+        "family": {"seed": "config/hypotheses/intraday-continuation.md",
+                   "iterations": iterations, "n": 5, "prefix": "nq-fam"}}))
+    return p
+
+
+def test_a_family_declares_M_but_not_its_members(tmp_path):
+    """The count is what the correction needs -- multiplicity is the number of
+    looks. Which question each campaign asks is decided as it goes, and saying
+    that plainly beats implying the family was written in advance."""
+    proc = subprocess.run(
+        [sys.executable, "scripts/research_session.py", "--plan",
+         str(_family_plan(tmp_path)), "--dry-run"],
+        capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "M = 5" in proc.stdout or "M = 3" in proc.stdout
+    assert "decided as it goes" in proc.stdout
+    assert "the L2 family would be: nq-fam-01, nq-fam-02, nq-fam-03" in proc.stdout
+    assert "not written yet" in proc.stdout, (
+        "a campaign with no question yet must say so, not print None")
+
+
+def test_a_plan_is_a_list_or_a_family_but_not_both(tmp_path):
+    import yaml
+    p = tmp_path / "both.yaml"
+    p.write_text(yaml.safe_dump({
+        "session": "x",
+        "campaigns": [{"name": "a", "hypothesis": "h.md"}],
+        "family": {"seed": "s.md", "iterations": 3}}))
+    proc = subprocess.run(
+        [sys.executable, "scripts/research_session.py", "--plan", str(p)],
+        capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert proc.returncode != 0
+    assert "not both" in (proc.stdout + proc.stderr)
+
+
+def test_a_family_of_one_is_refused(tmp_path):
+    proc = subprocess.run(
+        [sys.executable, "scripts/research_session.py", "--plan",
+         str(_family_plan(tmp_path, iterations=1))],
+        capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert proc.returncode != 0
+    assert "at least 2" in (proc.stdout + proc.stderr)
+
+
+def test_the_refinement_happens_inside_phase_1():
+    """That is what makes it legal. refine_hypothesis.py refuses if a validation
+    artefact is readable, and during phase 1 none exists because validation runs
+    at the stop. The ordering is the enforcement, not a promise."""
+    p1 = SRC.index("phase 1: campaigns")
+    p2 = SRC.index("phase 2: validation at the stop")
+    assert "refine_hypothesis.py" in SRC[p1:p2]
+    assert "refine_hypothesis.py" not in SRC[p2:]
+    assert "ordering enforces" in FLAT or "ordering is the enforcement" in FLAT
+
+
+def test_a_failed_refinement_goes_to_the_stop_rather_than_guessing():
+    """No question means no campaign. Carrying on with the parent question would
+    silently make two campaigns the same experiment and inflate M."""
+    assert "refinement FAILED" in SRC
+    assert "there is no question for the next campaign" in SRC
+    assert "no question: the refinement" in SRC

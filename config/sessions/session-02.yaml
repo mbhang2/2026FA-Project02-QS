@@ -1,0 +1,70 @@
+# Session 02 -- one family, refined across five iterations.
+#
+#   .venv/bin/python scripts/research_session.py --plan config/sessions/session-02.yaml
+#
+# This is the loop the project is actually for: run a campaign, read what the
+# auditors objected to, sharpen the same question, run again. Five times.
+#
+# ---------------------------------------------------------------------------
+# WHAT IS PRE-REGISTERED HERE AND WHAT IS NOT
+# ---------------------------------------------------------------------------
+# **M = 5 is declared before anything runs. Its members are not.** The count is
+# what the correction needs -- multiplicity is the number of looks, and the
+# number of looks is written down first -- while WHICH question each campaign
+# asks is decided from the one before it. Saying that plainly is better than
+# implying the whole family was written in advance, because it was not.
+#
+# Each refined question is written and committed by a machine under Amendment
+# 11, marked `Machine-Written` in its commit, and carries that amendment's
+# containment: **it may spend trials and may not support a claim** until a human
+# has read every machine-written question in the family. If this family reaches
+# L2 and passes, the pass is HELD, not acted on.
+#
+# ---------------------------------------------------------------------------
+# WHY THE REFINER IS NOT SHOWN THE GATE'S OUTPUT
+# ---------------------------------------------------------------------------
+# It sees what the strategy did -- turnover, exposure, where in time the money
+# came from, the distribution's shape -- and the four auditors' objections
+# verbatim. It does not see the p-value, the verdict, or any candidate's score.
+#
+# Task 36 measured an LLM shown its own prior scores learning to improve them,
+# on a dataset with no edge in it: trend p = 0.0031, +1.59 SD over a
+# history-withheld control. A refiner shown the gate's output is being taught to
+# write questions that score well. A refiner shown concentration diagnostics and
+# four auditors' objections is being taught to write questions that survive
+# scrutiny. Only the second is what we want.
+#
+# ---------------------------------------------------------------------------
+# HOW SECTION 4 IS ENFORCED RATHER THAN PROMISED
+# ---------------------------------------------------------------------------
+# `refine_hypothesis.py` REFUSES to run if any validation artefact is readable
+# for the campaign it was given. Refinement happens during phase 1, where none
+# exists, because validation runs at the stop. The ordering is the enforcement.
+#
+# ---------------------------------------------------------------------------
+# THE SEED, AND WHAT THE FIRST ITERATION ALREADY KNOWS
+# ---------------------------------------------------------------------------
+# The seed is the ORIGINAL intraday-continuation question, not the refinement
+# already produced from nq-s01-continuation. Starting from the original keeps
+# the family self-contained: five campaigns, four refinements, all of them
+# inside this session's own record, rather than a family whose first step
+# happened somewhere else and has to be explained.
+#
+# nq-s01-continuation's own result -- 20 trials, a champion trading 284 times
+# across 384 sessions, vetoed by the statistics and robustness seats for
+# concentration -- stays in the record as a separate campaign with its
+# validation look unspent.
+#
+# The holdout is NOT armed. Add --holdout-if-l2-passes "<reason>" at launch if
+# you mean to spend the single look, and read Amendment 11's containment first:
+# a family containing unread questions is not one to spend it on.
+
+session: session-02
+
+family:
+  seed: config/hypotheses/intraday-continuation.md
+  iterations: 5
+  n: 20
+  model: deepseek-v4-pro
+  profile: nq-train
+  prefix: nq-s02

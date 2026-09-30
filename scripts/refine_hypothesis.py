@@ -78,8 +78,14 @@ MAX_PAPERS = 3
 def validation_readable(campaign: str) -> list[str]:
     """Any validation artefact on this campaign. Non-empty means refuse."""
     d = CAMPAIGNS / campaign
-    return sorted(str(p.relative_to(ROOT)) for p in d.glob("validation*")
-                  if p.is_file())
+
+    def rel(x: pathlib.Path) -> str:
+        try:
+            return str(x.relative_to(ROOT))
+        except ValueError:
+            return str(x.relative_to(d.parent))   # tmp dirs in the tests
+
+    return sorted(rel(x) for x in d.glob("validation*") if x.is_file())
 
 
 # --------------------------------------------------------------------------- #

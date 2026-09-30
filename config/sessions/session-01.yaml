@@ -1,0 +1,80 @@
+# Session 01 -- the first real multi-campaign session.
+#
+#   .venv/bin/python scripts/research_session.py --plan config/sessions/session-01.yaml
+#
+# Written before the session runs, and that is the whole point: §4 corrects over M
+# campaigns, and M is what this file says. Dropping a campaign that did badly
+# would shrink M and inflate the maximum's significance, which is the same defect
+# as excluding crashed trials from N.
+#
+# 3 campaigns x N = 20 = 60 trials. Global N goes from 572 to about 632.
+#
+# ---------------------------------------------------------------------------
+# WHY THESE THREE, AND THE ONE THING THIS SELECTION CANNOT CLAIM
+# ---------------------------------------------------------------------------
+# All five committed hypotheses have been run before, so "pick the unused one"
+# was not available. The criterion is **three distinct mechanisms**, so M = 3 is
+# three shots at different ideas rather than three at one, and each choice is
+# grounded in a TRAIN-side observation:
+#
+#   intraday-continuation    nq-mvp-01's search drove turnover from 14,565 trades
+#                            to 3 and the score improved almost monotonically the
+#                            whole way. That campaign ran with NO idle charge and
+#                            NO exposure floor. Both are in force now, so this is
+#                            a genuinely different experiment on the same question.
+#
+#   orderflow-absorption     nq-orderflow-01's champion made 2 trades in 86
+#                            sessions and its record carries no
+#                            `min_exposed_fraction` -- it ran before the floor
+#                            existed. Same pathology, same fix to test.
+#
+#   auction-market-features  the opposite pole: six campaigns, the floor present
+#                            from nq-ml-03 on, and nq-ml-02's winner scored +1.78
+#                            on train, the highest this project has produced.
+#
+# **This selection has seen validation numbers and therefore cannot claim §4's
+# protection.** §4 says campaign k+1 may depend on prior campaigns' train results
+# and never on their validation results. The L2 gate was read on 2026-09-29 and
+# again on 2026-09-30, so whoever chose these three had six validation scores in
+# their head, whatever criterion they wrote down. The rationales above are all
+# train-side and that is deliberate, but it is not a proof, and recording the
+# exposure is worth more than asserting it away. Task 70 measured what adaptive
+# selection costs; at rho = 0 nothing, and rho is not known.
+#
+# ---------------------------------------------------------------------------
+# WHAT IS DELIBERATELY HELD CONSTANT
+# ---------------------------------------------------------------------------
+# One model across all three, so the only thing varying inside the family is the
+# hypothesis. Varying the model too would confound the two and leave no way to
+# say which mattered. claude-haiku-4-5 because it produced the most diverse set
+# of prior campaigns (mvp, flowcont, orderflow), so the train-side comparisons
+# above are against the same proposer.
+#
+# `min_exposed` is NOT overridden anywhere here. The registered floor is 0.70.
+# If one of these questions is genuinely rare and 0.70 rejects everything, the
+# fix is a new campaign registered with an explicit override AND a stated reason,
+# decided before it runs -- not a floor lowered after seeing it fail.
+#
+# The holdout is NOT armed. Add --holdout-if-l2-passes "<reason>" at launch if
+# you mean to spend the single look; §8 gives 73 sessions one look EVER.
+
+session: session-01
+
+campaigns:
+  - name: nq-s01-continuation
+    hypothesis: config/hypotheses/intraday-continuation.md
+    profile: nq-train
+    n: 20
+    model: claude-haiku-4-5
+
+  - name: nq-s01-absorption
+    hypothesis: config/hypotheses/orderflow-absorption.md
+    profile: nq-train
+    n: 20
+    model: claude-haiku-4-5
+
+  - name: nq-s01-auction
+    hypothesis: config/hypotheses/auction-market-features.md
+    profile: nq-train
+    n: 20
+    model: claude-haiku-4-5

@@ -373,3 +373,122 @@ def resolution_cap(r: int, q: float = 0.05) -> dict:
                  "`resampling_bias`. Measured, not assumed: "
                  "docs/reviews/task34/bias-grid.json."),
     }
+
+
+MAX_OF_M_NOTE = (
+    "max_of_m is max_of_n with the campaign as the unit, and that is deliberate "
+    "rather than lazy: section 4 of the pre-registration chooses it over a Holm "
+    "budget because it uses the actual null distribution of the maximum, and says "
+    "the L2 gate INHERITS the family-wise error rate measured for that machinery "
+    "(0.060, CI [0.041, 0.088] at R = 150, Task 38) rather than needing its own "
+    "calibration study. A second implementation of the same simulation would be a "
+    "second thing to calibrate."
+)
+
+
+def max_of_m(
+    winners: Sequence[dict],
+    *,
+    b: int = 10_000,
+    seed: int = 17,
+    q: float = 0.05,
+) -> dict:
+    """The L2 gate: the best of M campaign winners, on **validation**.
+
+    `winners` is one entry per campaign, each a mapping with
+
+        campaign_id        str
+        validation_primary float -- the winner's Sortino on validation
+        validation_null    sequence of float -- that winner's own null, on
+                           validation, from `randomization.round_turn.null_sample`
+                           over its validation fill log
+
+    Returns the two pass conditions of §5 reported separately, plus the family it
+    corrected over. **It does not decide promotion**; §5 is a pass rule and
+    promotion beyond the MVP is a human decision taken on all of the evidence.
+
+    ## Three properties that are easy to get wrong
+
+    **Every campaign enters the family, including the ones that did badly.** The
+    multiplicity comes from having looked M times, not from having looked M times
+    and liked the answer. Dropping the weak winners would shrink the family and
+    inflate the maximum's significance, which is the same defect as excluding
+    crashed trials from N -- §3's "excluding the trials that failed is the
+    cheapest way to shrink a denominator and the one nobody would look for".
+
+    **Rule (a) is separate from rule (b) and applies to the candidate on trial.**
+    §5 makes `Sortino > 0` a pass condition at L1 *and* L2, because §3b found a
+    candidate losing 3,275 points scoring p = 0.0005 against its own null: the
+    sign-flip null tests directional skill, not profitability. So a family can
+    produce a small p while the best winner still lost money, and that must not
+    read as a pass. Both are reported; `passes` requires both.
+
+    **An incomplete family gets no verdict at all.** If any campaign is missing
+    its validation null, M is unknown, and a correction over an unknown family
+    size is not a correction -- it is a correction over the campaigns that
+    happened to be ready. `verdict` is then `None` and `incomplete` names them.
+    This is stricter than `max_of_n`, which silently skips a trial whose null is
+    empty, and the asymmetry is intended: there, an empty null is a property of a
+    candidate that never traded; here, a missing null is a gap in our own work.
+
+    ## What this function cannot check, and who must
+
+    §4's stopping rule -- that a human may stop L2 for any reason **that is not a
+    validation result** -- is not checkable from these inputs and is not checked
+    here. The protocol's defence is structural: validation is not scored during
+    the run at all, and all M winners are scored at the stop, at once. This
+    function is the arithmetic at that stop, not the discipline before it.
+    """
+    entries = list(winners)
+    if not entries:
+        return {"m_campaigns": 0, "b": b, "q": q, "verdict": None,
+                "incomplete": [], "note": "no campaigns were supplied"}
+
+    incomplete = [str(w.get("campaign_id")) for w in entries
+                  if not len(w.get("validation_null") or ())]
+    rule_a = {str(w.get("campaign_id")): float(w.get("validation_primary", 0.0)) > 0.0
+              for w in entries}
+    best = max(entries, key=lambda w: float(w.get("validation_primary", float("-inf"))))
+    best_id = str(best.get("campaign_id"))
+    observed = float(best.get("validation_primary", float("-inf")))
+
+    out = {
+        "m_campaigns": len(entries),
+        "campaigns": [str(w.get("campaign_id")) for w in entries],
+        "b": b,
+        "q": q,
+        "observed_best": observed,
+        "best_campaign": best_id,
+        "rule_a_sortino_positive": rule_a,
+        "rule_a_pass": rule_a.get(best_id, False),
+        "incomplete": incomplete,
+        "note": MAX_OF_M_NOTE,
+    }
+    if incomplete:
+        out.update(
+            verdict=None, p=None, reject=None, passes=None,
+            withheld=("no verdict: {} of {} campaigns have no validation null, so "
+                      "M is unknown. A correction over an unknown family size is a "
+                      "correction over the campaigns that happened to be ready."
+                      ).format(len(incomplete), len(entries)))
+        return out
+
+    # The same simulation, on the same machinery, with campaigns as the unit --
+    # see MAX_OF_M_NOTE for why that is the point rather than a shortcut.
+    sim = max_of_n([w["validation_null"] for w in entries], observed,
+                   b=b, seed=seed, q=q)
+    out.update(
+        p=sim["p"], p_floor=sim["p_floor"], at_floor=sim["at_floor"],
+        reject=sim["reject"], null_max_mean=sim["null_max_mean"],
+        null_max_quantiles=sim["null_max_quantiles"],
+    )
+    out["passes"] = bool(out["rule_a_pass"] and sim["reject"])
+    out["verdict"] = "PASS" if out["passes"] else "FAIL"
+    if sim["reject"] and not out["rule_a_pass"]:
+        out["note"] = (
+            "rule (b) rejected the null but rule (a) did not pass: the best "
+            "winner's validation Sortino is not above zero. The sign-flip null "
+            "tests directional skill, not profitability (section 3b), so a small "
+            "p with a losing candidate is exactly the case rule (a) exists for. "
+            + MAX_OF_M_NOTE)
+    return out

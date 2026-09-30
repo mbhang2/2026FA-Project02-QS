@@ -194,3 +194,51 @@ def test_the_rerank_flag_adds_the_axis_without_erasing_the_first_pass():
     assert 'r.get("gate_relevance") is None' in src
     # and a moved axis-1 label is kept, because it says something about the scale
     assert 'row["relevance_first_pass"] = was' in src
+
+
+# --------------------------------------------------------------------------- #
+# the boundary between the retrieval side and validation (added 2026-09-29)
+# --------------------------------------------------------------------------- #
+def test_the_ranker_never_reads_a_papers_outcome():
+    """**§4: "Campaign k+1 may depend on prior campaigns' train results — never
+    on their validation results."**
+
+    The feedback edge writes a record onto each paper's row when its campaign
+    concludes. That record is train-side by construction, but the committee
+    verdict inside it is validation-informed: the report stage hands the auditors
+    a summary with the validation numbers in it. So the field list is not the
+    protection. This is.
+
+    A ranker that saw `outcome` would be ranking papers by how their campaigns
+    ended, which is selection on the thing being tested, and retrieval costs no
+    trial count only because it never consults our data.
+    """
+    sentinel = "ZQ-OUTCOME-SENTINEL-4417"
+    row = {**ROW,
+           "outcome": [{"campaign_id": sentinel, "gate": sentinel,
+                        "committee": sentinel, "stopped_by": sentinel}],
+           "campaign_ids": [sentinel]}
+    fake = _Fake(_ok())
+    rp.rank_one(fake, PAPER, row, "ctx")
+    assert sentinel not in fake.seen, (
+        "a paper's campaign outcome reached the ranking prompt")
+
+
+def test_the_assembled_context_carries_no_validation_number():
+    """The context block is built from committed artefacts. `closed_questions`
+    reads each campaign's tier-2 summary, which is the L1 gate on TRAIN, and
+    deliberately not its validation. Asserted against the real tree, where six
+    campaigns have validation scores on disk."""
+    ctx = rp.context_block()
+    import json
+    import pathlib
+    for d in (REPO_ROOT / "runs" / "campaigns").glob("*/validation.json"):
+        v = json.loads(d.read_text())
+        primary = (v.get("validation") or {}).get("primary")
+        if primary is None:
+            continue
+        for form in (f"{primary:.4f}", f"{primary:.3f}", f"{primary:.2f}"):
+            assert form.lstrip("-") not in ctx, (
+                f"{d.parent.name}'s validation score {form} reached the ranker")
+    # and it does carry the train-side verdict, which §4 permits
+    assert "rejected" in ctx and "closed" in ctx.lower()

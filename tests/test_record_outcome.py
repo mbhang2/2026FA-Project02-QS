@@ -85,10 +85,9 @@ def test_a_concluded_campaign_reaches_the_paper_that_suggested_it(monkeypatch, t
     assert mod.paper_for(reg, "config/hypotheses/nobody.md") is None
 
     assert v["gate"] == "ACCEPT"
-    assert v["validation_positive"] is False
     assert v["committee"] == "VETO"
     assert v["vetoed_by"] == ["statistics", "robustness"]
-    assert v["conclusion"] == "discarded"
+    assert v["stopped_by"] == "committee"
     assert v["campaign_dir"].endswith("campaigns/nq-ml-07")
 
 
@@ -179,7 +178,7 @@ def test_survived_all_stages_is_not_a_promotion(monkeypatch, tmp_path):
     _campaign(tmp_path, "nq-ml-09", hypothesis="config/hypotheses/ohlcv.md",
               gate="ACCEPT", val_positive=True, committee="PASS")
     v = mod.verdicts_for("nq-ml-09")
-    assert v["conclusion"] == "survived_all_stages"
+    assert v["stopped_by"] is None
     assert "promot" not in json.dumps(v).lower()
 
     src = (REPO_ROOT / "scripts" / "record_outcome.py").read_text()
@@ -188,19 +187,19 @@ def test_survived_all_stages_is_not_a_promotion(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize("gate,val,com,expected", [
-    ("REJECT", None, None, "discarded"),
-    ("ACCEPT", False, None, "discarded"),
-    ("ACCEPT", True, "VETO", "discarded"),
-    ("ACCEPT", True, "PASS", "survived_all_stages"),
-    ("ACCEPT", None, None, "survived_all_stages"),
+    ("REJECT", None, None, "gate"),
+    ("ACCEPT", False, None, None),          # validation is NOT consulted here
+    ("ACCEPT", True, "VETO", "committee"),
+    ("ACCEPT", True, "PASS", None),
+    ("ACCEPT", None, None, None),
 ])
-def test_the_conclusion_follows_the_stage_that_stopped_it(
+def test_stopped_by_names_only_the_train_side_gate_and_the_committee(
         monkeypatch, tmp_path, gate, val, com, expected):
     mod = _load(monkeypatch, tmp_path)
     _registry(tmp_path, **{"p": "config/hypotheses/h.md"})
     _campaign(tmp_path, "c", hypothesis="config/hypotheses/h.md", gate=gate,
               val_positive=val, committee=com)
-    assert mod.verdicts_for("c")["conclusion"] == expected
+    assert mod.verdicts_for("c")["stopped_by"] == expected
 
 
 def test_recording_twice_replaces_rather_than_duplicates(monkeypatch, tmp_path):
@@ -238,3 +237,34 @@ def test_the_report_stage_records_the_outcome_without_being_asked():
     assert "except Exception" in helper, (
         "a registry write must never cost a campaign its report")
     assert "record_outcome.py" in helper, "one implementation, not two"
+
+
+def test_no_validation_result_reaches_the_registry():
+    """**Corrected 2026-09-29**, after the first version recorded
+    `validation_positive`.
+
+    §4: "Campaign k+1 may depend on prior campaigns' train results -- never on
+    their validation results. Choosing the next hypothesis by what did well on
+    validation is selecting on the thing being tested." The ranker reads this
+    registry, so a validation result here is the same kind of door a score would
+    be.
+
+    Necessary and not sufficient: the committee verdict is itself
+    validation-informed, because the report stage hands the auditors a summary
+    with the validation numbers in it. The real protection is that the ranker
+    never reads a paper's `outcome` -- asserted in test_rank_papers.py.
+    """
+    src = (REPO_ROOT / "scripts" / "record_outcome.py").read_text()
+    assert "validation_positive" not in mod_fields(), "the field is gone"
+    body = src[src.index("def verdicts_for"):src.index("def paper_for")]
+    assert "validation.json" not in body, "it does not even open the file"
+    assert "rule_a_sortino_positive" not in body
+
+
+def mod_fields():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "record_outcome", REPO_ROOT / "scripts" / "record_outcome.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m.FIELDS

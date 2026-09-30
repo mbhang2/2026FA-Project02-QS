@@ -14,9 +14,14 @@ A pipeline whose results never return to it is a funnel, not a loop.
 ## What it writes, and the one thing it deliberately does not
 
 On the paper's row: the campaign id appended to `campaign_ids`, and a record
-appended to `outcome` carrying the **verdict of each stage** -- the tier-2 gate,
-whether validation came out positive, the tier-3 verdict, the committee's
-verdict and who vetoed -- plus the campaign directory.
+appended to `outcome` carrying the **train-side verdicts** -- the tier-2 gate,
+the tier-3 verdict, the committee's verdict and who vetoed, which stage stopped
+it -- plus the campaign directory.
+
+**No validation result either**, corrected 2026-09-29 after the first version
+recorded one. §4: "Campaign k+1 may depend on prior campaigns' train results --
+never on their validation results." The registry is read by the ranker, so a
+validation result here is the same kind of door a score would be.
 
 **No scores.** Not the best score, not the p-value, not the validation number.
 That is not an oversight and it is the most important line in this file.
@@ -39,9 +44,9 @@ judgement about weight of evidence, and automating it would let one bad campaign
 close a line of research. It prints the suggestion and stops.
 
 **It does not decide promotion.** No verdict in this project means approval, and
-that is enforced in `audit/tier3.py` rather than by policy. `conclusion` here is
-`discarded` or `survived_all_stages`; the second is not a promotion and has never
-occurred.
+that is enforced in `audit/tier3.py` rather than by policy. `stopped_by` names a
+stage or is `None`; `None` means the gate and the committee did not stop it, which
+is neither a promotion nor a statement about validation.
 
 ## Where it runs
 
@@ -67,8 +72,8 @@ CAMPAIGNS = ROOT / "runs" / "campaigns"
 
 # Everything this record may carry. A closed set, so adding a score means editing
 # this list and reading the docstring above that says why not.
-FIELDS = ("campaign_id", "recorded", "hypothesis", "gate", "validation_positive",
-          "tier3", "committee", "vetoed_by", "conclusion", "campaign_dir")
+FIELDS = ("campaign_id", "recorded", "hypothesis", "gate", "tier3",
+          "committee", "vetoed_by", "stopped_by", "campaign_dir")
 
 
 def _read(path: pathlib.Path) -> dict:
@@ -92,26 +97,39 @@ def verdicts_for(name: str) -> dict | None:
     if not gate:
         return None
 
-    val = _read(d / "validation.json")
     tier3 = _read(d / "tier3-verdict.json").get("verdict")
     com = _read(d / "committee-verdict.json")
 
-    # `rule_a_sortino_positive` is the pass condition of section 5. Absent means
-    # validation was never run, which is not the same as failing it.
-    val_pos = val.get("rule_a_sortino_positive")
-
-    stopped = (gate.upper() != "ACCEPT" or val_pos is False
-               or (com.get("verdict") or "").upper() == "VETO")
+    # **No validation result, and that is the correction of 2026-09-29.** The
+    # first version recorded `validation_positive`. §4 is explicit: "Campaign k+1
+    # may depend on prior campaigns' train results -- never on their validation
+    # results. Choosing the next hypothesis by what did well on validation is
+    # selecting on the thing being tested." `rank_papers.py` reads this registry,
+    # so a validation result here sits one careless edit from the retrieval side,
+    # which is the whole reason nothing here carries a score either.
+    #
+    # `stopped_by` therefore names only the TRAIN-side gate and the committee.
+    # `None` means neither of those stopped it, which is NOT "it survived
+    # validation" -- validation is deliberately not consulted here and the
+    # campaign directory is where a human reads it.
+    #
+    # **The committee verdict is itself validation-informed**, because the report
+    # stage hands the auditors a summary that embeds the validation numbers. So
+    # dropping the field is necessary and not sufficient: the real protection is
+    # that the ranker never reads a paper's `outcome` at all, which
+    # `tests/test_rank_papers.py` now asserts.
+    stopped_by = ("gate" if gate.upper() != "ACCEPT"
+                  else "committee" if (com.get("verdict") or "").upper() == "VETO"
+                  else None)
     return {
         "campaign_id": name,
         "recorded": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d"),
         "hypothesis": rec.get("hypothesis_path"),
         "gate": gate.upper(),
-        "validation_positive": val_pos,
         "tier3": tier3,
         "committee": com.get("verdict"),
         "vetoed_by": com.get("vetoed_by") or [],
-        "conclusion": "discarded" if stopped else "survived_all_stages",
+        "stopped_by": stopped_by,
         "campaign_dir": str((d).relative_to(ROOT)),
     }
 
@@ -173,11 +191,12 @@ def main() -> int:
             row["outcome"] = sorted(outs, key=lambda o: o["campaign_id"])
         wrote += 1
         print(f"  {pid}  <- {name}")
-        print(f"      gate {v['gate']}  validation "
-              f"{v['validation_positive']}  tier3 {v['tier3']}  "
+        print(f"      gate {v['gate']}  tier3 {v['tier3']}  "
               f"committee {v['committee']}"
               + (f" (vetoed by {', '.join(v['vetoed_by'])})" if v["vetoed_by"] else ""))
-        print(f"      conclusion: {v['conclusion']}")
+        stopped = v["stopped_by"] or ("neither the gate nor the committee "
+                                      "(validation is not consulted here)")
+        print(f"      stopped by: {stopped}")
 
     print(f"\n  {wrote} outcome(s) recorded, {unconcluded} campaign(s) have not "
           f"concluded, {len(unlinked)} not traceable to a paper")

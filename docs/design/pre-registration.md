@@ -1506,6 +1506,73 @@ pass conditions fail, and they fail in the least ambiguous way available.
 That is the number the L2 gate exists to produce, and it had never been computed
 before today.
 
+## Amendment 9 — 2026-09-30 — the holdout pass rule, written before the look
+
+**Status: DRAFTED, NOT IN FORCE.** §8 requires that "the pass rule is written
+**before** it is opened", and it never was. `scripts/holdout.py` refuses to run
+until this section says IN FORCE, so the refusal is mechanical rather than
+remembered.
+
+Nothing here weakens §8. **73 sessions, one look, ever**, and only if the L2 gate
+accepts. This adds the missing sentence: what the look has to show.
+
+### The rule
+
+The champion is **confirmed** on the holdout when both hold:
+
+| | rule | |
+|---|---|---|
+| (i) | Sortino > 0 on the holdout | the same floor as rules (a) at L1 and L2, for the same reason: the sign-flip null tests directional skill, not profitability |
+| (ii) | `round_turn_mc` p ≤ 0.05 against the champion's **own holdout null** | the test |
+
+Both are **pass conditions**. Anything else measured on those 73 sessions —
+train-to-holdout decay, per-hour and per-weekday concentration, turnover, the
+committee's reading of any of it — is **evidence and not a threshold**, exactly as
+rule (c) is at L2. There is no constant to tune here and there will not be one:
+"within X% of validation" needs an X, and this project does not fit thresholds to
+make a curve look better.
+
+### Why a null on the holdout at all, rather than just a sign
+
+Because §3b's finding applies here too and gets worse with fewer sessions. A
+candidate that loses money can still beat a sign-flip null, since flipping a
+loser's round turns makes it lose more. At 73 sessions the score is noisier than
+at 384, so a bare "it was positive" is weaker evidence than it looks. Rule (i)
+and rule (ii) fail in different ways and both are cheap.
+
+**There is no multiplicity correction at this step, and that is correct.** Exactly
+one candidate is ever scored here — the L2 gate's best, which is itself already
+corrected over N trials and M campaigns. One look needs no correction; it needs
+to actually be one look, which is what the one-way lock enforces.
+
+### What the look may not do
+
+- **It may not choose the candidate.** The candidate is the L2 gate's best,
+  determined before the lock opens and recorded in the L2 verdict file the
+  gate writes under `runs/`.
+  Picking a different one after seeing a holdout number is not a holdout.
+- **It may not be repeated**, re-seeded, re-profiled, or run "just to check the
+  plumbing". The plumbing is rehearsed on the synthetic `holdout` profile, which
+  exists for this purpose.
+- **It may not refit.** A fitted champion carries the weights it learned on
+  train, through `weights_path`, and the engine's one-fit rule refuses a second
+  `fit()`. Refitting on the holdout is the worst available version of the mistake
+  the validation stage was built to prevent.
+- **It does not decide promotion.** Confirmed means both rules held. What happens
+  next is a human decision, and `Verdict` still has no member meaning approval.
+
+### What would invalidate this amendment
+
+- A holdout look taken while the L2 verdict is anything but PASS.
+- A second look, under any justification.
+- A candidate scored on the holdout that is not the L2 gate's recorded best.
+- A threshold added to the evidence list, or rule (i) or (ii) relaxed after a
+  number is seen.
+
+Code: `scripts/holdout.py`, `config/run.yaml` profiles `nq-holdout` and
+`nq-holdout-fitted`, `tests/test_holdout.py`. Rehearsed end to end on the
+synthetic `holdout` profile; **never run against NQ.**
+
 ## Ideas recorded, not adopted
 
 Kept because the reasoning is worth more than the decision, and because an idea

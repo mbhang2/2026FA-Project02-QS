@@ -201,6 +201,43 @@ profiles:
     record_fill_spread: false
     weights_path: runs/current.weights
 
+
+  # **The holdout. 73 sessions, one look, ever** -- pre-registration section 8.
+  #
+  # These exist so the single look is a committed profile rather than a
+  # hand-typed command line. `scripts/holdout.py` is the only thing that should
+  # use them, and it refuses unless the L2 gate has PASSED and the pass rule of
+  # Amendment 9 is in force.
+  #
+  # Note the profile named plain `holdout` above is SYNTHETIC. It is the rehearsal
+  # surface: the holdout path can be exercised end to end on generated data
+  # without going anywhere near the real 73 sessions, which is the only way to
+  # test a one-shot.
+  nq-holdout:
+    dataset: nq
+    split: holdout
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    commission_per_contract: 0.10
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+
+  # The fitted half. `weights_path` is the same fixed handoff `nq-validation-fitted`
+  # uses, and its presence is what stops the engine refitting -- refitting on the
+  # holdout would be the worst version of the mistake that stage exists to prevent.
+  nq-holdout-fitted:
+    dataset: nq
+    split: holdout
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    weights_path: runs/current.weights
+    commission_per_contract: 0.10
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
   nq-validation:
     dataset: nq
     split: validation

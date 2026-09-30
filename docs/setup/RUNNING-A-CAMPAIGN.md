@@ -201,6 +201,99 @@ the substitution above, `deepseek-v4-pro` began returning `HTTP 404, Cannot find
 any route matching` while still appearing in the listing. That is the gateway
 being reconfigured — wait for it rather than re-registering.
 
+## 2b. A whole session, and a family that refines itself
+
+The five commands above run **one** campaign. Two things run a session.
+
+### A list of campaigns written in advance
+
+```yaml
+# config/sessions/mine.yaml
+session: mine
+campaigns:
+  - name: nq-mine-01
+    hypothesis: config/hypotheses/flow-continuation-5m.md
+    n: 20
+    model: deepseek-v4-pro
+```
+
+```
+.venv/bin/python scripts/research_session.py --plan config/sessions/mine.yaml --dry-run
+.venv/bin/python scripts/research_session.py --plan config/sessions/mine.yaml
+```
+
+Four phases, and **the order is the protocol, not tidiness**: every campaign
+through `report` first, *then* validation for all of them at once, then the L2
+gate over the declared family, then the holdout checked and not taken. §4's
+defence against optional stopping is that a human deciding whether to run
+campaign k+1 has seen no validation number, and that only holds if none exists
+yet.
+
+### A family that refines itself
+
+```yaml
+session: mine-02
+family:
+  seed: config/hypotheses/intraday-continuation.md
+  iterations: 5
+  n: 20
+  model: deepseek-v4-pro
+  prefix: nq-mine2
+```
+
+Campaign k+1 runs on a question written from campaign k's own outcome —
+`scripts/refine_hypothesis.py`, machine-committed under **Amendment 11**, marked
+`Machine-Written:` in its commit. **M is declared before anything runs; which
+questions the campaigns ask is not.** That is the honest split: multiplicity is
+the number of looks, and the number of looks is written down first.
+
+Two things to know before you use it:
+
+- **An unreviewed machine question may spend trials and may NOT support a
+  claim.** If the family reaches L2 and passes, the pass is held until a human
+  has read every machine-written question in it. Unattended running is allowed;
+  unattended claiming is not.
+- The refiner is not shown the gate's p-value, verdict, or any score, and it
+  **refuses to run** if a validation artefact is readable. Don't try to "help" it
+  by passing more.
+
+### Stopping it
+
+Ctrl-C once means *stop proposing and go to the stop* — no new campaign starts,
+and the session validates every champion it has, runs L2, and checks the holdout.
+It is a legitimate §4 stop precisely because phase 2 has not run, so there is no
+validation number you could be reacting to.
+
+Detached, there is no terminal to press Ctrl-C into, so the session prints its own
+cue at startup:
+
+```
+  pid 98793 -- the cue is:  kill -INT -98793
+```
+
+**The minus before the pid matters.** It signals the process group, so the
+campaign stops too; without it only the driver gets the signal and the child
+`run.py` carries on orphaned. A second cue aborts.
+
+### The holdout, if you mean to spend it
+
+```
+--holdout-if-l2-passes "why this look, in a sentence"
+```
+
+Only available **at launch**, and that is the point: at launch no validation
+number exists, so the decision to spend the single look cannot have been made in
+response to one. §8 gives 73 sessions one look **ever** — not one per session —
+and `runs/holdout-result.json` existing is itself a refusal, so arming a second
+session after spending it in the first changes nothing.
+
+### Do not run the test suite while a campaign is running
+
+A campaign owns `src/strategies/current.py`. `pytest` will fail to collect, which
+is harmless — but several tests *write* that file, and one doing so mid-trial
+means the campaign scores a source its record does not name. The ledger would
+look clean and be wrong.
+
 ## 3. The accounting — read this before you run
 
 **Commit your campaign directory.** N is the union over every committed ledger:

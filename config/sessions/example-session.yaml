@@ -1,0 +1,15 @@
+# A research session plan. Written BEFORE the session runs, and copied into the
+# session record, because the L2 family is every campaign named here -- dropping
+# the ones that did badly shrinks M and inflates the maximum's significance.
+#
+# Each campaign names a COMMITTED hypothesis file. Amendment 8 makes the commit
+# the human act, so a session cannot distil a question and register it in one
+# breath.
+session: example-session
+campaigns:
+  - name: nq-example-01
+    hypothesis: config/hypotheses/flow-continuation-5m.md
+    n: 20
+  - name: nq-example-02
+    hypothesis: config/hypotheses/orderflow-absorption.md
+    n: 20

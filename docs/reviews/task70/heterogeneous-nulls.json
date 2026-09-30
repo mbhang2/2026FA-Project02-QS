@@ -1,0 +1,332 @@
+{
+  "task": 70,
+  "status": "POST HOC -- decided after seeing the pre-registered result",
+  "question": "is max_of_m's maximum over raw validation Sortino invalid, or valid but blind to a campaign with a tight null?",
+  "real_validation_nulls": [
+    {
+      "campaign": "nq-flowcont-01",
+      "null_mean": -0.7724,
+      "null_sd": 0.0108
+    },
+    {
+      "campaign": "nq-flowcont-5m",
+      "null_mean": -0.174,
+      "null_sd": 0.1267
+    },
+    {
+      "campaign": "nq-ml-02",
+      "null_mean": -0.0143,
+      "null_sd": 0.2214
+    },
+    {
+      "campaign": "nq-ml-03",
+      "null_mean": -0.0703,
+      "null_sd": 0.1454
+    },
+    {
+      "campaign": "nq-orderflow-01",
+      "null_mean": -0.8934,
+      "null_sd": 0.0416
+    },
+    {
+      "campaign": "nq-orderflow-02",
+      "null_mean": -0.4075,
+      "null_sd": 0.0733
+    }
+  ],
+  "constants": {
+    "m_campaigns": 6,
+    "families": 4000,
+    "null_draws": 200,
+    "b_resamples": 2000,
+    "q": 0.05,
+    "deltas_own_sds": [
+      0.0,
+      2.0,
+      4.0,
+      8.0
+    ]
+  },
+  "rule_a_applied": false,
+  "cells": [
+    {
+      "planted": null,
+      "delta_own_sds": 0.0,
+      "families": 4000,
+      "raw_rate": 0.0565,
+      "raw_ci": [
+        0.0498,
+        0.0641
+      ],
+      "std_rate": 0.058,
+      "std_ci": [
+        0.0512,
+        0.0657
+      ],
+      "raw_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.1212,
+        "nq-ml-02": 0.5212,
+        "nq-ml-03": 0.3573,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0003
+      },
+      "std_winner_share": {
+        "nq-flowcont-01": 0.1678,
+        "nq-flowcont-5m": 0.161,
+        "nq-ml-02": 0.1708,
+        "nq-ml-03": 0.1775,
+        "nq-orderflow-01": 0.1643,
+        "nq-orderflow-02": 0.1588
+      }
+    },
+    {
+      "planted": "nq-flowcont-01",
+      "delta_own_sds": 0.0,
+      "families": 4000,
+      "raw_rate": 0.0565,
+      "raw_ci": [
+        0.0498,
+        0.0641
+      ],
+      "std_rate": 0.058,
+      "std_ci": [
+        0.0512,
+        0.0657
+      ],
+      "raw_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.1212,
+        "nq-ml-02": 0.5212,
+        "nq-ml-03": 0.3573,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0003
+      },
+      "std_winner_share": {
+        "nq-flowcont-01": 0.1678,
+        "nq-flowcont-5m": 0.161,
+        "nq-ml-02": 0.1708,
+        "nq-ml-03": 0.1775,
+        "nq-orderflow-01": 0.1643,
+        "nq-orderflow-02": 0.1588
+      }
+    },
+    {
+      "planted": "nq-flowcont-01",
+      "delta_own_sds": 2.0,
+      "families": 4000,
+      "raw_rate": 0.05575,
+      "raw_ci": [
+        0.0491,
+        0.0633
+      ],
+      "std_rate": 0.38875,
+      "std_ci": [
+        0.3738,
+        0.404
+      ],
+      "raw_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.1138,
+        "nq-ml-02": 0.5343,
+        "nq-ml-03": 0.3518,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0003
+      },
+      "std_winner_share": {
+        "nq-flowcont-01": 0.7502,
+        "nq-flowcont-5m": 0.0515,
+        "nq-ml-02": 0.053,
+        "nq-ml-03": 0.0467,
+        "nq-orderflow-01": 0.0522,
+        "nq-orderflow-02": 0.0462
+      }
+    },
+    {
+      "planted": "nq-flowcont-01",
+      "delta_own_sds": 4.0,
+      "families": 4000,
+      "raw_rate": 0.051,
+      "raw_ci": [
+        0.0446,
+        0.0583
+      ],
+      "std_rate": 0.9475,
+      "std_ci": [
+        0.9401,
+        0.954
+      ],
+      "raw_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.112,
+        "nq-ml-02": 0.5268,
+        "nq-ml-03": 0.3608,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0005
+      },
+      "std_winner_share": {
+        "nq-flowcont-01": 0.99,
+        "nq-flowcont-5m": 0.001,
+        "nq-ml-02": 0.002,
+        "nq-ml-03": 0.0018,
+        "nq-orderflow-01": 0.0022,
+        "nq-orderflow-02": 0.003
+      }
+    },
+    {
+      "planted": "nq-flowcont-01",
+      "delta_own_sds": 8.0,
+      "families": 4000,
+      "raw_rate": 0.0505,
+      "raw_ci": [
+        0.0441,
+        0.0577
+      ],
+      "std_rate": 1.0,
+      "std_ci": [
+        0.999,
+        1.0
+      ],
+      "raw_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.1177,
+        "nq-ml-02": 0.542,
+        "nq-ml-03": 0.3395,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0008
+      },
+      "std_winner_share": {
+        "nq-flowcont-01": 1.0,
+        "nq-flowcont-5m": 0.0,
+        "nq-ml-02": 0.0,
+        "nq-ml-03": 0.0,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0
+      }
+    },
+    {
+      "planted": "nq-ml-02",
+      "delta_own_sds": 0.0,
+      "families": 4000,
+      "raw_rate": 0.062,
+      "raw_ci": [
+        0.0549,
+        0.0699
+      ],
+      "std_rate": 0.06225,
+      "std_ci": [
+        0.0552,
+        0.0702
+      ],
+      "raw_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.1197,
+        "nq-ml-02": 0.5363,
+        "nq-ml-03": 0.3438,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0003
+      },
+      "std_winner_share": {
+        "nq-flowcont-01": 0.1685,
+        "nq-flowcont-5m": 0.1623,
+        "nq-ml-02": 0.175,
+        "nq-ml-03": 0.167,
+        "nq-orderflow-01": 0.163,
+        "nq-orderflow-02": 0.1643
+      }
+    },
+    {
+      "planted": "nq-ml-02",
+      "delta_own_sds": 2.0,
+      "families": 4000,
+      "raw_rate": 0.62525,
+      "raw_ci": [
+        0.6101,
+        0.6401
+      ],
+      "std_rate": 0.3905,
+      "std_ci": [
+        0.3755,
+        0.4057
+      ],
+      "raw_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.006,
+        "nq-ml-02": 0.964,
+        "nq-ml-03": 0.03,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0
+      },
+      "std_winner_share": {
+        "nq-flowcont-01": 0.0522,
+        "nq-flowcont-5m": 0.0473,
+        "nq-ml-02": 0.7562,
+        "nq-ml-03": 0.0508,
+        "nq-orderflow-01": 0.047,
+        "nq-orderflow-02": 0.0465
+      }
+    },
+    {
+      "planted": "nq-ml-02",
+      "delta_own_sds": 4.0,
+      "families": 4000,
+      "raw_rate": 0.99125,
+      "raw_ci": [
+        0.9879,
+        0.9937
+      ],
+      "std_rate": 0.9485,
+      "std_ci": [
+        0.9412,
+        0.9549
+      ],
+      "raw_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.0,
+        "nq-ml-02": 0.9995,
+        "nq-ml-03": 0.0005,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0
+      },
+      "std_winner_share": {
+        "nq-flowcont-01": 0.002,
+        "nq-flowcont-5m": 0.0015,
+        "nq-ml-02": 0.9875,
+        "nq-ml-03": 0.0037,
+        "nq-orderflow-01": 0.0032,
+        "nq-orderflow-02": 0.002
+      }
+    },
+    {
+      "planted": "nq-ml-02",
+      "delta_own_sds": 8.0,
+      "families": 4000,
+      "raw_rate": 1.0,
+      "raw_ci": [
+        0.999,
+        1.0
+      ],
+      "std_rate": 1.0,
+      "std_ci": [
+        0.999,
+        1.0
+      ],
+      "raw_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.0,
+        "nq-ml-02": 1.0,
+        "nq-ml-03": 0.0,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0
+      },
+      "std_winner_share": {
+        "nq-flowcont-01": 0.0,
+        "nq-flowcont-5m": 0.0,
+        "nq-ml-02": 1.0,
+        "nq-ml-03": 0.0,
+        "nq-orderflow-01": 0.0,
+        "nq-orderflow-02": 0.0
+      }
+    }
+  ]
+}

@@ -201,3 +201,139 @@ def test_an_empty_family_is_not_a_pass():
 def test_the_family_size_is_recorded_however_large(m):
     out = max_of_m(_winners([0.1] * m))
     assert out["m_campaigns"] == m and len(out["campaigns"]) == m
+
+
+# --------------------------------------------------------------------------- #
+# input types the gate must not raise on
+# --------------------------------------------------------------------------- #
+def test_a_numpy_null_sample_is_accepted_not_ambiguous():
+    """`arr or ()` raises on any array with more than one element, and that is
+    numpy refusing an ambiguity rather than a numpy quirk to work around.
+
+    `round_turn.null_sample` returns a list, so `l2_gate.py` never reached the
+    branch -- Task 70's simulation passes arrays and hit it on its first run. A
+    gate that raises on a legitimate input type fails whenever somebody new calls
+    it, which is the case the L2 gate exists to serve.
+    """
+    import numpy as np
+    winners = [
+        {"campaign_id": "a", "validation_primary": 0.9,
+         "validation_null": np.linspace(-1.0, 1.0, 200)},
+        {"campaign_id": "b", "validation_primary": 0.2,
+         "validation_null": np.linspace(-1.0, 1.0, 200)},
+    ]
+    out = max_of_m(winners, b=500, seed=3)
+    assert out["incomplete"] == []
+    assert out["verdict"] in ("PASS", "FAIL")
+    assert out["m_campaigns"] == 2
+    assert out["best_campaign"] == "a"
+
+
+def test_an_empty_numpy_null_still_counts_as_incomplete():
+    """The array fix must not turn a missing null into a silent zero-length pass."""
+    import numpy as np
+    winners = [
+        {"campaign_id": "a", "validation_primary": 0.9,
+         "validation_null": np.linspace(-1.0, 1.0, 200)},
+        {"campaign_id": "b", "validation_primary": 0.2,
+         "validation_null": np.array([])},
+    ]
+    out = max_of_m(winners, b=500, seed=3)
+    assert out["incomplete"] == ["b"]
+    assert out["verdict"] is None
+
+
+# --------------------------------------------------------------------------- #
+# Task 70: the raw maximum is valid but blind
+# --------------------------------------------------------------------------- #
+def _real_shaped(rng, primaries, moments, draws=300):
+    """Winners whose nulls have our six campaigns' real locations and scales."""
+    return [{"campaign_id": cid, "validation_primary": v,
+             "validation_null": (m + s * rng.standard_normal(draws)).tolist()}
+            for (cid, m, s), v in zip(moments, primaries)]
+
+
+def test_the_raw_and_standardised_statistics_are_both_always_reported():
+    """The verdict follows one statistic; the record carries both, so the other
+    never needs a rerun to be known."""
+    import numpy as np
+    w = _real_shaped(np.random.default_rng(9), [-0.15, -0.055],
+                     [("tight", -0.8934, 0.0416), ("wide", -0.0703, 0.1454)])
+    out = max_of_m(w, b=2000, seed=5)
+    assert out["statistic"] == "raw", "the pre-registered default"
+    assert "standardised_view" in out and "raw_view" in out
+    assert out["raw_view"]["p"] == out["p"], "raw is in force by default"
+    assert out["standardised_view"]["p"] != out["p"], (
+        "on these moments the two statistics must disagree, or the fixture has "
+        "stopped exercising the finding")
+
+
+def test_per_campaign_records_each_campaigns_distance_above_its_own_null():
+    """`nq-orderflow-01` sits +17.8 sds above its own validation null and lost the
+    best-of-M contest to a campaign at +0.1. That number was not in any output
+    before Task 70, which is why nobody saw it."""
+    import numpy as np
+    w = _real_shaped(np.random.default_rng(9), [-0.15, -0.055],
+                     [("tight", -0.8934, 0.0416), ("wide", -0.0703, 0.1454)])
+    out = max_of_m(w, b=500, seed=5)
+    z = {c["campaign_id"]: c["sds_above_own_null"] for c in out["per_campaign"]}
+    assert z["tight"] > 10, z
+    assert abs(z["wide"]) < 1, z
+    for c in out["per_campaign"]:
+        assert c["null_sd"] > 0 and "null_mean" in c
+
+
+def test_the_raw_statistic_names_a_disagreement_rather_than_hiding_it():
+    """A gate that quietly differs from a better-calibrated one is worse than
+    either. The verdict does not move -- the statistic in force is a
+    pre-registration decision -- but the record says so."""
+    import numpy as np
+    w = _real_shaped(np.random.default_rng(9), [-0.15, -0.055],
+                     [("tight", -0.8934, 0.0416), ("wide", -0.0703, 0.1454)])
+    out = max_of_m(w, b=2000, seed=5)
+    assert out["standardised_view"]["reject"] and not out["reject"]
+    assert "disagreement" in out
+    assert "valid but blind" in out["disagreement"]
+    assert "recorded, not acted on" in out["disagreement"]
+
+
+def test_the_standardised_statistic_judges_rule_a_on_its_own_winner():
+    """Rule (b) on one campaign and rule (a) on a different one, reported as one
+    verdict, would be two rules about two candidates."""
+    import numpy as np
+    w = _real_shaped(np.random.default_rng(9), [-0.15, -0.055],
+                     [("tight", -0.8934, 0.0416), ("wide", -0.0703, 0.1454)])
+    out = max_of_m(w, b=2000, seed=5, statistic="standardised")
+    assert out["best_campaign"] == "tight"
+    assert out["observed_best"] == pytest.approx(-0.15)
+    assert out["rule_a_pass"] is False, "-0.15 is not above zero"
+    assert out["verdict"] == "FAIL", "rule (a) still has to pass"
+    assert out["raw_view"]["best_campaign"] == "wide", (
+        "raw_view must report the RAW winner even when standardised is in force")
+
+
+def test_the_family_does_not_shrink_when_a_null_cannot_be_standardised():
+    """A degenerate null contributes nothing to the standardised maximum, exactly
+    as an empty null does in max_of_n -- but M is unchanged, because M is how many
+    times we looked."""
+    import numpy as np
+    rng = np.random.default_rng(4)
+    w = [{"campaign_id": "flat", "validation_primary": 0.5,
+          "validation_null": [0.2] * 200},
+         {"campaign_id": "normal", "validation_primary": 0.1,
+          "validation_null": rng.standard_normal(200).tolist()}]
+    out = max_of_m(w, b=500, seed=5, statistic="standardised")
+    assert out["m_campaigns"] == 2
+    assert out["incomplete"] == []
+    flat = [c for c in out["per_campaign"] if c["campaign_id"] == "flat"][0]
+    assert flat["null_sd"] == 0.0
+    assert flat["sds_above_own_null"] is None
+    assert out["best_campaign"] == "normal"
+
+
+def test_an_unknown_statistic_is_refused():
+    import numpy as np
+    w = _real_shaped(np.random.default_rng(1), [0.1, 0.2],
+                     [("a", 0.0, 1.0), ("b", 0.0, 1.0)])
+    with pytest.raises(ValueError, match="pre-registered default"):
+        max_of_m(w, b=100, seed=1, statistic="z")

@@ -375,6 +375,17 @@ def resolution_cap(r: int, q: float = 0.05) -> dict:
     }
 
 
+STANDARDISED_VIEW_NOTE = (
+    "diagnostic unless statistic='standardised' set the verdict. The maximum "
+    "over (observed - null mean) / null sd per campaign, which is the pivotal "
+    "form step_down_max already assumes. Task 70 measured the raw maximum as "
+    "valid but blind: on our six real validation nulls, whose sds differ by 20x, "
+    "it named two of the six campaigns the best of M zero times in 4,000 families "
+    "and a third of them once, and it rejected at 0.0505 against an eight-sigma "
+    "planted effect "
+    "in a tight-null campaign where the standardised maximum rejected at 1.0000."
+)
+
 MAX_OF_M_NOTE = (
     "max_of_m is max_of_n with the campaign as the unit, and that is deliberate "
     "rather than lazy: section 4 of the pre-registration chooses it over a Holm "
@@ -392,6 +403,7 @@ def max_of_m(
     b: int = 10_000,
     seed: int = 17,
     q: float = 0.05,
+    statistic: str = "raw",
 ) -> dict:
     """The L2 gate: the best of M campaign winners, on **validation**.
 
@@ -431,6 +443,41 @@ def max_of_m(
     empty, and the asymmetry is intended: there, an empty null is a property of a
     candidate that never traded; here, a missing null is a gap in our own work.
 
+    ## `statistic`: the raw maximum is valid but blind (Task 70)
+
+    The pre-registered statistic is the maximum over **raw** validation Sortino,
+    and that is the default. Task 70 measured what it costs, using the six real
+    validation nulls, whose standard deviations differ by **20x** (0.0108 to
+    0.2214) and whose means differ by **0.9 Sortino** (-0.8934 to -0.0143),
+    because a sign-flip null inherits its own candidate's cost drag and turnover.
+
+    Under the strict null the raw maximum is **valid** -- 0.0565, CI
+    [0.0498, 0.0641] at q = 0.05 -- and **blind**. Over 4,000 simulated families
+    it named `nq-ml-02` the best of M 52% of the time and `nq-ml-03` 36%; it named
+    `nq-flowcont-01` and `nq-orderflow-01` **zero** times, and `nq-orderflow-02`
+    **once in four thousand**. Three of our six campaigns effectively cannot be
+    the best of M, whatever they score. Plant a real effect of **eight of its own null standard deviations**
+    in the tight-null campaign and the raw gate rejects at 0.0505 -- it cannot
+    see it. The standardised maximum rejects at 1.0000.
+
+    This is live, not hypothetical: `nq-orderflow-01` sits **+17.8 null standard
+    deviations** above its own validation null right now, and lost the best-of-M
+    contest to `nq-ml-03` at +0.1.
+
+    `statistic="standardised"` takes the maximum over `(observed - null mean) /
+    null sd` per campaign, using each campaign's own null *sample* moments --
+    the pivotal form `step_down_max` already assumes. **Both are always
+    computed**: `standardised_view` and `per_campaign` are in the output whichever
+    mode set the verdict, so the record carries what the other statistic said
+    without a rerun. Flipping the default is a pre-registration decision and is
+    not taken here.
+
+    What the raw maximum buys, stated so the trade is not hidden: when the effect
+    really is in the widest-null campaign it has *more* power at a small effect
+    (0.625 against 0.391 at two own-null sds), because it is effectively a
+    one-campaign test and pays no multiplicity. It pays for that by giving up the
+    other five campaigns entirely.
+
     ## What this function cannot check, and who must
 
     §4's stopping rule -- that a human may stop L2 for any reason **that is not a
@@ -444,8 +491,21 @@ def max_of_m(
         return {"m_campaigns": 0, "b": b, "q": q, "verdict": None,
                 "incomplete": [], "note": "no campaigns were supplied"}
 
-    incomplete = [str(w.get("campaign_id")) for w in entries
-                  if not len(w.get("validation_null") or ())]
+    def _n_null(w: dict) -> int:
+        """How many null draws this campaign brought.
+
+        Written as a length rather than a truth test because a null sample is
+        very often a numpy array, and `arr or ()` raises "the truth value of an
+        array with more than one element is ambiguous" -- the ambiguity numpy is
+        right to refuse. `round_turn.null_sample` returns a list, so production
+        never reached it; Task 70's simulation passes arrays and did, on its
+        first run. A gate that raises on a legitimate input type is a gate that
+        fails when somebody new calls it.
+        """
+        sample = w.get("validation_null")
+        return 0 if sample is None else len(sample)
+
+    incomplete = [str(w.get("campaign_id")) for w in entries if not _n_null(w)]
     rule_a = {str(w.get("campaign_id")): float(w.get("validation_primary", 0.0)) > 0.0
               for w in entries}
     best = max(entries, key=lambda w: float(w.get("validation_primary", float("-inf"))))
@@ -475,20 +535,102 @@ def max_of_m(
 
     # The same simulation, on the same machinery, with campaigns as the unit --
     # see MAX_OF_M_NOTE for why that is the point rather than a shortcut.
-    sim = max_of_n([w["validation_null"] for w in entries], observed,
-                   b=b, seed=seed, q=q)
+    if statistic not in ("raw", "standardised"):
+        raise ValueError(
+            f"statistic must be 'raw' (the pre-registered default) or "
+            f"'standardised' (Task 70), not {statistic!r}")
+
+    import statistics as _stats
+
+    raw_nulls = [list(w["validation_null"]) for w in entries]
+    raw_best_id = best_id   # before the standardised branch may rebind it
+
+    # Per-campaign moments of each campaign's OWN null. These are the record of
+    # why the raw maximum behaves as it does: Task 70 found the sds differing by
+    # 20x across our six real campaigns, which is what makes three of them
+    # structurally unable to be the best of M.
+    per_campaign = []
+    std_nulls: list[list[float]] = []
+    std_obs: list[float] = []
+    for w, sample in zip(entries, raw_nulls):
+        mu = _stats.fmean(sample)
+        sd = _stats.stdev(sample) if len(sample) > 1 else 0.0
+        v = float(w.get("validation_primary", 0.0))
+        z = (v - mu) / sd if sd > 0 else None
+        per_campaign.append({
+            "campaign_id": str(w.get("campaign_id")),
+            "validation_primary": v,
+            "null_mean": mu,
+            "null_sd": sd,
+            "sds_above_own_null": z,
+        })
+        if sd > 0:
+            std_nulls.append([(x - mu) / sd for x in sample])
+            std_obs.append(z if z is not None else float("-inf"))
+        else:
+            # A degenerate null cannot be standardised. It keeps its place in the
+            # family -- M does not shrink -- and contributes nothing to the
+            # standardised maximum, the same treatment max_of_n gives an empty null.
+            std_nulls.append([])
+            std_obs.append(float("-inf"))
+    out["per_campaign"] = per_campaign
+
+    sim = max_of_n(raw_nulls, observed, b=b, seed=seed, q=q)
+
+    # The standardised view is computed whichever mode sets the verdict, so the
+    # record carries what the other statistic said without a rerun.
+    std_best_i = max(range(len(std_obs)), key=std_obs.__getitem__)
+    std_sim = max_of_n(std_nulls, std_obs[std_best_i], b=b, seed=seed, q=q)
+    standardised_view = {
+        "best_campaign": per_campaign[std_best_i]["campaign_id"],
+        "observed_best_sds": (None if std_obs[std_best_i] == float("-inf")
+                              else std_obs[std_best_i]),
+        "p": std_sim["p"],
+        "reject": std_sim["reject"],
+        "null_max_mean": std_sim.get("null_max_mean"),
+        "note": STANDARDISED_VIEW_NOTE,
+    }
+    out["standardised_view"] = standardised_view
+    out["statistic"] = statistic
+
+    chosen = sim if statistic == "raw" else std_sim
     out.update(
-        p=sim["p"], p_floor=sim["p_floor"], at_floor=sim["at_floor"],
-        reject=sim["reject"], null_max_mean=sim["null_max_mean"],
-        null_max_quantiles=sim["null_max_quantiles"],
+        p=chosen["p"], p_floor=chosen["p_floor"], at_floor=chosen["at_floor"],
+        reject=chosen["reject"], null_max_mean=chosen["null_max_mean"],
+        null_max_quantiles=chosen["null_max_quantiles"],
     )
-    out["passes"] = bool(out["rule_a_pass"] and sim["reject"])
+    if statistic == "standardised":
+        # The best campaign, and therefore rule (a)'s subject, is whichever
+        # campaign the statistic in force picked. Leaving rule (a) on the raw
+        # winner while rule (b) judged a different campaign would be two rules
+        # about two candidates reported as one verdict.
+        best_id = standardised_view["best_campaign"]
+        out["best_campaign"] = best_id
+        out["observed_best"] = per_campaign[std_best_i]["validation_primary"]
+        out["rule_a_pass"] = rule_a.get(best_id, False)
+    # The RAW winner, always -- `best_id` is rebound above when the standardised
+    # statistic is in force, and reporting that here would label the standardised
+    # winner as the raw one.
+    out["raw_view"] = {"best_campaign": raw_best_id,
+                       "observed_best": observed,
+                       "p": sim["p"], "reject": sim["reject"]}
+    out["passes"] = bool(out["rule_a_pass"] and chosen["reject"])
     out["verdict"] = "PASS" if out["passes"] else "FAIL"
-    if sim["reject"] and not out["rule_a_pass"]:
+    if chosen["reject"] and not out["rule_a_pass"]:
         out["note"] = (
             "rule (b) rejected the null but rule (a) did not pass: the best "
             "winner's validation Sortino is not above zero. The sign-flip null "
             "tests directional skill, not profitability (section 3b), so a small "
             "p with a losing candidate is exactly the case rule (a) exists for. "
             + MAX_OF_M_NOTE)
+    if statistic == "raw" and std_sim["reject"] and not sim["reject"]:
+        out["disagreement"] = (
+            "the standardised statistic rejects where the pre-registered raw "
+            "maximum does not. Task 70: the raw maximum is valid but blind -- "
+            "over 4,000 simulated families on our six real validation nulls it "
+            "named two of the tight-null campaigns the best of M zero times and a "
+            "third of them once, and it cannot see an eight-sigma effect in one of "
+            "them. This is "
+            "recorded, not acted on: the statistic in force is a "
+            "pre-registration decision.")
     return out

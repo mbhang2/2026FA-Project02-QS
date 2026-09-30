@@ -1625,3 +1625,84 @@ states the construction exactly (the cap, the entry-time distribution and the
 size rule are all free parameters until they are written down), measures the
 floor's effect on the four campaigns already run, and says plainly that it
 **supplements the directional test and never replaces it**.
+
+---
+
+## Amendment 10 — 2026-09-30 — the L2 statistic: raw or standardised
+
+**Status: DRAFTED, NOT IN FORCE.** The statistic that decides the L2 gate stays
+`raw`, which is what §5 registered, until this section says otherwise. Nothing
+below is applied by code; `max_of_m` reports both statistics and refuses to choose.
+
+### What was found
+
+Task 70 (`docs/reviews/task70/`) measured the maximum over raw validation Sortino
+against the maximum over each campaign's distance above its own null. The six real
+validation nulls have **standard deviations differing by 20x** (0.0108 to 0.2214)
+and **means differing by 0.9 Sortino** (-0.8934 to -0.0143), because a sign-flip
+null inherits its own candidate's cost drag and turnover.
+
+Over 4,000 simulated families on those six null shapes, both statistics are
+**valid** — 0.0565 and 0.0580 against q = 0.05 — and the raw maximum is **blind**:
+
+- An effect of **eight of its own null standard deviations**, planted in the
+  tight-null campaign, moves the raw rejection rate to **0.0505**. The
+  standardised maximum rejects at **1.0000**.
+- **Two of the six campaigns were named "best of M" zero times** in 4,000
+  families, and a third was named once (`nq-orderflow-02`, 0.0003). They are not
+  unlikely to win, they are effectively ineligible.
+
+And on the real family, now: **`nq-orderflow-01` sits +17.83 standard deviations
+above its own validation null, and the recorded p of 0.7321 was a statement about
+`nq-ml-03` at +0.10 sd.**
+
+### What this amendment would change, if signed
+
+One thing: `max_of_m(statistic="standardised")` becomes the statistic in force at
+L2, meaning
+
+- **rule (b)** is `max_of_n` over each campaign's standardised null, at the same
+  b and the same q, with no new constant; and
+- **the best of M** is the campaign with the largest distance above its own null,
+  which is also the campaign rule (a) is then applied to. Rule (b) on one campaign
+  and rule (a) on another, reported as one verdict, would be two rules about two
+  candidates.
+
+**Everything else is untouched.** M is still declared and never discovered, every
+campaign still enters the family including the ones that did badly, rule (a)
+remains a pass condition, q stays 0.05, and rule (c) stays evidence.
+
+### What it would NOT change, and must not be read as changing
+
+**Not the current verdict.** L2 is **FAIL** under either statistic, because rule
+(a) fails: all six validation Sortinos are below zero. This amendment cannot
+manufacture a pass and does not.
+
+**Not the holdout.** Amendment 9 governs that and is itself not in force.
+
+### The argument against signing it, stated fairly
+
+**The statistic was chosen after seeing which campaigns it favours.** That is the
+structure of a forking path, and the fact that the reasoning is sound does not by
+itself make the choice legitimate — a sound-sounding reason is exactly what a
+forking path produces. Three things weigh against that objection and none of them
+dissolves it:
+
+1. The direction was fixed by the *measurement*, not by the outcome: the
+   standardised form is the pivotal statistic `step_down_max` already assumes, and
+   the blindness was measured on simulated families under a strict null, not read
+   off our results.
+2. **No claim has ever been made from the L2 gate.** It has returned FAIL once, on
+   2026-09-29, and the holdout has never been opened.
+3. The change cannot flip the current verdict, because rule (a) fails regardless.
+
+The honest framing is that this is a **re-registration of the L2 statistic before
+any claim depends on it**, and it should be signed or refused by a human who has
+read the objection above, not adopted because the arithmetic is better.
+
+### What signing it requires
+
+The same three things every amendment here has required: this section says **IN
+FORCE** with a date; `scripts/l2_gate.py` passes `statistic="standardised"`; and
+the previous verdict file is **kept**, not overwritten, so the record shows that
+the gate was re-run under a different statistic and what each one said.

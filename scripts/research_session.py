@@ -195,6 +195,27 @@ def main() -> int:
         {"error": out[-600:]}
     record.write_text(json.dumps(log, indent=2) + "\n")
 
+    # `_run` shows one line, and the L2 gate's most important output is not on it.
+    # Four times in this project a number has been computed correctly and never
+    # reached its consumer; a session log that hides the gate's own warning would
+    # be the fifth.
+    v = log["l2"] if isinstance(log["l2"], dict) else {}
+    g = v.get("gate") or v
+    if g.get("verdict") or g.get("withheld"):
+        print(f"    L2 verdict        {g.get('verdict') or 'WITHHELD'}  "
+              f"M = {g.get('m_campaigns')}  best {g.get('best_campaign')}  "
+              f"p = {g.get('p')}")
+        print(f"    rule (a) Sortino > 0 on the best   {g.get('rule_a_pass')}")
+        print(f"    rule (b) max_of_m p <= q           {g.get('reject')}")
+        for c in g.get("per_campaign") or ():
+            z = c.get("sds_above_own_null")
+            print(f"      {c['campaign_id']:24} "
+                  f"{'n/a' if z is None else format(z, '+7.2f')} sd above its own null")
+        if g.get("disagreement"):
+            print("    !! THE TWO L2 STATISTICS DISAGREE -- see the verdict file "
+                  "and Amendment 10.\n       The statistic in force is a "
+                  "pre-registration decision, not this script's.")
+
     # ---- phase 4: the holdout, checked and NOT taken -----------------------
     print("\nphase 4: the holdout -- checked, never taken by a script\n")
     _run([PY, "scripts/holdout.py", "--check"], label="holdout --check")

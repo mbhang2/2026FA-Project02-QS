@@ -1,0 +1,398 @@
+{
+  "task": 70,
+  "question": "does a chooser that picks campaign k+1's family from campaigns 1..k's train results inflate the L2 gate's false-positive rate above q?",
+  "constants": {
+    "m_campaigns": 6,
+    "n_trials": 20,
+    "families": 12,
+    "exploit_p": 0.8,
+    "sessions": 2000,
+    "null_draws": 200,
+    "b_resamples": 2000,
+    "q": 0.05,
+    "rho_grid": [
+      0.0,
+      0.1,
+      0.2,
+      0.3,
+      0.5,
+      0.8
+    ]
+  },
+  "resolvable": "binomial SE at a rate of 0.05 with 2000 sessions is 0.0049; this resolves 0.07 from 0.05 and not 0.055 from 0.05",
+  "cells": [
+    {
+      "arm": "fixed",
+      "rho": 0.0,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.0435,
+      "rule_b_ci": [
+        0.0354,
+        0.0533
+      ],
+      "rule_a_rate": 0.9885,
+      "pass_rate": 0.0435,
+      "pass_ci": [
+        0.0354,
+        0.0533
+      ],
+      "median_p": 0.5012493753123438,
+      "mean_observed_best": 1.2656937331715263
+    },
+    {
+      "arm": "adaptive_train",
+      "rho": 0.0,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.05,
+      "rule_b_ci": [
+        0.0413,
+        0.0604
+      ],
+      "rule_a_rate": 0.9795,
+      "pass_rate": 0.05,
+      "pass_ci": [
+        0.0413,
+        0.0604
+      ],
+      "median_p": 0.5079960019990005,
+      "mean_observed_best": 1.257161376523165
+    },
+    {
+      "arm": "adaptive_validation",
+      "rho": 0.0,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.05,
+      "rule_b_ci": [
+        0.0413,
+        0.0604
+      ],
+      "rule_a_rate": 0.985,
+      "pass_rate": 0.05,
+      "pass_ci": [
+        0.0413,
+        0.0604
+      ],
+      "median_p": 0.4962518740629685,
+      "mean_observed_best": 1.2670859775569776
+    },
+    {
+      "arm": "fixed",
+      "rho": 0.1,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.079,
+      "rule_b_ci": [
+        0.068,
+        0.0916
+      ],
+      "rule_a_rate": 0.9965,
+      "pass_rate": 0.079,
+      "pass_ci": [
+        0.068,
+        0.0916
+      ],
+      "median_p": 0.38980509745127434,
+      "mean_observed_best": 1.4432633318926746
+    },
+    {
+      "arm": "adaptive_train",
+      "rho": 0.1,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.0885,
+      "rule_b_ci": [
+        0.0768,
+        0.1017
+      ],
+      "rule_a_rate": 0.994,
+      "pass_rate": 0.0885,
+      "pass_ci": [
+        0.0768,
+        0.1017
+      ],
+      "median_p": 0.3713143428285857,
+      "mean_observed_best": 1.4802332343444888
+    },
+    {
+      "arm": "adaptive_validation",
+      "rho": 0.1,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.0815,
+      "rule_b_ci": [
+        0.0703,
+        0.0943
+      ],
+      "rule_a_rate": 0.994,
+      "pass_rate": 0.0815,
+      "pass_ci": [
+        0.0703,
+        0.0943
+      ],
+      "median_p": 0.3695652173913043,
+      "mean_observed_best": 1.470251769261261
+    },
+    {
+      "arm": "fixed",
+      "rho": 0.2,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.1265,
+      "rule_b_ci": [
+        0.1126,
+        0.1418
+      ],
+      "rule_a_rate": 0.9995,
+      "pass_rate": 0.1265,
+      "pass_ci": [
+        0.1126,
+        0.1418
+      ],
+      "median_p": 0.30184907546226886,
+      "mean_observed_best": 1.628006700769719
+    },
+    {
+      "arm": "adaptive_train",
+      "rho": 0.2,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.144,
+      "rule_b_ci": [
+        0.1293,
+        0.1601
+      ],
+      "rule_a_rate": 0.999,
+      "pass_rate": 0.144,
+      "pass_ci": [
+        0.1293,
+        0.1601
+      ],
+      "median_p": 0.26486756621689156,
+      "mean_observed_best": 1.69523995901844
+    },
+    {
+      "arm": "adaptive_validation",
+      "rho": 0.2,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.135,
+      "rule_b_ci": [
+        0.1207,
+        0.1507
+      ],
+      "rule_a_rate": 0.9995,
+      "pass_rate": 0.135,
+      "pass_ci": [
+        0.1207,
+        0.1507
+      ],
+      "median_p": 0.2658670664667666,
+      "mean_observed_best": 1.6730343653692443
+    },
+    {
+      "arm": "fixed",
+      "rho": 0.3,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.171,
+      "rule_b_ci": [
+        0.1551,
+        0.1881
+      ],
+      "rule_a_rate": 0.9985,
+      "pass_rate": 0.171,
+      "pass_ci": [
+        0.1551,
+        0.1881
+      ],
+      "median_p": 0.2143928035982009,
+      "mean_observed_best": 1.7931169219922636
+    },
+    {
+      "arm": "adaptive_train",
+      "rho": 0.3,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.196,
+      "rule_b_ci": [
+        0.1792,
+        0.214
+      ],
+      "rule_a_rate": 0.9995,
+      "pass_rate": 0.196,
+      "pass_ci": [
+        0.1792,
+        0.214
+      ],
+      "median_p": 0.18565717141429286,
+      "mean_observed_best": 1.8702332876244068
+    },
+    {
+      "arm": "adaptive_validation",
+      "rho": 0.3,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.202,
+      "rule_b_ci": [
+        0.185,
+        0.2202
+      ],
+      "rule_a_rate": 1.0,
+      "pass_rate": 0.202,
+      "pass_ci": [
+        0.185,
+        0.2202
+      ],
+      "median_p": 0.17791104447776113,
+      "mean_observed_best": 1.8864966423743017
+    },
+    {
+      "arm": "fixed",
+      "rho": 0.5,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.2785,
+      "rule_b_ci": [
+        0.2593,
+        0.2986
+      ],
+      "rule_a_rate": 1.0,
+      "pass_rate": 0.2785,
+      "pass_ci": [
+        0.2593,
+        0.2986
+      ],
+      "median_p": 0.11444277861069466,
+      "mean_observed_best": 2.0680051473987313
+    },
+    {
+      "arm": "adaptive_train",
+      "rho": 0.5,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.4065,
+      "rule_b_ci": [
+        0.3852,
+        0.4282
+      ],
+      "rule_a_rate": 1.0,
+      "pass_rate": 0.4065,
+      "pass_ci": [
+        0.3852,
+        0.4282
+      ],
+      "median_p": 0.07246376811594203,
+      "mean_observed_best": 2.2657044280167336
+    },
+    {
+      "arm": "adaptive_validation",
+      "rho": 0.5,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.3905,
+      "rule_b_ci": [
+        0.3693,
+        0.4121
+      ],
+      "rule_a_rate": 1.0,
+      "pass_rate": 0.3905,
+      "pass_ci": [
+        0.3693,
+        0.4121
+      ],
+      "median_p": 0.08120939530234883,
+      "mean_observed_best": 2.233783201622699
+    },
+    {
+      "arm": "fixed",
+      "rho": 0.8,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.5015,
+      "rule_b_ci": [
+        0.4796,
+        0.5234
+      ],
+      "rule_a_rate": 1.0,
+      "pass_rate": 0.5015,
+      "pass_ci": [
+        0.4796,
+        0.5234
+      ],
+      "median_p": 0.04997501249375312,
+      "mean_observed_best": 2.428140040652241
+    },
+    {
+      "arm": "adaptive_train",
+      "rho": 0.8,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.6685,
+      "rule_b_ci": [
+        0.6476,
+        0.6888
+      ],
+      "rule_a_rate": 1.0,
+      "pass_rate": 0.6685,
+      "pass_ci": [
+        0.6476,
+        0.6888
+      ],
+      "median_p": 0.025987006496751622,
+      "mean_observed_best": 2.6510726107728755
+    },
+    {
+      "arm": "adaptive_validation",
+      "rho": 0.8,
+      "sessions": 2000,
+      "rule_b_reject_rate": 0.654,
+      "rule_b_ci": [
+        0.6329,
+        0.6745
+      ],
+      "rule_a_rate": 1.0,
+      "pass_rate": 0.654,
+      "pass_ci": [
+        0.6329,
+        0.6745
+      ],
+      "median_p": 0.028985507246376812,
+      "mean_observed_best": 2.6277750419930364
+    }
+  ],
+  "empirical_rho": {
+    "pairs": [
+      {
+        "campaign": "nq-flowcont-01",
+        "winner_digest": "9fcef5407e906115",
+        "train": -0.29658535416417436,
+        "validation": -0.7866997098661094
+      },
+      {
+        "campaign": "nq-flowcont-5m",
+        "winner_digest": "57fd4c8fc7447f90",
+        "train": -0.13699716578315613,
+        "validation": -0.2178564804675991
+      },
+      {
+        "campaign": "nq-ml-02",
+        "winner_digest": "3670de76c4573fda",
+        "train": 1.780712819389064,
+        "validation": -0.18452936814967413
+      },
+      {
+        "campaign": "nq-ml-03",
+        "winner_digest": "b838ae6036f8c135",
+        "train": 0.2898118438040208,
+        "validation": -0.05573144958405279
+      },
+      {
+        "campaign": "nq-orderflow-01",
+        "winner_digest": "4abb6772d63688d5",
+        "train": -0.012520518519564242,
+        "validation": -0.1516320268819263
+      },
+      {
+        "campaign": "nq-orderflow-02",
+        "winner_digest": "ad53a4e50ec4705f",
+        "train": -0.42319383661346593,
+        "validation": -0.4655074255769659
+      }
+    ],
+    "n": 6,
+    "definition": "within-candidate: the same winner's primary on train and on validation, from validation.json",
+    "pearson_r": 0.4462894406406514,
+    "pearson_ci": [
+      -0.5727,
+      0.9234
+    ],
+    "note": "n = 6. The interval below spans nearly everything, which is the finding: rho is not known to a precision that distinguishes any two columns of the table above. The number is recorded so rho is measured rather than assumed."
+  },
+  "elapsed_seconds": 11.4
+}

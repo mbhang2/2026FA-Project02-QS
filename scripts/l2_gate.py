@@ -66,6 +66,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 CAMPAIGNS = ROOT / "runs" / "campaigns"
 VERDICT = ROOT / "runs" / "l2-verdict.json"
+
+
+def _wrap(text: str, width: int) -> list[str]:
+    import textwrap
+    return textwrap.wrap(" ".join(text.split()), width)
 B_NULL = 10_000
 
 
@@ -216,6 +221,25 @@ def main() -> int:
         print(f"  rule (a) Sortino > 0 on the best   {out['rule_a_pass']}")
         print(f"  rule (b) max_of_m p <= q           {out['reject']}")
         print(f"  VERDICT          {out['verdict']}")
+
+        # Task 70: each campaign's distance above its OWN null. The raw maximum
+        # cannot see this, and it is the whole reason the two statistics differ.
+        print("\n  each campaign against its own validation null:")
+        for c in out.get("per_campaign") or ():
+            z = c.get("sds_above_own_null")
+            zs = "    n/a" if z is None else f"{z:+7.2f}"
+            print(f"    {c['campaign_id']:24} obs {c['validation_primary']:+.4f}  "
+                  f"null {c['null_mean']:+.4f} +/- {c['null_sd']:.4f}  {zs} sd")
+        sv = out.get("standardised_view") or {}
+        if sv:
+            print(f"\n  standardised statistic (DIAGNOSTIC, not the verdict): "
+                  f"best {sv.get('best_campaign')} at "
+                  f"{sv.get('observed_best_sds'):+.2f} sd, p = {sv.get('p'):.4f}, "
+                  f"reject = {sv.get('reject')}")
+        if out.get("disagreement"):
+            print("\n  !! THE TWO STATISTICS DISAGREE")
+            for line in _wrap(out["disagreement"], 74):
+                print(f"     {line}")
     print("\n  Not a promotion. Section 5 is a pass rule; promotion beyond the "
           "MVP is a\n  human decision on all of the evidence.")
 

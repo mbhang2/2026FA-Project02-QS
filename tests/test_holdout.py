@@ -246,3 +246,64 @@ def test_the_rehearsal_runs_the_whole_path_on_synthetic_data(tmp_path):
     assert row["outcome"] == "completed", "the lock was turned and the walk ran"
     assert "REHEARSAL" in (row.get("holdout_unlock_reason") or "")
     assert row["split"] == "Split.HOLDOUT" or "holdout" in str(row["split"]).lower()
+
+
+# --------------------------------------------------------------------------- #
+# refusal 7: the two L2 statistics must agree about the family (Task 70)
+# --------------------------------------------------------------------------- #
+def test_a_disagreement_between_the_two_l2_statistics_is_a_refusal(tmp_path,
+                                                                   monkeypatch):
+    """There is no second look in which to try the other candidate.
+
+    Task 70 measured the raw maximum as valid but blind. Until Amendment 10 says
+    which statistic decides, a family the gate cannot agree on is not a family
+    worth spending 73 irrecoverable sessions against.
+    """
+    mod = _mod()
+    verdict = tmp_path / "l2-verdict.json"
+    verdict.write_text(json.dumps({
+        "verdict": "PASS", "rule_a_pass": True, "reject": True, "p": 0.001,
+        "best_campaign": "nq-ml-03",
+        "raw_view": {"best_campaign": "nq-ml-03", "p": 0.7321, "reject": False},
+        "standardised_view": {"best_campaign": "nq-orderflow-01", "p": 0.0001,
+                              "reject": True},
+        "disagreement": "the standardised statistic rejects where the raw one "
+                        "does not",
+    }))
+    monkeypatch.setattr(mod, "L2_VERDICT", verdict)
+    monkeypatch.setattr(mod, "RESULT", tmp_path / "absent.json")
+    monkeypatch.setattr(mod, "amendment_9_in_force", lambda: True)
+
+    reasons = mod.blocked(rehearse=False)
+    hit = [r for r in reasons if "two statistics disagree" in r]
+    assert hit, reasons
+    assert "nq-ml-03" in hit[0] and "nq-orderflow-01" in hit[0], (
+        "the refusal must name both candidates, or a reader cannot act on it")
+    assert "Amendment 10" in hit[0]
+    assert "no second look" in hit[0]
+
+
+def test_agreeing_statistics_do_not_block_the_look(tmp_path, monkeypatch):
+    """The refusal must be about disagreement, not about the fields existing."""
+    mod = _mod()
+    verdict = tmp_path / "l2-verdict.json"
+    verdict.write_text(json.dumps({
+        "verdict": "PASS", "rule_a_pass": True, "reject": True, "p": 0.001,
+        "best_campaign": "nq-ml-03",
+        "raw_view": {"best_campaign": "nq-ml-03", "p": 0.001, "reject": True},
+        "standardised_view": {"best_campaign": "nq-ml-03", "p": 0.0005,
+                              "reject": True},
+    }))
+    monkeypatch.setattr(mod, "L2_VERDICT", verdict)
+    monkeypatch.setattr(mod, "RESULT", tmp_path / "absent.json")
+    monkeypatch.setattr(mod, "amendment_9_in_force", lambda: True)
+    assert not [r for r in mod.blocked(rehearse=False) if "disagree" in r]
+
+
+def test_the_docstring_counts_its_refusals_correctly():
+    """A docstring that says six while the code has seven is how a reader ends up
+    trusting a list that is missing the one that would have stopped them."""
+    src = (REPO_ROOT / "scripts" / "holdout.py").read_text()
+    n = len([1 for i in range(1, 12) if f"\n{i}. **" in src])
+    assert "Seven refusals" in src, "the count in the docstring"
+    assert n == 7, f"the docstring lists {n} numbered refusals"

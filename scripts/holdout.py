@@ -10,7 +10,7 @@ was a hand-typed `run.py --unlock-holdout` command, and a one-shot that depends 
 somebody typing the right profile and remembering to carry a fitted champion's
 weights is not a protocol, it is a hope.
 
-## Six refusals, in the order they fire
+## Seven refusals, in the order they fire
 
 Every one is a mechanical check on something §8 or Amendment 9 states in prose.
 They are ordered so the cheapest and most decisive come first.
@@ -31,6 +31,16 @@ They are ordered so the cheapest and most decisive come first.
 6. **A fitted champion must carry weights.** The engine refuses a second `fit()`,
    so a fitted strategy run without `weights_path` scores an untrained model --
    and on the holdout that mistake is unrecoverable.
+7. **The L2 gate's two statistics must not disagree.** Added after Task 70, which
+   measured the maximum over raw validation Sortino as valid but **blind**: on our
+   six real validation nulls, whose standard deviations differ by 20x, it named
+   two of the six campaigns the best of M zero times in 4,000 simulated families
+   and a third of them once, and it left `nq-orderflow-01` at +17.8 sd above its
+   own null while
+   recording p = 0.7321 about a campaign at +0.10 sd. `max_of_m` now reports both
+   statistics and sets `disagreement` when they differ. While Amendment 10 --
+   which would settle which statistic decides -- is NOT IN FORCE, a disagreement
+   is a refusal: **there is no second look in which to try the other candidate.**
 
 ## Rehearsal, and why it is not optional
 
@@ -129,6 +139,17 @@ def blocked(rehearse: bool) -> list[str]:
                    f"rule (a) {v.get('rule_a_pass')}, p {v.get('p')}). §8: opened "
                    "only if the L2 gate accepts -- otherwise the look confirms "
                    "nothing and spends 73 sessions that cannot be recovered.")
+    if v and v.get("disagreement"):
+        raw = (v.get("raw_view") or {}).get("best_campaign")
+        std = (v.get("standardised_view") or {}).get("best_campaign")
+        out.append(
+            "the L2 gate's two statistics disagree about the family. The raw "
+            f"maximum, which is the one in force, names {raw}; the standardised "
+            f"maximum names {std}. Task 70 measured the raw maximum as valid but "
+            "blind, and Amendment 10 -- which would settle which statistic "
+            "decides -- is DRAFTED and NOT IN FORCE. The single look must not be "
+            "spent on a candidate the gate itself cannot agree is the best of M: "
+            "there is no second look in which to try the other one.")
     if RESULT.exists():
         out.append(f"{_rel(RESULT)} already exists. The look has been "
                    "taken. There is no second one, under any justification.")

@@ -176,3 +176,17 @@ def test_the_example_plan_names_only_committed_hypotheses():
                                   c["hypothesis"]],
                                  capture_output=True, cwd=str(REPO_ROOT))
         assert tracked.returncode == 0, f"{c['hypothesis']} is not committed"
+
+
+def test_the_l2_verdict_is_printed_and_not_left_in_a_file():
+    """Four times in this project a number has been computed correctly and never
+    reached its consumer. `_run` prints one line; the gate's rule (a)/(b) split,
+    each campaign's distance above its own null, and the Task 70 disagreement
+    warning are not on it."""
+    phase3 = SRC[SRC.index("phase 3: the L2 gate"):SRC.index("phase 4: the holdout")]
+    assert "L2 verdict" in phase3
+    assert "rule (a)" in phase3 and "rule (b)" in phase3
+    assert "sds_above_own_null" in phase3
+    assert "THE TWO L2 STATISTICS DISAGREE" in phase3
+    assert "Amendment 10" in phase3
+    assert "pre-registration decision, not this script's" in FLAT

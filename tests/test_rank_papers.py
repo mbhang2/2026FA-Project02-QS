@@ -242,3 +242,60 @@ def test_the_assembled_context_carries_no_validation_number():
                 f"{d.parent.name}'s validation score {form} reached the ranker")
     # and it does carry the train-side verdict, which §4 permits
     assert "rejected" in ctx and "closed" in ctx.lower()
+
+
+# --------------------------------------------------------------------------- #
+# the current question (added 2026-09-30)
+# --------------------------------------------------------------------------- #
+def test_the_ranker_can_be_told_what_we_are_asking_now():
+    """**The gap Michael's example found.** Nothing told the ranker the current
+    research question. It inferred from what PAST hypotheses set aside, so an
+    order-flow absorption paper arriving while we chase trend reversal is marked
+    down for being a closed question -- right about the past, silent about the
+    present."""
+    import pathlib
+    h = REPO_ROOT / "config" / "hypotheses" / "flow-continuation-5m.md"
+    without = rp.context_block()
+    with_it = rp.context_block(h)
+    assert "asking NOW" not in without
+    assert "The question we are asking NOW" in with_it
+    assert h.read_text().strip()[:80] in with_it, "the question's own text"
+    assert len(with_it) > len(without)
+    # the history is still there: the present does not replace the past
+    for section in ("already asked, and closed", "Set aside deliberately",
+                    "Falsified on this data"):
+        assert section in with_it, section
+
+
+def test_the_current_question_goes_through_the_lint():
+    """It is prose reaching a model, so it goes through `hypothesis.load` like
+    every other hypothesis -- a file with gate vocabulary is refused rather than
+    quietly ranked against."""
+    import inspect
+    src = inspect.getsource(rp.asking_now)
+    assert "from src.core.loop import hypothesis as H" in src
+    assert "H.load(path)" in src
+
+
+def test_the_current_question_block_carries_no_outcome():
+    """§4: campaign k+1 may depend on prior campaigns' train results, never their
+    validation results. A "how did this question do" block is exactly that door,
+    so the block is the hypothesis text and nothing else."""
+    import pathlib
+    h = REPO_ROOT / "config" / "hypotheses" / "flow-continuation-5m.md"
+    block = rp.asking_now(h)
+    body = h.read_text().strip()
+    # everything in the block is either the framing sentences or the file itself
+    extra = block.replace(body, "")
+    for leaked in ("rejected", "ACCEPT", "verdict", "validation", "p =",
+                   "primary", "sortino"):
+        assert leaked.lower() not in extra.lower(), leaked
+
+
+def test_the_flag_is_optional_and_its_absence_is_reported():
+    """A run without it is legitimate -- ranking the corpus with no live question
+    is what we did today -- but the record should say which happened."""
+    src = (REPO_ROOT / "scripts" / "rank_papers.py").read_text()
+    assert '"--asking"' in src
+    assert 'NO current question' in src
+    assert "default=None" in src

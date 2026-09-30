@@ -108,12 +108,47 @@ def falsified() -> list[str]:
             for b in re.findall(r"^- (.+?)(?=\n- |\n\n|\Z)", m.group(1), re.S | re.M)]
 
 
-def context_block() -> str:
-    parts = ["### Questions already asked, and closed", *(f"- {x}" for x in closed_questions()),
-             "", "### Set aside deliberately -- the open questions",
-             *(f"- {x}" for x in deferrals()),
-             "", "### Falsified on this data -- do not re-explore",
-             *(f"- {x}" for x in falsified())]
+def asking_now(path: pathlib.Path) -> str:
+    """The question we are working on, as its own block.
+
+    **The gap this closes.** Nothing told the ranker what we are currently
+    researching. It inferred from what each *past* hypothesis set aside, so a
+    paper arriving while we chase trend reversal was judged against an old
+    campaign's leftovers. Michael's example: an order-flow absorption paper is
+    feasible on NQ tick data and would be marked down for being a closed
+    question, which is right about the past and silent about the present.
+
+    Deliberately the hypothesis TEXT and nothing else. It is linted prose that a
+    human committed, so it cannot carry a threshold or a score -- and it must not
+    carry an outcome: §4 allows campaign k+1 to depend on prior campaigns' train
+    results and never their validation results, and a "how did this question do"
+    block is exactly the door that opens.
+    """
+    from src.core.loop import hypothesis as H
+    h = H.load(path)              # linted, so no gate vocabulary reaches the model
+    return "\n".join([
+        "### The question we are asking NOW",
+        "",
+        "Rank against this as well as against the history below. A paper that "
+        "speaks to this question is worth more than one that speaks to a topic we "
+        "have never touched; a paper that would change it is worth more still.",
+        "",
+        f"From `{path.name}`:",
+        "",
+        h.text.strip(),
+    ])
+
+
+def context_block(current: pathlib.Path | None = None) -> str:
+    parts: list[str] = []
+    if current is not None:
+        parts += [asking_now(current), ""]
+    parts += ["### Questions already asked, and closed",
+              *(f"- {x}" for x in closed_questions()),
+              "", "### Set aside deliberately -- the open questions",
+              *(f"- {x}" for x in deferrals()),
+              "", "### Falsified on this data -- do not re-explore",
+              *(f"- {x}" for x in falsified())]
     return "\n".join(parts)
 
 
@@ -169,6 +204,11 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=50)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--asking", type=pathlib.Path, default=None,
+                    help="the hypothesis file we are working on now, added to the "
+                         "ranking context. Without it the ranker judges a paper "
+                         "only against what PAST campaigns set aside, which is "
+                         "silent about the present.")
     ap.add_argument("--rerank", action="store_true",
                     help="re-score papers that already have a relevance, to add "
                          "gate_relevance. The axis-1 label from the first pass is "
@@ -192,11 +232,15 @@ def main() -> int:
             print("nothing feasible and unranked; --rerank adds the second axis "
                   "to papers scored before it existed"); return 0
 
-    ctx = context_block()
+    if a.asking is not None and not a.asking.exists():
+        sys.exit(f"no hypothesis at {a.asking}")
+    ctx = context_block(a.asking)
     client, served = _client()
     print(f"ranking {len(todo)} feasible papers  model {MODEL} (served {served})")
     print(f"  context: {len(closed_questions())} closed questions, "
-          f"{len(deferrals())} deferral sets, {len(falsified())} falsified families\n")
+          f"{len(deferrals())} deferral sets, {len(falsified())} falsified families"
+          + (f", asking {a.asking.name}" if a.asking else ", NO current question")
+          + "\n")
 
     def work(row):
         f = RAW / f"{row['id']}.json"

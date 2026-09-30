@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2605.01384v1",
+  "abstract": "Portfolio optimization is constrained by linear assumptions and insufficient integration of multi-modal information in traditional models. This paper proposes a cross-modal BERT-driven Actor-Critic framework SBCA for multi-asset portfolio optimization to address the deficiencies of existing deep reinforcement learning DRL methods in fusing price data and financial text sentiment, as well as lacking practical trading constraints. The framework adopts a cross-modal gated fusion mechanism to adaptively integrate price time-series features and text semantic features, embeds downside risk and turnover penalty constraints into the reward function, and constructs a complete empirical system for validation. Experiments on 11-year U.S. stock multi-asset datasets show that SBCA outperforms equal weight, buy-and-hold and market benchmark strategies in portfolio value, annual return, Sharpe ratio and maximum drawdown. Ablation studies verify the complementary enhancement of Actor-Critic mechanism and cross-modal fusion module. Cost sensitivity analysis confirms the model's robustness under varying transaction costs. SBCA provides an effective and interpretable end-to-end solution for dynamic quantitative portfolio decision-making.",
+  "authors": [
+    "Jinfeng Pan",
+    "Jiahao Chen"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2605.01384v1",
+  "published": "2026-05-02T11:16:01Z",
+  "source": "arxiv",
+  "title": "SBCA: Cross-Modal BERT-driven Actor-Critic for Multi-Asset Portfolio Optimization",
+  "updated": "2026-05-02T11:16:01Z"
+}

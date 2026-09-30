@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2503.08833v2",
+  "abstract": "We study optimal execution in markets with transient price impact in a competitive setting with $N$ traders. Motivated by prior negative results on the existence of pure Nash equilibria, we consider randomized strategies for the traders and whether allowing such strategies can restore the existence of equilibria. We show that given a randomized strategy, there is a non-randomized strategy with strictly lower expected execution cost, and moreover this de-randomization can be achieved by a simple averaging procedure. As a consequence, Nash equilibria cannot contain randomized strategies, and non-existence of pure equilibria implies non-existence of randomized equilibria. Separately, we also establish uniqueness of equilibria. Both results hold in a general transaction cost model given by a strictly positive definite impact decay kernel and a convex trading cost.",
+  "authors": [
+    "Steven Campbell",
+    "Marcel Nutz"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.MF"
+  ],
+  "id": "2503.08833v2",
+  "published": "2025-03-11T19:15:19Z",
+  "source": "arxiv",
+  "title": "Randomization in Optimal Execution Games",
+  "updated": "2026-05-15T23:26:52Z"
+}

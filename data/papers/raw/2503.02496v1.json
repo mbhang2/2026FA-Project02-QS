@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2503.02496v1",
+  "abstract": "This paper addresses the trade-off between internalisation and externalisation in the management of stochastic trade flows. We consider agents who must absorb flows and manage risk by deciding whether to warehouse it or hedge in the market, thereby incurring transaction costs and market impact. Unlike market makers, these agents cannot skew their quotes to attract offsetting flows and deter risk-increasing ones, leading to a fundamentally different problem. Within the Almgren-Chriss framework, we derive almost-closed-form solutions in the case of quadratic execution costs, while more general cases require numerical methods. In particular, we discuss the challenges posed by artificial boundary conditions when using classical grid-based numerical PDE techniques and propose reinforcement learning methods as an alternative.",
+  "authors": [
+    "Philippe Bergault",
+    "Olivier Gu\u00e9ant",
+    "Hamza Bodor"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2503.02496v1",
+  "published": "2025-03-04T11:03:10Z",
+  "source": "arxiv",
+  "title": "To Hedge or Not to Hedge: Optimal Strategies for Stochastic Trade Flow Management",
+  "updated": "2025-03-04T11:03:10Z"
+}

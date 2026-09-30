@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2511.08608v1",
+  "abstract": "Problem. \"Thinking\" LLMs (TLLMs) expose explicit or hidden reasoning traces and are widely believed to generalize better on complex tasks than direct LLMs. Whether this promise carries to noisy, heavy-tailed and regime-switching financial data remains unclear. Approach. Using Indian equities (NIFTY constituents), we run a rolling 48m/1m walk-forward evaluation at horizon k = 1 day and dial cross-sectional complexity via the universe size U in {5, 11, 21, 36} while keeping the reasoning budget fixed (B = 512 tokens) for the TLLM. We compare a direct LLM (gpt-4o-mini), a TLLM (gpt-5), and classical learners (ridge, random forest) on cross-sectional ranking loss 1 - IC, MSE, and long/short backtests with realistic costs. Statistical confidence is measured with Diebold-Mariano, Pesaran-Timmermann, and SPA tests. Main findings. (i) As U grows under a fixed budget B, the TLLM's ranking quality deteriorates, whereas the direct LLM remains flat and classical baselines are stable. (ii) TLLM variance is higher, requiring ex-post calibration (winsorization and blending) for stability. (iii) Portfolio results under transaction costs do not support a net advantage for the TLLM. Hypotheses. Our results are consistent with the following testable hypotheses: H1 (Capacity-Complexity Mismatch): for fixed B, TLLM accuracy degrades superlinearly in cross-sectional complexity. H2 (Reasoning Variance): TLLM outputs exhibit higher dispersion date-by-date than direct LLMs, increasing error bars and turnover. H3 (Domain Misfit): next-token prediction objectives and token-budgeted inference are poorly aligned with heavy-tailed, weakly predictable stock returns. Implication. In our setting, \"thinking\" LLMs are not yet ready to replace classical or direct methods for short-horizon stock ranking; scaling the reasoning budget and/or re-aligning objectives appears necessary.",
+  "authors": [
+    "Rakeshkumar H Sodha"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2511.08608v1",
+  "published": "2025-11-05T08:40:44Z",
+  "source": "arxiv",
+  "title": "When Reasoning Fails: Evaluating 'Thinking' LLMs for Stock Prediction",
+  "updated": "2025-11-05T08:40:44Z"
+}

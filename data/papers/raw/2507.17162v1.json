@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2507.17162v1",
+  "abstract": "We consider a dynamic portfolio optimization problem that incorporates predictable returns, instantaneous transaction costs, price impact, and stochastic volatility, extending the classical results of Garleanu and Pedersen (2013), which assume constant volatility. Constructing the optimal portfolio strategy in this general setting is challenging due to the nonlinear nature of the resulting Hamilton-Jacobi-Bellman (HJB) equations. To address this, we propose a multi-scale volatility expansion that captures stochastic volatility dynamics across different time scales. Specifically, the analysis involves a singular perturbation for the fast mean-reverting volatility factor and a regular perturbation for the slow-moving factor. We also introduce an approximation for small price impact and demonstrate its numerical accuracy. We formally derive asymptotic approximations up to second order and use Monte Carlo simulations to show how incorporating these corrections improves the Profit and Loss (PnL) of the resulting portfolio strategy.",
+  "authors": [
+    "Patrick Chan",
+    "Ronnie Sircar",
+    "Iosif Zimbidis"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.MF",
+    "q-fin.PM",
+    "q-fin.TR"
+  ],
+  "id": "2507.17162v1",
+  "published": "2025-07-23T02:54:38Z",
+  "source": "arxiv",
+  "title": "Optimal Trading under Instantaneous and Persistent Price Impact, Predictable Returns and Multiscale Stochastic Volatility",
+  "updated": "2025-07-23T02:54:38Z"
+}

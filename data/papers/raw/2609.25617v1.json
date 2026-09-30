@@ -1,0 +1,22 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.25617v1",
+  "abstract": "Stock price forecasting is a long-standing challenge in computational finance, driven by the inherent randomness of markets and complex temporal patterns. While recent deep-learning models have raised forecasting accuracy by jointly modeling inter-stock and temporal price dynamics, they conflate inter-stock relationships with intra-stock temporal dependencies and focus solely on the univariate objective of price movement. To address these limitations, we propose LiMT, a Hierarchical Multi-Task Learning framework that integrates liquidity-aware signals for stock price forecasting. LiMT employs a Market Regime Encoder (MRE) module that first extracts contemporaneous cross-stock dependencies, then models each stock's temporal dynamics, yielding a unified latent state. Building on this latent state, we introduce a Liquidity-Driven Learning (LDL) module, a mixture-of-experts architecture that features cross-task gating mechanisms to jointly predict price movement, volatility, and trading volume. We further design an Adaptive Portfolio Optimization (APO) mechanism that converts multi-task forecasts into executable portfolio weights under transaction-cost and liquidity constraints. Extensive experiments on the CSI300 and CSI500 benchmarks show that LiMT performs best among strong neural and tree-based baselines across the reported metrics. In realistic CSI300 backtests, APO improves annualized return from 3.99% to 10.01% and Sharpe ratio from 1.22 to 1.86 over equal weighting, showing that the multi-task forecasts translate into deployable portfolio gains.",
+  "authors": [
+    "Hengyi Yang",
+    "Sida Lin",
+    "Yiyan Qi",
+    "Yankai Chen",
+    "Haohan Zhang",
+    "Xianhua Peng",
+    "Jian Guo"
+  ],
+  "categories": [
+    "cs.CE",
+    "q-fin.CP"
+  ],
+  "id": "2609.25617v1",
+  "published": "2026-09-22T03:23:59Z",
+  "source": "arxiv",
+  "title": "Hierarchical Multi-Task Learning with Liquidity-Aware Signals for Stock Forecasting",
+  "updated": "2026-09-22T03:23:59Z"
+}

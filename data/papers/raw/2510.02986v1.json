@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2510.02986v1",
+  "abstract": "Transaction costs and regime shifts are major reasons why paper portfolios fail in live trading. We introduce FR-LUX (Friction-aware, Regime-conditioned Learning under eXecution costs), a reinforcement learning framework that learns after-cost trading policies and remains robust across volatility-liquidity regimes. FR-LUX integrates three ingredients: (i) a microstructure-consistent execution model combining proportional and impact costs, directly embedded in the reward; (ii) a trade-space trust region that constrains changes in inventory flow rather than logits, yielding stable low-turnover updates; and (iii) explicit regime conditioning so the policy specializes to LL/LH/HL/HH states without fragmenting the data. On a 4 x 5 grid of regimes and cost levels with multiple random seeds, FR-LUX achieves the top average Sharpe ratio with narrow bootstrap confidence intervals, maintains a flatter cost-performance slope than strong baselines, and attains superior risk-return efficiency for a given turnover budget. Pairwise scenario-level improvements are strictly positive and remain statistically significant after multiple-testing corrections. We provide formal guarantees on optimality under convex frictions, monotonic improvement under a KL trust region, long-run turnover bounds and induced inaction bands due to proportional costs, positive value advantage for regime-conditioned policies, and robustness to cost misspecification. The methodology is implementable: costs are calibrated from standard liquidity proxies, scenario-level inference avoids pseudo-replication, and all figures and tables are reproducible from released artifacts.",
+  "authors": [
+    "Jian'an Zhang"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cs.LG"
+  ],
+  "id": "2510.02986v1",
+  "published": "2025-10-03T13:22:54Z",
+  "source": "arxiv",
+  "title": "FR-LUX: Friction-Aware, Regime-Conditioned Policy Optimization for Implementable Portfolio Management",
+  "updated": "2025-10-03T13:22:54Z"
+}

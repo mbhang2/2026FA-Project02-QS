@@ -1,0 +1,24 @@
+{
+  "abs_url": "http://arxiv.org/abs/2509.05080v3",
+  "abstract": "Financial trading systems must convert multimodal market history into executable positions while limiting overfitting from repeated strategy search. We introduce MM-ARC (MultiModal Adaptive Routing of Capital), which routes capital across trend, reversal, breakout, and exposure-control experts using aligned chart, numerical, and technical-text views. Within each market, regime-conditioned strategy pools are shared with bounded asset-specific adjustments. Robustness-Audited Bayesian Optimization (RABO) filters candidates proposed by Bayesian optimization on purged validation blocks using after-cost benchmark exceedance, lower-tail performance, stability, and turnover; a common portfolio layer then produces market-feasible orders. We evaluate 62 instruments across five asset classes using five training seeds and a frozen July 2025--June 2026 trading holdout. Under an all-in one-way cost of 10 basis points per unit of executed turnover, MM-ARC attains an equal-market Sharpe ratio of 1.33 and maximum drawdown of -13.7, versus 0.53 and -18.3 for the LLMoE-style routing baseline. The global learned-static control reaches 1.12 and -15.3, respectively. Paired block-bootstrap intervals favor the prespecified contrasts, while ablation point estimates are consistent with contributions from visual inputs, adaptive routing, exposure control, and robustness-audited admission. Family-level data-snooping tests also reject their prespecified nulls (SPA p= .039; Reality Check p= .021); we therefore interpret the evidence as benchmark-relative support within the evaluated candidate family and holdout, not as universal or future-regime superiority.",
+  "authors": [
+    "Yang Chen",
+    "Yuchen Cao",
+    "Jacky Keung",
+    "Leilei Gan",
+    "Kun Kuang",
+    "Yueheng Jiang",
+    "Zhaozhao Ma",
+    "Jianping Zhu",
+    "Fei Wu",
+    "Jinpeng Li"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2509.05080v3",
+  "published": "2025-09-05T13:19:51Z",
+  "source": "arxiv",
+  "title": "MM-ARC: Multimodal Adaptive Routing of Capital with Robustness-Audited Strategy Pools",
+  "updated": "2026-07-27T14:14:04Z"
+}

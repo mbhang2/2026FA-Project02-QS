@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2506.22611v1",
+  "abstract": "Extending Buehler et al.'s 2019 Deep Hedging paradigm, we innovatively employ deep neural networks to parameterize convex-risk minimization (CVaR/ES) for the portfolio tail-risk hedging problem. Through comprehensive numerical experiments on crisis-era bootstrap market simulators -- customizable with transaction costs, risk budgets, liquidity constraints, and market impact -- our end-to-end framework not only achieves significant one-day 99% CVaR reduction but also yields practical insights into friction-aware strategy adaptation, demonstrating robustness and operational viability in realistic markets.",
+  "authors": [
+    "Yuming Ma"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "cs.LG",
+    "math.OC",
+    "q-fin.CP",
+    "q-fin.RM"
+  ],
+  "id": "2506.22611v1",
+  "published": "2025-06-27T20:16:52Z",
+  "source": "arxiv",
+  "title": "Deep Hedging to Manage Tail Risk",
+  "updated": "2025-06-27T20:16:52Z"
+}

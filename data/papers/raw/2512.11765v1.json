@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2512.11765v1",
+  "abstract": "We study the high-frequency limit of an $n$-trader optimal execution game in discrete time. Traders face transient price impact of Obizhaeva--Wang type in addition to quadratic instantaneous trading costs $\u03b8(\u0394X_t)^2$ on each transaction $\u0394X_t$. There is a unique Nash equilibrium in which traders choose liquidation strategies minimizing expected execution costs. In the high-frequency limit where the grid of trading dates converges to the continuous interval $[0,T]$, the discrete equilibrium inventories converge at rate $1/N$ to the continuous-time equilibrium of an Obizhaeva--Wang model with additional quadratic costs $\\vartheta_0(\u0394X_0)^2$ and $\\vartheta_T(\u0394X_T)^2$ on initial and terminal block trades, where $\\vartheta_0=(n-1)/2$ and $\\vartheta_T=1/2$. The latter model was introduced by Campbell and Nutz as the limit of continuous-time equilibria with vanishing instantaneous costs. Our results extend and refine previous results of Schied, Strehle, and Zhang for the particular case $n=2$ where $\\vartheta_0=\\vartheta_T=1/2$. In particular, we show how the coefficients $\\vartheta_0=(n-1)/2$ and $\\vartheta_T=1/2$ arise endogenously in the high-frequency limit: the initial and terminal block costs of the continuous-time model are identified as the limits of the cumulative discrete instantaneous costs incurred over small neighborhoods of $0$ and $T$, respectively, and these limits are independent of $\u03b8>0$. By contrast, when $\u03b8=0$ the discrete-time equilibrium strategies and costs exhibit persistent oscillations and admit no high-frequency limit, mirroring the non-existence of continuous-time equilibria without boundary block costs. Our results show that two different types of trading frictions -- a fine time discretization and small instantaneous costs in continuous time -- have similar regularizing effects and select a canonical model in the limit.",
+  "authors": [
+    "Marcel Nutz",
+    "Alessandro Prosperi"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.MF"
+  ],
+  "id": "2512.11765v1",
+  "published": "2025-12-12T18:22:36Z",
+  "source": "arxiv",
+  "title": "High-Frequency Analysis of a Trading Game with Transient Price Impact",
+  "updated": "2025-12-12T18:22:36Z"
+}

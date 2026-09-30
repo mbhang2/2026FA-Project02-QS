@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2601.13421v2",
+  "abstract": "Dealers in foreign exchange markets provide bid and ask prices to their clients at which they are happy to buy and sell, respectively. To manage risk, dealers can skew their quotes and hedge in the interbank market. Hedging offers certainty but comes with transaction costs and market impact. Optimal market making with execution has previously been addressed within the Almgren-Chriss market impact model, which includes instantaneous and permanent components. However, there is overwhelming empirical evidence of the transient nature of market impact, with instantaneous and permanent impacts arising as the two limiting cases. In this note, we consider an intermediate scenario and study the interplay between risk management and impact resilience.",
+  "authors": [
+    "Alexander Barzykin"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.MF"
+  ],
+  "id": "2601.13421v2",
+  "published": "2026-01-19T22:09:03Z",
+  "source": "arxiv",
+  "title": "Market Making and Transient Impact in Spot FX",
+  "updated": "2026-06-05T16:18:28Z"
+}

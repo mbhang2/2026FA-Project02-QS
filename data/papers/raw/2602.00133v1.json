@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2602.00133v1",
+  "abstract": "Prediction markets offer a natural testbed for trading agents: contracts have binary payoffs, prices can be interpreted as probabilities, and realized performance depends critically on market microstructure, fees, and settlement risk. We introduce PredictionMarketBench, a SWE-bench-style benchmark for evaluating algorithmic and LLM-based trading agents on prediction markets via deterministic, event-driven replay of historical limit-order-book and trade data. PredictionMarketBench standardizes (i) episode construction from raw exchange streams (orderbooks, trades, lifecycle, settlement), (ii) an execution-realistic simulator with maker/taker semantics and fee modeling, and (iii) a tool-based agent interface that supports both classical strategies and tool-calling LLM agents with reproducible trajectories. We release four Kalshi-based episodes spanning cryptocurrency, weather, and sports. Baseline results show that naive trading agents can underperform due to transaction costs and settlement losses, while fee-aware algorithmic strategies remain competitive in volatile episodes.",
+  "authors": [
+    "Avi Arora",
+    "Ritesh Malpani"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "cs.AI"
+  ],
+  "id": "2602.00133v1",
+  "published": "2026-01-28T06:41:12Z",
+  "source": "arxiv",
+  "title": "PredictionMarketBench: A SWE-bench-Style Framework for Backtesting Trading Agents on Prediction Markets",
+  "updated": "2026-01-28T06:41:12Z"
+}

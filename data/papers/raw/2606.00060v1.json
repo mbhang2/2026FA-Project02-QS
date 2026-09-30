@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2606.00060v1",
+  "abstract": "This paper investigates whether machine learning forecasts of hourly BTC-USDT returns can be converted into economically meaningful trading performance after transaction costs. Using approximately 70,000 hourly observations from 2018-2026, XGBoost, LSTM, and iTransformer are evaluated in a 27-fold walk-forward protocol. All three models produce positive gross trading performance in selected configurations, but naive sign-based strategies fail once transaction costs of ten basis points are imposed. A cost-aware execution filter, which prevents trades only when the forecast magnitude exceeds a transaction-cost-based threshold, sharply reduces turnover and restores profitability in selected configurations. The strongest long-only XGBoost strategy produces annualised returns above 65% with a Sharpe ratio above one. Additional tests show that technical indicators improve performance in selected cases, EGARCH-derived features do not provide uniformly robust gains, and XGBoost is descriptively stronger than the neural alternatives, although bootstrap evidence does not support formal statistical dominance. Loss-function and model-selection effects are secondary and statistically fragile. The results show that the main obstacle in hourly cryptocurrency trading is not only weak predictability, but also the way forecasts are converted into trades.",
+  "authors": [
+    "Andrei Bysik",
+    "Robert \u015alepaczuk"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cs.CE",
+    "cs.LG"
+  ],
+  "id": "2606.00060v1",
+  "published": "2026-05-19T14:30:49Z",
+  "source": "arxiv",
+  "title": "Machine Learning-Based Bitcoin Trading Under Transaction Costs: Evidence From Walk-Forward Forecasting",
+  "updated": "2026-05-19T14:30:49Z"
+}

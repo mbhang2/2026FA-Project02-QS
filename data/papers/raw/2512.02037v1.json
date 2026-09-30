@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2512.02037v1",
+  "abstract": "We study a systematic approach to a popular Statistical Arbitrage technique: Pairs Trading. Instead of relying on two highly correlated assets, we replace the second asset with a replication of the first using risk factor representations. These factors are obtained through Principal Components Analysis (PCA), exchange traded funds (ETFs), and, as our main contribution, Long Short Term Memory networks (LSTMs). Residuals between the main asset and its replication are examined for mean reversion properties, and trading signals are generated for sufficiently fast mean reverting portfolios. Beyond introducing a deep learning based replication method, we adapt the framework of Avellaneda and Lee (2008) to the Polish market. Accordingly, components of WIG20, mWIG40, and selected sector indices replace the original S&P500 universe, and market parameters such as the risk free rate and transaction costs are updated to reflect local conditions. We outline the full strategy pipeline: risk factor construction, residual modeling via the Ornstein Uhlenbeck process, and signal generation. Each replication technique is described together with its practical implementation. Strategy performance is evaluated over two periods: 2017-2019 and the recessive year 2020. All methods yield profits in 2017-2019, with PCA achieving roughly 20 percent cumulative return and an annualized Sharpe ratio of up to 2.63. Despite multiple adaptations, our conclusions remain consistent with those of the original paper. During the COVID-19 recession, only the ETF based approach remains profitable (about 5 percent annual return), while PCA and LSTM methods underperform. LSTM results, although negative, are promising and indicate potential for future optimization.",
+  "authors": [
+    "Marek Adamczyk",
+    "Micha\u0142 D\u0105browski"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "cs.AI"
+  ],
+  "id": "2512.02037v1",
+  "published": "2025-11-20T21:09:34Z",
+  "source": "arxiv",
+  "title": "Statistical Arbitrage in Polish Equities Market Using Deep Learning Techniques",
+  "updated": "2025-11-20T21:09:34Z"
+}

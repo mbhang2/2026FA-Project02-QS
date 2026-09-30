@@ -1,0 +1,21 @@
+{
+  "abs_url": "http://arxiv.org/abs/2510.15921v1",
+  "abstract": "Cross-market portfolio optimization has become increasingly complex with the globalization of financial markets and the growth of high-frequency, multi-dimensional datasets. Traditional artificial neural networks, while effective in certain portfolio management tasks, often incur substantial computational overhead and lack the temporal processing capabilities required for large-scale, multi-market data. This study investigates the application of Spiking Neural Networks (SNNs) for cross-market portfolio optimization, leveraging neuromorphic computing principles to process equity data from both the Indian (Nifty 500) and US (S&P 500) markets. A five-year dataset comprising approximately 1,250 trading days of daily stock prices was systematically collected via the Yahoo Finance API. The proposed framework integrates Leaky Integrate-andFire neuron dynamics with adaptive thresholding, spike-timingdependent plasticity, and lateral inhibition to enable event-driven processing of financial time series. Dimensionality reduction is achieved through hierarchical clustering, while populationbased spike encoding and multiple decoding strategies support robust portfolio construction under realistic trading constraints, including cardinality limits, transaction costs, and adaptive risk aversion. Experimental evaluation demonstrates that the SNN-based framework delivers superior risk-adjusted returns and reduced volatility compared to ANN benchmarks, while substantially improving computational efficiency. These findings highlight the promise of neuromorphic computation for scalable, efficient, and robust portfolio optimization across global financial markets.",
+  "authors": [
+    "Amarendra Mohan",
+    "Ameer Tamoor Khan",
+    "Shuai Li",
+    "Xinwei Cao",
+    "Zhibin Li"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "cs.NE",
+    "q-fin.CP"
+  ],
+  "id": "2510.15921v1",
+  "published": "2025-10-01T19:13:44Z",
+  "source": "arxiv",
+  "title": "Spiking Neural Network for Cross-Market Portfolio Optimization in Financial Markets: A Neuromorphic Computing Approach",
+  "updated": "2025-10-01T19:13:44Z"
+}

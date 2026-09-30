@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2510.24467v1",
+  "abstract": "We formalize the paradox of an omniscient yet lazy investor - a perfectly informed agent who trades infrequently due to execution or computational frictions. Starting from a deterministic geometric construction, we derive a closed-form expected profit function linking trading frequency, execution cost, and path roughness. We prove existence and uniqueness of the optimal trading frequency and show that this optimum can be interpreted through the fractal dimension of the price path. A stochastic extension under fractional Brownian motion provides analytical expressions for the optimal interval and comparative statics with respect to the Hurst exponent. Empirical illustrations on equity data confirm the theoretical scaling behavior.",
+  "authors": [
+    "Stanis\u0142aw M. S. Halkiewicz"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "math.OC",
+    "q-fin.MF",
+    "q-fin.ST"
+  ],
+  "id": "2510.24467v1",
+  "published": "2025-10-28T14:35:14Z",
+  "source": "arxiv",
+  "title": "The Omniscient, yet Lazy, Investor",
+  "updated": "2025-10-28T14:35:14Z"
+}

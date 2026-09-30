@@ -1,0 +1,22 @@
+{
+  "abs_url": "http://arxiv.org/abs/2510.22206v1",
+  "abstract": "Execution algorithms are vital to modern trading, they enable market participants to execute large orders while minimising market impact and transaction costs. As these algorithms grow more sophisticated, optimising them becomes increasingly challenging. In this work, we present a reinforcement learning (RL) framework for discovering optimal execution strategies, evaluated within a reactive agent-based market simulator. This simulator creates reactive order flow and allows us to decompose slippage into its constituent components: market impact and execution risk. We assess the RL agent's performance using the efficient frontier based on work by Almgren and Chriss, measuring its ability to balance risk and cost. Results show that the RL-derived strategies consistently outperform baselines and operate near the efficient frontier, demonstrating a strong ability to optimise for risk and impact. These findings highlight the potential of reinforcement learning as a powerful tool in the trader's toolkit.",
+  "authors": [
+    "Ollie Olby",
+    "Andreea Bacalum",
+    "Rory Baggott",
+    "Namid Stillman"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.AI",
+    "cs.LG",
+    "q-fin.RM",
+    "q-fin.TR"
+  ],
+  "id": "2510.22206v1",
+  "published": "2025-10-25T08:10:18Z",
+  "source": "arxiv",
+  "title": "Right Place, Right Time: Market Simulation-based RL for Execution Optimisation",
+  "updated": "2025-10-25T08:10:18Z"
+}

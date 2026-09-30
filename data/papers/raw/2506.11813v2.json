@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2506.11813v2",
+  "abstract": "We study an optimal execution strategy for purchasing a large block of shares over a fixed time horizon. The execution problem is subject to a general price impact that gradually dissipates due to market resilience. We allow for general limit order book shapes to characterize instantaneous market impact. To model the resilience dynamics, we introduce a stochastic process that governs the rate at which the deviation between the impacted and unaffected prices decays. This volume-effect process reflects fluctuations in market activity that drive the pace of liquidity replenishment. Additionally, we incorporate stochastic liquidity variations through a regime-switching Markov chain to capture abrupt shifts in market conditions. We study this singular control problem, where the trader optimally determines the timing and rate of purchases to minimize execution costs. The associated value function to this optimization problem is shown to satisfy a system of variational Hamilton-Jacobi-Bellman inequalities. Moreover, we establish that it is the unique viscosity solution to this HJB system and study the analytical properties of the free boundary separating the execution and continuation regions. To illustrate our results, we present numerical examples under different limit-order book configurations, highlighting the interplay between price impact, resilience dynamics, and stochastic liquidity regimes in shaping the optimal execution strategy.",
+  "authors": [
+    "Etienne Chevalier",
+    "Yadh Hafsi",
+    "Vathana Ly Vath",
+    "Sergio Pulido"
+  ],
+  "categories": [
+    "q-fin.MF",
+    "q-fin.TR"
+  ],
+  "id": "2506.11813v2",
+  "published": "2025-06-13T14:17:31Z",
+  "source": "arxiv",
+  "title": "Optimal Execution under Liquidity Uncertainty",
+  "updated": "2026-04-11T09:53:59Z"
+}

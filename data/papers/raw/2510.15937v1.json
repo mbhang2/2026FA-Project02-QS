@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2510.15937v1",
+  "abstract": "We present a white-box, risk-sensitive framework for jointly hedging SPX and VIX exposures under transaction costs and regime shifts. The approach couples an arbitrage-free market teacher with a control layer that enforces safety as constraints. On the market side, we integrate an SSVI-based implied-volatility surface and a Cboe-compliant VIX computation (including wing pruning and 30-day interpolation), and connect prices to dynamics via a clipped, convexity-preserving Dupire local-volatility extractor. On the control side, we pose hedging as a small quadratic program with control-barrier-function (CBF) boxes for inventory, rate, and tail risk; a sufficient-descent execution gate that trades only when risk drop justifies cost; and three targeted tail-safety upgrades: a correlation/expiry-aware VIX weight, guarded no-trade bands, and expiry-aware micro-trade thresholds with cooldown. We prove existence/uniqueness and KKT regularity of the per-step QP, forward invariance of safety sets, one-step risk descent when the gate opens, and no chattering with bounded trade rates. For the dynamics layer, we establish positivity and second-order consistency of the discrete Dupire estimator and give an index-coherence bound linking the teacher VIX to a CIR-style proxy with explicit quadrature and projection errors. In a reproducible synthetic environment mirroring exchange rules and execution frictions, the controller reduces expected shortfall while suppressing nuisance turnover, and the teacher-surface construction keeps index-level residuals small and stable.",
+  "authors": [
+    "Jian'an Zhang"
+  ],
+  "categories": [
+    "q-fin.RM",
+    "q-fin.TR"
+  ],
+  "id": "2510.15937v1",
+  "published": "2025-10-09T09:30:17Z",
+  "source": "arxiv",
+  "title": "Tail-Safe Stochastic-Control SPX-VIX Hedging: A White-Box Bridge Between AI Sensitivities and Arbitrage-Free Market Dynamics",
+  "updated": "2025-10-09T09:30:17Z"
+}

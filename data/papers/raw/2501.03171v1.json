@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2501.03171v1",
+  "abstract": "Lead-lag relationships, integral to market dynamics, offer valuable insights into the trading behavior of high-frequency traders (HFTs) and the flow of information at a granular level. This paper investigates the lead-lag relationships between stock index futures contracts of different maturities in the Chinese financial futures market (CFFEX). Using high-frequency (tick-by-tick) data, we analyze how price movements in near-month futures contracts influence those in longer-dated contracts, such as next-month, quarterly, and semi-annual contracts. Our findings reveal a consistent pattern of price discovery, with the near-month contract leading the others by one tick, driven primarily by liquidity. Additionally, we identify a negative feedback effect of the \"lead-lag spread\" on the leading asset, which can predict returns of leading asset. Backtesting results demonstrate the profitability of trading based on the lead-lag spread signal, even after accounting for transaction costs. Altogether, our analysis offers valuable insights to understand and capitalize on the evolving dynamics of futures markets.",
+  "authors": [
+    "Guanlin Li",
+    "Xiyan Chen",
+    "Yingzheng Liu"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.ST",
+    "stat.AP"
+  ],
+  "id": "2501.03171v1",
+  "published": "2025-01-06T17:40:27Z",
+  "source": "arxiv",
+  "title": "High-frequency lead-lag relationships in the Chinese stock index futures market: tick-by-tick dynamics of calendar spreads",
+  "updated": "2025-01-06T17:40:27Z"
+}

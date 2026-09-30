@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2502.15757v3",
+  "abstract": "Price Trend Prediction (PTP) based on Limit Order Book (LOB) data is a fundamental challenge in financial markets. Despite advances in deep learning, existing models fail to generalize across different market conditions and assets. Surprisingly, by adapting a simple MLP-based architecture to LOB, we show that we surpass SoTA performance; thus, challenging the necessity of complex architectures. Unlike past work that shows robustness issues, we propose TLOB, a transformer-based model that uses a dual attention mechanism to capture spatial and temporal dependencies in LOB data. This allows it to adaptively focus on the market microstructure, making it particularly effective for longer-horizon predictions and volatile market conditions. We also introduce a new labeling method that improves on previous ones, removing the horizon bias. We evaluate TLOB's effectiveness across four horizons, using the established FI-2010 benchmark, a NASDAQ and a Bitcoin dataset. TLOB outperforms SoTA methods in every dataset and horizon. Additionally, we empirically show how stock price predictability has declined over time, -6.68 in F1-score, highlighting the growing market efficiency. Predictability must be considered in relation to transaction costs, so we experimented with defining trends using an average spread, reflecting the primary transaction cost. The resulting performance deterioration underscores the complexity of translating trend classification into profitable trading strategies. We argue that our work provides new insights into the evolving landscape of stock price trend prediction and sets a strong foundation for future advancements in financial AI. We release the code at https://github.com/LeonardoBerti00/TLOB.",
+  "authors": [
+    "Leonardo Berti",
+    "Gjergji Kasneci"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "cs.AI",
+    "cs.LG",
+    "q-fin.TR"
+  ],
+  "id": "2502.15757v3",
+  "published": "2025-02-12T12:41:10Z",
+  "source": "arxiv",
+  "title": "TLOB: A Novel Transformer Model with Dual Attention for Price Trend Prediction with Limit Order Book Data",
+  "updated": "2025-05-07T21:14:14Z"
+}

@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2601.11958v1",
+  "abstract": "Can fully agentic AI nowcast stock returns? We deploy a state-of-the-art Large Language Model to evaluate the attractiveness of each Russell 1000 stock daily, starting from April 2025 when AI web interfaces enabled real-time search. Our data contribution is unique along three dimensions. First, the nowcasting framework is completely out-of-sample and free of look-ahead bias by construction: predictions are collected at the current edge of time, ensuring the AI has no knowledge of future outcomes. Second, this temporal design is irreproducible -- once the information environment passes, it can never be recreated. Third, our framework is 100% agentic: we do not feed the model news, disclosures, or curated text; it autonomously searches the web, filters sources, and synthesises information into quantitative predictions. We find that AI possesses genuine stock selection ability, but only for identifying top winners. Longing the 20 highest-ranked stocks generates a daily Fama-French five-factor plus momentum alpha of 18.4 basis points and an annualised Sharpe ratio of 2.43. Critically, these returns derive from an implementable strategy trading highly liquid Russell 1000 constituents, with transaction costs representing less than 10\\% of gross alpha. However, this predictability is highly concentrated: expanding beyond the top tier rapidly dilutes alpha, and bottom-ranked stocks exhibit returns statistically indistinguishable from the market. We hypothesise that this asymmetry reflects online information structure: genuinely positive news generates coherent signals, while negative news is contaminated by strategic corporate obfuscation and social media noise.",
+  "authors": [
+    "Zefeng Chen",
+    "Darcy Pu"
+  ],
+  "categories": [
+    "q-fin.GN",
+    "q-fin.PM",
+    "q-fin.TR"
+  ],
+  "id": "2601.11958v1",
+  "published": "2026-01-17T08:27:53Z",
+  "source": "arxiv",
+  "title": "Autonomous Market Intelligence: Agentic AI Nowcasting Predicts Stock Returns",
+  "updated": "2026-01-17T08:27:53Z"
+}

@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2603.10137v1",
+  "abstract": "Deep hedging trains neural networks to manage derivative risk under market frictions, but produces hedge ratios with no measure of model confidence -- a significant barrier to deployment. We introduce uncertainty quantification to the deep hedging framework by training a deep ensemble of five independent LSTM networks under Heston stochastic volatility with proportional transaction costs. The ensemble's disagreement at each time step provides a per-time-step confidence measure that is strongly predictive of hedging performance: the learned strategy outperforms the Black-Scholes delta on approximately 80% of paths when model agreement is high, but on fewer than 20% when disagreement is elevated. We propose a CVaR-optimised blending strategy that combines the ensemble's hedge with the classical Black-Scholes delta, weighted by the level of model uncertainty. The blend improves on the Black-Scholes delta by 35-80 basis points in CVaR across several Heston calibrations, and on the theoretically optimal Whalley-Wilmott strategy by 100-250 basis points, with all improvements statistically significant under paired bootstrap tests. The analysis reveals that ensemble uncertainty is driven primarily by option moneyness rather than volatility, and that the uncertainty-performance relationship inverts under weak leverage -- findings with practical implications for the deployment of machine learning in hedging systems.",
+  "authors": [
+    "Manan Poddar"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2603.10137v1",
+  "published": "2026-03-10T18:17:51Z",
+  "source": "arxiv",
+  "title": "Uncertainty-Aware Deep Hedging",
+  "updated": "2026-03-10T18:17:51Z"
+}

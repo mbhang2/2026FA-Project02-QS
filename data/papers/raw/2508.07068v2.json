@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2508.07068v2",
+  "abstract": "Everlasting options, a relatively new class of perpetual financial derivatives, have emerged to tackle the challenges of rolling contracts and liquidity fragmentation in decentralized finance markets. This paper offers an in-depth analysis of markets for everlasting options, modeled using a dynamic proactive market maker. We examine the behavior of funding fees and transaction costs across varying liquidity conditions. Using simulations and modeling, we demonstrate that liquidity providers can aim to achieve a net positive PnL by employing effective hedging strategies, even in challenging environments characterized by low liquidity and high transaction costs. Additionally, we provide insights into the incentives that drive liquidity providers to support the growth of everlasting option markets and highlight the significant benefits these instruments offer to traders as a reliable and efficient financial tool.",
+  "authors": [
+    "Hardhik Mohanty",
+    "Giovanni Zaarour",
+    "Bhaskar Krishnamachari"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "q-fin.MF"
+  ],
+  "id": "2508.07068v2",
+  "published": "2025-08-09T18:19:45Z",
+  "source": "arxiv",
+  "title": "Proactive Market Making and Liquidity Analysis for Everlasting Options in DeFi Ecosystems",
+  "updated": "2026-05-07T17:26:43Z"
+}

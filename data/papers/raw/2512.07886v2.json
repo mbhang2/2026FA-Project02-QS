@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2512.07886v2",
+  "abstract": "Bitcoin operates as a macroeconomic paradox: it combines a strictly predetermined, inelastic monetary issuance schedule with a stochastic, highly elastic demand for scarce block space. This paper empirically validates the Endogenous Constraint Hypothesis, positing that protocol-level throughput limits generate a non-linear negative feedback loop between network friction and base-layer monetary velocity. Using a verified Transaction Cost Index (TCI) derived from Blockchain.com on-chain data and Hansen's (2000) threshold regression, we identify a definitive structural break at the 90th percentile of friction (TCI ~ 1.63). The analysis reveals a bifurcation in network utility: while the network exhibits robust velocity growth of +15.44% during normal regimes, this collapses to +6.06% during shock regimes, yielding a statistically significant Net Utility Contraction of -9.39% (p = 0.012). Crucially, Instrumental Variable (IV) tests utilizing Hashrate Variation as a supply-side instrument fail to detect a significant relationship in a linear specification (p=0.196), confirming that the velocity constraint is strictly a regime-switching phenomenon rather than a continuous linear function. Furthermore, we document a \"Crypto Multiplier\" inversion: high friction correlates with a +8.03% increase in capital concentration per entity, suggesting that congestion forces a substitution from active velocity to speculative hoarding.",
+  "authors": [
+    "Hamoon Soleimani"
+  ],
+  "categories": [
+    "q-fin.ST",
+    "q-fin.GN",
+    "q-fin.PR"
+  ],
+  "id": "2512.07886v2",
+  "published": "2025-11-30T19:51:43Z",
+  "source": "arxiv",
+  "title": "The Endogenous Constraint: Hysteresis, Stagflation, and the Structural Inhibition of Monetary Velocity in the Bitcoin Network (2016-2025)",
+  "updated": "2026-09-20T11:14:20Z"
+}

@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2606.09003v2",
+  "abstract": "We consider the interaction between centralized trading and decentralized Proof of Stake (PoS) blockchain ecosystems. Motivated by the increasing dominance of centralized exchanges and the institutionalization of crypto markets, we study how trading activities on centralized exchanges affect staking behavior, token allocation, and decentralization within a PoS blockchain. We formulate a continuous-time mean field model, where the miners simultaneously act as validators in the PoS protocol and traders in a centralized market with price impact. Under suitable assumptions, we establish the local well-posedness of the mean field system, and derive a semi-explicit characterization of the equilibrium trading strategy. Numerical results suggest that centralized trading activities may enhance staking participation, and promote decentralization of the staking distribution through market incentives. We also study the effects of transaction costs and token supply mechanisms on the equilibrium staking ratio and concentration profile. These results illustrate how market microstructure and centralized liquidity provision can exert significant influence on decentralized blockchain protocols.",
+  "authors": [
+    "Wenpin Tang"
+  ],
+  "categories": [
+    "q-fin.MF",
+    "math.OC",
+    "q-fin.TR"
+  ],
+  "id": "2606.09003v2",
+  "published": "2026-06-08T04:03:17Z",
+  "source": "arxiv",
+  "title": "Proof of Stake economy under centralized exchanges--a mean field model",
+  "updated": "2026-09-23T14:44:50Z"
+}

@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2507.18417v1",
+  "abstract": "Opinions expressed in online finance-related textual data are having an increasingly profound impact on trading decisions and market movements. This trend highlights the vital role of sentiment analysis as a tool for quantifying the nature and strength of such opinions. With the rapid development of Generative AI (GenAI), supervised fine-tuned (SFT) large language models (LLMs) have become the de facto standard for financial sentiment analysis. However, the SFT paradigm can lead to memorization of the training data and often fails to generalize to unseen samples. This is a critical limitation in financial domains, where models must adapt to previously unobserved events and the nuanced, domain-specific language of finance. To this end, we introduce FinDPO, the first finance-specific LLM framework based on post-training human preference alignment via Direct Preference Optimization (DPO). The proposed FinDPO achieves state-of-the-art performance on standard sentiment classification benchmarks, outperforming existing supervised fine-tuned models by 11% on the average. Uniquely, the FinDPO framework enables the integration of a fine-tuned causal LLM into realistic portfolio strategies through a novel 'logit-to-score' conversion, which transforms discrete sentiment predictions into continuous, rankable sentiment scores (probabilities). In this way, simulations demonstrate that FinDPO is the first sentiment-based approach to maintain substantial positive returns of 67% annually and strong risk-adjusted performance, as indicated by a Sharpe ratio of 2.0, even under realistic transaction costs of 5 basis points (bps).",
+  "authors": [
+    "Giorgos Iacovides",
+    "Wuyang Zhou",
+    "Danilo Mandic"
+  ],
+  "categories": [
+    "cs.CL",
+    "cs.LG",
+    "q-fin.ST",
+    "q-fin.TR"
+  ],
+  "id": "2507.18417v1",
+  "published": "2025-07-24T13:57:05Z",
+  "source": "arxiv",
+  "title": "FinDPO: Financial Sentiment Analysis for Algorithmic Trading through Preference Optimization of LLMs",
+  "updated": "2025-07-24T13:57:05Z"
+}

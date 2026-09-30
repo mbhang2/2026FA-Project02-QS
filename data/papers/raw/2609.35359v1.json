@@ -1,0 +1,15 @@
+{
+  "abs_url": "http://arxiv.org/abs/2609.35359v1",
+  "abstract": "This paper examines whether a cointegration-based pairs trading strategy between PepsiCo and The Coca-Cola Company is statistically robust and economically exploitable. We first test for cointegration and estimate the spread's mean-reversion dynamics over 2013-2018, then hold these statistical parameters fixed and optimise a threshold-based trading strategy in-sample over 2018-2023. Robustness is assessed through transaction-cost and parameter sensitivity tests, walk-forward validation, and Adjusted and Deflated Sharpe Ratios. The strategy is then evaluated out-of-sample from 2023 to the present, including an analysis of time-varying hedge ratios using rolling OLS and a Kalman filter. The results show that weakening mean-reversion dynamics in the spread undermine the effectiveness of the strategy out-of-sample.",
+  "authors": [
+    "Davide Graziano"
+  ],
+  "categories": [
+    "q-fin.ST"
+  ],
+  "id": "2609.35359v1",
+  "published": "2026-09-28T15:06:47Z",
+  "source": "arxiv",
+  "title": "From Cointegration to Out-of-Sample Failure: A Pairs-Trading Case Study on PEP-KO",
+  "updated": "2026-09-28T15:06:47Z"
+}

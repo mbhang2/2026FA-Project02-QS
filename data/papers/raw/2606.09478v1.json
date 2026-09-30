@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2606.09478v1",
+  "abstract": "This study investigates whether regime-dependent volatility forecasting and machine-learning-based return prediction can be jointly integrated to improve both statistical forecasting performance and economic strategy outcomes in equity markets. Using high-frequency CSI 300 Index data from 2005 to 2023, a sequential twostage framework is developed. In the first stage, realized volatility is modeled using regime-augmented HARQ specifications combined with Markov-switching GJR-GARCH filtering to capture long-memory dynamics, asymmetry, and structural market regimes. In the second stage, volatility forecasts, regime indicators, and return-related predictors are incorporated into an XGBoost return-prediction model estimated through a strictly walk-forward out-of-sample procedure. The empirical results demonstrate that regime-aware volatility forecasting consistently outperforms baseline HARQ models across forecast evaluation metrics and is generally supported by formal forecast comparison tests. In contrast, return predictability remains weak, state-dependent, and concentrated primarily in low-volatility regimes. Although naive predictive trading strategies generally fail after accounting for realistic transaction costs, carefully designed implementations incorporating volatility scaling, low-volatility gating, threshold calibration, and turnover controls can improve defensive economic performance. The findings suggest that the practical value of predictive systems in financial markets may depend less on generating strong unconditional return forecasts and more on transforming weak state-dependent signals into economically robust portfolio allocation rules. Overall, the study contributes by integrating econometric volatility modeling, regime classification, machine-learning return prediction, and implementation realism within a unified framework.",
+  "authors": [
+    "Xinyue Fang",
+    "Robert \u015alepaczuk"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "q-fin.CP",
+    "q-fin.MF"
+  ],
+  "id": "2606.09478v1",
+  "published": "2026-06-08T13:36:57Z",
+  "source": "arxiv",
+  "title": "Volatility Forecasting and Return Prediction under Market Regimes: Evidence from High-Frequency Chinese Equity Data",
+  "updated": "2026-06-08T13:36:57Z"
+}

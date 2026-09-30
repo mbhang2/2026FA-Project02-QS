@@ -1,0 +1,24 @@
+{
+  "abs_url": "http://arxiv.org/abs/2603.28898v1",
+  "abstract": "We address the problem of executing large client orders in continuous double-auction markets under time and liquidity constraints. We propose a model predictive control (MPC) framework that balances three competing objectives: order completion, market impact, and opportunity cost. Our algorithm is guided by a trading schedule (such as time-weighted average price or volume-weighted average price) but allows for deviations to reduce the expected execution cost, with due regard to risk. Our MPC algorithm executes the order progressively, and at each decision step it solves a fast quadratic program that trades off expected transaction cost against schedule deviation, while incorporating a residual cost term derived from a simple base policy. Approximate schedule adherence is maintained through explicit bounds, while variance constraints on deviation provide direct risk control. The resulting system is modular, data-driven, and suitable for deployment in production trading infrastructure. Using six months of NASDAQ 'level 3' data and simulated orders, we show that our MPC approach reduces schedule shortfall by approximately 40-50% relative to spread-crossing benchmarks and achieves significant reductions in slippage. Moreover, augmenting the base policy with predictive price information further enhances performance, highlighting the framework's flexibility for integration with forecasting components.",
+  "authors": [
+    "Thomas P. McAuliffe",
+    "Samuel Liew",
+    "Yuchao Li",
+    "Andrey Ushenin",
+    "Chihang Wang",
+    "Alexandros Tasos",
+    "Jack Pearce",
+    "Dimitris Tasoulis",
+    "Dimitri P. Bertsekas",
+    "Theodoros Tsagaris"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2603.28898v1",
+  "published": "2026-03-30T18:25:52Z",
+  "source": "arxiv",
+  "title": "Model Predictive Control For Trade Execution",
+  "updated": "2026-03-30T18:25:52Z"
+}

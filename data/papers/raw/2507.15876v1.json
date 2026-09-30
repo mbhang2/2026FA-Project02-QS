@@ -1,0 +1,23 @@
+{
+  "abs_url": "http://arxiv.org/abs/2507.15876v1",
+  "abstract": "Commodity Trading Advisors (CTAs) have historically relied on trend-following rules that operate on vastly different horizons from long-term breakouts that capture major directional moves to short-term momentum signals that thrive in fast-moving markets. Despite a large body of work on trend following, the relative merits and interactions of short-versus long-term trend systems remain controversial. This paper adds to the debate by (i) dynamically decomposing CTA returns into short-term trend, long-term trend and market beta factors using a Bayesian graphical model, and (ii) showing how the blend of horizons shapes the strategy's risk-adjusted performance.",
+  "authors": [
+    "Eric Benhamou",
+    "Jean-Jacques Ohana",
+    "Alban Etienne",
+    "B\u00e9atrice Guez",
+    "Ethan Setrouk",
+    "Thomas Jacquot"
+  ],
+  "categories": [
+    "cs.AI",
+    "q-fin.PR",
+    "q-fin.ST",
+    "q-fin.TR"
+  ],
+  "id": "2507.15876v1",
+  "published": "2025-07-17T12:09:29Z",
+  "source": "arxiv",
+  "title": "Re-evaluating Short- and Long-Term Trend Factors in CTA Replication: A Bayesian Graphical Approach",
+  "updated": "2025-07-17T12:09:29Z"
+}

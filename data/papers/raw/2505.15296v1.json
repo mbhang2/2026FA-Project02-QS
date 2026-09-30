@@ -1,0 +1,21 @@
+{
+  "abs_url": "http://arxiv.org/abs/2505.15296v1",
+  "abstract": "In this paper, we describe a novel agent-based approach for modelling the transaction cost of buying or selling an asset in financial markets, e.g., to liquidate a large position as a result of a margin call to meet financial obligations. The simple act of buying or selling in the market causes a price impact and there is a cost described as liquidity risk. For example, when selling a large order, there is market slippage -- each successive trade will execute at the same or worse price. When the market adjusts to the new information revealed by the execution of such a large order, we observe in the data a permanent price impact that can be attributed to the change in the fundamental value as market participants reassess the value of the asset. In our ABM model, we introduce a novel mechanism where traders assume orderflow is informed and each trade reveals some information about the value of the asset, and traders update their belief of the fundamental value for every trade. The result is emergent, realistic price impact without oversimplifying the problem as most stylised models do, but within a realistic framework that models the exchange with its protocols, its limit orderbook and its auction mechanism and that can calculate the transaction cost of any execution strategy without limitation. Our stochastic ABM model calculates the costs and uncertainties of buying and selling in a market by running Monte-Carlo simulations, for a better understanding of liquidity risk and can be used to optimise for optimal execution under liquidity risk. We demonstrate its practical application in the real world by calculating the liquidity risk for the Hang-Seng Futures Index.",
+  "authors": [
+    "Perukrishnen Vytelingum",
+    "Rory Baggott",
+    "Namid Stillman",
+    "Jianfei Zhang",
+    "Dingqiu Zhu",
+    "Tao Chen",
+    "Justin Lyon"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2505.15296v1",
+  "published": "2025-05-21T09:25:32Z",
+  "source": "arxiv",
+  "title": "Agent-based Liquidity Risk Modelling for Financial Markets",
+  "updated": "2025-05-21T09:25:32Z"
+}

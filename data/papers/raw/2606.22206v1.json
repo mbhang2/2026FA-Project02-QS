@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2606.22206v1",
+  "abstract": "We study the evolution of transaction speed and fees from January 2024 through March 2026, comparing Ethereum Mainnet and its Layer 2 (L2) networks, as well as Solana and Polygon. Ethereum has undergone upgrades that have increased block size and blob count. These upgrades have doubled transactions per second (TPS) on both the Mainnet and the L2 networks. Mainnet median fees have fallen from over \\$2 to under \\$0.02, and L2 median fees have fallen more than 95% from \\$0.05 to \\$0.0015. We forecast that Mainnet median fees will converge with Solana in August 2027, but TPS will remain below 100 until 2034. The L1 Strawmap, proposing EIP-7938, a potential exponential increase in the gas limit, brings the Mainnet to only 100 TPS in January 2028. With continued blob expansion, L2s will surpass Solana TPS in March 2029 and have lower median fees by October 2026.",
+  "authors": [
+    "Meghan Ambrosia",
+    "Bruce Mizrach"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2606.22206v1",
+  "published": "2026-06-20T19:57:56Z",
+  "source": "arxiv",
+  "title": "Transaction Costs and Speed in the Ethereum Ecosystem: Scalability of the Mainnet and Layer 2s",
+  "updated": "2026-06-20T19:57:56Z"
+}

@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2511.20678v1",
+  "abstract": "This paper proposes a reinforcement learning--based framework for cryptocurrency portfolio management using the Soft Actor--Critic (SAC) and Deep Deterministic Policy Gradient (DDPG) algorithms. Traditional portfolio optimization methods often struggle to adapt to the highly volatile and nonlinear dynamics of cryptocurrency markets. To address this, we design an agent that learns continuous trading actions directly from historical market data through interaction with a simulated trading environment. The agent optimizes portfolio weights to maximize cumulative returns while minimizing downside risk and transaction costs. Experimental evaluations on multiple cryptocurrencies demonstrate that the SAC and DDPG agents outperform baseline strategies such as equal-weighted and mean--variance portfolios. The SAC algorithm, with its entropy-regularized objective, shows greater stability and robustness in noisy market conditions compared to DDPG. These results highlight the potential of deep reinforcement learning for adaptive and data-driven portfolio management in cryptocurrency markets.",
+  "authors": [
+    "Kamal Paykan"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.LG"
+  ],
+  "id": "2511.20678v1",
+  "published": "2025-11-16T03:43:24Z",
+  "source": "arxiv",
+  "title": "Cryptocurrency Portfolio Management with Reinforcement Learning: Soft Actor--Critic and Deep Deterministic Policy Gradient Algorithms",
+  "updated": "2025-11-16T03:43:24Z"
+}

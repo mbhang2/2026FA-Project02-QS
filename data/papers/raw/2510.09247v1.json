@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2510.09247v1",
+  "abstract": "This paper explores the application of deep Q-learning to hedging at-the-money options on the S\\&P~500 index. We develop an agent based on the Twin Delayed Deep Deterministic Policy Gradient (TD3) algorithm, trained to simulate hedging decisions without making explicit model assumptions on price dynamics. The agent was trained on historical intraday prices of S\\&P~500 call options across years 2004--2024, using a single time series of six predictor variables: option price, underlying asset price, moneyness, time to maturity, realized volatility, and current hedge position. A walk-forward procedure was applied for training, which led to nearly 17~years of out-of-sample evaluation. The performance of the deep reinforcement learning (DRL) agent is benchmarked against the Black--Scholes delta-hedging strategy over the same period. We assess both approaches using metrics such as annualized return, volatility, information ratio, and Sharpe ratio. To test the models' adaptability, we performed simulations across varying market conditions and added constraints such as transaction costs and risk-awareness penalties. Our results show that the DRL agent can outperform traditional hedging methods, particularly in volatile or high-cost environments, highlighting its robustness and flexibility in practical trading contexts. While the agent consistently outperforms delta-hedging, its performance deteriorates when the risk-awareness parameter is higher. We also observed that the longer the time interval used for volatility estimation, the more stable the results.",
+  "authors": [
+    "Zofia Bracha",
+    "Pawe\u0142 Sakowski",
+    "Jakub Micha\u0144k\u00f3w"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "cs.LG",
+    "q-fin.PR"
+  ],
+  "id": "2510.09247v1",
+  "published": "2025-10-10T10:35:50Z",
+  "source": "arxiv",
+  "title": "Application of Deep Reinforcement Learning to At-the-Money S&P 500 Options Hedging",
+  "updated": "2025-10-10T10:35:50Z"
+}

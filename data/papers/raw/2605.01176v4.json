@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2605.01176v4",
+  "abstract": "Decision-focused learning (DFL) is attractive for portfolio optimization because it trains predictors according to downstream decision quality rather than prediction accuracy alone. However, SPO(Smart, Predict then Optimize surrogate)-based DFL may produce inflated return signals and unstable portfolio reallocations. This study provides a KKT-based interpretation showing that portfolio decisions can be viewed as ranking over risk- and transaction-cost-adjusted marginal scores. Empirically, we examine prediction inflation and excessive turnover in SPO-trained portfolios, and evaluate clipping, min-max rescaling, and partial portfolio adjustment as practical stabilization mechanisms. The results suggest that realistic output constraints and portfolio-level turnover control improve the implementability of SPO-based portfolio strategies.",
+  "authors": [
+    "Yi Wang",
+    "Takashi Hasuike"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "q-fin.CP"
+  ],
+  "id": "2605.01176v4",
+  "published": "2026-05-02T00:48:16Z",
+  "source": "arxiv",
+  "title": "Decision-Induced Ranking Explains Prediction Inflation and Excessive Turnover in SPO-Based Portfolio Optimization",
+  "updated": "2026-07-13T10:36:25Z"
+}

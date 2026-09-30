@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2503.04218v1",
+  "abstract": "Derivatives, as a critical class of financial instruments, isolate and trade the price attributes of risk assets such as stocks, commodities, and indices, aiding risk management and enhancing market efficiency. However, traditional hedging models, constrained by assumptions such as continuous trading and zero transaction costs, fail to satisfy risk control requirements in complex and uncertain real-world markets. With advances in computing technology and deep learning, data-driven trading strategies are becoming increasingly prevalent. This thesis proposes a derivatives hedging framework integrating deep learning and reinforcement learning. The framework comprises a probabilistic forecasting model and a hedging agent, enabling market probability prediction, derivative pricing, and hedging. Specifically, we design a spatiotemporal attention-based probabilistic financial time series forecasting Transformer to address the scarcity of derivatives hedging data. A low-rank attention mechanism compresses high-dimensional assets into a low-dimensional latent space, capturing nonlinear asset relationships. The Transformer models sequential dependencies within this latent space, improving market probability forecasts and constructing an online training environment for downstream hedging tasks. Additionally, we incorporate generalized geometric Brownian motion to develop a risk-neutral pricing approach for derivatives. We model derivatives hedging as a reinforcement learning problem with sparse rewards and propose a behavior cloning-based recurrent proximal policy optimization (BC-RPPO) algorithm. This pretraining-finetuning framework significantly enhances the hedging agent's performance. Numerical experiments in the U.S. and Chinese financial markets demonstrate our method's superiority over traditional approaches.",
+  "authors": [
+    "Yiheng Ding",
+    "Gangnan Yuan",
+    "Dewei Zuo",
+    "Ting Gao"
+  ],
+  "categories": [
+    "q-fin.CP"
+  ],
+  "id": "2503.04218v1",
+  "published": "2025-03-06T08:53:28Z",
+  "source": "arxiv",
+  "title": "Hedging with Sparse Reward Reinforcement Learning",
+  "updated": "2025-03-06T08:53:28Z"
+}

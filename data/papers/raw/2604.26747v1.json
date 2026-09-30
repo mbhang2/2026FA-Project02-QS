@@ -1,0 +1,20 @@
+{
+  "abs_url": "http://arxiv.org/abs/2604.26747v1",
+  "abstract": "LLM agents are promising tools for empirical discovery, but their flexibility can also turn discovery into uncontrolled search. We study how to use agents under a reproducible protocol through cryptocurrency factor discovery. Our framework casts the task as sequential hypothesis search: an agent reads an append-only experiment trace, proposes falsifiable factor hypotheses, and maps them to executable recipes, while a deterministic engine enforces fixed data splits, selection gates, transaction costs, and portfolio tests. Candidate actions are restricted to a point-in-time factor DSL, making both successful and failed hypotheses auditable. A ridge-combined portfolio trained only on 2020--2022 data achieves a 44.55% annualized return and Sharpe ratio of 1.55 in the 2024--2026 pure out-of-sample period after a 5 basis point one-way trading cost.",
+  "authors": [
+    "Yikuan Huang",
+    "Zheqi Fan",
+    "Kaiqi Hu",
+    "Yifan Ye"
+  ],
+  "categories": [
+    "q-fin.PM",
+    "q-fin.GN",
+    "q-fin.TR"
+  ],
+  "id": "2604.26747v1",
+  "published": "2026-04-29T14:46:10Z",
+  "source": "arxiv",
+  "title": "From Hypotheses to Factors: Constrained LLM Agents in Cryptocurrency Markets",
+  "updated": "2026-04-29T14:46:10Z"
+}

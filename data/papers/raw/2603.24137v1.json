@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2603.24137v1",
+  "abstract": "We introduce a practical, interactive simulator of the limit order book for large-tick assets, designed to produce realistic execution, costs, and P&L. The book state is projected onto a tractable representation based on spread and volume imbalance, enabling robust estimation from market data. Event timing is calibrated to reproduce the fine-scale temporal structure of real markets, revealing a pronounced mode at exchange round-trip latency consistent with simultaneous reactions and latency races among participants. We further incorporate a feedback mechanism that accumulates signed trade flow through a power-law decay kernel, reproducing both concave market impact during execution and partial post-trade reversion. Across several stocks and strategy case studies, the simulator yields realistic behavior where profitability becomes highly sensitive to execution parameters. We present the approach as a practical recipe: project, estimate, validate, adapt, for building realistic limit order book simulations.",
+  "authors": [
+    "Patrick Noble",
+    "Mathieu Rosenbaum",
+    "Saad Souilmi"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2603.24137v1",
+  "published": "2026-03-25T10:02:03Z",
+  "source": "arxiv",
+  "title": "Bridging the Reality Gap in Limit Order Book Simulation",
+  "updated": "2026-03-25T10:02:03Z"
+}

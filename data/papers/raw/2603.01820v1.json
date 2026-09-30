@@ -1,0 +1,19 @@
+{
+  "abs_url": "http://arxiv.org/abs/2603.01820v1",
+  "abstract": "We present a large scale benchmark of modern deep learning architectures for a financial time series prediction and position sizing task, with a primary focus on Sharpe ratio optimization. Evaluating linear models, recurrent networks, transformer based architectures, state space models, and recent sequence representation approaches, we assess out of sample performance on a daily futures dataset spanning commodities, equity indices, bonds, and FX spanning 2010 to 2025. Our evaluation goes beyond average returns and includes statistical significance, downside and tail risk measures, breakeven transaction cost analysis, robustness to random seed selection, and computational efficiency. We find that models explicitly designed to learn rich temporal representations consistently outperform linear benchmarks and generic deep learning models, which often lead the ranking in standard time series benchmarks. Hybrid models such as VSN with LSTM, a combination of Variable Selection Networks (VSN) and LSTMs, achieves the highest overall Sharpe ratio, while VSN with xLSTM and LSTM with PatchTST exhibit superior downside adjusted characteristics. xLSTM demonstrates the largest breakeven transaction cost buffer, indicating improved robustness to trading frictions.",
+  "authors": [
+    "Adir Saly-Kaufmann",
+    "Kieran Wood",
+    "Jan Peter-Calliess",
+    "Stefan Zohren"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cs.LG"
+  ],
+  "id": "2603.01820v1",
+  "published": "2026-03-02T12:52:50Z",
+  "source": "arxiv",
+  "title": "Deep Learning for Financial Time Series: A Large-Scale Benchmark of Risk-Adjusted Performance",
+  "updated": "2026-03-02T12:52:50Z"
+}

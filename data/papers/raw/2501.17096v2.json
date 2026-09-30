@@ -1,0 +1,22 @@
+{
+  "abs_url": "http://arxiv.org/abs/2501.17096v2",
+  "abstract": "Estimating market impact and transaction costs of large trades (metaorders) is a very important topic in finance. However, using models of price and trade based on public market data provide average price trajectories which are qualitatively different from what is observed during real metaorder executions: the price increases linearly, rather than in a concave way, during the execution and the amount of reversion after its end is very limited. We claim that this is a generic phenomenon due to the fact that even sophisticated statistical models are unable to correctly describe the origin of the autocorrelation of the order flow. We propose a modified Transient Impact Model which provides more realistic trajectories by assuming that only a fraction of the metaorder trading triggers market order flow. Interestingly, in our model there is a critical condition on the kernels of the price and order flow equations in which market impact becomes permanent.",
+  "authors": [
+    "Manuel Naviglio",
+    "Giacomo Bormetti",
+    "Francesco Campigli",
+    "German Rodikov",
+    "Fabrizio Lillo"
+  ],
+  "categories": [
+    "q-fin.TR",
+    "cs.AI",
+    "econ.EM",
+    "physics.soc-ph"
+  ],
+  "id": "2501.17096v2",
+  "published": "2025-01-28T17:29:08Z",
+  "source": "arxiv",
+  "title": "Why is the estimation of metaorder impact with public market data so challenging?",
+  "updated": "2025-12-03T16:06:53Z"
+}

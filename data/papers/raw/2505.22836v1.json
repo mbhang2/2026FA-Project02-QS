@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2505.22836v1",
+  "abstract": "Option pricing theory, such as the Black and Scholes (1973) model, provides an explicit solution to construct a strategy that perfectly hedges an option in a continuous-time setting. In practice, however, trading occurs in discrete time and often involves transaction costs, making the direct application of continuous-time solutions potentially suboptimal. Previous studies, such as those by Buehler et al. (2018), Buehler et al. (2019) and Cao et al. (2019), have shown that deep learning or reinforcement learning can be used to derive better hedging strategies than those based on continuous-time models. However, these approaches typically rely on a large number of trajectories (of the order of $10^5$ or $10^6$) to train the model. In this work, we show that using as few as 256 trajectories is sufficient to train a neural network that significantly outperforms, in the Geometric Brownian Motion framework, both the classical Black & Scholes formula and the Leland model, which is arguably one of the most effective explicit alternatives for incorporating transaction costs. The ability to train neural networks with such a small number of trajectories suggests the potential for more practical and simple implementation on real-time financial series.",
+  "authors": [
+    "Pierre Brugi\u00e8re",
+    "Gabriel Turinici"
+  ],
+  "categories": [
+    "q-fin.MF",
+    "q-fin.ST"
+  ],
+  "id": "2505.22836v1",
+  "published": "2025-05-28T20:16:07Z",
+  "source": "arxiv",
+  "title": "Model-Free Deep Hedging with Transaction Costs and Light Data Requirements",
+  "updated": "2025-05-28T20:16:07Z"
+}

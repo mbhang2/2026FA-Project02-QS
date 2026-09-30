@@ -1,0 +1,17 @@
+{
+  "abs_url": "http://arxiv.org/abs/2505.01575v3",
+  "abstract": "This paper proposes an innovative Transformer model, Single-directional representative from Transformer (SERT), for US large capital stock pricing. It also innovatively applies the pre-trained Transformer models under the stock pricing and factor investment context. They are compared with standard Transformer models and encoder-only Transformer models in three periods covering the entire COVID-19 pandemic to examine the model adaptivity and suitability during the extreme market fluctuations. Namely, pre-COVID-19 period, COVID-19 period and 1-year post-COVID-19. The best proposed SERT model achieves the highest out-of-sample $R^2$, 11.94\\% and 11.47\\% respectively, when extreme market fluctuation takes place, followed by pre-trained Transformer models (11.13\\% and 9.72\\%). Their Trend-following-based strategy's performance also proves their excellent capability for hedging downside risks during market shocks. The proposed SERT model achieves a Sortino ratio 47\\% higher than the buy-and-hold benchmark in the equal-weighted portfolio and 28\\% higher in the value-weighted portfolio in the static transaction cost scenario when the pandemic period is considered. It proves that Transformer models have a strong ability to capture patterns of temporal sparsity in asset pricing factor models, especially with high volatility. I also find the softmax signal filter as the common configuration of Transformer models in alternative contexts, which only eliminates differences between models, but does not improve strategy-wise performance, while increasing attention heads improves the model performance insignificantly and applying the 'layer normalization first' method does not boost the model performance in our case.",
+  "authors": [
+    "Shanyan Lai"
+  ],
+  "categories": [
+    "q-fin.CP",
+    "econ.EM",
+    "q-fin.PR"
+  ],
+  "id": "2505.01575v3",
+  "published": "2025-05-02T20:38:59Z",
+  "source": "arxiv",
+  "title": "Asset Pricing in Pre-trained Transformer",
+  "updated": "2026-06-21T12:42:35Z"
+}

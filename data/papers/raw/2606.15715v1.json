@@ -1,0 +1,16 @@
+{
+  "abs_url": "http://arxiv.org/abs/2606.15715v1",
+  "abstract": "Sunshine trading theory predicts that publicly disclosing trading intentions can reduce adverse selection and attract liquidity provision, lowering execution costs. Evidence is scarce, because explicit preannouncement of large orders is rare in traditional markets. We study Hyperliquid, a fully on-chain limit order book for cryptocurrency perpetual futures, where protocol-native TWAP orders disclose their terms from inception and remain visible while active, a natural form of sunshine trading. Using address-level data, we reconstruct 4.3 million hidden metaorders and compare them with 465,000 visible TWAP executions. The two execution styles differ sharply: hidden metaorders follow front-loaded, U-shaped schedules consistent with transient-impact optimal execution, whereas TWAPs trade nearly uniformly. We test the preannouncement predictions of Admati and Pfleiderer (1991). Visible TWAPs face lower execution costs than comparable hidden metaorders and leave a smaller permanent price impact. Hidden metaorders executed alongside already-visible same-direction TWAP flow incur higher permanent costs: adverse-selection costs shift toward non-announcers. Finally, visible TWAP programs elicit liquidity provision: while active, displayed depth rises and the book tilts toward the absorbing side, the more so the larger the announced order.",
+  "authors": [
+    "Davide Barone",
+    "Fabrizio Lillo"
+  ],
+  "categories": [
+    "q-fin.TR"
+  ],
+  "id": "2606.15715v1",
+  "published": "2026-06-14T10:07:34Z",
+  "source": "arxiv",
+  "title": "Trading in the Sunshine or in the Shade: Market Impact and Adverse Selection on Hyperliquid",
+  "updated": "2026-06-14T10:07:34Z"
+}

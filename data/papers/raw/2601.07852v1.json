@@ -1,0 +1,18 @@
+{
+  "abs_url": "http://arxiv.org/abs/2601.07852v1",
+  "abstract": "Forecasting accuracy is routinely optimised in financial prediction tasks even though investment and risk-management decisions are executed under transaction costs, market impact, capacity limits, and binding risk constraints. This paper treats forecasting as an econometric input to a constrained decision problem. A predictive distribution induces a decision rule through a utility objective combined with an explicit friction operator consisting of both a cost functional and a feasible-set constraint system. The econometric target becomes minimisation of expected decision loss net of costs rather than minimisation of prediction error. The paper develops a utility-weighted calibration criterion aligned to the decision loss and establishes sufficient conditions under which calibrated predictive distributions weakly dominate uncalibrated alternatives. An empirical study using a pre-committed nested walk-forward protocol on liquid equity index futures confirms the theory: the proposed utility-weighted calibration reduces realised decision loss by over 30\\% relative to an uncalibrated baseline ($t$-stat -30.31) for loss differential and improves the Sharpe ratio from -3.62 to -2.29 during a drawdown regime. The mechanism is identified as a structural reduction in the frequency of binding constraints (from 16.0\\% to 5.1\\%), preventing the \"corner solution\" failures that characterize overconfident forecasts in high-friction environments.",
+  "authors": [
+    "Craig S Wright"
+  ],
+  "categories": [
+    "econ.EM",
+    "q-fin.CP",
+    "q-fin.PM",
+    "q-fin.TR"
+  ],
+  "id": "2601.07852v1",
+  "published": "2026-01-09T01:11:21Z",
+  "source": "arxiv",
+  "title": "Utility-Weighted Forecasting and Calibration for Risk-Adjusted Decisions under Trading Frictions",
+  "updated": "2026-01-09T01:11:21Z"
+}

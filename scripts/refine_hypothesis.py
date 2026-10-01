@@ -67,6 +67,7 @@ REFINE_MAX_TOKENS = 32_768
 MIN_WORDS = 350
 MAX_WORDS = 1_125
 MAX_LINT_REPAIRS = 3
+MAX_FORMAT_RETRIES = 3
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,5}$")
 PAPER_CHARS = 6_000
 MAX_PAPERS = 3
@@ -282,7 +283,34 @@ def main() -> int:
                     max_tokens=REFINE_MAX_TOKENS)
     sources = [parent, user] + [p["body"] + p["abstract"] for p in papers]
 
-    out = client.ask(PROMPT.read_text(), user)
+    def _ask(extra: str = "") -> dict:
+        """One call, retried only for a reply that was not usable JSON.
+
+        The client repairs raw control characters inside strings, which is the
+        failure that ended session-03 after three campaigns. This is the second
+        line: a malformed reply gets a bounded number of further tries with the
+        requirement restated, because a format fault should cost a few seconds
+        rather than a five-campaign session.
+        """
+        from audit.committee.llm import LLMUnavailable
+        last = None
+        for i in range(MAX_FORMAT_RETRIES + 1):
+            try:
+                return client.ask(PROMPT.read_text(), user + extra + (
+                    "" if i == 0 else
+                    "\n\n# Your last reply was not usable JSON\n"
+                    "Return ONLY a JSON object with keys \"slug\" and "
+                    "\"markdown\". Inside the markdown string every line break "
+                    "must be written \\n and every tab \\t -- a real line "
+                    "break inside a JSON string is invalid.\n"))
+            except LLMUnavailable as exc:
+                last = exc
+                print(f"      reply was not usable JSON "
+                      f"(attempt {i + 1}/{MAX_FORMAT_RETRIES + 1}): "
+                      f"{str(exc)[:110]}", flush=True)
+        raise last
+
+    out = _ask()
     for attempt in range(MAX_LINT_REPAIRS):
         md = out.get("markdown") or ""
         leaks = lint_findings(md) if md else ["empty"]
@@ -304,7 +332,7 @@ def main() -> int:
             note.append(f"\n## It is no longer the same question\n- {fam}\n")
         if length:
             note.append(f"\n## Length\n- {length}\n")
-        out = client.ask(PROMPT.read_text(), user + "".join(note))
+        out = _ask("".join(note))
 
     md = str(out.get("markdown") or "")
     slug = str(out.get("slug") or "").strip().lower()

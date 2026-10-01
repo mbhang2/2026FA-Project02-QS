@@ -141,7 +141,62 @@ class Client:
         try:
             return json.loads(raw)
         except json.JSONDecodeError as exc:
+            repaired = _escape_raw_controls(raw)
+            if repaired != raw:
+                try:
+                    return json.loads(repaired)
+                except json.JSONDecodeError:
+                    pass
             raise LLMUnavailable(f"reply was not JSON: {exc}; {text[:200]!r}")
+
+
+def _escape_raw_controls(raw: str) -> str:
+    """Escape literal newlines, tabs and carriage returns inside JSON strings.
+
+    **A response that is one escape away from valid JSON is not a failure to
+    throw a session away over.** Measured 2026-10-01: `refine_hypothesis.py`
+    asked for a thousand words of markdown inside a JSON string field and
+    `deepseek-v4-pro` returned it with real newlines in it --
+
+        {"slug": "...", "markdown": "# Does an outsized move...\n\n## The question
+
+    -- which is invalid by the grammar and identical in meaning to the escaped
+    form. It happened on all five retries, because the shape is what the model
+    produces for that prompt and not a transient fault, and it ended a
+    five-campaign session after three campaigns.
+
+    This is a repair, not a parser: it only ever converts a raw control character
+    **inside a string literal** into its escape, which is the one reading JSON
+    permits. Outside strings, whitespace is already legal and is left alone. If
+    the repair does not produce valid JSON, the original error is raised --
+    nothing is guessed at and nothing is silently accepted.
+
+    The structural fix belongs upstream too: a prompt that asks for a long
+    markdown document inside a JSON string is asking for this, and
+    `config/prompts/hypothesis-refine.md` now says to escape newlines. Both,
+    because the prompt is advice and this is not.
+    """
+    out = []
+    in_string = False
+    escaped = False
+    for ch in raw:
+        if escaped:
+            out.append(ch)
+            escaped = False
+            continue
+        if ch == "\\" and in_string:
+            out.append(ch)
+            escaped = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            out.append(ch)
+            continue
+        if in_string and ch in "\n\r\t":
+            out.append({"\n": "\\n", "\r": "\\r", "\t": "\\t"}[ch])
+            continue
+        out.append(ch)
+    return "".join(out)
 
 
 def _same(asked: str, served: str) -> bool:

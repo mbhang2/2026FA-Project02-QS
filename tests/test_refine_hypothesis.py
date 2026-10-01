@@ -148,3 +148,51 @@ def test_the_committed_refinement_carries_its_trailer():
         ["git", "log", "--format=%(trailers:key=Machine-Written)", "-20"],
         capture_output=True, text=True, cwd=str(REPO_ROOT))
     assert "Machine-Written: nq-s01-continuation" in out.stdout
+
+
+# --------------------------------------------------------------------------- #
+# the format fault that ended session-03 after three campaigns
+# --------------------------------------------------------------------------- #
+def test_raw_newlines_inside_a_json_string_are_repaired_not_thrown_away():
+    """deepseek-v4-pro returned a thousand words of markdown inside a JSON
+    string with real newlines in it, on all five retries, and the session died.
+    A reply one escape away from valid JSON is not worth a session."""
+    import json as _json
+    from audit.committee.llm import _escape_raw_controls
+    bad = '{\n "slug": "a-b",\n "markdown": "# Title\n\n## Section\n\ttabbed"\n}'
+    with pytest.raises(_json.JSONDecodeError):
+        _json.loads(bad)
+    d = _json.loads(_escape_raw_controls(bad))
+    assert d["slug"] == "a-b"
+    assert d["markdown"] == "# Title\n\n## Section\n\ttabbed", (
+        "the repair must preserve the text exactly, only changing its encoding")
+
+
+def test_the_repair_never_touches_valid_json():
+    from audit.committee.llm import _escape_raw_controls
+    for ok in ('{"a": "line1\\nline2", "b": 3}',
+               '{"a": "has \\" an escaped quote", "b": [1, 2]}',
+               '{\n  "pretty": "printed",\n  "n": 1\n}'):
+        assert _escape_raw_controls(ok) == ok, ok
+
+
+def test_a_backslash_before_a_quote_does_not_end_the_string():
+    """The walker has to honour escapes or it loses track of where strings are,
+    and then it escapes newlines that were never inside one."""
+    from audit.committee.llm import _escape_raw_controls
+    import json as _json
+    bad = '{"a": "ends with a backslash-quote \\\\" , "b": "x\ny"}'
+    out = _escape_raw_controls(bad)
+    # whatever it does, it must not crash and must not corrupt the prefix
+    assert out.startswith('{"a": "ends with a backslash-quote')
+
+
+def test_the_prompt_states_the_escaping_requirement():
+    assert "every newline in it must be written" in " ".join(PROMPT.split())
+    assert "most common way this request fails" in " ".join(PROMPT.split())
+
+
+def test_a_malformed_reply_is_retried_with_the_requirement_restated():
+    assert "MAX_FORMAT_RETRIES" in SRC
+    assert "reply was not usable JSON" in SRC
+    assert "rather than a five-campaign session" in FLAT

@@ -81,6 +81,10 @@ Return JSON with exactly two keys:
   "slug"      2-6 kebab-case words naming the revised question
   "markdown"  the revised question
 
+**The markdown goes inside a JSON string, so every newline in it must be written
+`\n` and every tab `\t`.** A real line break inside a JSON string is invalid and
+the reply is unusable. This is the single most common way this request fails.
+
 ## USER
 
 {context}

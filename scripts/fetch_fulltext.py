@@ -259,6 +259,18 @@ def main() -> int:
     ap.add_argument("--paper", help="a single registry id")
     ap.add_argument("--survivors", action="store_true",
                     help="every paper stage 1 judged direct or adaptable")
+    ap.add_argument("--infeasible", action="store_true",
+                    help="papers stage 1 REJECTED, so the screen's "
+                         "false-negative rate can be measured at all (Task 71). "
+                         "A rejected paper never gets a body, so nothing can "
+                         "discover that its body would have kept it.")
+    ap.add_argument("--limit", type=int, default=None,
+                    help="stop after this many; with --infeasible the subset is "
+                         "a SEEDED random sample, not the first N, because the "
+                         "registry is in arXiv fetch order and that correlates "
+                         "with search term and date")
+    ap.add_argument("--sample-seed", type=int, default=71,
+                    help="the seed for that sample; 71 is Task 71's")
     ap.add_argument("--setup-tools", action="store_true",
                     help="create .venv-tools and install the PDF reader there")
     ap.add_argument("--force", action="store_true", help="refetch what is present")
@@ -267,19 +279,37 @@ def main() -> int:
 
     if a.setup_tools:
         return setup_tools()
-    if not (a.paper or a.survivors):
-        sys.exit("give --paper <id>, --survivors, or --setup-tools")
+    if not (a.paper or a.survivors or a.infeasible):
+        sys.exit("give --paper <id>, --survivors, --infeasible, or --setup-tools")
+    if a.survivors and a.infeasible:
+        sys.exit("--survivors and --infeasible are different populations and "
+                 "mixing them makes the measurement uninterpretable")
 
     reg = json.loads(REGISTRY.read_text())
     if a.paper:
         if a.paper not in reg["papers"]:
             sys.exit(f"{a.paper} is not in the registry")
         todo = [a.paper]
+    elif a.infeasible:
+        todo = sorted(v["id"] for v in reg["papers"].values()
+                      if v.get("feasibility") == "infeasible")
     else:
         todo = sorted(v["id"] for v in reg["papers"].values()
                       if v.get("feasibility") in ("direct", "adaptable"))
     if not a.force:
         todo = [p for p in todo if not (TEXT_DIR / f"{p}.txt").exists()]
+    if a.limit is not None and len(todo) > a.limit:
+        if a.infeasible:
+            # **Seeded random, not the first N.** The registry is in arXiv fetch
+            # order, which follows the search term and the submission date, so
+            # the first 40 would be 40 papers about whatever was searched first.
+            # A measurement of a rate has to sample the population.
+            import random
+            todo = sorted(random.Random(a.sample_seed).sample(todo, a.limit))
+            print(f"sampled {a.limit} of the infeasible set with seed "
+                  f"{a.sample_seed}\n")
+        else:
+            todo = todo[:a.limit]
     if not todo:
         print("every requested paper already has full text; --force to refetch")
         return 0

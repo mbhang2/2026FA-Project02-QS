@@ -164,6 +164,9 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--limit", type=int, default=20)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--force-rescreen", action="store_true",
+                    help="re-ask about a body already judged. A re-roll: the "
+                         "evidence has not changed, so say why in the commit.")
     ap.add_argument("--rescreen", action="store_true",
                     help="re-judge already-screened papers we hold a body for. "
                          "The first verdict is preserved as "
@@ -180,12 +183,22 @@ def main() -> int:
         # a different answer is not a re-screen, it is a re-roll -- and it is the
         # habit this project is built against. A body is new evidence; an
         # abstract seen twice is not.
+        # **And not one already judged on its body.** The comment above says a
+        # re-screen needs new evidence; a paper whose verdict already came from
+        # its full text has none, and re-asking is the re-roll this guards
+        # against. Found on 2026-10-01: `--rescreen --limit 40` spent 19 of its
+        # 40 slots re-asking papers that had already been judged on full text,
+        # so a 40-paper measurement actually covered 21.
         todo = [p for p in reg["papers"].values()
                 if p.get("status") == "screened"
-                and (TEXT_DIR / f"{p['id']}.txt").exists()][:a.limit]
+                and (TEXT_DIR / f"{p['id']}.txt").exists()
+                and (a.force_rescreen or p.get("screened_on") != "fulltext")][:a.limit]
         if not todo:
-            sys.exit("nothing screened has a body yet; run "
-                     "scripts/fetch_fulltext.py --survivors first")
+            sys.exit("nothing screened has a body that has not already been "
+                     "judged on it. Fetch more bodies "
+                     "(scripts/fetch_fulltext.py --survivors | --infeasible), "
+                     "or pass --force-rescreen to ask again about the same "
+                     "evidence -- which is a re-roll, so say why.")
     else:
         todo = [p for p in reg["papers"].values()
                 if p["status"] == "unread"][:a.limit]

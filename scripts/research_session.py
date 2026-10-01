@@ -186,8 +186,9 @@ def _run(argv: list[str], *, label: str) -> tuple[int, str]:
 # guards these raise must NOT be softened: `ModelSubstituted` exists because
 # continuing would write a record naming a model that did not answer. The right
 # response to a transient substitution is to try again, not to believe it.
-TRANSIENT = ("ModelSubstituted", "ReadTimeout", "ConnectTimeout",
-             "RemoteDisconnected", "ServiceUnavailable", "502", "503", "504")
+TRANSIENT = ("ModelSubstituted", "ReadTimeout", "ConnectTimeout", "Timeout",
+             "RemoteDisconnected", "ConnectionError", "ServiceUnavailable",
+             "502", "503", "504")
 # Progressive, because the substitution window is minutes long, not seconds.
 # Measured on 2026-09-30: the same 157,505-character prompt was substituted on
 # every attempt for several minutes and then served correctly by the model asked
@@ -197,24 +198,34 @@ STAGE_BACKOFF_S = (30, 120, 300, 600, 600)
 MAX_STAGE_RETRIES = len(STAGE_BACKOFF_S)
 
 
-def campaign_stage(name: str, stage: str, extra: list[str] | None = None,
-                   *, retries: int = 0):
-    argv = [PY, "scripts/nq_campaign.py", "--stage", stage, "--name", name,
-            *(extra or [])]
+def _retrying(argv: list[str], *, label: str, retries: int = 0):
+    """Run it, and try again on a fault that is the endpoint's rather than ours.
+
+    Used by the campaign stages AND by the refinement. The refinement was left
+    out of this on 2026-09-30 and a single `ReadTimeout` on the gateway preflight
+    ended a five-campaign session after one campaign.
+    """
+    code, body = 1, ""
     for attempt in range(retries + 1):
-        code, body = _run(argv, label=f"{name} {stage}"
-                          + (f" (retry {attempt})" if attempt else ""))
+        code, body = _run(argv, label=label + (f" (retry {attempt})"
+                                               if attempt else ""))
         if code == 0 or attempt == retries:
             return code, body
         hit = next((t for t in TRANSIENT if t in body), None)
         if hit is None:
             return code, body
         wait = STAGE_BACKOFF_S[min(attempt, len(STAGE_BACKOFF_S) - 1)]
-        print(f"      {hit} is the endpoint's fault, not the candidate's. "
-              f"Waiting {wait}s, then retrying {stage}; it resumes where it "
-              f"stopped.", flush=True)
+        print(f"      {hit} is the endpoint's fault, not ours. Waiting {wait}s, "
+              f"then retrying.", flush=True)
         time.sleep(wait)
     return code, body
+
+
+def campaign_stage(name: str, stage: str, extra: list[str] | None = None,
+                   *, retries: int = 0):
+    return _retrying([PY, "scripts/nq_campaign.py", "--stage", stage,
+                      "--name", name, *(extra or [])],
+                     label=f"{name} {stage}", retries=retries)
 
 
 def already_run(name: str) -> bool:
@@ -328,11 +339,14 @@ def _main() -> int:
           "  Ctrl-C twice = abort.\n")
 
     stopped_by_cue = False
+    aborted_by_failure = False
     completed: list[str] = []
     cur_hypothesis = (ROOT / str(fam["seed"])) if fam else None
     for c in entries:
-        if stopped_by_cue:
-            log["campaigns"][str(c["name"])] = "not started (human cue)"
+        if stopped_by_cue or aborted_by_failure:
+            log["campaigns"][str(c["name"])] = (
+                "not started (human cue)" if stopped_by_cue
+                else "not started (the session aborted on a failure)")
             continue
         name = str(c["name"])
         if a.resume and already_run(name):
@@ -374,23 +388,40 @@ def _main() -> int:
                     nxt = next(e for e in entries
                                if e["name"] != name
                                and e.get("hypothesis") is None)
-                    code, out = _run(
+                    code, out = _retrying(
                         [PY, "scripts/refine_hypothesis.py",
                          "--campaign", name, "--parent", str(cur_hypothesis),
                          "--model", str(c.get("model") or "deepseek-v4-pro"),
                          "--commit"],
-                        label=f"{name} refine -> next question")
+                        label=f"{name} refine -> next question",
+                        retries=MAX_STAGE_RETRIES)
                     written = [ln.split("wrote ", 1)[1].split("  ")[0].strip()
                                for ln in out.splitlines() if ln.startswith("wrote ")]
                     if code or not written:
                         log["campaigns"][name] += "; refinement FAILED"
                         log["refinement_failed_after"] = name
-                        print(f"\n  the refinement after {name} failed, so "
-                              f"there is no question for the next campaign.\n"
-                              f"  Going to the stop with the "
-                              f"{len(completed)} campaign(s) that ran.",
+                        # **A broken session does not spend validation looks.**
+                        # This used to set stopped_by_cue, which made an
+                        # infrastructure failure behave like a human deciding to
+                        # stop -- and a human deciding to stop means "validate
+                        # what we have". On 2026-09-30 a single ReadTimeout
+                        # therefore spent nq-s02-01's one validation look on a
+                        # session that never executed its plan. A cue is a
+                        # decision; a timeout is not, and the two must not share
+                        # a code path.
+                        aborted_by_failure = True
+                        print(f"\n  the refinement after {name} failed after "
+                              f"{MAX_STAGE_RETRIES} retries, so there is no "
+                              f"question for the next campaign.\n"
+                              f"  STOPPING WITHOUT VALIDATING. Validation is one "
+                              f"look per campaign and this session did not run "
+                              f"its plan;\n  spending those looks on a broken "
+                              f"session would cost them for nothing. The "
+                              f"{len(completed)} campaign(s) that ran keep their "
+                              f"looks unspent.\n  Fix the endpoint and start a "
+                              f"fresh family, or cue the stop deliberately if "
+                              f"you want these validated.",
                               flush=True)
-                        stopped_by_cue = True
                     else:
                         nxt["hypothesis"] = written[0]
                         cur_hypothesis = ROOT / written[0]
@@ -423,6 +454,18 @@ def _main() -> int:
         "nothing of theirs to drop." if stopped_by_cue else
         "every campaign in the plan, written before the session ran.")
     names = completed if stopped_by_cue else names
+
+    if aborted_by_failure:
+        log["aborted_by_failure"] = True
+        log["validation"] = "NOT RUN -- the session aborted on a failure"
+        log["finished"] = dt.datetime.now(dt.timezone.utc).isoformat(
+            timespec="seconds")
+        record.write_text(json.dumps(log, indent=2) + "\n")
+        print(f"\n  phases 2-4 were SKIPPED. {len(completed)} campaign(s) ran "
+              f"and are reported;\n  none has been validated, so every one of "
+              f"their looks is still available.\n  wrote "
+              f"{record.relative_to(ROOT)}")
+        return 1
 
     if not names:
         print("\n  no campaign produced a winner, so there is nothing to "

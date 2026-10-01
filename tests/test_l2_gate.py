@@ -163,8 +163,24 @@ def test_the_candidate_lister_runs_offline_and_reports_the_real_tree():
     for c in cands:
         assert c["validation_primary"] is not None
         assert c["hypothesis"] is not None
-    # and every one of them failed rule (a): no winner has ever been profitable
-    # on validation. Asserted so that when one finally is, this test says so.
-    assert all(c["rule_a"] is False for c in cands), (
-        "a winner is now positive on validation -- update this assertion and "
-        "look closely at it")
+    # **One winner is now positive on validation, and this test is how we found
+    # out.** It used to assert that none ever had been. `nq-s02-01` broke it on
+    # 2026-09-30: train +0.2248 over 466 trades, validation **+0.1765** over 106
+    # trades and +941 index points. It is the first time rule (a) has passed
+    # anywhere in this project.
+    #
+    # It did NOT pass the gate. Its own validation null sits at +0.0113 +/-
+    # 0.1604, so the winner is +1.03 sd above it and p = 0.1471 -- nowhere near
+    # q. The L2 verdict is FAIL and nothing is claimed. Rule (a) is a floor, not
+    # a finding, and a positive number that a sign-flip of its own round turns
+    # reproduces one time in seven is what "not distinguishable" looks like.
+    #
+    # Two caveats that belong beside the number, not in a footnote: M = 1,
+    # because the five-campaign family it belonged to died on a network timeout
+    # after one campaign; and that campaign's committee never ran, for the same
+    # reason, so no auditor has read it.
+    positive = [c["campaign_id"] for c in cands if c["rule_a"]]
+    assert positive == ["nq-s02-01"], (
+        f"the set of winners positive on validation changed: {positive}. "
+        "Update this deliberately and look closely at whichever one is new -- "
+        "every previous campaign's winner lost money on validation.")

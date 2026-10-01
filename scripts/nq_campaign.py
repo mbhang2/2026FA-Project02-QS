@@ -714,12 +714,36 @@ def stage_report(name: str) -> None:
 
     best_source = (tier2.get("best_candidate") or {}).get("source")
     print("  committee ...", flush=True)
-    try:
-        from audit.committee.review import review
-        cv = review(tier2, source=best_source,
-                    model=(record.agent_config or {}).get("model", MODEL),
-                    hypothesis=hyp_text)
-    except Exception as exc:                                      # noqa: BLE001
+    # **Retried on a fault that is the endpoint's.** On 2026-09-30 a single
+    # `ReadTimeout` recorded this campaign's committee as ERROR, which is a
+    # correct refusal -- "no verdict" is not "no veto" -- but it is a bad
+    # outcome to accept from a network blip when the whole campaign has already
+    # been paid for. Four auditors unread because of a 60-second timeout is
+    # throwing away the most expensive part of the run.
+    _TRANSIENT = ("ReadTimeout", "ConnectTimeout", "Timeout", "ConnectionError",
+                  "RemoteDisconnected", "ServiceUnavailable", "502", "503",
+                  "504")
+    _BACKOFF = (30, 120, 300)
+    cv = exc = None
+    for _attempt in range(len(_BACKOFF) + 1):
+        try:
+            from audit.committee.review import review
+            cv = review(tier2, source=best_source,
+                        model=(record.agent_config or {}).get("model", MODEL),
+                        hypothesis=hyp_text)
+            exc = None
+            break
+        except Exception as e:                                    # noqa: BLE001
+            exc = e
+            blip = any(t in f"{type(e).__name__}: {e}" for t in _TRANSIENT)
+            if not blip or _attempt == len(_BACKOFF):
+                break
+            wait = _BACKOFF[_attempt]
+            print(f"    {type(e).__name__} is the endpoint's fault. Waiting "
+                  f"{wait}s, then asking the committee again.", flush=True)
+            import time as _t
+            _t.sleep(wait)
+    if exc is not None:
         # Recorded, not swallowed. A committee that failed to run is a different
         # state from one that had nothing to veto, and the MVP rule "no veto =
         # approve" would read the second from the first.

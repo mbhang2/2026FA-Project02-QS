@@ -366,9 +366,41 @@ def test_the_refinement_happens_inside_phase_1():
     assert "ordering enforces" in FLAT or "ordering is the enforcement" in FLAT
 
 
-def test_a_failed_refinement_goes_to_the_stop_rather_than_guessing():
-    """No question means no campaign. Carrying on with the parent question would
-    silently make two campaigns the same experiment and inflate M."""
+def test_a_failed_refinement_never_reuses_the_parent_question():
+    """No question means no campaign. Carrying on with the parent would silently
+    make two campaigns the same experiment and inflate M by one look that was
+    really the same look."""
     assert "refinement FAILED" in SRC
-    assert "there is no question for the next campaign" in SRC
+    assert "question for the next campaign" in SRC
     assert "no question: the refinement" in SRC
+    # and it aborts rather than quietly continuing
+    assert "aborted_by_failure = True" in SRC
+
+
+def test_an_infrastructure_failure_does_not_spend_validation_looks():
+    """A cue is a decision; a timeout is not, and they must not share a path.
+
+    On 2026-09-30 a single ReadTimeout on the gateway preflight ended a
+    five-campaign family after one campaign -- and because a failed refinement
+    set the same flag a human cue sets, the session went to the stop and spent
+    nq-s02-01's one validation look on a plan that never ran.
+    """
+    assert "aborted_by_failure" in SRC
+    assert "STOPPING WITHOUT VALIDATING" in SRC
+    assert "timeout is not, and the two must not share" in FLAT
+    # the failure path must not set the cue flag
+    i = SRC.index("refinement FAILED")
+    j = SRC.index("print(f\"\\n  the refinement after {name} failed")
+    assert "stopped_by_cue = True" not in SRC[i:j + 1200]
+    # and phases 2-4 are skipped outright
+    assert 'log["validation"] = "NOT RUN -- the session aborted on a failure"' in SRC
+    assert "phases 2-4 were SKIPPED" in SRC
+
+
+def test_the_refinement_retries_like_every_other_stage():
+    """It was left out of the retry helper, and one timeout cost a session."""
+    assert "_retrying(" in SRC
+    i = SRC.index("scripts/refine_hypothesis.py")
+    assert "_retrying(" in SRC[max(0, i - 400):i]
+    assert "retries=MAX_STAGE_RETRIES" in SRC[i - 400:i + 600]
+    assert "ReadTimeout" in SRC and "ConnectionError" in SRC

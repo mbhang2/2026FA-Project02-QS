@@ -404,3 +404,76 @@ def test_the_refinement_retries_like_every_other_stage():
     assert "_retrying(" in SRC[max(0, i - 400):i]
     assert "retries=MAX_STAGE_RETRIES" in SRC[i - 400:i + 600]
     assert "ReadTimeout" in SRC and "ConnectionError" in SRC
+
+
+# --------------------------------------------------------------------------- #
+# Task 72: the control arm, and not spending looks to audit a process
+# --------------------------------------------------------------------------- #
+def _control_plan(tmp_path, refine=False, iterations=3):
+    import yaml
+    p = tmp_path / "ctl.yaml"
+    p.write_text(yaml.safe_dump({
+        "session": "s-ctl",
+        "family": {"seed": "config/hypotheses/intraday-continuation.md",
+                   "iterations": iterations, "refine": refine, "n": 5,
+                   "prefix": "nq-ctl"}}))
+    return p
+
+
+def test_a_control_family_runs_the_same_question_every_time(tmp_path):
+    """Three independent best-of-N draws from one fixed question give the spread
+    that any claim about refinement has to clear. Without it, nq-s03's
+    0.0786 -> 0.7530 -> 0.8924 is uninterpretable."""
+    proc = subprocess.run(
+        [sys.executable, "scripts/research_session.py", "--plan",
+         str(_control_plan(tmp_path)), "--train-only", "--dry-run"],
+        capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "CONTROL ARM" in proc.stdout
+    assert proc.stdout.count("intraday-continuation.md") >= 3, (
+        "every campaign must name the SAME question")
+    assert "not written yet" not in proc.stdout
+    assert "run-to-run spread" in proc.stdout
+
+
+def test_a_control_family_never_calls_the_refiner():
+    assert 'if fam and refines and name != entries[-1]["name"]:' in SRC
+    assert 'refines = fam.get("refine", True)' in SRC
+    assert "`refine: false` is the control arm" in FLAT
+
+
+def test_train_only_skips_every_phase_that_touches_a_closed_split(tmp_path):
+    """Validation is one look per campaign. Spending six on a methodology
+    experiment is the same mistake as opening the holdout to test plumbing."""
+    proc = subprocess.run(
+        [sys.executable, "scripts/research_session.py", "--plan",
+         str(_control_plan(tmp_path)), "--train-only", "--dry-run"],
+        capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert "phases 2-4 would be skipped" in proc.stdout
+    assert "no campaign would be validated" in proc.stdout
+    assert '"--train-only"' in SRC
+    assert "phases 2-4 SKIPPED" in SRC
+    assert "same mistake as opening the holdout" in FLAT
+
+
+def test_train_only_and_arming_the_holdout_are_refused_together(tmp_path):
+    proc = subprocess.run(
+        [sys.executable, "scripts/research_session.py", "--plan",
+         str(_control_plan(tmp_path)), "--train-only",
+         "--holdout-if-l2-passes", "nope"],
+        capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert proc.returncode != 0
+    assert "contradict each other" in (proc.stdout + proc.stderr)
+
+
+def test_the_task72_plans_are_identical_except_for_refine():
+    """The arms differ in ONE field. If anything else drifts -- N, the proposer,
+    the profile, the seed -- the comparison measures that instead."""
+    import yaml
+    a = yaml.safe_load((REPO_ROOT / "config" / "sessions"
+                        / "task72-refined.yaml").read_text())["family"]
+    b = yaml.safe_load((REPO_ROOT / "config" / "sessions"
+                        / "task72-control.yaml").read_text())["family"]
+    assert a.pop("refine") is True and b.pop("refine") is False
+    assert a.pop("prefix") != b.pop("prefix")
+    assert a == b, f"the arms differ in more than `refine`: {a} vs {b}"

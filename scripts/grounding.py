@@ -134,6 +134,17 @@ def ungrounded_numbers(claim: str, *sources: str) -> list[str]:
             continue
         if val in seen or val in have:
             continue
+        # **Quoting a figure to fewer decimals is grounded.** A source holding
+        # 652.2132352941182 supports a claim of "652.213"; comparing raw floats
+        # calls that invented. Measured 2026-10-01: a refinement was refused for
+        # seven numbers, five of which were correctly-rounded source figures.
+        #
+        # This does not loosen the check. A claim still has to match a real
+        # source number AT ITS OWN STATED PRECISION, so 578.5 against a source
+        # with no 578.5 is still ungrounded -- which is how the same run's two
+        # genuinely invented numbers were caught.
+        if frac and any(round(h, len(frac)) == val for h in have):
+            continue
         is_decimal = bool(frac)
         is_year = not is_decimal and 1900 <= val <= 2100
         if is_year:

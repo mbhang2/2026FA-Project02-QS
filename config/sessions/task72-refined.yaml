@@ -1,0 +1,25 @@
+# Task 72, arm A -- the REFINED arm. See docs/reviews/task72/README.md.
+#
+#   .venv/bin/python scripts/research_session.py \
+#       --plan config/sessions/task72-control.yaml --train-only
+#
+# All three campaigns run the SAME question. No refinement. The point is to
+# measure the run-to-run spread of best-of-20 under a fixed question and a fixed
+# proposer -- a number this project has never had, and without which no sequence
+# of per-campaign p values means anything. nq-s03 went 0.0786 -> 0.7530 -> 0.8924
+# and I narrated that as refinement making things worse; if this arm spans a
+# comparable range on one unchanged question, that reading was noise.
+#
+# --train-only is not optional here. Validation is one look per campaign and this
+# is a measurement about our own machinery, not a search for a candidate.
+
+session: task72-refined
+
+family:
+  seed: config/hypotheses/intraday-continuation.md
+  iterations: 3
+  refine: true           # <- the comparison: each question refined from the last
+  n: 20
+  model: deepseek-v4-pro
+  profile: nq-train
+  prefix: nq-t72a

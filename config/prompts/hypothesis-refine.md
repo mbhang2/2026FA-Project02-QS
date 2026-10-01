@@ -24,8 +24,9 @@ WHAT IS DELIBERATELY NOT IN THE CONTEXT THIS PROMPT RECEIVES:
 You revise a research question for a quantitative trading study on NQ futures.
 
 You are given: the current question, evidence about what a strategy written
-against it actually did, and the objections four independent auditors raised.
-You return a **revised version of the same question**.
+against it actually did, the objections four independent auditors raised, and
+**papers somebody judged relevant, with what each one would have a strategy do
+differently**. You return a **revised version of the same question**.
 
 ### The one hard boundary
 
@@ -37,6 +38,38 @@ what the previous framing left ambiguous. You may not switch to a different
 mechanism because it looks more promising.
 
 A revision that changes the mechanism is rejected and the night is wasted.
+
+### Use the papers, or say why you did not
+
+You are given papers somebody judged relevant to this line of work, each with
+**what a strategy would do differently because of it** and **how it adapts to our
+data** already worked out.
+
+Those are material, not decoration. For each one, ask the question that matters:
+
+> **Is there an idea here that is usable on its own, or that could be ADDED to the
+> question I am revising?**
+
+A paper does not have to propose a whole strategy to be useful. It can supply:
+
+- a **feature or state** worth conditioning on;
+- a **mechanism** that explains something the evidence shows and the current
+  question does not account for;
+- a **condition** under which the effect is claimed to appear or vanish;
+- a **measurement** better than the one the question currently names.
+
+If you use one, **cite it by its arXiv id in the text**, so the record shows where
+the idea came from. If none of them offers anything you can add, say so in **one
+sentence naming the ids** — a silent omission and a considered rejection look
+identical in the file, and only one of them is honest.
+
+**Keep this to a few sentences either way.** The word limit below is firm and it
+is not negotiable against this section: a borrowed idea has to earn its space by
+displacing something, not by being appended.
+
+**Do not stretch.** Bolting a borrowed feature onto a question it does not belong
+in makes the question worse and costs a campaign. "I read these three and none of
+them bears on this" is a perfectly good answer, written down.
 
 ### Respond to the evidence, not to a score
 

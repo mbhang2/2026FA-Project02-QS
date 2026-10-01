@@ -71,7 +71,16 @@ Each hypothesis states what it was not asking. Those deferrals are the open
 questions, written down at the time, and a paper that speaks to one is worth more
 than a paper on a topic we have never touched.
 
-**3. It would change the question, not just confirm it.**
+**3. It is usable on its own, OR could be added to a question we already ask.**
+These are two different ways to be worth something and the second was missing.
+A paper that cannot carry a campaign by itself may still supply one part of a
+question already in flight: a state to condition on, a mechanism that explains a
+result we could not account for, a condition under which the effect should appear,
+a better measurement than the one we named. **Rank that as usable.** The test is
+whether a named, concrete piece of it could be bolted onto an existing question --
+not whether it could stand alone as a new one.
+
+**4. It would change the question, not just confirm it.**
 The best answer names a concrete edit to the next hypothesis: a condition to add, a
 horizon to name, a state to split on, a measurement to replace. A paper that would
 leave the next hypothesis identical is not worth a campaign.

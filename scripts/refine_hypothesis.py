@@ -66,7 +66,7 @@ MODEL = "deepseek-v4-pro"
 REFINE_MAX_TOKENS = 32_768
 MIN_WORDS = 350
 MAX_WORDS = 1_125
-MAX_LINT_REPAIRS = 3
+MAX_LINT_REPAIRS = 5
 MAX_FORMAT_RETRIES = 3
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,5}$")
 PAPER_CHARS = 6_000
@@ -92,6 +92,17 @@ def validation_readable(campaign: str) -> list[str]:
 # --------------------------------------------------------------------------- #
 # what the refiner is shown
 # --------------------------------------------------------------------------- #
+def _round(v, places: int = 2):
+    """Round a diagnostic for display, through dicts and lists."""
+    if isinstance(v, dict):
+        return {k: _round(x, places) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_round(x, places) for x in v]
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return v
+    return round(v, places)
+
+
 def evidence(campaign: str) -> dict:
     """What the strategy DID and what the auditors said. Never the gate's score.
 
@@ -127,7 +138,12 @@ def evidence(campaign: str) -> dict:
             "net_pnl_index_points": score.get("net_pnl"),
             "skew": score.get("skew"), "kurtosis": score.get("kurtosis"),
         },
-        "concentration": {k: diags.get(k) for k in
+        # **Rounded, so the numbers it sees are numbers it can quote.** The raw
+        # diagnostics carry full float precision (652.2132352941182), and a model
+        # that sensibly rounds one then fails the grounding check against the
+        # unrounded source. Fixing the check was half of it; not handing it
+        # fifteen significant figures of a P&L total is the other half.
+        "concentration": {k: _round(diags.get(k)) for k in
                           ("by_month", "by_hour_utc", "by_weekday",
                            "best_session_share", "avg_holding_period_ns")
                           if diags.get(k) is not None},
@@ -138,21 +154,64 @@ def evidence(campaign: str) -> dict:
     }
 
 
-def papers_for(limit: int = MAX_PAPERS) -> list[dict]:
-    """Survivors rated high on either axis, with a slice of body text."""
+def papers_for(parent_text: str = "", limit: int = MAX_PAPERS) -> list[dict]:
+    """Papers worth showing the refiner, best first, with the ranker's judgement.
+
+    Two things were wrong with the first version and both killed the impact.
+
+    **It chose globally.** `rows[:limit]` took the first three in registry order
+    among everything rated high on either axis -- no reference to the question
+    being refined. Three papers about evaluation protocol handed to a refiner
+    rewriting a market question.
+
+    **It shipped raw body text and nothing else.** 6,000 characters of a paper
+    with no framing. The ranker had already written `acts_on` (what a strategy
+    would do differently) and `adaptation` (how it maps to our data), and those
+    are the useful part; the body is for checking a claim, not for reading cold.
+
+    Ordering is by the campaign axis first, because that axis asks whether there
+    is something to act on, then by overlap with the question's own vocabulary.
+    """
     if not REGISTRY.exists():
         return []
+    rank = {"high": 0, "medium": 1, "low": 2, None: 3}
     rows = [v for v in json.loads(REGISTRY.read_text())["papers"].values()
             if v.get("feasibility") in ("direct", "adaptable")
-            and (v.get("relevance") == "high" or v.get("gate_relevance") == "high")]
+            and (v.get("relevance") in ("high", "medium")
+                 or v.get("gate_relevance") == "high")]
+
+    # Overlap with the question's own words -- crude on purpose. A paper about
+    # order flow handed to a question about order flow beats one about drawdown
+    # quantiles, and nothing here needs an embedding model to see that.
+    stop = {"the", "and", "that", "this", "with", "from", "what", "does", "for",
+            "are", "its", "not", "but", "has", "was", "which", "would", "than",
+            "paper", "data", "session", "sessions", "question", "strategy"}
+    want = {w for w in re.findall(r"[a-z]{4,}", parent_text.lower())
+            if w not in stop}
+
+    def overlap(v: dict) -> int:
+        text = " ".join(str(v.get(k) or "") for k in
+                        ("title", "relevance_reason", "acts_on", "adaptation",
+                         "speaks_to_deferral")).lower()
+        return -len(want & set(re.findall(r"[a-z]{4,}", text)))
+
+    rows.sort(key=lambda v: (rank[v.get("relevance")], overlap(v),
+                             rank[v.get("gate_relevance")]))
     out = []
     for v in rows[:limit]:
         body = ""
-        p = ROOT / "data" / "papers" / "text" / f"{v['id']}.txt"
-        if p.exists():
-            body = p.read_text()[:PAPER_CHARS]
+        f = ROOT / "data" / "papers" / "text" / f"{v['id']}.txt"
+        if f.exists():
+            body = f.read_text()[:PAPER_CHARS]
         out.append({"id": v["id"], "title": v.get("title"),
-                    "abstract": (v.get("abstract") or "")[:2_000], "body": body})
+                    "campaign_axis": v.get("relevance"),
+                    "gate_axis": v.get("gate_relevance"),
+                    # the ranker's own words: what to DO with this paper
+                    "acts_on": v.get("acts_on"),
+                    "adaptation": v.get("adaptation"),
+                    "speaks_to_deferral": v.get("speaks_to_deferral"),
+                    "abstract": (v.get("abstract") or "")[:1_500],
+                    "body": body})
     return out
 
 
@@ -176,11 +235,29 @@ def context(parent_text: str, ev: dict, papers: list[dict]) -> str:
         "\nYou are not told how the study scored this, because a question "
         "written to score well is not the same as a question that is true.\n")
     if papers:
-        parts.append("\n\n# Papers held as relevant\n")
+        parts.append(
+            "\n\n# Papers judged relevant, with what each one would have a "
+            "strategy do differently\n\nFor each: is there an idea here usable "
+            "on its own, or that could be ADDED to the question above? Cite the "
+            "arXiv id if you use one; say which you considered and rejected if "
+            "you do not.\n")
         for p in papers:
-            parts.append(f"\n## {p['id']} -- {p['title']}\n{p['abstract']}\n")
+            parts.append(f"\n## {p['id']} -- {p['title']}\n")
+            parts.append(f"rated: campaign axis {p['campaign_axis']}, "
+                         f"gate axis {p['gate_axis']}\n")
+            if p.get("speaks_to_deferral"):
+                parts.append(f"\n**Speaks to a question we set aside:** "
+                             f"{p['speaks_to_deferral']}\n")
+            if p.get("acts_on"):
+                parts.append(f"\n**What a strategy would do differently:** "
+                             f"{p['acts_on']}\n")
+            if p.get("adaptation"):
+                parts.append(f"\n**How it adapts to our data:** "
+                             f"{p['adaptation']}\n")
+            parts.append(f"\n{p['abstract']}\n")
             if p["body"]:
-                parts.append(f"\n{p['body']}\n")
+                parts.append(f"\n### full text (first {len(p['body']):,} "
+                             f"chars, for checking a claim)\n{p['body']}\n")
     return "".join(parts)
 
 
@@ -260,7 +337,7 @@ def main() -> int:
     parent = parent_path.read_text()
 
     ev = evidence(a.campaign)
-    papers = papers_for()
+    papers = papers_for(parent)
     user = context(parent, ev, papers)
     print(f"parent      {parent_path.relative_to(ROOT)}")
     print(f"evidence    {len(ev['auditors'])} auditor(s), "
@@ -293,6 +370,14 @@ def main() -> int:
         rather than a five-campaign session.
         """
         from audit.committee.llm import LLMUnavailable
+        import requests
+        # A network fault is the same kind of thing as a malformed reply from
+        # here: the endpoint did not give us a usable answer. Catching only
+        # LLMUnavailable let a ReadTimeout escape and kill a standalone run --
+        # the session driver retries the whole step, so this only showed up
+        # outside one.
+        retryable = (LLMUnavailable, requests.exceptions.Timeout,
+                     requests.exceptions.ConnectionError)
         last = None
         for i in range(MAX_FORMAT_RETRIES + 1):
             try:
@@ -303,9 +388,9 @@ def main() -> int:
                     "\"markdown\". Inside the markdown string every line break "
                     "must be written \\n and every tab \\t -- a real line "
                     "break inside a JSON string is invalid.\n"))
-            except LLMUnavailable as exc:
+            except retryable as exc:
                 last = exc
-                print(f"      reply was not usable JSON "
+                print(f"      no usable reply "
                       f"(attempt {i + 1}/{MAX_FORMAT_RETRIES + 1}): "
                       f"{str(exc)[:110]}", flush=True)
         raise last
@@ -331,7 +416,16 @@ def main() -> int:
         if fam:
             note.append(f"\n## It is no longer the same question\n- {fam}\n")
         if length:
-            note.append(f"\n## Length\n- {length}\n")
+            note.append(
+                f"\n## Length -- this is a hard gate, not a preference\n"
+                f"- {length}. Cut to **under {MAX_WORDS} words** and return the "
+                f"whole revision again.\n"
+                f"- Cut by DROPPING the least load-bearing material, not by "
+                f"compressing every sentence into something unreadable. The "
+                f"sections that must survive are the question itself, what the "
+                f"evidence showed, and what the revision therefore demands.\n"
+                f"- Anything you borrowed from a paper has to displace "
+                f"something, not be appended to it.\n")
         out = _ask("".join(note))
 
     md = str(out.get("markdown") or "")

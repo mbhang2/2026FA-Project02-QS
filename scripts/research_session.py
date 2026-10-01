@@ -244,6 +244,12 @@ def _main() -> int:
                     help="skip campaigns that already have a ledger")
     ap.add_argument("--dry-run", action="store_true",
                     help="print the plan and what would run; touch nothing")
+    ap.add_argument("--train-only", action="store_true",
+                    help="stop after phase 1. No validation, no L2, no holdout. "
+                         "For a measurement ABOUT the machinery rather than a "
+                         "search for a candidate: validation is one look per "
+                         "campaign and spending it to audit a process is the "
+                         "same mistake as opening the holdout to test plumbing.")
     ap.add_argument("--holdout-if-l2-passes", metavar="REASON", default=None,
                     help="arm the single look, BEFORE the session starts and so "
                          "before any validation number exists. Phase 4 then runs "
@@ -271,8 +277,14 @@ def _main() -> int:
         seed = ROOT / str(fam["seed"])
         if not seed.is_file():
             sys.exit(f"no seed hypothesis at {fam['seed']}")
+        # **`refine: false` is the control arm.** Every campaign runs the SAME
+        # question, so the family measures the run-to-run spread of best-of-N
+        # under a fixed question and a fixed proposer -- the number without which
+        # no sequence of per-campaign p values can be read at all (Task 72).
+        refines = fam.get("refine", True)
         entries = [{"name": f"{prefix}-{k + 1:02d}",
-                    "hypothesis": str(fam["seed"]) if k == 0 else None,
+                    "hypothesis": str(fam["seed"]) if (k == 0 or not refines)
+                                  else None,
                     "profile": fam.get("profile"), "n": fam.get("n"),
                     "model": fam.get("model"),
                     "min_exposed": fam.get("min_exposed")}
@@ -298,8 +310,16 @@ def _main() -> int:
         pass        # already a leader, or a platform without process groups
 
     print(f"session {session}: {len(entries)} campaign(s)"
-          + (f" -- a FAMILY refined from {fam['seed']}" if fam else ""))
-    if fam:
+          + ("" if not fam else
+             f" -- a FAMILY refined from {fam['seed']}"
+             if fam.get("refine", True) else
+             f" -- a CONTROL family, all on {fam['seed']}"))
+    if fam and not fam.get("refine", True):
+        print(f"  CONTROL ARM: all {len(entries)} campaigns run the SAME "
+              f"question.\n  This measures the run-to-run spread of best-of-N, "
+              f"which is what makes a\n  sequence of per-campaign results "
+              f"readable at all.")
+    elif fam:
         print(f"  M = {len(entries)} is declared; WHICH questions they ask is "
               f"decided as it goes.\n  Each refinement is machine-committed "
               f"under Amendment 11 and may not support a claim.")
@@ -314,7 +334,11 @@ def _main() -> int:
         print(f"  {c['name']:24} {mark:12} {shown}")
     if a.dry_run:
         print("\n  dry run: nothing was run")
-        print("  the L2 family would be: " + ", ".join(names))
+        if a.train_only:
+            print("  --train-only: phases 2-4 would be skipped, so there is no "
+                  "L2 family and\n  no campaign would be validated.")
+        else:
+            print("  the L2 family would be: " + ", ".join(names))
         return 0
 
     SESSIONS.mkdir(parents=True, exist_ok=True)
@@ -330,6 +354,9 @@ def _main() -> int:
 
     # ---- phase 1: every campaign, through report, with NO validation --------
     print("\nphase 1: campaigns (register, run, nulls, report)\n")
+    if a.train_only and a.holdout_if_l2_passes:
+        sys.exit("--train-only and --holdout-if-l2-passes contradict each other: "
+                 "one says touch no closed split, the other arms the single look.")
     if a.holdout_if_l2_passes:
         print("  the holdout look is ARMED for this session: it will be taken if "
               "L2 PASSES\n  and holdout.py's own refusals all clear. Armed now, "
@@ -384,7 +411,7 @@ def _main() -> int:
                 # artefact is readable for the campaign it is given; during
                 # phase 1 none exists, because validation runs at the stop. The
                 # ordering enforces §4 rather than a promise to be careful.
-                if fam and name != entries[-1]["name"]:
+                if fam and refines and name != entries[-1]["name"]:
                     nxt = next(e for e in entries
                                if e["name"] != name
                                and e.get("hypothesis") is None)
@@ -454,6 +481,21 @@ def _main() -> int:
         "nothing of theirs to drop." if stopped_by_cue else
         "every campaign in the plan, written before the session ran.")
     names = completed if stopped_by_cue else names
+
+    if a.train_only:
+        log["train_only"] = True
+        log["validation"] = ("NOT RUN -- --train-only. This session is a "
+                             "measurement about the machinery, not a search for "
+                             "a candidate, and validation is one look per "
+                             "campaign.")
+        log["finished"] = dt.datetime.now(dt.timezone.utc).isoformat(
+            timespec="seconds")
+        record.write_text(json.dumps(log, indent=2) + "\n")
+        print(f"\n  --train-only: phases 2-4 SKIPPED. {len(completed)} "
+              f"campaign(s) ran and are reported;\n  none is validated, so every "
+              f"one of their looks is still available.\n  wrote "
+              f"{record.relative_to(ROOT)}")
+        return 0
 
     if aborted_by_failure:
         log["aborted_by_failure"] = True

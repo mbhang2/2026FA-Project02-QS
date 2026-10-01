@@ -17,7 +17,46 @@ not average them.
 
 ---
 
-## Axis 1 — `relevance`: the three things that make a paper worth a campaign
+## Axis 1 — `relevance`
+
+### First, separate the paper's ideas from its apparatus
+
+**Almost every paper in this corpus proposes a method we cannot run** —
+reinforcement learning, a deep network, a cross-sectional panel of 500 equities,
+an options surface. Judging those papers by whether their *method* is runnable
+here rates the whole corpus `low`, which is what happened: **0 of 284 papers rated
+high on this axis**, and one of the zeros had already produced six campaigns by
+hand.
+
+So before anything else, ask what survives when the apparatus is removed:
+
+- the **features or state** it computes from market data;
+- the **mechanism** it claims drives returns;
+- the **condition** under which it claims the effect appears.
+
+If any of those is computable from one instrument's trades and bars, **the paper
+has an actionable claim even though its method is out of scope.** Judge that part,
+and say in your reason which part you judged.
+
+**A worked example, from this corpus, and it is why this section exists.**
+`2609.13825v1` (ViperQ) trains two PPO agents against a prospect-theory reward.
+Reinforcement learning is deferred here and we cannot tune a shaped reward, so the
+paper's *method* is out of scope and nothing about that is arguable. But its
+Auction Market Theory features — volume point of control, value area, cumulative
+delta, tape velocity — are computable from trades on a single future. A human read
+this paper, wrote *"the feature set is borrowed; the method is not"*, and ran six
+campaigns on the features with a plain forward-return target. **Ranked on its
+method it is `low`. Ranked on what is separable it is at least `medium`.** The
+second reading is the right one, and the first one is the mistake this section
+exists to stop.
+
+**Separability is not a licence to rate everything high.** If what survives the
+removal is a model, an estimator, a risk measure or a stylised fact, criterion 1
+below still applies and the answer is still `low`. The question is whether
+something a strategy could *act on* survives — not whether anything at all
+survives.
+
+### Then, the three things that make a paper worth a campaign
 
 **1. There is a claim a strategy could act on.**
 Stage 1 passes papers that are *feasible*, which is not the same as *testable*. A
@@ -43,9 +82,17 @@ leave the next hypothesis identical is not worth a campaign.
   known answer; if a paper argues a falsified family works for a reason we did not
   test, say that explicitly rather than ranking it high by default.
 - **A question we just answered.** Repeating a closed question is not a new campaign.
-- **Requiring machinery we do not have**, even if stage 1 judged the data adaptable —
-  a paper needing a fitted regime model, a trained network or a calibration we cannot
-  perform is a project, not a campaign.
+- **Requiring machinery we do not have, *and* nothing separable left once it is
+  removed.** Both halves are required. A paper needing a fitted regime model, a
+  trained network or a calibration we cannot perform is a project rather than a
+  campaign **only when its claim is inseparable from that apparatus** — when the
+  edge *is* the trained network. If its features, its mechanism or its
+  conditioning survive the removal, rank on those instead and say so.
+
+  This clause used to have only its first half, and it is what rated ViperQ
+  `low`: every word of the recorded reason — *"the adapted claim still requires
+  training machinery (PPO agent, prospect-theory reward tuning) we do not have"* —
+  was true about the method and irrelevant to the features.
 
 ### What does NOT raise relevance
 

@@ -48,6 +48,11 @@ sys.path.insert(0, str(ROOT))
 REGISTRY = ROOT / "data" / "papers" / "registry.json"
 RAW = ROOT / "data" / "papers" / "raw"
 PROMPT = ROOT / "config" / "prompts" / "paper-rank.md"
+
+
+def _prompt_digest() -> str:
+    import hashlib
+    return hashlib.sha256(PROMPT.read_bytes()).hexdigest()[:16]
 HYPOTHESES = ROOT / "config" / "hypotheses"
 CAMPAIGNS = ROOT / "runs" / "campaigns"
 DATASET_DOC = ROOT / "docs" / "datasets" / "nq-es-qqq.md"
@@ -222,10 +227,27 @@ def main() -> int:
     feasible = [r for r in reg["papers"].values()
                 if r.get("feasibility") in ("direct", "adaptable")]
     if a.rerank:
-        # Everything feasible that has not yet been scored on axis 2.
-        todo = [r for r in feasible if r.get("gate_relevance") is None][:a.limit]
+        # Everything feasible that has not been scored on axis 2, OR was scored
+        # under a different criterion.
+        #
+        # **A changed prompt is new evidence; the same prompt twice is not.** The
+        # screen draws that line explicitly and the ranker did not: `--rerank`
+        # only ever picked up papers missing axis 2, so after the axis-1
+        # criterion was rewritten there was no way to re-rank the corpus under
+        # it. Keyed on the digest rather than a flag, so it cannot be used to
+        # re-roll a label under the criterion that produced it.
+        here = _prompt_digest()
+        todo = [r for r in feasible
+                if r.get("gate_relevance") is None
+                or r.get("rank_prompt_digest") != here][:a.limit]
         if not todo:
-            print("every feasible paper already has a gate_relevance"); return 0
+            print(f"every feasible paper is ranked under the current criterion "
+                  f"({here}). Change config/prompts/paper-rank.md to re-rank; "
+                  f"re-asking the same prompt is a re-roll."); return 0
+        stale = [r["id"] for r in todo if r.get("gate_relevance") is not None]
+        if stale:
+            print(f"  {len(stale)} paper(s) were ranked under an older criterion "
+                  f"and are being re-ranked under {here}\n")
     else:
         todo = [r for r in feasible if r.get("relevance") is None][:a.limit]
         if not todo:
@@ -271,6 +293,13 @@ def main() -> int:
                 # overwriting it would erase that.
                 row["relevance_first_pass"] = was
             row.update(got)
+            # **Which criterion produced this label.** A ranking is only
+            # interpretable against the prompt that made it, and on 2026-10-01
+            # the axis-1 criterion changed in a way that moved labels: it used to
+            # rate a paper by whether its METHOD was runnable here, which rated
+            # the whole corpus low. Recording the digest makes "ranked under the
+            # old criterion" a queryable state instead of a thing to remember.
+            row["rank_prompt_digest"] = _prompt_digest()
     print(f"\n  campaign axis {counts}")
     print(f"  gate axis     {gcounts}")
     moved = [p for p, g, e in results if not e and g

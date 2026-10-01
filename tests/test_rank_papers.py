@@ -8,7 +8,9 @@ gap the design originally had.
 
 from __future__ import annotations
 
+import collections
 import importlib.util
+import json
 import pathlib
 
 import pytest
@@ -299,3 +301,90 @@ def test_the_flag_is_optional_and_its_absence_is_reported():
     assert '"--asking"' in src
     assert 'NO current question' in src
     assert "default=None" in src
+
+
+# --------------------------------------------------------------------------- #
+# the axis-1 criterion: separate the ideas from the apparatus
+# --------------------------------------------------------------------------- #
+PROMPT_TEXT = (REPO_ROOT / "config" / "prompts" / "paper-rank.md").read_text()
+PROMPT_FLAT = " ".join(PROMPT_TEXT.split())
+
+
+def test_the_criterion_asks_what_survives_when_the_method_is_removed():
+    """0 of 284 papers rated high on axis 1, and one of the zeros had already
+    produced six campaigns by hand. The criterion rated papers by whether their
+    METHOD was runnable here, which rates this whole corpus low."""
+    assert "separate the paper's ideas from its apparatus" in PROMPT_FLAT
+    for part in ("features or state", "mechanism", "condition"):
+        assert part in PROMPT_FLAT, part
+    assert "0 of 284 papers rated high on this axis" in PROMPT_FLAT
+
+
+def test_the_machinery_clause_requires_both_halves():
+    """"Requires machinery we do not have" used to be enough on its own. It is
+    true of almost every paper here and says nothing about whether a separable
+    part is testable."""
+    assert "nothing separable left once it is" in PROMPT_FLAT
+    assert "Both halves are required" in PROMPT_FLAT
+    assert "the edge *is* the trained network" in PROMPT_FLAT
+
+
+def test_separability_is_not_a_licence_to_rate_everything_high():
+    """The opposite failure. A criterion that passes everything is as useless as
+    one that passes nothing, and this is the sentence that stops it."""
+    assert "not a licence to rate everything high" in PROMPT_FLAT
+    assert "whether something a strategy could *act on* survives" in PROMPT_FLAT
+
+
+def test_viperq_is_the_worked_example_and_is_named_as_such():
+    """Using one paper as a test case risks fitting the criterion to it, so the
+    prompt says out loud that it is a teaching example rather than hiding it."""
+    assert "2609.13825v1" in PROMPT_TEXT
+    assert "the feature set is borrowed; the method is not" in PROMPT_FLAT
+    assert "the first one is the mistake this section exists to stop" in PROMPT_FLAT
+
+
+def test_the_criterion_change_actually_moved_labels_and_not_all_of_them():
+    """Both directions, measured on the real registry. ViperQ had to rise, and
+    the corpus must NOT have become uniformly high."""
+    reg = json.loads((REPO_ROOT / "data" / "papers" / "registry.json").read_text())
+    rows = [v for v in reg["papers"].values()
+            if v.get("feasibility") in ("direct", "adaptable")]
+    labels = collections.Counter(v.get("relevance") for v in rows)
+    assert labels["low"] >= len(rows) // 2, (
+        f"most survivors must still be low or the criterion is vacuous: {labels}")
+    assert labels["high"] + labels["medium"] >= 1, (
+        f"nothing rates above low, which is the state this fix was for: {labels}")
+    viperq = [v for v in rows if v["id"] == "2609.13825v1"]
+    assert viperq, "ViperQ must be a survivor; Task 71 flipped it on full text"
+    assert viperq[0]["relevance"] in ("medium", "high"), (
+        "the paper that produced six campaigns by hand must not rate low")
+    assert viperq[0].get("relevance_first_pass") == "low", (
+        "and the record must keep what it used to say")
+
+
+def test_a_paper_is_ranked_against_a_recorded_criterion():
+    """A label is only interpretable against the prompt that made it, and a
+    changed prompt is new evidence where the same prompt twice is a re-roll."""
+    src = (REPO_ROOT / "scripts" / "rank_papers.py").read_text()
+    assert "rank_prompt_digest" in src
+    assert "_prompt_digest()" in src
+    flat = " ".join(src.split())
+    assert "A changed prompt is new evidence" in flat
+    assert "re-roll" in flat
+    reg = json.loads((REPO_ROOT / "data" / "papers" / "registry.json").read_text())
+    rows = reg["papers"].values()
+    # Scoped to survivors on purpose. Five papers carry a label from before this
+    # field existed and were later demoted to infeasible, so they are never
+    # re-ranked and the digest cannot be recovered -- backfilling a guess would
+    # be worse than the gap, because it would claim to know which criterion
+    # produced a label nobody can check.
+    survivors = [v for v in rows if v.get("feasibility") in ("direct", "adaptable")]
+    assert survivors
+    assert all(v.get("rank_prompt_digest") for v in survivors), (
+        "every survivor must record which criterion produced its label")
+    orphans = [v["id"] for v in rows
+               if v.get("relevance") is not None
+               and not v.get("rank_prompt_digest")]
+    assert all(reg["papers"][o]["feasibility"] == "infeasible" for o in orphans), (
+        f"a survivor is carrying an unattributable label: {orphans}")

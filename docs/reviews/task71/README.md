@@ -219,3 +219,84 @@ not a re-screen, it is a re-roll"* — and the selection did not implement it. S
 the first pass of this measurement covered 21 papers rather than 40. Fixed:
 papers already judged on full text are skipped unless `--force-rescreen` is passed,
 which is named a re-roll in its own help text.
+
+---
+
+## 12. The criterion, fixed — and the first campaign-axis `high`
+
+The clause that did the damage, quoted in full as it stood:
+
+> **Requiring machinery we do not have**, even if stage 1 judged the data
+> adaptable — a paper needing a fitted regime model, a trained network or a
+> calibration we cannot perform is a project, not a campaign.
+
+Every word true of ViperQ **as a whole**, and the prompt never asked whether a
+*part* of a paper is separable from its apparatus. Almost every paper in this
+corpus proposes a method we cannot run, so judging by method rates the corpus
+`low` — which is exactly what it did, 284 times.
+
+Two changes to `config/prompts/paper-rank.md`:
+
+1. A new first step on axis 1: **separate the ideas from the apparatus.** Ask
+   what survives when the method is removed — the features or state it computes,
+   the mechanism it claims, the condition under which it claims it — and judge
+   that. ViperQ is the worked example, **named as a teaching example out loud**,
+   because using one paper as a test case risks fitting the criterion to it and
+   hiding that would be worse than doing it.
+2. The machinery clause now requires **both halves**: machinery we lack *and*
+   nothing separable once it is removed. A paper is a project rather than a
+   campaign only when the edge **is** the trained network.
+
+With the guard against the opposite failure stated in the prompt itself:
+*separability is not a licence to rate everything high* — if what survives is a
+model, an estimator or a stylised fact, criterion 1 still makes it `low`.
+
+### The result, both directions
+
+```
+campaign axis   before {low: 25}
+                after  {low: 21, medium: 3, high: 1}
+```
+
+**21 of 25 stayed low, so the criterion is not vacuous**, and four labels moved:
+
+| paper | now | why it moved |
+|---|---|---|
+| 2607.20093v1 — *Retail Trader's Ruin* | **high** | its three-gate acceptance framework is separable from the signal families it tests |
+| 2605.11423v3 — VVG classifier, MNQ | medium | a day-classifier usable as a conditioning variable, on our instrument |
+| 2609.06085v1 — explainable deep learning | medium | lagged signed volume as a saturating impact mechanism, separable from the Shapley apparatus |
+| **2609.13825v1 — ViperQ** | **medium** | the test case. "The AMT feature set is separable from the PPO apparatus" |
+
+ViperQ's new reason is sharper than the one I would have written, and it is why
+it is `medium` rather than `high`:
+
+> "the paper proposes no mechanism that would change how a strategy *acts* — it
+> is a feature engineering contribution, not a claim about when or why those
+> features predict returns."
+
+That is a better judgement than the human's, which simply took the features.
+
+### The first high is a paper about the gate
+
+`2607.20093v1`, *Retail Trader's Ruin: An Anatomy of Popular Signal Failure*,
+rates **high on both axes** and carries a concrete `protocol_edit`:
+
+> "(1) statistical gate uses hierarchical Benjamini-Yekutieli correction for
+> multiplicity rather than Bonferroni; (2) economic gate requires net return
+> after transaction costs to exceed a pre-registered threshold (not just
+> positive); (3) survival under leverage..."
+
+Which is this project's own deliverable, arriving through the retrieval pipeline,
+on the first run of a criterion that can see it. Whether to adopt any of it is a
+separate question and a human one — gate (2) in particular is a threshold, and
+this project does not fit thresholds to make a curve look better.
+
+### What is still not fixed
+
+**Impact remains zero.** No refined hypothesis has cited a paper yet, and the
+loop has not run since the criterion changed. A criterion that can rate a paper
+`high` is a precondition for the retrieval side mattering, not evidence that it
+does. The next session is what tests that.
+
+The 221 unfetched bodies are also still unfetched. Section 10's order stands, and
+step 1 of it is now done.

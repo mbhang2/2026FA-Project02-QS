@@ -106,7 +106,7 @@ def test_the_real_documents_current_statuses():
     signed, which is the point at which somebody should be reading this list."""
     mod = _mod()
     expected = {1: True, 2: True, 3: True, 4: False, 5: False,
-                6: False, 7: False, 8: True, 9: True, 10: True, 11: True}
+                6: False, 7: True, 8: True, 9: True, 10: True, 11: True}
     actual = {n: ok for n, ok, _ in mod.all_amendments()}
     assert actual == expected, actual
 

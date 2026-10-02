@@ -790,11 +790,18 @@ def main() -> int:
                     help="Amendment 6 exposure floor for this campaign, in (0, 1]; "
                          "--stage register only, frozen into campaign.json. Default "
                          "is campaign.min_exposed_fraction in config/run.yaml.")
-    ap.add_argument("--probe", action="store_true", default=False,
+    ap.add_argument("--probe", action=argparse.BooleanOptionalAction,
+                    default=None,
                     help="--stage register only. Amendment 7: run each proposal "
                          "once on a synthetic profile before its trial and let "
                          "the agent repair a crash or a no-op edit, bounded. "
-                         "Frozen into campaign.json; later stages read it there.")
+                         "Frozen into campaign.json; later stages read it there. "
+                         "Omit to take campaign.probe_before_trial from "
+                         "config/run.yaml; --no-probe turns it off for one "
+                         "campaign. It was `store_true, default=False` until "
+                         "Amendment 7 was signed, which meant the flag silently "
+                         "overrode the config to False on every registration and "
+                         "the config default could never take effect.")
     ap.add_argument("--seed", type=pathlib.Path, default=None,
                     help="a strategy file to start trial 0 from; --stage register "
                          "only. Copied to champion.py and recorded by digest. "

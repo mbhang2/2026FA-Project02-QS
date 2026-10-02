@@ -341,10 +341,26 @@ def test_adding_the_field_did_not_move_any_existing_records_digest():
                           probe_before_trial=False).digest() != a.digest()
 
 
-def test_the_config_default_is_off_and_registration_freezes_the_flag():
+def test_the_config_default_is_on_since_amendment_7_and_the_flag_is_tri_state():
+    """Signed 2026-10-01, and the default flipped with it.
+
+    The `false` default existed so no campaign could run an unsigned mechanism
+    by accident; once signed the opposite risk takes over, which is forgetting
+    the flag on a campaign that should have had it.
+
+    And the flag itself was broken. `--probe` was `store_true, default=False`
+    while registration applied it whenever it was "not None" -- which it never
+    was -- so the flag silently overrode the config to False on EVERY
+    registration and the config default could never take effect. A tri-state
+    now: omit for the config, `--probe`/`--no-probe` to decide per campaign.
+    """
     cfg = yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text())
-    assert cfg["campaign"]["probe_before_trial"] is False
+    assert cfg["campaign"]["probe_before_trial"] is True
     source = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert "action=argparse.BooleanOptionalAction" in source
+    assert "default=None" in source
+    assert "if probe is not None:" in source, (
+        "registration must fall through to the config when no flag was given")
     assert 'probe_before_trial=bool(cc.get("probe_before_trial"))' in source
     assert 'agent_cfg["probe_before_trial"]' in source
     # the run stage reads the record, never the config

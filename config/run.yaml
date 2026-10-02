@@ -362,7 +362,7 @@ campaign:
   #
   # Off by default until the amendment is signed off; `--probe` at
   # registration turns it on for one campaign and freezes that in the record.
-  probe_before_trial: false
+  probe_before_trial: true
 
   # TWO AXES, not one. `max_of_n` is a correction; `round_turn_mc` is a null
   # source. See pre-registration.md 3a -- including which combinations are

@@ -1100,11 +1100,24 @@ infinitely good, which is why the metric is defined over the whole calendar.
 
 ## Amendment 7 — 2026-09-25 — a synthetic probe before each trial
 
-**Status: DRAFTED, NOT YET IN FORCE.** Implemented behind a per-campaign flag
-(`probe_before_trial`, default `false` in `config/run.yaml`) so that no campaign
-can run it by accident; a campaign turns it on with `--probe` at registration
-and the record freezes that. It comes into force for a campaign only when Michael
-registers one with the flag, and this section is what he is agreeing to.
+**Status: IN FORCE from 2026-10-01, signed off by Michael.** The default in
+`config/run.yaml` is now `true`: every campaign registered from here runs the
+probe unless it passes `--no-probe`, and the record freezes whichever it was.
+
+**Why the default flipped on signing, and what it was protecting against.** The
+`false` default existed so that no campaign could run an unsigned mechanism by
+accident. Once signed, that reason is gone and the opposite risk takes over --
+forgetting the flag on a campaign that should have had it. Provenance is
+unaffected either way, because `campaign.json` records the value that was in
+force rather than the default that produced it.
+
+**A defect found while signing.** `--probe` was `store_true, default=False`, and
+registration applied the flag whenever it was "not None" -- which it never was.
+So the flag silently overrode the config to `false` on every registration and
+the config default could never have taken effect at all. It is now a tri-state:
+omit it for the config, `--probe` or `--no-probe` to decide per campaign.
+
+**What signing is agreed to is everything below**, unchanged from the draft.
 
 ### What was found
 

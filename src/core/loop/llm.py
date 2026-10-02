@@ -100,6 +100,27 @@ def template_digest(path: Path = TEMPLATE_PATH) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+# A transport failure is retried this many times before the proposal is blocked.
+MAX_TRANSPORT_RETRIES = 3
+TRANSPORT_BACKOFF_S = (15, 60, 180)
+
+
+class LLMTransportError(RuntimeError):
+    """The endpoint never answered, so there is no proposal to judge.
+
+    **The distinction this class exists to draw.** A failed call and a bad
+    proposal are different events, and conflating them cost this project 24
+    trials. A model that returns something we dislike must NEVER be re-asked --
+    that is a re-roll, and `max_of_n` is corrected over the proposals we made,
+    not the ones we kept. But a `ReadTimeout` produced nothing at all: retrying
+    it does not re-roll a proposal, it obtains the one that was always going to
+    happen, and N is unchanged either way.
+
+    Raised only for transport and for HTTP statuses that mean "ask again"
+    (429, 5xx). Never for a parsed reply, never for a substituted model.
+    """
+
+
 class LLMError(RuntimeError):
     """The call did not produce a usable answer. Never retried."""
 
@@ -171,7 +192,7 @@ class LLMAgent:
     max_tokens: int = 4096
     show_history: bool = True
     max_repair_attempts: int = 2
-    request_timeout_s: float = 240.0
+    request_timeout_s: float = 600.0
     proposal_wall_clock_s: float = 600.0
     history_full_sources: int = 2
     seed: int | None = None
@@ -629,7 +650,36 @@ class LLMAgent:
         return {"requested": self.model, "served": served}
 
     def _one(self, prompt: str, kind: str) -> str:
-        """One call. One. A failure here is a blocked proposal, never a retry."""
+        """One proposal, retried only when the endpoint never answered.
+
+        **What is and is not a retry here.** A reply we dislike is final: asking
+        again would be a re-roll, and the correction is over the proposals we
+        made rather than the ones we kept. A transport failure is not a reply at
+        all -- see `LLMTransportError` -- so retrying it changes nothing about N
+        and recovers a trial that would otherwise be spent on a placeholder that
+        raises at module level.
+
+        Measured 2026-10-01 before this existed: **24 of 503 trials** project-wide
+        were consumed by `agent_blocked: call_failed`, every one a gateway
+        `ReadTimeout`, and three of them inside one 20-trial campaign. Each
+        attempt is recorded in the call log, so the record shows the retries
+        rather than hiding them.
+        """
+        last: Exception | None = None
+        for attempt in range(MAX_TRANSPORT_RETRIES + 1):
+            try:
+                return self._one_attempt(prompt, kind)
+            except LLMTransportError as exc:
+                last = exc
+                if attempt == MAX_TRANSPORT_RETRIES:
+                    break
+                wait = TRANSPORT_BACKOFF_S[min(attempt,
+                                               len(TRANSPORT_BACKOFF_S) - 1)]
+                time.sleep(wait)
+        raise LLMError(f"{last}") from None
+
+    def _one_attempt(self, prompt: str, kind: str) -> str:
+        """One call. One. Its failure is for `_one` to classify."""
         import requests
 
         system, user = prompt.split("## USER", 1)
@@ -655,12 +705,18 @@ class LLMAgent:
         except Exception as exc:
             self._pending.append(Call(kind, False, time.monotonic() - t0,
                                       error=f"{type(exc).__name__}: {exc}"[:300]))
-            raise LLMError(f"{type(exc).__name__}: {exc}") from None
+            # requests raised: timeout, DNS, refused, reset. No reply exists.
+            raise LLMTransportError(f"{type(exc).__name__}: {exc}") from None
         latency = time.monotonic() - t0
 
         if resp.status_code != 200:
             self._pending.append(Call(kind, False, latency,
                                       error=f"HTTP {resp.status_code}"))
+            # 429 and 5xx mean "ask again"; 400 and 401 mean "you are wrong",
+            # and re-asking those just burns the budget on the same mistake.
+            if resp.status_code == 429 or 500 <= resp.status_code < 600:
+                raise LLMTransportError(
+                    f"HTTP {resp.status_code}: {resp.text[:200]}")
             raise LLMError(f"HTTP {resp.status_code}: {resp.text[:200]}")
         try:
             payload = resp.json()

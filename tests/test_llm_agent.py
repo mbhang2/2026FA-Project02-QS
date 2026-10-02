@@ -365,3 +365,107 @@ def test_the_proposer_budget_clears_a_reasoning_models_appetite():
     assert m, "the budget must be a named constant, not a literal at two call sites"
     assert int(m.group(1).replace("_", "")) >= 32_768
     assert "max_tokens=16_384" not in src
+
+
+# --------------------------------------------------------------------------- #
+# a failed CALL and a bad PROPOSAL are different events
+# --------------------------------------------------------------------------- #
+def _attempts(agent, monkeypatch, outcomes):
+    """Drive `_one` with a scripted sequence of `_one_attempt` outcomes."""
+    seen = []
+
+    def fake(prompt, kind):
+        seen.append(kind)
+        out = outcomes[len(seen) - 1]
+        if isinstance(out, Exception):
+            raise out
+        return out
+
+    monkeypatch.setattr(agent, "_one_attempt", fake)
+    monkeypatch.setattr(llm.time, "sleep", lambda _s: None)
+    return seen
+
+
+def test_a_transport_failure_is_retried_because_it_produced_no_proposal(
+        monkeypatch):
+    """24 of 503 trials project-wide were spent on `agent_blocked: call_failed`,
+    every one a gateway ReadTimeout. Retrying a call that never answered does not
+    re-roll a proposal -- there was nothing to re-roll -- and N is unchanged."""
+    agent = _agent()
+    seen = _attempts(agent, monkeypatch, [
+        llm.LLMTransportError("ReadTimeout"),
+        llm.LLMTransportError("ReadTimeout"),
+        "```python\nclass Strategy:\n    pass\n```",
+    ])
+    out = agent._one("## SYSTEM\ns\n## USER\nu", "propose")
+    assert "class Strategy" in out
+    assert len(seen) == 3, "it must have retried twice and then succeeded"
+
+
+def test_a_reply_we_dislike_is_never_retried(monkeypatch):
+    """The load-bearing half. Asking again for a proposal that came back is a
+    re-roll, and `max_of_n` corrects over the proposals we MADE, not the ones we
+    kept. Only transport is retryable."""
+    agent = _agent()
+    seen = _attempts(agent, monkeypatch, [llm.LLMError("HTTP 400: bad request")])
+    with pytest.raises(llm.LLMError):
+        agent._one("## SYSTEM\ns\n## USER\nu", "propose")
+    assert len(seen) == 1, "a content failure must be final"
+
+
+def test_a_substituted_model_is_not_retried_either(monkeypatch):
+    """It is a harness failure, so it must propagate past the retry loop
+    untouched rather than being re-asked until the gateway behaves."""
+    agent = _agent()
+    seen = _attempts(agent, monkeypatch,
+                     [llm.ModelSubstituted("asked x, got y")])
+    with pytest.raises(llm.ModelSubstituted):
+        agent._one("## SYSTEM\ns\n## USER\nu", "propose")
+    assert len(seen) == 1
+
+
+def test_transport_retries_are_bounded_and_then_block(monkeypatch):
+    agent = _agent()
+    seen = _attempts(agent, monkeypatch,
+                     [llm.LLMTransportError("ReadTimeout")] * 9)
+    with pytest.raises(llm.LLMError):
+        agent._one("## SYSTEM\ns\n## USER\nu", "propose")
+    assert len(seen) == llm.MAX_TRANSPORT_RETRIES + 1
+
+
+def test_transport_is_not_a_subclass_of_the_error_that_blocks_a_proposal():
+    """`propose` catches LLMError and turns it into a blocked trial. If
+    LLMTransportError were a subclass, the retry loop would never see it."""
+    assert not issubclass(llm.LLMTransportError, llm.LLMError)
+    assert not issubclass(llm.LLMError, llm.LLMTransportError)
+
+
+def test_which_http_statuses_mean_ask_again():
+    """429 and 5xx mean ask again; 400 and 401 mean you are wrong, and re-asking
+    those burns the budget on the same mistake."""
+    src = (REPO_ROOT / "src" / "core" / "loop" / "llm.py").read_text()
+    assert "if resp.status_code == 429 or 500 <= resp.status_code < 600:" in src
+    flat = " ".join(src.split())
+    assert "mean \"ask again\"" in flat or 'mean "ask again"' in flat
+
+
+def test_the_request_timeout_clears_the_measured_latency_tail():
+    """Measured over 506 real calls: median 22s, p90 77s, p99 198s, max 241s --
+    against a 240s limit, so the failures were sitting exactly at the ceiling
+    rather than scattered."""
+    import inspect
+    default = inspect.signature(llm.LLMAgent).parameters["request_timeout_s"].default
+    assert default >= 600.0, (
+        f"the default timeout is {default}s; the measured p99 is 198s and the "
+        "max 241s, and at 240s the failures were at the ceiling")
+
+
+def test_every_attempt_is_recorded_rather_than_only_the_last():
+    """A retried call must leave its failures in the log, or the record shows a
+    clean single call where three happened."""
+    src = (REPO_ROOT / "src" / "core" / "loop" / "llm.py").read_text()
+    flat = " ".join(src.split())
+    assert "Each attempt is recorded in the call log" in flat
+    # the Call append happens inside _one_attempt, which the loop calls per try
+    i = src.index("def _one_attempt")
+    assert "self._pending.append" in src[i:i + 3000]

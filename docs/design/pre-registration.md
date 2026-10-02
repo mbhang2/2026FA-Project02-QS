@@ -816,12 +816,18 @@ make it one.
 
 ## Amendment 4 — 2026-09-22 — what a trial is when the strategy is fitted
 
-**Status: REGISTERED, NOT YET IN FORCE.** In force from the first campaign whose
-profile carries `fit_sessions > 0`; nothing before that commit is affected. No
-such campaign has been registered, because no ML strategy has been written -- not
-because anything blocks one. The remote boundary this originally waited on was
-closed on 2026-09-22 (`docs/design/ml-strategies.md` §11) and `nq-train-fitted`
-has since been run against real NQ.
+**Status: IN FORCE from 2026-09-24**, when `nq-ml-01` was registered on
+`nq-train-fitted` (`fit_sessions = 284`) at 13:54 UTC. Six campaigns have run
+under it: `nq-ml-01` through `nq-ml-06`, every one fitted.
+
+> **Correction of the record, 2026-10-01.** This line read "REGISTERED, NOT YET
+> IN FORCE ... No such campaign has been registered, because no ML strategy has
+> been written." That stopped being true the same day it was written, and stayed
+> wrong for a week while six fitted campaigns ran. Nothing about the amendment's
+> substance changed and nothing it governs was done differently -- it takes force
+> when a fitted campaign is registered, which is exactly what happened. Only this
+> status line was stale, and a reader consulting it to understand `nq-ml-02`
+> would have concluded the fitted-trial rules did not apply to it.
 
 **This amendment needs no separate registration step.** It takes force when a
 fitted campaign is registered, and `campaign.json` freezes `fit_sessions` before
@@ -908,11 +914,18 @@ campaign's own N and does not tax any other campaign.
 
 ## Amendment 5 — 2026-09-24 — report the score with and without the idle charge
 
-**Status: REGISTERED, NOT YET IMPLEMENTED.** Written while `nq-ml-02` is running
-and to be implemented after it finishes -- nothing in `src/core` changes under a
-live campaign. It applies to `nq-ml-02`'s validation stage and to every
-validation and holdout look after it, because it changes what is *reported* and
-not what is *decided*.
+**Status: IN FORCE from 2026-09-24**, commit `8058f19` ("Amendment 5
+implemented: primary_uncharged beside primary"). `run.py` writes
+`score.primary_uncharged` on every scored run; **204 of the 791 scored rows in
+the ledger carry it**, those being every row scored since.
+
+> **Correction of the record, 2026-10-01.** This line read "REGISTERED, NOT YET
+> IMPLEMENTED", and the commit that implemented it landed the same day, saying so
+> in its own subject. The status line was never updated. As written it claimed
+> something false about the code for a week.
+
+It applies to `nq-ml-02`'s validation stage and to every validation and holdout
+look after it, because it changes what is *reported* and not what is *decided*.
 
 ### What is settled
 
@@ -990,10 +1003,20 @@ Realised trading frequency against the hypothesis's stated expectation, as a
 
 ## Amendment 6 — 2026-09-24 — an exposure floor as an eligibility condition
 
-**Status: REGISTERED, NOT YET IMPLEMENTED.** Written while `nq-ml-02` runs and
-to be implemented after it. **It does not apply to `nq-ml-02`**, which was
-registered under the rules as they stood; in force from the next registered
-campaign. The idle charge (Amendment 3) stays exactly as it is.
+**Status: IN FORCE from 2026-09-25**, when `nq-ml-03` became the first campaign
+to freeze `min_exposed_fraction` (0.70) into its record, at 06:49 UTC. Implemented
+by `670fedd` on 2026-09-24 and corrected by `c9f67ac` on 2026-09-25 (the exposed
+count reached the row that failed but not the row that passed). **Thirteen
+campaigns have the floor frozen, and it has rejected 60 trials** -- 60 of the 67
+rejections in the whole ledger cite this amendment by name.
+
+**It does not apply to `nq-ml-02`**, which was registered under the rules as they
+stood, exactly as the draft said. The idle charge (Amendment 3) stays as it is.
+
+> **Correction of the record, 2026-10-01.** This line read "REGISTERED, NOT YET
+> IMPLEMENTED" while the floor was the single largest consumer of trials in the
+> project. A reader consulting it would have concluded that no campaign had been
+> screened on exposure; thirteen had.
 
 ### What was found
 

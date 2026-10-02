@@ -105,8 +105,11 @@ def test_the_real_documents_current_statuses():
     changing what a gate does. Update it deliberately when an amendment is
     signed, which is the point at which somebody should be reading this list."""
     mod = _mod()
-    expected = {1: True, 2: True, 3: True, 4: False, 5: False,
-                6: False, 7: True, 8: True, 9: True, 10: True, 11: True}
+    # 4, 5 and 6 were corrected on 2026-10-01: all three said NOT IN FORCE while
+    # the code enforced them. See the guard below, which now checks each claim
+    # against the thing that would make it true instead of trusting a snapshot.
+    expected = {1: True, 2: True, 3: True, 4: True, 5: True,
+                6: True, 7: True, 8: True, 9: True, 10: True, 11: True}
     actual = {n: ok for n, ok, _ in mod.all_amendments()}
     assert actual == expected, actual
 
@@ -133,3 +136,58 @@ def test_amendment_9_is_in_force_and_the_holdout_is_still_shut():
 def test_the_document_is_the_switch_and_says_so():
     assert "The document is the switch" in FLAT
     assert "boolean in code" in FLAT or "flag" in FLAT
+
+
+# --------------------------------------------------------------------------- #
+# the document must not claim something the code contradicts
+# --------------------------------------------------------------------------- #
+def test_an_amendment_the_code_enforces_must_not_say_it_is_not_in_force():
+    """Three status lines were false for a week, and A5 and A6 were wrong within
+    hours of being written -- both were implemented the same day by commits whose
+    subjects say "Amendment N implemented", and neither updated the status.
+
+    `prereg.py` is load-bearing now: holdout.py gates the single look on
+    Amendment 9, l2_gate.py picks its statistic from Amendment 10,
+    refine_hypothesis.py gates a machine commit on Amendment 11. A guard keyed to
+    a stale line is a guard keyed to a lie, so each claim below is checked against
+    the thing that would make it true.
+    """
+    import json
+    mod = _mod()
+    root = REPO_ROOT
+    failures = []
+
+    # A4 -- in force once a campaign has run on a profile with fit_sessions > 0
+    import yaml
+    profiles = yaml.safe_load((root / "config" / "run.yaml").read_text())["profiles"]
+    fitted = {k for k, v in profiles.items() if (v.get("fit_sessions") or 0) > 0}
+    ran_fitted = [p.parent.name
+                  for p in (root / "runs" / "campaigns").glob("*/campaign.json")
+                  if json.loads(p.read_text()).get("record", {}).get("profile")
+                  in fitted]
+    if ran_fitted and not mod.in_force(4):
+        failures.append(f"Amendment 4 is not IN FORCE but {len(ran_fitted)} "
+                        f"fitted campaign(s) have run: {sorted(ran_fitted)[:3]}")
+
+    # A5 -- in force once run.py writes primary_uncharged
+    if "primary_uncharged" in (root / "run.py").read_text() \
+            and not mod.in_force(5):
+        failures.append("Amendment 5 is not IN FORCE but run.py writes "
+                        "score.primary_uncharged")
+
+    # A6 -- in force once the scorer enforces the floor AND a campaign froze one
+    enforces = "min_exposed_fraction is not None" in \
+        (root / "src" / "core" / "scoring" / "scorer.py").read_text()
+    froze = [p.parent.name
+             for p in (root / "runs" / "campaigns").glob("*/campaign.json")
+             if json.loads(p.read_text()).get("record", {}).get(
+                 "min_exposed_fraction")]
+    if enforces and froze and not mod.in_force(6):
+        failures.append(f"Amendment 6 is not IN FORCE but the scorer enforces the "
+                        f"floor and {len(froze)} campaign(s) froze one")
+
+    assert not failures, (
+        "the pre-registration claims something the code contradicts:\n  "
+        + "\n  ".join(failures)
+        + "\n\nFix the status line, with the date it actually took force and the "
+          "evidence. Do not change what the amendment says.")

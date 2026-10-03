@@ -1,0 +1,44 @@
+# Session 04 -- opening range breakout, one family refined across three campaigns.
+#
+#   .venv/bin/python scripts/research_session.py \
+#       --plan config/sessions/session-04-opening-range.yaml
+#
+# Michael asked for this on 2026-10-03: 3 campaigns, N = 20, full RAG, on the
+# question "after the regular-hours open, wait 30 minutes, then decide from that
+# range". The seed hypothesis is his question; the two after it are refined from
+# the campaign before, machine-committed under Amendment 11.
+#
+# 60 trials. Global N 1,025 -> ~1,085.
+#
+# FULL RAG MEANS, CONCRETELY:
+#   - the refiner is given papers chosen against THIS question, not globally,
+#     each with the ranker's own acts_on and adaptation
+#   - and the open questions our own auditors raised, which it may answer
+#   - it must cite an arXiv id if it uses a paper, or name the ids it considered
+#     and rejected
+#   - it is NOT shown the gate's p, the gate's verdict, or any score
+#   - it refuses to run at all if a validation artefact is readable
+#
+# The corpus it draws on is the one swept yesterday: 282 of 284 papers judged on
+# full text, 36 survivors, 5 rated above `low` on the campaign axis.
+#
+# WHAT THIS RUN CANNOT TELL US, said here rather than discovered later. The
+# control arm measured the gate's p spanning 0.077 -> 0.952 across three runs of
+# ONE unchanged question at N = 20. So the three p values this session produces
+# are not comparable to each other and a trend across them is not evidence of
+# anything. What the session CAN produce: three campaigns' worth of train
+# results on a new question, three refinements exercising the whole RAG chain,
+# and whatever the auditors object to.
+#
+# The holdout is NOT armed.
+
+session: session-04-opening-range
+
+family:
+  seed: config/hypotheses/opening-range-breakout-30m.md
+  iterations: 3
+  refine: true
+  n: 20
+  model: deepseek-v4-pro
+  profile: nq-train
+  prefix: nq-s04

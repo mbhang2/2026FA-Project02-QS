@@ -264,9 +264,29 @@ def test_the_ranker_can_be_told_what_we_are_asking_now():
     assert h.read_text().strip()[:80] in with_it, "the question's own text"
     assert len(with_it) > len(without)
     # the history is still there: the present does not replace the past
-    for section in ("already asked, and closed", "Set aside deliberately",
+    for section in ("already asked, and closed", "was NOT asking",
                     "Falsified on this data"):
         assert section in with_it, section
+
+
+def test_the_exclusion_list_is_not_labelled_as_the_open_questions():
+    """It used to be, and criterion 2 told the ranker a paper speaking to one was
+    worth MORE. The lines are mostly permanent data constraints ("no depth, no
+    bid-ask") and standing decisions ("Not reinforcement learning, section 8
+    defers it"), so the criterion rewarded papers for proposing exactly what we
+    had ruled out -- and did: 2605.11423v3 was rated medium partly for
+    "directly addresses the deferred question 'Not a regime model'"."""
+    blk = rp.context_block()
+    assert "the open questions" not in blk, (
+        "an exclusion list must not be labelled as the open questions")
+    assert "Read these as exclusions" in blk
+    prompt = (REPO_ROOT / "config" / "prompts" / "paper-rank.md").read_text()
+    flat = " ".join(prompt.split())
+    assert "NOT the same as something we ruled out" in flat
+    for kind in ("Hard constraints on the data", "Deferred by choice",
+                 "Genuinely unresolved"):
+        assert kind in prompt, kind
+    assert "Speaking to an exclusion is not relevance" in flat
 
 
 def test_the_current_question_goes_through_the_lint():

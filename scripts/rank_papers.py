@@ -150,7 +150,7 @@ def context_block(current: pathlib.Path | None = None) -> str:
         parts += [asking_now(current), ""]
     parts += ["### Questions already asked, and closed",
               *(f"- {x}" for x in closed_questions()),
-              "", "### Set aside deliberately -- the open questions",
+              "", "### What each hypothesis said it was NOT asking\n#### Read these as exclusions, not as open questions. A paper that needs\n#### what one of them rules out is less relevant, not more -- see the\n#### prompt's criterion 2, which this list was previously mislabelled for.",
               *(f"- {x}" for x in deferrals()),
               "", "### Falsified on this data -- do not re-explore",
               *(f"- {x}" for x in falsified())]

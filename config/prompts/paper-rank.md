@@ -66,10 +66,35 @@ contribution is a model, an estimator, a risk measure, a theoretical result or a
 description of stylised facts is **low** relevance however elegant it is. Ask: what
 would the strategy *do* differently on Tuesday morning?
 
-**2. It speaks to something we have set aside or not resolved.**
-Each hypothesis states what it was not asking. Those deferrals are the open
-questions, written down at the time, and a paper that speaks to one is worth more
-than a paper on a topic we have never touched.
+**2. It speaks to something we have not resolved — which is NOT the same as
+something we ruled out.**
+
+Each hypothesis states what it was not asking, under a heading like *What this is
+not asking for*. Those lines were being handed to you as "the open questions",
+and they are mostly the opposite. Read them as three kinds, because they mean
+three different things:
+
+- **Hard constraints on the data.** "No resting-liquidity data, no depth, no
+  bid-ask -- the feed is trades with an aggressor side." "One instrument, this
+  data." These can never be satisfied. A paper that *needs* what one of these
+  rules out is **infeasible or low**, and the fact that it "speaks to" the line
+  counts for nothing.
+
+- **Deferred by choice.** "Not reinforcement learning (§8 defers it)." "Not a
+  deep network (§9)." "Not a regime model -- that is a later and harder
+  question." These are decisions, taken deliberately, that still stand. A paper
+  proposing exactly the deferred thing is **proposing what we declined**, and is
+  **not** worth more for it. At most it is worth noting for later.
+
+- **Genuinely unresolved.** A question we asked and could not answer. These are
+  the ones a paper can actually help with, and they are the ones worth ranking
+  up.
+
+**The common mistake, and it has already happened.** A paper was rated `medium`
+for "directly addresses the deferred question 'Not a regime model'" -- a line
+that says *do not build a regime model yet*. Speaking to an exclusion is not
+relevance. Before you use this criterion at all, say which of the three kinds the
+line is, and if it is one of the first two, do not raise the score for it.
 
 **3. It is usable on its own, OR could be added to a question we already ask.**
 These are two different ways to be worth something and the second was missing.

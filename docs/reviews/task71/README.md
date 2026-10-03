@@ -300,3 +300,77 @@ does. The next session is what tests that.
 
 The 221 unfetched bodies are also still unfetched. Section 10's order stands, and
 step 1 of it is now done.
+
+---
+
+## 13. The full sweep — the pilot held
+
+Step 2 of section 10, run 2026-10-02 after the criterion was fixed. Bodies
+fetched for every remaining rejected paper, then re-screened on full text.
+
+```
+bodies on disk        67  ->  282 of 284   (201 html, 11 pdf, 3 latex, 2 unavailable)
+judged on full text   48  ->  281
+survivors             25  ->  36
+```
+
+**14 papers flipped `infeasible` → feasible across the whole corpus**, a
+false-negative rate of **14/259 = 5.4%** against the pilot's 7.5% with
+CI [2.6%, 19.9%]. The pilot predicted the sweep, which is the result a pilot is
+supposed to produce.
+
+### The campaign axis, before and after a day's work
+
+```
+this morning   25 survivors   {low: 25}                   zero above low
+now            36 survivors   {low: 31, medium: 4, high: 1}
+```
+
+| | | |
+|---|---|---|
+| **high** | 2607.20093v1 | *Retail Trader's Ruin* — a three-gate acceptance framework |
+| medium | 2605.11423v3 | VVG classifier, regime identification on MNQ |
+| medium | **2608.00885v1** | **Optimal Trading of Microstructure Mean Reversion** |
+| medium | 2609.06085v1 | lagged signed volume as a saturating impact mechanism |
+| medium | 2609.13825v1 | ViperQ — the paper the screen originally threw away |
+
+`2608.00885v1` is the one worth noting: a **signal paper recovered from the
+reject pile** by the sweep and then rated usable by the fixed criterion. Both
+halves of today's work were needed to surface it — the screen would have kept it
+buried, and the old ranker would have rated it `low` for needing Hasbrouck or
+Kalman filtering it does not have. Its separable claim is a band around an
+estimated latent efficient price, which is testable here.
+
+## 14. And a second inversion in the ranking criterion
+
+Found while looking at why relevance was still mostly `low`.
+
+Criterion 2 said: *"Each hypothesis states what it was not asking. Those
+deferrals are **the open questions**, written down at the time, and a paper that
+speaks to one is worth more."* The ranker was handed that list under the heading
+**"Set aside deliberately -- the open questions"**.
+
+They are not open questions. Read them:
+
+- *"No resting-liquidity data, no depth, no bid-ask."* — a permanent constraint
+  on the feed.
+- *"One instrument, this data."* — the same.
+- *"Not reinforcement learning (§8 defers it)."* — a decision that stands.
+- *"Not a regime model -- that is a later and harder question."* — likewise.
+
+**So the criterion rewarded papers for proposing exactly what we had ruled out.**
+It had already happened: `2605.11423v3` was rated `medium` partly for *"directly
+addresses the deferred question 'Not a regime model'"* — a line that says do not
+build a regime model yet.
+
+Criterion 2 now splits them into three kinds — hard constraints on the data,
+deferred by choice, and genuinely unresolved — and says only the third raises a
+score. The context block is relabelled from "the open questions" to "what each
+hypothesis said it was NOT asking", with the instruction to read them as
+exclusions.
+
+**What is still missing is the third kind.** Nothing in the pipeline records a
+question we asked and could not answer. The committee's `CANNOT_TELL` verdicts
+and the robustness seat's unexplained concentration are exactly that, and they
+reach no one. That is the next thing to build on the retrieval side, and it is
+the only one of the three kinds a paper can actually help with.

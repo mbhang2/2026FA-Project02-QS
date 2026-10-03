@@ -97,6 +97,13 @@ MODEL = "gemini-2.5-pro"
 FULLTEXT_CAP = 120_000
 
 MIN_WORDS = 350
+# **1,125, and deliberately NOT the refiner's 1,500.** A test states the reason:
+# `auction-market-features.md` is 1,422 words and predates this budget, and "the
+# point of a ceiling is that the next one is smaller, not that the biggest
+# existing file defines it." That argument is about turning a paper into a NEW
+# question, which is this script's job. `refine_hypothesis.py` does a different
+# job -- a revision carries its parent's question plus what the evidence showed
+# plus what it took from the literature -- and carries 1,500 for that reason.
 MAX_WORDS = 1_125
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,5}$")

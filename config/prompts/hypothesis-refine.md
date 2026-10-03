@@ -63,9 +63,13 @@ the idea came from. If none of them offers anything you can add, say so in **one
 sentence naming the ids** — a silent omission and a considered rejection look
 identical in the file, and only one of them is honest.
 
-**Keep this to a few sentences either way.** The word limit below is firm and it
-is not negotiable against this section: a borrowed idea has to earn its space by
-displacing something, not by being appended.
+**Keep this to a few sentences either way, and make room rather than adding it.**
+A borrowed idea earns its space by **displacing** something weaker, never by being
+appended. The word limit is generous enough that you could grow this file every
+iteration instead of sharpening it -- and a question that accretes for three
+iterations is vaguer at the end than it was at the start, which is the opposite of
+refinement. If the revision is longer than its parent, say in one sentence what
+the extra length bought.
 
 **Do not stretch.** Bolting a borrowed feature onto a question it does not belong
 in makes the question worse and costs a campaign. "I read these three and none of

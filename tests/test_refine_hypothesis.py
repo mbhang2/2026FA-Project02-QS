@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -196,3 +197,38 @@ def test_a_malformed_reply_is_retried_with_the_requirement_restated():
     assert "MAX_FORMAT_RETRIES" in SRC
     assert "reply was not usable JSON" in SRC
     assert "rather than a five-campaign session" in FLAT
+
+
+def test_the_refiner_allows_more_words_than_the_distiller_and_says_why():
+    """The two ceilings differ on purpose. `distil_paper` turns a paper into a NEW
+    question and its ceiling exists so the next file is smaller than the worst
+    legacy one (1,422 words). A revision carries its parent's question, what the
+    evidence showed, and what it took from the literature -- at 1,125 a 920-word
+    parent left ~200 words of headroom, and that is what ended session-04 after
+    one campaign of three."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "distil_paper", REPO_ROOT / "scripts" / "distil_paper.py")
+    dp = importlib.util.module_from_spec(spec); spec.loader.exec_module(dp)
+    mod = _mod()
+    assert mod.MAX_WORDS == 1_500
+    assert dp.MAX_WORDS == 1_125
+    assert mod.MAX_WORDS > dp.MAX_WORDS
+    bare = " ".join(re.sub(r"^\s*#\s?", "", SRC, flags=re.M).split()).lower()
+    assert "a revision is a different operation" in bare
+    assert "asymmetry is deliberate" in bare
+
+
+def test_a_repeated_length_miss_escalates_to_a_different_model():
+    """Five rounds of "too long" is what ended session-04. The repair now names
+    the exact deficit and the longest sections, and a model that keeps missing is
+    replaced rather than asked again."""
+    assert "SWITCH_MODEL_AFTER" in SRC and "FALLBACK_MODEL" in SRC
+    assert "words over** and must cut at least that" in SRC
+    assert "Your longest sections are" in SRC
+    assert "is not about to comply on the sixth" in FLAT
+    assert mod_max_repairs() >= 8
+
+
+def mod_max_repairs():
+    return _mod().MAX_LINT_REPAIRS

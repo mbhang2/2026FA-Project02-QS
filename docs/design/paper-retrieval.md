@@ -263,7 +263,8 @@ It must pass `src.core.loop.hypothesis.lint` and it must be **small**: measured 
 2.6%. `Test1.md` would be ~15,300 tokens, about a third of the prompt and roughly
 725,000 extra tokens over a 50-trial campaign.
 
-**Budget the distilled hypothesis at 800-1,500 tokens.** This is the same problem
+**Budget the distilled hypothesis at 800-2,000 tokens** (350-1,500 words; the
+ceiling was 1,500 tokens until 2026-10-03, see section 6). This is the same problem
 Gowtam's `spec_digest.py` solves on his branch, arrived at from the other end: he
 compresses because his loop re-embeds the paper per step, we compress because the
 hypothesis is the pre-registered question and a question should be short enough to
@@ -369,12 +370,30 @@ would become false. It needs an amendment, not a quiet edit.
 
 ## 6. Token budget — not about cost
 
-The distilled hypothesis is budgeted at **800-1,500 tokens** even though tokens may
+The distilled hypothesis is budgeted at **800-2,000 tokens** even though tokens may
 be effectively free (the gateway serves several models; local and Gemini capacity
 has been mentioned). Cost was never the binding constraint. Three others are:
 
 - **Latency.** The proposal call is part of a ~5 min/trial budget, 50 times a
   campaign. Prompt size is wall clock.
+**The ceiling moved from 1,500 to 2,000 tokens on 2026-10-03**, and the reason is
+that neither constraint below binds there. The proposal prompt has grown to
+167,489 characters (~41,900 tokens), so the arithmetic is now:
+
+| | words | tokens | share of the prompt |
+|---|---|---|---|
+| the worked example below | 1,120 | 1,493 | 3.6% |
+| old ceiling | 1,125 | 1,500 | 3.6% |
+| **new ceiling** | **1,500** | **2,000** | **4.8%** |
+| the pathology this budget exists to prevent | 11,475 | 15,300 | 36.5% |
+
+A refinement has to carry its parent's question *and* what the evidence showed
+*and* what it took from the literature, and at 1,125 words a 920-word seed left
+roughly 200 words of headroom -- which is what actually ended `session-04` after
+one campaign. The constraint the ceiling was really enforcing is that a revision
+**displace** rather than accrete, and `config/prompts/hypothesis-refine.md` now
+carries that as an instruction instead of smuggling it in as a length limit.
+
 - **Context dilution.** Measured on `nq-orderflow-02`: ~32,000 prompt tokens, of
   which the hypothesis is ~840 (2.6%) and `docs/agent/strategy-api.md` is ~11,700.
   A 15,300-token hypothesis would be a third of the prompt and would crowd the

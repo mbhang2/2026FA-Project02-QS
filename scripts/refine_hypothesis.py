@@ -65,8 +65,41 @@ REGISTRY = ROOT / "data" / "papers" / "registry.json"
 MODEL = "deepseek-v4-pro"
 REFINE_MAX_TOKENS = 32_768
 MIN_WORDS = 350
-MAX_WORDS = 1_125
-MAX_LINT_REPAIRS = 5
+# **1,500 words, raised from 1,125 on 2026-10-03.** The old number was 1,500
+# *tokens* expressed in words, which was the top of `paper-retrieval.md`'s stated
+# budget. Michael asked why not 1,500 words, and the budget's own reasons do not
+# forbid it: that document says in as many words that cost "was never the binding
+# constraint" and names latency and context dilution instead. Measured against the
+# real proposal prompt, now 167,489 characters:
+#
+#     the doc's worked example (nq-orderflow-02)   1,120 words   3.6% of prompt
+#     old cap                                      1,125 words   3.6%
+#     new cap                                      1,500 words   4.8%
+#     the pathology the budget was written against 11,475 words 36.5%
+#
+# So this moves the hypothesis from 3.6% to 4.8% of the prompt, nowhere near the
+# third-of-the-prompt case the budget exists to prevent, and the latency of 650
+# extra input tokens is lost in a 10-80 s call.
+#
+# What the cap was really doing was forcing a refinement to DISPLACE rather than
+# accrete, and a looser cap weakens that. The prompt carries that pressure
+# explicitly instead, because it is the honest place for it.
+#
+# **`distil_paper.py` keeps 1,125 and that asymmetry is deliberate.** A test
+# there argues a ceiling exists so the NEXT question is smaller than the
+# worst legacy file (1,422 words), which is right for turning a paper into a
+# new question. A revision is a different operation: it carries its parent,
+# the evidence, and what it took from the literature, and at 1,125 a 920-word
+# parent left ~200 words of headroom -- which is what ended session-04 after
+# one campaign of three.
+MAX_WORDS = 1_500
+MAX_LINT_REPAIRS = 8
+# **After this many failed repairs, ask a different model.** A model that has
+# missed the same gate five times is not about to comply on the sixth, and
+# session-04 died with one campaign of three because nothing escalated. The
+# fallback is a different family from the proposer on purpose.
+SWITCH_MODEL_AFTER = 5
+FALLBACK_MODEL = "gemini-2.5-pro"
 MAX_FORMAT_RETRIES = 3
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,5}$")
 PAPER_CHARS = 6_000
@@ -397,6 +430,13 @@ def main() -> int:
 
     out = _ask()
     for attempt in range(MAX_LINT_REPAIRS):
+        # Escalate to a different model rather than asking the same one again.
+        if attempt == SWITCH_MODEL_AFTER and a.model != FALLBACK_MODEL:
+            print(f"      {a.model} has missed a gate {attempt} times; asking "
+                  f"{FALLBACK_MODEL} instead", flush=True)
+            served = preflight(FALLBACK_MODEL)
+            client = Client(model=FALLBACK_MODEL, temperature=0.7,
+                            max_tokens=REFINE_MAX_TOKENS)
         md = out.get("markdown") or ""
         leaks = lint_findings(md) if md else ["empty"]
         loose = grounding_findings(md, sources) if md else []
@@ -416,16 +456,29 @@ def main() -> int:
         if fam:
             note.append(f"\n## It is no longer the same question\n- {fam}\n")
         if length:
+            over = words - MAX_WORDS
+            # Name the sections and their sizes. "You are 207 words over, and
+            # these are your three longest sections" is actionable; "too long"
+            # is not, and five rounds of "too long" is what ended session-04.
+            import re as _re
+            secs = [(h.strip(), len(b.split())) for h, b in
+                    _re.findall(r"^(#{2,3} .*)$([^#]*)", md, _re.M)]
+            secs.sort(key=lambda x: -x[1])
             note.append(
-                f"\n## Length -- this is a hard gate, not a preference\n"
-                f"- {length}. Cut to **under {MAX_WORDS} words** and return the "
-                f"whole revision again.\n"
-                f"- Cut by DROPPING the least load-bearing material, not by "
-                f"compressing every sentence into something unreadable. The "
-                f"sections that must survive are the question itself, what the "
-                f"evidence showed, and what the revision therefore demands.\n"
-                f"- Anything you borrowed from a paper has to displace "
-                f"something, not be appended to it.\n")
+                f"\n## Length -- a hard gate, and you have now missed it "
+                f"{attempt + 1} time(s)\n"
+                f"- You wrote **{words} words**. The ceiling is **{MAX_WORDS}**. "
+                f"You are **{over} words over** and must cut at least that "
+                f"much.\n"
+                f"- Your longest sections are: "
+                + "; ".join(f"**{h}** ({n} words)" for h, n in secs[:4]) + ".\n"
+                f"- **Cut whole sentences and whole bullets**, do not compress "
+                f"every sentence into something unreadable. What must survive is "
+                f"the question itself, what the evidence showed, and what the "
+                f"revision therefore demands.\n"
+                f"- The parent was {len(parent.split())} words. A revision does "
+                f"not have to be longer than its parent, and if yours is, the "
+                f"extra length has to be buying something.\n")
         out = _ask("".join(note))
 
     md = str(out.get("markdown") or "")

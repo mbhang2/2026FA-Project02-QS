@@ -64,7 +64,16 @@ REGISTRY = ROOT / "data" / "papers" / "registry.json"
 RAW = ROOT / "data" / "papers" / "raw"
 PROMPT = ROOT / "config" / "prompts" / "paper-distil.md"
 HYPOTHESES = ROOT / "config" / "hypotheses"
-MODEL = "claude-haiku-4-5"
+# **gemini-2.5-pro, not claude-haiku-4-5.** Measured 2026-10-03 against the
+# gateway: every Claude model except haiku is 403 FORBIDDEN, and haiku itself is
+# substituted to gemini-3.1-pro-preview above ~157k characters. So haiku was the
+# weakest authorised model, doing a judgement task.
+#
+# gemini-2.5-pro is chosen over deepseek-v4-pro deliberately: deepseek writes the
+# strategies, and the model that judges a paper should not be the model that
+# writes the code. Different family, authorised, 39s on a 167k prompt -- and the
+# prompts here are a fraction of that.
+MODEL = "gemini-2.5-pro"
 
 # The budget from the design, in words rather than tokens because a word count is
 # what a human can check. The design's figure is **800-1,500 tokens**

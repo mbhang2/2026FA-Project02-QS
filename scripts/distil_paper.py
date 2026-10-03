@@ -73,7 +73,11 @@ HYPOTHESES = ROOT / "config" / "hypotheses"
 # strategies, and the model that judges a paper should not be the model that
 # writes the code. Different family, authorised, 39s on a 167k prompt -- and the
 # prompts here are a fraction of that.
-MODEL = "gemini-2.5-pro"
+# **mimo-v2.6-pro.** One call turns one paper into one question, so the 738 s
+# this model costs per call is paid once -- unlike the screen and the ranker,
+# which run over 200+ papers and stay on gemini-2.5-pro (mimo would be ~44 h to
+# screen the corpus).
+MODEL = "mimo-v2.6-pro"
 
 # The budget from the design, in words rather than tokens because a word count is
 # what a human can check. The design's figure is **800-1,500 tokens**

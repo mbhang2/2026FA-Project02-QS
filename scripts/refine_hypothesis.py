@@ -62,7 +62,17 @@ HYPOTHESES = ROOT / "config" / "hypotheses"
 PROMPT = ROOT / "config" / "prompts" / "hypothesis-refine.md"
 REGISTRY = ROOT / "data" / "papers" / "registry.json"
 
-MODEL = "deepseek-v4-pro"
+# **mimo-v2.6-pro: the smartest model we are allowed, where one call does the
+# thinking.** Measured 2026-10-03: 738 s per call on a cache miss, which is
+# ruinous for the proposer (20 calls a campaign, 5.4 h instead of 1.4 h) and
+# cheap here, because a session refines two or three times. Allocation by call
+# count, not by smartness alone.
+#
+# It is also CACHED: an identical prompt returns byte-identical output in 0.3 s
+# ignoring temperature. Harmless here -- every repair attempt appends to the
+# prompt, so each is a fresh key -- but it is why the sub-second entries in
+# docs/setup/MODEL-ACCESS.md are marked suspect.
+MODEL = "mimo-v2.6-pro"
 REFINE_MAX_TOKENS = 32_768
 MIN_WORDS = 350
 # **1,500 words, raised from 1,125 on 2026-10-03.** The old number was 1,500
@@ -98,7 +108,7 @@ MAX_LINT_REPAIRS = 8
 # missed the same gate five times is not about to comply on the sixth, and
 # session-04 died with one campaign of three because nothing escalated. The
 # fallback is a different family from the proposer on purpose.
-SWITCH_MODEL_AFTER = 5
+SWITCH_MODEL_AFTER = 3
 FALLBACK_MODEL = "gemini-2.5-pro"
 MAX_FORMAT_RETRIES = 3
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,5}$")

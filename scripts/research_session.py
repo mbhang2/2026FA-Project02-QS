@@ -415,11 +415,23 @@ def _main() -> int:
                     nxt = next(e for e in entries
                                if e["name"] != name
                                and e.get("hypothesis") is None)
+                    # **Do NOT pass the campaign's model.** This used to send
+                    # `c["model"]` -- the PROPOSER's model -- so the refiner ran
+                    # on whatever wrote the strategies, and `refine_hypothesis`'s
+                    # own choice could never take effect inside a session. Same
+                    # shape as the committee defect in `nq_campaign.py`, where
+                    # the auditors inherit the proposer's model too.
+                    #
+                    # The refiner picks its own (mimo-v2.6-pro: one call does the
+                    # thinking, so 738 s is affordable where 20 calls a campaign
+                    # would not be). `refine_model:` in the plan overrides it.
+                    refine_argv = [PY, "scripts/refine_hypothesis.py",
+                                   "--campaign", name,
+                                   "--parent", str(cur_hypothesis), "--commit"]
+                    if fam.get("refine_model"):
+                        refine_argv += ["--model", str(fam["refine_model"])]
                     code, out = _retrying(
-                        [PY, "scripts/refine_hypothesis.py",
-                         "--campaign", name, "--parent", str(cur_hypothesis),
-                         "--model", str(c.get("model") or "deepseek-v4-pro"),
-                         "--commit"],
+                        refine_argv,
                         label=f"{name} refine -> next question",
                         retries=MAX_STAGE_RETRIES)
                     written = [ln.split("wrote ", 1)[1].split("  ")[0].strip()

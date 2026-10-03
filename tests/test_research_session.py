@@ -400,9 +400,12 @@ def test_an_infrastructure_failure_does_not_spend_validation_looks():
 def test_the_refinement_retries_like_every_other_stage():
     """It was left out of the retry helper, and one timeout cost a session."""
     assert "_retrying(" in SRC
-    i = SRC.index("scripts/refine_hypothesis.py")
-    assert "_retrying(" in SRC[max(0, i - 400):i]
-    assert "retries=MAX_STAGE_RETRIES" in SRC[i - 400:i + 600]
+    # The refine call is built as `refine_argv` and then handed to `_retrying`,
+    # so assert on the pairing rather than on their distance apart.
+    i = SRC.index("refine_argv = [PY")
+    block = SRC[i:i + 1200]
+    assert "_retrying(" in block and "refine_argv" in block
+    assert "retries=MAX_STAGE_RETRIES" in block
     assert "ReadTimeout" in SRC and "ConnectionError" in SRC
 
 
@@ -477,3 +480,19 @@ def test_the_task72_plans_are_identical_except_for_refine():
     assert a.pop("refine") is True and b.pop("refine") is False
     assert a.pop("prefix") != b.pop("prefix")
     assert a == b, f"the arms differ in more than `refine`: {a} vs {b}"
+
+
+def test_the_refiner_keeps_its_own_model_rather_than_the_proposers():
+    """The driver used to pass the campaign's model to the refiner, so
+    `refine_hypothesis`'s own choice could never take effect inside a session --
+    the refiner silently ran on whatever wrote the strategies.
+
+    It is the same shape as the committee defect: `nq_campaign.py` passes
+    `(record.agent_config).get("model")` into `review()`, so the auditors inherit
+    the proposer's model too. Judgement should not default to the model being
+    judged."""
+    assert 'refine_argv = [PY, "scripts/refine_hypothesis.py"' in SRC
+    assert '"--model", str(c.get("model")' not in SRC, (
+        "the campaign's model must not reach the refiner")
+    assert 'if fam.get("refine_model"):' in SRC, "but a plan may override it"
+    assert "Do NOT pass the campaign's model" in SRC

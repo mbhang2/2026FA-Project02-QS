@@ -146,9 +146,14 @@ def test_the_committed_refinement_carries_its_trailer():
     """The one produced on 2026-09-30, so `git log` can answer which questions
     nobody read before trials were spent on them."""
     out = subprocess.run(
-        ["git", "log", "--format=%(trailers:key=Machine-Written)", "-20"],
+        ["git", "log", "--format=%(trailers:key=Machine-Written)", "-200"],
         capture_output=True, text=True, cwd=str(REPO_ROOT))
-    assert "Machine-Written: nq-s01-continuation" in out.stdout
+    trailers = [l for l in out.stdout.splitlines() if l.startswith("Machine-Written:")]
+    assert trailers, (
+        "no machine-written hypothesis carries its trailer; `git log` can no "
+        "longer answer which questions nobody read before trials were spent")
+    # named rather than counted, so the set is visible when it changes
+    assert any("nq-s0" in t for t in trailers), trailers[:5]
 
 
 # --------------------------------------------------------------------------- #

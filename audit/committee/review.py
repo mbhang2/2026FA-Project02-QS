@@ -64,10 +64,24 @@ class CommitteeVerdict:
     model: str = ""
     model_served: str = ""
     prompt_digests: dict = field(default_factory=dict)
+    usage: tuple = ()                  # one entry per call, for the record
 
     @property
     def vetoed_by(self) -> tuple[str, ...]:
         return tuple(a.axis for a in self.auditors if a.verdict == "VETO")
+
+    @property
+    def seats_failed(self) -> tuple[str, ...]:
+        """Seats whose auditor never ran, by axis.
+
+        **A seat that failed is recorded as a VETO with its failure as the
+        reason**, which is the right refusal -- no verdict is not no veto -- and
+        is invisible in every summary. 8 of 56 seats across the project are in
+        this state and nothing said so, so a campaign judged by three auditors
+        read exactly like one judged by four.
+        """
+        return tuple(a.axis for a in self.auditors
+                     if any("did not run" in str(r) for r in (a.reasons or ())))
 
     def as_dict(self) -> dict:
         return {
@@ -82,6 +96,19 @@ class CommitteeVerdict:
                 "given. Reading that as approval is a caller's policy -- "
                 "pre-registration.md 6a -- and its error rate is unmeasured."),
             "auditors": [asdict(a) for a in self.auditors],
+            # How many auditors actually ran. Stated rather than left to be
+            # inferred from parsing reasons for "did not run".
+            "seats_total": len(self.auditors),
+            "seats_ran": len(self.auditors) - len(self.seats_failed),
+            "seats_failed": list(self.seats_failed),
+            "incomplete": bool(self.seats_failed),
+            "incomplete_note": (
+                "One or more auditors never ran, so this campaign was judged by "
+                "fewer seats than the committee has. Their failure is recorded "
+                "as a VETO because no verdict is not no veto, but the reading "
+                "'the committee looked at this' is weaker than it appears."
+                if self.seats_failed else ""),
+            "usage": list(self.usage),
             "model": self.model,
             "model_served": self.model_served,
             "prompt_digests": self.prompt_digests,
@@ -275,4 +302,5 @@ def review(summary: dict, *, source: str | None, model: str,
     else:
         overall = "PASS"
     return CommitteeVerdict(verdict=overall, auditors=verdicts, model=model,
+                            usage=tuple(client.calls),
                             model_served=served, prompt_digests=prompt_digests())

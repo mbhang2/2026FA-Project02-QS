@@ -47,7 +47,18 @@ class Client:
     # was written. Measured: the same economics prompt needs ~7,000 completion
     # tokens on that model, 6,900 of them reasoning. Robustness, the shortest
     # prompt, was the one seat that fit.
-    max_tokens: int = 16384
+    # **And 16,384 was not enough either. Sixth site, 2026-10-02.** 8 of 56
+    # auditor seats across the project never ran; four of them returned
+    # `finish_reason='length'` with `completion_tokens == reasoning_tokens ==
+    # 16384` -- the entire budget spent thinking, nothing written. One campaign
+    # in seven was judged by three seats instead of four and no summary said so.
+    #
+    # 65,536 matches `PROPOSER_MAX_TOKENS`, which was raised for this exact
+    # failure. Picked to match rather than measured, because **nothing recorded
+    # what a SUCCESSFUL auditor consumes** -- the verdict file kept no usage at
+    # all, so the only data was the failures. That gap is closed below, so the
+    # next person to touch this number has a distribution instead of a guess.
+    max_tokens: int = 65_536
     # A verdict is a short JSON object; long chains of thought are cost, not
     # rigour. Sent when set; dropped and retried once if the endpoint rejects
     # the parameter for a model that does not take it.

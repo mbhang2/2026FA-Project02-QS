@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -373,3 +374,74 @@ def test_an_unsupported_parameter_is_retried_when_it_arrives_as_a_substitution()
     # the parameter is dropped exactly once; there is no retry loop
     assert ask.count('body.pop("reasoning_effort")') == 2
     assert "while" not in ask, "one retry, not a loop"
+
+
+# --------------------------------------------------------------------------- #
+# a campaign judged by three seats must not read like one judged by four
+# --------------------------------------------------------------------------- #
+def _seat(axis, verdict, reasons=()):
+    from audit.committee.review import AuditorVerdict
+    return AuditorVerdict(axis=axis, verdict=verdict, reasons=tuple(reasons))
+
+
+def test_the_verdict_says_how_many_auditors_actually_ran():
+    """A seat that failed is recorded as a VETO with its failure as the reason --
+    the right refusal, since no verdict is not no veto -- and it was invisible in
+    every summary. 8 of 56 seats across the project are in that state, so one
+    campaign in seven was judged by three auditors and read like four."""
+    from audit.committee.review import CommitteeVerdict
+    cv = CommitteeVerdict(verdict="VETO", auditors=(
+        _seat("leakage", "PASS"),
+        _seat("statistics", "VETO", ["concentrated in two hours"]),
+        _seat("economics", "VETO",
+              ["the auditor did not run: empty reply: finish_reason='length'"]),
+        _seat("robustness", "PASS"),
+    ))
+    d = cv.as_dict()
+    assert d["seats_total"] == 4
+    assert d["seats_ran"] == 3
+    assert d["seats_failed"] == ["economics"]
+    assert d["incomplete"] is True
+    assert "judged by fewer seats" in d["incomplete_note"]
+
+
+def test_a_complete_committee_says_so_quietly():
+    from audit.committee.review import CommitteeVerdict
+    cv = CommitteeVerdict(verdict="VETO", auditors=(
+        _seat("leakage", "PASS"),
+        _seat("statistics", "VETO", ["a real objection"]),
+    ))
+    d = cv.as_dict()
+    assert d["seats_ran"] == 2 and d["seats_failed"] == []
+    assert d["incomplete"] is False and d["incomplete_note"] == ""
+
+
+def test_the_budget_clears_what_a_reasoning_model_thinks():
+    """4096 -> 16384 was already this fix once, with measured evidence. It failed
+    again: four seats returned finish_reason='length' with the whole 16,384
+    spent on reasoning and nothing written."""
+    from audit.committee.llm import Client
+    import dataclasses
+    default = {f.name: f.default for f in dataclasses.fields(Client)}
+    assert default["max_tokens"] >= 65_536, (
+        f"the committee budget is {default['max_tokens']}; 16,384 was consumed "
+        "entirely by reasoning on four real seats")
+
+
+def test_usage_is_recorded_so_the_next_number_can_be_measured():
+    """The verdict kept no usage at all, so when 16,384 failed there was no
+    distribution of what a SUCCESSFUL auditor consumes -- only the failures.
+    65,536 is matched to the proposer rather than measured, and this is what
+    stops the next person guessing too."""
+    from audit.committee.review import CommitteeVerdict
+    cv = CommitteeVerdict(verdict="PASS", auditors=(_seat("leakage", "PASS"),),
+                          usage=({"completion_tokens": 7000,
+                                  "reasoning_tokens": 6900},))
+    d = cv.as_dict()
+    assert d["usage"] == [{"completion_tokens": 7000, "reasoning_tokens": 6900}]
+    src = (REPO_ROOT / "audit" / "committee" / "llm.py").read_text()
+    # Comment markers survive a naive flatten, so strip them first rather than
+    # matching around a line break.
+    flat = " ".join(re.sub(r"^\s*#\s?", "", src, flags=re.M).split())
+    assert "nothing recorded what a SUCCESSFUL auditor consumes" in flat
+    assert "the verdict file kept no usage at all" in flat

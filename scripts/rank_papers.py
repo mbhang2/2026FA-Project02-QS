@@ -154,6 +154,19 @@ def context_block(current: pathlib.Path | None = None) -> str:
               *(f"- {x}" for x in deferrals()),
               "", "### Falsified on this data -- do not re-explore",
               *(f"- {x}" for x in falsified())]
+    # **The third kind of context, and the only one a paper can actually help
+    # with** (Task 71 section 14). Questions we asked and did not answer, quoted
+    # from the auditors who raised them. Drawn only from campaigns with no
+    # validation artefact -- the same refusal `refine_hypothesis.py` applies, one
+    # rule stated once and used twice. Never fatal: a ranking run must not die
+    # because a committee file is malformed.
+    try:
+        import open_questions
+        oq = open_questions.block()
+        if oq:
+            parts += ["", oq.rstrip()]
+    except Exception:                                            # noqa: BLE001
+        pass
     return "\n".join(parts)
 
 

@@ -1,0 +1,240 @@
+{
+  "schema": "strategy-reviews/1",
+  "campaign": "nq-s04-03",
+  "hypothesis": "config/hypotheses/opening-range-break-continuation-or-fade.md",
+  "model": "gemini-2.5-pro",
+  "score_blind": true,
+  "is_a_gate": false,
+  "gate_note": "This seat records and does not block. Blocking a candidate before it is scored changes which candidates the search sees, which is a change to a registered procedure and needs its own pre-registration.",
+  "approval_note": "NO_OBJECTION is not approval and the counts below are not a pass rate. This seat cannot say a strategy is good.",
+  "tally": {
+    "CANNOT_TELL": 2,
+    "NO_OBJECTION": 8,
+    "OBJECT": 4,
+    "SEAT_FAILED": 1
+  },
+  "seats_failed": 1,
+  "coverage_note": "1 of 15 candidate(s) were never judged: the seat's own call failed. That is a coverage hole, not a verdict about the code.",
+  "candidates": [
+    {
+      "source_name": "ed7e77b53475408c.py",
+      "path": "runs/campaigns/nq-s04-03/sources/ed7e77b53475408c.py",
+      "digest": "ed7e77b53475408c",
+      "outcome": "crashed",
+      "review": {
+        "verdict": "CANNOT_TELL",
+        "concerns": [],
+        "note": "The provided source code contains no strategy logic; it consists only of a docstring and an exception raised at the module level to record a failed static check, making it impossible to review against the research question.",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "e99d48101dd526cb.py",
+      "path": "runs/campaigns/nq-s04-03/sources/e99d48101dd526cb.py",
+      "digest": "e99d48101dd526cb",
+      "outcome": "crashed",
+      "review": {
+        "verdict": "CANNOT_TELL",
+        "concerns": [],
+        "note": "The file contains no strategy code; it intentionally raises an exception to record a failed static check, so there is no logic to review against the research question.",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "346475605262e34e.py",
+      "path": "runs/campaigns/nq-s04-03/sources/346475605262e34e.py",
+      "digest": "346475605262e34e",
+      "outcome": "crashed",
+      "review": {
+        "verdict": "NO_OBJECTION",
+        "concerns": [],
+        "note": "",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "10caf22e6343858b.py",
+      "path": "runs/campaigns/nq-s04-03/sources/10caf22e6343858b.py",
+      "digest": "10caf22e6343858b",
+      "outcome": "crashed",
+      "review": {
+        "verdict": "OBJECT",
+        "concerns": [
+          "5. It is a different strategy than it appears: The logic to determine when the opening range is complete is flawed, causing the range to be calculated on the first bar of the day and remain fixed, rather than being calculated after the 30-minute window closes.",
+          "2. It can barely act: Because the opening range is calculated incorrectly using only the first bar of the session, the range is often just the high and low of that single bar. This makes it extremely narrow, and subsequent bars are almost always outside it, leading to a trade on nearly every session's second bar. This is not the intended 'opening range break' logic."
+        ],
+        "note": "The logic for converting between UTC and Chicago time, including daylight saving, appears correct and was not the source of the issue.",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "7d77ec8bb0075589.py",
+      "path": "runs/campaigns/nq-s04-03/sources/7d77ec8bb0075589.py",
+      "digest": "7d77ec8bb0075589",
+      "outcome": "crashed",
+      "review": {
+        "verdict": "NO_OBJECTION",
+        "concerns": [],
+        "note": "",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "beef059c83446876.py",
+      "path": "runs/campaigns/nq-s04-03/sources/beef059c83446876.py",
+      "digest": "beef059c83446876",
+      "outcome": "crashed",
+      "review": {
+        "verdict": "OBJECT",
+        "concerns": [
+          "5. It is a different strategy than it appears: The strategy claims to fade a breakout by placing a stop order, but the trigger price logic prevents the order from being placed in most scenarios. For a short entry after a breakout above the high, the trigger price is set at `max(self._range_high - buffer, bar.close - 0.25)`. Since `bar.close` is greater than `self._range_high`, and `buffer` is positive, `bar.close - 0.25` will almost always be the maximum. A sell stop order's trigger must be below the current price, but the framework requires it to be above. This contradiction means the order is rejected and the strategy rarely trades.",
+          "2. It can barely act: The flawed trigger price logic described above means that entry orders are almost always rejected by the trading framework. The condition `bar.close > self._range_high` might be met, but the subsequent call to `ctx.sell(type='stop', ...)` will fail because the trigger price is not above the current price as required for a sell stop. The strategy is therefore unable to act on the signals it generates."
+        ],
+        "note": "The framework's specific rules for stop order trigger prices (sell stop trigger > current price, buy stop trigger < current price) were not provided but are inferred from the code's failure to operate as described.",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "13cad8f91402423d.py",
+      "path": "runs/campaigns/nq-s04-03/sources/13cad8f91402423d.py",
+      "digest": "13cad8f91402423d",
+      "outcome": "completed",
+      "review": {
+        "verdict": "NO_OBJECTION",
+        "concerns": [],
+        "note": "",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "665527a33375110d.py",
+      "path": "runs/campaigns/nq-s04-03/sources/665527a33375110d.py",
+      "digest": "665527a33375110d",
+      "outcome": "crashed",
+      "review": {
+        "verdict": "CANNOT_TELL",
+        "concerns": [],
+        "failed": true,
+        "note": "LLMUnavailable: reply was not JSON: Unterminated string starting at: line 4 column 5 (char 45); '```json\\n{\\n  \"verdict\": \"OBJECT\",\\n  \"concerns\": [\\n    \"5. It is a different strategy than it appears: The entry logic for fading a breakout is flawed. The strategy places stop orders to enter, but the '",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro"
+      }
+    },
+    {
+      "source_name": "6ee21a8bd0baf9eb.py",
+      "path": "runs/campaigns/nq-s04-03/sources/6ee21a8bd0baf9eb.py",
+      "digest": "6ee21a8bd0baf9eb",
+      "outcome": "completed",
+      "review": {
+        "verdict": "NO_OBJECTION",
+        "concerns": [],
+        "note": "",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "be9699d4b8d2c92c.py",
+      "path": "runs/campaigns/nq-s04-03/sources/be9699d4b8d2c92c.py",
+      "digest": "be9699d4b8d2c92c",
+      "outcome": "completed",
+      "review": {
+        "verdict": "OBJECT",
+        "concerns": [
+          "1. It does not implement the question.\nThe strategy's logic for identifying the opening range is flawed. The question specifies the range as the first 30 minutes after the 08:30 Chicago open. The code attempts to find bars within the [08:30, 09:00) window, but it does so by checking if the bar's open time falls within that window. A 5-minute bar opening at 08:55 Chicago time will have a close time of 09:00, and its data should be included in the range. However, the code then checks if the bar's close time is *after* 09:00 to finalize the range calculation. This means the last bar of the opening range (08:55-09:00) is never added to `self._range_bars`.\n\nLine 131: `if 8 * 60 + 30 <= minutes < 8 * 60 + 30 + self.range_minutes:`\nLine 134: `if h_close * 60 + m_close >= 8 * 60 + 30 + self.range_minutes:`\n\nBecause the condition to add a bar (line 131) and the condition to stop adding bars and compute the range (line 134) are mutually exclusive within the same `on_bars` call, the bar that triggers the range computation is never itself included in the range."
+        ],
+        "note": "",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "47ffb6aa09f43c14.py",
+      "path": "runs/campaigns/nq-s04-03/sources/47ffb6aa09f43c14.py",
+      "digest": "47ffb6aa09f43c14",
+      "outcome": "crashed",
+      "review": {
+        "verdict": "NO_OBJECTION",
+        "concerns": [],
+        "note": "",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "60b15d1160a2c1d9.py",
+      "path": "runs/campaigns/nq-s04-03/sources/60b15d1160a2c1d9.py",
+      "digest": "60b15d1160a2c1d9",
+      "outcome": "completed",
+      "review": {
+        "verdict": "NO_OBJECTION",
+        "concerns": [],
+        "note": "",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "a157dd8789e8b049.py",
+      "path": "runs/campaigns/nq-s04-03/sources/a157dd8789e8b049.py",
+      "digest": "a157dd8789e8b049",
+      "outcome": "completed",
+      "review": {
+        "verdict": "OBJECT",
+        "concerns": [
+          "1. It does not implement the question. The strategy's logic for identifying the opening range is flawed. The condition `h_close * 60 + m_close >= 8 * 60 + 30 + self.range_minutes` (line 161) uses the bar's `close_ts` to decide when the 30-minute window is over. For a 5-minute bar opening at 08:55 Chicago, its `close_ts` will be at 09:00 Chicago. This bar will be included in the range calculation, but the condition will also trigger the finalization of the range. The next bar, opening at 09:00 Chicago, will also be included because its `open_ts` satisfies `8 * 60 + 30 <= minutes < 8 * 60 + 30 + self.range_minutes`. This means the opening range is calculated over 35 minutes (08:30-09:05) instead of the 30 minutes (08:30-09:00) required by the question."
+        ],
+        "note": "",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "0dc1218c750ebf4b.py",
+      "path": "runs/campaigns/nq-s04-03/sources/0dc1218c750ebf4b.py",
+      "digest": "0dc1218c750ebf4b",
+      "outcome": "completed",
+      "review": {
+        "verdict": "NO_OBJECTION",
+        "concerns": [],
+        "note": "",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    },
+    {
+      "source_name": "f39148b48e139696.py",
+      "path": "runs/campaigns/nq-s04-03/sources/f39148b48e139696.py",
+      "digest": "f39148b48e139696",
+      "outcome": "completed",
+      "review": {
+        "verdict": "NO_OBJECTION",
+        "concerns": [],
+        "note": "The framework's handling of bracket orders (stop/target) was not visible, but the logic for placing them is present in the code.",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "approval_note": "NO_OBJECTION is not approval. It means nothing in the code made it an unfair attempt at the question; it says nothing about whether the strategy works."
+      }
+    }
+  ]
+}

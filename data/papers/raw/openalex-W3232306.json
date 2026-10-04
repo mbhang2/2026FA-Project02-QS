@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W3232306",
+  "source": "openalex",
+  "openalex_id": "W3232306",
+  "doi": null,
+  "title": "Models and algorithms for the empty container repositioning and its integration with routing problems",
+  "abstract": "The introduction of containers has fostered intermodal freight transportation. A definition of intermodality was provided by the European Commission as \u201ca characteristic \\nof a transport system whereby at least two different modes are used in an integrated manner in order to complete a door-to-door transport sequence\u201d. The intermodal container transportation leads to several benefits, such as higher \\nproductivity during handling phases and advantages in terms of security, losses and damages. However, the distribution of containers comes with a drawback: due to directional imbalances in freight flows, some areas tend to accumulate unnecessary empty containers, while others face container shortages. Several planning models were developed for carriers in order to manage both loaded and empty containers profitably. However, they were built to operate under normal circumstances, neglecting the fact that networks are increasingly affected by both uncertainty and vulnerability, which may result in disruptions. The thesis aims to survey whether the impact of uncertainty can be mitigated by a stochastic programming approach, in which disruptions and normal operations are both foreseen as possible futures or scenarios. This approach is carried out by a multi-scenario optimization model in which scenarios are linked by non-anticipativity conditions. The empty container repositioning becomes even more challenging and difficult when integrated with routing problems. In fact, carriers often face problems in which they must determine simultaneously how many empty containers are carried by a \\nfleet of vehicles and which routes must be followed by these vehicles. These problems typically arise in inland networks, in which one must plan the distribution by trucks \\nof loaded and empty containers to customers. \\nThe thesis addresses this type of vehicle routing problems, which are motivated by a real case study occurred during the collaboration with a carrier that operates in the Mediterranean Sea in door-to-door modality. The carrier manages a fleet of trucks based at the port. Trucks and containers are used to service two types of transportation requests, the delivery of container loads from the port to import customers, and the shipment of container loads from export customers to the port. The thesis addresses two problems which differ in the composition of the fleet \\nof trucks. The first problem involves a heterogeneous fleet of trucks that can carry one or two containers. We present a Vehicle Routing Problem with backhauls, load \\nsplits into multiple visits, and the impossibility to separate trucks and containers during customer service. Then, we formalize the problem by an Integer Linear \\nProgramming formulation and propose an efficient meta-heuristic algorithm able to solve it. The meta-heuristic determines the initial solution by a variant of the Clarkeand-Wright algorithm, and improves it by several local search phases, in which both node movements and truck swaps are implemented. The second problem involves a homogeneous fleet of trucks that can carry more than a container. As a consequence, the identification of routes can be more difficult. We present and formalize the associated Vehicle Routing Problem by an Integer Linear Programming formulation. Then we propose an efficient adaptive guidance meta-heuristic algorithm able to solve \\nit. The meta-heuristic determines an initial feasible solution by a Tabu Search step, and next improves this solution by appropriate adaptive guidance mechanisms.",
+  "published": "2013-05-20",
+  "updated": "2013-05-20",
+  "authors": [
+    "Michela Lai"
+  ],
+  "categories": [
+    "Vehicle Routing Optimization Methods",
+    "Maritime Ports and Logistics",
+    "Transportation and Mobility Innovations"
+  ],
+  "abs_url": "https://openalex.org/W3232306",
+  "oa_url": "http://hdl.handle.net/11584/266107",
+  "is_oa": true,
+  "venue": "VEprints - Universita degli Studi di Cagliari",
+  "cited_by_count": 8
+}

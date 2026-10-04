@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7204486245",
+  "source": "openalex",
+  "openalex_id": "W7204486245",
+  "doi": "10.5281/zenodo.22121876",
+  "title": "New edge proposed: opening_range_20_min_breakout_with_volume_confirmation \u2014 E8 Intelligence Research",
+  "abstract": "{ \"name\": \"opening_range_20_min_breakout_with_volume_confirmation\", \"source\": \"Toby Crabel, 'Day Trading with Short Term Price Patterns and Opening Range Breakout'\", \"type\": \"entry_engine\", \"rule\": \"Enter long if price breaks above the 20-minute opening range high by at least 0.1 ATR on a candle with volume > 1.5x 20-period average volume, stop at range low, target 2x ATR; short mirror for breakdown.\", \"pseudocode\": \"if time == 20min_from_open: OR_high = high[0:20], OR_low = low[0:20]\\nif close > OR_high + 0.1*ATR14 and volume > 1.5*SMA20(volume):\\n entry = next_bar_open, stop = OR_low, target = entry + 2*ATR14\\nif close < OR_low - 0.1*ATR14 and volume > 1.5*SMA20(volume):\\n entry = next_bar_open, stop = OR_high, target = entry - 2*ATR14\\nif time > 60min: no new signals\", \"why_it_works\": \"Opening range breakout captures institutional order flow that sets the daily directional bias after early liquidity imbalance, with volume confirming participation.\" } Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-08-27",
+  "updated": "2026-08-27",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Competitive and Knowledge Intelligence",
+    "Complex Systems and Time Series Analysis",
+    "Intelligence, Security, War Strategy"
+  ],
+  "abs_url": "https://openalex.org/W7204486245",
+  "oa_url": "https://doi.org/10.5281/zenodo.22121876",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

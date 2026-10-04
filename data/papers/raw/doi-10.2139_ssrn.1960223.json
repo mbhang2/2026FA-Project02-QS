@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.1960223",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.1960223",
+  "title": "Order Imbalance, Market Returns and Macroeconomic News: Evidence from the Australian Interest Rate Futures Market",
+  "abstract": "The relationship between order imbalance, market returns and macroeconomic news is examined in the context of the Australian interest rate futures market. Contemporaneous order imbalance exerts a significant impact on market returns in the expected direction i.e. excess buy (sell) orders drive up (down) prices. Order imbalances are related to past market returns with market participants acting in a contrarian manner across all products following market rallies. Nine major macroeconomic announcements are identified with order imbalance, and returns, reacting to such announcements in a manner that correctly reflects the news component. Following a scheduled macroeconomic announcement there is an increase in the level of information asymmetry within the interest rate futures market, demonstrated by an increased sensitivity to order flow. Finally, the pattern of order imbalance immediately prior to scheduled announcements suggests that there is no information leakage.",
+  "published": "2011",
+  "updated": "2011",
+  "authors": [
+    "Lee A. Smales"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.1960223",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

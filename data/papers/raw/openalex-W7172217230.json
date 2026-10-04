@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7172217230",
+  "source": "openalex",
+  "openalex_id": "W7172217230",
+  "doi": "10.5281/zenodo.21754442",
+  "title": "The Hindsight-Selection Trap: Why a Backtest Can Pass Every Standard Robustness Check and Still Be Untradeable",
+  "abstract": "We report a systematic, pre-registered-style search for tradeable short-horizon equity signals on theSingapore Exchange (SGX), covering 32 candidate strategies across two structurally differentfamilies: intraday VWAP-deviation reversion, and a set of causally-defineddaily/announcement-driven signals designed specifically to avoid a bias we identify and name thehindsight-selection artifact. Our central finding is methodological rather than market-specific: anintraday reversion strategy built on an event population defined by \"the single most extreme deviationobserved that trading session\" backtests cleanly through every standard robustness gate \u2014walk-forward validation, an untouched holdout period, liquidity-capped position sizing, and a ten-itemadversarial audit \u2014 yet is provably non-tradeable, because the entry rule requires information(whether a larger deviation will occur later the same session) that does not exist at decision time. Weshow the edge is concentrated almost entirely in the retrospectively-known rank of the observation(rank 1: mean net return +0.13%, 51.8% win rate) and collapses to indistinguishable-from-random byrank 2 (+0.003%, 43.8% win rate), even though rank-2 observations remain substantially moreextreme than a randomly sampled bar. Two independent, principled attempts to construct a causal(first-passage) analogue of the same signal both fail decisively, with the more conservative variantfailing harder \u2014 evidence against a simple timing fix and consistent with the retrospective selectionrule manufacturing the measured edge. We further document a second, distinct failure mode in a30-candidate systematic sweep: a cross-sectional momentum signal that clears every mechanicalgate (positive dev and holdout return, 0-of-5 negative walk-forward folds) is shown, via atail-dependency check, to derive 85-97% of its total profit from three trades out of several hundred,independently in both the development and holdout periods \u2014 a signature of idiosyncratic luck ratherthan a repeatable effect. Finally, we document that this project's transaction-cost assumption (a flat0.50% round-trip cost, applied uniformly across a 148-symbol universe spanning blue chips tomicro-caps) was never validated against real spread data and was miscalibrated in both directions:too wide for liquid names (Corwin-Schultz-estimated spread 0.18-0.28% for the largest names in theuniverse) and too narrow for illiquid ones (1-2%+). We provide the estimator, a precomputed spreadtable, and unit tests as a reusable artifact. We additionally report a small, independently motivatedliterature-search extension: two hypotheses constructed directly from recent academic findings onovernight-news content and earnings-surprise magnitude, neither of which survived testing, and oneexternal corroboration \u2014 an independent 2026 study on Nasdaq futures reporting the same statisticalnon-significance for a mechanically identical opening-gap-fade strategy we had already rejected onSGX equities. Of 32 strategies tested, zero survive as live-tradeable, one remains genuinelyinconclusive pending real execution data, and we argue the negative results themselves \u2014particularly the hindsight-selection mechanism \u2014 constitute the paper's primary contribution.",
+  "published": "2026-08-02",
+  "updated": "2026-08-02",
+  "authors": [
+    "Shanmugam Elangovan"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Sports Analytics and Performance",
+    "Auditing, Earnings Management, Governance"
+  ],
+  "abs_url": "https://openalex.org/W7172217230",
+  "oa_url": "https://doi.org/10.5281/zenodo.21754442",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

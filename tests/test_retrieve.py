@@ -126,13 +126,22 @@ def test_it_suggests_only_undistilled_high_rated_papers():
     assert not (set(done) & {v["id"] for v in picks})
 
 
-def test_an_empty_suggestion_list_is_explained_as_a_finding():
-    """The campaign axis has never rated a paper high in 284, because our
-    single-instrument constraint removes almost every signal paper. An empty list
-    should say that rather than look like a bug."""
-    # the message is one string with an embedded newline escape, so match its parts
-    assert "finding" in SRC and "not a failure" in SRC
-    assert "single-instrument constraint" in FLAT
+def test_an_empty_suggestion_list_does_not_blame_the_data_alone():
+    """This message used to say an empty list was a finding about our data: the
+    campaign axis had never rated a paper high in 284, because the
+    single-instrument constraint removes almost every signal paper.
+
+    **Measured 2026-10-04, that was half right.** The other half was the source.
+    arXiv q-fin is mostly method papers: 3 of 284 were directly testable here
+    (1.1%), against 22 of 153 from OpenAlex (14.4%). The corpus now holds 28
+    directly testable papers where it held 3. An explanation that stops at "our
+    data is unusual" is the kind that stops someone looking, so the message now
+    names both halves and says to run the ranker before concluding anything."""
+    assert "half right" in FLAT
+    assert "single-instrument" in FLAT, "the real constraint still belongs in it"
+    assert "run the ranker" in FLAT
+    # and it no longer presents the old reading as settled
+    assert "not a failure" not in SRC
 
 
 def test_the_dry_run_touches_nothing(tmp_path):
@@ -143,3 +152,17 @@ def test_the_dry_run_touches_nothing(tmp_path):
     assert proc.returncode == 0
     assert "dry run" in proc.stdout
     assert (REPO_ROOT / "data" / "papers" / "registry.json").read_bytes() == before
+
+
+def test_one_row_per_claim_in_the_suggestions():
+    """The registry keeps every row -- a row carries decisions and a re-fetch
+    must not erase them -- but suggesting one paper twice invites two campaigns
+    on one idea. Measured 2026-10-04: 40 duplicate titles across 82 rows, which
+    is what adding journal and preprint sources to an arXiv-only corpus buys."""
+    import re
+    mod = _mod()
+    picks = mod.worth_distilling()
+    keys = [" ".join(re.sub(r"[^a-z0-9 ]+", " ", (v.get("title") or "").lower()).split())
+            for v in picks]
+    assert len(keys) == len(set(keys)), "the same claim is suggested twice"
+    assert "One row per claim" in SRC

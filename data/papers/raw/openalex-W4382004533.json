@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W4382004533",
+  "source": "openalex",
+  "openalex_id": "W4382004533",
+  "doi": "10.26845/kjfs.2023.4.52.2.275",
+  "title": "Do IOC Orders Improve the Market Quality? Evidence from the KOSPI 200 Futures Market",
+  "abstract": "This study investigates the effect of IOC (immediate-or-cancel) orders on market quality, such as time to execution, volatility, quote spread, and market depth, in the KOSPI 200 index futures market. Analysis of the order flow imbalance indicates that IOC orders, accounting for 50% of trades in the futures market, leads more price impact than non-IOC,. Additionally, the IOC orders, mostly submitted by foreign investors, and simultaneously by multiple traders in the form of herding, incur negative impact on the market quality in the aspect of market volatility, quote spread, and market depth. However, IOC orders have the positive effect of reducing the time to execution.",
+  "published": "2023-04-30",
+  "updated": "2023-04-30",
+  "authors": [
+    "Byungwook Choi"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Corporate Finance and Governance",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W4382004533",
+  "oa_url": "https://www.e-kjfs.org/upload/pdf/KJFS-2023-4-52-2-275.pdf",
+  "is_oa": true,
+  "venue": "Korean Journal of Financial Studies",
+  "cited_by_count": 2
+}

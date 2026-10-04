@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.6535019",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6535019",
+  "title": "Decomposing High-Frequency Order Flow: Commonality and Idiosyncratic Trade Imbalance",
+  "abstract": "Standard measures of trade imbalance often fail to distinguish between asset-specific directional pressure and market-wide trading activity, leading to misleading inferences. This paper develops a continuous-time framework to decompose high-frequency order flow into common and idiosyncratic components using bivariate Cox processes with a latent common factor. We propose a novel Idiosyncratic Trade Imbalance (IdTI) index, designed to filter out interference from common factors. To facilitate inference, we establish a coupling result using a fixed number of observations that supports Poisson approximations for high-frequency data and develop a Bayesian procedure with asymptotic validity. Simulation results indicate that traditional frequentist methods become unreliable during market-wide intensity shocks, while our proposed methodology maintains robust coverage. Applying the framework to tick-by-tick data during major product launches and FOMC announcements, we find that the idiosyncratic measure unmasks significant directional convictions that are otherwise obscured by common trade intensity.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Wenhao Cui",
+    "Haibin Zhu"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6535019",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

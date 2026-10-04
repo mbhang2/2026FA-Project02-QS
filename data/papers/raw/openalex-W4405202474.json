@@ -1,0 +1,22 @@
+{
+  "id": "openalex-W4405202474",
+  "source": "openalex",
+  "openalex_id": "W4405202474",
+  "doi": "10.31203/aepa.2019.16.4.09",
+  "title": "Starting Overnight Trading and Changes in Market Frictions: Focusing on KOSPI 200 Futures",
+  "abstract": "This paper investigates the impact of starting overnight trading for KOSPI 200 futures on market frictions in regular trading hours. On November 16, 2009, Korea Exchange the extended trading hours by starting overnight trading via Chicago Mercantile Exchange GLOBEX system. Thus non-trading hours out of 24 hours is reduced from 17.75 hours to 6.75 hours. We utilize this event as a natural experiment to investigate whether market frictions in regular trading has changed due to the reduction in non-trading hours. Stoll(2000) points out that the more compensation is need to be paid to liquidity providers in the market, as market friction gets bigger. That is why market friction can be measured by trading costs that are paid for immediacy to liquidity providers. Since any factor that restricts trading activity and increases trading costs can be considered as market friction, we can regard periodical closures in an exchange as a factor of market friction. The existence of periodical closures itself restricts trading activity. The extension of trading hours via starting overnight trading might expand the opportunity of trading and, thus, affect market frictions. Using intraday data measured by a 60-minute interval, we examine changes in total frictions and it\u2019s components, real friction and informational friction during KOSPI 200 furures\u2019regular trading hours before and after the event. The real friction is defined as the component of trading costs that consume real resources of liquidity providers (e.g. order processing costs and inventory holding costs). Meanwhile the informational friction is defined as the components of trading costs that redistribute investors\u2019wealth without consuming real resources of liquidity providers (e.g asymmetric information costs). We measure total friction as the sensitivity of trading costs to the absolute value of order imbalances. Real friction (informational friction) is measured by the sensitivity of trading costs to expected (unexpected) component of the absolute value of order imbalances. This method of measurement is based on information-based market microstructure theory including Hasbrouck (1991). According to the theory, the unexpected component of order flows is more likely to impound private information than the expected component. We divide a trading day into six 60-minute intervals and use Quoted Spread Ratio (QSR) and Effective Spread Ratio (QSR) in order to measure trading costs. The changes in market frictions that has occurred after the event can be summarized as follows: Total frictions and real frictions have decreased, but informational frictions has not changed. The reason for this result is deduced as follows: As overnight trading increases investors\u2019trading opportunity, the need for closing positions before the market close in order to evade overnight portfolio risk and making trades reflecting accumulated information just after the market open has decreased. This lessen order imbalances and thus, reduces real costs of liquidity providers such as order processing or inventory holding components of spreads during regular trading session. As regular trading session\u2019s informational environment like the arrival rate of informed traders and their trading activity are not affected by the increased trading opportunity via overnight, asymmetric information costs, and thus informational frictions are likely to be unaffected.",
+  "published": "2019-12-30",
+  "updated": "2019-12-30",
+  "authors": [
+    "Junghoon Seon",
+    "Sang Lyong Joo"
+  ],
+  "categories": [
+    "Insurance and Financial Risk Management"
+  ],
+  "abs_url": "https://openalex.org/W4405202474",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": 0
+}

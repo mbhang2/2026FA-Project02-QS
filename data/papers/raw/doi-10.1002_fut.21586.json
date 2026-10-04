@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.1002_fut.21586",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.21586",
+  "title": "Intraday Liquidity Provision by Trader Types in a Limit Order Market: Evidence from Taiwan Index Futures",
+  "abstract": "This study examines the dynamic liquidity provision process by institutional and individual traders in the Taiwan index futures market, which is a pure limit order market. The empirical analysis obtains several interesting empirical results. We find that trader type affects liquidity provision in a number of interesting ways. First, although institutional traders use more limit orders than market orders, foreign institution (individual) traders use a relatively higher percentage of market (limit) orders in the early trading session and then switch to more limit (market) orders for the remainder of the day until close to the end of the trading day. Second, net limit order submissions by both institutional and individual traders are positively related to one\u2010period lagged transitory volatility and negatively related to informational volatility. Third, net limit order submissions by institutional traders are positively related to one\u2010period lagged spread. Finally, both the state of limit order book and order size significantly influence all types of traders\u2019 strategy on submission of limit order versus market order during the intraday trading session. \u00a9 2012 Wiley Periodicals, Inc. Jrl Fut Mark 34:145\u2013172, 2014",
+  "published": "2012-11-28",
+  "updated": "2012-11-28",
+  "authors": [
+    "Junmao Chiu",
+    "Huimin Chung",
+    "George H. K. Wang"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.21586",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.2386457",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2386457",
+  "title": "On the Reverse U-Shaped Intraday Pattern of Volume and Volatility: Evidence from CSI 300 Index Futures Market",
+  "abstract": "In contrast to the U-shaped intraday pattern of volume and volatility documented by previous literature, we document a reverse U-shaped intraday pattern of volume and volatility during the afternoon session in Chinese newborn CSI 300 index futures market. We analyze the dominant contracts of CSI 300 index futures with tick-by-tick data. We use ranged and realized measure of volatility, and we measure volume by dollar volume, share volume and number of trades. We find that no matter which measure is adopted, both trading volume and volatility of CSI 300 index future show a reverse U-shaped in the afternoon session.",
+  "published": "2014",
+  "updated": "2014",
+  "authors": [
+    "Zhijuan Chen",
+    "Hai Lin",
+    "Changfeng Ma"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2386457",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

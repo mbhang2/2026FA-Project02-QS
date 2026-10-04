@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.4388560",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.4388560",
+  "title": "Intraday Market Return Predictability Culled from the Factor Zoo",
+  "abstract": "We provide strong empirical evidence for time-series predictability of the intraday return on the aggregate market portfolio by exploiting lagged high-frequency cross-sectional returns on the factor zoo. Our results rely on the use of modern Machine Learning techniques to regularize the predictive regressions and help tame the signals stemming from the zoo, together with techniques from financial econometrics to differentiate between continuous and theoretically non-predictable discontinuous high-frequency price increments. Using the predictions from the model estimated for the aggregate market portfolio in the formulation of simple intraday trading strategies for a set of highly liquid ETFs results in sizeable out-of-sample Sharpe ratios and alphas after accounting for transaction costs. Further dissecting the abnormal intraday returns, we find that most of the superior performance may be traced to periods of high economic uncertainty and a few key factors related to tail risk and liquidity, pointing to slow-moving capital and the gradual incorporation of new information as the underlying mechanisms at work.",
+  "published": "2023",
+  "updated": "2023",
+  "authors": [
+    "Saketh Aleti",
+    "Tim Bollerslev",
+    "Mathias Siggaard"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.4388560",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

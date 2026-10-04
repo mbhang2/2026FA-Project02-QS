@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.6897760",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6897760",
+  "title": "Market Microstructure Analysis of NIFTY50 Stocks using Hawkes Processes and Order Flow Imbalance",
+  "abstract": "This paper provides an exhaustive analysis of market microstructure for all constituent stocks of the NIFTY50 index. We model trade arrival rates using Hawkes processes with an exponential excitation kernel, estimate the order flow imbalance (OFI) dynamics, quantify adverse selection risk, and measure market impact via Kyle's lambda. A systematic trading strategy based on the Hawkes-OFI engine is backtested across the entire universe. Results show consistent predictive power, with an average Sharpe ratio of 2.45, a maximum drawdown of-4.2%, and a win rate of 62.1%. The branching ratio of 0.67 indicates moderate self-excitation in order flow. Our findings confirm the efficacy of the approach even during periods of high reflexive volatility.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Sambit Mishra"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6897760",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.3756630",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3756630",
+  "title": "What Drives Intraday Reversal? Illiquidity or Liquidity Oversupply?",
+  "abstract": "Previous studies of the U.S. market regard short-term reversal as compensation for liquidity provision. However, we find that intraday reversal has no significant dependence on stock liquidity in the Chinese market. Hence, based on a stylized framework, we propose an alternative explanation: irrational uninformed liquidity providers, who underestimate the information component in the equilibrium price due to physiological anchoring, trade against previous price movement, which generates an opposing price pressure. The empirical results confirm this explanation of liquidity oversupply (from irrational uninformed liquidity providers). The negative correlation between previous intraday returns and future returns in the Chinese market is reversed once we extend the holding period. This indicates that reversal is a pricing error due to excessive liquidity provision from uninformed retail traders instead of a price correction from a temporary price concession due to a lack of liquidity.",
+  "published": "2021",
+  "updated": "2021",
+  "authors": [
+    "Junqing Kang",
+    "Shen Lin",
+    "Xiong Xiong"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3756630",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

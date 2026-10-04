@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7542098",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7542098",
+  "title": "Order Flow Imbalance and Price Impact in Indian Equity Derivatives: Cross-Sectional Evidence from NSE F&amp;amp;O Markets",
+  "abstract": "We examine the informational content of multilevel order flow imbalance (OFI) in Indian equity derivatives markets using a novel dataset of live-collected tick-by-tick limit order book data from the National Stock Exchange of India (NSE). Our sample comprises 27,997,612 second-level observations across 90 futures contracts spanning 24 trading days (April 27 to June 16, 2026), representing the most comprehensive highfrequency study of NSE F&amp;amp;O microstructure to date. We document four findings. First, multilevel OFI information coefficients grow monotonically with horizon mean IC of-0.004 at 10 seconds,-0.019 at 30 seconds, and-0.032 at 60 seconds consistent with mean-reverting price dynamics driven by retail order flow, contrasting with the momentum-consistent dynamics documented for US equity markets. Second, OFI predictability is concentrated in public sector banking stocks: SBIN (IC =-0.081), PNB (IC =-0.092), and BANKBARODA (IC =-0.086) exhibit the strongest signals, all significant after Benjamini-Hochberg FDR correction. Third, intraday predictability peaks during the 10:00-11:00 morning session (IC =-0.037) and declines to a minimum during 14:00-15:00 (IC =-0.017), with one-way ANOVA confirming significant hour-level variation (F = 13.04, p &amp;lt; 0.001). Fourth, a long-short portfolio exploiting OFI achieves a gross Sharpe ratio of 57.83 with positive returns on all 23 trading days and outperforms a random signal by 1.64 basis points per period. However, India's Securities Transaction Tax of 10 basis points per transaction exceeds the mean gross signal of 1.71 basis points, rendering direct exploitation economically unviable for standard market participants. These findings have implications for execution strategy design, algorithmic trading regulation, and the ongoing policy debate around India's transaction tax structure.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Abhimanyu Chaudhari"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7542098",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

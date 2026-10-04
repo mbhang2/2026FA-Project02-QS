@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.3900141",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3900141",
+  "title": "Deep Order Flow Imbalance: Extracting Alpha at Multiple Horizons from the Limit Order Book",
+  "abstract": "We employ deep learning in forecasting high-frequency returns at multiple horizons for 115 stocks traded on Nasdaq using order book information at the most granular level. While raw order book states can be used as input to the forecasting models, we achieve state-of-the-art predictive accuracy by training simpler \"off-the-shelf\" artificial neural networks on stationary inputs derived from the order book. Specifically, models trained on order flow significantly outperform most models trained directly on order books. Using cross-sectional regressions we link the forecasting performance of a long short-term memory network to stock characteristics at the market microstructure level, suggesting that \"information-rich\" stocks can be predicted more accurately. Finally, we demonstrate that the effective horizon of stock specific forecasts is approximately two average price changes.",
+  "published": "2021",
+  "updated": "2021",
+  "authors": [
+    "Petter N. Kolm",
+    "Jeremy Turiel",
+    "Nicholas Westray"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3900141",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

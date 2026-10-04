@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W7168158348",
+  "source": "openalex",
+  "openalex_id": "W7168158348",
+  "doi": "10.48550/arxiv.2607.09426",
+  "title": "The Quarter-Hour Effect: Periodic Algorithmic Trading and Return Predictability in Cryptocurrency Futures",
+  "abstract": "Cryptocurrency markets exhibit periodic bursts in volatility and volume at one-minute, five-minute, and quarter-hour marks. Using trade data for six Binance perpetual contracts, we link these bursts to algorithmic participation: trade-size roundness declines sharply during them. The Autocorrelation Map, a clock-phase-resolved display, reveals serial dependence in order flow and returns at quarter-hour openings that conventional measures obscure. Opening returns are predictable out of sample, while opening order imbalance predicts returns over four to twelve hours, with much weaker effects at finer clock-time frequencies. Together, these findings characterize periodic algorithmic trading and its cross-frequency variation.",
+  "published": "2026-07-10",
+  "updated": "2026-07-10",
+  "authors": [
+    "Chan Kim",
+    "Peter Reinhard Hansen"
+  ],
+  "categories": [
+    "Blockchain Technology Applications and Security",
+    "Financial Markets and Investment Strategies",
+    "Art History and Market Analysis"
+  ],
+  "abs_url": "https://openalex.org/W7168158348",
+  "oa_url": "https://arxiv.org/pdf/2607.09426",
+  "is_oa": true,
+  "venue": "arXiv (Cornell University)",
+  "cited_by_count": 0
+}

@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.6938742",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6938742",
+  "title": "Order-Flow Imbalance and Short-Horizon Return Predictability in Cryptocurrency Markets",
+  "abstract": "Order-flow imbalance, the net pressure of buyer-versus seller-initiated trading, is one of the most robust drivers of short-horizon price movement in market microstructure theory and equity evidence. This article consolidates that literature and translates it to cryptocurrency markets, where the aggressor side of each trade is reported rather than estimated and where tick-level data are freely public. We review the theoretical foundations and the empirical record on order-flow imbalance, define the principal measures precisely, describe the public data environment, and set out a transparent, reproducible framework for evaluating whether order flow predicts returns, as distinct from the largely mechanical relation by which trades move price within the same interval. The framework specifies out-of-sample evaluation, a realistic transaction-cost model, and explicit control for data-snooping. This is a review and design article; it does not report new empirical estimates. Its contribution is a consolidated account of what is known and a rigorous, open-data plan for testing it.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Rem Vafin"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6938742",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

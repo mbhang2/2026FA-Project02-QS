@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7203489758",
+  "source": "openalex",
+  "openalex_id": "W7203489758",
+  "doi": "10.5281/zenodo.21928798",
+  "title": "LAB #1019 PROMISING: TG AUTO: New edge proposed: opening_range_breakout_fade_2 \u2014 E8 Intelligence Research",
+  "abstract": "IDEA: AUTO-FORWARDED from the Telegram/breakthrough stream (#645825, division=research, agent=gtx_scout): { \"name\": \"opening_range_breakout_fade_2\", \"source\": \"Larry Williams / 'Day Trading Futures' (opening range breakout reversal)\", \"type\": \"entry_engine\", \"rule\": \"Go short if price breaks above the first 30-minute opening range high by more than 0.5 ATR (of the opening range bar) and then closes back below that high within 3 bars; go long if price breaks below the opening range low by more than 0.5 ATR and then closes back above that low within 3 bars.\", \"pseudocode\": \"opening_range_high = highest(high, first_30_min_bars); opening_range_low = lowest(low, first_30_min_bars); atr_open = atr(first_30_min_bars); if close > opening_range_high + 0.5*atr_open and then close < opening_range_hig SAME-WINDOW EFFECT: Over the current trade window, this edge would likely have triggered zero entries because none of the listed trades occurred within a 30-minute opening range breakout/fade Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-08-14",
+  "updated": "2026-08-14",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Competitive and Knowledge Intelligence",
+    "Intelligence, Security, War Strategy",
+    "Data-Driven Disease Surveillance"
+  ],
+  "abs_url": "https://openalex.org/W7203489758",
+  "oa_url": "https://doi.org/10.5281/zenodo.21928798",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W2132979697",
+  "source": "openalex",
+  "openalex_id": "W2132979697",
+  "doi": null,
+  "title": "The partial adjustment factors of FTSE 100 stock index and stock index futures: The informational impact of electronic trading systems",
+  "abstract": "This paper examines the partial adjustment factors of FTSE 100 stock index and stock index futures. Using high frequency data since January 15, 1997 until March 17, 2000, it aims to assess the informational impact of the new electronic trading systems recently implemented at London Stock Exchange and LIFFE. The results suggest that information runs mainly from the futures market to the spot market. We find that the introduction of SETS, in October 1997, has increased the FTSE 100 index absolute efficiency; however it reduced the informational feedback to the futures market. The implementation of LIFFE CONNECT at LIFFE, in May 1999, has reduced the absolute and relative efficiency of FTSE 100 futures. These findings seem to imply that during the period under scrutiny electronic trading has increased the level of microstructural noise, probably due to the bid-ask bounce and order flow imbalances.",
+  "published": "2008-10-01",
+  "updated": "2008-10-01",
+  "authors": [
+    "H\u00e9lder Sebasti\u00e3o"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Monetary Policy and Economic Impact",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W2132979697",
+  "oa_url": "http://hdl.handle.net/10316/11732",
+  "is_oa": true,
+  "venue": "RePEc: Research Papers in Economics",
+  "cited_by_count": 1
+}

@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7110598479",
+  "source": "openalex",
+  "openalex_id": "W7110598479",
+  "doi": null,
+  "title": "Analysis of the Time Series Characteristics of Intraday Momentum on the Tokyo Stock Exchange",
+  "abstract": "This research analyzed the time-series characteristics of intraday momentum in the market returns of the Tokyo Stock Exchange, using the TOPIX index.Specifically, the study confirmed that, apart from the financial crisis in 2008, events such as the Great East Japan Earthquake and the COVID-19 shock also significantly impacted the intraday momentum of the Tokyo Stock Exchange.Additionally, the study identified the existence of calendar effects in the intradaymomentum of the Tokyo Stock Exchange, notably observed statistically on trading days before weekends or after long holidays.",
+  "published": "",
+  "updated": "",
+  "authors": [
+    "HUIXING JIN"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Stock Market Forecasting Methods",
+    "Financial Risk and Volatility Modeling"
+  ],
+  "abs_url": "https://openalex.org/W7110598479",
+  "oa_url": "http://www2.econ.osaka-u.ac.jp/econ_society/dp/2311.pdf",
+  "is_oa": false,
+  "venue": "RePEc: Research Papers in Economics",
+  "cited_by_count": 0
+}

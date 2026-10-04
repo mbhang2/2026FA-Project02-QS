@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.451281",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.451281",
+  "title": "Intraday Predictability of Overnight Interest Rates",
+  "abstract": "It has been found in the literature that the overnight Eurodollar rate and the effective Fed funds rate exhibit similar calendar-day effects caused by the Federal Reserve regulations and accounting conventions and characteristics of the Fed funds market. However, it was not documented whether the effects are the same on the two interest rates. This paper finds that the effects are smaller on the overnight Eurodollar rate than on the Fed funds rate. Even if the overnight Eurodollar market is affected by the Fed funds market, the overnight Eurodollar market is not perfectly integrated with the Fed funds market.",
+  "published": "2003",
+  "updated": "2003",
+  "authors": [
+    "Young-Sook Lee"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.451281",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

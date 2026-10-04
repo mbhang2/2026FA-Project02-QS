@@ -157,6 +157,16 @@ class Client:
                 f"reasoning_tokens={reasoning_tokens}, max_tokens={self.max_tokens}")
         block = FENCE.search(text)
         raw = block.group(1) if block else text
+        if block is None and raw.lstrip().startswith("```"):
+            # **An OPENED fence with no closing one, which means truncation.**
+            # `FENCE` needs the closing ``` to match, so a reply cut off by
+            # max_tokens mid-object left `raw` starting with "```json" and failed
+            # at character 0 -- reported as "not JSON", which sent the reader
+            # looking for a malformed model instead of a budget. 81 of 248 papers
+            # were lost this way on 2026-10-04. Dropping the opening line gets a
+            # parse attempt out of a reply that is otherwise fine, and when it is
+            # genuinely truncated the error below now says so.
+            raw = raw.lstrip()[3:].split("\n", 1)[-1]
         try:
             return json.loads(raw)
         except json.JSONDecodeError as exc:
@@ -166,7 +176,15 @@ class Client:
                     return json.loads(repaired)
                 except json.JSONDecodeError:
                     pass
-            raise LLMUnavailable(f"reply was not JSON: {exc}; {text[:200]!r}")
+            # `finish_reason` and the token counts, for the same reason the
+            # empty-reply branch above carries them: "length" is a budget
+            # problem and "stop" is a model problem, and they are fixed
+            # differently. Without this the two are indistinguishable.
+            raise LLMUnavailable(
+                f"reply was not JSON: {exc}; "
+                f"finish_reason={choice.get('finish_reason')!r}, "
+                f"completion_tokens={usage.get('completion_tokens')}, "
+                f"max_tokens={self.max_tokens}; {text[:200]!r}")
 
 
 def _escape_raw_controls(raw: str) -> str:

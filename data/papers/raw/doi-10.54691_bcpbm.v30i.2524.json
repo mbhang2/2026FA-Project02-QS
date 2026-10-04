@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.54691_bcpbm.v30i.2524",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.54691/bcpbm.v30i.2524",
+  "title": "Exploring the predictability of intraday returns in China's stock market",
+  "abstract": "With the rapid development of high-frequency trading, intraday trading has become more and more popular due to its important role in understanding the efficiency of the intraday market and capturing more trading opportunities. This article explores whether there is momentum effect and reversal effect in China\u2019s stock market by studying the correlation and predictability between half-hour returns. The results show that there is an intraday momentum effect between the first half-hour and full-day returns. After the investment strategy, it is found that this effect has economic significance, but after considering the transaction costs, the momentum effect cannot make investors obtain excess returns. These costs are the reason for the long-term predictability of intraday returns.",
+  "published": "2022-10-24",
+  "updated": "2022-10-24",
+  "authors": [
+    "Yanbing Xu"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.54691/bcpbm.v30i.2524",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "BCP Business &amp; Management",
+  "cited_by_count": null
+}

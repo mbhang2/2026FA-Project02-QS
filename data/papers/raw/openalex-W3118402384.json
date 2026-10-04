@@ -1,0 +1,26 @@
+{
+  "id": "openalex-W3118402384",
+  "source": "openalex",
+  "openalex_id": "W3118402384",
+  "doi": "10.1002/ijfe.2439",
+  "title": "Order book price impact in the Chinese soybean futures market",
+  "abstract": "Abstract We study the price impact of order flow in the world's largest soybean meal futures markets. Our intraday results indicate that incoming orders can be used to explain and predict future price changes. Our results are shown to be robust to various order flow measures, price aggregation approaches and data frequencies. We find that order flow imbalance (OFI) is a more all\u2010encompassing measure carrying greater information about price change relative to both trade imbalance (TI) and volume. Moreover, while both OFI and TI are shown to predict future price changes, this predictability diminishes over longer measure and price change frequency horizons.",
+  "published": "2021-01-03",
+  "updated": "2021-01-03",
+  "authors": [
+    "Muzhao Jin",
+    "Fearghal Joseph Kearney",
+    "Youwei Li",
+    "Yung Chiang Yang"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Financial Markets and Investment Strategies",
+    "Financial Risk and Volatility Modeling"
+  ],
+  "abs_url": "https://openalex.org/W3118402384",
+  "oa_url": "https://pure.qub.ac.uk/en/publications/e2df2c38-c572-4752-ab9c-4f7cfdef042f",
+  "is_oa": true,
+  "venue": "International Journal of Finance & Economics",
+  "cited_by_count": 2
+}

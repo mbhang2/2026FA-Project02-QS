@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W2733711474",
+  "source": "openalex",
+  "openalex_id": "W2733711474",
+  "doi": "10.5075/epfl-thesis-7785",
+  "title": "Three Essays on Predictability and Seasonality in the Cross-Section of Stock Returns",
+  "abstract": "This thesis examines predictability and seasonality in the cross-section of stock returns. The first chapter, titled ``Infrequent Rebalancing, Return Autocorrelation, and Seasonality,'' shows that a model of infrequent rebalancing can explain specific predictability patterns in the time series and cross-section of stock returns. First, infrequent rebalancing produces return autocorrelations that are consistent with empirical evidence from intraday returns and new evidence from daily returns. Autocorrelations can switch sign and become positive at the rebalancing horizon. Second, the cross-sectional variance in expected returns is larger when more traders rebalance. This effect generates seasonality in the cross-section of stock returns, which can help explain available empirical evidence. The second chapter, titled ``Seasonalities in Anomalies,'' investigates return seasonalities in a set of well-known anomalies in the cross-section of U.S. stocks returns. A January seasonality goes beyond a size effect and strongly affects most anomalies, which can even switch sign in January. Both tax-loss selling and firm size are important in explaining the turn-of-the-year pattern. Return seasonality exists outside of January, with respect to the month of the quarter. Small stocks earn abnormally high average returns on the last day of each quarter, which significantly affects size, idiosyncratic volatility, and illiquidity portfolios. The results have implications for the interpretation and analysis of many anomalies, such as asset growth and momentum. The third chapter, titled ``The Cross-Section of Intraday and Overnight Returns,'' uses a thirty-year sample of U.S. stock returns to document substantial cross-sectional variation in returns over the trading day and overnight. Market closures have a large impact on returns. Small and illiquid stocks earn high average returns in the last thirty minutes of trading. In contrast, large and liquid stocks perform poorly at this time. I find support for institutional and information asymmetry theories. But these theories do not fully explain the cross-sectional evidence. Portfolios based on other characteristics, such as beta and idiosyncratic volatility, earn their return gradually throughout the trading day\u00e2 contrary to the market and a benchmark based on random portfolios. These portfolios also tend to incur large negative returns overnight, consistent with mispricing at the open.",
+  "published": "2017-01-01",
+  "updated": "2017-01-01",
+  "authors": [
+    "Vincent Bogousslavsky"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Monetary Policy and Economic Impact",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W2733711474",
+  "oa_url": "https://infoscience.epfl.ch/record/229415/files/EPFL_TH7785.pdf",
+  "is_oa": true,
+  "venue": "Infoscience (Ecole Polytechnique F\u00e9d\u00e9rale de Lausanne)",
+  "cited_by_count": 0
+}

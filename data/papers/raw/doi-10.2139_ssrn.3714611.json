@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.3714611",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3714611",
+  "title": "Decomposing Cross-Asset Time Series Momentum",
+  "abstract": "I decompose the expected return difference between cross-asset time series momentum and time series momentum into market timing and risk premium components, and show that market timing accounts for 67\u201377% of the difference. I thus show that two recent critiques of time series momentum do not apply to cross-asset time series momentum. Instead, the outperformance of cross-asset time series momentum is driven specifically by the strategy's ability to exploit cross-asset time series predictability in global bond and equity markets.",
+  "published": "2020",
+  "updated": "2020",
+  "authors": [
+    "Aleksi Pitk\u00e4j\u00e4rvi"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3714611",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

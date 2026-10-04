@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W4387479089",
+  "source": "openalex",
+  "openalex_id": "W4387479089",
+  "doi": "10.21314/jois.2023.004",
+  "title": "An empirical study of the contrarian strategy against US equities in the Japanese market",
+  "abstract": "This study examines the contrarian strategy against US equities. We observe a reversal effect against US equities: for samples in which the previous day\u2019s daily return on the S&P 500 index is positive (negative), the following day\u2019s intraday returns on Japanese stock-index futures are negative (positive).We analyze the returns unique to Japan during overnight hours, which we refer to as abnormal after-hours returns. We confirm that samples with positive (negative) abnormal after-hours returns exhibit positive (negative) intraday returns. We divide the sample into cases in which the US and Japanese stock markets have the same investment environment and those in which it differs, and we observe a reversal effect against US equities only in the latter case. We use an out-of-sample analysis to verify the performance of the contrarian strategy against US equities coupled with abnormal after-hours return information, and we find this combination performs better than employing the contrarian strategy against US equities on its own.",
+  "published": "2023-01-01",
+  "updated": "2023-01-01",
+  "authors": [
+    "Yasuhiro Iwanaga"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Auditing, Earnings Management, Governance",
+    "Financial Markets and Investment Strategies"
+  ],
+  "abs_url": "https://openalex.org/W4387479089",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "The Journal of Investment Strategies",
+  "cited_by_count": 0
+}

@@ -1,0 +1,26 @@
+{
+  "id": "openalex-W2299176289",
+  "source": "openalex",
+  "openalex_id": "W2299176289",
+  "doi": "10.1002/fut.21779",
+  "title": "Spillovers and Directional Predictability with a Cross\u2010Quantilogram Analysis: The Case of U.S. and Chinese Agricultural Futures",
+  "abstract": "This paper examines the daily, overnight, intraday, and rolling return spillovers of four key agricultural commodities\u2014soybeans, wheat, corn, and sugar, between the U.S. and Chinese futures markets via a newly developed quantile dependence measure called quantilogram. The results reveal significant bi\u2010directional dependence between the two markets across commodities which is greater in extreme quantiles and moderately stronger from the United States to China. These findings offer valuable insights into investors\u2019 behavior, market integration, dissimilarity, and market efficiency in both countries. \u00a9 2016 Wiley Periodicals, Inc. Jrl Fut Mark 36:1231\u20131255, 2016",
+  "published": "2016-03-14",
+  "updated": "2016-03-14",
+  "authors": [
+    "Huayun Jiang",
+    "Jen\u2010Je Su",
+    "Neda Todorova",
+    "Eduardo Roca"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Monetary Policy and Economic Impact",
+    "Financial Risk and Volatility Modeling"
+  ],
+  "abs_url": "https://openalex.org/W2299176289",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": 68
+}

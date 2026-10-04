@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.1002_fut.70008",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.70008",
+  "title": "Forecasting Chinese Stock Market Volatility With Intraday and Overnight Volatility Components of INE Oil Futures",
+  "abstract": "ABSTRACT This paper investigates the role of different volatility components of the Shanghai International Energy Exchange (INE) oil futures, including intraday, overnight, and the first half\u2010hour components, in forecasting Chinese stock market volatility. Using 5\u2010min realized volatility (RV) as realized volatility measure (RM), the log\u2010HAR models are applied to generate one\u2010step\u2010ahead forecasts for three Chinese stock indices (CSI 300, SHSE and SZSE). Our out\u2010of\u2010sample results show that the model extended with 5\u2010min RV of INE oil futures does not generate more accurate volatility forecasts than the baseline log\u2010HAR model. However, the overnight volatility of INE oil futures significantly improves forecasting accuracy. Our results are robust across different estimation schemes, estimation windows, out\u2010of\u2010sample periods, and evaluation methods. Additionally, using Bi\u2010Power Variation (BPV) as an alternative RM yields consistent results. Overall, the results highlight the importance of incorporating the overnight volatility component of INE oil futures in forecasting Chinese stock market volatility.",
+  "published": "2025-07-20",
+  "updated": "2025-07-20",
+  "authors": [
+    "Qihao Chen",
+    "Zhuo Huang"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.70008",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

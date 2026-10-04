@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W2604890964",
+  "source": "openalex",
+  "openalex_id": "W2604890964",
+  "doi": "10.5539/ijef.v9n5p1",
+  "title": "The Momentum & Trend-Reversal as Temporal Market Anomalies",
+  "abstract": "The main goal of this paper is to introduce and discuss the temporal dimension and the subsequent (time-series) functionalities of two well-known technical market anomalies - the momentum anomaly and the trend-reversal anomaly. Our approach not only challenging the efficient-market hypothesis but also has a temporal dimension because it uses the \u201cpsychological time\u201d at the beginning of a move, as a parameter in overnight post-market asset position trading strategies and daytime asset position strategies as well. Momentum and reversal have been documented extensively in financial literature and they are viewed, in the current paper, as temporal momentum and temporal trend-reversal anomalies because they are hard to fully explain within the standard static asset-pricing paradigm. A rational dynamic and temporal representative agent could explain and document better these anomalies and this is the case of this article. The presented research shows that momentum profit accumulates entirely overnight, while trend-reversal profit occurs entirely intraday. These findings reject classical theories of intraday and overnight returns. Hence, (i) a well designed overnight-position return strategy based on temporal momentum anomaly; and (ii) a well designed intraday-position return strategy based on temporal trend-reversal anomaly, could gain benefit at the expense of long-term investors and hedgers. After back-testing our research in available 16-year data, we found that overnight-position speculators profit from the proposed temporal momentum trading strategy approach at the expense of hedgers, and daytime swing traders profit from the proposed temporal trend-reversal trading strategy approach at the expense of long-term investors.",
+  "published": "2017-04-05",
+  "updated": "2017-04-05",
+  "authors": [
+    "Vasiliki Basdekidou"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Complex Systems and Time Series Analysis",
+    "Financial Markets and Investment Strategies"
+  ],
+  "abs_url": "https://openalex.org/W2604890964",
+  "oa_url": "http://www.ccsenet.org/journal/index.php/ijef/article/download/65327/36605",
+  "is_oa": true,
+  "venue": "International Journal of Economics and Finance",
+  "cited_by_count": 6
+}

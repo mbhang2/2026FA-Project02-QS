@@ -1,0 +1,22 @@
+{
+  "id": "openalex-W2902964609",
+  "source": "openalex",
+  "openalex_id": "W2902964609",
+  "doi": "10.5121/ijci.2016.5107",
+  "title": "Opening Range Breakout Stock Trading Algorithmic Model",
+  "abstract": "Stock Trading Algorithmic Model is an important research problem that is dealt with knowledge in fundamental and technical analysis, combined with the knowledge expertise in programming and computer science.There have been numerous attempts in predicting stock trends, we aim to predict it with least amount of computation and to decrease the space complexity.The goal of this paper is to create a hybrid recommendation system that will inform the trader about the future of a stock trend in order to improve the profitability of a short term investment.We make use of technical analysis tools to incorporate this recommendation into our system.In order to understand the results, we implemented a prototype in R programming language.",
+  "published": "2016-02-28",
+  "updated": "2016-02-28",
+  "authors": [
+    "S. Mahalakshmi",
+    "P. Vignesh"
+  ],
+  "categories": [
+    "Stock Market Forecasting Methods"
+  ],
+  "abs_url": "https://openalex.org/W2902964609",
+  "oa_url": "https://doi.org/10.5121/ijci.2016.5107",
+  "is_oa": true,
+  "venue": "International Journal on Cybernetics & Informatics",
+  "cited_by_count": 0
+}

@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W2769426428",
+  "source": "openalex",
+  "openalex_id": "W2769426428",
+  "doi": "10.25560/52251",
+  "title": "Empirical asset pricing in high-frequency markets",
+  "abstract": "The first chapter provides a brief overview of the theoretical grounding of the so-called realized-measures and summarizes their statistical properties. Motivated by the superior statistical accuracy of high-frequency measures I test if they add economic value in a low-frequency investment context. I compare the profitability of the same investment strategy against two implementations of its trading signals: one that conventionally uses daily returns (LF) and the other that takes advantage of high-frequency (HF) returns. I use different lengths of the formation period to verify if the HF implementation can leverage the superior amount of observations. Although economic differences favour the HF implementation, the evidence is not statistically significant. Nonetheless, the HF implementation is more robust to the choice of parameters and provides, for the most illiquid stocks, strong economic benefits that are inversely increasing in the length of the formation period. The second chapter moves the focus onto the intraday level and seeks to establish the existence of an intraday momentum effect. Motivated by limited evidence of intraday pre- dictability both in the cross-section of US stock returns (see Heston, Korajczyk, and Sadka, 2010) and in the time-series of the aggregate stock market (see Gao et al., 2015), I reconsider the time-series dimension using all common US stocks from 1993 until 2010 and, building on this, I present the cross-sectional dimension with new and complimentary evidence. I find that statistical time-series predictability does not imply economic profitability, whereas cross-sectional sorts on past performance see stocks, which lost or won the most in the morning, earn (positive returns) above the rest of the cross-section in the afternoon, and especially during the last half-hour of trading. The effect is robust to stock characteristics, the day-of-week effect, variations in the formation and holding peri- ods, but exhibits some dependence on the sample period, suggesting that specific market mechanisms or frictions play a relevant role on intraday price formation. The third chapter looks at some claims about price acceleration constituting an informative trading signal. We build several empirical measures of acceleration and compare them to other traditional equity signals from the academic literature. We find that buying stocks whose returns are decelerating and shorting stocks whose returns are accelerating, produces a wide spread in returns. Moreover, while these profits are not explained by the state-of-the-art equity factor models, the cross-sectional variation of the average returns of portfolios sorted on the acceleration signals, are reconciled once we add our la5 factor \u2013 a simple reversal strategy with a lookback of one week. Taken together, our results cast doubt on acceleration being a separate phenomenon and suggest that the lookback period in trending strategies has been shrinking over time.",
+  "published": "2017-01-01",
+  "updated": "2017-01-01",
+  "authors": [
+    "Komarov, Oleg"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Housing Market and Economics",
+    "Stochastic processes and financial applications"
+  ],
+  "abs_url": "https://openalex.org/W2769426428",
+  "oa_url": "http://hdl.handle.net/10044/1/52251",
+  "is_oa": true,
+  "venue": null,
+  "cited_by_count": 0
+}

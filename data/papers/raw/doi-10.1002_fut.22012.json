@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.1002_fut.22012",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.22012",
+  "title": "Volatility index and the return\u2013volatility relation: Intraday evidence from Chinese options market",
+  "abstract": "Abstract We use unique intraday data to investigate the validity of the Shanghai Stock Exchange's the revised Chinese implied volatility index (iVX). We find that iVX is an effective barometer for the underlying exchange\u2010traded fund (ETF) market and can be used as a valid \u201cfear index\u201d when there is anxiety over large drops. Furthermore, we use robust quantile regressions and document the asymmetric relation between returns and iVX changes. We also show that behavioral theories offer better explanations for this asymmetric relation than do fundamental theories. More important, we examine the role of iVX in selecting trading strategies.",
+  "published": "2019-05-09",
+  "updated": "2019-05-09",
+  "authors": [
+    "Jupeng Li",
+    "Xiaoli Yu",
+    "Xingguo Luo"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.22012",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

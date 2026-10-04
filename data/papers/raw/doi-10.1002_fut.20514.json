@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.1002_fut.20514",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.20514",
+  "title": "Intraday price discovery and volatility transmission in stock index and stock index futures markets: Evidence from China",
+  "abstract": "Abstract Using high\u2010frequency data, this study investigates intraday price discovery and volatility transmission between the Chinese stock index and the newly established stock index futures markets in China. Although the Chinese stock index started a sharp decline immediately after the stock index futures were introduced, the cash market is found to play a more dominant role in the price discovery process. The new stock index futures market does not function well in its price discovery performance at its infancy stage, apparently due to high barriers to entry into this emerging futures market. Based on a newly proposed theoretically consistent asymmetric GARCH model, the results uncover strong bidirectional dependence in the intraday volatility of both markets. \u00a9 2011 Wiley Periodicals, Inc. Jrl Fut Mark",
+  "published": "2011-03",
+  "updated": "2011-03",
+  "authors": [
+    "Jian Yang",
+    "Zihui Yang",
+    "Yinggang Zhou"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.20514",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

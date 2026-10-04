@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7155458",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7155458",
+  "title": "Non-Parametric Intraday Price Boundary Detection: Evidence of Time-Contingent Reversal Memory",
+  "abstract": "This paper introduces a non-parametric algorithmic framework to isolate dynamic intraday support and resistance boundaries by modeling the interaction between continuous transaction volume distributions and localized price extremes. Traditional volume profile implementations rely on discrete, arbitrary price-bin configurations that introduce severe parameter bias. To bypass this limitation, we apply a robust Gaussian kernel density estimation (KDE) framework over volume partitions from level 1 data to extract continuous high-volume nodes (HVN) and lowvolume nodes (LVN), stripping out high-frequency microstructure noise. These statistical baselines are subsequently refined via a maximum-likelihood gating mechanism that maps localized swing extrema to the price boundaries. We deploy the algorithm using Level 1 tick data for equity index, commodity, and foreign exchange futures contracts across the 2025-2026 sessions. Evaluating conditional reversal probabilities via a Bayesian permutation framework relative to random-walk and shuffled-return benchmarks, we find that time-based 5-minute Open-High-Low-Close (OHLC) candles exhibit statistically significant reversal predictability at short lags, with confidence in this predictability decaying as directional streaks extend beyond four reversals. Volume-aggregated OHLC candles, by contrast, show predictability largely confined to the shortest lag, with rapid sample decay rendering high-lag boundaries statistically inconclusive.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Valter Levander"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7155458",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

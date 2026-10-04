@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.1283175",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.1283175",
+  "title": "Price Discovery and Liquidity in the European CO2 Futures Market: An Intraday Analysis",
+  "abstract": "European Union CO2 allowances (EUAs) are traded on several markets with increasing intensity. We provide an intraday data analysis of the EUA futures market for the complete first trading period 2005-2007 (Phase 1). To investigate the trading process in this young market, we compare the two main trading platforms, ECX and Nord Pool, with respect to price discovery and liquidity. Both are of high relevance to traders. We analyze liquidity by estimating traded bid-ask spreads following the approach of Madhavan, Richardson, and Roomans (1997) and study price discovery using the VECM framework of Engle and Granger (1987). We find that while estimated transaction costs are always lower on the larger exchange ECX, the less liquid platform Nord Pool also contributes to price discovery, especially during the first months of trading. Overall, results indicate that from 2005 to 2007 liquidity in the European CO2 futures market has markedly increased and according to microstructural criteria the trading process has developed smoothly.",
+  "published": "2008",
+  "updated": "2008",
+  "authors": [
+    "Eva A. Benz",
+    "J\u00f6rdis Hengelbrock"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.1283175",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

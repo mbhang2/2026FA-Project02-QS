@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.1142_s242478632250027x",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1142/s242478632250027x",
+  "title": "Can exchange-traded funds be profitably traded with the trading range breakout technical trading rule?",
+  "abstract": "This study investigates whether the trading range breakout technical trading rule can be applied in exchange-traded funds. Using the samples of crude oil exchange-traded funds, namely USO, USL, UCO, and DBO, that track West Texas intermediate (WTI), the results indicate that the trading range breakout technical trading rule outperforms the benchmark buy-and-hold strategy. In addition, a volatility-based trading range breakout technical trading rule is proposed to enhance trading performance. The results suggest that the proposed TGARCH-MA can be used as a technical trading rule to assist investors and fund managers interested in using the trading range breakout in exchange-traded funds.",
+  "published": "2022-09-30",
+  "updated": "2022-09-30",
+  "authors": [
+    "Kok-Leong Yap",
+    "Wee-Yeap Lau",
+    "Izlin Ismail"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1142/s242478632250027x",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "International Journal of Financial Engineering",
+  "cited_by_count": null
+}

@@ -1,0 +1,29 @@
+{
+  "id": "openalex-W2911858053",
+  "source": "openalex",
+  "openalex_id": "W2911858053",
+  "doi": "10.1109/access.2019.2899177",
+  "title": "Assessing the Profitability of Timely Opening Range Breakout on Index Futures Markets",
+  "abstract": "This paper presents a timely open range breakout (TORB) strategies for index futures market trading via using one-minute intraday data. We observe that the trading volumes and fluctuations in returns on each one-minute interval of trading hours in the futures markets reach their peaks at the opening and closing of the underlying stock markets. With these observations, we align the active hours of an index futures market with its underlying stock market and test the proposed TORB strategies on the DJIA, S&P 500, NASDAQ, HSI, and TAIEX index futures from 2003 to 2013. In the experiments, the proposed strategy achieves over 8% annual returns with p-values less than 3% in all of the five markets; the best performance, 20.28% annual returns at a p-value of 3.1\u00d710-5%, is reached in the TAIEX. For each market, we also find the best probing time, which is relatively short in the U.S. market and relatively long in Asian markets. Furthermore, we conduct experiments on a TAIEX futures transaction dataset to analyze the relationship between the TORB signals and trader behavior, and find that the TORB signals are in the same direction as institutional traders, especially foreign investment institutions.",
+  "published": "2019-01-01",
+  "updated": "2019-01-01",
+  "authors": [
+    "Yi-Cheng Tsai",
+    "Mu\u2010En Wu",
+    "Jia-Hao Syu",
+    "Chin\u2010Laung Lei",
+    "Chung-Shu Wu",
+    "Jan-Ming Ho",
+    "Chuan\u2010Ju Wang"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Stock Market Forecasting Methods",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W2911858053",
+  "oa_url": "https://ieeexplore.ieee.org/ielx7/6287639/8600701/08641124.pdf",
+  "is_oa": true,
+  "venue": "IEEE Access",
+  "cited_by_count": 20
+}

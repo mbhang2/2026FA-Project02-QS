@@ -1,0 +1,24 @@
+{
+  "id": "doi-10.2139_ssrn.2526053",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2526053",
+  "title": "Modeling High-Frequency Order Flow Imbalance by Functional Limit Theorems for Two-Sided Risk Processes",
+  "abstract": "A micro-scale model is proposed for the evolution of the limit order book. Within this model, the flows of orders (claims) are described by doubly stochastic Poisson processes taking account of the stochastic character of intensities of bid and ask orders that determine the price discovery mechanism in financial markets. The process of order flow imbalance (OFI) is studied. This process is a sensitive indicator of the current state of the limit order book since time intervals between events in a limit order book are usually so short that price changes are relatively infrequent events. Therefore price changes provide a very coarse and limited description of market dynamics at time micro-scales. The OFI process tracks best bid and ask queues and change much faster than prices. It incorporates information about build-ups and depletions of order queues so that it can be used to interpolate market dynamics between price changes and to track the toxicity of order flows. The two-sided risk processes are suggested as mathematical models of the OFI process. The multiplicative model is proposed for the stochastic intensities making it possible to analyze the characteristics of order flows as well as the instantaneous proportion of the forces of buyers and sellers, that is, the intensity imbalance (II) process, without modeling the external information background. The proposed model gives the opportunity to link the micro-scale (high-frequency) dynamics of the limit order book with the macro-scale models of stock price processes of the form of subordinated Wiener processes by means of functional limit theorems of probability theory and hence, to give a deeper insight in the nature of popular subordinated Wiener processes such as generalized hyperbolic L\u00b4evy processes as models of the evolution of characteristics of financial markets. In the proposed models, the subordinator is determined by the evolution of the stochastic intensity of the external information flow.",
+  "published": "2014",
+  "updated": "2014",
+  "authors": [
+    "Victor Korolev",
+    "Andrey Chertok",
+    "Alexander Korchagin",
+    "Alexander Zeifman"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2526053",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

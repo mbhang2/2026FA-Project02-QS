@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W4403196404",
+  "source": "openalex",
+  "openalex_id": "W4403196404",
+  "doi": "10.1002/fut.22555",
+  "title": "Which Way Does the Wind Blow Between SPX Futures and VIX Futures?",
+  "abstract": "ABSTRACT The negative correlation between returns and volatility is well known. However, there is no consensus on whether returns cause changes in volatility or vice versa. In this paper, we investigate the contemporaneous relation between the VIX futures and E\u2010mini S&P 500 futures markets with the aim of shedding new light on the relation between market returns and implied volatility. We use the E\u2010mini S&P 500 futures (often referred to as SPX futures) as a proxy for stock market returns and VIX futures as a proxy for expectations of implied volatility. We consistently find that stock returns cause changes in expectations of implied volatility. To estimate the coefficients of interest, we use an identification through heteroskedasticity approach which takes advantage of predictable intraday shifts in volatility in the two futures markets.",
+  "published": "2024-10-07",
+  "updated": "2024-10-07",
+  "authors": [
+    "Ekow A. Aikins",
+    "Alexander Kurov"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Financial Risk and Volatility Modeling",
+    "Financial Markets and Investment Strategies"
+  ],
+  "abs_url": "https://openalex.org/W4403196404",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": 1
+}

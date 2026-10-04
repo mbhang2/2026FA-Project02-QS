@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W3199228172",
+  "source": "openalex",
+  "openalex_id": "W3199228172",
+  "doi": "10.1111/fire.12290",
+  "title": "Bitcoin intraday time series momentum",
+  "abstract": "Abstract This study examines intraday time series momentum in Bitcoin. Unlike stock markets, Bitcoin trades 24 h a day and therefore has not got a clear opening and closing period. Therefore, we use trading volume as a proxy for the market trading time and show that the first half\u2010hour positively predicts the last half\u2010hour return. We find that the first trading sessions with the highest volume or volatility are associated with the greatest predictability for intraday time series momentum. We also show that intraday momentum\u2010based trading yields substantial economic gains in terms of market timing and asset allocation, especially in periods of a market downturn in Bitcoin. Consistent with the finding in foreign exchange markets, our results also show that the Bitcoin intraday momentum is driven by liquidity provision rather than late\u2010informed trading.",
+  "published": "2021-10-26",
+  "updated": "2021-10-26",
+  "authors": [
+    "Dehua Shen",
+    "Andrew Urquhart",
+    "Pengfei Wang"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Blockchain Technology Applications and Security",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W3199228172",
+  "oa_url": "https://centaur.reading.ac.uk/100181/3/21Sep2021Bitcoin%20Intraday%20Time-Series%20Momentum.R2.pdf",
+  "is_oa": true,
+  "venue": "Financial Review",
+  "cited_by_count": 38
+}

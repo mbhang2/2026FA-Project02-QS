@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.3993561",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3993561",
+  "title": "Cross-Impact of Order Flow Imbalance in Equity Markets",
+  "abstract": "We investigate the impact of order flow imbalance (OFI) on price movements in equity markets in a multi-asset setting. First, we propose a systematic approach for combining OFIs at the top levels of the limit order book into an integrated OFI variable which better explains price impact, compared to the best-level OFI. We show that once the information from multiple levels is integrated into OFI, multi-asset models with cross-impact do not provide additional explanatory power for contemporaneous impact compared to a sparse model without cross-impact terms. On the other hand, we show that lagged cross-asset OFIs do improve the forecasting of future returns. We also establish that this lagged cross-impact mainly manifests at short-term horizons and decays rapidly in time.",
+  "published": "2021",
+  "updated": "2021",
+  "authors": [
+    "Rama Cont",
+    "Mihai Cucuringu",
+    "Chao Zhang"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3993561",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

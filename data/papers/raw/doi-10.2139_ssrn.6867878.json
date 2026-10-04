@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.6867878",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6867878",
+  "title": "Boundaries of Time Series Momentum",
+  "abstract": "Shiller's CAPE, dividend yield, and the government bond yield-curve slope are measures of value in equity and bond markets. We find that equity market time-series momentum performs well in mid-valuation regimes, but breaks down near historical valuation extremes, where the direction of the equity market commonly turns. Controlling for equity market return reversals-when valuation measures are near their 10-or 20-year historical extremes-increases the R 2 of a predictive regression of equity market returns by up to 110% and the R 2 of a predictive regression of time series momentum returns by up to 550%.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Matti Suominen",
+    "Erik Hjalmarsson"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6867878",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

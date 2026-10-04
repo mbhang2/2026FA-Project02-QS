@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W7111175948",
+  "source": "openalex",
+  "openalex_id": "W7111175948",
+  "doi": "10.1108/sef-09-2018-0294.html?utm_source=repec&utm_medium=feed&utm_campaign=repec",
+  "title": "Effectiveness of filter trading as an intraday trading rule",
+  "abstract": "Purpose - Filter trading is a technical trading rule that has been used extensively to test the efficient market hypothesis in the context of long-term trading. In this paper, the authors adopt the rule to analyze intraday trading, in which an open position is not left overnight. This paper aims to explore the relationship between intraday filter trading profitability and intraday realized volatilities. The bivariate thin plate spline (TPS) model is chosen to fit the predictor-response surface for high frequency data from the Hang Seng index futures (HSIF) market. The hypotheses follow the adaptive market hypothesis, arguing that intraday filter trading differs in profitability under different market conditions as measured by realized volatility, and furthermore, the optimal filter size for trading on each day is related to the realized volatility. The empirical results furnish new evidence that range-based realized volatilities (RaV) are more efficient in identifying trading profit than return-based volatilities (ReV). These results shed light on the efficiency of intraday high frequency trading in the HSIF market. Some trading suggestions are given based on the findings. Design/methodology/approach - Among all the factors that affect the profit of filter trading, intraday realized volatility stands out as an important predictor. The authors explore several intraday volatilities measures using range-based or return-based methods of estimation. The authors then study how the filter trading profit will depend on realized volatility and how the optimal filter size is related to the realized volatility. The bivariate TPS model is used to model the predictor-response relationship. Findings - The empirical results show that range-based realized volatility has a higher predictive power on filter rule trading profit than the return-based realized volatility. Originality/value - First, the authors contribute to the literature by investigating the profitability of the filter trading rule on high frequency tick-by-tick data of HSIF market. Second, the authors test the assumption that the magnitude of the intraday momentum trading profit depends on the realized volatilities and aims to identify a relationship between them. Furthermore, the authors consider several intraday realized volatilities and find the RaV have the higher prediction power than ReV. Finally, the authors find some relationship between the optimal filter size and the realized volatilities. Based on the observations, the authors also give some trading suggestions to the intraday filter traders.",
+  "published": "",
+  "updated": "",
+  "authors": [
+    "Ling Xin",
+    "Kin Lam",
+    "Philip L.H. Yu"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Financial Risk and Volatility Modeling",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W7111175948",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "RePEc: Research Papers in Economics",
+  "cited_by_count": 0
+}

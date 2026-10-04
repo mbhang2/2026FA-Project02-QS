@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.2991183",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2991183",
+  "title": "Reversal, Momentum and Intraday Returns",
+  "abstract": "This paper studies the trades immediately after the market open and immediately before the market close. The trades in the morning positively predict future returns and cause price continuation. The trades in the afternoon negatively predict future returns and cause price reversals. The momentum trading strategies based on morning returns and the reversal trading strategies based on afternoon returns generate significant abnormal returns, which cannot be explained by standard risk factors including momentum and reversal factors. The results provide strong evidence that trades in the morning are mostly information driven and trades in the afternoon are mostly liquidity driven.",
+  "published": "2017",
+  "updated": "2017",
+  "authors": [
+    "Haoyu Xu"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2991183",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W3123501996",
+  "source": "openalex",
+  "openalex_id": "W3123501996",
+  "doi": "10.31274/etd-20210114-84",
+  "title": "Intraday information diffusion on nonsimultaneous trading",
+  "abstract": "This dissertation presents an in-depth investigation of the S&P 500 pre-market futures predictive power on its underlying index. At the outset, this research develops an information diffusion model of market-to-firm information flow on an intraday futures and index trading framework. This model incorporates fundamental and myopic traders with irrational expectations and generates momentum and reversal in return covariance. The market equilibrium leads to a theoretical proposition that the overnight returns on the futures market will predict next day spot index movements. The analysis theoretically implies that the information spillover strengthens at the spot opening, and the level of market uncertainty is negatively correlated with the strength of price linkage.The subsequent chapter empirically tests this proposition utilizing a modified vector autoregressive model with thirty-five intraday S&P 500 returns. The results evidently validate that the S&P 500 pre-market futures returns are positively correlated to the index returns on the spot opening as well as across the entire regular trading session. Additionally, the spillover size increases as the futures corresponding return intervals become narrower and closer to the spot opening. This research introduces several signal trading strategies to demonstrate the usefulness of the pre-market futures predictive power. The backtesting locates several pre-market signals that outperform the index benchmark. Consistent with the aforementioned discoveries, the drawdown analysis finds that the magnitude of information spillover is more pronounced when market volatility is low. The information advantage of the pre-market futures market is validated for these strategies.",
+  "published": "2020-01-01",
+  "updated": "2020-01-01",
+  "authors": [
+    "Chenzi Lv"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Complex Systems and Time Series Analysis",
+    "Financial Risk and Volatility Modeling"
+  ],
+  "abs_url": "https://openalex.org/W3123501996",
+  "oa_url": "https://dr.lib.iastate.edu/bitstreams/38ac3bad-14e6-4f37-ae3b-e8265737b836/download",
+  "is_oa": true,
+  "venue": null,
+  "cited_by_count": 0
+}

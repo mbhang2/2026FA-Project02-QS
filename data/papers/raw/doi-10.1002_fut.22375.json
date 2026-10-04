@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.1002_fut.22375",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.22375",
+  "title": "Understanding intraday momentum strategies",
+  "abstract": "Abstract This paper studies the out\u2010of\u2010sample performance of the intraday momentum strategy where the overnight return predicts the return of the last half\u2010hour of trading. The predictability disappears in the out\u2010of\u2010sample period. A Markov\u2010switching model endogenously identifies two distinct regimes and suggests that the predictability depends on the strength of the signal. Hence, assessing return predictability in calendar time may lead to false conclusions when anomalies feature time\u2010varying returns. The paper documents that understanding the return dynamics is important for an effective strategy implementation. A strategy with thresholds delivers higher returns than a strategy that is always active.",
+  "published": "2022-09-08",
+  "updated": "2022-09-08",
+  "authors": [
+    "Carlo Rosa"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.22375",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

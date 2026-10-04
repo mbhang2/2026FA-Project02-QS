@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.2400847",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2400847",
+  "title": "Time Series Momentum and Market Stability",
+  "abstract": "We propose a continuous-time heterogeneous agent model consisting of fundamental, momentum, and contrarian traders to explain the significant time series momentum. We show that the market under-reacts in short-run and over-reacts in long-run when momentum traders dominate the market, which provides profit opportunity for time series momentum strategies with short-time horizons and reversal with long-time horizons. We find momentum strategies with short horizons stabilise the market while the effect becomes opposite with longer horizons. The results provide an insight into the profitability of time series momentum documented in recent empirical studies.",
+  "published": "2014",
+  "updated": "2014",
+  "authors": [
+    "Xue-Zhong 'Tony' He",
+    "Kai Li"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2400847",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

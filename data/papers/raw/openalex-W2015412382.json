@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W2015412382",
+  "source": "openalex",
+  "openalex_id": "W2015412382",
+  "doi": "10.2202/1558-3708.1076",
+  "title": "Intraday and Interday Basis Dynamics: Evidence from the FTSE 100 Index Futures Market",
+  "abstract": "We examine the intraday and interday dynamics of both the level of and changes in the FTSE (Financial Times-Stock Exchange) 100 index futures mispricing. Like numerous previous studies we find significant evidence of mean reversion and hence predictability in mispricing changes measured over high (minute-by-minute) and low (daily) frequencies. Contrary to other studies we show explicitly that for high-frequency data, this predictability is due not to microstructure effects but to arbitrage activity. Using a threshold autoregressive model that is consistent with arbitrage behavior, we show that such models imply first-order autocorrelation in mispricing changes similar in magnitude to that actually observed. For low-frequency data, we show that predictability is driven neither by arbitrage activity nor by microstructure effects. Rather, it is a statistical illusion that is the result of overdifferencing a trend-stationary series.",
+  "published": "2001-01-01",
+  "updated": "2001-01-01",
+  "authors": [
+    "Ian Garrett",
+    "Nicholas Taylor"
+  ],
+  "categories": [
+    "Complex Systems and Time Series Analysis",
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W2015412382",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Studies in Nonlinear Dynamics and Econometrics",
+  "cited_by_count": 15
+}

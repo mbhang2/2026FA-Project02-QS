@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W4312126891",
+  "source": "openalex",
+  "openalex_id": "W4312126891",
+  "doi": "10.1029/2022gl101408",
+  "title": "Observational Perspectives on Beaufort Sea Ice Breakouts",
+  "abstract": "Abstract In winter 2013, a sea ice breakout in the Beaufort Sea produced extensive fracturing and contributed to record ice export. Rheinl\u00e6nder et al. (2022, https://doi.org/10.1029/2022GL099024 ) simulated this event using the neXtSIM sea ice model, reproducing a realistic progression of lead opening and ice drift following the track of an anticyclone. Their simulations indicate strong winds and thin ice are key factors in breakouts. We discuss observational records giving additional insight into the mechanisms controlling breakout events, including the role of wind direction. Breakouts are common and have occurred under weaker winds than in 2013 and in thicker ice of previous decades. During 2013 and other events, patterns of lead opening during breakout followed changes in wind direction relative to the coast with anticyclone position. For skillful predictions of future breakouts, models must reproduce this behavior, and their performance should be assessed across a range of wind and ice conditions.",
+  "published": "2022-12-24",
+  "updated": "2022-12-24",
+  "authors": [
+    "MacKenzie Elise Jewell",
+    "Jennifer Katy Hutchings"
+  ],
+  "categories": [
+    "Arctic and Antarctic ice dynamics",
+    "Climate change and permafrost",
+    "Cryospheric studies and observations"
+  ],
+  "abs_url": "https://openalex.org/W4312126891",
+  "oa_url": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1029/2022GL101408",
+  "is_oa": true,
+  "venue": "Geophysical Research Letters",
+  "cited_by_count": 13
+}

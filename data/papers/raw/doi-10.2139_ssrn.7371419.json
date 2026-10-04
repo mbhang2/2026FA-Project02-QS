@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7371419",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7371419",
+  "title": "Intraday Response of the Term Structure to US Macroeconomic Shocks: Evidence from the B3 DI Futures Market",
+  "abstract": "This paper investigates price adjustment speed, price discovery, and conditional volatility dynamics across the Brazilian interest rate term structure following US macroeconomic announcements (Non-Farm Payroll and CPI). Using 1-minute high-frequency data of Brazilian DI futures contracts traded on B3 across three maturities-short (DI1F29), intermediate (DI1F32), and long (DI1F37)-, we conduct an intraday event study and estimate joint AR(1)-GARCH(1,1)-X models with HAC Newey-West robust standard errors. Empirical findings reveal monotonic term-structure heterogeneity: in the conditional mean equation, the directional impact of exogenous surprises peaks at the short end and decreases monotonically toward the long end (\u03b2 Pay declines from +0.3884 to +0.2241; \u03b2 CPI decreases from +0.2874 to +0.1362, both statistically significant). In the conditional variance equation, releases trigger immediate volatility spikes (\u03b3 \u2248 0.046 to 0.049), while persistence (\u03b1 + \u03b2) increases with contractual maturity (0.9257 for DI1F29, 0.9635 for DI1F32, and 0.9812 for DI1F37). The findings support the semi-strong form of the Efficient Market Hypothesis and show that international shocks primarily alter short-to-medium-term domestic monetary policy expectations, whereas longer maturities experience prolonged volatility clustering.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Christian Aloys Wafo Nomsi"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7371419",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

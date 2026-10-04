@@ -1,0 +1,21 @@
+{
+  "id": "openalex-W2384041907",
+  "source": "openalex",
+  "openalex_id": "W2384041907",
+  "doi": null,
+  "title": "Test on the Short-term Validity of Futures Market Volume and Price Analytical Method\u2014\u2014Based on the Duration Theory",
+  "abstract": "Duration is a important market microstructure signal,it has important roles to improve forecast accuracy of assets price volatility and the evaluation of liquidity risk.First,this paper brought forward the concept of joint duration for reflecting the joint variation among price,trading volume and open interest volume,and analyzed the intraday effect character of high frequency data of different variable.Then,this paper built the extended binary choice model under the duration theory frame,and empirical tested the short-term predictability of volume and price analytical method in Shanghai fuel oil futures market.The research results indicate that over half of the empirical rules are effective,which illuminates that volume and price analytical method has the high predictability in short-term price forecasting,and it is one of important and worth trusting technical analysis method.",
+  "published": "2011-01-01",
+  "updated": "2011-01-01",
+  "authors": [
+    "Feng Wang"
+  ],
+  "categories": [
+    "Stock Market Forecasting Methods"
+  ],
+  "abs_url": "https://openalex.org/W2384041907",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Technoeconomics & Management Research",
+  "cited_by_count": 0
+}

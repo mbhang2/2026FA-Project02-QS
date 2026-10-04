@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.2457647",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2457647",
+  "title": "Risk Adjusted Time Series Momentum",
+  "abstract": "We introduce a new class of momentum strategies, the risk-adjusted time series momentum (RAMOM) strategies, which are based on averages of past futures returns, normalized by their volatility. We test these strategies on a universe of 64 liquid futures contracts and show that RAMOM strategies outperform the time series momentum (TSMOM) strategies of Ooi, Moskowitz, and Pedersen (2012) for almost all combinations of holding and look-back periods. This outperformance is driven by the following new striking stylized fact that we document: For almost all of the 64 futures contracts, independent of the asset class, realized futures volatility is contemporaneously negatively related to the Fama and French (1987) market (MKT), value (HML), and momentum (UMD) factors. As a result, RAMOM returns have a natural, built-in exposure to the MKT, HML, and UMD factors and outperform TSMOM returns precisely in times when (some of) the factors deliver good returns. In particular, RAMOM allows investors to gain significant exposure to Fama and French factors without actually trading the very large stock universe. Furthermore, dollar turnover of RAMOM strategies is about 40% lower than that of TSMOM, implying a drastic reduction in trading costs. We construct measures of momentum-specific volatility, both within and across asset classes, and show how these volatility measures can be used for risk management. We find that momentum risk management significantly increases Sharpe ratios, but at the same time may lead to more pronounced negative skewness and tail risk. Furthermore, momentum risk management leads to a much lower exposure to market, value, and momentum factors; as a result, risk-managed momentum returns offer much higher diversification benefits than those of standard momentum returns.",
+  "published": "2014",
+  "updated": "2014",
+  "authors": [
+    "Martin Dudler",
+    "Bruno Gmuer",
+    "Semyon Malamud"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2457647",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

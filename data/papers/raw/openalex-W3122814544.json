@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W3122814544",
+  "source": "openalex",
+  "openalex_id": "W3122814544",
+  "doi": null,
+  "title": "The Information Content of IV Skew on Futures and Stock Markets: Evidence from Taiwan",
+  "abstract": "The paper uses a unique set of daily and intraday data to examine the relationship between changes in the implied volatility skew of the options market and the returns in the stock and futures markets in Taiwan with respect to different institutional investors in the options market. This result shows that the change in the volatility skew of all investors in the option market had no significant predictive power on the returns from the stock and futures markets when using daily or intraday data. However, the skew changes of the institutional investors and foreign institutional investors contained the predictability of the returns in both the stock and futures markets when using intraday data. Interestingly, the skew change in foreign institutional investors can predict the returns in the stock and futures markets at all trading times, except in the periods 30 minutes after opening and before closing, in the stock market. The results also showed that institutional investors tended to be more informed about the spot and futures markets and that using intraday data was more powerful than daily data in analysing the information content of the implied volatility.",
+  "published": "2016-04-01",
+  "updated": "2016-04-01",
+  "authors": [
+    "Yen\u2010Hsien Lee",
+    "David K. Wang",
+    "Cuong Cao Nguyen"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Financial Markets and Investment Strategies",
+    "Stock Market Forecasting Methods"
+  ],
+  "abs_url": "https://openalex.org/W3122814544",
+  "oa_url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2900537",
+  "is_oa": true,
+  "venue": "SSRN Electronic Journal",
+  "cited_by_count": 0
+}

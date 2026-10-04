@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.607782",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.607782",
+  "title": "Momentum Strategies and Financial Databases: An Investigation of Intraday Pattern in Price Momentum",
+  "abstract": "How do different databases define a firm? What are the rules for listing/de-listing firms across different databases? In this paper we show that the divergence in the criteria for listing/de-listing firms between the CRSP and TAQ databases is significant enough to impact the magnitude and direction of statistical profits of momentum portfolios. We show that while the standard momentum returns established in the literature can be replicated using CRSP data, TAQ data leads to entirely different results due to listing/de-listing discrepancies. We construct a two-stage filtering process to eliminate new/de-listing discrepancies between CRSP and TAQ to show a convergence in results. We then document that intra-day momentum profits exhibit an inverted U-shape. Given that intra-day stock prices follow a U-shape, we then show that an investor can \"time\" the market and enhance the profits of momentum portfolios if (s)he buys at noon prices and sells at the close.",
+  "published": "2004",
+  "updated": "2004",
+  "authors": [
+    "Bidisha Chakrabarty",
+    "Charles Trzcinka"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.607782",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

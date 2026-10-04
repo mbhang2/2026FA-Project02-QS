@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W1998872001",
+  "source": "openalex",
+  "openalex_id": "W1998872001",
+  "doi": "10.1093/rfs/7.4.653",
+  "title": "Program Trading and Intraday Volatility",
+  "abstract": "Program trading and intraday changes in the S&P 500 Index are correlated. Futures prices and, to a lesser extent, cash prices lead program trades. Index arbitrage trades are followed by an immediate change in the cash index, which ultimately reverses slightly. No reversal follows nonarbitrage trades. The cumulative index changes associated with buy-and-sell trades and with arbitrage and nonarbitrage trades all are similar. Price decompositions suggest that the results are not due to microstructure effects. Program trades in this 1989\u20131990 sample do not seem to have created major short-term liquidity problems. The results are stable within the sample.",
+  "published": "1994-10-01",
+  "updated": "1994-10-01",
+  "authors": [
+    "Lawerence Harris",
+    "George Sofianos",
+    "James E. Shapiro"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Corporate Finance and Governance",
+    "Stochastic processes and financial applications"
+  ],
+  "abs_url": "https://openalex.org/W1998872001",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Review of Financial Studies",
+  "cited_by_count": 74
+}

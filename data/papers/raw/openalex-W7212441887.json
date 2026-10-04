@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7212441887",
+  "source": "openalex",
+  "openalex_id": "W7212441887",
+  "doi": "10.5281/zenodo.22732919",
+  "title": "LAB #2139 NEUTRAL: TG AUTO: New edge proposed: opening_range_breakout_with_prior_day_high_low_reclaim \u2014 E8 Intelligence Research",
+  "abstract": "IDEA: AUTO-FORWARDED from the Telegram/breakthrough stream (#769903, division=research, agent=gtx_scout): { \"name\": \"opening_range_breakout_with_prior_day_high_low_reclaim\", \"source\": \"Toby Crabel, 'Day Trading with Short Term Price Patterns and Opening Range Breakout'\", \"type\": \"entry_engine\", \"rule\": \"Within the first 30 minutes of the trading session, enter long on a close above the 30-minute opening range high if that high is above the previous day's high, or enter short on a close below the opening range low if that low is below the previous day's low, with a stop at the opposite side of the opening range and an initial profit target of 1\\u00d7 ATR(14) from entry.\", \"pseudocode\": \"if bar.timestamp >= session_open and bar.timestamp <= session_open + 30min: update ORH/ORL\\nif close > OR SAME-WINDOW EFFECT: Over the current live window, this rule would have had minimal direct impact. The entries are all mid-session (10:35\u201311:35) with no 30-minute opening-range breakout conditi Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-09-13",
+  "updated": "2026-09-13",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Intelligence, Security, War Strategy",
+    "Competitive and Knowledge Intelligence",
+    "Military and Defense Studies"
+  ],
+  "abs_url": "https://openalex.org/W7212441887",
+  "oa_url": "https://doi.org/10.5281/zenodo.22732919",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

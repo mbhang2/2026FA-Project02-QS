@@ -1,0 +1,21 @@
+{
+  "id": "openalex-W2392105174",
+  "source": "openalex",
+  "openalex_id": "W2392105174",
+  "doi": null,
+  "title": "The Investor Behavior and Futures' Volatility: A Two-Stage OLG Model and Empirical Study Based on Intraday Data",
+  "abstract": "Investor trading behavior is always an important issue in the behavioral finance and market supervision,but the related research is scarce.This paper introduces a two-stage OLG model into the future market and set the investor behavior model based on future contract price,which can also be extended to complete and incomplete information.We provide the equilibrium solution and use cuprum tick data in SHFE to conduct the empirical analysis.Empirical results present three main findings: First,the 2-period OLG model based on future market is consistent with the practical situation;second,the sufficient information investors such as institution adopt reversal trading patterns generally;last,the insufficient information investors such as private adopt momentum trading patterns in general.",
+  "published": "2012-01-01",
+  "updated": "2012-01-01",
+  "authors": [
+    "Renhai Hua"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies"
+  ],
+  "abs_url": "https://openalex.org/W2392105174",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Zhongguo guanli kexue",
+  "cited_by_count": 0
+}

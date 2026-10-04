@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.6792161",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6792161",
+  "title": "Sequential Structure in Intraday Futures Data: LSTM vs Gradient Boosting on MNQ",
+  "abstract": "This paper compares two machine learning architectures for intraday directional prediction in Micro E-Mini Nasdaq 100 futures (MNQ): a gradient boosting classifier operating on engineered daily and intraday features, and a long short-term memory (LSTM) recurrent neural network processing raw five-minute bar return sequences. The comparison is motivated by recent foundation model research in financial candlestick data, including the Kronos architecture (Shi et al., 2025), which demonstrated that sequential bar-level structure contains predictive information when processed at scale. We implement a tractable approximation of this architecture adapted for a dataset of 944 trading days spanning 2021 through 2025. Four model configurations are evaluated under strict walk-forward validation with expanding training windows across three out-of-sample test periods (2023, 2024, 2025). The target variable is binary: whether the session close exceeds the 10:30 AM bar open by more than ten points. All models are evaluated against a 51.8% base rate. No configuration produces out-of-sample accuracy materially above the base rate. Combined out-of-sample accuracies range from 50.00% to 50.89% across all gradient boosting variants. The LSTM produces a combined OOS accuracy of 50.59%. Permutation test p-values are 0.135 for the best gradient boosting configuration and 0.515 for the LSTM, both failing the p &amp;lt; 0.05 significance threshold. Feature importance analysis across walk-forward folds reveals systematic instability: the features dominating each fold differ substantially, confirming noise fitting rather than consistent structural signal capture. We conclude that five-minute OHLCV bar sequences do not contain sufficient sequential predictive structure for session-level directional forecasting at this dataset size and resolution. The primary contribution is a documented implementation and honest evaluation of a Kronos-inspired architecture on a constrained real-world dataset, contributing an empirical lower bound on the dataset scale requirements for sequential ML-based intraday forecasting. A structural interpretation is offered: the sample size required for transformer-scale architectures to learn non-trivial financial patterns is orders of magnitude larger than what is available in four years of single-instrument intraday data.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Mathias Mesfin"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6792161",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

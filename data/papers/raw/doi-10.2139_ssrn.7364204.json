@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7364204",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7364204",
+  "title": "Volatility as a Signal Switch: Regime-dependent Intraday Mean Reversion in Nasdaq-100 Futures",
+  "abstract": "We ask whether intraday price moves beyond an implied-volatility&amp;nbsp; &lt;br&gt; band in E-mini Nasdaq-100 futures (NQ) revert before the session&amp;nbsp; &lt;br&gt; closes. The band is set daily as \u00b1 VXN/16 relative to the&amp;nbsp; &lt;br&gt; prior-session close; dividing by 16 converts the annualised VXN&amp;nbsp; &lt;br&gt; to a one-day standard-deviation estimate. Over 860 algorithmically&amp;nbsp; &lt;br&gt; detected band-breach events (2018\u20132026), the unconditional&amp;nbsp; &lt;br&gt; same-session reversion rate is 85.2%. When we sort by VXN level,&amp;nbsp; &lt;br&gt; the Sharpe\u2013VXN profile is non-monotone. Reversion probability is&amp;nbsp; &lt;br&gt; statistically significant in all four VXN buckets (BH-adjusted&amp;nbsp; &lt;br&gt; p &amp;lt; 0.001), but the 30-minute exit rule generates positive Sharpe&amp;nbsp; &lt;br&gt; only at the extremes (VXN &amp;lt; 20: 0.38; VXN &amp;gt;= 30: 0.64), with&amp;nbsp; &lt;br&gt; slightly negative values in between. Walk-forward validation&amp;nbsp; &lt;br&gt; confirms the pattern out of sample (IS 2018\u20132022, n = 298,&amp;nbsp; &lt;br&gt; Sharpe = 0.47; OOS 2023\u20132026, n = 191, Sharpe = 1.29). A&amp;nbsp; &lt;br&gt; pre-sample from 2010\u20132017 gives a Sharpe of -0.94 without the&amp;nbsp; &lt;br&gt; regime filter. A momentum alternative that enters in the breach&amp;nbsp; &lt;br&gt; direction is rejected on the same data. The band effect depends&amp;nbsp; &lt;br&gt; on volatility, with the strongest edge appearing when VXN &amp;gt;= 30.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Leander Seeck"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7364204",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

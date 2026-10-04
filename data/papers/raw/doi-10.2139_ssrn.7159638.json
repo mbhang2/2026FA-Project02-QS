@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.7159638",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7159638",
+  "title": "Anatomy of a Manufactured Crisis Reversal: Intraday Index Construction, Stale Prices, and TOPIX Futures",
+  "abstract": "A large and statistically robust crisis-reversal premium in Japanese equities-20 to 59 basis points per trade, rising monotonically with the severity of intraday synchronized selling, and surviving matched benchmarks, placebo randomization, bootstrap inference, and multiple-testing corrections-was generated mechanically by an intraday index-construction procedure that reconciled each day's price path to its contemporaneous daily close. We derive the exact identity through which such same-day reconciliation transmits path measurement error into cross-day returns, and verify it trade by trade. The contradiction with executable TOPIX futures provides the initial diagnostic and the external market-wide clock against which the cash-index chronology is reconstructed. Over the full sample, the premium shrinks to 4-13 basis points, loses statistical significance, and loses its threshold gradient on three valid rulers: a chronologically reconstructed index, a TOPIX exchange-traded fund, and executable TOPIX futures. A diagnostic split at September 2021 reveals substantial temporal heterogeneity: validruler returns are flat or negative before the split but positive and increasing afterward, although the recent-period estimates are based on only 11-51 episodes. Before the split, the contaminated ruler manufactures a premium absent from valid rulers; afterward, it distorts the magnitude of a positive pattern present across all valid rulers. Genuine opening staleness remains economically important but takes a different form: on crisis mornings up to 83% of market capitalization has not traded in the opening five-minute interval, attenuating measured overnight gaps symmetrically and briefly without generating mean returns. Statistical robustness cannot substitute for timestamp-valid measurement; traded instruments can.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Katsuhiko Okada",
+    "Yukinobu Hamuro"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7159638",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

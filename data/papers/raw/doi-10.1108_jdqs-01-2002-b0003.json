@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.1108_jdqs-01-2002-b0003",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1108/jdqs-01-2002-b0003",
+  "title": "Intraday Volatility in the Korean Stock Ind and Korean Stock Index Futures Markets",
+  "abstract": "This paper tries to find the information flow between KOSPI200 Index and KOSPI200 Futures more accurately by considering two models. First, three-stage least-squares regression is used to estimate lead and lag relationships based on the representation of a simultaneous-equations model because futures and cash returns may affect each other contemporaneously. Secondly, a bivariate GARCH model is used because the lead-lag relationships between the two markets should consider not only return itself but also return volatility. The results from the first regression suggest that KOSPI200 futures returns and the index are simultaneously related and that the lead from futures to cash returns extends for about 40 minutes and the lead from cash to futures returns extends for about 30 minutes, which means the lead-lag relationship between the two markets are not unidirectional. I find from the analysis of a bivariate GARCH model that the information flow between the two markets is rather symmetrical when the volatility relationships are also considered, although it seems non-symmetrical when the returns relationships alone are considered. I also find a much stronger dependence in both directions in the volatility of returns between the cash and futures markets than that observed in the returns alone. When I consider intraday volatility as well in the lead-lag relationship between the two markets, KOSPI200 futures markets strongly lead index markets but KOSPI index do not lead futures markets. Evidence also suggests strong intermarket dependences in the conditional volatilities and in the return shocks. So the results have implications for understanding the pattern of information flows between the two markets.",
+  "published": "2002-05-31",
+  "updated": "2002-05-31",
+  "authors": [
+    "Se Kyung Oh"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1108/jdqs-01-2002-b0003",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Derivatives and Quantitative Studies",
+  "cited_by_count": null
+}

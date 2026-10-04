@@ -1,0 +1,26 @@
+{
+  "id": "openalex-W3091977402",
+  "source": "openalex",
+  "openalex_id": "W3091977402",
+  "doi": "10.1016/j.jmse.2020.10.004",
+  "title": "The role of oil futures intraday information on predicting US stock market volatility",
+  "abstract": "This study investigates the role of oil futures price information on forecasting the US stock market volatility using the HAR framework. In-sample results indicate that oil futures intraday information is helpful to increase the predictability. Moreover, compared to the benchmark model, the proposed models improve their predictive ability with the help of oil futures realized volatility. In particular, the multivariate HAR model outperforms the univariate model. Accordingly, considering the contemporaneous connection is useful to predict the US stock market volatility. Furthermore, these findings are consistent across a variety of robust checks.",
+  "published": "2020-10-10",
+  "updated": "2020-10-10",
+  "authors": [
+    "Yusui Tang",
+    "Xiao Xiao",
+    "M.I.M. Wahab",
+    "Feng Ma"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Energy, Environment, Economic Growth",
+    "Monetary Policy and Economic Impact"
+  ],
+  "abs_url": "https://openalex.org/W3091977402",
+  "oa_url": "https://www.sciencedirect.com/science/article/pii/S2096232020300494/pdf",
+  "is_oa": true,
+  "venue": "Journal of Management Science and Engineering",
+  "cited_by_count": 98
+}

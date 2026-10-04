@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7213952895",
+  "source": "openalex",
+  "openalex_id": "W7213952895",
+  "doi": "10.5281/zenodo.22873541",
+  "title": "LAB #2509 NEUTRAL: VIDEO SCOUT: 15 Min Opening Range Breakout - NinjaTrader Live Code \u2014 E8 Intelligence Research",
+  "abstract": "IDEA: AUTO VIDEO SCOUT \u2014 evaluate this trading strategy video for the swarm: VIDEO: \"15 Min Opening Range Breakout - NinjaTrader Live Code\" by Code4Traders \u2014 https://www.youtube.com/watch?v=rOrYqCRLszE (duration 783s, 4 views; found via search 'opening range breakout strategy backtested'). TASK FOR MERLIN: From the title, channel and your knowledge of this trader/method, identify the strategy being taught. Judge it for OUR use: we scalp fast (15s-7m charts), long or short, targets set by E8 sacred geometry BEFORE entry. State what the method gets right, where it is weak, and exactly how E8 node/rhythm logic would improve on it. Verdict PROMISING only if a concrete, testable edge exists that we can code into the Replay Bench. **SAME-WINDOW EFFECT:** If this ORB strategy had been live over the current window, it would have generated roughly 1\u20132 trades per day on ES/forex pairs, but likely **zero overlap** with our existing rizzy5m/7m scalps \u2014 our entries are intraday rhythm-based (10 Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-09-21",
+  "updated": "2026-09-21",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Intelligence, Security, War Strategy",
+    "Competitive and Knowledge Intelligence",
+    "Psychological and Educational Research Studies"
+  ],
+  "abs_url": "https://openalex.org/W7213952895",
+  "oa_url": "https://doi.org/10.5281/zenodo.22873541",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

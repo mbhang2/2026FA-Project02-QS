@@ -1,0 +1,24 @@
+{
+  "id": "doi-10.2139_ssrn.4282926",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.4282926",
+  "title": "Night Trading and Intraday Return Predictability: Evidence from Chinese Metal Futures Market",
+  "abstract": "In 2013, the Shanghai Futures Exchange (SHFE) introduced a night session in Chinese metal futures markets. Using high-frequency data of gold, silver, and copper futures, we investigate the impact of night trading on intraday return predictability in Chinese metal futures markets. Firstly, we find the intraday return predictability has changed after introducing night trading: before the launch of night trading, the first half-hour daytime returns show significant predictability, whereas the first half-hour night returns exhibit forecasting power after that. Such changes can be explained by the immediate reactions of domestic investors to international news released in the evening. Secondly, the market timing strategy outperforms the always-long and buy-and-hold benchmark strategies. Thirdly, the predictability of night return is stronger on days with higher volatility and volume. Furthermore, stronger intraday predictability is associated with global news releases and positive news sentiment, suggesting enhanced connectedness of Chinese and international metal futures markets after the launch of night trading.",
+  "published": "2022",
+  "updated": "2022",
+  "authors": [
+    "Gaoping Ma",
+    "Elie Bouri",
+    "Yahua Xu",
+    "Z. Ivy Zhou"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.4282926",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

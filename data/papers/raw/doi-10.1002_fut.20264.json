@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.1002_fut.20264",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.20264",
+  "title": "Order imbalance and the pricing of index futures",
+  "abstract": "Abstract This study examines whether the aggregate order imbalance for index stocks can explain the arbitrage spread between index futures and the underlying cash index. The study covers the period of the Asian financial crisis and includes wide variations in order imbalance and the indexfutures basis. The analysis controls for realistic trading costs and actual dividend payments. The results indicate that the arbitrage spread is positively related to the aggregate order imbalance in the underlying index stocks; negative order\u2010imbalance has a stronger impact than positive order imbalance. Violations of the upper no\u2010arbitrage bound are related to positive order imbalance; of the lower no\u2010arbitrage bound to negative order imbalance. Asymmetric response times to negative and positive spreads can be attributed to the difficulty, cost, and risk of short stock arbitrage when the futures are below their no\u2010arbitrage value. The significant relationship between order imbalance and arbitrage spread confirms that index arbitrageurs are important providers of liquidity in the futures market when the stock market is in disequilibrium. \u00a9 2007 Wiley Periodicals, Inc. Jrl Fut Mark 27:697\u2013717, 2007",
+  "published": "2007-05-31",
+  "updated": "2007-05-31",
+  "authors": [
+    "Joseph K.W. Fung"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.20264",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

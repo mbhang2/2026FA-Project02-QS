@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.1142_s2382626619500114",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1142/s2382626619500114",
+  "title": "Multi-Level Order-Flow Imbalance in a Limit Order Book",
+  "abstract": "We study the multi-level order-flow imbalance (MLOFI), which is a vector quantity that measures the net flow of buy and sell orders at different price levels in a limit order book (LOB). Using a recent, high-quality data set for six liquid stocks on Nasdaq, we fit a simple, linear relationship between MLOFI and the contemporaneous change in mid-price. For all six stocks that we study, we find that the out-of-sample goodness-of-fit of the relationship improves with each additional price level that we include in the MLOFI vector. Our results underline how order-flow activity deep into the LOB can influence the price-formation process.",
+  "published": "2018-09",
+  "updated": "2018-09",
+  "authors": [
+    "Ke Xu",
+    "Martin D. Gould",
+    "Sam D. Howison"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1142/s2382626619500114",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Market Microstructure and Liquidity",
+  "cited_by_count": null
+}

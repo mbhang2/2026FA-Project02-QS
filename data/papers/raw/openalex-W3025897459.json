@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W3025897459",
+  "source": "openalex",
+  "openalex_id": "W3025897459",
+  "doi": "10.3905/jpm.2020.1.157",
+  "title": "What\u2019s Priced? Estimating Market Mispricing of Macroeconomic News",
+  "abstract": "Delineating between fundamental and nonfundamental price moves is vital for investment practitioners because the former tend to be more persistent than the latter. This article describes an approach to isolating price moves that are driven by fundamental macroeconomic news. The authors use an event-study methodology at the intraday frequency to estimate typical reactions to macro news releases for a set of seven equity and six government bond markets. These are calculated on an expanding-window and exponentially weighted basis to account for time variation in these reactions. The primary innovation of this work is a measure of market mispricing that looks at deviations of market returns from the returns expected based on the authors\u2019 estimated coefficients, which they calculate for each of these markets from 2015 to 2019. This measure provides an input for discretionary tactical asset allocation decisions. The correlation of this market mispricing measure with future returns provides support for the thesis that initial time-series momentum and later time-series reversion of asset returns reflect nonfundamental factors. TOPICS:Derivatives, financial crises and financial market history Key Findings \u2022 Because nonfundamental price moves mean revert faster than fundamental price moves, the R2 of macro news is higher at a low frequency than at a high frequency. \u2022 Intraday estimates of market price responses to macro news are more accurate than estimates based on daily time series because a short event-study window reduces concerns around endogeneity. \u2022 These intraday estimates can be used to now-cast market return potential and help find the deviation of those now-casts from actual returns. Cumulating these deviations over months of data indicates whether markets are mispriced relative to macro fundamentals. \u2022 Our measure of market mispricing helps predict future asset returns and provides broader context to discretionary tactical asset allocation decisions. \u2022 This measure also reveals more cleanly than previous research the time-series properties of nonfundamental price moves, with initial time-series momentum and later time-series reversal.",
+  "published": "2020-05-12",
+  "updated": "2020-05-12",
+  "authors": [
+    "Kevin Ferriter",
+    "Pierre Sarrau",
+    "Eric Van Nostrand"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility",
+    "Stock Market Forecasting Methods"
+  ],
+  "abs_url": "https://openalex.org/W3025897459",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "The Journal of Portfolio Management",
+  "cited_by_count": 0
+}

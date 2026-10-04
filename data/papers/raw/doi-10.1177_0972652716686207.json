@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.1177_0972652716686207",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1177/0972652716686207",
+  "title": "Intraday Periodicity and Volatility Forecasting: Evidence from Indian Crude Oil Futures Market",
+  "abstract": "We estimate intraday periodicities in return volatility by implementing two time series procedures\u2014flexible Fourier form and cubic spline. We use intraday data for more than five years for crude oil futures contracts traded at the Multi Commodity Exchange India Limited. Filtration of the intraday periodicities from the raw returns reveals long-run dependence in volatility. We observe the presence of recurring and consistent intraday patterns in return volatility. Further, we find that adjustment for the intraday periodicity in return volatility improves forecasting performance. Our results are robust after controlling for the scheduled macroeconomic announcements. JEL Classification: C14, C22, G10",
+  "published": "2017-03-14",
+  "updated": "2017-03-14",
+  "authors": [
+    "B.B. Chakrabarti",
+    "Vivek Rajvanshi"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1177/0972652716686207",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Emerging Market Finance",
+  "cited_by_count": null
+}

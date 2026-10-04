@@ -1,0 +1,24 @@
+{
+  "id": "doi-10.2139_ssrn.2025274",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2025274",
+  "title": "A Tale of Two Index Futures: The Intraday Price Discovery and Volatility Transmission Processes between the China Financial Futures Exchange and the Singapore Exchange",
+  "abstract": "This is the first study to examine the intraday price discovery and volatility transmission processes between the Singapore Exchange and the China Financial Futures Exchange. Using one- and five-minute high-frequency data from May to November 2011, we found that China\u2019s CSI 300 index futures dominated Singapore\u2019s A50 index futures in terms of the price discovery process. However, A50 futures contracts also made a substantial contribution (26%-37%) to the price discovery process. The CSI 300 futures market also dominates its Singapore counterpart in the intraday volatility transmission process. These results have important implications for both traders and policymakers.",
+  "published": "2012",
+  "updated": "2012",
+  "authors": [
+    "Qian Han",
+    "DooJin Ryu",
+    "Biao Guo",
+    "Maonan Liu"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2025274",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

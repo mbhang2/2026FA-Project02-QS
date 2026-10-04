@@ -1,0 +1,26 @@
+{
+  "id": "openalex-W7215063495",
+  "source": "openalex",
+  "openalex_id": "W7215063495",
+  "doi": "10.21511/imfi.23(4).2026.02",
+  "title": "Exploring overnight momentum: Evidence from the Indonesian stock market",
+  "abstract": "Type of the article: Research ArticleAbstractThis study examines the effectiveness and consistency of overnight momentum strategies in the Indonesian stock market using cross-sectional, time-series, and dual momentum approaches. The analysis employs intraday stock price data covering 112 firms and 546 trading days from July 2021 to September 2023. Abnormal returns are evaluated using the Fama-French five-factor model to assess whether strategy performance can be explained by systematic risk exposures. The empirical results show that during the close-open interval, all three overnight momentum strategies generate negative and statistically significant alphas, indicating short-term return reversal rather than momentum continuation. When the holding horizon is extended, the reversal pattern remains relatively persistent for the cross-sectional and time-series strategies, whereas the dual momentum strategy exhibits weaker statistical significance, suggesting reduced stability of the combined signal over longer holding periods. Additional robustness tests based on trading days confirm that the reversal pattern is observed throughout the trading week, with the strongest consistency identified in the time-series framework. These findings differ from evidence reported in several developed markets that document positive overnight momentum and instead suggest that overnight return dynamics in Indonesia may reflect temporary price adjustments occurring between market close and the subsequent market opening. From a theoretical perspective, the results provide additional evidence that short-horizon return behavior may not be fully captured by conventional risk factors and highlight the relevance of behavioral and market microstructure considerations in explaining overnight return patterns in emerging markets.",
+  "published": "2026-10-01",
+  "updated": "2026-10-01",
+  "authors": [
+    "Nanda Nanda",
+    "Tafdil Husni",
+    "Masyhuri Hamidi",
+    "Fajri Adrianto"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Stock Market Forecasting Methods",
+    "COVID-19 Pandemic Impacts"
+  ],
+  "abs_url": "https://openalex.org/W7215063495",
+  "oa_url": "https://businessperspectives.org/images/pdf/applications/publishing/templates/article/assets/25049/IMFI_2026_04_Nanda.pdf",
+  "is_oa": true,
+  "venue": "Investment Management and Financial Innovations",
+  "cited_by_count": 0
+}

@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W3123181790",
+  "source": "openalex",
+  "openalex_id": "W3123181790",
+  "doi": "10.1016/j.rfe.2008.10.001",
+  "title": "Profitability of technical stock trading: Has it moved from daily to intraday data?",
+  "abstract": "Abstract This paper investigates how technical trading systems exploit the momentum and reversal effects in the S&P 500 spot and futures market. When based on daily data, the profitability of 2580 technical models has steadily declined since 1960, and has been unprofitable since the early 1990s. However, when based on 30\u2010minutes\u2010data the same models produce an average gross return of 7.2% per year between 1983 and 2007. These results do not change substantially when trading is tested over eight subperiods. In particular, there is no clear trend of a declining profitability of technical stock trading based on 30\u2010minutes\u2010data. Those 25 models which performed best over the most recent subperiod produce a significantly higher gross return over the subsequent subperiod than all models. Between 2001 and 2007 the 2580 models perform worse than over the 1980s and 1990s. This result could be due to stock markets becoming recently more efficient or to stock price trends shifting from 30\u2010minutes\u2010prices to prices of higher frequencies.",
+  "published": "2008-10-14",
+  "updated": "2008-10-14",
+  "authors": [
+    "Stephan Schulmeister"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Stock Market Forecasting Methods",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W3123181790",
+  "oa_url": "https://www.econstor.eu/bitstream/10419/128874/1/wp_323.pdf",
+  "is_oa": true,
+  "venue": "Review of Financial Economics",
+  "cited_by_count": 126
+}

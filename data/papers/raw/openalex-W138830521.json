@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W138830521",
+  "source": "openalex",
+  "openalex_id": "W138830521",
+  "doi": null,
+  "title": "Stock Market Volatility around Expiration Days in Japan",
+  "abstract": "This study evaluates the impact of stock trading activity around expirations of Japanese stock index options and futures contracts on the underlying stock prices. Though these expiration days are associated with higher than average trading volume, tests indicate that the intraday return volatility in the last hours of trading on expiration days and the first hours following expirations is only marginally greater than that on non-expiration days. Moreover, portfolio return reversals of 0.1% or less during the last hour of trading at expiration and the first hours of trading following the expiration are statistically insignificant and smaller in magnitude than typical bid-ask spreads, commission rates and market impact costs would warrant. Finally, in comparing the expiration effects for the two similar Nikkei index futures contracts traded in the Singapore and the more-heavily-regulated Osaka/Tokyo markets, no important differences can be discerned. The implications of these findings for the newest restrictions on index arbitrage activity by Japan's Ministry of Finance and the Tokyo Stock Exchange are discussed.",
+  "published": "1996-12-05",
+  "updated": "1996-12-05",
+  "authors": [
+    "George Andrew Karolyi"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Corporate Finance and Governance",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W138830521",
+  "oa_url": "https://autopapers.ssrn.com/sol3/papers.cfm?abstract_id=7962",
+  "is_oa": true,
+  "venue": "SSRN Electronic Journal",
+  "cited_by_count": 46
+}

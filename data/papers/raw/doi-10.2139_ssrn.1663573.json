@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.1663573",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.1663573",
+  "title": "Number of Trades, Trade Size, Order Imbalance, Order Book Slope and Volatility in Futures Markets",
+  "abstract": "We investigate the effect of number of trades, average trade size, order imbalance and order book slope on volatility. Examining three interest rate futures (90-day Bank Accepted Bill, 3-Year Treasury Bond and 10-Year Treasury Bond) traded on the Australian Securities Exchange, we document that the number of trades has a more significant impact on volatility than the average trade size. We also observe supportive evidence for the explanatory power of order imbalance and order book slope volatility but we find that these two factors are not the main factors behind the relation between volatility and number of trade and size of trades.",
+  "published": "2010",
+  "updated": "2010",
+  "authors": [
+    "Huu Nhan Duong",
+    "Liwen (Emily) Fang",
+    "Petko S. Kalev"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.1663573",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

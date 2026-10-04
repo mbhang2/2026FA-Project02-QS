@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7326538",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7326538",
+  "title": "Order Flow Imbalance and Short-Horizon FX Returns: A Multiple-Testing-Corrected Double Machine Learning Analysis",
+  "abstract": "Order flow imbalance (OFI) has a long lineage in market microstructure as a candidate driver of short-horizon price impact, from Kyle's (1985) linear price-impact model through the bulk volume classification tradition underlying VPIN (Easley, L\u00f3pez de Prado &amp;amp; O'Hara, 2012). Practitioner claims that a given order-flow construction \"predicts\" returns are common but are rarely subjected to a causal standard that separates a structural relationship from confounding by time-of-day, volatility clustering, and recent momentum \u2014 nor to correction for the fact that testing many instruments and time partitions inflates the chance of a false positive. This note applies Double Machine Learning (Chernozhukov et al., 2018) to a transparent, bar-level OFI proxy across a systematic 32-instrument, 730,013-observation sweep of 30-minute FX, metals, and sovereign-bond-CFD data, and subjects the resulting 256-test battery to Benjamini-Hochberg false discovery rate correction. Under the correction family appropriate to a single pre-specified sweep, no instrument-session pairing retains a statistically defensible relationship between OFI and 90-minute forward returns. A small number of nominally significant results survive a looser, per-instrument correction, but carry effect sizes too small to be economically meaningful. The result is reported as a genuine null: a signal that would appear promising under the single-pair, uncorrected screen many practitioner claims rely on does not survive a stricter, causally motivated, multiple-testing-aware test.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Charles Glah"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7326538",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

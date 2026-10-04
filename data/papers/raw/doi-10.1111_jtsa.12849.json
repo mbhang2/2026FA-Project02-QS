@@ -1,0 +1,24 @@
+{
+  "id": "doi-10.1111_jtsa.12849",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1111/jtsa.12849",
+  "title": "Decoupling Interday and Intraday Volatility Dynamics With Price Durations",
+  "abstract": "ABSTRACT This article introduces a novel framework for volatility estimation based on price durations with an adaptive price change threshold. This innovation allows us to disentangle daily and intraday volatility dynamics from price durations, which greatly simplifies the parametric modelling of price durations and hence leads to more accurate volatility estimators. Simulation results demonstrate superior finite\u2010sample performance of our duration\u2010based estimators for both spot and integrated volatility compared with some established methods. An empirical application based on intraday data for the SPDR S&amp;P 500 ETF highlights the improved forecasting accuracy of our integrated volatility estimator within a standard daily volatility forecasting framework. Furthermore, an intraday analysis of spot volatility estimation shows that our method can capture the immediate and substantial impact of FOMC news announcements on market volatility.",
+  "published": "2025-06-29",
+  "updated": "2025-06-29",
+  "authors": [
+    "Yifan Li",
+    "Ingmar Nolte",
+    "Sandra Nolte",
+    "Shifan Yu"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1111/jtsa.12849",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Time Series Analysis",
+  "cited_by_count": null
+}

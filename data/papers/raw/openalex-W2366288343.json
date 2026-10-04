@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W2366288343",
+  "source": "openalex",
+  "openalex_id": "W2366288343",
+  "doi": null,
+  "title": "Study of stress characteristics of brittle failures of rock around underground openings",
+  "abstract": "Under high stresses,rock bursts,borehole breakouts and spalling are all common phenomena which occur around the underground openings.In substance,these three phenomena all belong to brittle failures of intact rock mass;but they reflect different failure extents of intact rock mass under the action of high stresses.After analyzing and comparing the stress-strength criteria for rock bursts,borehole breakouts and spalling put forward by other specialists,we find that these brittle failure phenomena share the same stress requirement.The stress requirements for brittle failures can be defined with the ratio of the maximum tangential stress around an underground opening to the uniaxial compressive strength(\u03c3 \u03b8max/ \u03c3 ci) or the ratio of the maximum principal stress to the uniaxial compressive strength(\u03c3 1/ \u03c3 ci);actually,both indices reflect the same stress requirements.For \u03c3 \u03b8max/ \u03c3 ci,the ratio of 0.4\u00b10.1 should be the critical stress requirement,but for \u03c3 1/ \u03c3 ci,the ratio of 0.15\u00b10.05 should be the critical stress requirement.Large amounts of engineering cases and the mechanical analysis based on the Hoek-Brown criterion also prove the validity of these two stress requirements.Here,the two stress requirements reflect a ratio range because the complicated rock mass ratings,lithology and geotechnical conditions shall have profound impacts on the stress requirement for brittle failures.",
+  "published": "2012-01-01",
+  "updated": "2012-01-01",
+  "authors": [
+    "Lipeng Liu"
+  ],
+  "categories": [
+    "Geomechanics and Mining Engineering",
+    "Rock Mechanics and Modeling",
+    "Geoscience and Mining Technology"
+  ],
+  "abs_url": "https://openalex.org/W2366288343",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Rock and Soil Mechanics",
+  "cited_by_count": 2
+}

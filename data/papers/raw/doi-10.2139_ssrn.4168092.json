@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.4168092",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.4168092",
+  "title": "A Limited Attention Theory of Time Series Momentum",
+  "abstract": "I present a model of bond and equity markets where some investors have limited attention, and show that the model generates both time series momentum and cross-asset time series momentum. The model makes several novel predictions about the performance of different time series momentum and cross-asset time series momentum strategies, and about the effects that investor attention has on strategy performance. Using bond and equity returns from twenty countries and Google search volume as a measure of investor attention, I find that the predictions are in line with the data.",
+  "published": "2022",
+  "updated": "2022",
+  "authors": [
+    "Aleksi Pitk\u00e4j\u00e4rvi"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.4168092",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

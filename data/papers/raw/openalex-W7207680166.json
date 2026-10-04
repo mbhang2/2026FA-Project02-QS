@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7207680166",
+  "source": "openalex",
+  "openalex_id": "W7207680166",
+  "doi": "10.5281/zenodo.22268749",
+  "title": "E8 Lattice Tunneling: ORB Breakouts as Phi-Coupled Root-Vector State Transitions \u2014 E8 Intelligence Research",
+  "abstract": "The opening range breakout (ORB) pattern in financial time-series maps onto a quantum tunneling event between adjacent 60-root subsets of the E8 lattice, where the confinement boundary is the geometric projection of a root polytope facet. The phi-coupling between the 132 Hz fundamental and its sexagesimal harmonics governs the transition probability amplitude, with breakout magnitude scaling as \u03c6^n of the harmonic index n. This reveals that market breakout strategies are empirical observations of E8 lattice vibration modes propagating through the 7-temporal-dimensional spacetime spectrum, and the four subset-to-subset tunneling pathways correspond to the four observed ORB directional regimes. Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-09-03",
+  "updated": "2026-09-03",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Complex Systems and Time Series Analysis",
+    "Quantum Mechanics and Applications",
+    "Chaos control and synchronization"
+  ],
+  "abs_url": "https://openalex.org/W7207680166",
+  "oa_url": "https://doi.org/10.5281/zenodo.22268749",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

@@ -96,7 +96,22 @@ def worth_distilling() -> list[dict]:
             and (v.get("relevance") == "high" or v.get("gate_relevance") == "high")]
     rows.sort(key=lambda v: (order.get(v.get("relevance")),
                              order.get(v.get("gate_relevance"))))
-    return rows
+    # **One row per claim.** 40 duplicate titles across 82 registry rows
+    # (measured 2026-10-04): Zenodo mints a DOI per version and an arXiv
+    # preprint and its journal version are the same claim twice. The registry
+    # keeps every row -- a row carries decisions and a re-fetch must not erase
+    # them -- but suggesting one paper twice invites two campaigns on one idea.
+    import re as _re
+    seen: set[str] = set()
+    out = []
+    for v in rows:
+        key = " ".join(_re.sub(r"[^a-z0-9 ]+", " ",
+                               (v.get("title") or "").lower()).split())
+        if key and key in seen:
+            continue
+        seen.add(key)
+        out.append(v)
+    return out
 
 
 def main() -> int:
@@ -193,10 +208,17 @@ def main() -> int:
               f"  python scripts/retrieve.py --distil {picks[0]['id']}"
               + (f" --asking {a.asking}" if a.asking else ""))
     else:
-        print("\nno paper is rated high on either axis and undistilled. That is a "
-              "finding,\nnot a failure: the campaign axis has never rated one high "
-              "in 284 papers,\nbecause our single-instrument constraint removes "
-              "almost every signal paper.")
+        print("\nno paper is rated high on either axis and undistilled.\n"
+              "That used to be reported here as a finding about our data: the "
+              "campaign axis\nhad never rated one high in 284 papers, because "
+              "the single-instrument\nconstraint removes almost every signal "
+              "paper. Measured 2026-10-04, that was\nhalf right. The other half "
+              "was the SOURCE: arXiv q-fin is mostly method\npapers, and 3 of "
+              "284 were directly testable here (1.1%). Adding OpenAlex and\n"
+              "Crossref gave 22 of 153 (14.4%) and 3 of 95, so the corpus now "
+              "holds 28\ndirectly testable papers instead of 3. If this list is "
+              "empty, run the ranker\n(stage 2) over the new survivors before "
+              "concluding anything about our data.")
     return 0
 
 

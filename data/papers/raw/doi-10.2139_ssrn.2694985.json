@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.2694985",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2694985",
+  "title": "Intraday Momentum in FX Markets: Disentangling Informed Trading from Liquidity Provision",
+  "abstract": "We examine intraday momentum in the RUB-USD exchange market and its relationship with informed trading and liquidity provision. Using tick-by-tick transaction level data from the Moscow Interbank Currency Exchange (MICEX) for the period 2005 to 2014, we establish the presence of intraday momentum, defined as a significantly positive relationship between the first half-hour return and the last-half hour return. We find that, for our specific dataset, intraday momentum does not appear to be the result of informed trading. Instead, our results suggest that intraday momentum is consistent with risk-aversion for overnight holdings among liquidity providers.",
+  "published": "2015",
+  "updated": "2015",
+  "authors": [
+    "Gert Elaut",
+    "Michael Fr\u00f6mmel",
+    "Kevin Lampaert"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2694985",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

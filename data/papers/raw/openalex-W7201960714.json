@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7201960714",
+  "source": "openalex",
+  "openalex_id": "W7201960714",
+  "doi": "10.5281/zenodo.21846522",
+  "title": "LAB #809 NEUTRAL: VIDEO SCOUT: I Backtested 1,178,668 Opening Range Breakout Trades. Here's the Data. \u2014 E8 Intelligence Research",
+  "abstract": "IDEA: AUTO VIDEO SCOUT \u2014 evaluate this trading strategy video for the swarm: VIDEO: \"I Backtested 1,178,668 Opening Range Breakout Trades. Here's the Data.\" by TOS Indicators \u2014 https://www.youtube.com/watch?v=MOG-DbgmzzI (duration 565s, 33868 views; found via search 'opening range breakout strategy backtested'). TASK FOR MERLIN: From the title, channel and your knowledge of this trader/method, identify the strategy being taught. Judge it for OUR use: we scalp fast (15s-7m charts), long or short, targets set by E8 sacred geometry BEFORE entry. State what the method gets right, where it is weak, and exactly how E8 node/rhythm logic would improve on it. Verdict PROMISING only if a concrete, testable edge exists that we can code into the Replay Bench. **SAME-WINDOW EFFECT:** Over the current trade window, this ORB strategy would have triggered entries on EURUSD, GBPUSD, and USDJPY around the 5-15m opening range breakouts. Given the 5m ORB's 53.78% win rate and the 15m's higher EV ($0.0 Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-08-08",
+  "updated": "2026-08-08",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Intelligence, Security, War Strategy",
+    "Competitive and Knowledge Intelligence",
+    "Military Strategy and Technology"
+  ],
+  "abs_url": "https://openalex.org/W7201960714",
+  "oa_url": "https://doi.org/10.5281/zenodo.21846522",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

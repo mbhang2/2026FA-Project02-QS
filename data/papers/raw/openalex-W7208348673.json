@@ -1,0 +1,19 @@
+{
+  "id": "openalex-W7208348673",
+  "source": "openalex",
+  "openalex_id": "W7208348673",
+  "doi": null,
+  "title": "\u6771\u8a3c\u65e5\u5185\u30e2\u30fc\u30e1\u30f3\u30bf\u30e0\u306e\u6642\u7cfb\u5217\u7684\u7279\u5fb4\u306b\u95a2\u3059\u308b\u8003\u5bdf",
+  "abstract": "This research analyzed the time-series characteristics of intraday momentum in the market returns of the Tokyo Stock Exchange, using the TOPIX index. Specifically, the study confirmed that, apart from the financial crisis in 2008, events such as the Great East Japan Earthquake and the COVID-19 shock also significantly impacted the intraday momentum of the Tokyo Stock Exchange. Additionally, the study identified the existence of calendar effects in the intraday momentum of the Tokyo Stock Exchange, notably observed statistically on trading days before weekends or after long holidays.",
+  "published": "2023-11-01",
+  "updated": "2023-11-01",
+  "authors": [
+    "Jin Huixing"
+  ],
+  "categories": [],
+  "abs_url": "https://openalex.org/W7208348673",
+  "oa_url": "http://www2.econ.osaka-u.ac.jp/econ_society/dp/2311.pdf",
+  "is_oa": true,
+  "venue": "Institutional Repositories DataBase (IRDB)",
+  "cited_by_count": 0
+}

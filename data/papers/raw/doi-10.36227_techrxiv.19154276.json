@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.36227_techrxiv.19154276",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.36227/techrxiv.19154276",
+  "title": "Order Flow, Technical Analysis And Neural Network: Predicting Short-term Direction Of Futures Contract",
+  "abstract": "Predictions of short-term directional movement of the futures contract can be challenging as its pricing is often based on multiple complex dynamic conditions. This work presents an innovative method for predicting the short-term directional movement of an underlying futures contract. We engineered a set of features from technical analysis, order flow, and order-book data. Then, Tabnet, a deep learning neural network, is trained using these features. We train our model on the Silver Futures Contract listed on Shanghai Futures Exchange and achieve an accuracy of 0.601 on predicting the directional change during selected period. When used in conjunction with a basic trading strategy, a profit of 24.08 % is gained within a two-month timespan.&lt;br&gt;",
+  "published": "2022-02-19",
+  "updated": "2022-02-19",
+  "authors": [
+    "Yiyang Zheng"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.36227/techrxiv.19154276",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

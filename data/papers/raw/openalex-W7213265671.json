@@ -1,0 +1,26 @@
+{
+  "id": "openalex-W7213265671",
+  "source": "openalex",
+  "openalex_id": "W7213265671",
+  "doi": "10.1002/fut.70142",
+  "title": "Cross\u2010Market Convergence Trading in Options Order Flow",
+  "abstract": "ABSTRACT We suggest a framework to isolate and quantify convergence\u2010driven options order imbalances using synthetic positions from matched calls and puts. Unlike the conventional measure of informed trading, our convergence trading measure increases with options\u2013futures mispricing. Convergence\u2010driven imbalances negatively predict related\u2010market returns, unlike informed trading imbalances. Foreign (domestic) investors primarily respond to options\u2013futures (options\u2013spot) mispricing. Investors react more strongly to spot undervaluation than overvaluation, consistent with short\u2010sale constraints. This asymmetry is not observed in options\u2013futures convergence. Our findings identify convergence trading as a distinct order\u2010flow channel through which cross\u2010market price deviations are corrected.",
+  "published": "2026-09-14",
+  "updated": "2026-09-14",
+  "authors": [
+    "Jaeram Lee",
+    "Doojin Ryu",
+    "Heejin Yang",
+    "Jinyoung Yu"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Stochastic processes and financial applications",
+    "Financial Risk and Volatility Modeling"
+  ],
+  "abs_url": "https://openalex.org/W7213265671",
+  "oa_url": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/fut.70142",
+  "is_oa": true,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": 0
+}

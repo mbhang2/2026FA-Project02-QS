@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W1999532109",
+  "source": "openalex",
+  "openalex_id": "W1999532109",
+  "doi": "10.1002/fut.20226",
+  "title": "Intraday price-reversal patterns in the currency futures market: The impact of the introduction of GLOBEX and the euro",
+  "abstract": "This article assesses the intraday price-reversal patterns of seven major currency futures contracts traded on the Chicago Mercantile Exchange over 1988\u20132003 after 1-day returns and opening gaps. Significant intraday price-reversal patterns are observed in five of the seven currency futures contracts, following large price changes. Additional tests are conducted in three subperiods (1988\u20131992, 1993\u20131998, and 1999\u20132003) to examine the impact of the introduction of electronic trading on GLOBEX in 1992 (to assess how a near 24-hour trading session might impact the next-day opening and closing futures prices) and the introduction of the euro in 1999 (to assess its impact on price predictability in other futures markets). It is found that the introduction of the GLOBEX in 1992 significantly reduced pricing errors in currency futures in the second subperiod, making the currency futures markets fairly efficient. However, the introduction of the new currency, the euro, and the disappearance of several European currencies in 1999, resulted in significant price patterns (mostly reversals and some persistence) in most of the currency futures, indicating inefficiencies in the third subperiod. \u00a9 2006 Wiley Periodicals, Inc. Jrl Fut Mark 26:1089\u20131130, 2006",
+  "published": "2006-01-01",
+  "updated": "2006-01-01",
+  "authors": [
+    "Joel C. Rentzler",
+    "Kishore Tandon",
+    "Susana Yu"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W1999532109",
+  "oa_url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=885686",
+  "is_oa": true,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": 4
+}

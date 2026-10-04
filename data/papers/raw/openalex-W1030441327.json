@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W1030441327",
+  "source": "openalex",
+  "openalex_id": "W1030441327",
+  "doi": null,
+  "title": "Intraday serial correlation and the predictability of returns in the U.S. treasury note futures market",
+  "abstract": "This study examines the intraday price patterns in the U.S. Treasury note futures market. Significantly negative serial correlations of price changes have been found throughout the trading day. The serial correlations are consistently negative throughout the trading day and have declined considerably over time. In addition, it is seen that the level of recent daily serial correlations is predictive of correlations throughout the trading day. A trading strategy has been tested based on these results and shows that excess profits can be earned. Importantly, the trading results are seen to improve when the level of serial correlation is used to refine the trading strategy.",
+  "published": "2009-09-29",
+  "updated": "2009-09-29",
+  "authors": [
+    "Patrick J. Cusatis",
+    "Mukund S. Kulkarni",
+    "Martin Thomas"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility",
+    "Capital Investment and Risk Analysis"
+  ],
+  "abs_url": "https://openalex.org/W1030441327",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Banking and finance review",
+  "cited_by_count": 0
+}

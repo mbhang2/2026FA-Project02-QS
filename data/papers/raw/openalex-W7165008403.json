@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W7165008403",
+  "source": "openalex",
+  "openalex_id": "W7165008403",
+  "doi": "10.1016/j.jfds.2026.100197",
+  "title": "Reinforcement learning for automated market making in cryptocurrency perpetual futures: Integrating funding rate dynamics with historical BTCUSDT evidence",
+  "abstract": "The emergence of cryptocurrency perpetual futures has created unique opportunities for automated market making, yet existing approaches often ignore the funding rate mechanism that transfers payments between long and short position holders every eight hours. This paper develops a reinforcement learning framework that jointly optimizes market making spread decisions and funding rate capture, formulating the problem as a Markov Decision Process with state features tailored to perpetual futures, including funding rates, inventory, realized volatility, and an order-flow imbalance proxy. This state design is a foundational methodological contribution because it embeds crypto-native contract mechanics directly into the agent\u2019s information set rather than treating funding as an exogenous overlay. The empirical evaluation uses public Binance Futures BTCUSDT perpetual data, comprising 29,606 hourly observations from 31 December 2022 to 18 May 2026 and 3,701 funding-rate records. After replacing the synthetic proof of concept with historical data, the best reinforcement learning policy remains only marginally positive under the conservative Sharpe definition. However, a performance-first adaptive market making variant with volatility filtering, fee-aware quoting, and momentum-based inventory targeting achieves an annualized return of 24.63%, Sharpe ratio of 1.49, zero-risk-free Sharpe ratio of 1.87, and maximum drawdown of 6.39% on the final historical holdout. These findings indicate that the proposed state representation is useful for studying perpetual-futures control, but profitability depends critically on explicit fee, regime, and inventory filters. The paper therefore contributes a reproducible real-data benchmark and identifies the risk controls, execution assumptions, latency constraints, and multi-venue extensions required before reinforcement learning market making can be considered production-ready.",
+  "published": "2026-06-17",
+  "updated": "2026-06-17",
+  "authors": [
+    "Edson Pindza",
+    "Claude Rodrigue Bambe Moutsinga"
+  ],
+  "categories": [
+    "Blockchain Technology Applications and Security",
+    "Stock Market Forecasting Methods",
+    "Financial Markets and Investment Strategies"
+  ],
+  "abs_url": "https://openalex.org/W7165008403",
+  "oa_url": "https://doi.org/10.1016/j.jfds.2026.100197",
+  "is_oa": true,
+  "venue": "The Journal of Finance and Data Science",
+  "cited_by_count": 0
+}

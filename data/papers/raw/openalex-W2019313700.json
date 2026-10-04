@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W2019313700",
+  "source": "openalex",
+  "openalex_id": "W2019313700",
+  "doi": "10.1002/fut.20182",
+  "title": "Dynamics of intraday serial correlation in the Italian futures market",
+  "abstract": "Abstract The serial correlation of high\u2010frequency intraday returns on the Italian stock index futures (FIB30) in the period 2000\u20132002 is studied. It is found that intraday autocorrelation is mostly negative for time scales lower than 20 minutes, mainly due to the bid\u2013ask bounce effect. Although this supports the efficiency of the Italian futures market, evidence that intraday serial correlation becomes positive in high\u2010volatility regimes is also provided. Moreover, it is found that it is mainly unexpected volatility that makes serial correlation rise, and not its predictable part. The results are supportive of the K. Chan (1993) model. \u00a9 2006 Wiley Periodicals, Inc. Jrl Fut Mark 26:61\u201384, 2006",
+  "published": "2005-11-16",
+  "updated": "2005-11-16",
+  "authors": [
+    "Simone Bianco",
+    "Roberto Ren\u00f2"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Complex Systems and Time Series Analysis",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W2019313700",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": 37
+}

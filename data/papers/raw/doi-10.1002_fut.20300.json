@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.1002_fut.20300",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.20300",
+  "title": "Intraday behavior of market depth in a competitive dealer market: A note",
+  "abstract": "Abstract This study is the first to examine the intraday behavior of quoted depth in a competitive dealer market. In sharp contrast to previous research that focuses on specialist markets, quoted depth is lowest at the open of trading, plateaus around the middle of the day, and then dramatically increases in the final hours of trading, peaking at the close. This peak in quoted depth coincides with a narrowing in bid\u2010ask spreads, and is contrary to intraday patterns documented for specialist markets. The authors conclude that the increase in depth and narrowing of bid\u2010ask spreads at the close is driven by dealers rebalancing inventories to achieve target inventory levels in a competitive market. \u00a9 2008 Wiley Periodicals, Inc. Jrl Fut Mark 28:294\u2013307, 2008",
+  "published": "2008-02-19",
+  "updated": "2008-02-19",
+  "authors": [
+    "Alex Frino",
+    "Andrew Lepone",
+    "Grant Wearin"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.20300",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

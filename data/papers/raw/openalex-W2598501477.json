@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W2598501477",
+  "source": "openalex",
+  "openalex_id": "W2598501477",
+  "doi": null,
+  "title": "Expiration day effects of the EURO STOXX 50 index futures and options",
+  "abstract": "PURPOSE OF THE STUDY\\nThe purpose of this thesis is to bring new evidence on index derivatives\u2019 expiration day effects in Europe. The study addresses the lacking evidence on the expiration day effects of the EURO STOXX 50 index futures and options, which are among the most traded index derivatives in the world. The thesis studies the abnormal volume, return, volatility and return reversal effects around the monthly options and quarterly futures expiration days. Furthermore, this study examines whether some of the effects are spilled over from the EURO STOXX 50 index to OMXH25 via Nokia, which is a member of both indexes. \\n\\nDATA\\nThe data used in this study consists of EURO STOXX 50 constituents\u2019 daily trading volume and return figures as well as monthly index weights from Datastream. Furthermore, 15 second interval high frequency index price data from STOXX Ltd. is used to compare the intraday volatilities and returns on expiration days to the control group of non-expiration days. The futures expiration day sample includes 40 trading days, the options sample 80 days and the control group 401 days, covering the years 2000-2009. Furthermore, daily high, low, and closing prices, as well as monthly and semiannual weightings and component lists of OMXH25 index constituents are used. This data is from Nasdaq OMX and Datastream.\\n\\nRESULTS\\nI find significant expiration day effects around the expiration of EURO STOXX 50 index derivatives. The effects are in general stronger for the expiration of futures than for options. The results show that expiration days are associated with a significantly higher trading volume on the underlying index. This is due to the unwinding of delta positions and to heavy program trading activities on expiration days. Furthermore, a significantly higher intraday volatility around the expiration time at 12:00 CET on expiration days is found. This result is robust also when controlling for sample size differences. Moreover, the intraday returns before expiration are significantly higher and the returns after expiration significantly lower on expiration days. The returns before 12:00 CET tend, on average, to reverse more on expiration days after 12:00 CET than on non-expiration days. The finding regarding reversals suggests that trading is liquidity driven on expiration days and supports theory on inventory considerations of market makers. Moreover, the systematic direction of the return effect is a sign of potential price manipulation activities and/or on average a significant unwinding of short positions on expiration days. However, no significant evidence of expiration day effects spilling over from the EURO STOXX 50 index to OMXH25 via Nokia is found, at least when studying daily data.",
+  "published": "2010-01-01",
+  "updated": "2010-01-01",
+  "authors": [
+    "Markus Joensuu"
+  ],
+  "categories": [
+    "Monetary Policy and Economic Impact",
+    "Global Financial Crisis and Policies",
+    "German Economic Analysis & Policies"
+  ],
+  "abs_url": "https://openalex.org/W2598501477",
+  "oa_url": "https://aaltodoc.aalto.fi/handle/123456789/429",
+  "is_oa": true,
+  "venue": "Aaltodoc (Aalto University)",
+  "cited_by_count": 0
+}

@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.1002_fut.20288",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.20288",
+  "title": "Order imbalance and the dynamics of index and futures prices",
+  "abstract": "Abstract This study uses transaction records of index futures and index stocks, with bid/ask price quotes, to examine the impact of stock market order imbalance on the dynamic behavior of index futures and cash index prices. Spurious correlation in the index is purged by using an estimate of the \u201ctrue\u201d index with highly synchronous and active quotes of individual stocks. A smooth transition autoregressive error correction model is used to describe the nonlinear dynamics of the index and futures prices. Order imbalance in the cash stock market is found to affect significantly the error correction dynamics of index and futures prices. Order imbalance impedes error correction particularly when the market impact of order imbalance works against the error correction force of the cash index, explaining why real potential arbitrage opportunities may persist over time. Incorporating order imbalance in the framework significantly improves its explanatory power. The findings indicate that a stock market microstructure that allows a quick resolution of order imbalance promotes dynamic arbitrage efficiency between futures and underlying stocks. The results also suggest that the unloading of cash stocks by portfolio managers in a falling market situation aggravates the price decline and increases the real cost of hedging with futures. \u00a9 2007 Wiley Periodicals, Inc. Jrl Fut Mark 27:1129\u20131157, 2007",
+  "published": "2007-10-09",
+  "updated": "2007-10-09",
+  "authors": [
+    "Joseph K.W. Fung",
+    "Philip L.H. Yu"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.20288",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

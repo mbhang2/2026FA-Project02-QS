@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.1002_fut.10043",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.10043",
+  "title": "Nonlinear dynamics in high\u2010frequency intraday financial data: Evidence for the UK long gilt futures market",
+  "abstract": "Abstract Recent research investigating the properties of high\u2010frequency financial data has suggested that the stochastic nonlinearity widely present in such data may be characterized by heterogeneous components in conditional volatility, and nonlinear dependence of threshold autoregressive form due to market frictions. This article tests for the presence of such effects in intraday long gilt futures returns on the UK LIFFE market. Tests against the null of linearity indicate the significance of smooth transition autoregressive nonlinearities in such returns at the 5\u2010min frequency, which entails a first\u2010order autoregressive process with switching intercept. This nonlinear structure is robust to the presence of asymmetric and component structures in conditional variance, and consistent with the existence of heterogeneous traders facing different levels of transaction costs, noise trader risk, or capital constraints. \u00a9 2002 Wiley Periodicals, Inc. Jrl Fut Mark 22:1037\u20131057, 2002",
+  "published": "2002-09-24",
+  "updated": "2002-09-24",
+  "authors": [
+    "David G. McMillan",
+    "Alan E. H. Speight"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.10043",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

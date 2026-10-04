@@ -1,0 +1,21 @@
+{
+  "id": "openalex-W4415314647",
+  "source": "openalex",
+  "openalex_id": "W4415314647",
+  "doi": "10.48550/arxiv.2508.06788",
+  "title": "Returns and Order Flow Imbalances: Intraday Dynamics and Macroeconomic News Effects",
+  "abstract": "We study the interaction between returns and order flow imbalances in the S&P 500 E-mini futures market using a structural VAR model identified through heteroskedasticity. The model is estimated at one-second frequency for each 15-minute interval, capturing both intraday variation and endogeneity due to time aggregation. We find that macroeconomic news announcements sharply reshape price-flow dynamics: price impact rises, flow impact declines, return volatility spikes, and flow volatility falls. Pooling across days, both price and flow impacts are significant at the one-second horizon, with estimates broadly consistent with stylized limit-order-book predictions. Impulse responses indicate that shocks dissipate almost entirely within a second. Structural parameters and volatilities also exhibit pronounced intraday variation tied to liquidity, trading intensity, and spreads. These results provide new evidence on high-frequency price formation and liquidity, highlighting the role of public information and order submission in shaping market quality.",
+  "published": "2025-08-09",
+  "updated": "2025-08-09",
+  "authors": [
+    "Makoto Konagai Takahashi"
+  ],
+  "categories": [
+    "Economic Theory and Policy"
+  ],
+  "abs_url": "https://openalex.org/W4415314647",
+  "oa_url": "https://arxiv.org/pdf/2508.06788",
+  "is_oa": true,
+  "venue": "arXiv (Cornell University)",
+  "cited_by_count": 0
+}

@@ -1,0 +1,21 @@
+{
+  "id": "openalex-W2760868007",
+  "source": "openalex",
+  "openalex_id": "W2760868007",
+  "doi": "10.25911/5d739660679d3",
+  "title": "Information transfer, microstructures and arbitrage in related stock and futures markets",
+  "abstract": "A general result from theoretical and empirical research in financial market is that information, market microstructure and trading clientele affect prices and trading patterns. Previous research, however, concentrated mainly on larger well traded security markets. This thesis extend this research to the thinly traded and informationally dependent Australian All Ordinaries Index (AOI), the Share Price Index (SPI) future contract and the arbitrage pricing series between these two markets. Time series and transfer function techniques are applied to intraday and interday data to examine the impact of information flow and trading structures on trading and price patterns and the spillover effect across markets. The empirical evidence from this the is thesis is consistent with a number of complex and dynamic relationship which vary across trading times and market place. Reults indicate that in individual AOI and SPI markets, structural trading halts, price setting mechanism, and the arrival of information at market opening are associated with price overreaction and higher volatility, but this is not the case in the arbitrage price series. At the close of trading there are significant average price deviations in the individual and arbitrage erie, but without any excess price volatility. Unexpected intraday trading activity in the futures market preceded price exchange in the stock and future markets; the arrival of information has a greater impact on future price and the short term volatility in the futures markets is significantly higher than in the stock market. These influence in the future market, however, did not lead to any spillover effect which increased the long term volatility of the stock market. However, there is evidence of sustained and predictable mispricing in the SPI index futures arbitrage series with mean reversion in the arbitrage series being a function of different time of the day and possible market psychology. On the other hand, significant mean reversion is associated with increased trading volume and efficient transaction cost bound argument. Overall, the research in this thesis indicate that market are affected by a mixture of information, trading micro structure and subtle market reaction, which are both rational and irrational. The major conclusion is that price and volume reaction are complex and flexible theories are required to explain the intricate working of the marketplace. These are important consideration to be borne in mind by policy makers, regulator and market traders.",
+  "published": "1995-01-01",
+  "updated": "1995-01-01",
+  "authors": [
+    "Allan Hodgson"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W2760868007",
+  "oa_url": "https://doi.org/10.25911/5d739660679d3",
+  "is_oa": true,
+  "venue": "ANU Open Research (Australian National University)",
+  "cited_by_count": 0
+}

@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.1002_fut.21579",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.21579",
+  "title": "Does International Order Flow Contribute to Price Discovery in Futures Markets?",
+  "abstract": "This study examines whether order flow originating from overseas contributes to price discovery in domestic futures markets. This issue is examined using a unique dataset for stock index futures traded on the Australian Securities Exchange that identifies the geographic location of computer servers on which orders are placed. We find that (i) transactions originating from overseas servers have a significant impact on the price volatility of stock index futures; (ii) trades initiated from international servers also have a permanent impact on price; and (iii) price movements caused by trades initiated from overseas servers lead those on domestic servers and make a greater contribution to price discovery. Our results confirm that international order flow is important in the price discovery process in domestic markets.",
+  "published": "2012-08-14",
+  "updated": "2012-08-14",
+  "authors": [
+    "Alex Frino",
+    "Robert I. Webb",
+    "Hui Zheng"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.21579",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

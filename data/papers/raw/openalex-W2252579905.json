@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W2252579905",
+  "source": "openalex",
+  "openalex_id": "W2252579905",
+  "doi": null,
+  "title": "Nasdaq-100 Index Futures: Intraday Momentum or Reversal?",
+  "abstract": "This paper explores the intraday behavior of the NASDAQ-100 futures index for momentum and reversals. A multiple regression model simultaneously (1) relates today's intraday returns to yesterday's and last night's returns, and (2) estimates how the relationship changes with the signs of yesterday's and last night's return, whether today is in a bull or bear market, and the day of the week. A simplistic view of momentum and reversal proves untenable. There appear to be both momentum and reversal effects and they appear to depend on the signs of yesterday's and last night's returns, and whether today is a Monday. Yesterday's return is associated with both momentum and reversals. Last night's return is predominately associated with reversals. An efficient forecast model is in favor on four intraday periods. This result suggests that there is a structural feature of the futures market in the opening hours.",
+  "published": "2005-04-29",
+  "updated": "2005-04-29",
+  "authors": [
+    "Susana Yu",
+    "Joel C. Rentzler",
+    "Avner S. Wolf"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Complex Systems and Time Series Analysis",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W2252579905",
+  "oa_url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=712168",
+  "is_oa": true,
+  "venue": "SSRN Electronic Journal",
+  "cited_by_count": 1
+}

@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.6744643",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6744643",
+  "title": "Fractal Market Dynamics: Applying Mandelbrot's Long-Memory Theory to Intraday NQ Futures Trading",
+  "abstract": "Standard finance theory assumes returns follow a normal distribution. They do not. Mandelbrot showed this sixty years ago, and the evidence has not changed. This paper takes his long-memory framework seriously and asks whether it produces a measurable edge in intraday NQ futures trading. Using 565,481 five-minute bars from 2018 to 2025, I compute rolling Hurst exponents via the variance ratio method and classify each bar into one of three regimes: persistent (H &amp;gt; 0.55), neutral (0.45 \u2264 H \u2264 0.55), and antipersistent (H &amp;lt; 0.45). Trades taken during persistent regimes achieve a win rate of Twapewa Xoliswa Ntingana Fractal Market Dynamics-NQ Futures 52.5% and an average net P&amp;amp;L of $153. The same trades in anti-persistent conditions yield a 44.8% win rate and $47 average P&amp;amp;L-a 3.25x difference in trade quality. I also introduce a tail risk filter using realised volatility z-scores, grounded in Mandelbrot's power-law tail theory, which dynamically scales position size during extreme volatility events. Across 2,500 Monte Carlo simulations using the Davey validation framework, the combined system achieves a return-to-drawdown ratio of 6.36x and a risk of ruin of 1.2%. All five Davey performance thresholds are met. The results support applying fractal market theory as a practical position-sizing framework, not just as an academic critique of EMH.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Twapewa Xoliswa Ntingana"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6744643",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

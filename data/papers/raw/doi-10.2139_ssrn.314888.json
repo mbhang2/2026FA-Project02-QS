@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.314888",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.314888",
+  "title": "Dependence of the Intraday Nikkei Stock Index Futures",
+  "abstract": "This paper examines the dependence of the Intraday Nikkei Stock Index Futures returns using Markov chain methodology and offers an alternative viewpoint to explain the contradictory empirical evidences of market efficiency and inefficiency. The current log price returns significantly influence the subsequent two 5-minute interval returns. Therefore the intraday Nikkei futures prices do not follow a random walk based on 5-minute and 10-minute intervals. However, the current returns have no effect on the third (and more than third) 5-minute returns. Thus the random walk hypothesis cannot be rejected at the third lag of 5-minute intervals. Moreover, the 5-minute returns show a pattern of strong mean reversion, but this pattern turns to persistence for 10-minute returns. Those findings suggest that the test intervals play a role in the efficiency test of security prices, a 'horizon effect'. We explore further that if the short-term inefficiency is due to bid-ask bounce or some other factors, e.g. short term overreaction, or mean-reverting component of prices.",
+  "published": "2002",
+  "updated": "2002",
+  "authors": [
+    "Shiyun Wang"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.314888",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

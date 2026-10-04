@@ -1,0 +1,24 @@
+{
+  "id": "doi-10.2139_ssrn.3416022",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3416022",
+  "title": "Intraday Momentum: Evidence from the Crude Oil Market",
+  "abstract": "Our analysis of high-frequency United States Oil Fund (USO) data from 2006 to 2018 shows that intraday momentum exists in the crude oil market. The first half-hour return from the previous day\u2019s market close positively predicts the last half-hour return both in-sample and out-of-sample. Predictability is stronger during crisis periods and on days with higher realized volatility, higher trading volume, higher overnight returns, and jumps. A market timing strategy, constructed by using the first half-hour return as a timing signal, outperforms two other benchmark strategies.",
+  "published": "2019",
+  "updated": "2019",
+  "authors": [
+    "Zhuzhu Wen",
+    "Ro Cho",
+    "Diandian Ma",
+    "Yahua Xu"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3416022",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

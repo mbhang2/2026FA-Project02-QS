@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7155467931",
+  "source": "openalex",
+  "openalex_id": "W7155467931",
+  "doi": null,
+  "title": "A hybrid market-making framework combining Avellaneda\u2013Stoikov with queues and machine learning-based alpha signals",
+  "abstract": "Market making in electronic limit order book markets requires a continuous balance between spread capture, inventory control, and adverse-selection risk. Although analytical frameworks such as Avellaneda\u2013Stoikov provide an interpretable foundation for inventory-aware quoting, they do not explicitly exploit short-horizon predictive information embedded in high-frequency market microstructure data. This project investigates whether machine-learning-based alpha signals can improve market-making performance when integrated into an Avellaneda\u2013Stoikov with Queues (ASQ) framework through a controlled and execution-aware design. The study develops an end-to-end, modular research pipeline covering historical market data ingestion, causal feature engineering, forward-return label construction, supervised model training, online-style feature reconstruction, and event-driven backtesting. Using high-frequency BTCUSDT perpetual futures data, the project constructs a set of market microstructure features capturing price dynamics, order flow, liquidity imbalance, momentum, and volatility, and trains short-horizon predictive models under chronologically valid evaluation procedures. Rather than using the model output as a standalone directional trading signal, the proposed strategy incorporates it into an inventory-aware ASQ quoting framework through gated and confidence-scaled quote adjustment, while preserving explicit risk and inventory controls. Empirical results show that predictive signals contain incremental value, but that predictive performance alone is not sufficient to improve trading outcomes. A naive ML overlay improves decision quality relative to a pure ASQ baseline, yet remains economically weak once execution frictions and inventory effects are considered. By contrast, the full hybrid ASQ\u2013ML strategy achieves the strongest overall performance by combining predictive information with disciplined signal gating, selective market participation, and controlled quote adaptation. The findings therefore suggest that machine learning is most useful in market making when it augments, rather than replaces, a structured analytical framework. Overall, the project contributes both a practical systems pipeline for machine-learning-assisted market-making research and an empirical demonstration that the value of short-horizon alpha depends critically on how it is translated into execution.",
+  "published": "2026-01-01",
+  "updated": "2026-01-01",
+  "authors": [
+    "Rixin Wu"
+  ],
+  "categories": [
+    "Stock Market Forecasting Methods",
+    "Financial Markets and Investment Strategies",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W7155467931",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "DR-NTU (Nanyang Technological University)",
+  "cited_by_count": 0
+}

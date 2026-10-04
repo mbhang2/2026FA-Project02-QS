@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.1002_fut.10022",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.10022",
+  "title": "An intraday test of pricing and arbitrage opportunities in the New Zealand bank bill futures market",
+  "abstract": "Abstract This paper examines pricing and arbitrage opportunities in the New Zealand bank bill futures market using an intraday data set. The key findings are: (a) the implied forward rate model yields biased estimates of the bill futures yield but the bias is small and not economically significant; (b) ex post synthetic bill opportunities are more numerous than ex post quasi\u2010arbitrage opportunities but the yield enhancements are minor; (c) ex post quasi\u2010arbitrage opportunities are substantially less frequent and less profitable than reported by prior studies using closing data; and (d) arbitrage opportunities decline when execution delays are introduced but the declines are not statistically significant. In broad terms, the bill futures market is efficient with respect to quasi\u2010arbitrage but less so with respect to synthetic bill opportunities. The results also suggest that arbitrage opportunities are not generally available to arbitrageurs without access to the interbank bill market. The incidence of arbitrage opportunities is on a par with levels reported in intraday studies of stock index and foreign exchange markets. This illustrates the importance of using high frequency data to assess transactional efficiency in financial markets. \u00a9 2002 Wiley Periodicals, Inc. Jrl Fut Mark 22:519\u2013555, 2002",
+  "published": "2002-04-03",
+  "updated": "2002-04-03",
+  "authors": [
+    "Russell Poskitt"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.10022",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

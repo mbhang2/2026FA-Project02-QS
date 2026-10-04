@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.1002_fut.21715",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.21715",
+  "title": "The Impact of Sampling Frequency on Intraday Correlation and Lead\u2013Lag Relationships Between Index Futures and Individual Stocks",
+  "abstract": "Transaction costs, liquidity effects, capital limits, and regulatory restrictions reduce arbitrage efficiency and weaken the link between futures prices and their underlying stocks. This study examines how the sampling frequency for return calculation affects the intraday correlation and the lead\u2013lag relationship between the Hong Kong Hang Seng Index futures, the underlying cash index, an exchange\u2010traded fund (ETF) that mimics the index, and each component stock. The paper uses firm bid and offer quotes to eliminate the negative bias in measuring the correlation between the futures and the less liquid stocks. The sampling frequency significantly affects the futures\u2010stock dynamic relationship, particularly for small\u2010cap stocks. The overall results indicate that market participants trade ETF and the largest index's constituent stocks to capitalize on index arbitrage opportunities. The lag of the cash index is greatest against futures price movement, a reflection of the adverse impact of stale prices on the informational role of stock indexes. \u00a9 2015 Wiley Periodicals, Inc. Jrl Fut Mark 35:939\u2013952, 2015",
+  "published": "2015-03-16",
+  "updated": "2015-03-16",
+  "authors": [
+    "Joseph K.W. Fung",
+    "Francis Lau",
+    "Yiuman Tse"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.21715",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

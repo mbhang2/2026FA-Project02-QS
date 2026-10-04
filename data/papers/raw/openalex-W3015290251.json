@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W3015290251",
+  "source": "openalex",
+  "openalex_id": "W3015290251",
+  "doi": "10.1108/jdqs-01-2005-b0001",
+  "title": "Trading Performance of Domestic and Foreign Investors in KOSPI200 Index Futures Markets",
+  "abstract": "We analyze trading performance of domestic and foreign investors in the KOSPI200 index futures markets in Korea over various holding periods from each transaction time to 20 trading days. We find that foreign non-brokerage firms (including investment trust, pension fund, bank and insurance) trade at a disadvantageous price compared to domestic investors, i.e., buying at a higher price by about 5bp and selling at a lower price by about 6bp during the sample period (May 1996\u223cDec. 1999). The magnitude of the disadvantageous price is close to the opportunity loss attributable to their intraday momentum strategy. In contrast, foreign brokerage firms trade at a somewhat advantageous price relative to domestic investors, but not always do so. By extending holding periods up to 20 trading days after each trade, we find that foreign investors and domestic brokerage firms who made large buy or sell trades show significantly higher holding period returns, indicating that they possess superior ability to predict future price movements.",
+  "published": "2005-05-31",
+  "updated": "2005-05-31",
+  "authors": [
+    "Bong\u2010Chan Kho",
+    "Jin-Woo Kim"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Insurance and Financial Risk Management"
+  ],
+  "abs_url": "https://openalex.org/W3015290251",
+  "oa_url": "https://doi.org/10.1108/jdqs-01-2005-b0001",
+  "is_oa": true,
+  "venue": "Journal of Derivatives and Quantitative Studies \uc120\ubb3c\uc5f0\uad6c",
+  "cited_by_count": 3
+}

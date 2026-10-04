@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7160408141",
+  "source": "openalex",
+  "openalex_id": "W7160408141",
+  "doi": "10.48550/arxiv.2605.04004",
+  "title": "Structural Limits of OHLCV-Based Intraday Momentum Signals in MNQ Futures: A Systematic Falsification Study",
+  "abstract": "This paper tests whether common intraday momentum signals built from OHLCV data generate a tradable edge in Micro E-Mini Nasdaq 100 (MNQ) futures after realistic execution costs. Fourteen signal families were evaluated on 947 trading days of five-minute data from 2021-2025 under expanding-window walk-forward validation. Each signal had to clear five criteria: T-statistic >= 2.0 on out-of-sample net returns, >= 30 trades per out-of-sample fold, positive net returns after instrument-appropriate friction, consistent direction across test years (2023, 2024, 2025), and permutation p < 0.001 where applicable. None passed all five. The failures divide into three groups. Eleven families fail because gross return before friction is 0.07-1.50 points, below the 2.0-point friction floor. Three clear friction but fail elsewhere: the Opening Range Breakout long (T = 0.88, year-unstable), the VVG classifier reversal (T = 1.26, year-unstable), and gap continuation short (gross +16.53 pts, T = 1.46, fails year stability and per-fold sample minimum). Two positive controls confirm the methodology detects genuine edge: the RTH Confluence Signal (OOS T = 3.11, mean net +11.82 pts, N = 196) and London Session Signal B (OOS T = 4.30, mean net +4.09 pts, N = 247, p = 0.000025).",
+  "published": "2026-05-05",
+  "updated": "2026-05-05",
+  "authors": [
+    "Mathias Mesfin"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Financial Risk and Volatility Modeling",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W7160408141",
+  "oa_url": "https://arxiv.org/pdf/2605.04004",
+  "is_oa": true,
+  "venue": "arXiv (Cornell University)",
+  "cited_by_count": 0
+}

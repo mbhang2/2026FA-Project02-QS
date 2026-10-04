@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W3122282278",
+  "source": "openalex",
+  "openalex_id": "W3122282278",
+  "doi": "10.1002/fut.20364",
+  "title": "Expiration\u2010day effects\u2014An Asian twist",
+  "abstract": "Abstract This study examines the intraday trading activities of index stocks on the common expiration day of index derivatives. In Hong Kong, index futures and index options use an Asian\u2010style settlement procedure. All contracts are settled against the estimated average settlement price, an arithmetic average of the underlying cash index taken every five minutes on the expiration day. Trading volume and total trade count on the expiration day are both found to be higher than normal. Most important, trading intensifies in terms of volume and frequency close to the five\u2010minute time marks. The study does not find significant price reversal and price compression patterns. Although significant order imbalance pattern is found on some expiration days, the results show no association between order imbalance pattern and the next\u2010day return. \u00a9 2009 Wiley Periodicals, Inc. Jrl Fut Mark 28:430\u2013450, 2009",
+  "published": "2009-03-03",
+  "updated": "2009-03-03",
+  "authors": [
+    "Joseph K. W. Fung",
+    "Haynes H. M. Yung"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility",
+    "Financial Risk and Volatility Modeling"
+  ],
+  "abs_url": "https://openalex.org/W3122282278",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": 13
+}

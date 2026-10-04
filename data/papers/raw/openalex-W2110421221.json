@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W2110421221",
+  "source": "openalex",
+  "openalex_id": "W2110421221",
+  "doi": "10.1002/jae.2453",
+  "title": "ECB Monetary Policy Surprises: Identification Through Cojumps in Interest Rates",
+  "abstract": "This paper proposes a new econometric approach to disentangle two distinct response patterns of the yield curve to monetary policy announcements. Based on cojumps in intraday tick data of short- and long-term interest rate futures, we develop a day-wise test that detects the occurrence of a significant policy surprise and identifies the market perceived source of the surprise. The new test is applied to 133 policy announcements of the European Central Bank (ECB) in the period from 2001 to 2012. Our main findings indicate a good predictability of ECB policy decisions and remarkably stable perceptions about the ECB's policy preferences. Copyright \u00a9 2015 John Wiley & Sons, Ltd.",
+  "published": "2015-03-06",
+  "updated": "2015-03-06",
+  "authors": [
+    "Lars Winkelmann",
+    "Markus Bibinger",
+    "Tobias Linzert"
+  ],
+  "categories": [
+    "Monetary Policy and Economic Impact",
+    "Financial Risk and Volatility Modeling",
+    "Italy: Economic History and Contemporary Issues"
+  ],
+  "abs_url": "https://openalex.org/W2110421221",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Applied Econometrics",
+  "cited_by_count": 23
+}

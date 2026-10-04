@@ -1,0 +1,21 @@
+{
+  "id": "openalex-W4414817568",
+  "source": "openalex",
+  "openalex_id": "W4414817568",
+  "doi": "10.48550/arxiv.2510.01542",
+  "title": "Equity Market Price Changes Are Predictable: A Natural Science Approach",
+  "abstract": "Equity markets have long been regarded as unpredictable, with intraday price movements treated as stochastic noise. This study challenges that view by introducing the Extended Samuelson Model (ESM), a natural science-based framework that captures the dynamic, causal processes underlying market behavior. ESM identifies peaks, troughs, and turning points across multiple timescales and demonstrates temporal compatibility: finer timeframes contain all signals of broader ones while offering sharper directional guidance. Beyond theory, ESM translates into practical trading strategies. During intraday sessions, it reliably anticipates short-term reversals and longer-term trends, even under the influence of breaking news. Its eight market states and six directional signals provide actionable guardrails for traders, enabling consistent profit opportunities. Notably, even during calm periods, ESM can capture 10-point swings in the S&P 500, equivalent to $500 per E-mini futures contract. These findings resonate with the state-based approaches attributed to Renaissance Technologies' Medallion Fund, which delivered extraordinary returns through systematic intraday trading. By bridging normal conditions with crisis dynamics, ESM not only advances the scientific understanding of market evolution but also provides a robust, actionable roadmap for profitable trading.",
+  "published": "2025-10-02",
+  "updated": "2025-10-02",
+  "authors": [
+    "Qingyuan Han"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies"
+  ],
+  "abs_url": "https://openalex.org/W4414817568",
+  "oa_url": "https://arxiv.org/pdf/2510.01542",
+  "is_oa": true,
+  "venue": "arXiv (Cornell University)",
+  "cited_by_count": 0
+}

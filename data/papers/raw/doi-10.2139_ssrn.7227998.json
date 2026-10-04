@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7227998",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7227998",
+  "title": "Order Flow Imbalance and Short-Horizon BTC/USDT Returns: A Signal That Kept Needing More Scrutiny",
+  "abstract": "&lt;div&gt; We test whether order-flow imbalance (OFI), defined per Cont, Kukanov &amp;amp; Stoikov (2014), &lt;/div&gt; &lt;div&gt; predicts short-horizon (1\u201310 second) mid-price returns in BTC/USDT, using L2 order-book &lt;/div&gt; &lt;div&gt; data reconstructed from Binance.US\u2019s diff-depth stream. &lt;/div&gt; &lt;div&gt; &lt;br&gt; &lt;/div&gt; &lt;div&gt; We evaluate this across three successive extensions of the same capture (\u223c7, \u223c9, and \u223c17 &lt;/div&gt; &lt;div&gt; days), using an identical walk-forward pipeline: purge/embargo at fold boundaries, Newey- &lt;/div&gt; &lt;div&gt; West HAC inference, and moving-block bootstrap confidence intervals, benchmarked against &lt;/div&gt; &lt;div&gt; a training-mean forecast and two naive alternatives: signed trade-flow imbalance and a same- &lt;/div&gt; &lt;div&gt; horizon AR(1) trailing return. &lt;/div&gt; &lt;div&gt; &lt;br&gt; &lt;/div&gt; &lt;div&gt; The out-of-sample result reversed twice as the sample grew. On \u223c7 days, OFI showed &lt;/div&gt; &lt;div&gt; significant positive R2 (0.17%\u20131.00%), decaying monotonically with horizon and surviving a &lt;/div&gt; &lt;div&gt; permutation placebo test. On \u223c9 days, the pooled result turned null or negative at every horizon. &lt;/div&gt; &lt;div&gt; On \u223c17 days, after fixing two data-pipeline issues identified through fold-level diagnostics and &lt;/div&gt; &lt;div&gt; adding purge/embargo, it turned positive again (R2 0.13%\u20131.06%), again surviving a placebo &lt;/div&gt; &lt;div&gt; test. Fold-level decomposition throughout shows a coefficient that never changes sign, with &lt;/div&gt; &lt;div&gt; noisy but eventually net-favorable out-of-sample fit. Univariately, AR(1) matches or beats &lt;/div&gt; &lt;div&gt; OFI at every horizon except 10s and trade-flow imbalance is never significant; a combined &lt;/div&gt; &lt;div&gt; OFI-plus-AR(1) specification shows both predictors survive together, with the combined model &lt;/div&gt; &lt;div&gt; outperforming either alone at every horizon. &lt;/div&gt; &lt;div&gt; &lt;br&gt; &lt;/div&gt; &lt;div&gt; We interpret this as a small, real, direction-consistent effect that carries information beyond &lt;/div&gt; &lt;div&gt; simple price momentum but is difficult to detect reliably below roughly two weeks of single- &lt;/div&gt; &lt;div&gt; symbol, single-venue data. The repeated reversals are also the paper\u2019s central methodological &lt;/div&gt; &lt;div&gt; point: a single walk-forward result, however clean, should be treated as provisional until it &lt;/div&gt; &lt;div&gt; survives a deliberate attempt to break it. &lt;/div&gt;",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Michael Schmalz"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7227998",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

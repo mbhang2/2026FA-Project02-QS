@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7204221736",
+  "source": "openalex",
+  "openalex_id": "W7204221736",
+  "doi": "10.5281/zenodo.22106077",
+  "title": "New edge proposed: opening_range_direction_continuation \u2014 E8 Intelligence Research",
+  "abstract": "{ \"name\": \"opening_range_direction_continuation\", \"source\": \"Toby Crabel - Day Trading with Short Term Price Patterns and Opening Range Breakout\", \"type\": \"filter_flag\", \"rule\": \"Only allow long trades when the opening range (first 30 minutes) closes above the prior day's high, and only allow short trades when the opening range closes below the prior day's low; all other setups are skipped.\", \"pseudocode\": \"if bar.time == session_start:\\n OR_high = max(high of first 30min)\\n OR_low = min(low of first 30min)\\nif bar.time == session_start + 30min:\\n OR_close = close\\n if OR_close > prior_day_high:\\n direction = 'long_only'\\n else if OR_close < prior_day_low:\\n direction = 'short_only'\\n else:\\n direction = 'neutral'\\non each subsequent bar:\\n if direction == 'neutral': skip signal\\n else: allow only signals matching direction\", \"why_it_works\": \"This captures the well-documented opening range breakout persistence effect where a strong ope Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-08-26",
+  "updated": "2026-08-26",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Intelligence, Security, War Strategy",
+    "Wireless Signal Modulation Classification",
+    "Radar Systems and Signal Processing"
+  ],
+  "abs_url": "https://openalex.org/W7204221736",
+  "oa_url": "https://doi.org/10.5281/zenodo.22106077",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

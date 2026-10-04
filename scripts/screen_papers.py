@@ -88,8 +88,16 @@ def _fetch_bodies_for_new_survivors(ids: list[str]) -> None:
     reg = json.loads(REGISTRY.read_text())
     ff.TEXT_DIR.mkdir(parents=True, exist_ok=True)
     for pid in todo:
+        # **arXiv ids go to arXiv; everything else goes to its open-access
+        # link.** `ff.fetch` only knows arxiv.org, so before `fetch_scholar.py`
+        # existed this loop would have called it with an OpenAlex id and quietly
+        # recorded "unavailable" for every non-arXiv survivor.
+        row = reg["papers"].get(pid) or {}
         try:
-            text, source = ff.fetch(pid)
+            if row.get("source") in ("openalex", "crossref"):
+                text, source = ff.fetch_url(row.get("oa_url") or "")
+            else:
+                text, source = ff.fetch(pid)
         except Exception as exc:                                # noqa: BLE001
             print(f"    {pid}  {type(exc).__name__}: {exc}"[:110]); continue
         print(f"    {pid}  {source:24} {len(text):>8,} chars")
@@ -114,7 +122,15 @@ def _client():
     from audit.committee.llm import Client, preflight
 
     served = preflight(MODEL)
-    return Client(model=MODEL, temperature=0.0, max_tokens=1024), served
+    # **16,384, not 1,024. Fourth site of one defect, 2026-10-04.** The
+    # committee client's own comment records this at 4,096 and again at 16,384:
+    # a reasoning model spends the completion budget thinking and the JSON is
+    # never written. Here it truncated the reply mid-object, which left an
+    # unclosed ``` fence and surfaced as "reply was not JSON" -- so it read as a
+    # malformed model rather than a budget, and 81 of 248 papers were silently
+    # left unscreened. A screen verdict is two fields and a sentence; the budget
+    # is for the reasoning in front of it.
+    return Client(model=MODEL, temperature=0.0, max_tokens=16_384), served
 
 
 # How much of a paper body reaches the screen. The longest extracted paper is

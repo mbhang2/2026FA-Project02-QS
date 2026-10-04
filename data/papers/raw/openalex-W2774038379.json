@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W2774038379",
+  "source": "openalex",
+  "openalex_id": "W2774038379",
+  "doi": "10.1108/cfri-06-2017-0070",
+  "title": "Does index futures trading cause market fluctuations?",
+  "abstract": "Purpose The purpose of this paper is to study the effect of different parts (predictable and impact) of different types of speculative behavior (intraday speculation, medium-term speculation and long-term speculation) on future fluctuations in the underlying index. Design/methodology/approach The authors input information about heterogeneous speculative behavior into the HAR-RV model to study the effect of different parts (predictable and impact) of different types of speculative behavior (intraday speculation, medium-term speculation and long-term speculation) on the future fluctuation of the underlying index. Findings The authors find that the increase in intraday speculation will exacerbate spot market volatility; and the expected increase of long-term value speculation can reduce market volatility, but the shock of speculation will exacerbate market volatility. Practical implications The authors suggest that regulators should strictly limit speculative intraday trading, and also focus on the long-term value speculation that decreases market volatility, in order to guide the benign development of the markets that stabilize abnormal market fluctuations. Originality/value First, in view of the correlation between the futures and spot markets, the authors put forward a new proxy for the speculation degree. Second, the authors input heterogeneous speculative behavior into the HAR-RV model to study the effects of different parts (predictable and impact) on different types of speculative behavior (intraday speculation, medium-term speculation and long-term speculation) on the future fluctuation of the underlying index.",
+  "published": "2017-12-12",
+  "updated": "2017-12-12",
+  "authors": [
+    "Shanshan Dong",
+    "Yun Feng"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Financial Risk and Volatility Modeling",
+    "Financial Markets and Investment Strategies"
+  ],
+  "abs_url": "https://openalex.org/W2774038379",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "China Finance Review International",
+  "cited_by_count": 4
+}

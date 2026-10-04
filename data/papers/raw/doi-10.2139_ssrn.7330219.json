@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7330219",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7330219",
+  "title": "The Touch Carries No Direction: A Pre-Registered Null on Order-Flow Imbalance and Queue Depletion in Index Futures Josy",
+  "abstract": "Two order-book features widely believed to carry short-horizon directional informationaggressor imbalance at the touch (OFI) and trade-driven queue depletion (DEPL)-are tested against a symmetric \u00b13-tick first-passage barrier on 45,700 races drawn from 20 regular-hours sessions of NQ index futures. Both hypotheses, the barrier geometry, the cost line, and the falsification criterion were declared before the test was run. Neither feature departs measurably from the unconditional base rate: OFI resolves up-first in 49.91% of races and DEPL in 50.20%, against an unconditional 49.71% and a breakeven requirement of 63.00% at the measured passive cost line. Two robustness questions an earlier draft only conceded are answered here by computation. The threshold rests on a simulated passive fill, so the cost line is swept to zero: at free execution the required rate is 50.00 percent and the better arm's interval of [49.74, 50.66] contains it, so the null does not depend on the fill model anywhere in its range. Races overlap heavily, initiated every 10 seconds and abandoned after 300, giving an analytic design effect as high as 20; that raises the standard error from 0.234 to 1.046 percentage points and reduces the gap from 56 standard errors to 12.5, and to 10.2 at a deliberately pessimistic 30. The conclusion is therefore a range bounded below by ten standard errors rather than a single figure assuming independent races. This is not an inconclusive test. A symmetric-barrier first-passage statistic returns 0.50 by construction in the absence of conditional drift, so 0.50 is the value the null predicts, and it is the value observed to within half a percentage point. A separate execution measurement drawn from the same corpus does survive and is reported here, because it changes which question the test was able to ask: a prior internal estimate of passive mark-out was wrong by a factor of twenty, and had rendered the breakeven requirement arithmetically unreachable.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Ronald Rodas"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7330219",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

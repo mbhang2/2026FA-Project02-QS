@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.6745958",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6745958",
+  "title": "ANATOMY OF THE RETEST IN THE QQQ OPENING RANGE BREAKOUT",
+  "abstract": "This paper is an exploratory and descriptive study. The author makes no claims of causality or exploitability regarding the documented patterns. We present an exploratory study of the post-breakout sequence in the Invesco QQQ Trust ETF, using intraday data at one-minute resolution from January 2017 through December 2024. The existing literature on the Opening Range Breakout focuses on entry at the moment of the breakout; the internal dynamics of the minutes that follow have not been measured to date. We decompose the sequence into four levels-the opening range, the breakout, the retest, and the outcome-and document the statistical associations observed at each level. We find that range size is associated with the magnitude of the subsequent move, that a consistent fraction of breakouts generates a retest of the broken level within a defined time window, that the time elapsed until that retest shows the strongest association with the subsequent outcome, and that larger pre-retest excursions are associated with a lower probability of continuation-a counterintuitive pattern that we document along with its interpretive limitations. All results are descriptive associations conditional on operational definitions that we document with precision. Causal mechanisms are unknown. We invite other researchers to replicate, challenge, and extend this work.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Mario Pineda"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6745958",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

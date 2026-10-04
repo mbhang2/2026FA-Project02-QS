@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W2763785538",
+  "source": "openalex",
+  "openalex_id": "W2763785538",
+  "doi": "10.1111/mafi.12045",
+  "title": "OPTIMAL EXECUTION HORIZON",
+  "abstract": "Execution traders know that market impact greatly depends on whether their orders lean with or against the market. We introduce the OEH model, which incorporates this fact when determining the optimal trading horizon for an order, an input required by many sophisticated execution strategies. This model exploits the trader's private information about her trade's side and size, and how it will shift the prevailing order flow. From a theoretical perspective, OEH explains why market participants may rationally \u201cdump\u201d their orders in an increasingly illiquid market. We argue that trade side and order imbalance are key variables needed for modeling market impact functions, and their dismissal may be the reason behind the apparent disagreement in the literature regarding the functional form of the market impact function. We show that in terms of its information ratio OEH performs better than participation rate schemes and VWAP strategies. Our backtests suggest that OEH contributes substantial \u201cexecution alpha\u201d for a wide variety of futures contracts. An implementation of OEH is provided in Python language.",
+  "published": "2013-10-09",
+  "updated": "2013-10-09",
+  "authors": [
+    "David A. Easley",
+    "Marcos L\u00f3pez de Prado",
+    "Maureen O\u2019Hara"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Economic theories and models",
+    "Stochastic processes and financial applications"
+  ],
+  "abs_url": "https://openalex.org/W2763785538",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Mathematical Finance",
+  "cited_by_count": 19
+}

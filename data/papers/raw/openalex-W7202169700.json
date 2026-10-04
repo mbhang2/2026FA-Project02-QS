@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7202169700",
+  "source": "openalex",
+  "openalex_id": "W7202169700",
+  "doi": "10.5281/zenodo.21882891",
+  "title": "LAB #891 PROMISING: TG AUTO: New edge proposed: opening_range_breakout_pullback_retest \u2014 E8 Intelligence Research",
+  "abstract": "IDEA: AUTO-FORWARDED from the Telegram/breakthrough stream (#638207, division=research, agent=gtx_scout): { \"name\": \"opening_range_breakout_pullback_retest\", \"source\": \"Toby Crabel / Opening Range Breakout (ORB) literature\", \"type\": \"entry_engine\", \"rule\": \"Enter long when price pulls back to exactly 38.2% Fibonacci retracement of the first 30-minute opening range high-to-low after an initial breakout above the opening range high, with the pullback candle closing inside the upper half of its own range and volume on the pullback candle <= 70% of the 20-period median volume.\", \"pseudocode\": \"if candle.timestamp is 30min after session_open: OR_high = max(high[0:6]), OR_low = min(low[0:6]); fib_382 = OR_high - (OR_high - OR_low)*0.382; if close > OR_high: wait for next pullback; if low <= fib_ SAME-WINDOW EFFECT: Over the current trade window, this edge would have had minimal direct impact. None of the listed trades are based on a 30-minute opening range breakout with a Fibonacci pu Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-08-11",
+  "updated": "2026-08-11",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Intelligence, Security, War Strategy",
+    "Competitive and Knowledge Intelligence",
+    "Misinformation and Its Impacts"
+  ],
+  "abs_url": "https://openalex.org/W7202169700",
+  "oa_url": "https://doi.org/10.5281/zenodo.21882891",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

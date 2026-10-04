@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W1589968820",
+  "source": "openalex",
+  "openalex_id": "W1589968820",
+  "doi": "10.1142/9789812791696_0012",
+  "title": "The Momentum and Mean Reversion of Nikkei Index Futures: A Markov Chain Analysis",
+  "abstract": "AbstractThis chapter finds that the intraday Nikkei futures returns exhibit different patterns of momentum or mean reversion when changing observation intervals. Using a Markov chains methodology, a significant return momentum was found at 1-min observation interval. However, a significant return mean reversion was found at 10-min observation interval. This switching pattern of momentum to mean reversion is robust to intraday seasonality. Further, the sources that contribute to the high-frequency momentum and mean reversion are explored and it is concluded that large limit orders and the bid-ask effect can play the role.",
+  "published": "2008-03-01",
+  "updated": "2008-03-01",
+  "authors": [
+    "Ke Peng",
+    "Shiyun Wang"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility",
+    "Economic theories and models"
+  ],
+  "abs_url": "https://openalex.org/W1589968820",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Advanced in quantitative analysis of finance and accounting",
+  "cited_by_count": 0
+}

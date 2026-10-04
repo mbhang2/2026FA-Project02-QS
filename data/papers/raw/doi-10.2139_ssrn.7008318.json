@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7008318",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7008318",
+  "title": "Intraday Momentum in Spot FX and Currency Futures: Signal Persistence, the JPY Amplification Mechanism, and the Cost Barrier to Retail Exploitability",
+  "abstract": "We test the intraday momentum effect documented by Gao et al. (2018) and Baltussen et al. (2021) across five spot FX CFD instruments and one currency futures contract. Using M5 Dukascopy data for spot pairs (2012\u20132024) and M1 Databento data for 6J CME futures (2019\u20132024), with a strict in-sample/out-of-sample split (IS: 2012\u20132018; OOS: 2019\u20132024), we document three principal findings. First, the London Open 30-minute sign signal is statistically significant on five of six instruments in both periods (permutation p &amp;lt; 0.001), with GBPUSD exhibiting a reversed signal direction consistent with the absence of JPY carry-trade amplification, confirming that the intraday momentum mechanism extends to retail market structures. Second, we identify a JPY Amplification Mechanism: JPY-denominated instruments exhibit regression coefficients approximately 3.8\u00d7 larger than non-JPY pairs (average OOS \u03b2: 0.000859 vs. 0.000226), with GBPUSD treated separately due to its structurally reversed signal direction, consistent with the structural role of JPY as a global risk-sentiment amplifier and carry-trade funding currency. Third, after applying realistic round-trip transaction costs from actual platform data, USDJPY spot is the sole instrument producing a positive cost-adjusted edge (OOS Sortino: +0.748), while four spot pairs and 6J futures fail to clear their respective cost hurdles when standard prop-firm position sizing constraints are applied. A direct spot-futures comparison reveals a mechanistically important divergence in 2022: while BOJ Yield Curve Control interventions destroyed the spot signal, 6J futures maintained positive performance (annual Sharpe: +0.383 vs. \u22120.557), indicating that futures microstructure partially insulates the signal from central bank intervention. Regime filter tests confirm the USDJPY baseline is filter-robust. These results establish that the intraday momentum mechanism is pervasive across retail FX instruments but faces a steep cost barrier, with JPY carry dynamics as the primary exploitable source of intraday directional information.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Leander Seeck"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7008318",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

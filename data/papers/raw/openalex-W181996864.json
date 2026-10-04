@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W181996864",
+  "source": "openalex",
+  "openalex_id": "W181996864",
+  "doi": null,
+  "title": "Assessing Measures of Order Flow Toxicity via Perfect Trade Classification",
+  "abstract": "The VPIN, or Volume-synchronized Probability of INformed trading, metric is introduced by Easley, Lopez de Prado and O'Hara (ELO) as a real-time indicator of order flow toxicity. They find the measure useful in predicting return volatility and conclude it may help signal impending market turmoil. The VPIN metric involves decomposing volume into active buys and sells. We use the best-bid-offer (BBO) files from the CME Group to construct (near) perfect trade classification measures for the E-mini S&P 500 futures contract. We investigate the accuracy of the ELO Bulk Volume Classification (BVC) scheme and find it inferior to a standard tick rule based on individual transactions. Moreover, when VPIN is constructed from accurate classification, it behaves in a diametrically opposite way to BVC-VPIN. We also find the latter to have forecast power for short-term volatility solely because it generates systematic classification errors that are correlated with trading volume and return volatility. When controlling for trading intensity and volatility, the BVC-VPIN measure has no incremental predictive power for future volatility. We conclude that VPIN is not suitable for measuring order flow imbalances.",
+  "published": "2013-01-01",
+  "updated": "2013-01-01",
+  "authors": [
+    "Torben  Gustav Andersen",
+    "Oleg Bondarenko"
+  ],
+  "categories": [
+    "Financial Risk and Volatility Modeling",
+    "Financial Markets and Investment Strategies",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W181996864",
+  "oa_url": "https://repec.econ.au.dk/repec/creates/rp/13/rp13_43.pdf",
+  "is_oa": false,
+  "venue": "RePEc: Research Papers in Economics",
+  "cited_by_count": 6
+}

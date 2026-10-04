@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7053198",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7053198",
+  "title": "Predictive Order Flow Imbalance: Cross-Asset Microstructure Alpha",
+  "abstract": "This paper examines the predictive power of Order Flow Imbalance (OFI) as an intraday alpha signal across twelve U.S. equity and ETF instruments over a one-year sample period (April 2024 to April 2025). Building on the framework of Cont, Kukanov and Stoikov (2014), we construct OFI from Level-1 NBBO quote data at ten-second bar frequency and evaluate its forward predictive content using walk-forward Ridge regression across 84 monthly test folds. The signal exhibits statistically significant predictive power at short horizons, with a mean Information Coefficient of +0.0044 (pooled t = 3.26, p = 0.0016) and a positive out-of-sample IC of +0.0022. The statistical evidence is robust to ticker-level dependence but sensitive to the short out-of-sample period (seven months), limiting the strength of cross-temporal inference. Sensitivity analyses using ticker-level and month-level aggregation produced qualitatively similar conclusions, although month-level aggregation was not statistically significant owing to the short sevenmonth sample. A two-state Hidden Markov Model identifies calm and stressed volatility regimes. Regime-conditioned models show elevated IC at longer horizons (5m: +0.0148, 10m: +0.0161), but these findings do not survive multiple-testing correction and are treated as exploratory. The strategy does not survive transaction costs at ten-second execution frequency. A gross Sharpe of +0.981 collapses to a net Sharpe of-1.726, with bid-ask crossing costs exceeding the gross signal edge by a factor of 164. NVDA is the only instrument achieving a positive mean net Sharpe (+0.14) after costs. A depth-aware imbalance comparison using Databento XNAS ITCH Market-By-Order (MBO) data provides directional evidence of Level-1 attenuation bias, although the results are not statistically conclusive over the 40-day window.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Kethan S E"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7053198",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

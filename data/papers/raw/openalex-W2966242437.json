@@ -1,0 +1,22 @@
+{
+  "id": "openalex-W2966242437",
+  "source": "openalex",
+  "openalex_id": "W2966242437",
+  "doi": null,
+  "title": "Trading the 30-min Opening Range Breakouts",
+  "abstract": "The goal of this project is to identify various set-ups and exit strategies that could be usedfor trading the 30-minute Opening Range breakouts. The project team created a technical tradingsystem using the TradeStation platform and backtested it over 250 stocks from different industry sectors. Twenty two stocks were identified that performed significantly well and details about their performances with various conditions were provided.",
+  "published": "2010-04-29",
+  "updated": "2010-04-29",
+  "authors": [
+    "Mehmet Emre Cekirdekci"
+  ],
+  "categories": [
+    "Hemodynamic Monitoring and Therapy",
+    "Insect Pheromone Research and Control"
+  ],
+  "abs_url": "https://openalex.org/W2966242437",
+  "oa_url": "https://digitalcommons.wpi.edu/cgi/viewcontent.cgi?article=3203&context=mqp-all",
+  "is_oa": true,
+  "venue": "Digital WPI",
+  "cited_by_count": 0
+}

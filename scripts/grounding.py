@@ -239,6 +239,16 @@ def ungrounded_quotes(claim: str, *sources: str) -> list[str]:
 CITATION_MARKED = re.compile(r"(?:arXiv:|arxiv:)\s*(\d{4}\.\d{4,5})(?:v\d+)?"
                              r"|\b(\d{4}\.\d{4,5})v\d+\b")
 
+# **DOIs and OpenAlex ids, since the corpus stopped being arXiv-only.** A
+# citation check that only understands `NNNN.NNNNN` would wave through
+# `doi:10.1016/j.jbankfin.2099.999999` -- an invented journal paper, which is the
+# easier thing to invent than an invented arXiv id, because the shape is less
+# familiar. `10.` plus a registrant code is unambiguous enough to treat as a
+# citation whether or not it is marked, unlike a bare arXiv-shaped number, which
+# can be a quantity.
+DOI_ID = re.compile(r"\b(10\.\d{4,9}/[^\s\]\)\}>,;\"']+)")
+OPENALEX_ID = re.compile(r"\b([Ww]\d{6,12})\b")
+
 
 def registry_ids(registry: "dict | None" = None) -> set[str]:
     """Every paper id we hold, with and without its version suffix."""
@@ -248,9 +258,19 @@ def registry_ids(registry: "dict | None" = None) -> set[str]:
             return set()
         registry = json.loads(f.read_text())["papers"]
     out: set[str] = set()
-    for pid in registry:
+    for pid, row in (registry.items() if hasattr(registry, "items")
+                     else ((k, {}) for k in registry)):
         out.add(pid)
         out.add(pid.split("v")[0])
+        # The row's own identifiers, so a hypothesis may cite the DOI or the
+        # OpenAlex id rather than our internal key -- which is what anyone
+        # reading the paper would naturally write.
+        if isinstance(row, dict):
+            doi = (row.get("doi") or "").lower().replace("https://doi.org/", "")
+            if doi:
+                out.add(doi)
+            if row.get("openalex_id"):
+                out.add(str(row["openalex_id"]))
     return out
 
 
@@ -267,13 +287,22 @@ def citations(claim: str, known: "set[str] | None" = None) -> set[str]:
         bare = m.split("v")[0]
         if bare in known:
             found.add(bare)
-    return {c.split("v")[0] for c in found}
+    # A DOI is a citation on sight: the shape cannot be a quantity.
+    out = {c.split("v")[0] for c in found}
+    out |= {d.rstrip(".").lower() for d in DOI_ID.findall(claim)}
+    # An OpenAlex id only counts when we hold it -- `W` plus digits is too thin
+    # a shape to assume, and a lone "W2252579905" in prose is unlikely but a
+    # false positive here would refuse a clean file.
+    out |= {w for w in OPENALEX_ID.findall(claim) if w in known}
+    return out
 
 
 def unverifiable_citations(claim: str, known: "set[str] | None" = None) -> list[str]:
     """Cited ids that are in no registry we hold. Non-empty means refuse."""
     known = registry_ids() if known is None else known
-    return sorted(c for c in citations(claim, known) if c not in known)
+    lower = {k.lower() for k in known}
+    return sorted(c for c in citations(claim, known)
+                  if c not in known and c.lower() not in lower)
 
 
 def findings(claim: str, *sources: str) -> list[str]:

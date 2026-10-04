@@ -181,7 +181,15 @@ def context_block(current: pathlib.Path | None = None) -> str:
 
 def _client():
     from audit.committee.llm import Client, preflight
-    return Client(model=MODEL, temperature=0.0, max_tokens=1024), preflight(MODEL)
+    # **16,384, not 1,024. Seventh site of one defect, 2026-10-04.**
+    # `audit/committee/llm.py` already counted five and named this file as a
+    # caller; the budget here was never raised. 91 of 102 papers failed with
+    # `finish_reason='length', completion_tokens=1020` -- the model spent the
+    # budget reasoning and the JSON was cut mid-string. It surfaced as "reply was
+    # not JSON", which is why five previous instances each looked like something
+    # other than a budget. A relevance verdict is one field and a sentence; the
+    # budget is for the reasoning in front of it.
+    return Client(model=MODEL, temperature=0.0, max_tokens=16_384), preflight(MODEL)
 
 
 def rank_one(client, paper: dict, row: dict, ctx: str) -> dict:

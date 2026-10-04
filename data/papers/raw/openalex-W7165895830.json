@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7165895830",
+  "source": "openalex",
+  "openalex_id": "W7165895830",
+  "doi": "10.5281/zenodo.20839195",
+  "title": "Is There Volume\u2013Range Predictability in FX? A Clean Multi-Instrument Futures Test",
+  "abstract": "This paper asks whether relative trading volume (RVOL) \u2014 session volume scaled by its trailing norm \u2014 predicts the intraday price range in foreign-exchange markets, as practitioner folklore claims. Using sixteen years (2010\u20132026) of clean CME futures data for seven major currencies, it separates the contemporaneous volume\u2013range relationship (Spearman \u03c1 \u2248 0.42\u20130.54) from the genuinely ex-ante, out-of-session relationship (\u03c1 \u2248 0.10\u20130.21), using the Asian session \u2014 which closes before London opens \u2014 as a strictly forward-looking predictor. The predictive signal is weak, concerns range (size) not direction, and adds only a small, economically negligible increment over a HAR realized-volatility baseline out-of-sample (Clark\u2013West significant, but at a low bar given the sample size). A within-instrument test finds the volume measure \u2014 trade count vs contract volume \u2014 does not matter at session aggregation. An appendix documents how weekend / zero-activity rows in retail spot data can manufacture spurious volume\u2013range predictability. The result is a clean confirmation that volume offers little tradeable forecasting value for FX intraday range.",
+  "published": "2026-06-25",
+  "updated": "2026-06-25",
+  "authors": [
+    "Patel Bhavin"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Financial Risk and Volatility Modeling",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W7165895830",
+  "oa_url": "https://doi.org/10.5281/zenodo.20839195",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

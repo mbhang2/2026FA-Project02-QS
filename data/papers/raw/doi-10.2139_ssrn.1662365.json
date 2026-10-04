@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.1662365",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.1662365",
+  "title": "Using Intraday Information Combinations for Optimal Futures Hedging",
+  "abstract": "Intraday-based volatility estimators have been shown to provide a better estimation for actual return volatility than the one using daily squared returns. This study proposes a new class of multivariate BEKK models by adding combinations of intraday-based realized volatility (RV) and realized range (RR) estimators at the right-hand side of daily-return-based BEKK model for a forecasting purpose. The optimal combinations of using intraday information are discussed by evaluating them in a context of a futures hedge. Using daily data on S&amp;P 500 index and futures, it is found that hedging models with intraday information can provide better out-of-sample hedging performance than the model using only daily returns. Particularly, as the information used by investors increases, the out-of-sample hedging performance generally improves. Hence, it is suggested that investors should exploit intraday data in decisions when the finer information are available for volatility estimation.",
+  "published": "2010",
+  "updated": "2010",
+  "authors": [
+    "Yu-Sheng Lai",
+    "Her-Juin Sheu"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.1662365",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

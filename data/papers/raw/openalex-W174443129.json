@@ -1,0 +1,21 @@
+{
+  "id": "openalex-W174443129",
+  "source": "openalex",
+  "openalex_id": "W174443129",
+  "doi": null,
+  "title": "Volatility in the futures markets for financial and physical commodity assets: The impact of high frequency data on the distributional properties and forecasting of volatility, direction -of -change probability forecasting and asymmetric volatility effects",
+  "abstract": "This dissertation examines the impact of high frequency data in volatility measurement on the distributional properties and predictability of futures market volatility, direction-of-change probability forecasting using the dynamics of volatility and the presence of asymmetric volatility effects. Chapter 1 studies the distributional properties of returns and volatility in 33 futures markets and their implications for asset allocation, risk management and asset pricing. In particular, the focus is on realized volatility estimated from high frequency intraday returns and returns standardized by realized volatility. Returns standardized by realized volatility are approximately normal as is logarithmic realized volatility. Based on the statistical distribution analysis, time series forecasting models for logarithmic realized volatility are estimated and evaluated. In Chapter 2, I study the direction-of-change predictability in futures markets based on the dynamics of volatility and the economic value of such predictability. I extend previous research in a number of ways. First, I study direction-of-change predictability based on conditional volatility, skewness and kurtosis in a diverse selection of international currency, equity, financial and physical commodity futures markets. Second, I use the highly efficient measure of realized volatility based on high-frequency intraday returns. Third, I use the SEMIFAR model to forecast conditional volatility. Finally, I examine the economic value of sign predictability in market timing trading strategies. I find that volatility dynamics can successfully be used to forecast signs across a large number of futures markets. In low volatility periods, forecasting models using volatility dynamics generally outperform a baseline model which uses historical probability. Trading strategies based on sign forecasting through volatility dynamics produce performance comparable but not highly correlated to that of a common trendfollowing strategy. In Chapter 3, I study asymmetric volatility in physical commodity futures markets using high frequency data to construct efficient volatility measures at the daily and monthly horizons. The findings indicate that asymmetric volatility effects in futures markets are generally consistent with the size and the sign of net speculative interest in these markets. Volatility asymmetry is consistently present in certain markets, consistently absent from other markets and intermittently present and absent in a third group of markets.",
+  "published": "2007-01-01",
+  "updated": "2007-01-01",
+  "authors": [
+    "Georgi Georgiev"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W174443129",
+  "oa_url": "https://scholarworks.umass.edu/dissertations/AAI3254896",
+  "is_oa": true,
+  "venue": "ScholarWorks@UMassAmherst (University of Massachusetts Amherst)",
+  "cited_by_count": 0
+}

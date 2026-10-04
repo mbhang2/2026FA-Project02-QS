@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W2008723976",
+  "source": "openalex",
+  "openalex_id": "W2008723976",
+  "doi": "10.1080/17446540701720550",
+  "title": "Demonstrating error-correction modelling for intraday statistical arbitrage",
+  "abstract": "Applying cointegration analysis to security price movements illustrates how securities move together in the long-term. This can be augmented with an error-correction model to show how the long-run relationship is approached when the security prices are out of line with their cointegrated relationship. Cointegration and error-correction modelling promises to be useful in statistical arbitrage applications: not only does it show what relative prices of securities should be, but it also illuminates the short-run dynamics of how equilibrium should be restored along with how long it will take. Cointegration, coupled with error-correction modelling, promises to be a profitable way of implementing statistical arbitrage strategies. 1 1 For example, see Kumar and Seppi (1994 Kumar, P. and Seppi, D. 1994. Information and index arbitrage. The Journal of Business, 67: 481\u2013509. [Google Scholar]), Wang and Yau (1994 Wang, G. and Yau, J. 1994. A time series approach to testing for market linkage: unit root and cointegration tests. The Journal of Futures Markets, 14 Juned: 457\u201374. [Crossref], [Web of Science \u00ae] , [Google Scholar]), Forbes et al. (1999 Forbes, C., Kalb, G. and Kofman, P. 1999. Bayesian arbitrage threshold analysis. Journal of Business & Economic Statistics, 17: 364\u201372. [Taylor & Francis Online], [Web of Science \u00ae] , [Google Scholar]), Canjels et al. (2004 Canjels, E., Prakash-Canjels, G. and Taylor, A. 2004. Measuring market integration: foreign exchange arbitrage and the gold standard, 1879\u20131913. The Review of Economics and Statistics, 86: 868\u201382. [Google Scholar]), Tatom (2002 Tatom, J. 2002. Stock prices, inflation and monetary policy. Business Economics, 37: 7\u201319. [Google Scholar]), Harasty and Roulet (2000 Harasty, H. and Roulet, J. 2000. Modeling stock market returns. Journal of Portfolio Management, 26: 33\u201346. [Google Scholar]) and Laopodis and Sawhney (2002 Laopodis, N. and Sawhney, B. 2002. Dynamic interactions between Main Street and Wall Street. The Quarterly Review of Economics and Finance, 42: 803\u201315. [Crossref] , [Google Scholar]). They have applications ranging from index arbitrage to gold-point arbitrage during the pre-World War I era. Bondarenko (2003 Bondarenko, O. 2003. Statistical arbitrage and securities prices. The Review of Financial Studies, 16: 875\u2013919. [Crossref], [Web of Science \u00ae] , [Google Scholar]) and Hogan et al. (2004 Hogan, S., Jarrow, R., Teo, M. and Warachka, M. 2004. Testing market efficiency using statistical arbitage with applications to momentum and value trading strategies. Journal of Financial Economics, 73: 525\u201365. [Crossref], [Web of Science \u00ae] , [Google Scholar]) defined statistical arbitrage as an attempt to exploit the long-horizon trading opportunities revealed by cointegration relationships. Alexander and Dimitriu (2005 Alexander, C. and Dimitriu, A. 2005. Indexing and statistical arbitrage. Journal of Portfolio Management, 31: 50\u20133. [Crossref], [Web of Science \u00ae] , [Google Scholar]) showed how cointegration is a better way of implementing a statistical arbitrage strategy than other conventional ways, like the use of tracking error variance minimization. These previous studies, however, did not add error-correction modelling to the trading strategies. This article seeks to fill that gap, by presenting how to implement a statistical arbitrage strategy based on cointegration and error-correction modelling.",
+  "published": "2008-05-12",
+  "updated": "2008-05-12",
+  "authors": [
+    "Brian J. Jacobsen"
+  ],
+  "categories": [
+    "Monetary Policy and Economic Impact",
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W2008723976",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Applied Financial Economics Letters",
+  "cited_by_count": 3
+}

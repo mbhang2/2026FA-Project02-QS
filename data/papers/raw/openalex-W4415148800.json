@@ -1,0 +1,21 @@
+{
+  "id": "openalex-W4415148800",
+  "source": "openalex",
+  "openalex_id": "W4415148800",
+  "doi": "10.3905/jpm.2025.1.777",
+  "title": "Image-Based Representations of Financial Time Series for Strategy Development",
+  "abstract": "This article provides a step-by-step tutorial on applying convolutional neural networks (CNNs) to financial time series by converting prices into images. It presents procedures for creating spatial representations such as Gramian angular fields and recurrence plots, building baseline CNN architectures, and evaluating results with reproducible workflows. The emphasis is instructional, encompassing data-preparation checklists, model templates, and guidance on avoiding common pitfalls (data leakage, overfitting, regime dependence). Short, self-contained examples cover equities, futures, options, and exchange-traded funds, with code outlines for candlestick classification, momentum detection, and intraday breakout screens. Throughout, image-based methods are contrasted with traditional technical rules to highlight where CNNs add practical value for forecasting and risk monitoring. The goal is to equip practitioners with a modern toolkit suitable for classroom or production sandboxes, not to present new empirical claims.",
+  "published": "2025-10-14",
+  "updated": "2025-10-14",
+  "authors": [
+    "Matt Lutey"
+  ],
+  "categories": [
+    "Stock Market Forecasting Methods"
+  ],
+  "abs_url": "https://openalex.org/W4415148800",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "The Journal of Portfolio Management",
+  "cited_by_count": 0
+}

@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.1002_fut.20315",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.20315",
+  "title": "Intraday volatility in the bond, foreign exchange, and stock index futures markets",
+  "abstract": "Abstract Intraday volatility for the Eurodollar, the Euro/dollar foreign exchange rate, and the E\u2010mini S&amp;P 500 futures contracts traded on a continuous 23\u2010hour schedule on the Chicago Mercantile Exchange Globex electronic platform is studied. Volatility transmission in a single market across different regions is mainly explained by intraregion volatility (heat waves); interregion volatility (meteor showers) plays a secondary role. The joint impact of liquidity variables such as volume and open interest on volatility is also analyzed. Volume tends to increase volatility, but open interest does not affect it. The results are explained by the type of trading venue. Unlike floor\u2010based trading systems, in electronic markets open interest does not seem to provide additional information on market liquidity and its relation to volatility beyond any information contributed by volume. \u00a9 2008 Wiley Periodicals, Inc. Jrl Fut Mark 28:313\u2013 334, 2008",
+  "published": "2008-02-12",
+  "updated": "2008-02-12",
+  "authors": [
+    "Valeria Martinez",
+    "Yiuman Tse"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.20315",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

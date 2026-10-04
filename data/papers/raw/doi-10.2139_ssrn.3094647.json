@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.3094647",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3094647",
+  "title": "The Impact of Futures Trading on Intraday Spot Volatility and Liquidity: Evidence from Bitcoin Market",
+  "abstract": "This study uses high-frequency data to examine the impact of Bitcoin futures trading on volatility and liquidity of the Bitcoin spot market. The introduction of futures trading significantly reduces the spot price variations. The spot market becomes more liquid in the post-futures trading period. The results are robust to different volatility and liquidity proxies. Hence, at least within a short period, Bitcoin futures trading plays a positive role in stabilising the spot price volatility and improving the spot market liquidity.",
+  "published": "2018",
+  "updated": "2018",
+  "authors": [
+    "Shimeng Shi"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3094647",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

@@ -1,0 +1,22 @@
+{
+  "id": "openalex-W4393242184",
+  "source": "openalex",
+  "openalex_id": "W4393242184",
+  "doi": "10.54097/hbem.v21i.14857",
+  "title": "Research on Forecasting the Yield of China's Commodity Futures Market Based on the Intraday Momentum Effect",
+  "abstract": "By exploring the intraday momentum effect of the Chinese commodity futures market, it was found that there is a significant intraday momentum effect in the Chinese commodity futures market. The first half hour return of night opening and the first half hour return of day opening can significantly predict the first half hour return of closing within and outside the sample. Furthermore, it was found that the momentum effect of commodity futures is more significant at high trading volume and high volatility levels. The momentum strategy constructed based on the intraday momentum effect can significantly outperform the benchmark strategy, providing investors with a robust investment strategy.",
+  "published": "2023-12-12",
+  "updated": "2023-12-12",
+  "authors": [
+    "Kai Zheng"
+  ],
+  "categories": [
+    "Energy Load and Power Forecasting",
+    "Grey System Theory Applications"
+  ],
+  "abs_url": "https://openalex.org/W4393242184",
+  "oa_url": "https://drpress.org/ojs/index.php/HBEM/article/download/14857/14405",
+  "is_oa": true,
+  "venue": "Highlights in Business Economics and Management",
+  "cited_by_count": 0
+}

@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7323419",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7323419",
+  "title": "\"Beat the Market\" Revisited An Independent Replication and Statistical Audit of an Intraday Momentum Strategy",
+  "abstract": "Zarattini, Aziz, and Barbon report that a simple intraday time-series momentum strategy applied to SPY produced a total return of 1,985%, an annualized return of 19.6%, and a Sharpe Ratio of 1.33 from May 2007 through April 2024. This paper performs an independent replication and a post-publication extension using approximately 2.6 million one-minute SPY observations from TradeStation spanning January 2000 through August 2026. After reconciling two material implementation details against the authors\u2019 published Python reference code\u2014the use of typical-price Volume Weighted Average Price (VWAP) and VWAP confirmation at entry\u2014the original result is reproduced almost exactly: 1,989% total return and a Sharpe Ratio of 1.317 on the paper window under the closest paper-matching convention. The independent update also closely reproduces the authors\u2019 September 2025 FAQ update: 2024 returns are 31.8% versus their 32.2%, and January\u2013August 2025 returns are 1.4% versus their 1.0%. The longer sample changes the interpretation, but not in the simple form suggested by the pooled May 2024\u2013August 2026 Sharpe of 0.35. Disaggregating the post-publication path reveals two sharply different regimes. Under a Q24-comparable monthly convention, May 2024\u201329 August 2025 returns 19.3% with Sharpe 1.057; using the exact first trading day after the 10 May 2024 publication, the corresponding return is 23.3% with Sharpe 1.284. By contrast, the subsequent 2 September 2025\u201314 August 2026 stretch returns -8.1% with Sharpe -0.461. Thus the evidence does not support a narrative of immediate post-publication alpha decay; it supports a strong initial post-publication period followed by a materially weak recent regime. A systematic search then evaluates asymmetric short filters, relative-volume sizing, volatility overlays, persistence filters, profit locks, breakeven rules, trade caps, daily loss limits, VWAP-dominance rules, intraday decay, regime overlays, and performance-based overlays. Only a small subset survives the consistent multi-window standard applied during the extension stage. The final frozen selected specification reaches a valid-period Sharpe Ratio of 1.274, a -14.8% maximum drawdown, and a 2110.6% total return over 2000\u20132026, while deliberately sacrificing terminal wealth relative to the baseline. To address multiple testing, a research ledger of 129 trials is reconstructed and 80 SPY search alternatives are identified. Combinatorially Symmetric Cross-Validation yields a Probability of Backtest Overfitting of 38.49% under the historical convention and 40.87% on a common-valid sample. The Deflated Sharpe Ratio of the final candidate, using \ud835\udc41 = 80 as the primary multiple-testing count, is 99.999986796%. These statistics support a strong retrospective edge but do not provide a genuine prospective validation because the search was adaptive and the 2024\u20132026 data were observed during model development. The correct next experiment is therefore not another retrospective optimization, but the passage of time with frozen parameters.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Jos\u00e9 Enrique Delgado"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7323419",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

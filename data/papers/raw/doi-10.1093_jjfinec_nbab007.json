@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.1093_jjfinec_nbab007",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1093/jjfinec/nbab007",
+  "title": "Intraday Market Predictability: A Machine Learning Approach",
+  "abstract": "Abstract Conducting, to our knowledge, the largest study ever of 5-min equity market returns using state-of-the-art machine learning models trained on the cross-section of lagged market index constituent returns, we show that regularized linear models and nonlinear tree-based models yield significant market return predictability. Ensemble models perform the best across time and their predictability translates into economically significant Sharpe ratios of 0.98 after transaction costs. These results provide strong evidence that intraday market returns are predictable during short time horizons, beyond what can be explained by transaction costs. Furthermore, we show that constituent returns hold significant predictive information that is not contained in market returns or in price trend and liquidity characteristics. Consistent with the hypothesis that predictability is driven by slow-moving trader capital, predictability decreased post-decimalization, and market returns are more predictable during the middle of the day, on days with high volatility or illiquidity, and in financial crisis periods.",
+  "published": "2021-10-18",
+  "updated": "2021-10-18",
+  "authors": [
+    "Dillon Huddleston",
+    "Fred Liu",
+    "Lars Stentoft"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1093/jjfinec/nbab007",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Financial Econometrics",
+  "cited_by_count": null
+}

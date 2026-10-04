@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W3174723766",
+  "source": "openalex",
+  "openalex_id": "W3174723766",
+  "doi": null,
+  "title": "Trading the 30 Minute Opening Range Breakout",
+  "abstract": "The goal of this project is to identify various set-ups and exit strategies that could be used for trading the 30-minute Opening Range breakouts. The project team created a technical trading system using the TradeStation platform and backtested it over 250 stocks from different industry sectors. Twenty two stocks were identified that performed significantly well and details about their performances with various conditions were provided.",
+  "published": "2010-04-29",
+  "updated": "2010-04-29",
+  "authors": [
+    "Veselin Doychinov Iliev"
+  ],
+  "categories": [
+    "Human auditory perception and evaluation",
+    "Advanced Adaptive Filtering Techniques",
+    "Speech and Audio Processing"
+  ],
+  "abs_url": "https://openalex.org/W3174723766",
+  "oa_url": "https://digitalcommons.wpi.edu/iqp-all/1450",
+  "is_oa": true,
+  "venue": "Digital WPI",
+  "cited_by_count": 1
+}

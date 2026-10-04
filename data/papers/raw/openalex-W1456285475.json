@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W1456285475",
+  "source": "openalex",
+  "openalex_id": "W1456285475",
+  "doi": null,
+  "title": "Intraday Momentum : Day trading on the gold futures market using Opening Range Breakouts and GARCH",
+  "abstract": "Intraday Momentum : Day trading on the gold futures market using Opening Range Breakouts and GARCH",
+  "published": "2015-01-01",
+  "updated": "2015-01-01",
+  "authors": [
+    "Tobias S\u00f6nnert"
+  ],
+  "categories": [
+    "Financial Risk and Volatility Modeling",
+    "Market Dynamics and Volatility",
+    "Stock Market Forecasting Methods"
+  ],
+  "abs_url": "https://openalex.org/W1456285475",
+  "oa_url": "http://urn.kb.se/resolve?urn=urn:nbn:se:umu:diva-106885",
+  "is_oa": true,
+  "venue": "KTH Publication Database DiVA (KTH Royal Institute of Technology)",
+  "cited_by_count": 0
+}

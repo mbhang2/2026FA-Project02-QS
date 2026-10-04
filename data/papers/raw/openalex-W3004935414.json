@@ -1,0 +1,26 @@
+{
+  "id": "openalex-W3004935414",
+  "source": "openalex",
+  "openalex_id": "W3004935414",
+  "doi": "10.21511/imfi.17(1).2020.03",
+  "title": "Momentum and contrarian effects in the Ukrainian stock market: case of daily overreactions",
+  "abstract": "This paper examines momentum and contrarian effects in the Ukrainian stock market after one-day abnormal returns. To do this, UX futures data over the period 2010\u20132018 are used. The following hypotheses are tested: H1) hourly returns on overreaction days differ from hourly returns on normal days, H2) there are price patterns on overreaction days, and H3) to test these hypotheses, visual inspection and average analysis are used, as well as t-tests, cumulative abnormal returns, and trading simulation approaches. The results suggest that there are statistically significant differences between intraday dynamics during the usual days and the overreactions day. There is a strong momentum effect present on the day of overreaction: prices tend to change only in the direction of the overreaction during the whole day. The fact of the overreaction becomes clear after 13:00-14:00. This gives a lot of time to explore the momentum effect in the day of overreaction. On the day after the overreaction, prices tend to go in the opposite direction: contrarian pattern is detected, which is in line with the overreaction hypothesis. Based on detected price patterns, rules of trading and trading strategies for the Ukrainian stock market are developed. Momentum Strategy (based on price patterns on the day of overreaction) generates several successful trades; close to with 90%, and their number being is profitable (trading results differ from the random ones \u2013 confirmed by t-tests). Contrarian Strategy (based on price patterns on the day after the overreaction) demonstrates low efficiency, and results do not differ from random trading.",
+  "published": "2020-02-10",
+  "updated": "2020-02-10",
+  "authors": [
+    "Alex Plastun",
+    "\u041d.\u0406. \u0421\u0442\u0440\u043e\u0447\u0435\u043d\u043a\u043e",
+    "Olga Zhmaylova",
+    "Liudmyla Sliusarev\u0430",
+    "Sergiy Bashlay"
+  ],
+  "categories": [
+    "Complex Systems and Time Series Analysis",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W3004935414",
+  "oa_url": "https://businessperspectives.org/images/pdf/applications/publishing/templates/article/assets/13094/IMFI_2020_01_Plastun.pdf",
+  "is_oa": true,
+  "venue": "Investment Management and Financial Innovations",
+  "cited_by_count": 3
+}

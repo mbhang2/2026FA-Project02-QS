@@ -1,0 +1,24 @@
+{
+  "id": "doi-10.2139_ssrn.3760365",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3760365",
+  "title": "Hedging Demand and Market Intraday Momentum",
+  "abstract": "edging short gamma exposure requires trading in the direction of price movements,thereby creating price momentum. Using intraday returns on over 60 futures on equities,bonds, commodities, and currencies between 1974 and 2020, we document strong \u201cmarketintraday momentum\u201d everywhere. The return during the last 30 minutes before the marketclose is positively predicted by the return during the rest of the day (from previous marketclose to the last 30 minutes). The predictive power is economically and statistically highlysignificant, and reverts over the next days. We provide novel evidence that links marketintraday momentum to the gamma hedging demand from market participants such as marketmakers of options and leveraged ETFs.",
+  "published": "2021",
+  "updated": "2021",
+  "authors": [
+    "Guido Baltussen",
+    "Zhi Da",
+    "Sten Lammers",
+    "Martin Martens"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3760365",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

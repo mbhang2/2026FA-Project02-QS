@@ -1,0 +1,26 @@
+{
+  "id": "openalex-W4281682358",
+  "source": "openalex",
+  "openalex_id": "W4281682358",
+  "doi": "10.1186/s40854-022-00360-7",
+  "title": "To jump or not to jump: momentum of jumps in crude oil price volatility prediction",
+  "abstract": "Abstract A well-documented finding is that explicitly using jumps cannot efficiently enhance the predictability of crude oil price volatility. To address this issue, we find a phenomenon, \u201cmomentum of jumps\u201d (MoJ), that the predictive ability of the jump component is persistent when forecasting the oil futures market volatility. Specifically, we propose a strategy that allows the predictive model to switch between a benchmark model without jumps and an alternative model with a jump component according to their recent past forecasting performance. The volatility data are based on the intraday prices of West Texas Intermediate. Our results indicate that this simple strategy significantly outperforms the individual models and a series of competing strategies such as forecast combinations and shrinkage methods. A mean\u2013variance investor who targets a constant Sharpe ratio can realize the highest economic gains using the MoJ-based volatility forecasts. Our findings survive a wide variety of robustness tests, including different jump measures, alternative volatility measures, various financial markets, and extensive model specifications.",
+  "published": "2022-06-05",
+  "updated": "2022-06-05",
+  "authors": [
+    "Yaojie Zhang",
+    "Yudong Wang",
+    "Feng Ma",
+    "Yu Wei"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Monetary Policy and Economic Impact",
+    "Financial Risk and Volatility Modeling"
+  ],
+  "abs_url": "https://openalex.org/W4281682358",
+  "oa_url": "https://jfin-swufe.springeropen.com/counter/pdf/10.1186/s40854-022-00360-7",
+  "is_oa": true,
+  "venue": "Financial Innovation",
+  "cited_by_count": 12
+}

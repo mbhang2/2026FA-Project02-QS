@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W3086757424",
+  "source": "openalex",
+  "openalex_id": "W3086757424",
+  "doi": "10.1108/jdqs-01-2014-b0007",
+  "title": "Financial Crisis, Put-Call Parity and Momentum Effect",
+  "abstract": "This study investigates the deviation from put-call parity in the KOSPI200 options market. The sample period is from January 2, 2006 to May 31, 2009. Due to the financial crisis in 2008, short sale of stocks had been prohibited from October 1, 2008 to May 31, 2009. The sample is divided into the pre-crisis period and the crisis period. The crisis period is the period during which short sale of stocks are prohibited. The summary statistics shows that the trading volume of KOSPI200 stocks doubled, but the trading volume of call options and that of put options declined to one half and one third from the pre-crisis period to the crisis period, respectively. The equation which relates the deviation of futures price to the deviation of put-call parity is derived and the deviation from put-call parity is analyzed by using two stage least square. This paper looks into not only the prior 60 day return's momentum effect, but also the intraday spot return's momentum effect. Evidence indicates that the intraday momentum does exist in options and stock prices. Empirical results show that the prior 60 day return's momentum effect is statistically insignificant during the pre-crisis period, but statistically significant during the crisis period whereas the intraday return's momentum effect is strongly significant for both of the periods. This result lends support to the argument that the deviation of futures price from its theoretical price is a component of the deviation from put-call parity. The sign and significance of the regression coefficient for momentum effects are consistent with Kim and Park (2011) and Kim (2012) again lending support to the validity of their regression equation. Overall, our results are consistent with the validity of the derived equation, Kim and Park (2011) and Kim (2013)\u2019s rationale.",
+  "published": "2014-02-28",
+  "updated": "2014-02-28",
+  "authors": [
+    "Suhkyong Kim"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Capital Investment and Risk Analysis",
+    "Stochastic processes and financial applications"
+  ],
+  "abs_url": "https://openalex.org/W3086757424",
+  "oa_url": "https://doi.org/10.1108/jdqs-01-2014-b0007",
+  "is_oa": true,
+  "venue": "Journal of Derivatives and Quantitative Studies \uc120\ubb3c\uc5f0\uad6c",
+  "cited_by_count": 0
+}

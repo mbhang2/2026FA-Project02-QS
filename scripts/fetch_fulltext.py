@@ -253,6 +253,46 @@ def fetch(pid: str) -> tuple[str, str]:
     return "", "unavailable"
 
 
+def fetch_url(url: str) -> tuple[str, str]:
+    """`(text, source)` for an arbitrary open-access link.
+
+    `fetch()` above is arXiv-only: it knows arxiv.org/html and arxiv.org/e-print.
+    `extract_html` and `extract_pdf` were already generic -- they take text and
+    bytes, not ids -- so the non-arXiv corpus gets real bodies for the cost of
+    choosing between them on the content type.
+
+    Added 2026-10-04 with `fetch_scholar.py`: OpenAlex gives an `oa_url` for the
+    open-access half of what it knows about, and a screen reading an abstract
+    alone is the weaker path this repo already documents.
+    """
+    import requests
+
+    if not url:
+        return "", "no-oa-url"
+    try:
+        r = requests.get(url, timeout=120, headers=UA, allow_redirects=True)
+        if r.status_code != 200:
+            return "", f"http-{r.status_code}"
+        ctype = (r.headers.get("content-type") or "").lower()
+        if r.content[:4] == b"%PDF" or "pdf" in ctype:
+            text = extract_pdf(r.content)
+            if len(text) >= MIN_CHARS:
+                return text, "oa-pdf"
+            if tools_python() is None:
+                return "", "pdf-only-not-extracted"
+            return "", "oa-pdf-too-short"
+        if "html" in ctype or r.content[:1] == b"<":
+            text = extract_html(r.text)
+            if len(text) >= MIN_CHARS:
+                return text, "oa-html"
+            # A publisher landing page that is all navigation and an abstract is
+            # the common case here, and it is not a body.
+            return "", "oa-html-too-short"
+    except Exception as exc:                                     # noqa: BLE001
+        return "", f"error-{type(exc).__name__}"
+    return "", "unavailable"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)

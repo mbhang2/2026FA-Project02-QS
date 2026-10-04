@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.4496917",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.4496917",
+  "title": "Intraday Stock Predictability Everywhere",
+  "abstract": "With more than a billion observations, we conduct, to our knowledge, the largest study to date of intraday stock return predictability using machine learning techniques, finding consistent out-of-sample predictability across market, sector, and individual stock returns at various time horizons. For portfolios, linear models have the strongest statistical predictive power, but nonlinear models dominate them in profitability after transaction costs. Predictability is higher at shorter horizons, highest in the middle of the day, more pronounced for less liquid firms, and persists in the absence of observable news, consistent with gradual information diffusion arising from frictions such as inattention and limits to arbitrage.",
+  "published": "2023",
+  "updated": "2023",
+  "authors": [
+    "Fred Liu",
+    "Lars Stentoft"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.4496917",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

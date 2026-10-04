@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.1002_fut.20323",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1002/fut.20323",
+  "title": "Efficiency of single\u2010stock futures: An intraday analysis",
+  "abstract": "Abstract Using intraday bid\u2013ask quotes of single\u2010stock futures (SSFs) contracts and the underlying stocks, the pricing and informational efficiency of SSF traded on the Hong Kong Exchange are examined. Both the SSFs and the stocks are traded on electronic platforms. The market microstructure and the data obviate the problems of stale and non\u2010executable prices as well as uncertain bid\u2013ask bounce of the thinly traded futures contracts. Nominal price comparisons show that more than 80% of SSF quotes are inferior to stock quotes. More than 99% of the observed futures spreads are above one stock tick compared with only 2% of those for stocks. After adjusting for the cost\u2010of\u2010carry, however, SSFs are fairly priced. Given higher stock trading costs, non\u2010members should even find the futures attractively priced. Thus, the absence of competitive market maker does not bias prices so as to discourage trading. SSF quotes also account for one\u2010third of price discovery despite their low volume. \u00a9 2008 Wiley Periodicals, Inc. Jrl Fut Mark 28:518\u2013536, 2008",
+  "published": "2008-04-02",
+  "updated": "2008-04-02",
+  "authors": [
+    "Joseph K.W. Fung",
+    "Yiuman Tse"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1002/fut.20323",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": null
+}

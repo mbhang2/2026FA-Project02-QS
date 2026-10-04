@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.3345849",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3345849",
+  "title": "Time-Series Momentum: A Monte-Carlo Approach",
+  "abstract": "This paper develops a Monte-Carlo backtesting procedure for risk premia strategies and employs it to study Time-Series Momentum (TSM). Relying on time-series models, empirical residual distributions and copulas we overcome two key drawbacks of conventional backtesting procedures. We create 10,000 paths of different TSM strategies based on the S&amp;amp;P 500 and a cross-asset class futures portfolio. The simulations reveal a probability distribution which shows that strategies that outperform Buy-and-Hold in-sample using historical backtests may out-of- sample i) exhibit sizable tail risks, ii) under-perform or outperform. Our results are robust to using different time-series models, time periods, asset classes, and risk measures.&lt;br&gt;",
+  "published": "2019",
+  "updated": "2019",
+  "authors": [
+    "Enoch Cheng",
+    "Clemens Struck"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3345849",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

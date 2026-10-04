@@ -1,0 +1,24 @@
+{
+  "id": "doi-10.2139_ssrn.2440866",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2440866",
+  "title": "Market Intraday Momentum",
+  "abstract": "Based on high frequency data of the S&amp;P 500 ETF from 1993\u20132013, we document an intraday momentum pattern: the \ufb01rst half-hour return on the market since the previous day\u2019s market close predicts the last half-hour return. The predictability, both statistically and economically signi\ufb01cant, is stronger on more volatile days, on higher volume days, on recession days, and on major macroeconomic news release days. This intraday momentum is also present for ten other most actively traded domestic and international ETFs. Theoretically, the intraday momentum is consistent not only with Bogousslavsky\u2019s (2016) model of portfolio infrequent rebalancing, but also with a model of trading on late-informed news near the market close.",
+  "published": "2014",
+  "updated": "2014",
+  "authors": [
+    "Lei Gao",
+    "Yufeng Han",
+    "Sophia Zhengzi Li",
+    "Guofu Zhou"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2440866",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

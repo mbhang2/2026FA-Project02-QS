@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.3460965",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3460965",
+  "title": "Intraday Time Series Momentum: Global Evidence and Links to Market Characteristics",
+  "abstract": "This paper studies intraday time-series momentum (ITSM) in an international setting by employing high-frequency data of 16 developed markets. We show that ITSM is economically sizable and statistically significant both in- and out-of-sample in most countries. Based on existing theories of investor behavior, we propose and test four hypotheses to reveal the source of ITSM profitability. We document both in the cross-section and time-series dimension that ITSM is stronger when liquidity is low, volatility is high and new information is discrete. Overall, our analysis suggests that the ITSM is driven by both market microstructure and behavioral factors.",
+  "published": "2019",
+  "updated": "2019",
+  "authors": [
+    "Zeming Li",
+    "Athanasios Sakkas",
+    "Andrew Urquhart"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3460965",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

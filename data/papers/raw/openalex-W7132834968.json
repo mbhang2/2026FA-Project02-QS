@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7132834968",
+  "source": "openalex",
+  "openalex_id": "W7132834968",
+  "doi": "10.1016/j.finr.2026.100108",
+  "title": "How the prior day's S&P 500 returns influence the intraday returns of Nikkei 225 futures",
+  "abstract": "This study examines the impact of the previous day's U.S. stock market returns on Japanese stock market returns during a specific period. The analysis revealed intraday momentum and intraday reversals in the Japanese stock market. Specifically, when the previous day\u2019s return of the S&P 500 index was higher, lower returns were observed in the first 30 minutes of trading in the Japanese stock market, while higher returns were observed 30 minutes before the end of trading. These findings suggest that the U.S. equity market exerts a significant influence on the Japanese market. The observed return patterns are consistent with the interpretation that intraday momentum may reflect differences in investor rebalancing frequency, whereas intraday reversals may indicate temporary overreaction followed by partial correction. However, the study does not directly test these underlying mechanisms.",
+  "published": "2026-02-28",
+  "updated": "2026-02-28",
+  "authors": [
+    "Yasuhiro Iwanaga"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility",
+    "Financial Risk and Volatility Modeling"
+  ],
+  "abs_url": "https://openalex.org/W7132834968",
+  "oa_url": "https://doi.org/10.1016/j.finr.2026.100108",
+  "is_oa": true,
+  "venue": "Finance Research Open",
+  "cited_by_count": 0
+}

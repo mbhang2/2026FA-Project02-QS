@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W2945479896",
+  "source": "openalex",
+  "openalex_id": "W2945479896",
+  "doi": "10.20944/preprints201905.0306.v1",
+  "title": "Intraday Return Reversals: Empirical Evidence from the Korean ETF Market",
+  "abstract": "We find that the overnight returns of Korean exchange-traded index funds (ETFs) are significantly positive, whereas the subsequent intraday returns are negative. These intraday return reversals are caused by relatively higher opening prices than the closing prices. In the Korean ETF market, where institutional investors are dominant participants, the return reversals are not explained by the attention hypothesis as in Berkman et al. [1]. Hence, we investigate whether the disagreement hypothesis can explain return reversals. Under the disagreement situations between positive and negative traders at the open, positive traders can have a positive influence on the ETF prices by increasing their investments. However, negative traders, who give up investments due to limited short selling opportunities in the ETF market, have no effects on the prices. Comparing ETF markets with KOSPI 200 Futures where there are no restrictions on short selling, we find that short selling constraints are significant factors for the return reversals. This implies that disagreement among the investors can cause return reversals even in the markets without noise traders. Using unique Korean market data, we conclude that return reversals cannot be completely explained by the attention hypothesis, and that disagreement among investors is also a significant factor for the return reversals. This study contributes to the existing literature by showing that the attention hypothesis does not explain return reversals in the ETF market completely, and suggesting the disagreement hypothesis as an alternative.",
+  "published": "2019-05-27",
+  "updated": "2019-05-27",
+  "authors": [
+    "Sangki Lee",
+    "Chung-hun Hong"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W2945479896",
+  "oa_url": "https://www.preprints.org/manuscript/201905.0306/v1/download",
+  "is_oa": true,
+  "venue": "Preprints.org",
+  "cited_by_count": 1
+}

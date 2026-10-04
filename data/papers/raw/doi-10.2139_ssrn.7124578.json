@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7124578",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7124578",
+  "title": "Opening-Range Reversal in Dow Jones Futures: Evidence Consistent with 0DTE Hedging Pressure",
+  "abstract": "This paper documents a short-side opening reversal pattern in E-mini Dow futures over 194 trades from January 2023-March 2026. Under a symmetric 1:1 payoff structure, the strategy produced a 59.79% win rate and gross expectancy of 0.196R per trade. Performance was concentrated in the earliest entry windows: trades in the first three timing buckets won 65.56% of the time, compared with 39.53% of the time in the final two. A reconstructed pre-2023 historical sample (N = 115, provisionally dated to approximately 2021-2022) shows a win rate of 45.22%, below breakeven and significantly lower than the 2023-2026 sample (Fisher's exact test, p = 0.0135). This discontinuity is broadly consistent with the period over which 0DTE options volume scaled substantially, though the exploratory identification of this boundary limits the strength of that inference. The results are consistent with a time-bound hedging-related opening flow but do not independently identify 0DTE dealer activity as the causal mechanism. Exact trading parameters are withheld, limiting independent replication.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Lance Ladia"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7124578",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

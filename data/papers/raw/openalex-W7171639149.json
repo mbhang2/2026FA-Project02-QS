@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7171639149",
+  "source": "openalex",
+  "openalex_id": "W7171639149",
+  "doi": "10.5281/zenodo.21673594",
+  "title": "LAB #314 NEUTRAL: VIDEO SCOUT: I Backtested the Opening Range Breakout With an ATR Filter \u2013 1000% Return in 5 Years? \u2014 E8 Intelligence Research",
+  "abstract": "IDEA: AUTO VIDEO SCOUT \u2014 evaluate this trading strategy video for the swarm: VIDEO: \"I Backtested the Opening Range Breakout With an ATR Filter \u2013 1000% Return in 5 Years?\" by Trading Steady \u2014 https://www.youtube.com/watch?v=1Lq9OUAdGKs (duration 461s, 9832 views; found via search 'opening range breakout strategy backtested'). TASK FOR MERLIN: From the title, channel and your knowledge of this trader/method, identify the strategy being taught. Judge it for OUR use: we scalp fast (15s-7m charts), long or short, targets set by E8 sacred geometry BEFORE entry. State what the method gets right, where it is weak, and exactly how E8 node/rhythm logic would improve on it. Verdict PROMISING only if a concrete, testable edge exists that we can code into the Replay Bench. **SAME-WINDOW EFFECT:** Over the current trade window, the ORB+ATR filter would have added no direct trades \u2014 our scalps on 5m\u20137m charts operate far inside the opening range window (typically first 30\u201360 minutes). The strate Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-07-29",
+  "updated": "2026-07-29",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Intelligence, Security, War Strategy",
+    "Competitive and Knowledge Intelligence",
+    "Military History and Strategy"
+  ],
+  "abs_url": "https://openalex.org/W7171639149",
+  "oa_url": "https://doi.org/10.5281/zenodo.21673594",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

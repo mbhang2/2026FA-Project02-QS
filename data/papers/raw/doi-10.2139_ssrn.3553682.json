@@ -1,0 +1,24 @@
+{
+  "id": "doi-10.2139_ssrn.3553682",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3553682",
+  "title": "Intraday Momentum and Return Predictability: Evidence from the Crude Oil Market",
+  "abstract": "Intraday return predictability has firstly been identified in the equity markets, and we extend the analysis to the crude oil market by using high-frequency United States Oil Fund data from 2006 to 2018. We find a different intraday prediction pattern in the oil market, where only the first half-hour returns positively predict the last half-hour returns. A market timing strategy based on the findings generates substantial profits. We further decompose the first half-hour return into the overnight and the open half-hour components, and find that the former contains more predictive information. Economic mechanisms of the infrequent portfolio rebalancing and the presence of late-informed investors explain our findings. Notably, unlike equity markets, the oil market exhibits a unique intraday trading volume pattern, caused by the release of two routine oil inventory announcements. However, the information contained in the inventory announcements does not offer predictability to the last half-hour returns.",
+  "published": "2020",
+  "updated": "2020",
+  "authors": [
+    "Zhuzhu Wen",
+    "Xu Gong",
+    "Diandian Ma",
+    "Yahua Xu"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3553682",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

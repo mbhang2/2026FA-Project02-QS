@@ -1,0 +1,29 @@
+{
+  "id": "openalex-W7204182187",
+  "source": "openalex",
+  "openalex_id": "W7204182187",
+  "doi": "10.48550/arxiv.2608.23362",
+  "title": "Breakout/Interchange Reconnection as a driver of Jets, Fast CME, and Solar Energetic Particles",
+  "abstract": "Understanding how energetic particles are accelerated and released from the low corona into the interplanetary medium during solar eruptions is crucial for space weather research. Here, we present multiwavelength observations of a solar eruption that are consistent with breakout reconnection playing an important role in driving a fast coronal mass ejection (CME) and the associated solar energetic particle (SEP) event. Extreme-ultraviolet and radio observations reveal evidence of breakout reconnection within a fan-spine topology. The filament eruption begins after the pre-eruption opening, accompanied by quasiperiodic jets and associated downflows near the null point, as well as recurrent faint Type III radio bursts during the ongoing slow breakout reconnection. Furthermore, the observations also reveal the formation of pre-eruption coronal rain via slow interchange reconnection near the null point. A large-scale circular ribbon, along with simultaneous four hard X-ray footpoint sources and intense Type III radio bursts, was observed during the explosive breakout reconnection that enabled opening of field lines and allowed energetic particles to escape into interplanetary space. In situ measurements by PSP and Wind confirm the prompt injection of electron beams consistent with the timing of the explosive breakout reconnection. A fast shock associated with the erupting flux rope during interchange reconnection played a major role in producing the gradual SEP event. These observations highlight the key role of breakout reconnection in producing a fast CME/shock with the SEP release and acceleration process. These results have broader implications for particle acceleration and release processes in multiscale null-point topologies, which produce a continuum of eruptions ranging from small-scale jets to large-scale CMEs.",
+  "published": "2026-08-24",
+  "updated": "2026-08-24",
+  "authors": [
+    "Pankaj Kumar",
+    "Judith T. Karpen",
+    "David Lario",
+    "B. J. Lynch",
+    "Peter F. Wyper",
+    "S. K. Antiochos",
+    "P. K. Manoharan"
+  ],
+  "categories": [
+    "Solar and Space Plasma Dynamics",
+    "Ionosphere and magnetosphere dynamics",
+    "Dust and Plasma Wave Phenomena"
+  ],
+  "abs_url": "https://openalex.org/W7204182187",
+  "oa_url": "https://arxiv.org/pdf/2608.23362",
+  "is_oa": true,
+  "venue": "arXiv (Cornell University)",
+  "cited_by_count": 0
+}

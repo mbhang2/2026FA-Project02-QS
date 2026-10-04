@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W7214550928",
+  "source": "openalex",
+  "openalex_id": "W7214550928",
+  "doi": "10.5281/zenodo.22987135",
+  "title": "New edge proposed: opening_range_breakout_with_pullback_reentry \u2014 E8 Intelligence Research",
+  "abstract": "{ \"name\": \"opening_range_breakout_with_pullback_reentry\", \"source\": \"Toby Crabel, 'Day Trading with Short Term Price Patterns and Opening Range Breakout'\", \"type\": \"entry_engine\", \"rule\": \"Enter long if price breaks above the 30-minute opening range high by 0.2 ATR (20-period), then pulls back to touch that high again within 2 hours, confirmed by a bullish 3-bar reversal (higher low + close above previous close).\", \"pseudocode\": \"if time == 09:30: ORH = highest(high, 30min); if time >= 10:00 and prior 30min bar close > ORH + 0.2*ATR14_30min: if bar crosses below ORH then close > ORH within same bar: enter at close; stop = lowest(low, prior 2 bars); target = entry + 1.5 * (entry - stop)\", \"why_it_works\": \"Exploits the classic opening range breakout failure-to-hold (sweep) followed by a reclamation, representing an early-session liquidity grab that resolves in the direction of the prevailing momentum.\" } Author: Andrew Stewart Caldin, Independent Researcher, UK. Part of the E8 Intelligence Research series. Platform: e8intelligence.com",
+  "published": "2026-09-27",
+  "updated": "2026-09-27",
+  "authors": [
+    "Andrew Stewart Caldin"
+  ],
+  "categories": [
+    "Intelligence, Security, War Strategy",
+    "Competitive and Knowledge Intelligence",
+    "Big Data and Business Intelligence"
+  ],
+  "abs_url": "https://openalex.org/W7214550928",
+  "oa_url": "https://doi.org/10.5281/zenodo.22987135",
+  "is_oa": true,
+  "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+  "cited_by_count": 0
+}

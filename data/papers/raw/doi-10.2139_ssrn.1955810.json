@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.1955810",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.1955810",
+  "title": "Bond Futures and Order Imbalance: An International Comparison",
+  "abstract": "Order imbalance methodology is utilized to examine the link between trading activity and returns in the six most liquid international bond futures markets. Order imbalances are strongly related to contemporaneous returns, in the expected direction (i.e. excess buy (sell) orders push down (up) yields, even after controlling for aggregate market volume. There is evidence of contrarian investor behaviour following an increase in yields, but continuation of order imbalances when yields are falling (the prices of bond futures are rising). International bond futures markets are strongly intertwined with the US market having a strong influence on the returns and order-flow across all countries; this is likely an indication of the spill-over effect of US macroeconomic data.",
+  "published": "2011",
+  "updated": "2011",
+  "authors": [
+    "Lee A. Smales"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.1955810",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

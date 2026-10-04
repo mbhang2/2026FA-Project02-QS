@@ -1,0 +1,26 @@
+{
+  "id": "openalex-W3092743568",
+  "source": "openalex",
+  "openalex_id": "W3092743568",
+  "doi": "10.22004/ag.econ.290798",
+  "title": "Wheat Futures Trading Volume Forecasting and the Value of Extended Trading Hours",
+  "abstract": "Electronic trading in modern commodity markets has extended trading hours, lowered barriers to listing new contracts, broadened participation internationally, and encouraged entry of new trader types, particularly algorithmic traders whose order execution is automated. This paper seeks to understand how these forces have shaped the amount and timing of trading activity using the world\u2019s multiple wheat futures markets as a laboratory. To do so, we extend existing volume forecasting models found in the literature on volume weighted average price (VWAP) order execution (e.g. Bialkowski, et al 2008 and Humphery-Jenner 2011) with applications beyond trading algorithm design. We consider a setting with multiple trading venues for related commodities, specifically the front-month Chicago Mercantile Exchange Soft Red Wheat and Paris Euronext Milling Wheat futures contracts. We compare a series of nested forecasting models to infer whether past trading history, intraday volume dynamics, cross market trading activity, and other information are useful predictors of trading activity. We assess the value of extended trading hours and the existence of alternative trading venues by testing whether trading volume is more predictable at particular times throughout the trading day.",
+  "published": "2019-01-01",
+  "updated": "2019-01-01",
+  "authors": [
+    "Joseph P. Janzen",
+    "Nicolas Legrand",
+    "Janzen, Joseph",
+    "Legrand, Nicolas"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Financial Markets and Investment Strategies",
+    "Stock Market Forecasting Methods"
+  ],
+  "abs_url": "https://openalex.org/W3092743568",
+  "oa_url": "https://ageconsearch.umn.edu/record/290798/files/Abstracts_19_05_15_10_58_26_55__129_130_53_68_0.pdf",
+  "is_oa": true,
+  "venue": "RePEc: Research Papers in Economics",
+  "cited_by_count": 0
+}

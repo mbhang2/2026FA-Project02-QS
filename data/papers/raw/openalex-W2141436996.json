@@ -1,0 +1,26 @@
+{
+  "id": "openalex-W2141436996",
+  "source": "openalex",
+  "openalex_id": "W2141436996",
+  "doi": "10.1111/1468-5957.00219",
+  "title": "Intraday Empirical Regularities in Interest Rate and Equity Index Futures Markets, and the Effect of Macroeconomic Announcements",
+  "abstract": "This paper focuses on the intraday behaviour of returns, volatility, volume and price reversals for the Short Sterling interest rate and FTSE100 stock index futures contracts traded on the London International Financial Futures and Options Exchange (LIFFE). It also examines the effect of scheduled macroeconomic announcements and interest rate changes on the intraday behaviour of the variables of interest. We find clear differences and similarities with US studies and between the interest rate and equity contracts, which have important theoretical implications. This new evidence helps discriminate between the theories seeking to explain these intraday patterns.",
+  "published": "1998-09-01",
+  "updated": "1998-09-01",
+  "authors": [
+    "Mike J. Buckle",
+    "Owain ap Gwilym",
+    "Stephen H. Thomas",
+    "M.S. Woodhams"
+  ],
+  "categories": [
+    "Market Dynamics and Volatility",
+    "Financial Markets and Investment Strategies",
+    "Monetary Policy and Economic Impact"
+  ],
+  "abs_url": "https://openalex.org/W2141436996",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Business Finance &amp Accounting",
+  "cited_by_count": 22
+}

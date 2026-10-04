@@ -304,3 +304,60 @@ def test_every_committed_hypothesis_verifies():
         if u:
             bad[f.name] = u
     assert not bad, f"hypotheses cite papers we do not hold: {bad}"
+
+
+# --------------------------------------------------------------------------- #
+# citations beyond arXiv (2026-10-04, with fetch_scholar.py)
+# --------------------------------------------------------------------------- #
+def test_an_invented_doi_is_refused():
+    """The corpus stopped being arXiv-only, so the citation check had to stop
+    being arXiv-only. A fabricated journal DOI is EASIER to invent convincingly
+    than a fabricated arXiv id, because the shape is less familiar."""
+    bad = "as 10.1016/j.jbankfin.2099.999999 shows, the effect persists"
+    assert g.unverifiable_citations(bad) == ["10.1016/j.jbankfin.2099.999999"]
+
+
+def test_a_doi_is_a_citation_on_sight():
+    """Unlike a bare NNNN.NNNNN, a DOI's shape cannot be a quantity, so it does
+    not need to be marked or already known to count as a claim about a paper."""
+    assert g.citations("see 10.1002/fut.22375") == {"10.1002/fut.22375"}
+
+
+def test_a_number_is_still_not_a_doi():
+    """The regression this check exists to avoid: a plain measurement read as a
+    citation would refuse every honest file."""
+    assert g.citations("net 1133.4125 index points") == set()
+    assert g.citations("a 10.5 point move") == set()
+    assert g.unverifiable_citations("10.5 points, or 10.25 at worst") == []
+
+
+def test_a_registered_doi_verifies():
+    """Whatever `fetch_scholar.py` actually put in the registry must be citable,
+    or the refiner cannot use the half of the corpus that is not arXiv."""
+    import json
+    reg = json.loads((REPO_ROOT / "data" / "papers" / "registry.json").read_text())
+    dois = [v["doi"] for v in reg["papers"].values() if v.get("doi")]
+    if not dois:
+        return
+    claim = f"following doi:{dois[0]}, we ask whether"
+    assert g.unverifiable_citations(claim) == [], dois[0]
+
+
+def test_an_openalex_id_counts_only_when_held():
+    """`W` plus digits is too thin a shape to assume: a false positive here would
+    refuse a clean file over a stray token."""
+    import json
+    reg = json.loads((REPO_ROOT / "data" / "papers" / "registry.json").read_text())
+    held = [v["openalex_id"] for v in reg["papers"].values()
+            if v.get("openalex_id")]
+    assert g.citations("W9999999999 is not a thing we hold") == set()
+    if held:
+        assert g.citations(f"see {held[0]}") == {held[0]}
+
+
+def test_registry_ids_includes_the_rows_own_identifiers():
+    """A hypothesis should be able to cite the DOI, which is what anyone reading
+    the paper would write, rather than our internal registry key."""
+    ids = g.registry_ids()
+    assert len(ids) > 284
+    assert any("/" in i for i in ids), "no DOI reached the known set"

@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W4402378849",
+  "source": "openalex",
+  "openalex_id": "W4402378849",
+  "doi": "10.7494/manage.2023.24.1.39",
+  "title": "Expiration day effects of stock and index futures on the Warsaw Stock Exchange before and in the initial phase of the COVID-19 pandemic",
+  "abstract": "This paper examines the existence of expiration day effects of stock and index derivatives on the Warsaw Stock Exchange. Event study analysis is employed to high-frequency data to check the occurrence of four types of anomalies: abnormal increase in trading volume and in intraday volatility of underlying stocks, price reversal and price shock. The study confirms that on expiration days trading volume of underlying stocks increase unusually during the time when final settlement prices of expiring futures are being calculated. Intraday volatility of stock prices is also abnormally high on expiration days. However, before 2020 this price effect occurred on expiration days during triple withing hour, while in the initial phase of COVID-19 pandemic it has been visible on expiration days only at the close and additionally at the beginning of the next trading session. The analysis of price reversal and price shock effects revealed that only the second anomaly is a phenomenon which constantly appears after futures expiration, indicating the distortion of stock prices on expiration days and their return to normal levels at the beginning of the next trading session. Division of the research period (2018-2020) into two parts allow to find out that after the outbreak of the pandemic, when the importance of hedgers\u2019 activity on the futures market have increased, some of the analyzed anomalies have weakened and their duration have been shortened. However, distortions of underlying stock prices have been still visible at the close of the trading session on expiration days. This suggests that as long as the final settlement prices of stock future are equal to closing prices of underlying stocks, expiration day effects will occur on the WSE.",
+  "published": "2024-04-05",
+  "updated": "2024-04-05",
+  "authors": [
+    "Milena Suliga"
+  ],
+  "categories": [
+    "Global Health Care Issues",
+    "Market Dynamics and Volatility",
+    "Energy, Environment, Economic Growth"
+  ],
+  "abs_url": "https://openalex.org/W4402378849",
+  "oa_url": "https://journals.agh.edu.pl/manage/article/download/5970/2963",
+  "is_oa": true,
+  "venue": "Managerial Economics",
+  "cited_by_count": 1
+}

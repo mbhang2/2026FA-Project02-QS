@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.1444498",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.1444498",
+  "title": "Nonlinearity and Intraday Efficiency Tests on Energy Futures Markets",
+  "abstract": "Using high frequency data, this paper first time comprehensively examines the intraday efficiency of four major energy (crude oil, heating oil, gasoline, natural gas) futures markets. In contrast to earlier studies which focus on in-sample evidence and assume linearity, the paper employs various nonlinear models and several model evaluation criteria to examine market efficiency in an out-of-sample forecasting context. Overall, there is evidence for intraday market inefficiency of two of the four energy future markets (heating oil and natural gas), which exists particularly during the bull market condition but not during the bear market condition. The evidence is also robust against the data-snooping bias and the model overfitting problem, and its economic significance can be very substantial.",
+  "published": "2009",
+  "updated": "2009",
+  "authors": [
+    "Tao Wang",
+    "Jian Yang"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.1444498",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

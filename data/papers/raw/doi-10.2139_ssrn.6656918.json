@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.6656918",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6656918",
+  "title": "Intraday Statistical Arbitrage via Dual-Channel LSTM-Transformer: A High-Frequency Study on Cross-Market Palm Oil Futures",
+  "abstract": "&lt;p&gt;&lt;span&gt;Traditional statistical arbitrage in commodity futures often falters during intraday high-frequency trading due to non-linear microstructural noise and macro-driven structural breaks. This study proposes a novel Dual-Channel Deep Learning (DCDL) framework integrated with an AI Reversal Stop (AIRS) mechanism to navigate the cross-market palm oil futures corridor between Malaysia (FCPO) and China (P.DCE). To address the \"dual-memory\" nature of high-frequency spreads, the DCDL architecture parallelizes an LSTM channel for local micro-momentum extraction and a Transformer channel for global macro-equilibrium anchoring. This design achieves a superior out-of-sample directional accuracy of 63.76%. Crucially, the AIRS module functions as an intelligent circuit breaker, preemptively truncating positions when the network identifies structural trend breakdowns rather than temporary deviations. Empirical results from 2019 to 2023 reveal that AIRS successfully navigated 52 macro-structural breaks, \"rescuing\" the strategy from 77 potential catastrophic reversals. Under rigorous stress-testing featuring 8 bps bilateral transaction costs and independent dual-account margin requirements, the proposed strategy delivered a remarkable 25.10% Net ROI and a 2.52 Sharpe ratio, strictly limiting maximum drawdown to -4.27%. By shifting the deep learning paradigm from simple signal generation to holistic tail-risk mitigation, this research provides a highly resilient and survival-oriented solution for high-frequency algorithmic trading in volatile global commodity markets.&lt;/span&gt;&lt;/p&gt;",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Razli Ramli",
+    "Yang Li"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6656918",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

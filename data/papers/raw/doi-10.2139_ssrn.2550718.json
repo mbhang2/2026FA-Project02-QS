@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.2550718",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2550718",
+  "title": "Time Series Momentum and Macroeconomic Risk",
+  "abstract": "The time series momentum strategy has been shown to deliver consistent profitability over a long time horizon. Funds pursuing these strategies are now a component of many institutional portfolios, due to the expectation of positive returns in equity bear markets. However, the return drivers of the strategy and its performance in other economic conditions are less well understood. The authors find evidence that the returns to the strategy are connected to the business cycle. Returns are positive in both recessions and expansions, but profitability is especially high in expansions. About 40% of returns are due to time varying factor-related risk exposure, consistent with rational asset pricing theories having a role in explaining the profitability of the strategy.",
+  "published": "2015",
+  "updated": "2015",
+  "authors": [
+    "Mark C. Hutchinson",
+    "John O'Brien"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2550718",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

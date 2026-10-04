@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W7127542653",
+  "source": "openalex",
+  "openalex_id": "W7127542653",
+  "doi": null,
+  "title": "Explainable Patterns in Cryptocurrency Microstructure",
+  "abstract": "We document stable cross-asset patterns in cryptocurrency limit-order-book microstructure: the same engineered order book and trade features exhibit remarkably similar predictive importance and SHAP dependence shapes across assets spanning an order of magnitude in market capitalization (BTC, LTC, ETC, ENJ, ROSE). The data covers Binance Futures perpetual contract order books and trades on 1-second frequency starting from January 1st, 2022 up to October 12th, 2025. Using a unified CatBoost modeling pipeline with a direction-aware GMADL objective and time-series cross validation, we show that feature rankings and partial effects are stable across assets despite heterogeneous liquidity and volatility. We connect these SHAP structures to microstructure theory (order flow imbalance, spread, and adverse selection) and validate tradability via a conservative top-of-book taker backtest as well as fixed depth maker backtest. Our primary novelty is a robustness analysis of a major flash crash, where the divergent performance of our taker and maker strategies empirically validates classic microstructure theories of adverse selection and highlights the systemic risks of algorithmic trading. Our results suggest a portable microstructure representation of short-horizon returns and motivate universal feature libraries for crypto markets.",
+  "published": "2026-01-31",
+  "updated": "2026-01-31",
+  "authors": [
+    "Bartosz Bieganowski",
+    "Robert \u015alepaczuk"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Blockchain Technology Applications and Security",
+    "Stock Market Forecasting Methods"
+  ],
+  "abs_url": "https://openalex.org/W7127542653",
+  "oa_url": "https://arxiv.org/pdf/2602.00776",
+  "is_oa": true,
+  "venue": "arXiv (Cornell University)",
+  "cited_by_count": 0
+}

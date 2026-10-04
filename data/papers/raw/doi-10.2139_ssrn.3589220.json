@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.3589220",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3589220",
+  "title": "Empirical Study of Market Impact Conditional on Order-Flow Imbalance",
+  "abstract": "In this research, we have empirically investigated the key drivers affecting liquidity in equity markets. We illustrated how theoretical models, such as Kyle's model, of agents' interplay in the financial markets, are aligned with the phenomena observed in publicly available trades and quotes data. Specifically, we confirmed that for small signed order-flows, the price impact grows linearly with increase in the order-flow imbalance. We have, further, implemented a machine learning algorithm to forecast market impact given a signed order-flow. Our findings suggest that machine learning models can be used in estimation of financial variables; and predictive accuracy of such learning algorithms can surpass the performance of traditional statistical approaches.&lt;br&gt;&lt;br&gt;Understanding the determinants of price impact is crucial for several reasons. From a theoretical stance, modelling the impact provides a statistical measure of liquidity. Practitioners adopt impact models as a pre-trade tool to estimate expected transaction costs and optimize the execution of their strategies. This further serves as a post-trade valuation benchmark as suboptimal execution can significantly deteriorate a portfolio performance.&lt;br&gt;&lt;br&gt;More broadly, the price impact reflects the balance of liquidity across markets. This is of central importance to regulators as it provides an all-encompassing explanation of the correlation between market design and systemic risk, enabling regulators to design more stable and efficient markets.",
+  "published": "2020",
+  "updated": "2020",
+  "authors": [
+    "Anastasia Bugaenko"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3589220",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W2004068247",
+  "source": "openalex",
+  "openalex_id": "W2004068247",
+  "doi": "10.3905/jod.2005.580514",
+  "title": "Performance of Candlestick Analysis on Intraday Futures Data",
+  "abstract": "Many practitioners use technical trading in derivatives markets, especially futures. Academic researchers, by contrast, consider \u201ccharting\u201d to be without merit because it would violate the principle of market efficiency with respect to publicly available information, in particular, the history of past prices. In truth, however, this opinion is based more on conviction than on extensive research, the excuse being that analyzing chart patterns is too subjective to be amenable to rigorous statistical analysis. In this article, Fock, Klein, and Zwergel put one very popular charting technique, the \u201ccandlestick\u201d method, to the test. They start by developing specific criteria for a set of basic candlestick patterns, and then measure predictive performance with intraday data from two major futures, the DAX stock index contract, and the Bund interest rate future. And guess what? The academics are right! The authors find no evidence of predictive ability from candlestick patterns alone, or in combination with other common technical indicators, like momentum.",
+  "published": "2005-08-31",
+  "updated": "2005-08-31",
+  "authors": [
+    "J. Henning Fock",
+    "Christian Klein",
+    "Bernhard Zwergel"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Financial Risk and Volatility Modeling",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W2004068247",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "The Journal of Derivatives",
+  "cited_by_count": 57
+}

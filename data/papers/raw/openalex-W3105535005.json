@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W3105535005",
+  "source": "openalex",
+  "openalex_id": "W3105535005",
+  "doi": "10.1108/cfri-05-2020-0049",
+  "title": "Does VPIN provide predictive information for realized volatility forecasting: evidence from Chinese stock index futures market",
+  "abstract": "Purpose Using intraday data, the authors explore the forecast ability of one high frequency order flow imbalance measure (OI) based on the volume-synchronized probability of informed trading metric (VPIN) for predicting the realized volatility of the index futures on the China Securities Index 300 (CSI 300). Design/methodology/approach The authors employ the heterogeneous autoregressive model for realized volatility (HAR-RV) and compare the forecast ability of models with and without the predictive variable, OI. Findings The empirical results demonstrate that the augmented HAR model incorporating OI (HARX-RV) can generate more precise forecasts, which implies that the order imbalance measure contains substantial information for describing the volatility dynamics. Originality/value The study sheds light on the relation between high frequency trading behavior and volatility forecasting in China's index futures market and reveals the underlying market mechanisms of liquidity-induced volatility.",
+  "published": "2020-11-18",
+  "updated": "2020-11-18",
+  "authors": [
+    "Conghua Wen",
+    "Jia Fei",
+    "Jianli Hao"
+  ],
+  "categories": [
+    "Financial Risk and Volatility Modeling",
+    "Financial Markets and Investment Strategies",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W3105535005",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "China Finance Review International",
+  "cited_by_count": 13
+}

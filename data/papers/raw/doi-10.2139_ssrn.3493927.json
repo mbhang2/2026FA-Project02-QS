@@ -1,0 +1,24 @@
+{
+  "id": "doi-10.2139_ssrn.3493927",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3493927",
+  "title": "Intraday Time-series Momentum: Evidence from China",
+  "abstract": "This study conducts an investigation of intraday time-series momentum across four Chinese commodity futures contracts: copper, steel, soybean, and soybean meal. Our results indicate that the first half-hour return positively predicts the last half-hour return across all four futures. Furthermore, in metals markets, we find that first trading sessions with high volume or volatility are associated with the strongest intraday time-series momentum dynamics. Based on this, we propose an intraday momentum informed trading strategy that earns a return in excess of standard always long and buy-and-hold benchmarks.",
+  "published": "2019",
+  "updated": "2019",
+  "authors": [
+    "Muzhao Jin",
+    "Fearghal Kearney",
+    "Youwei Li",
+    "Yung Chiang Yang"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3493927",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

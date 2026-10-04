@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7520438",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7520438",
+  "title": "Order Flow Imbalance and Price Discovery on Prediction Markets: Evidence from Kalshi",
+  "abstract": "We apply the Order Flow Imbalance (OFI) framework of Cont et al. (2014) to CFTC-regulated prediction markets on Kalshi. Using 143,297 orderbook snapshots collected over 13 days across sports, weather, and economic event contracts, we document a statistically significant positive relationship between OFI and contemporaneous mid-price changes. The explanatory power of OFI varies substantially across contract categories: sports championship futures exhibit a mean R 2 of 0.29, weather contracts 0.13, and macroeconomic contracts 0.02. A pooled panel regression with market fixed effects confirms the aggregate relationship (standardized \u03b2 = 0.45, p &amp;lt; 0.001). Results are robust to subsample splitting, winsorization, and exclusion of illiquid contracts. These findings provide the first evidence that the standard microstructure framework for order flow and price formation extends to binary event contracts on prediction markets, with cross-category heterogeneity suggesting systematic differences in the information content of order flow across contract types.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Ash Mal\u00e9k"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7520438",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

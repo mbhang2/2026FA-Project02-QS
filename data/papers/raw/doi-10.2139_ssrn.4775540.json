@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.4775540",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.4775540",
+  "title": "Re-examining Differences between Momentum and Time Series Momentum among Individual Stocks",
+  "abstract": "In this paper, we provide a comprehensive comparison of momentum (CSMOM) and time series momentum (TSMOM) among individual stocks in the US stock market from January 1964 to December 2015 and find that the two are distinct among individual stocks. With zero-cost strategies on both of them, we find that the explanations in Goyal and Jegadeesh (2018) cannot fully explain the differences between the performances of CSMOM strategies and TSMOM strategies.",
+  "published": "2024",
+  "updated": "2024",
+  "authors": [
+    "Yuandong Mu",
+    "Chaohua He"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.4775540",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

@@ -1,0 +1,24 @@
+{
+  "id": "openalex-W2254566918",
+  "source": "openalex",
+  "openalex_id": "W2254566918",
+  "doi": null,
+  "title": "Can Simple Buy and Sell Rules Increase Index Future Day Trading Profitability",
+  "abstract": "Day trading index futures is popular. Two common are trend-following and gap-reversal. This paper uses these as strategies and asks whether simple intraday exit rules can increase their profitability. Intraday stop-loss exit rules appear to add return to a trend-following base strategy of buying index futures at the opening and closing out the position at the close. There is no strong evidence that the same is true of profit-lock exit rules or that either works with a corresponding gap-reversal strategy.",
+  "published": "2004-04-12",
+  "updated": "2004-04-12",
+  "authors": [
+    "Joel C. Rentzler",
+    "Susana Yu"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Corporate Finance and Governance",
+    "Capital Investment and Risk Analysis"
+  ],
+  "abs_url": "https://openalex.org/W2254566918",
+  "oa_url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=523762",
+  "is_oa": true,
+  "venue": "SSRN Electronic Journal",
+  "cited_by_count": 0
+}

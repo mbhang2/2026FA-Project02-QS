@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.1111_ajfs.12117",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1111/ajfs.12117",
+  "title": "Intraday Volatility and Volume in China's Stock Index and Index Futures Markets",
+  "abstract": "Abstract This paper examines the effects of intraday trading volume on return volatility across China's stock index and index futures markets using 5\u2010min intraday data. The periodic characteristics of intraday data are considered and a FIEGARCH model is employed to allow for long memory properties of intraday volatility. We find that volume has significant positive influences on volatility across the two markets, and that the impact of futures volume on spot volatility is significantly stronger than the impact of spot volume on futures volatility. These findings indicate a stronger information flow from the futures market to the spot market than vice versa, which might result from current access restrictions on investors in China's stock index futures market.",
+  "published": "2015-12",
+  "updated": "2015-12",
+  "authors": [
+    "Yusaku Nishimura",
+    "Bianxia Sun"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1111/ajfs.12117",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Asia-Pacific Journal of Financial Studies",
+  "cited_by_count": null
+}

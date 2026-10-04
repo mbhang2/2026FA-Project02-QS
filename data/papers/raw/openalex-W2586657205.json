@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W2586657205",
+  "source": "openalex",
+  "openalex_id": "W2586657205",
+  "doi": null,
+  "title": "Predicting the highest and lowest stock price before end of the day",
+  "abstract": "In this paper, an ensemble model for forecasting highly complex financial time series is being introduced. To use the Autoregressive Integrated Moving Average (ARIMA) and Random Walk with Drift (RWDRIFT) models to capture the characteristics of highly complex financial time series. Experimental results with real data sets indicate that the combined model can be an effective way to improve forecasting accuracy achieved by either of the models used separately. So ARIMA-RWDRIFT has shown better forecasts by taking advantage of each model\u2019s capabilities. \\n \\nThe ensemble model was used to build the Intraday Trading Model which was used to generate trade signals dynamically to trade in a real-world stock market. We used the daily series of 1 minute tick data to predict the highest, lowest and closing stock price before end of the day. This model is being compared with existing technical indicators which are the Moving Average (MA) as well as Moving Average Convergence Divergence (MACD) which identify trend reversion in the long horizon. More specifically, the trading performance of all the models is investigated in a forecast and trading simulation on several stocks in (New York Stock Exchange (NYSE). \\n \\nAs it turns out, the ARIMA-RWDRIFT model do remarkably well and outperform the technical indicators in a simple trading simulation exercise using a momentum trading strategy. The model is able to identify price movement patterns and forecast in a short horizon and to achieve a better Profits & Loss ratio over the technical indicators that identify patterns on a longer horizon in terms of a higher accuracy of true trade signals which in turn result into a better Profits & Loss ratio.",
+  "published": "2014-01-01",
+  "updated": "2014-01-01",
+  "authors": [
+    "Choo, Zhi Cheng"
+  ],
+  "categories": [
+    "Stock Market Forecasting Methods",
+    "Forecasting Techniques and Applications",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W2586657205",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "DR-NTU (Nanyang Technological University)",
+  "cited_by_count": 0
+}

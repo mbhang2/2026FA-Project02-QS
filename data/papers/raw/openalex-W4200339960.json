@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W4200339960",
+  "source": "openalex",
+  "openalex_id": "W4200339960",
+  "doi": "10.1002/fut.22301",
+  "title": "Who and what drives informed options trading after the market opens?",
+  "abstract": "Abstract This study examines what affects the return predictability of option order imbalances immediately after the market opening and who contributes to this predictability. Although intraday momentum is insignificant, option order imbalances in the first 10 min of trading significantly predict the returns of stock index and index futures for the remainder of the day. Simple market timing strategies result in significant profits even after transaction costs are incurred. This predictive power is more prominent when uncertainty exists in the market or options are attractive to informed investors. Such predictability is mainly driven by institutional traders rather than day traders.",
+  "published": "2021-12-20",
+  "updated": "2021-12-20",
+  "authors": [
+    "Jong-Ho Kang",
+    "Jangkoo Kang",
+    "Jaeram Lee"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility",
+    "Monetary Policy and Economic Impact"
+  ],
+  "abs_url": "https://openalex.org/W4200339960",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Journal of Futures Markets",
+  "cited_by_count": 3
+}

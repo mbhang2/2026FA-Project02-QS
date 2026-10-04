@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.6355218",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6355218",
+  "title": "Regime-Conditional Alpha in SPY 0DTE Opening Range Breakout Strategies: A Filtering and Strike Selection Framework",
+  "abstract": "This paper presents a simulation-based quantitative examination of the Opening Range Breakout (ORB) strategy applied to zero-days-to-expiration (0DTE) debit vertical spreads on the SPDR S&amp;amp;P 500 ETF Trust (SPY). Using a transparent Monte Carlo simulation framework calibrated to empirically documented parameters across 756 potential trading days (2022-2025), we model 214 filtered trades and derive the conditions under which the strategy generates positive expected value. The simulation generates an unfiltered win rate of 46.8%, consistent with the practitioner literature, and a filtered win rate of 65.4% (95% Wilson CI: [58.8%, 71.5%]) under a three-factor filter stack: day-of-week selection (Monday, Wednesday, Friday), VIX regime restriction (15-25), and macroeconomic event exclusion. We derive an analytically exact breakeven win rate of 66.7% under fixed 25%/50% exit parameters and show that the observed filtered win rate sits at the margin of viability, emphasizing the fragility of the edge to execution slippage. Critically, this paper provides the first systematic treatment of strike selection in the ORB 0DTE context: we demonstrate that the breakout-to-strike distance materially affects both net debit and effective breakeven, and that spreads entered with the long strike 0.96-2.00&amp;nbsp;standard dollars from the breakout level produce the highest per-trade EV in simulation ($1.61\u2013 $4.40 vs. \u2212$11.11 for the nearest-strike entry). A transaction cost sensitivity table shows EV remains within $2 of zero across all practical slippage levels, confirming that execution discipline is the primary determinant of profitability. A retail implementation framework and Monte Carlo projections for a $1,500 account are provided.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Justin Chuk"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6355218",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

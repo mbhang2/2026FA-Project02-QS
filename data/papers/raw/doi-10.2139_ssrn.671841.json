@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.671841",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.671841",
+  "title": "Momentum in Futures Markets",
+  "abstract": "Momentum has been examined extensively in equity markets, but little studied outside them. I document the existence of momentum and reversals in futures markets including commodity and financial futures contracts traded in the US and overseas. Futures momentum portfolios earn positive average returns even after adjusting for risk using canonical pricing models including the CAPM and Fama-French three factor models. If futures momentum portfolios are formed based on standardized performance, they earn positive average returns even after a momentum factor is included in the Fama-French model, although the momentum factor is statistically significant. Thus, futures momentum is related to, but not subsumed by, equity momentum. Non-parametric risk adjustment reduces momentum returns, but momentum portfolios formed based on standardized historical returns exhibit abnormal performance even allowing for time varying, non-parametric risk adjustment.",
+  "published": "2005",
+  "updated": "2005",
+  "authors": [
+    "Craig Pirrong"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.671841",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

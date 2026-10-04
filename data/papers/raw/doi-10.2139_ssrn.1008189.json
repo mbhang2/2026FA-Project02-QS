@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.1008189",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.1008189",
+  "title": "Order Imbalance and the Dynamics of Index and Futures Prices",
+  "abstract": "This working paper was written by Joseph K.W. Fung (Hong Kong Baptist University) and Philip Yu (University of Hong Kong).&lt;br&gt;&lt;br&gt;This study uses transaction records of index futures and the index stocks, with bid/ask price quotes, to examine the impact of stock market order imbalance on the dynamic behavior of index futures and cash index prices. Spurious correlation in the index is purged by using an estimate of the \"true\" index with highly synchronous and active quotes of individual stocks. A smooth transition autoregressive error-correction model (STAECM) is used to describe the nonlinear dynamics of the index and futures prices. Order imbalance in the cash stock market is found to significantly affect the error-correction dynamics of index and futures prices. Order imbalance impedes error-correction particularly when the market impact of order imbalance works against the error-correction force of the cash index, explaining why real potential arbitrage opportunity may persist over some time. Incorporating order imbalance in the framework significantly improves its explanatory power. The findings indicate that a stock market microstructure that allows a quick resolution of order imbalance promotes dynamic arbitrage efficiency between futures and the underlying stocks.",
+  "published": "2007",
+  "updated": "2007",
+  "authors": [
+    "Hong Kong Institute for Monetary and Financial Research"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.1008189",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

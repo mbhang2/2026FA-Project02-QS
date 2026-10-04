@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7428398",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7428398",
+  "title": "Opening-Range Breakout Does Not Survive Trading Costs: A Pre-Registered 225-Cell Study on Sixteen Years of Futures Data &lt;br&gt; &lt;br&gt;",
+  "abstract": "Opening-range breakout (ORB) is among the most widely taught intraday strategies, and recent studies report triple-digit annual alphas for it on equity instruments. We test whether any simple, fully specified ORB variant survives realistic futures trading costs. Before observing any profit-and-loss number, we pre-registered a grid of 225 cells - nine liquid U.S. futures markets (equity indices, metals, energy) x two session anchors (the cash open and the 18:00 ET Globex open) x four opening-range lengths (5/15/30/60 minutes) x three exit rules from the literature, plus a volatility-threshold comparator - together with fill conventions, cost scenarios, verdict criteria, power requirements, and falsification controls. The study uses sixteen years of one-minute data (2010-2026), split into fixed exploration, confirmation, and reserve windows. Zero of 225 cells meet the pre-registered positive bar (t &amp;gt;= 2.5 at $25 per round-trip, sign agreement across sub-periods, year-by-year stability). Gross of costs, the grid earns +$1.57M on the confirmation window; at $25 per round-trip it loses $6.49M. The median gross edge is -0.01 ticks per trade, and 155 of 225 cells have a gross edge within two ticks of zero: where the breakout earns anything, it earns it inside the spread. Twenty-eight cells are negative with statistical power (a friction-sized edge would have been detected); the 5-minute range - the literature's favourite - is the worst window; and the largest-dollar surviving cell fails a random-anchor control, indicating volatility-expansion continuation rather than any information in the session open. We conclude that ORB, as specified in the public literature, is not a viable strategy on these markets at realistic costs, and we argue that pre-registration with mandatory power analysis is the appropriate standard for trading-strategy research. All 79 published claims of the underlying research programme, including every number in this paper, re-derive offline from committed evidence by a public verification harness. &lt;br&gt; &lt;br&gt;",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Mulham Fetna"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7428398",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

@@ -1,0 +1,23 @@
+{
+  "id": "openalex-W2086237027",
+  "source": "openalex",
+  "openalex_id": "W2086237027",
+  "doi": "10.1080/13518470903345729",
+  "title": "The informational impact of electronic trading systems on the FTSE 100 stock index and its futures contracts",
+  "abstract": "This article examines the partial adjustment factors of Financial Times Stock Exchange (FTSE) 100 stock index and stock index futures. Using high frequency data from 15 January 1997 to 17 March 2000, it aims to assess the informational impact of the electronic trading systems implemented at the London Stock Exchange and London International Financial Futures Exchange (LIFFE). The results suggest that information runs mainly from the futures market to the spot market. We find that the introduction of stock exchange trading system, in October 1997, has increased the FTSE 100 index's absolute efficiency; however, it reduced the informational feedback to the futures market. The implementation of LIFFE CONNECT at LIFFE, in May 1999, has reduced the absolute and relative efficiency of FTSE 100 futures. These findings seem to imply that during the period under scrutiny electronic trading increased the level of microstructural noise, probably due to the bid\u2013ask bounce and order flow imbalances.",
+  "published": "2009-12-04",
+  "updated": "2009-12-04",
+  "authors": [
+    "H\u00e9lder Sebasti\u00e3o"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Monetary Policy and Economic Impact",
+    "Complex Systems and Time Series Analysis"
+  ],
+  "abs_url": "https://openalex.org/W2086237027",
+  "oa_url": "https://estudogeral.uc.pt/bitstream/10316/93815/1/Final_article.pdf",
+  "is_oa": true,
+  "venue": "European Journal of Finance",
+  "cited_by_count": 2
+}

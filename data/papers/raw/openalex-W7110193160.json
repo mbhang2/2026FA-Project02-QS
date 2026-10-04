@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W7110193160",
+  "source": "openalex",
+  "openalex_id": "W7110193160",
+  "doi": "10.30998/faktorexacta.v18i1.27805",
+  "title": "Identification of Stock Breakouts Using Support Vector Machine with Integrated Fundamental Data and Random Forest Prediction",
+  "abstract": "In this study, we investigated the detection of breakout events in Tesla, Inc. stock by integrating technical analysis with fundamental financial data using a Support Vector Machine (SVM) model. The Opening Range Breakout (ORB) strategy has demonstrated substantial returns, while the Support Vector Machine (SVM) method excels in detecting breakout events. Furthermore, the Random Forest (RF) algorithm effectively forecasts long-term trends. This study aims to integrate fundamental data\ufffdspecifically net income and Earnings Per Share (EPS)\ufffdand a long-term trend prediction derived from RF as additional features in an SVM model for Tesla, Inc. (TSLA) stock. Utilizing the Sample, Explore, Modify, Model, Assess (SEMMA) framework, the research evaluates daily stock data from November 15, 2019, to November 14, 2024. Results indicate that incorporating fundamental data improves SVM precision from 0.08 to 0.18, although recall remains low. Conversely, adding the RF prediction feature does not yield a significant benefit and reduces precision to 0.13. These findings suggest that while integrating fundamental data enhances breakout detection performance, further refinement is essential for the effective incorporation of RF-based predictions.",
+  "published": "2025-07-16",
+  "updated": "2025-07-16",
+  "authors": [
+    "Gusti Bagus Cahya Utama",
+    "Ahmad Chusyairi",
+    "Riad Sahara"
+  ],
+  "categories": [
+    "Stock Market Forecasting Methods",
+    "Financial Distress and Bankruptcy Prediction",
+    "Forecasting Techniques and Applications"
+  ],
+  "abs_url": "https://openalex.org/W7110193160",
+  "oa_url": "https://journal.lppmunindra.ac.id/index.php/Faktor_Exacta/article/download/27805/7837",
+  "is_oa": true,
+  "venue": "Faktor Exacta",
+  "cited_by_count": 0
+}

@@ -1,0 +1,25 @@
+{
+  "id": "openalex-W322098919",
+  "source": "openalex",
+  "openalex_id": "W322098919",
+  "doi": null,
+  "title": "Stock Index Futures Options and the Predictability of Intraday Index Price Changes",
+  "abstract": "INTRODUCTION The Chicago Board Options Exchange began offering standardized call options on equities in 1973. These options were standardized in terms of expiration dates and exercise prices. The popularity of these options, in terms of trading volume, grew quickly. The introduction of these options and the fast growth in their popularity raised the empirical question of how the underlying markets were being affected by option trading. Many studies have examined the impact of equity option introduction on the return variability and trading volume of the underlying equities. Such studies include Bansal, Pruitt and Wei (1989), Whiteside, Dukes and Dunne (1983), and Hayes and Tennenbaum (1979). More recently, beginning in 1982, standardized option trading was initiated on futures contracts. Currently futures options are traded on many agricultural, financial, currency and stock index futures. Options on futures contracts allow investors and risk managers to define and limit their risk in the form of a premium paid for the right to buy or sell a futures contract at a specified price known as the exercise price. The impact of futures option introduction on their underlying instruments is not well understood. The case of options on futures is interesting because, for many contracts, the underlying futures contract plays a price discovery role. There are many types of futures contracts and the magnitude of the price discovery role appears to vary by contract type and in some cases even within contract type. Studies such as Figlewski (1987), Kawaller, Koch and Koch (1987), Finnerty and Park (1987), Swinnerton, Curcio and Bennett (1989), Swinnerton (1988), and Kawaller, Koch and Koch (1993) examine the temporal price relationship between stock index futures and the underlying index and find a significant positive relationship. Theoretical futures mispricings and lagged index price changes have also been utilized by Swinnerton, Curcio and Bennett (1989) to try to predict subsequent intraday index price changes. Irwin (1990) suggests it would be a particularly interesting question whether the introduction of option trading has a perceptible impact on the efficiency of cash and futures price movements. This paper utilized a regression framework to examine the impact of stock index futures option initiation on the predictability of intraday index price changes based on 1) theoretical futures mispricings, 2) lagged index changes and 3) lagged futures price changes. DATA The data used in this study consists of tick-by-tick MMI stock index futures price quotes as well as MMI stock index price quotes. In calculating the theoretical futures price, the treasury bill rate was used as a proxy for the risk-free rate of interest and actual dividend payments by firms represented in the MMI were used as a proxy for the expected dividends. The MMI divisors which must be multiplied by the reported index value to convert the index point value to the index dollar value used in computing a theoretical futures price were obtained from the Chicago Board of Trade. METHODOLOGY The impact of futures option introduction on the predictability of intraday price changes was examined with respect to three predictor variables using the ordinary least squares regression approach developed by Curcio, Swinnerton and Bennett (1988). The three predictor or independent variables examined are 1) theoretical futures mispricings, 2) lagged spot index price changes and 3) lagged futures price changes. The dependent variable in the regression is the change in the spot price from the [j.sup.th] minute of day t to the j+[n.sup.th] minute of day t where n ranges from 5 to 30 minutes. The regression model is as follows: [MATHEMATICAL EXPRESSION NOT REPRODUCIBLE IN ASCII] where, [S.sub.tj] = the spot price of the index on the [j.sup.th] minute of day t, [S. \u2026",
+  "published": "1997-07-01",
+  "updated": "1997-07-01",
+  "authors": [
+    "James Stotler",
+    "Richard J. Curcio",
+    "Eugene Swinnerton"
+  ],
+  "categories": [
+    "Capital Investment and Risk Analysis",
+    "Financial Markets and Investment Strategies",
+    "Stochastic processes and financial applications"
+  ],
+  "abs_url": "https://openalex.org/W322098919",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Academy of Accounting and Financial Studies journal",
+  "cited_by_count": 0
+}

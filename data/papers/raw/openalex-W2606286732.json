@@ -1,0 +1,22 @@
+{
+  "id": "openalex-W2606286732",
+  "source": "openalex",
+  "openalex_id": "W2606286732",
+  "doi": "10.2469/dig.v30.n1.625",
+  "title": "Market Microstructure of FT-SE 100 Index Futures: An Intraday Empirical Analysis",
+  "abstract": "Frequency: Yearly ISSN: 0015-198X eISSN: 1938-3312 https://www.tandfonline.com/doi/abs/10.1080/0015198X.2021.1965861 Abstract Assets whose carry is trending up, namely, assets with high carry momentum, tend to have higher returns than those with low carry momentum. Using data from different asset classes, we show that portfolios with high-carry-momentum assets delivered higher returns than portfolios with low-carry-momentum assets. The return differentials cannot be explained by exposure to traditional market risks or by such seemingly related factors as time-series momentum and carry. The results can be motivated by a model in which investors\u2019 demand for an asset depends on the market\u2019s view on the expected returns. An increase in carry raises investors\u2019 belief in the attractiveness of an asset, leading to the possibility for higher demand in the market and in turn to the potential for higher prices and positive returns.",
+  "published": "2000-02-01",
+  "updated": "2000-02-01",
+  "authors": [
+    "William H. Sackley"
+  ],
+  "categories": [
+    "Financial Markets and Investment Strategies",
+    "Market Dynamics and Volatility"
+  ],
+  "abs_url": "https://openalex.org/W2606286732",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "CFA Digest",
+  "cited_by_count": 0
+}

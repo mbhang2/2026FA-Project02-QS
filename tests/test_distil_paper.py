@@ -317,7 +317,12 @@ def test_the_lint_repair_is_bounded_and_carries_no_market_data():
         'handing the model the whole paper makes the leak MORE likely: a '
         "falsification study's body is saturated with the banned words")
     src = inspect.getsource(dp.distil_one)
-    assert "for attempt in range(MAX_LINT_REPAIRS):" in src
+    # Two budgets since 2026-10-04 -- mechanical repairs and the agentic seat's
+    # rounds -- so the loop bound is their sum and each has its own counter.
+    # The mechanical bound is still MAX_LINT_REPAIRS, which the call-count test
+    # below is the real guard on.
+    assert "for _ in range(MAX_LINT_REPAIRS + MAX_REVIEW_REPAIRS):" in src
+    assert "if mech >= MAX_LINT_REPAIRS:" in src
     assert "while" not in src, "bounded, not a loop until it passes"
 
 
@@ -411,3 +416,62 @@ def test_the_missing_citation_is_repairable_too():
     c = _ForgetsThenRemembers()
     got = dp.distil_one(c, PAPER, ROW)
     assert c.calls == 2 and ROW["id"] in got["markdown"]
+
+
+# --------------------------------------------------------------------------- #
+# the agentic seat on the FIRST question (Brian point 2a, 2026-10-04)
+#
+# Verified live on 2605.17724v1: the seat objected with concern 4 (more than one
+# question), the model repaired it, and the second draft cleared. The mechanical
+# gates had passed the bundled version -- lint, grounding, length and the
+# citation are all string checks and none can see two questions in one file.
+# --------------------------------------------------------------------------- #
+def test_the_reviewer_runs_on_a_distilled_question():
+    src = (REPO_ROOT / "scripts" / "distil_paper.py").read_text()
+    assert "def _review_seat(md: str) -> tuple[list[str], str]:" in src
+    assert "MAX_REVIEW_REPAIRS = 2" in src
+    assert "review_hypothesis.py" in src
+
+
+def test_there_is_no_family_seat_here_and_the_reason_is_stated():
+    """A first question has no parent, so there is nothing to drift from.
+    Running the family seat here would be asking a model to compare a file with
+    nothing."""
+    src = (REPO_ROOT / "scripts" / "distil_paper.py").read_text()
+    import re
+    flat = " ".join(re.sub(r"^\s*#\s?", "", src, flags=re.M).split())
+    assert "family_review" not in src
+    assert "no parent, so there is nothing to drift from" in flat
+
+
+def test_the_seat_runs_only_on_a_mechanically_clean_draft():
+    src = (REPO_ROOT / "scripts" / "distil_paper.py").read_text()
+    loop = src[src.index("for _ in range(MAX_LINT_REPAIRS"):
+               src.index('    slug = str(out.get("slug")')]
+    assert loop.index("if not (leaks or loose or length or uncited):") < \
+           loop.index("_review_seat(md_so_far)")
+
+
+def test_the_review_rounds_do_not_eat_the_mechanical_ones():
+    """At MAX_LINT_REPAIRS = 3 a single objection would have left one repair for
+    four checks that have to be satisfied together -- which is the exact failure
+    `_repair_note`'s docstring says took three rounds to converge."""
+    src = (REPO_ROOT / "scripts" / "distil_paper.py").read_text()
+    assert "range(MAX_LINT_REPAIRS + MAX_REVIEW_REPAIRS)" in src
+
+
+def test_the_seat_is_never_fatal_and_says_when_it_did_not_run():
+    src = (REPO_ROOT / "scripts" / "distil_paper.py").read_text()
+    assert 'DID-NOT-RUN ({type(exc).__name__}) -- NOT reviewed' in src
+    assert "NOT-REACHED" in src
+    flat = " ".join(src.split())
+    assert "the reviewer never read this question" in flat
+
+
+def test_what_the_seat_did_reaches_the_registry():
+    """The registry row is this path's durable record, the way the commit
+    trailer is the refine path's. The seat fails open, so without this a
+    question nobody read is indistinguishable later from one that passed."""
+    src = (REPO_ROOT / "scripts" / "distil_paper.py").read_text()
+    i = src.index('"model": a.model, "model_served": served,')
+    assert '"review": got["review"]' in src[i:i + 500]

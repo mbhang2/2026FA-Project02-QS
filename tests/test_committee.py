@@ -458,3 +458,79 @@ def test_the_client_timeout_outlasts_the_slowest_allowed_model():
     f = {x.name: x for x in dataclasses.fields(L.Client)}
     assert f["timeout_s"].default >= 800.0, (
         "must leave headroom over mimo's measured 738 s")
+
+
+# --------------------------------------------------------------------------- #
+# independence (decided and fixed 2026-10-04)
+#
+# Until this date `nq_campaign.py` passed the proposer's own model into
+# `review()`, so all 17 recorded verdicts had a model auditing its own work.
+# docs/setup/MODEL-ACCESS.md called it a decision rather than a patch because
+# fixing it changes what every past verdict means. Michael decided it.
+# --------------------------------------------------------------------------- #
+def test_the_audit_seats_have_their_own_model():
+    import importlib
+    # `audit.committee` re-exports `review` as a function, which shadows the
+    # submodule of the same name -- import it explicitly.
+    R = importlib.import_module("audit.committee.review")
+    assert R.AUDIT_MODEL == "mimo-v2.6-pro"
+    import inspect
+    assert inspect.signature(R.review).parameters["model"].default == R.AUDIT_MODEL, (
+        "the committee must pick its own model, not take the campaign's")
+
+
+def test_the_campaign_no_longer_dictates_the_auditors_model():
+    """The exact expression that was the defect must not come back."""
+    src = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    i = src.index("cv = review(")
+    call = src[i:i + 400]
+    import re
+    assert "proposer_model=" in call, "it must record what wrote the code"
+    # `proposer_model=(record...` contains `model=(record...`, so match the
+    # bare argument only.
+    assert not re.search(r"(?<!proposer_)model=\(record\.agent_config", call), (
+        "this is the independence defect -- the auditors ran on the proposer's "
+        "model")
+
+
+def test_independence_is_a_tri_state_so_unknown_cannot_read_as_a_pass():
+    from audit.committee import AuditorVerdict
+    from audit.committee.review import CommitteeVerdict
+    a = (AuditorVerdict(axis="leakage", verdict="PASS", reasons=()),)
+
+    def cv(model, proposer):
+        return CommitteeVerdict(verdict="PASS", auditors=a, model=model,
+                                proposer_model=proposer)
+    assert cv("mimo-v2.6-pro", "deepseek-v4-pro").independent is True
+    assert cv("mimo-v2.6-pro", "mimo-v2.6-pro").independent is False
+    assert cv("mimo-v2.6-pro", "").independent is None, (
+        "unknown must not collapse into True")
+    assert cv("", "deepseek-v4-pro").independent is None
+
+
+def test_the_artefact_says_whether_the_check_was_independent():
+    """It went unnoticed for 17 campaigns because answering it meant reading the
+    caller. The verdict file now answers it."""
+    from audit.committee import AuditorVerdict
+    from audit.committee.review import CommitteeVerdict
+    a = (AuditorVerdict(axis="leakage", verdict="PASS", reasons=()),)
+    bad = CommitteeVerdict(verdict="PASS", auditors=a, model="x",
+                           proposer_model="x").as_dict()
+    assert bad["independent"] is False
+    assert "not an independent check" in bad["independence_note"]
+    unknown = CommitteeVerdict(verdict="PASS", auditors=a, model="x").as_dict()
+    assert unknown["independent"] is None
+    assert "cannot be determined" in unknown["independence_note"]
+    good = CommitteeVerdict(verdict="PASS", auditors=a, model="x",
+                            proposer_model="y").as_dict()
+    assert good["independent"] is True
+    assert good["independence_note"] == ""
+
+
+def test_the_past_verdicts_are_not_claimed_to_be_independent():
+    """All 17 on disk predate the fix. The doc must say so rather than let a
+    reader assume the committee was always a separate check."""
+    doc = (REPO_ROOT / "docs" / "setup" / "MODEL-ACCESS.md").read_text()
+    flat = " ".join(doc.split())
+    assert "none of them was an independent check" in flat
+    assert "nothing retroactively makes them one" in flat

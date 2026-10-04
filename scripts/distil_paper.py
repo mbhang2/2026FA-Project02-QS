@@ -229,6 +229,54 @@ def context(paper: dict, row: dict) -> str:
 # found it in. Two repairs were not enough for `2605.04004v3`; the note now also
 # shows the offending LINE, which is what makes the fix locatable.
 MAX_LINT_REPAIRS = 3
+# **The agentic seat gets its own budget**, the same split the refiner uses: the
+# mechanical findings are defects and the reviewer's are judgements, so two
+# rounds of "a reviewer disagrees" is a revision and more is an argument.
+MAX_REVIEW_REPAIRS = 2
+
+
+def _review_seat(md: str) -> tuple[list[str], str]:
+    """Brian's point 2 on the FIRST question, not only on revisions.
+
+    The mechanical gates here are the lint, grounding, length and the citation,
+    and every one is a string check -- none can say the question is not worth
+    asking. `nq-s04-03` is the cost of that: it passed every mechanical gate on
+    the refine path with a question whose champion made four trades and scored
+    `-inf`, and twenty trials bought nothing. A question distilled from a paper
+    can fail the same way, and this is the first chance to catch it.
+
+    No family seat here: there is no parent, so there is nothing to drift from.
+
+    Returns the concerns and what the seat did. Never fatal on its own error --
+    a dead model call must not throw away a distillation that is otherwise
+    clean -- so the status says in words when the question was not read.
+    """
+    import importlib.util
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "review_hypothesis", pathlib.Path(__file__).with_name(
+                "review_hypothesis.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        r = mod.review(md)
+    except Exception as exc:                                     # noqa: BLE001
+        print(f"      the reviewer did not run ({type(exc).__name__}); "
+              f"treating that as no objection, which it is not", flush=True)
+        return [], f"DID-NOT-RUN ({type(exc).__name__}) -- NOT reviewed"
+    status = f"{r['verdict']} ({r['model_served']})"
+    if r.get("unreadable"):
+        status += " -- unreadable verdict, NOT reviewed"
+    if r["verdict"] != "OBJECT":
+        return [], status
+    return [f"reviewer: {c}" for c in r["concerns"]], status
+
+
+def _review_note(concerns: list[str]) -> str:
+    return ("\n\n### A reviewer read your question and objected\n\n"
+            "It was shown the question and no score of any kind. Answer the "
+            "objection by changing the question, or if you think it is wrong, "
+            "say so inside the question in one sentence and leave it as it "
+            "is.\n\n" + "".join(f"- {c}\n" for c in concerns))
 
 
 def _too_long(md: str) -> str:
@@ -321,16 +369,45 @@ def distil_one(client, paper: dict, row: dict) -> dict:
     """One call, one hypothesis, with a bounded repair on a lint failure."""
     user = context(paper, row)
     out = client.ask(PROMPT.read_text(), user)
-    for attempt in range(MAX_LINT_REPAIRS):
+    reviews = 0
+    mech = 0
+    reviewer = "NOT-REACHED (the mechanical gates were never all clean)"
+    # **Two budgets, counted separately.** The review rounds get their own
+    # headroom rather than eating the three mechanical ones -- at
+    # MAX_LINT_REPAIRS = 3 a single objection would have left one repair for four
+    # checks that have to be satisfied together, which is the exact failure
+    # `_repair_note` was written for. But widening the loop alone would have
+    # ALSO given a stubborn leaker five mechanical tries instead of three, so
+    # each budget is enforced by its own counter and the loop bound is only
+    # their sum.
+    for _ in range(MAX_LINT_REPAIRS + MAX_REVIEW_REPAIRS):
         md_so_far = out.get("markdown") or ""
         leaks = _lint_findings(md_so_far)
         loose = _grounding_findings(md_so_far, row["id"]) if md_so_far else []
         length = _too_long(md_so_far)
         uncited = "" if row["id"] in md_so_far else row["id"]
         if not (leaks or loose or length or uncited):
+            # **The seat runs last and only on a mechanically clean draft.** It
+            # is a model call, so asking it about a file that still leaks spends
+            # a minute to be told what the linter already said.
+            if reviews < MAX_REVIEW_REPAIRS:
+                rev, reviewer = _review_seat(md_so_far)
+                if rev:
+                    reviews += 1
+                    print(f"      reviewer objected ({reviews}/"
+                          f"{MAX_REVIEW_REPAIRS}): {rev[0][:90]}", flush=True)
+                    out = client.ask(PROMPT.read_text(),
+                                     user + _review_note(rev))
+                    continue
+            elif reviews:
+                reviewer += (f" -- objected {reviews}x, cap reached, this "
+                             f"question was taken WITHOUT the seat clearing it")
             break
+        if mech >= MAX_LINT_REPAIRS:
+            break               # the final checks below refuse it by name
         out = client.ask(PROMPT.read_text(), user + _repair_note(
-            attempt, leaks, loose, length, uncited))
+            mech, leaks, loose, length, uncited))
+        mech += 1
 
     slug = str(out.get("slug") or "").strip().lower()
     if not SLUG.match(slug):
@@ -382,7 +459,10 @@ def distil_one(client, paper: dict, row: dict) -> dict:
             "adapted_claim": out.get("adapted_claim"),
             "cannot_test": out.get("cannot_test"),
             "sets_aside": out.get("sets_aside") or [],
-            "words": words}
+            "words": words,
+            # Reported, because the seat fails open. A question nobody read must
+            # not look like one that was read and passed.
+            "review": reviewer}
 
 
 def main() -> int:
@@ -437,6 +517,12 @@ def main() -> int:
     print(f"  words       {got['words']}  (budget {MIN_WORDS}-{MAX_WORDS})")
     print(f"  lint        clean")
     print(f"  cites id    yes")
+    print(f"  reviewer    {got['review']}"
+          + ("   (not approval)" if got["review"].startswith("NO_OBJECTION")
+             else ""))
+    if "NOT reviewed" in got["review"] or got["review"].startswith("NOT-REACHED"):
+        print("  ** the reviewer never read this question. That is not the same "
+              "as no objection. **")
     print(f"  adapted     {str(got['adapted_claim'])[:100]}")
     if got["cannot_test"]:
         print(f"  cannot test {str(got['cannot_test'])[:100]}")
@@ -456,7 +542,12 @@ def main() -> int:
                         "adapted_claim": got["adapted_claim"],
                         "cannot_test": got["cannot_test"],
                         "sets_aside": got["sets_aside"],
-                        "model": a.model, "model_served": served}
+                        "model": a.model, "model_served": served,
+                        # The registry row is this path's durable record, the
+                        # way the commit trailer is the refine path's. The seat
+                        # fails open, so a question nobody read must be
+                        # distinguishable later from one that was read.
+                        "review": got["review"]}
     REGISTRY.write_text(json.dumps(reg, indent=2, sort_keys=True) + "\n")
     print(f"\n  wrote {dest.relative_to(ROOT)}")
     print(f"  wrote {REGISTRY.relative_to(ROOT)}  ({a.paper}.hypothesis_path)")

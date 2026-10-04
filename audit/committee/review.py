@@ -37,6 +37,14 @@ from .llm import Client, LLMUnavailable, ModelSubstituted, preflight
 
 PROMPTS = pathlib.Path(__file__).parent / "prompts"
 AXES = ("leakage", "statistics", "economics", "robustness")
+
+# **The audit seats' own model, not the campaign's.** A different family from
+# every proposer we run on purpose: the model that audits a strategy must not be
+# the model that wrote it. mimo-v2.6-pro because it is the strongest model this
+# project is authorised to use (docs/setup/MODEL-ACCESS.md) and four seats once
+# per campaign is a cheap place to spend a slow model -- unlike the proposer,
+# which calls twenty times a campaign.
+AUDIT_MODEL = "mimo-v2.6-pro"
 VERDICTS = ("PASS", "VETO", "CANNOT_TELL")
 
 
@@ -65,10 +73,26 @@ class CommitteeVerdict:
     model_served: str = ""
     prompt_digests: dict = field(default_factory=dict)
     usage: tuple = ()                  # one entry per call, for the record
+    # The model that WROTE what these seats audited. Recorded so the question
+    # "was this an independent check" is answerable from the artefact instead of
+    # from reading the caller, which is how it went unnoticed for 17 campaigns.
+    proposer_model: str = ""
 
     @property
     def vetoed_by(self) -> tuple[str, ...]:
         return tuple(a.axis for a in self.auditors if a.verdict == "VETO")
+
+    @property
+    def independent(self) -> bool | None:
+        """Did a different model audit than wrote? `None` means unknowable.
+
+        Tri-state on purpose. `False` is the defect; `None` is a record that
+        does not say, and collapsing the two would let an unknown read as a
+        pass the next time someone greps for it.
+        """
+        if not self.model or not self.proposer_model:
+            return None
+        return self.model != self.proposer_model
 
     @property
     def seats_failed(self) -> tuple[str, ...]:
@@ -110,6 +134,15 @@ class CommitteeVerdict:
                 if self.seats_failed else ""),
             "usage": list(self.usage),
             "model": self.model,
+            "proposer_model": self.proposer_model,
+            "independent": self.independent,
+            "independence_note": (
+                "The auditors ran on the same model that wrote what they were "
+                "auditing, which is not an independent check of it."
+                if self.independent is False else
+                "The proposer's model was not recorded, so whether this was an "
+                "independent check cannot be determined from this file."
+                if self.independent is None else ""),
             "model_served": self.model_served,
             "prompt_digests": self.prompt_digests,
         }
@@ -280,14 +313,23 @@ def _one(axis: str, client: Client, summary: dict, source: str | None,
                           confidence_note=str(got.get("confidence_note", "")))
 
 
-def review(summary: dict, *, source: str | None, model: str,
-           hypothesis: str | None = None,
+def review(summary: dict, *, source: str | None, model: str = AUDIT_MODEL,
+           hypothesis: str | None = None, proposer_model: str = "",
            axes: tuple[str, ...] = AXES) -> CommitteeVerdict:
     """The four, in parallel, isolated. Returns a verdict that cannot approve.
 
     Preflight first: a committee that ran on a model its record does not name is
     a committee whose verdict means nothing, and `ModelSubstituted` propagates
     rather than degrading to CANNOT_TELL.
+
+    **`model` defaults rather than being supplied by the campaign.** Until
+    2026-10-04 `nq_campaign.py` passed the proposer's own model, so all 17
+    recorded verdicts had a model auditing its own work -- `deepseek-v4-pro`
+    reviewing `deepseek-v4-pro` on the last nine. `docs/setup/MODEL-ACCESS.md`
+    called it a decision rather than a patch because fixing it changes what
+    every past verdict means; Michael decided it on 2026-10-04. Pass
+    `proposer_model` so the artefact can say whether the check was independent
+    instead of leaving it to be inferred from the caller.
     """
     served = preflight(model)
     client = Client(model=model)
@@ -303,4 +345,5 @@ def review(summary: dict, *, source: str | None, model: str,
         overall = "PASS"
     return CommitteeVerdict(verdict=overall, auditors=verdicts, model=model,
                             usage=tuple(client.calls),
-                            model_served=served, prompt_digests=prompt_digests())
+                            model_served=served, prompt_digests=prompt_digests(),
+                            proposer_model=proposer_model)

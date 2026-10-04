@@ -99,13 +99,19 @@ HTTP 200, a different model in the payload. The guard catches it; the point is t
 | proposer | `deepseek-v4-pro` | the only strong model serving itself at 167k in reasonable time |
 | paper screen / rank / distil | `gemini-2.5-pro` | **changed today from `claude-haiku-4-5`** -- the weakest authorised model was doing a judgement task. A different family from the proposer on purpose: the model that judges a paper should not be the model that writes the code |
 | hypothesis refiner | `deepseek-v4-pro` | |
-| committee, four auditors | **the campaign's own proposer model** | **a defect -- see below** |
+| committee, four auditors | `mimo-v2.6-pro` | **changed 2026-10-04 from the campaign's own proposer model** -- see below. Four seats once per campaign is a cheap place to spend a slow model, unlike the proposer, which calls twenty times |
 
-### The committee is not independent, and that is a real problem
+### The committee was not independent. Decided and fixed 2026-10-04
 
-`scripts/nq_campaign.py` passes `model=(record.agent_config or {}).get("model", MODEL)` into `review()`, so the four auditors run on **whatever model wrote the strategy they are auditing**. Every recent campaign has had `deepseek-v4-pro` auditing `deepseek-v4-pro`.
+`scripts/nq_campaign.py` passed `model=(record.agent_config or {}).get("model", MODEL)` into `review()`, so the four auditors ran on **whatever model wrote the strategy they were auditing**. The last nine campaigns had `deepseek-v4-pro` auditing `deepseek-v4-pro`; the eight before that had `claude-haiku-4-5` auditing `claude-haiku-4-5`.
 
-The committee is the only tier that has ever vetoed anything. An auditor that is the same model as the author is not an independent check of it. Fixing it changes what every past verdict means, so it is a decision and not a patch -- recorded here rather than quietly changed.
+The committee is the only tier that has ever vetoed anything. An auditor that is the same model as the author is not an independent check of it.
+
+**Michael decided it on 2026-10-04.** `review()` now defaults to `AUDIT_MODEL = "mimo-v2.6-pro"` and the campaign passes `proposer_model=` instead, which is recorded rather than used to pick the auditor.
+
+**What it means for the 17 verdicts already on disk, stated plainly: none of them was an independent check, and nothing retroactively makes them one.** They are not being rewritten. Two things limit the damage. Every one of the 17 is a `VETO`, so independence has not yet changed an outcome -- it would have mattered the first time something passed. And the committee cannot approve in any case (`can_approve: False`), so a verdict was never evidence *for* a strategy, only against one.
+
+**It is now detectable rather than only fixed.** `committee-verdict.json` carries `proposer_model`, and `independent` as a **tri-state**: `false` is the defect, `null` means the record does not say, and the two are kept apart so an unknown cannot read as a pass. Files written before this change have neither key, which is itself the marker.
 
 ## 6. Reproducing this
 

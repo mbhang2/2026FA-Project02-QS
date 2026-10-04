@@ -728,9 +728,13 @@ def stage_report(name: str) -> None:
     for _attempt in range(len(_BACKOFF) + 1):
         try:
             from audit.committee.review import review
-            cv = review(tier2, source=best_source,
-                        model=(record.agent_config or {}).get("model", MODEL),
-                        hypothesis=hyp_text)
+            # **The committee picks its own model; the campaign only says
+            # what wrote the code.** Passing the proposer's model here is the
+            # independence defect docs/setup/MODEL-ACCESS.md recorded: all 17
+            # verdicts to 2026-10-04 had a model auditing its own work.
+            proposer = (record.agent_config or {}).get("model", MODEL)
+            cv = review(tier2, source=best_source, hypothesis=hyp_text,
+                        proposer_model=proposer)
             exc = None
             break
         except Exception as e:                                    # noqa: BLE001

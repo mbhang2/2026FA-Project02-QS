@@ -35,10 +35,30 @@ This works because `scripts/research_session.py` validates at the stop: during
 phase 1 no validation file exists for any campaign, so the refiner runs, and
 after phase 2 it will not run at all. The ordering enforces the rule.
 
-## The five gates of Amendment 11
+## The gates of Amendment 11
 
-Lint, grounding, a recorded diff against the parent, the family unchanged, and no
-validation readable. All five, or nothing is written.
+**Six mechanical, then two agentic.** Nothing is written unless all of them are
+satisfied.
+
+Mechanical, in the repair loop, in this order because each is free and the next
+one costs more: the shape (a 2-6 word slug and a `#` heading), the lint (it must
+not name how it will be judged), grounding (every number in a source), the
+family unchanged, the length, and no validation artefact readable. A recorded
+diff against the parent goes in the commit.
+
+Agentic, and only on a draft that cleared all six, because spending a model call
+to be told what a regex already knew is a wasted minute:
+
+  * the **hypothesis** seat -- is this question worth spending twenty trials on?
+  * the **family** seat -- is this revision still the same question as its
+    parent, or a new one?
+
+Two seats rather than one concern inside one seat, which is the discipline
+`audit/committee` uses for its four: a VETO means a different thing on each
+axis. Neither can approve. Both fail open on their own error -- a dead model
+call must not kill an overnight session -- and because they fail open, what each
+one did is written into the commit trailer, so `git log` answers whether a
+question was ever actually read.
 """
 from __future__ import annotations
 
@@ -311,27 +331,57 @@ def context(parent_text: str, ev: dict, papers: list[dict]) -> str:
 # gates 1, 2, 4
 # --------------------------------------------------------------------------- #
 def review_findings(md: str, parent: str) -> tuple[list[str], str]:
-    """Amendment 11's sixth gate: a reviewer reads the question itself.
+    """The first agentic seat: is this question worth spending trials on?
 
-    The other five are mechanical -- slug, heading, vocabulary, grounding,
-    family, length -- and `nq-s04-03` passed all of them with a question whose
-    champion made four trades and scored `-inf`, so `n_nulls` was 0 and twenty
-    trials bought nothing.
+    The six mechanical gates are string checks -- slug, heading, vocabulary,
+    grounding, family, length -- and none of them can tell you a question is
+    *bad*, only that it is malformed, leaky, unsupported, drifting or long.
+    `nq-s04-03` passed every one of them with a question whose champion made
+    four trades and scored `-inf`, so `n_nulls` was 0 and twenty trials bought
+    nothing. A reader would have seen in a minute that a strategy obeying that
+    question could barely act.
+    """
+    return _seat("hypothesis", lambda m: m.review(md, parent))
 
-    Never fatal on its own error: a reviewer that cannot run is not an
-    objection, and the campaign should not die because one model call did.
 
-    Returns the concerns and a word for what happened, because an empty list
-    means two different things -- the reviewer read it and said nothing, or the
-    reviewer never ran -- and the file that gets written should say which.
+def family_findings_agentic(parent: str, md: str) -> tuple[list[str], str]:
+    """The second agentic seat: is this revision still the same question?
+
+    The mechanical `family_changed` below is two similarity floors and this
+    file's own docstring calls it the weakest gate. It catches a revision that
+    changed the subject outright; it cannot catch one that drifted in small
+    steps, which is the shape the failure actually takes. Mechanical first
+    because it is free, this second and only on a draft that cleared it.
+    """
+    return _seat("family", lambda m: m.family_review(parent, md))
+
+
+def _seat(name: str, call) -> tuple[list[str], str]:
+    """Run one agentic seat. Returns its repair lines and what it did.
+
+    **The status carries the verdict, not just "ran".** An empty finding list
+    means two different things -- the seat read it and did not object, or the
+    seat never ran -- and a question nobody reviewed should not be
+    indistinguishable, a week later, from one that passed.
+
+    Never fatal on its own error, which is a deliberate asymmetry with
+    `audit/committee`, where a seat that fails is recorded as a VETO. Here a
+    failed call would kill an overnight session, so it fails open -- and the
+    status says so in words, and that string reaches the commit trailer.
     """
     try:
         import review_hypothesis
-        return review_hypothesis.findings(md, parent), "ran"
+        r = call(review_hypothesis)
     except Exception as exc:                                     # noqa: BLE001
-        print(f"      the reviewer did not run ({type(exc).__name__}); "
+        print(f"      the {name} seat did not run ({type(exc).__name__}); "
               f"treating that as no objection, which it is not", flush=True)
-        return [], f"did not run ({type(exc).__name__})"
+        return [], f"DID-NOT-RUN ({type(exc).__name__}) -- NOT reviewed"
+    status = f"{r['verdict']} ({r['model_served']})"
+    if r.get("unreadable"):
+        status += " -- unreadable verdict, NOT reviewed"
+    if r["verdict"] != "OBJECT":
+        return [], status
+    return [f"{name} reviewer: {c}" for c in r["concerns"]], status
 
 
 def lint_findings(md: str) -> list[str]:
@@ -345,7 +395,8 @@ def grounding_findings(md: str, sources: list[str]) -> list[str]:
 
 
 def family_changed(parent: str, child: str) -> str:
-    """Gate 4, and the README is honest that it is the weakest of the five.
+    """The mechanical family gate, and the weakest of the six -- which is
+    exactly why `family_findings_agentic` now sits behind it.
 
     A title that no longer overlaps the parent's, or a body sharing almost
     nothing with it, is a new question wearing an old name. Measured as a
@@ -359,9 +410,29 @@ def family_changed(parent: str, child: str) -> str:
     cw = {w for w in re.findall(r"[a-z]+", ch) if w not in stop and len(w) > 2}
     overlap = len(pw & cw) / max(1, len(pw))
     body = difflib.SequenceMatcher(None, parent, child).ratio()
-    if overlap < 0.34 and body < 0.30:
-        return (f"the revision looks like a different question: its heading "
-                f"shares {overlap:.0%} of the parent's content words and the "
+    # **`or`, not `and`. Measured 2026-10-04, and the `and` made this gate very
+    # nearly inert.** A revision is written by handing a model its parent and
+    # asking for a revision, so it reuses the parent's standing sections and
+    # body similarity is always high -- 65-77% across the five real machine
+    # refinements in this repo's history. Requiring BOTH terms to be low meant
+    # the body term alone vetoed the gate no matter how far the title moved. A
+    # planted revision that renamed the question from "does an outsized move
+    # continue" to "do particular clock hours carry a directional bias" scored
+    # 20% title overlap and 81% body similarity, and passed.
+    #
+    # Checked against ground truth before changing: all five real refinements
+    # score 100% title overlap, so `or` fires on none of them. The body term
+    # keeps a thin margin -- the tightest real refinement is 32% against a 30%
+    # floor -- so it may occasionally ask for a repair it did not need. That is
+    # cheap: a repair request, not a refusal.
+    #
+    # It still cannot catch a drift that keeps the title. That one needs
+    # `family_findings_agentic`, which is the point of having both.
+    if overlap < 0.34 or body < 0.30:
+        why = ("its heading shares only" if overlap < 0.34 else
+               "its heading shares")
+        return (f"the revision looks like a different question: {why} "
+                f"{overlap:.0%} of the parent's content words and the "
                 f"bodies are {body:.0%} similar.\n    parent: {ph}\n    child:  "
                 f"{ch}")
     return ""
@@ -466,7 +537,8 @@ def main() -> int:
         raise last
 
     reviews = 0
-    reviewer = "never reached (the mechanical gates were never all clean)"
+    _unreached = "NOT-REACHED (the mechanical gates were never all clean)"
+    reviewer = family_seat = _unreached
     out = _ask()
     for attempt in range(MAX_LINT_REPAIRS):
         # Escalate to a different model rather than asking the same one again.
@@ -504,7 +576,9 @@ def main() -> int:
             # objections are judgements, not defects: two rounds of "a reviewer
             # disagrees" is argument, and the gate is not a debating society.
             if reviews < MAX_REVIEW_REPAIRS:
-                rev, reviewer = review_findings(md, parent)
+                hyp_rev, reviewer = review_findings(md, parent)
+                fam_rev, family_seat = family_findings_agentic(parent, md)
+                rev = hyp_rev + fam_rev
                 if rev:
                     reviews += 1
                     print(f"      reviewer objected ({reviews}/"
@@ -519,8 +593,10 @@ def main() -> int:
                                + "".join(f"- {c}\n" for c in rev))
                     continue
             elif reviews:
-                reviewer = (f"objected {reviews}x, cap reached -- the last "
-                            f"revision was taken WITHOUT the reviewer clearing it")
+                capped = (f" -- objected {reviews}x, cap reached, the last "
+                          f"revision was taken WITHOUT a seat clearing it")
+                reviewer += capped
+                family_seat += capped
             break
         note = ["\n\n# Your previous attempt was refused. Fix ALL of it at once.\n"]
         if shape:
@@ -598,13 +674,15 @@ def main() -> int:
     print(f"\nwrote {dest.relative_to(ROOT)}  ({words} words)")
     print(f"  mechanical gates passed: shape, lint, grounding, family, "
           f"length, no validation readable")
-    # The sixth gate is a judgement, so it is reported rather than summed into
-    # the others. "ran" means it stated no objection, which Amendment 11 is
-    # explicit is NOT approval -- the reviewer cannot approve a question, only
-    # fail to object to it.
-    print(f"  reviewer: {reviewer}"
-          + ("  (no objection stated -- which is not approval)"
-             if reviewer == "ran" else ""))
+    # The agentic seats are judgements, so they are reported one by one rather
+    # than summed into the mechanical count. NO_OBJECTION is NOT approval --
+    # neither seat can approve a question, only fail to object to it.
+    for label, st in (("hypothesis seat", reviewer), ("family seat", family_seat)):
+        print(f"  {label:16} {st}"
+              + ("   (not approval)" if st.startswith("NO_OBJECTION") else ""))
+    if "NOT reviewed" in reviewer or "NOT reviewed" in family_seat:
+        print("  ** at least one seat never read this question. That is not "
+              "the same as no objection. **")
 
     if not a.commit:
         print("\nNOT committed. Read it, then commit it -- or pass --commit, "
@@ -628,7 +706,12 @@ def main() -> int:
         f"a claim. If a family containing it reaches L2 and passes, the pass is "
         f"held until a human has read every machine-written question in it.\n\n"
         f"--- diff against the parent ---\n{diff[:4000]}\n\n"
-        f"Machine-Written: {a.campaign}\n")
+        f"Machine-Written: {a.campaign}\n"
+        # **The record that was missing.** Until now the only trace of what the
+        # agentic seats said was stdout, so a question nobody reviewed looked,
+        # a week later, exactly like one that passed. `git log` now answers it.
+        f"Hypothesis-Review: {reviewer}\n"
+        f"Family-Review: {family_seat}\n")
     subprocess.run(["git", "add", str(dest)], cwd=str(ROOT), check=True)
     subprocess.run(["git", "commit", "-q", "-m", msg], cwd=str(ROOT), check=True)
     print(f"  committed, marked `Machine-Written: {a.campaign}`")

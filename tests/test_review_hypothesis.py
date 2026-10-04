@@ -163,9 +163,11 @@ def test_the_two_kinds_of_silence_are_distinguished():
     ran'. Collapsing them lets a dead gate look like a passed one -- which is
     exactly what the first end-to-end run did when mimo timed out."""
     r = (REPO_ROOT / "scripts" / "refine_hypothesis.py").read_text()
-    assert "def review_findings(md: str, parent: str) -> tuple[list[str], str]:" in r
-    assert 'return review_hypothesis.findings(md, parent), "ran"' in r
-    assert 'return [], f"did not run ({type(exc).__name__})"' in r
+    assert "def _seat(name: str, call) -> tuple[list[str], str]:" in r
+    # the status carries the verdict, so NO_OBJECTION and never-ran differ
+    assert 'status = f"{r[\'verdict\']} ({r[\'model_served\']})"' in r
+    assert 'DID-NOT-RUN ({type(exc).__name__}) -- NOT reviewed' in r
+    assert "NOT-REACHED" in r
 
 
 def test_the_written_file_reports_what_the_reviewer_did():
@@ -174,8 +176,10 @@ def test_the_written_file_reports_what_the_reviewer_did():
     r = (REPO_ROOT / "scripts" / "refine_hypothesis.py").read_text()
     flat = " ".join(r.split())
     assert "mechanical gates passed: shape, lint, grounding, family," in flat
-    assert 'print(f"  reviewer: {reviewer}"' in r
-    assert "which is not approval" in flat
+    assert '("hypothesis seat", reviewer), ("family seat", family_seat)' in r
+    assert "(not approval)" in r
+    # and a seat that never read it says so loudly rather than looking clean
+    assert "at least one seat never read this question" in flat
 
 
 def test_hitting_the_review_cap_is_not_reported_as_a_pass():
@@ -184,4 +188,84 @@ def test_hitting_the_review_cap_is_not_reported_as_a_pass():
     r = (REPO_ROOT / "scripts" / "refine_hypothesis.py").read_text()
     flat = " ".join(r.split())
     assert "cap reached" in flat
-    assert "WITHOUT the reviewer clearing it" in flat
+    assert "WITHOUT a seat clearing it" in flat
+
+
+# --------------------------------------------------------------------------- #
+# the family seat (added 2026-10-04)
+#
+# Brian: a gate may include agents where a mechanical check is impossible or
+# underperforming. The mechanical family gate was BOTH. Measured against four
+# planted revisions of `intraday-continuation.md` and the five real machine
+# refinements in this repo's history:
+#
+#   variant             title  body   mechanical(and)  mechanical(or)  agent
+#   A genuine refine     100%   91%        passes          passes      NO_OBJECTION
+#   B reversed answer    100%   95%        passes          passes      NO_OBJECTION
+#   C blatant drift       20%   81%        passes          OBJECT      OBJECT
+#   D subtle drift       100%   71%        passes          passes      OBJECT
+#
+# D is the case that justifies the seat: it keeps the title and most of the
+# prose and swaps price for aggressor flow -- drifting into the
+# flow-continuation family this project has already run, which is the silent
+# counting error the gate exists to stop.
+# --------------------------------------------------------------------------- #
+FAMILY_PROMPT = (REPO_ROOT / "config" / "prompts" / "family-review.md").read_text()
+FAMILY_PFLAT = " ".join(FAMILY_PROMPT.split())
+
+
+def test_the_family_seat_exists_and_is_separate_from_the_other_one():
+    """One seat, one axis -- the discipline audit/committee uses for its four.
+    A VETO means a different thing on each: 'not worth trials' and 'not the
+    same question' are different findings."""
+    m = _mod()
+    assert callable(m.family_review)
+    assert callable(m.family_findings)
+    assert m.FAMILY_PROMPT.name == "family-review.md"
+    assert m.PROMPT.name != m.FAMILY_PROMPT.name
+
+
+def test_the_family_seat_cannot_approve():
+    m = _mod()
+    assert m.VERDICTS == ("OBJECT", "CANNOT_TELL", "NO_OBJECTION")
+    assert "does not mean the revision is" in FAMILY_PFLAT
+    assert "a good refinement" in FAMILY_PFLAT
+
+
+def test_both_seats_refuse_identically():
+    """The normaliser is shared so a malformed reply cannot pass on one seat
+    and fail on the other."""
+    m = _mod()
+    for seat in ("hypothesis", "family"):
+        r = m._normalise({"verdict": "lgtm"}, "x", "x", seat=seat)
+        assert r["verdict"] == "CANNOT_TELL"
+        assert r["unreadable"] is True
+        assert r["seat"] == seat
+        r2 = m._normalise({"verdict": "OBJECT", "concerns": []}, "x", "x", seat=seat)
+        assert r2["verdict"] == "CANNOT_TELL", "OBJECT with no concern is not actionable"
+
+
+def test_the_family_seat_is_never_shown_a_score():
+    m = _mod()
+    ctx = m.family_context("# parent\n", "# child\n")
+    assert "Deliberately withheld" in ctx
+    assert "validation" in ctx
+    assert "not whether either of them is a good one" in ctx
+
+
+def test_the_prompt_says_narrowing_on_evidence_is_not_drift():
+    """Objecting to narrowing would defeat the mechanism the seat protects --
+    refinement IS narrowing in response to evidence."""
+    assert "Narrowing in response to evidence" in FAMILY_PFLAT
+    assert "Reversing what it expects to find" in FAMILY_PFLAT
+
+
+def test_the_family_seat_needs_a_parent():
+    import subprocess
+    import sys
+    proc = subprocess.run(
+        [sys.executable, "scripts/review_hypothesis.py", "--family",
+         "--hypothesis", "config/hypotheses/intraday-continuation.md"],
+        capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert proc.returncode != 0
+    assert "--family needs --parent" in (proc.stdout + proc.stderr)

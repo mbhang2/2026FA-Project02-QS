@@ -1,8 +1,15 @@
-# Session 05 -- opening-range REVERSAL, one family refined across three
+# Session 05b -- opening-range REVERSAL, one family refined across three
 # campaigns at N = 100.
 #
 #   .venv/bin/python scripts/research_session.py \
-#       --plan config/sessions/session-05-opening-reversal.yaml
+#       --plan config/sessions/session-05b-opening-reversal.yaml
+#
+# 05b, not 05: the first launch registered nq-s05-01 with
+# generation_width null, because research_session.py built its
+# per-campaign entries without that key. Two trials ran as a chain
+# before it was caught; they count toward N and nq-s05-01 carries a
+# status.json saying so. A pre-registration is written once, so the
+# family restarts under a new prefix rather than reusing the name.
 #
 # Michael asked for this on 2026-10-04: the opening-range reversal paper,
 # N = 100, 3 campaigns. 300 trials. Global N 1,093 -> ~1,393.
@@ -48,7 +55,7 @@
 #
 # The holdout is NOT armed.
 
-session: session-05-opening-reversal
+session: session-05b-opening-reversal
 
 family:
   seed: config/hypotheses/nq-opening-reversal.md
@@ -58,4 +65,4 @@ family:
   generation_width: 4
   model: deepseek-v4-pro
   profile: nq-train
-  prefix: nq-s05
+  prefix: nq-s05b

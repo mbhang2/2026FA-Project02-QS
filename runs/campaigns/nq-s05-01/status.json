@@ -1,0 +1,6 @@
+{
+  "counts_toward_n": 2,
+  "status": "abandoned",
+  "summary": "Registered 2026-10-04 for session-05 and abandoned after 2 trials. The plan asked for generation_width 4 under Amendment 12, but research_session.py built its per-campaign entries without that key -- the flag had been added to the register argv loop and not to the dict the loop reads -- so the record was written with generation_width null and the campaign began running as a chain. The 2 trials that ran were real looks at the train split on the registered question and COUNT toward N; they are not superseded, because a configuration mistake of mine is not a platform failure and is not evidence about those proposals. A pre-registration is written once, so this record stands and the session was relaunched under the prefix nq-s05b.",
+  "trials_run": 2
+}

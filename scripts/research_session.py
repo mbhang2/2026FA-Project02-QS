@@ -290,7 +290,15 @@ def _main() -> int:
                                   else None,
                     "profile": fam.get("profile"), "n": fam.get("n"),
                     "model": fam.get("model"),
-                    "min_exposed": fam.get("min_exposed")}
+                    "min_exposed": fam.get("min_exposed"),
+                    # **Amendment 12, and the reason this line exists on its
+                    # own.** The flag was added to the argv loop below without
+                    # being added here, so `generation_width: 4` in a plan
+                    # reached nothing and session-05 registered its first
+                    # campaign as a chain -- the 19-hour path the amendment was
+                    # signed to avoid. A flag the driver can pass and the plan
+                    # cannot set is a flag that silently does nothing.
+                    "generation_width": fam.get("generation_width")}
                    for k in range(iterations)]
     if not entries:
         sys.exit("the plan names no campaigns")

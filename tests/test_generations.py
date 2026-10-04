@@ -160,3 +160,33 @@ def test_no_probe_reaches_the_record():
     describes being fixed once already, reintroduced at the call site."""
     assert "a.probe, a.generation_width)" in SRC
     assert "True if a.probe else None" not in SRC
+
+
+def test_a_plan_can_actually_set_the_generation_width():
+    """**The flag was added to the driver's argv loop and not to the dict that
+    loop reads.** `generation_width: 4` in session-05's plan reached nothing,
+    the first campaign registered as a chain, and the 19-hour path the amendment
+    was signed to avoid is what started running. Two trials were spent before it
+    was caught.
+
+    A flag the driver can pass and a plan cannot set is a flag that silently
+    does nothing, so both halves are asserted here.
+    """
+    src = (REPO_ROOT / "scripts" / "research_session.py").read_text()
+    # the plan key reaches the per-campaign entry ...
+    assert '"generation_width": fam.get("generation_width")' in src
+    # ... and the entry reaches the register argv
+    assert '("--generation-width", "generation_width")' in src
+    i = src.index('"generation_width": fam.get')
+    j = src.index('("--generation-width", "generation_width")')
+    assert i < j, "the entry is built before the argv is assembled"
+
+
+def test_the_committed_session_plan_asks_for_generations():
+    import yaml
+    p = REPO_ROOT / "config" / "sessions" / "session-05b-opening-reversal.yaml"
+    if not p.exists():
+        return
+    fam = yaml.safe_load(p.read_text())["family"]
+    assert fam["generation_width"] == 4
+    assert fam["n"] == 100

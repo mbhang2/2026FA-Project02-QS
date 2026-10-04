@@ -111,6 +111,9 @@ MAX_LINT_REPAIRS = 8
 SWITCH_MODEL_AFTER = 3
 FALLBACK_MODEL = "gemini-2.5-pro"
 MAX_FORMAT_RETRIES = 3
+# The reviewer is a judgement, not a defect check, so it gets fewer rounds than
+# the mechanical gates: two exchanges is a revision, more is an argument.
+MAX_REVIEW_REPAIRS = 2
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,5}$")
 PAPER_CHARS = 6_000
 MAX_PAPERS = 3
@@ -307,6 +310,30 @@ def context(parent_text: str, ev: dict, papers: list[dict]) -> str:
 # --------------------------------------------------------------------------- #
 # gates 1, 2, 4
 # --------------------------------------------------------------------------- #
+def review_findings(md: str, parent: str) -> tuple[list[str], str]:
+    """Amendment 11's sixth gate: a reviewer reads the question itself.
+
+    The other five are mechanical -- slug, heading, vocabulary, grounding,
+    family, length -- and `nq-s04-03` passed all of them with a question whose
+    champion made four trades and scored `-inf`, so `n_nulls` was 0 and twenty
+    trials bought nothing.
+
+    Never fatal on its own error: a reviewer that cannot run is not an
+    objection, and the campaign should not die because one model call did.
+
+    Returns the concerns and a word for what happened, because an empty list
+    means two different things -- the reviewer read it and said nothing, or the
+    reviewer never ran -- and the file that gets written should say which.
+    """
+    try:
+        import review_hypothesis
+        return review_hypothesis.findings(md, parent), "ran"
+    except Exception as exc:                                     # noqa: BLE001
+        print(f"      the reviewer did not run ({type(exc).__name__}); "
+              f"treating that as no objection, which it is not", flush=True)
+        return [], f"did not run ({type(exc).__name__})"
+
+
 def lint_findings(md: str) -> list[str]:
     from src.core.loop.hypothesis import findings
     return findings(md)
@@ -438,6 +465,8 @@ def main() -> int:
                       f"{str(exc)[:110]}", flush=True)
         raise last
 
+    reviews = 0
+    reviewer = "never reached (the mechanical gates were never all clean)"
     out = _ask()
     for attempt in range(MAX_LINT_REPAIRS):
         # Escalate to a different model rather than asking the same one again.
@@ -448,15 +477,61 @@ def main() -> int:
             client = Client(model=FALLBACK_MODEL, temperature=0.7,
                             max_tokens=REFINE_MAX_TOKENS)
         md = out.get("markdown") or ""
+        slug = str(out.get("slug") or "").strip().lower()
         leaks = lint_findings(md) if md else ["empty"]
         loose = grounding_findings(md, sources) if md else []
         fam = family_changed(parent, md) if md else ""
         words = len(md.split())
         length = ("" if MIN_WORDS <= words <= MAX_WORDS else
                   f"{words} words, outside {MIN_WORDS}-{MAX_WORDS}")
-        if not (leaks or loose or fam or length):
+        # **Shape is repairable like everything else.** The slug and the
+        # opening heading were checked only after this loop, so a model could
+        # satisfy lint, grounding, family and length for all eight rounds and
+        # still end the run with nothing written, over a seven-word slug
+        # nobody had told it was wrong. That is what happened on the first
+        # end-to-end run against nq-t72b-01. A gate the proposer is never
+        # shown is not a gate, it is a trap.
+        shape = []
+        if not SLUG.match(slug):
+            shape.append(f"slug is not 2-6 kebab-case words: {slug!r}")
+        if md and not md.lstrip().startswith("#"):
+            shape.append("markdown does not start with a '#' heading")
+        if not (leaks or loose or fam or length or shape):
+            # **The reviewer runs last, and only on a mechanically clean file.**
+            # It is a model call, so asking it about a draft that still has a
+            # lint leak spends a minute to be told something we already knew.
+            # Bounded separately from the mechanical repairs because its
+            # objections are judgements, not defects: two rounds of "a reviewer
+            # disagrees" is argument, and the gate is not a debating society.
+            if reviews < MAX_REVIEW_REPAIRS:
+                rev, reviewer = review_findings(md, parent)
+                if rev:
+                    reviews += 1
+                    print(f"      reviewer objected ({reviews}/"
+                          f"{MAX_REVIEW_REPAIRS}): {rev[0][:90]}", flush=True)
+                    out = _ask("\n\n# A reviewer read your revision and "
+                               "objected\n\nIt was shown the question and its "
+                               "parent, and no score of any kind. Answer the "
+                               "objection by changing the question, or if you "
+                               "think it is wrong, say so inside the revision "
+                               "in one sentence and leave the question as it "
+                               "is.\n\n"
+                               + "".join(f"- {c}\n" for c in rev))
+                    continue
+            elif reviews:
+                reviewer = (f"objected {reviews}x, cap reached -- the last "
+                            f"revision was taken WITHOUT the reviewer clearing it")
             break
         note = ["\n\n# Your previous attempt was refused. Fix ALL of it at once.\n"]
+        if shape:
+            note.append("\n## The shape of the reply is wrong\n")
+            note += [f"- {x}\n" for x in shape]
+            note.append(
+                "- The slug is the JSON \"slug\" field, not a heading. Two to "
+                "six lowercase words joined by single hyphens, for example "
+                "`opening-range-breakout`. **Name** the question, do not "
+                "describe it -- if your slug reads like a sentence it is too "
+                "long.\n")
         if leaks:
             note.append("\n## It tells the strategy agent how it is judged\n")
             note += [f"- {x}\n" for x in leaks[:10]]
@@ -521,8 +596,15 @@ def main() -> int:
         tofile=str(dest.relative_to(ROOT)), lineterm=""))
     dest.write_text(md if md.endswith("\n") else md + "\n")
     print(f"\nwrote {dest.relative_to(ROOT)}  ({words} words)")
-    print(f"  all five gates passed: lint, grounding, family, length, "
-          f"no validation readable")
+    print(f"  mechanical gates passed: shape, lint, grounding, family, "
+          f"length, no validation readable")
+    # The sixth gate is a judgement, so it is reported rather than summed into
+    # the others. "ran" means it stated no objection, which Amendment 11 is
+    # explicit is NOT approval -- the reviewer cannot approve a question, only
+    # fail to object to it.
+    print(f"  reviewer: {reviewer}"
+          + ("  (no objection stated -- which is not approval)"
+             if reviewer == "ran" else ""))
 
     if not a.commit:
         print("\nNOT committed. Read it, then commit it -- or pass --commit, "

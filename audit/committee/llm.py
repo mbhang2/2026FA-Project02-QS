@@ -63,7 +63,15 @@ class Client:
     # rigour. Sent when set; dropped and retried once if the endpoint rejects
     # the parameter for a model that does not take it.
     reasoning_effort: str | None = "low"
-    timeout_s: float = 180.0
+    # **900, not 180. Measured 2026-10-03: mimo-v2.6-pro takes 738 s on a
+    # cache miss**, so every cold call to the smartest model we are allowed
+    # timed out before it could answer -- twice in one end-to-end refinement,
+    # once on the proposer and once on the reviewer. The reviewer's failure
+    # was the quiet one: it degrades to "did not run", which is honest but
+    # silently costs the gate. 180 was never measured against anything; it
+    # predates mimo being allowed. 900 matches the remote adapter's budget and
+    # leaves headroom over the slowest model on the access list.
+    timeout_s: float = 900.0
     base_url: str = ""
     calls: list = field(default_factory=list, init=False, repr=False)
 

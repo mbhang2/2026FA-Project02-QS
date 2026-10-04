@@ -251,3 +251,56 @@ def test_an_ungrounded_span_is_reported_in_full_not_truncated():
     long_span = "x" * 200
     out = g.ungrounded_quotes(f'It says "{long_span}".', "nothing")
     assert out and out[0] == long_span and "..." not in out[0]
+
+
+# --------------------------------------------------------------------------- #
+# a citation is a claim that a paper exists, and nothing checked it
+# --------------------------------------------------------------------------- #
+def test_a_pnl_figure_is_not_a_citation():
+    """`net 1133.4125 index points` is in a real committed hypothesis. A naive
+    id-matcher reads it as arXiv 1133.4125 and refuses the file."""
+    known = {"2605.11423", "2609.13825"}
+    assert g.citations("net 1133.4125 index points", known) == set()
+    assert g.unverifiable_citations("the range was 2605.0 to 2610.5",
+                                            known) == []
+
+
+def test_a_marked_or_versioned_id_is_always_a_citation():
+    known = {"2605.11423"}
+    assert g.citations("see arXiv:2605.11423", known) == {"2605.11423"}
+    assert g.citations("9999.12345v2 proves it", known) == {"9999.12345"}
+
+
+def test_a_bare_id_counts_only_when_the_registry_knows_it():
+    """Otherwise every four-digit decimal in a P&L table becomes a citation."""
+    known = {"2605.11423"}
+    assert g.citations("2605.11423 shows this", known) == {"2605.11423"}
+    assert g.citations("1133.4125 index points", known) == set()
+
+
+def test_an_invented_paper_is_refused():
+    """The refiner is only ever SHOWN papers from our registry, so an id outside
+    it was invented or lifted from some paper's bibliography -- neither has been
+    fetched, screened or ranked here."""
+    known = {"2605.11423"}
+    assert g.unverifiable_citations("see arXiv:2501.99999", known) == \
+        ["2501.99999"]
+    assert g.unverifiable_citations("9999.12345v2 proves it", known) == \
+        ["9999.12345"]
+
+
+def test_the_citation_check_reaches_findings():
+    out = g.findings("see arXiv:2501.99999 for the result", "a source")
+    assert any("in no registry we hold" in f for f in out), out
+
+
+def test_every_committed_hypothesis_verifies():
+    """Six carry citations. They were checked by hand on 2026-10-03 and were all
+    real, which was luck rather than design -- this is the design."""
+    import pathlib as _p
+    bad = {}
+    for f in sorted((REPO_ROOT / "config" / "hypotheses").glob("*.md")):
+        u = g.unverifiable_citations(f.read_text())
+        if u:
+            bad[f.name] = u
+    assert not bad, f"hypotheses cite papers we do not hold: {bad}"

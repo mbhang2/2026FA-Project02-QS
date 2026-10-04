@@ -445,3 +445,16 @@ def test_usage_is_recorded_so_the_next_number_can_be_measured():
     flat = " ".join(re.sub(r"^\s*#\s?", "", src, flags=re.M).split())
     assert "nothing recorded what a SUCCESSFUL auditor consumes" in flat
     assert "the verdict file kept no usage at all" in flat
+
+
+def test_the_client_timeout_outlasts_the_slowest_allowed_model():
+    """mimo-v2.6-pro: 738 s measured on a cache miss, 2026-10-03. At the old
+    180 s default every cold call to the smartest model we are allowed timed
+    out before it could answer -- twice in one end-to-end refinement. The
+    reviewer's failure was the quiet one: it degrades to 'did not run', which
+    is honest but silently costs the gate."""
+    import dataclasses
+    import audit.committee.llm as L
+    f = {x.name: x for x in dataclasses.fields(L.Client)}
+    assert f["timeout_s"].default >= 800.0, (
+        "must leave headroom over mimo's measured 738 s")

@@ -237,3 +237,40 @@ def test_a_repeated_length_miss_escalates_to_a_different_model():
 
 def mod_max_repairs():
     return _mod().MAX_LINT_REPAIRS
+
+
+# --------------------------------------------------------------------------- #
+# shape is repairable (the nq-t72b-01 end-to-end failure, 2026-10-03)
+# --------------------------------------------------------------------------- #
+def test_the_slug_is_checked_inside_the_repair_loop():
+    """It used to be checked only after the loop. A model could satisfy lint,
+    grounding, family and length for all eight rounds and still end the run
+    with nothing written, over a seven-word slug nobody had told it was wrong.
+    That is a trap, not a gate -- and it is the failure Michael asked never to
+    wake up to."""
+    src = (REPO_ROOT / "scripts" / "refine_hypothesis.py").read_text()
+    loop = src[src.index("for attempt in range(MAX_LINT_REPAIRS)"):
+               src.index('note = ["\\n\\n# Your previous attempt was refused')]
+    assert "SLUG.match(slug)" in loop, "the slug must be checked in the loop"
+    assert "shape" in loop
+    # and it must actually gate the exit, not merely be computed
+    assert "or shape)" in loop
+
+
+def test_a_bad_slug_is_named_back_to_the_model_actionably():
+    """Eight rounds of 'wrong' is what ended session-04 on the length gate. The
+    repair note has to say what a slug IS, not only that this one was bad."""
+    src = (REPO_ROOT / "scripts" / "refine_hypothesis.py").read_text()
+    flat = " ".join(src.split())
+    assert "The shape of the reply is wrong" in flat
+    assert "six lowercase words joined by single hyphens" in flat
+    assert "opening-range-breakout" in flat
+
+
+def test_the_final_check_still_exists_as_a_backstop():
+    """Moving a check into the loop must not delete it from the end: the loop
+    is bounded, so the last attempt can still be bad."""
+    src = (REPO_ROOT / "scripts" / "refine_hypothesis.py").read_text()
+    tail = src[src.index('md = str(out.get("markdown") or "")'):]
+    assert "slug is not 2-6 kebab-case words" in tail
+    assert "NOT WRITTEN" in tail

@@ -233,15 +233,29 @@ def test_the_assembled_context_carries_no_validation_number():
     campaigns have validation scores on disk."""
     ctx = rp.context_block()
     import json
+    import math
     import pathlib
+    checked = 0
     for d in (REPO_ROOT / "runs" / "campaigns").glob("*/validation.json"):
         v = json.loads(d.read_text())
         primary = (v.get("validation") or {}).get("primary")
         if primary is None:
             continue
+        # **Non-finite is a sentinel, not a score.** nq-s04-03 validated to
+        # -inf -- no candidate cleared the exposure floor, so there is no
+        # number to leak. Searching for it anyway asks whether the 3-letter
+        # string "inf" appears in the context, and it does, inside
+        # "reinforcement" in a paper title. A leak test that fires on English
+        # words stops being read.
+        if not math.isfinite(primary):
+            continue
+        checked += 1
         for form in (f"{primary:.4f}", f"{primary:.3f}", f"{primary:.2f}"):
             assert form.lstrip("-") not in ctx, (
                 f"{d.parent.name}'s validation score {form} reached the ranker")
+    assert checked >= 6, (
+        f"only {checked} finite validation score(s) on disk -- this test is "
+        f"asserting against almost nothing")
     # and it does carry the train-side verdict, which §4 permits
     assert "rejected" in ctx and "closed" in ctx.lower()
 

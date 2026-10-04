@@ -221,12 +221,70 @@ def ungrounded_quotes(claim: str, *sources: str) -> list[str]:
     return out
 
 
+# **A citation is a claim that a paper exists, and nothing checked it.** The
+# grounding check strips arXiv ids before looking at numbers, so a cited id was
+# never examined at all -- a hypothesis could name a paper nobody has ever read
+# and pass every gate. Six committed hypotheses now carry citations.
+#
+# The rule is **registry membership, not plausibility**. The refiner is only ever
+# SHOWN papers from our registry; an id outside it was either invented or lifted
+# from some paper's bibliography, and neither has been fetched, screened or
+# ranked here. "It looks like a real arXiv id" is not the property we want.
+#
+# What counts as a citation at all matters, because P&L figures share the shape:
+# a refinement written on 2026-10-02 contains "net 1133.4125 index points", which
+# a naive id-matcher reads as arXiv 1133.4125. So a bare number is a citation
+# only when the registry confirms it; otherwise it needs an explicit marker --
+# an `arXiv:` prefix or a version suffix -- and then it must still resolve.
+CITATION_MARKED = re.compile(r"(?:arXiv:|arxiv:)\s*(\d{4}\.\d{4,5})(?:v\d+)?"
+                             r"|\b(\d{4}\.\d{4,5})v\d+\b")
+
+
+def registry_ids(registry: "dict | None" = None) -> set[str]:
+    """Every paper id we hold, with and without its version suffix."""
+    if registry is None:
+        f = ROOT / "data" / "papers" / "registry.json"
+        if not f.exists():
+            return set()
+        registry = json.loads(f.read_text())["papers"]
+    out: set[str] = set()
+    for pid in registry:
+        out.add(pid)
+        out.add(pid.split("v")[0])
+    return out
+
+
+def citations(claim: str, known: "set[str] | None" = None) -> set[str]:
+    """Ids the text is actually claiming as papers.
+
+    Marked ones always count. A bare `NNNN.NNNNN` counts only when the registry
+    recognises it -- otherwise it is a quantity, and quantities are the number
+    check's business.
+    """
+    known = registry_ids() if known is None else known
+    found = {a or b for a, b in CITATION_MARKED.findall(claim)}
+    for m in PAPER_ID.findall(claim):
+        bare = m.split("v")[0]
+        if bare in known:
+            found.add(bare)
+    return {c.split("v")[0] for c in found}
+
+
+def unverifiable_citations(claim: str, known: "set[str] | None" = None) -> list[str]:
+    """Cited ids that are in no registry we hold. Non-empty means refuse."""
+    known = registry_ids() if known is None else known
+    return sorted(c for c in citations(claim, known) if c not in known)
+
+
 def findings(claim: str, *sources: str) -> list[str]:
     """Readable lines, empty when everything checks out."""
     out = [f"the range {r!r} appears in no source as a range"
            for r in ungrounded_ranges(claim, *sources)]
     out += [f"{n!r} appears in no source" for n in ungrounded_numbers(claim, *sources)]
     out += [f"quoted {q!r} appears in no source" for q in ungrounded_quotes(claim, *sources)]
+    out += [f"cites {c!r}, which is in no registry we hold -- a paper nobody "
+            f"has fetched, screened or ranked here" for c in
+            unverifiable_citations(claim)]
     return out
 
 

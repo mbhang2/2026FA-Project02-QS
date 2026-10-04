@@ -1,0 +1,16 @@
+{
+  "schema": "research-session/1",
+  "session": "session-01",
+  "plan": "config/sessions/session-01.yaml",
+  "declared_family": [
+    "nq-s01-continuation",
+    "nq-s01-absorption",
+    "nq-s01-auction"
+  ],
+  "started": "2026-09-30T18:50:05+00:00",
+  "campaigns": {
+    "nq-s01-continuation": "complete"
+  },
+  "validation": {},
+  "l2": null
+}

@@ -1,0 +1,83 @@
+{
+  "schema": "research-session/1",
+  "session": "session-02",
+  "plan": "config/sessions/session-02.yaml",
+  "declared_family": [
+    "nq-s02-01"
+  ],
+  "started": "2026-09-30T20:39:12+00:00",
+  "campaigns": {
+    "nq-s02-01": "complete; refinement FAILED",
+    "nq-s02-02": "not started (human cue)",
+    "nq-s02-03": "not started (human cue)",
+    "nq-s02-04": "not started (human cue)",
+    "nq-s02-05": "not started (human cue)"
+  },
+  "validation": {
+    "nq-s02-01": "done"
+  },
+  "l2": {
+    "m_campaigns": 1,
+    "campaigns": [
+      "nq-s02-01"
+    ],
+    "b": 10000,
+    "q": 0.05,
+    "observed_best": 0.17651961385690437,
+    "best_campaign": "nq-s02-01",
+    "rule_a_sortino_positive": {
+      "nq-s02-01": true
+    },
+    "rule_a_pass": true,
+    "incomplete": [],
+    "note": "max_of_m is max_of_n with the campaign as the unit, and that is deliberate rather than lazy: section 4 of the pre-registration chooses it over a Holm budget because it uses the actual null distribution of the maximum, and says the L2 gate INHERITS the family-wise error rate measured for that machinery (0.060, CI [0.041, 0.088] at R = 150, Task 38) rather than needing its own calibration study. A second implementation of the same simulation would be a second thing to calibrate.",
+    "per_campaign": [
+      {
+        "campaign_id": "nq-s02-01",
+        "validation_primary": 0.17651961385690437,
+        "null_mean": 0.011270688962242564,
+        "null_sd": 0.16043651394017974,
+        "sds_above_own_null": 1.0299957337409889
+      }
+    ],
+    "standardised_view": {
+      "best_campaign": "nq-s02-01",
+      "observed_best_sds": 1.0299957337409889,
+      "p": 0.14708529147085292,
+      "reject": false,
+      "null_max_mean": 0.011584594740502639,
+      "note": "diagnostic unless statistic='standardised' set the verdict. The maximum over (observed - null mean) / null sd per campaign, which is the pivotal form step_down_max already assumes. Task 70 measured the raw maximum as valid but blind: on our six real validation nulls, whose sds differ by 20x, it named two of the six campaigns the best of M zero times in 4,000 families and a third of them once, and it rejected at 0.0505 against an eight-sigma planted effect in a tight-null campaign where the standardised maximum rejected at 1.0000."
+    },
+    "statistic": "standardised",
+    "p": 0.14708529147085292,
+    "p_floor": 9.999000099990002e-05,
+    "at_floor": false,
+    "reject": false,
+    "null_max_mean": 0.011584594740502639,
+    "null_max_quantiles": {
+      "0.5": -0.09880734332569288,
+      "0.2": 0.7753290766299146,
+      "0.1": 1.3386047047594227,
+      "0.05": 1.8622453010107534,
+      "0.01": 2.9052307659528607
+    },
+    "raw_view": {
+      "best_campaign": "nq-s02-01",
+      "observed_best": 0.17651961385690437,
+      "p": 0.14708529147085292,
+      "reject": false
+    },
+    "passes": false,
+    "verdict": "FAIL",
+    "schema": "l2-verdict/1",
+    "declared_family": [
+      "nq-s02-01"
+    ]
+  },
+  "refinement_failed_after": "nq-s02-01",
+  "stopped_by_cue": true,
+  "family_note": "the L2 family is the campaigns that reached `report` and therefore have a winner. Campaigns that ran and produced none are in `campaigns` above with their reason: their trials count, they contribute no candidate, and dropping them from the family is not family-shrinking because there is nothing of theirs to drop.",
+  "holdout_check_clear": false,
+  "holdout": "checked only; not armed",
+  "finished": "2026-09-30T22:04:08+00:00"
+}

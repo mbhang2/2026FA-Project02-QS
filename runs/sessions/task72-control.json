@@ -1,0 +1,22 @@
+{
+  "schema": "research-session/1",
+  "session": "task72-control",
+  "plan": "config/sessions/task72-control.yaml",
+  "declared_family": [
+    "nq-t72b-01",
+    "nq-t72b-02",
+    "nq-t72b-03"
+  ],
+  "started": "2026-10-01T17:25:11+00:00",
+  "campaigns": {
+    "nq-t72b-01": "complete",
+    "nq-t72b-02": "complete",
+    "nq-t72b-03": "complete"
+  },
+  "validation": "NOT RUN -- --train-only. This session is a measurement about the machinery, not a search for a candidate, and validation is one look per campaign.",
+  "l2": null,
+  "stopped_by_cue": false,
+  "family_note": "every campaign in the plan, written before the session ran.",
+  "train_only": true,
+  "finished": "2026-10-01T22:07:26+00:00"
+}

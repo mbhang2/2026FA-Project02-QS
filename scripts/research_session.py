@@ -545,6 +545,39 @@ def _main() -> int:
         return 0
 
     # ---- phase 2: validation, all of them, now ------------------------------
+    #
+    # **A truncated family does not get to spend its validation looks.**
+    # Validation is one pass per campaign and it cannot be taken back; §4 puts
+    # it at the stop precisely so it is taken once, over the family that was
+    # declared. On 2026-10-04 a `--resume` skipped nq-s05b-01 as already run,
+    # which also skipped the refinement that writes the NEXT question -- so
+    # campaigns 2 and 3 had no question, were passed over, and the session fell
+    # straight through to here and validated a family of one. The L2 then ran
+    # at M = 1 over a declared M of 3.
+    #
+    # Nothing downstream could detect that: the L2 reports the M it was given.
+    # So it is refused here, where the difference is still visible.
+    planned = [str(c["name"]) for c in entries]
+    missing = [n for n in planned
+               if "no question" in str(log["campaigns"].get(n, ""))]
+    if missing and not stopped_by_cue:
+        print("\nphase 2 REFUSED: the declared family is incomplete.\n")
+        for n in missing:
+            print(f"    {n}: {log['campaigns'][n]}")
+        print("\n  Validation is one look per campaign and §4 puts it at the "
+              "stop so it\n  is taken once, over the family that was declared. "
+              f"{len(missing)} of {len(planned)}\n  campaigns never ran, so "
+              "validating now would spend the looks of a family\n  that does "
+              "not exist and compute L2 at the wrong M.\n")
+        print("  A human cue (Ctrl-C) is a legitimate stop and validates what "
+              "ran.\n  This is not that: the campaigns were passed over "
+              "without being asked for.\n")
+        log["phase2"] = f"refused: {len(missing)} campaign(s) never ran"
+        log["finished"] = dt.datetime.now(dt.timezone.utc).isoformat(
+            timespec="seconds")
+        record.write_text(json.dumps(log, indent=2) + "\n")
+        return 1
+
     print("\nphase 2: validation at the stop -- every winner, in one pass\n")
     print(f"  the family is {len(names)} campaign(s): {', '.join(names)}\n"
           "  a second Ctrl-C from here aborts.\n")

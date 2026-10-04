@@ -1,0 +1,118 @@
+{
+  "schema": "research-session/1",
+  "session": "session-04-opening-range",
+  "plan": "config/sessions/session-04-opening-range.yaml",
+  "declared_family": [
+    "nq-s04-01",
+    "nq-s04-02",
+    "nq-s04-03"
+  ],
+  "started": "2026-10-03T18:56:04+00:00",
+  "campaigns": {
+    "nq-s04-01": "complete",
+    "nq-s04-02": "complete",
+    "nq-s04-03": "complete"
+  },
+  "validation": {
+    "nq-s04-01": "done",
+    "nq-s04-02": "done",
+    "nq-s04-03": "done"
+  },
+  "l2": {
+    "m_campaigns": 3,
+    "campaigns": [
+      "nq-s04-01",
+      "nq-s04-02",
+      "nq-s04-03"
+    ],
+    "b": 10000,
+    "q": 0.05,
+    "observed_best": -0.18144322957147688,
+    "best_campaign": "nq-s04-03",
+    "rule_a_sortino_positive": {
+      "nq-s04-01": false,
+      "nq-s04-02": false,
+      "nq-s04-03": false
+    },
+    "rule_a_pass": false,
+    "incomplete": [],
+    "note": "max_of_m is max_of_n with the campaign as the unit, and that is deliberate rather than lazy: section 4 of the pre-registration chooses it over a Holm budget because it uses the actual null distribution of the maximum, and says the L2 gate INHERITS the family-wise error rate measured for that machinery (0.060, CI [0.041, 0.088] at R = 150, Task 38) rather than needing its own calibration study. A second implementation of the same simulation would be a second thing to calibrate.",
+    "per_campaign": [
+      {
+        "campaign_id": "nq-s04-01",
+        "validation_primary": -0.2082953585405289,
+        "null_mean": 0.0107777384420605,
+        "null_sd": 0.1604887413032787,
+        "sds_above_own_null": -1.3650371683618774
+      },
+      {
+        "campaign_id": "nq-s04-02",
+        "validation_primary": -0.05485319498319538,
+        "null_mean": 0.01337833679841033,
+        "null_sd": 0.16341050142285793,
+        "sds_above_own_null": -0.417546798935784
+      },
+      {
+        "campaign_id": "nq-s04-03",
+        "validation_primary": -0.18144322957147688,
+        "null_mean": 0.4605668962118477,
+        "null_sd": 1.7933355732733292,
+        "sds_above_own_null": -0.3579977642508257
+      }
+    ],
+    "standardised_view": {
+      "best_campaign": "nq-s04-03",
+      "observed_best_sds": -0.3579977642508257,
+      "p": 0.9908009199080092,
+      "reject": false,
+      "null_max_mean": 0.837777763598578,
+      "note": "diagnostic unless statistic='standardised' set the verdict. The maximum over (observed - null mean) / null sd per campaign, which is the pivotal form step_down_max already assumes. Task 70 measured the raw maximum as valid but blind: on our six real validation nulls, whose sds differ by 20x, it named two of the six campaigns the best of M zero times in 4,000 families and a third of them once, and it rejected at 0.0505 against an eight-sigma planted effect in a tight-null campaign where the standardised maximum rejected at 1.0000."
+    },
+    "statistic": "standardised",
+    "p": 0.9908009199080092,
+    "p_floor": 9.999000099990002e-05,
+    "at_floor": false,
+    "reject": false,
+    "null_max_mean": 0.837777763598578,
+    "null_max_quantiles": {
+      "0.5": 0.5236227612641493,
+      "0.2": 1.5167058052164555,
+      "0.1": 2.398826959113259,
+      "0.05": 3.89230393380291,
+      "0.01": 3.89230393380291
+    },
+    "raw_view": {
+      "best_campaign": "nq-s04-02",
+      "observed_best": -0.05485319498319538,
+      "p": 0.9405059494050595,
+      "reject": false
+    },
+    "passes": false,
+    "verdict": "FAIL",
+    "schema": "l2-verdict/1",
+    "declared_family": [
+      "nq-s04-01",
+      "nq-s04-02",
+      "nq-s04-03"
+    ]
+  },
+  "refinements": [
+    {
+      "after": "nq-s04-01",
+      "wrote": "config/hypotheses/opening-range-break-continuation-failure.md",
+      "machine_written": true,
+      "amendment": 11
+    },
+    {
+      "after": "nq-s04-02",
+      "wrote": "config/hypotheses/opening-range-break-continuation-or-fade.md",
+      "machine_written": true,
+      "amendment": 11
+    }
+  ],
+  "stopped_by_cue": false,
+  "family_note": "every campaign in the plan, written before the session ran.",
+  "holdout_check_clear": false,
+  "holdout": "checked only; not armed",
+  "finished": "2026-10-03T22:45:36+00:00"
+}

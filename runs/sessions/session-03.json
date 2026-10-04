@@ -1,0 +1,39 @@
+{
+  "schema": "research-session/1",
+  "session": "session-03",
+  "plan": "config/sessions/session-03.yaml",
+  "declared_family": [
+    "nq-s03-01",
+    "nq-s03-02",
+    "nq-s03-03"
+  ],
+  "started": "2026-10-01T00:36:08+00:00",
+  "campaigns": {
+    "nq-s03-01": "complete",
+    "nq-s03-02": "complete",
+    "nq-s03-03": "complete; refinement FAILED",
+    "nq-s03-04": "not started (the session aborted on a failure)",
+    "nq-s03-05": "not started (the session aborted on a failure)"
+  },
+  "validation": "NOT RUN -- the session aborted on a failure",
+  "l2": null,
+  "refinements": [
+    {
+      "after": "nq-s03-01",
+      "wrote": "config/hypotheses/intraday-move-continuation-vs-giveback.md",
+      "machine_written": true,
+      "amendment": 11
+    },
+    {
+      "after": "nq-s03-02",
+      "wrote": "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md",
+      "machine_written": true,
+      "amendment": 11
+    }
+  ],
+  "refinement_failed_after": "nq-s03-03",
+  "stopped_by_cue": false,
+  "family_note": "every campaign in the plan, written before the session ran.",
+  "aborted_by_failure": true,
+  "finished": "2026-10-01T04:28:50+00:00"
+}

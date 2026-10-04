@@ -231,3 +231,30 @@ def test_the_feedback_edge_reports_keys_that_exist():
     for key in ("gate", "committee", "vetoed_by"):
         assert key in v, key
         assert f"v['{key}']" in src or f'v.get("{key}")' in src, key
+
+
+def test_a_truncated_family_cannot_spend_its_validation_looks():
+    """**The loss that motivated this.** A `--resume` skipped nq-s05b-01 as
+    already run, which also skipped the refinement that writes the NEXT
+    question -- so campaigns 2 and 3 had no question, were passed over, and the
+    session fell straight through to phase 2 and validated a family of one. The
+    L2 then ran at M = 1 over a declared M of 3.
+
+    Validation is one look per campaign and cannot be taken back. Nothing
+    downstream could detect the truncation, because the L2 reports the M it was
+    given, so it has to be refused where the difference is still visible.
+
+    A human Ctrl-C is a legitimate stop and still validates what ran; this
+    guard fires only when campaigns were passed over without being asked for.
+    """
+    src = (REPO_ROOT / "scripts" / "research_session.py").read_text()
+    assert "phase 2 REFUSED: the declared family is incomplete" in src
+    assert "not stopped_by_cue" in src, "a human cue must still validate"
+    i = src.index("phase 2 REFUSED")
+    j = src.index('print("\\nphase 2: validation at the stop')
+    assert i < j, "the guard must run before any validation"
+
+
+def test_resume_skipping_a_campaign_is_recorded_as_such():
+    src = (REPO_ROOT / "scripts" / "research_session.py").read_text()
+    assert 'log["campaigns"][name] = "skipped (resume)"' in src

@@ -1,0 +1,6 @@
+{
+  "counts_toward_n": 0,
+  "status": "abandoned",
+  "summary": "Registered 2026-10-04 to prove Amendment 12's generational runner, on the module default model claude-haiku-4-5. The first proposal raised ModelSubstituted: the gateway answered with gemini-3.1-pro-preview, which docs/setup/MODEL-ACCESS.md records as what haiku does at our ~167,000-character proposal prompt. No trial ran and no ledger exists, so this registration cost nothing and counts nothing. A pre-registration is written once, so it is left here rather than deleted and rewritten; the proof ran as a12-gen-w4b on deepseek-v4-pro. The module default was changed to deepseek-v4-pro the same day so the next person does not register a campaign that cannot run.",
+  "trials_run": 0
+}

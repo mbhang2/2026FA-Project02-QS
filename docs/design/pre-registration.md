@@ -226,7 +226,9 @@ superseded with a reason, never deleted.
 **The agent is shown nothing about the gate.** No threshold, no p-value, no
 false-acceptance rate, no N, no mention that a correction exists. It is shown the
 API documents, the current strategy, the hypothesis, the run facts, and its own
-prior trials with their scores. An agent shown the gate optimizes the gate.
+prior trials with their scores -- **every trial completed before its generation
+began**, which Amendment 12 widened from "every prior trial" and which is the
+same thing at W = 1. An agent shown the gate optimizes the gate.
 
 **Nothing about validation or holdout reaches the prompt, ever.**
 
@@ -1940,3 +1942,88 @@ wasted night.
 Amendment 8 stands except for its requirement that the commit be human. Its other
 conditions — linted, grounded, read before a *claim* — are unchanged, and the
 "read" has moved from before the campaign to before the claim.
+
+## Amendment 12 — 2026-10-04 — trials in generations, not a chain
+
+**Status: IN FORCE from 2026-10-04, signed off by Michael.** The first amendment here that trades statistical power for wall clock; the eleven before it all tightened something. That trade is the point of it and not a side effect -- read *the argument against* below before relying on a number produced under it.
+
+### Why it was asked for
+
+Brian suggested it and the arithmetic forces it. A trial costs 3.8 minutes of
+wall clock, measured over session-04's sixty. The registered operating rule is
+**N ≥ 400** (§2), which is **25 hours for one campaign** and three days for a
+three-campaign family. Every campaign this project has run has been N = 20, and
+the reason is not that 20 is defensible — §2 says it is not — but that 400 is
+unaffordable one trial at a time.
+
+`scripts/worker_tree.py` removed the mechanical obstacle on 2026-10-04: trials
+can run in isolated working copies with no shared `src/strategies/current.py`,
+proven on real NQ data to reproduce a sequential score bit-identically. What
+remains is not mechanical. It is that **§3 describes a chain** — each proposal
+is shown "its own prior trials with their scores" — and a chain cannot be run in
+parallel without changing what each proposal is shown.
+
+### What it permits
+
+A campaign may propose its N trials in **generations of W**. Every trial in a
+generation is shown the same history: **every trial completed before that
+generation began**, and nothing from its own generation. Generations run in
+order; trials inside one run concurrently.
+
+W = 1 is the current procedure exactly, so this amendment strictly widens what
+is permitted and changes nothing already run.
+
+`W` and each trial's generation index are recorded in `campaign.json` and on
+every ledger row. A campaign that does not record them was run under W = 1.
+
+### What this does NOT change, and why that is the whole argument
+
+**The correction is policy-independent.** `max_of_n` takes `null_samples[i]` —
+each scored candidate's own null — and simulates the distribution of the
+best-of-N. It corrects for **how many candidates were scored**, never for how
+they were chosen. A hundred candidates proposed in twenty-five generations of
+four are a hundred looks, counted identically to a hundred proposed one at a
+time. Nothing in `correction.py` reads the proposal order, the generation, or
+the history.
+
+So: §2's accounting, §3's null construction, §4's L2, §8's holdout and every
+committed number are untouched. **Parallelism still does not launder
+multiplicity** — that remains the thing nobody may claim.
+
+### The argument against, which is real
+
+**1. A generation's candidates are correlated, and that costs power.** W
+proposals from one identical prompt at temperature 0.7 are W samples from one
+distribution. Sequential trials are less alike because each sees more. Correlated
+candidates mean the effective number of independent looks is **below** N, so
+correcting for N over-corrects. That direction is safe — it makes the gate
+harder to pass, not easier — but it is a real loss of power and it is paid in
+exchange for wall clock.
+
+**2. The search is strictly less informed.** The fourth trial of a generation
+sees what the first saw. Sequentially it would have seen three more results.
+A campaign under W = 4 may find a worse best candidate than the same campaign
+under W = 1, and we do not know by how much.
+
+**3. Best scores across campaigns now mix two policies.** Comparing campaign
+best-scores already had a measured problem — Task 72's control arm put p from
+0.077 to 0.952 on one unchanged question at N = 20 — and this adds a second
+reason the comparison is not clean. It does not affect any single campaign's
+own verdict.
+
+**4. It is untested.** Nothing here says a tree searches better. The honest
+claim is only that it searches *differently*, for less wall clock, with the
+statistics intact.
+
+### What is NOT permitted by this
+
+**Selection between generations.** Keeping the best k of a generation and
+branching only from those is beam search, it changes the search in a way this
+amendment does not cover, and it needs its own pre-registration. Every completed
+trial enters the next generation's history, winners and losers alike.
+
+### The sentence this amends
+
+§3 said the agent is shown "its own prior trials with their scores". Under this
+amendment it is shown **every trial completed before its generation began**,
+which is the same sentence at W = 1.

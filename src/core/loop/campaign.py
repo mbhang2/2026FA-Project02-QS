@@ -94,6 +94,17 @@ class CampaignRecord:
     # results: "we allowed ML once the unfitted trials looked poor" is a
     # different experiment from the one that was registered.
     allow_fitted_proposals: bool | None = None
+    # **Amendment 12: how many trials share one history.** `None` and `1` both
+    # mean the chain this project ran for its first eighteen campaigns, where
+    # every proposal sees every trial before it. Above 1, trials are proposed in
+    # generations of this width: everyone in a generation sees every trial
+    # completed before the generation began, and nothing from its own.
+    #
+    # `None` rather than `1` as the default for the same reason as the field
+    # above: `digest()` drops None keys, so a record committed before this
+    # existed hashes to what it always did and `CampaignRecord.read` does not
+    # raise `CampaignTampered` on records nobody touched.
+    generation_width: int | None = None
     # **Where trial 0's starting point came from, if it was given one.** A
     # campaign may begin from a human-written champion -- the division Michael
     # set out: human writes the initial version, the agent edits per trial -- or
@@ -201,13 +212,24 @@ def declares_fit(source: str) -> bool:
 
 
 def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
-              index: int, allow_fitted: bool | None = None) -> dict:
+              index: int, allow_fitted: bool | None = None,
+              root: Path | None = None) -> dict:
     """One proposal, one isolated run, one ledger row. Returns the row.
 
     The strategy file is written, `run.py` is invoked exactly as a human would
     invoke it, and the row is read back. Nothing about the trial is an argument:
     dataset, split, seed and fill model all come from the committed profile.
+
+    **`root` is which working copy to run in**, and defaults to this repository,
+    which is the only value any campaign used before Amendment 12.
+    `src/strategies/current.py` is one hardwired path, so two trials in one
+    checkout overwrite each other mid-flight and the ledger would look clean and
+    be wrong; `scripts/worker_tree.py` builds the isolated copies a generation
+    runs in. Measured on real NQ data: a worker reproduces this repository's
+    score bit-identically, which is the only reason running elsewhere is allowed
+    to be invisible in the result.
     """
+    root = root or REPO_ROOT
     if declares_fit(source) and not allow_fitted:
         # Refused before `current.py` is touched and before `run.py` is invoked,
         # so the proposal never reaches the data. It is NOT a ledger row and does
@@ -221,7 +243,7 @@ def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
                          "strategy chooses its parameters from data, which is a "
                          "different experiment from the one registered."}
 
-    strategy_path = REPO_ROOT / "src" / "strategies" / "current.py"
+    strategy_path = root / "src" / "strategies" / "current.py"
     original = strategy_path.read_text()
     before = _line_count(ledger)
     strategy_path.write_text(source)
@@ -229,7 +251,7 @@ def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
         subprocess.run(
             [sys.executable, "run.py", "--human", "--quiet", "--purpose", "trial",
              "--profile", profile, "--ledger", str(ledger)],
-            capture_output=True, text=True, cwd=str(REPO_ROOT),
+            capture_output=True, text=True, cwd=str(root),
         )
     finally:
         strategy_path.write_text(original)

@@ -29,6 +29,7 @@ verdict. The correction happens in `report`, after every trial is in the ledger.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures as cf
 import datetime as dt
 import hashlib
 import json
@@ -43,7 +44,18 @@ import yaml  # noqa: E402
 
 PROFILE = "nq-train"
 OUT = ROOT / "runs" / "campaigns"
-MODEL = "claude-haiku-4-5"
+# **Not haiku, and docs/setup/MODEL-ACCESS.md says why in one line:**
+# `claude-haiku-4-5` passes a small prompt and is substituted to
+# `gemini-3.1-pro-preview` at our real proposal prompt of ~167,000 characters.
+# `ModelSubstituted` catches the swap and refuses the trial, so no record was
+# ever corrupted -- but it means a campaign registered on the default model
+# cannot run at all, which is what happened to the first a12 proof registration
+# on 2026-10-04. The preflight at register time passes, because the preflight
+# prompt is small; the first real proposal then dies.
+#
+# deepseek-v4-pro is what the last nine campaigns actually used, named in their
+# plans rather than taken from here.
+MODEL = "deepseek-v4-pro"
 # The default only applies to `--stage register`, which writes the choice into
 # campaign.json. Every later stage reads the path back out of the record, so a
 # campaign cannot be registered against one question and run against another.
@@ -310,7 +322,8 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                    n_trials: int | None = None,
                    model: str = MODEL,
                    min_exposed: float | None = None,
-                   probe: bool | None = None) -> None:
+                   probe: bool | None = None,
+                   generation_width: int | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -403,6 +416,10 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         and bool(profile.get("fit_sessions", 0)),
         min_exposed_fraction=cc.get("min_exposed_fraction"),
         probe_before_trial=bool(cc.get("probe_before_trial")),
+        # Amendment 12, frozen before trial 0 like the budget. A campaign that
+        # widened its generations halfway through would be two search procedures
+        # reported as one.
+        generation_width=generation_width,
         agent="src.core.loop.llm.LLMAgent", dataset="nq-trades", split="train",
         hypothesis_path=str(hypothesis.relative_to(ROOT)),
         hypothesis_digest=agent_cfg["hypothesis"]["digest"],
@@ -507,15 +524,105 @@ def stage_run(name: str) -> None:
         agent.probe = functools.partial(probe_source, ledger=d / "probe-ledger.jsonl")
         print("  probe before trial: ON (Amendment 7); synthetic rows in "
               "probe-ledger.jsonl", flush=True)
+    # **Amendment 12: generations.** W trials share one history and run at the
+    # same time; the next generation sees all of them. W = 1 is the chain the
+    # first eighteen campaigns ran, and it keeps running in THIS repository
+    # rather than in a worker, so nothing about a W = 1 campaign changes.
+    width = max(1, int(record.generation_width or 1))
+    workers = []
+    if width > 1:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import worker_tree
+        print(f"  Amendment 12: generations of {width}; building working copies",
+              flush=True)
+        workers = worker_tree.create(width, quiet=True)
+        if worker_tree.verify(width):
+            sys.exit("worker isolation failed; refusing to run trials that would "
+                     "overwrite each other's strategy")
+        # The agents are per-slot: `propose` is a model call and an LLMAgent
+        # carries its own drain log, so W of them is W bills, not one shared and
+        # raced.
+        agents = [agent] + [agent_for(champion if champion.exists() else None,
+                                      hyp_path, record.profile, model)
+                            for _ in range(width - 1)]
+    else:
+        agents = [agent]
+
+    def _merge(worker: pathlib.Path, wledger: pathlib.Path) -> None:
+        """Copy a worker's stored sources next to the campaign's ledger.
+
+        `run.py` stores a trial's source beside the ledger it wrote, so a
+        generation's sources land in the worker. The ledger row names the digest
+        and a reader follows it from the campaign directory, so they have to be
+        moved or every parallel trial's row points at nothing.
+        """
+        src_dir = wledger.parent / "sources"
+        if not src_dir.is_dir():
+            return
+        dest = ledger.parent / "sources"
+        dest.mkdir(parents=True, exist_ok=True)
+        for f in src_dir.glob("*.py"):
+            target = dest / f.name
+            if not target.exists():
+                target.write_text(f.read_text())
+
     t0 = time.monotonic()
-    for i in range(start, record.budget):
-        agent.champion = champion if champion.exists() else None
-        source = agent.propose(rows)
-        row = run_trial(source, profile=record.profile, ledger=ledger,
-                        campaign_id=record.campaign_id, index=i,
-                        allow_fitted=record.allow_fitted_proposals)
-        drain = getattr(agent, "drain_log", None)
-        if drain is not None:
+    for gen_start in range(start, record.budget, width):
+        gen = list(range(gen_start, min(gen_start + width, record.budget)))
+        # **One history for the whole generation, snapshotted before any of it
+        # runs.** This is the sentence Amendment 12 amended: everyone here sees
+        # every trial completed before the generation began and nothing from its
+        # own.
+        shown = list(rows)
+        champ_now = champion if champion.exists() else None
+
+        def _one(slot_and_index):
+            slot, i = slot_and_index
+            a = agents[slot]
+            a.champion = champ_now
+            source = a.propose(shown)
+            if width == 1:
+                return i, slot, source, run_trial(
+                    source, profile=record.profile, ledger=ledger,
+                    campaign_id=record.campaign_id, index=i,
+                    allow_fitted=record.allow_fitted_proposals)
+            w = workers[slot]
+            wledger = w / "runs" / "ledger.jsonl"
+            row = run_trial(source, profile=record.profile, ledger=wledger,
+                            campaign_id=record.campaign_id, index=i,
+                            allow_fitted=record.allow_fitted_proposals,
+                            root=w)
+            _merge(w, wledger)
+            return i, slot, source, row
+
+        pairs = list(enumerate(gen))
+        if width == 1:
+            results = [_one(pairs[0])]
+        else:
+            with cf.ThreadPoolExecutor(max_workers=len(pairs)) as pool:
+                results = list(pool.map(_one, pairs))
+
+        # **Merged in index order, always.** The champion advances on a strict
+        # improvement, so the order results are folded in decides which of two
+        # equal-scoring candidates becomes the base. Thread completion order is
+        # arbitrary; trial index is not.
+        for i, slot, source, row in sorted(results, key=lambda r: r[0]):
+          # **Stamped BEFORE the row is written, not after.** Amendment 12 says
+          # the generation index is on every ledger row, and the first version
+          # of this loop set it on the in-memory copy after appending -- so the
+          # file recorded `null` for all eight trials of the proof run and the
+          # amendment's own disclosure requirement was unmet by the code that
+          # implements it.
+          row["generation"] = gen_start // width if width > 1 else None
+          row["generation_width"] = width
+          if width > 1:
+            # The canonical ledger is this campaign's. A worker's copy is scratch
+            # and is not on any path `global_n()` reads, so a row counts once.
+            with ledger.open("a") as fh:
+                fh.write(json.dumps(row, sort_keys=True) + "\n")
+          agent = agents[slot]
+          drain = getattr(agent, "drain_log", None)
+          if drain is not None:
             # Kept in a sidecar, because `run.py` owns the ledger row and this is
             # the driver's cost rather than the run's. The first version attached
             # it to the in-memory row only, so the campaign's bill was lost the
@@ -524,25 +631,29 @@ def stage_run(name: str) -> None:
             with (d / "agent-calls.jsonl").open("a") as fh:
                 fh.write(json.dumps({"trial": i, **row["agent_call"]}) + "\n")
 
-        # The champion advances only on a strict improvement. A tie keeps the
-        # incumbent, so the base does not drift between equivalent files.
-        score = (row.get("score") or {}).get("primary")
-        rejected = (row.get("score") or {}).get("rejected")
-        if score is not None and not rejected and (best is None or score > best):
+          # The champion advances only on a strict improvement. A tie keeps the
+          # incumbent, so the base does not drift between equivalent files.
+          score = (row.get("score") or {}).get("primary")
+          rejected = (row.get("score") or {}).get("rejected")
+          if score is not None and not rejected and (best is None or score > best):
             best = score
             champion.write_text(source)
             state.write_text(json.dumps({"best": best, "trial": i}))
-        row["champion_best_after"] = best
-        rows.append(row)
+          row["champion_best_after"] = best
+          rows.append(row)
 
-        el = time.monotonic() - t0
-        done = i - start + 1
-        print(f"  {i + 1}/{record.budget}  outcome={row.get('outcome')} "
-              f"score={score if score is None else round(score, 4)}  "
-              f"best={best if best is None else round(best, 4)}  "
-              f"{el / 60:.0f}m elapsed, eta {(el / done) * (record.budget - i - 1) / 60:.0f}m",
-              flush=True)
-    print(f"{name}: {record.budget} trials in {(time.monotonic() - t0) / 60:.0f} min")
+          el = time.monotonic() - t0
+          done = i - start + 1
+          print(f"  {i + 1}/{record.budget}  outcome={row.get('outcome')} "
+                f"score={score if score is None else round(score, 4)}  "
+                f"best={best if best is None else round(best, 4)}  "
+                f"{el / 60:.0f}m elapsed, eta "
+                f"{(el / done) * (record.budget - i - 1) / 60:.0f}m", flush=True)
+    if workers:
+        print(f"  {len(workers)} worker(s) left in place for inspection; "
+              f"scripts/worker_tree.py --destroy removes them", flush=True)
+    print(f"{name}: {record.budget} trials in {(time.monotonic() - t0) / 60:.0f} min "
+          f"(generations of {width})")
 
 
 def stage_nulls(name: str) -> None:
@@ -794,6 +905,16 @@ def main() -> int:
                     help="Amendment 6 exposure floor for this campaign, in (0, 1]; "
                          "--stage register only, frozen into campaign.json. Default "
                          "is campaign.min_exposed_fraction in config/run.yaml.")
+    ap.add_argument("--generation-width", type=int, default=None,
+                    help="Amendment 12: how many trials share one history and "
+                         "run at the same time; --stage register only, frozen "
+                         "into campaign.json. Omit or 1 for the chain every "
+                         "campaign before 2026-10-04 ran. Above 1 the trials of "
+                         "a generation are proposed from the same history and "
+                         "scored concurrently in isolated working copies. It "
+                         "buys wall clock and costs power -- correlated "
+                         "candidates mean fewer effective looks than N, so "
+                         "max_of_n over-corrects. Read Amendment 12.")
     ap.add_argument("--probe", action=argparse.BooleanOptionalAction,
                     default=None,
                     help="--stage register only. Amendment 7: run each proposal "
@@ -841,7 +962,7 @@ def main() -> int:
                 sys.exit(f"{seed} is outside the repository; a seed has to be a "
                          "committed file or the record points at nothing.")
         stage_register(a.name, hyp, a.profile, seed, a.n, a.model, a.min_exposed,
-                       True if a.probe else None)
+                       a.probe, a.generation_width)
     else:
         # Refused rather than ignored. Silently accepting it on a run stage is how
         # someone believes they changed the question and did not.

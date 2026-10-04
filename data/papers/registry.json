@@ -8492,13 +8492,27 @@
       "cited_by_count": null,
       "claim": "A short-side opening-range reversal pattern exists in E-mini Dow futures, with performance concentrated in the earliest part of the trading session.",
       "date_pulled": "2026-10-04T08:44:36+00:00",
+      "distilled": {
+        "adapted_claim": "A short-side opening-range reversal pattern, similar to one documented in Dow futures, exists in NQ futures and is profitable after costs.",
+        "cannot_test": "We cannot test the claim on Dow Jones futures, which was the instrument used in the paper. We also cannot test the specific time-discontinuity the paper found around 2023, as our data covers a different, continuous period.",
+        "model": "gemini-2.5-pro",
+        "model_served": "gemini-2.5-pro",
+        "review": "NO_OBJECTION (mimo-v2.6-pro)",
+        "sets_aside": [
+          "long-side reversal patterns",
+          "strategies with asymmetric risk/reward ratios",
+          "strategies using indicators other than opening price action"
+        ],
+        "slug": "nq-opening-reversal",
+        "words": 582
+      },
       "doi": "10.2139/ssrn.7124578",
       "feasibility": "adaptable",
       "feasibility_reason": "The paper studies a reversal pattern in E-mini Dow (YM) futures, while our data is for E-mini Nasdaq-100 (NQ) futures.",
       "gate_reason": "The paper's core contribution is its use of a pre/post analysis to identify a structural break, which directly addresses the 'robustness' and 'concentration in time' objections raised by auditors in multiple past campaigns.",
       "gate_relevance": "medium",
       "hypothesis_edit": "Create a new hypothesis `opening-range-fade-0dte` that tests for a short-side reversal of an opening range breakout, conditioned on post-2023 data and with a parameter search for the optimal entry window early in the session.",
-      "hypothesis_path": null,
+      "hypothesis_path": "config/hypotheses/nq-opening-reversal.md",
       "id": "doi-10.2139_ssrn.7124578",
       "is_oa": false,
       "oa_url": null,

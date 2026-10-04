@@ -120,6 +120,9 @@ campaigns:
     n: 20                      # optional, defaults to the config
     model: claude-haiku-4-5    # optional
     min_exposed: 0.70          # optional
+    generation_width: 4        # optional; Amendment 12. Omit or 1 for the
+                               # chain. Above 1, trials of a generation share
+                               # one history and run at the same time.
 ```
 
 Written before the session starts, and copied into the session record. `--resume`
@@ -389,7 +392,11 @@ def _main() -> int:
                 extra = ["--hypothesis", str(c["hypothesis"])]
                 for flag, key in (("--profile", "profile"), ("--n", "n"),
                                   ("--model", "model"),
-                                  ("--min-exposed", "min_exposed")):
+                                  ("--min-exposed", "min_exposed"),
+                                  # Amendment 12. Omitted from a plan means the
+                                  # chain, which is what every session before
+                                  # 2026-10-04 ran.
+                                  ("--generation-width", "generation_width")):
                     if c.get(key) is not None:
                         extra += [flag, str(c[key])]
                 code, _ = campaign_stage(name, "register", extra)

@@ -108,8 +108,10 @@ def test_the_real_documents_current_statuses():
     # 4, 5 and 6 were corrected on 2026-10-01: all three said NOT IN FORCE while
     # the code enforced them. See the guard below, which now checks each claim
     # against the thing that would make it true instead of trusting a snapshot.
-    expected = {1: True, 2: True, 3: True, 4: True, 5: True,
-                6: True, 7: True, 8: True, 9: True, 10: True, 11: True}
+    # 12 signed 2026-10-04: trials in generations, not a chain. The first
+    # amendment here that trades statistical power for wall clock.
+    expected = {1: True, 2: True, 3: True, 4: True, 5: True, 6: True,
+                7: True, 8: True, 9: True, 10: True, 11: True, 12: True}
     actual = {n: ok for n, ok, _ in mod.all_amendments()}
     assert actual == expected, actual
 

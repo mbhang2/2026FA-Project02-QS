@@ -99,10 +99,34 @@ RANGE = re.compile(
 CLAIM_MIN = 10.0
 
 
+def _strip_identifiers(text: str) -> str:
+    """Remove every paper identifier before numbers are read out of a text.
+
+    **A DOI is not a quantity either.** `PAPER_ID` has stripped arXiv ids since
+    the first distillation, for exactly this reason: `2605.04004v3` would be read
+    as 2605 and reported ungrounded on every file that cites its source
+    correctly. When the corpus stopped being arXiv-only this acquired a second
+    shape and the stripping did not follow -- so a hypothesis citing
+    `doi:10.2139/ssrn.7124578` had `10.2139` pulled out of the DOI and demanded
+    of the sources. Found 2026-10-04 on the first non-arXiv distillation, which
+    it refused; it would have refused every one of them.
+    """
+    out = PAPER_ID.sub(" ", DOI_ID.sub(" ", text))
+    # **And the registry's OWN keys**, which is the case the two shape patterns
+    # above still missed. Our key for an SSRN paper is
+    # `doi-10.2139_ssrn.7124578`; a model citing it in that form, or as a bare
+    # "SSRN 7124578", leaves `7124578` behind to be demanded of the sources.
+    # Matched longest-first so a key is never half-removed.
+    for pid in sorted(registry_ids(), key=len, reverse=True):
+        if len(pid) >= 6 and pid in out:
+            out = out.replace(pid, " ")
+    return out
+
+
 def numbers(text: str) -> set[float]:
     """Every numeric literal, as floats so formatting cannot cause a mismatch."""
     out: set[float] = set()
-    for whole, frac in NUMBER.findall(PAPER_ID.sub(" ", text)):
+    for whole, frac in NUMBER.findall(_strip_identifiers(text)):
         try:
             out.add(float(whole.replace(",", "") + ("." + frac if frac else "")))
         except ValueError:                                       # pragma: no cover
@@ -126,7 +150,10 @@ def ungrounded_numbers(claim: str, *sources: str) -> list[str]:
         have |= numbers(s)
     out: list[str] = []
     seen: set[float] = set()
-    for whole, frac in NUMBER.findall(PAPER_ID.sub(" ", claim)):
+    # `_strip_identifiers`, not `PAPER_ID` alone. This was the second stripping
+    # site and it is why the first fix did not take: an identifier has to stop
+    # being a number in both places or in neither.
+    for whole, frac in NUMBER.findall(_strip_identifiers(claim)):
         raw = whole + ("." + frac if frac else "")
         try:
             val = float(whole.replace(",", "") + ("." + frac if frac else ""))
@@ -158,7 +185,7 @@ def ungrounded_numbers(claim: str, *sources: str) -> list[str]:
 
 def _ranges(text: str) -> set[tuple[float, float]]:
     out: set[tuple[float, float]] = set()
-    for lo, hi in RANGE.findall(PAPER_ID.sub(" ", text)):
+    for lo, hi in RANGE.findall(_strip_identifiers(text)):
         try:
             a, b = float(lo), float(hi)
         except ValueError:                                       # pragma: no cover
@@ -180,7 +207,7 @@ def ungrounded_ranges(claim: str, *sources: str) -> list[str]:
         have |= _ranges(s)
     out: list[str] = []
     seen: set[tuple[float, float]] = set()
-    for lo, hi in RANGE.findall(PAPER_ID.sub(" ", claim)):
+    for lo, hi in RANGE.findall(_strip_identifiers(claim)):
         try:
             pair = (float(lo), float(hi))
         except ValueError:                                       # pragma: no cover

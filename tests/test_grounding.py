@@ -361,3 +361,35 @@ def test_registry_ids_includes_the_rows_own_identifiers():
     ids = g.registry_ids()
     assert len(ids) > 284
     assert any("/" in i for i in ids), "no DOI reached the known set"
+
+
+def test_a_doi_is_not_read_as_a_quantity():
+    """**`PAPER_ID` has stripped arXiv ids since the first distillation**, so
+    `2605.04004v3` is not reported as the ungrounded number 2605. When the
+    corpus stopped being arXiv-only the stripping did not follow, and
+    `doi:10.2139/ssrn.7124578` had `10.2139` pulled out of it and demanded of
+    the sources. It refused the first non-arXiv distillation and would have
+    refused every one of them."""
+    src = "a short-side opening reversal over 194 trades, 59.79% win rate"
+    assert g.ungrounded_numbers(
+        "Following doi:10.2139/ssrn.7124578, we ask whether it reverses.",
+        src) == []
+    assert g.ungrounded_numbers("Following arXiv:2605.04004v3 we ask.", src) == []
+    # and a real invented number is still caught
+    assert g.ungrounded_numbers("We expect a 37.5 point move.", src) == ["37.5"]
+
+
+def test_every_identifier_strip_site_uses_the_same_helper():
+    """The first fix did not take because there were two stripping sites and
+    only one was changed; the range check had two more. An identifier has to
+    stop being a number in every place or in none."""
+    import re
+    src = (REPO_ROOT / "scripts" / "grounding.py").read_text()
+    # The one legitimate use is inside the helper itself; every other site must
+    # go through it. Located by function rather than by a literal, which went
+    # stale the moment the helper grew a second line.
+    body = src[src.index("def _strip_identifiers"):src.index("def numbers(")]
+    outside = src.replace(body, "")
+    assert "PAPER_ID.sub" not in outside, (
+        "a bare PAPER_ID.sub site is one the DOI fix will not reach")
+    assert outside.count("_strip_identifiers(") >= 4

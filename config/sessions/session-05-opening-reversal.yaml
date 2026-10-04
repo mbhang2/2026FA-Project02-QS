@@ -1,0 +1,61 @@
+# Session 05 -- opening-range REVERSAL, one family refined across three
+# campaigns at N = 100.
+#
+#   .venv/bin/python scripts/research_session.py \
+#       --plan config/sessions/session-05-opening-reversal.yaml
+#
+# Michael asked for this on 2026-10-04: the opening-range reversal paper,
+# N = 100, 3 campaigns. 300 trials. Global N 1,093 -> ~1,393.
+#
+# THE QUESTION comes from a paper the RAG found the day the corpus stopped
+# being arXiv-only: `doi-10.2139_ssrn.7124578`, "Opening-Range Reversal in Dow
+# Jones Futures: Evidence Consistent with 0DTE Hedging Pressure". It is the
+# first campaign in this project seeded by a non-arXiv paper.
+#
+# WHAT THE PAPER CANNOT GIVE US, said here rather than discovered later:
+#   - it is E-mini DOW, not NQ. The question is an adaptation, not a replication
+#   - we hold its ABSTRACT only (1,085 chars). Crossref yields no bodies and the
+#     publisher blocks scrapers, so the distillation read 1,085 characters where
+#     an arXiv distillation reads 44,000
+#   - its mechanism is 0DTE dealer hedging and we have no options data, so this
+#     tests the PATTERN and cannot test the CAUSE
+#   - the paper itself says "Exact trading parameters are withheld, limiting
+#     independent replication"
+#
+# THE SHAPE OF THE RISK. The question is short-only with a symmetric 1:1 stop
+# and target, both fixed by the paper's claim. That is a narrow condition set,
+# and narrow is exactly what gave nq-s04-03 four trades, n_nulls = 0 and a
+# score of -inf. Michael's call on 2026-10-04 was to leave the exposure floor
+# alone, so `min_exposed` is deliberately unset here as it was for s04. If a
+# campaign produces n_nulls = 0 again, that is the known failure and not a
+# surprise; `scripts/review_strategy.py` will say which candidates could not
+# act, and it records rather than gates.
+#
+# AMENDMENT 12 IS IN FORCE FOR THIS SESSION. `generation_width: 4` means the
+# 100 trials of each campaign run as 25 generations of 4: everyone in a
+# generation sees every trial completed before it began, and nothing from its
+# own. This buys wall clock -- measured 3.75x on the eight-trial proof, so
+# ~5 hours instead of ~19 -- and it COSTS POWER: four proposals from one
+# identical prompt are correlated, so the effective number of independent looks
+# is below 100 and `max_of_n` over-corrects. That direction is safe and the
+# trade is deliberate. Read Amendment 12 before quoting a number from here.
+#
+# WHAT THIS RUN CANNOT TELL US. The control arm measured the gate's p spanning
+# 0.077 -> 0.952 across three runs of ONE unchanged question at N = 20. N = 100
+# is five times that and the spread will be narrower, but it is NOT the
+# registered N >= 400 and the three p values this session produces are still
+# not a trend.
+#
+# The holdout is NOT armed.
+
+session: session-05-opening-reversal
+
+family:
+  seed: config/hypotheses/nq-opening-reversal.md
+  iterations: 3
+  refine: true
+  n: 100
+  generation_width: 4
+  model: deepseek-v4-pro
+  profile: nq-train
+  prefix: nq-s05

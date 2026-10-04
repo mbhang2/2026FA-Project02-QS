@@ -109,6 +109,32 @@ One paragraph: why this paper, now, and what it changes about what we were
 already asking.
 ```
 
+### Every quantity you write must already exist in what you were given
+
+A number in this file is checked against the paper and against this prompt, and
+the file is **refused** if it appears in neither. Not softened, not warned --
+refused, and the campaign does not get written.
+
+So:
+
+- **Quote the paper's figures, do not restate them.** If the paper says a win
+  rate of 59.79%, write 59.79%. Rounding it to 60% is a number the paper does
+  not contain.
+- **Name a parameter without pricing it.** The section above says which
+  parameters the strategy agent may set. Say *"a window measured in the opening
+  minutes of the session"*, not *"a 15-minute window"* -- the 15 is yours to
+  invent, which is exactly why it cannot be in a pre-registered question. This
+  is the convention and not a workaround: leaving the measure open is how a
+  campaign lets twenty candidates each propose their own.
+- **Cite the paper by the id you were given**, verbatim. An id is not a
+  quantity and is not checked as one, but only in the form we hold it.
+- **If the paper withholds its parameters, say that it withholds them.** Some
+  papers state a result and keep the rule. That is a fact about the paper and a
+  perfectly good thing to write; inventing the missing rule is not.
+
+If you cannot state the claim without a number you were not given, the honest
+output is the claim without it.
+
 ### Length
 
 **800 to 1,500 words is far too long — aim for 450 to 700 words.** This file is

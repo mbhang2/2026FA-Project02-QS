@@ -190,3 +190,44 @@ def test_the_committed_session_plan_asks_for_generations():
     fam = yaml.safe_load(p.read_text())["family"]
     assert fam["generation_width"] == 4
     assert fam["n"] == 100
+
+
+def test_every_artefact_beside_a_worker_ledger_is_merged():
+    """**`runlog.py` writes three directories beside a ledger** --
+    `sources/`, `weights/` and `fills/` -- and the first version of the merge
+    copied `sources/` only. The missing one was `fills/`, which the sign-flip
+    null reconstructs round turns from, so `stage_nulls` found nothing for any
+    candidate, wrote 100 empty samples, and the gate reported `n_nulls = 0` and
+    `p = 1.0` on a campaign with 45 finite scores.
+
+    Asserted as "copy whatever is there" rather than against the three names,
+    because enumerating names is exactly what broke.
+    """
+    assert "for src_dir in sorted(wledger.parent.iterdir()):" in SRC
+    assert "Every sibling directory, not a list of names" in FLAT
+    # and runlog really does write more than one
+    runlog = (REPO_ROOT / "src" / "core" / "runlog.py").read_text()
+    for name in ("sources", "weights", "fills"):
+        assert f'"{name}"' in runlog, name
+
+
+def test_the_feedback_edge_reports_keys_that_exist():
+    """It printed `v['conclusion']`, which `verdicts_for()` has never returned.
+    The KeyError was raised AFTER the registry write, so the edge did its job
+    and then reported "feedback edge FAILED" -- the opposite of the truth, on
+    nq-s05b-01 and on every campaign seeded by a paper before it. A best-effort
+    step that lies about succeeding is worse than one that stays quiet."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "record_outcome", REPO_ROOT / "scripts" / "record_outcome.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    v = mod.verdicts_for("nq-s05b-01")
+    if v is None:
+        return
+    assert "conclusion" not in v
+    src = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert "v['conclusion']" not in src
+    for key in ("gate", "committee", "vetoed_by"):
+        assert key in v, key
+        assert f"v['{key}']" in src or f'v.get("{key}")' in src, key

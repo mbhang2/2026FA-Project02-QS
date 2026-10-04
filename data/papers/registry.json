@@ -8488,7 +8488,9 @@
       "acts_on": "A strategy would fade (short) a move above the opening range, particularly in the earliest part of the session, and would be tested specifically on post-2023 data.",
       "adaptation": "The claim must be tested on NQ futures instead of Dow futures. This means we would be testing for the existence of a similar opening reversal pattern in a different, more volatile index, not replicating the paper's specific result.",
       "bears_on": "gate",
-      "campaign_ids": [],
+      "campaign_ids": [
+        "nq-s05b-01"
+      ],
       "cited_by_count": null,
       "claim": "A short-side opening-range reversal pattern exists in E-mini Dow futures, with performance concentrated in the earliest part of the trading session.",
       "date_pulled": "2026-10-04T08:44:36+00:00",
@@ -8517,7 +8519,21 @@
       "is_oa": false,
       "oa_url": null,
       "openalex_id": null,
-      "outcome": null,
+      "outcome": [
+        {
+          "campaign_dir": "runs/campaigns/nq-s05b-01",
+          "campaign_id": "nq-s05b-01",
+          "committee": "VETO",
+          "gate": "REJECT",
+          "hypothesis": "config/hypotheses/nq-opening-reversal.md",
+          "recorded": "2026-10-04",
+          "stopped_by": "gate",
+          "tier3": "CANNOT_TELL",
+          "vetoed_by": [
+            "robustness"
+          ]
+        }
+      ],
       "protocol_edit": "Add a check to the gate: if a strategy's performance is concentrated in a specific period (e.g., post-2023), require a plausible mechanism for the change and verify that performance is significantly weaker in the prior period, as demonstrated in the paper.",
       "published": "2026",
       "query": "scholar terms=intraday momentum futures|intraday reversal index futures|opening range breakout|order flow imbalance futures|intraday time series momentum|futures market intraday predictability since=any source=both require_abstract=True",

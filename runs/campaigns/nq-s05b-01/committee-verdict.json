@@ -1,0 +1,93 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "No access to scorer/dataset/calendar internals; history[-1] is consumed on bar close and no state carries future-dated values, but I cannot verify the harness's per-bar view guarantee beyond reading the source.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "All views coherently reject (gate p=0.872 vs. null-max 5% quantile 0.277; BH/Holm/uncorrected 0 discoveries; deflation margin -0.063) and the best candidate rests on 384 sessions / 182 downside sessions / 359 trades, not a degenerate denominator; what I could not see is the per-session return concentration (the reported kurtosis of 43.6 and skew of 4.1 hint at heavy concentration) and the number of prior campaigns run before this one.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Net P&L is positive (531.7 pts / ~$10.6k), commission is 11.9% of gross and not decisive, per-trade edge of ~1.48 pts ($29.64) comfortably exceeds the 0.2 pt round-trip commission, holding period (~6.7 min) and trade frequency (359 trades/384 sessions, one per session by design) are plausible for NQ opening-window entries; the module docstring matches the code (short-only, rally-then-reverse, symmetric stop/target) and stays inside the guardrail; however the score is quite modest (0.125) and no out-of-sample or per-trade distribution evidence was provided, so robustness of the pattern is hard to gauge.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "By hour UTC, all profit comes from just two hours: hour 22 contributes 284.05 and hour 23 contributes 285.18, while hour 00 loses -37.53 and no other hours appear. Net ~531 total vs 569 from hours 22-23 alone \u2014 effectively 100%+ of gross profit is generated in a 2-hour window with no stated reason for why that window should persist.",
+        "By weekday, Sunday alone accounts for 396.2 of the ~531.7 total (74% of all profit), with Mon/Tue contributing smaller positives and Wed/Thu negative \u2014 the result is a Sunday-effect strategy in disguise, not a broad pattern.",
+        "By month, 2025-04 alone contributes 301.3 of ~531.7 total (57% of all profit). Removing that single month drops the total from 531.7 to ~230.4, and combined with the -93.7 and -72.5 losses in adjacent months, the monthly profile is dominated by one spike rather than consistent accrual.",
+        "Outcomes report 11 'crashed' against 89 'completed' (11% crash rate on the tracked subset), and this tracked subset covers only 100 of the 359 trades \u2014 the outcome distribution is either materially adverse or incompletely measured, and no explanation is offered for what 'crashed' means or why 11% is tolerable.",
+        "The profit_concentration_top5pct field is redacted and thus unavailable for the axis most directly about tail concentration; the reader cannot verify whether a small number of trades drove the result."
+      ],
+      "confidence_note": "The campaign winner's own trade-level distribution (per-trade P&L, per-session P&L) is not provided, and the redacted top-5% concentration figure means I cannot confirm or rule out single-trade dependence beyond what the hourly/weekday/monthly breakdowns already show.",
+      "error": null
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 1613,
+      "completion_tokens": 2379,
+      "reasoning_tokens": 1907,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 12714,
+      "completion_tokens": 1914,
+      "reasoning_tokens": 1756,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 1885,
+      "completion_tokens": 2629,
+      "reasoning_tokens": 2562,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 3890,
+      "completion_tokens": 2656,
+      "reasoning_tokens": 2460,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "proposer_model": "deepseek-v4-pro",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

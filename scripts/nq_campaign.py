@@ -549,22 +549,36 @@ def stage_run(name: str) -> None:
         agents = [agent]
 
     def _merge(worker: pathlib.Path, wledger: pathlib.Path) -> None:
-        """Copy a worker's stored sources next to the campaign's ledger.
+        """Copy everything a worker stored beside its ledger into the campaign's.
 
-        `run.py` stores a trial's source beside the ledger it wrote, so a
-        generation's sources land in the worker. The ledger row names the digest
-        and a reader follows it from the campaign directory, so they have to be
-        moved or every parallel trial's row points at nothing.
+        `run.py` writes a trial's artefacts next to the ledger it was given, so
+        for a parallel trial they land in the worker. The row names a digest and
+        a reader follows it from the CAMPAIGN directory, so anything left behind
+        is a row pointing at nothing.
+
+        **Every sibling directory, not a list of names.** The first version
+        copied `sources/` only, and `runlog.py` writes three --
+        `sources/`, `weights/` and `fills/`. The missing one was `fills/`, which
+        is what the sign-flip null reconstructs round turns from, so
+        `stage_nulls` found no fill log for any candidate, wrote 100 empty
+        samples, and the gate reported `n_nulls = 0` and `p = 1.0` on a campaign
+        with 45 finite scores. It cost nq-s05b-01 its nulls and they had to be
+        rescued out of the workers before the next campaign recreated them.
+        Enumerating names is what broke it; this copies whatever is there.
         """
-        src_dir = wledger.parent / "sources"
-        if not src_dir.is_dir():
+        if not wledger.parent.is_dir():
             return
-        dest = ledger.parent / "sources"
-        dest.mkdir(parents=True, exist_ok=True)
-        for f in src_dir.glob("*.py"):
-            target = dest / f.name
-            if not target.exists():
-                target.write_text(f.read_text())
+        for src_dir in sorted(wledger.parent.iterdir()):
+            if not src_dir.is_dir():
+                continue
+            dest = ledger.parent / src_dir.name
+            dest.mkdir(parents=True, exist_ok=True)
+            for f in src_dir.iterdir():
+                if not f.is_file():
+                    continue
+                target = dest / f.name
+                if not target.exists():
+                    target.write_bytes(f.read_bytes())
 
     t0 = time.monotonic()
     for gen_start in range(start, record.budget, width):
@@ -615,6 +629,24 @@ def stage_run(name: str) -> None:
           # implements it.
           row["generation"] = gen_start // width if width > 1 else None
           row["generation_width"] = width
+          if width > 1:
+            # **Repoint the row's artefact paths at the campaign.** `run.py`
+            # records them relative to the root it ran under, so a parallel
+            # trial's row says `runs/fills/<digest>.jsonl.gz` -- which resolves
+            # against THIS repository and finds nothing, because the file was
+            # merged into `runs/campaigns/<name>/fills/`. A sequential campaign
+            # records the campaign-relative path, so this restores the only
+            # shape every reader already understands.
+            #
+            # It is why `stage_nulls` found no fill log for any of nq-s05b-01's
+            # candidates even after the files were merged: the files were there
+            # and the rows pointed somewhere else.
+            rel = ledger.parent.relative_to(ROOT).as_posix()
+            for key in [k for k in row if k.endswith("_source")]:
+                v = row.get(key)
+                if isinstance(v, str) and v.startswith("runs/") \
+                        and not v.startswith("runs/campaigns/"):
+                    row[key] = f"{rel}/{v[len('runs/'):]}"
           if width > 1:
             # The canonical ledger is this campaign's. A worker's copy is scratch
             # and is not on any path `global_n()` reads, so a row counts once.
@@ -740,7 +772,16 @@ def _record_outcome(name: str) -> None:
         row["campaign_ids"] = ids
         row["outcome"] = sorted(outs, key=lambda o: o["campaign_id"])
         mod.REGISTRY.write_text(_json.dumps(reg, indent=2, sort_keys=True) + "\n")
-        print(f"  feedback edge: recorded on paper {pid} -- {v['conclusion']}")
+        # **Keys that exist.** This read a `conclusion` key, which
+        # `verdicts_for()` has never returned, and the KeyError was raised AFTER
+        # the registry write -- so the edge did its job and then reported
+        # "feedback edge FAILED", which is the opposite of what happened. A
+        # best-effort step that lies about succeeding is worse than one that
+        # stays quiet.
+        print(f"  feedback edge: recorded on paper {pid} -- gate {v['gate']}, "
+              f"committee {v['committee']}"
+              + (f" (vetoed by {', '.join(v['vetoed_by'])})"
+                 if v.get("vetoed_by") else ""))
     except Exception as exc:                                      # noqa: BLE001
         print(f"  feedback edge FAILED (report stands): {type(exc).__name__}: {exc}")
 

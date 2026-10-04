@@ -1,0 +1,1989 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 39,
+    "diagnostics": {
+      "avg_holding_period_ns": 403525565166.31476,
+      "best_session_share": 0.09145225678214183,
+      "by_hour_utc": {
+        "00": -37.525000000000006,
+        "22": 284.0499999999971,
+        "23": 285.175
+      },
+      "by_month": {
+        "2024-07": 42.775,
+        "2024-08": 33.875,
+        "2024-09": -2.425000000000035,
+        "2024-10": 13.89999999999998,
+        "2024-11": -8.175000000000013,
+        "2024-12": -72.49999999999994,
+        "2025-01": 103.80000000000015,
+        "2025-02": 69.0000000000002,
+        "2025-03": 114.34999999999997,
+        "2025-04": 301.32499999999936,
+        "2025-05": -93.74999999999994,
+        "2025-06": 60.175000000000075,
+        "2025-07": -62.00000000000001,
+        "2025-08": 35.65000000000003,
+        "2025-09": -12.975000000000003,
+        "2025-10": 40.324999999999974,
+        "2025-11": -65.94999999999999,
+        "2025-12": 34.29999999999999
+      },
+      "by_weekday": {
+        "Mon": 64.57500000000009,
+        "Sun": 396.19999999999845,
+        "Thu": -29.47499999999993,
+        "Tue": 144.05000000000013,
+        "Wed": -43.64999999999997
+      },
+      "commission": 71.8,
+      "fill_model_spread": null,
+      "gross_pnl": 603.5,
+      "max_drawdown": -290.63069074063003,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.2374,
+        "exposure_share": 0.9349,
+        "return_dispersion": 0.0659,
+        "trades_per_session": 0.0215
+      },
+      "profit_concentration_top5pct": 0.4068156861889169,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 359,
+      "trade_count": 359,
+      "turnover_contracts_per_session": 1.8697916666666667,
+      "win_rate": 0.5626740947075209
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 182,
+      "kurtosis": 43.61282189381579,
+      "metric": "sortino_per_session",
+      "min_exposed_fraction": 0.7,
+      "n_sessions": 384,
+      "net_pnl": 531.7,
+      "primary": 0.12519111831691807,
+      "primary_uncharged": 0.14508290983989733,
+      "reject_reason": "",
+      "rejected": false,
+      "sessions_exposed": 359,
+      "sharpe": 0.06650602938546517,
+      "significance": 2.4532348816387683,
+      "skew": 4.0892623574590585,
+      "sortino": 0.12519111831691807,
+      "trade_count": 359
+    },
+    "source": "\"\"\"Short-side opening reversal strategy for NQ futures, v6.\n\nThe campaign requires a short-only reversal strategy using a symmetric 1:1\nrisk/reward. Prior trials have been mostly negative, with the best score\n+0.1244 from trial #31. This version attempts to improve by:\n\n1. Restricting trades to the first 15 minutes of the session, where the\n   paper found the strongest effect.\n2. Using a 1-minute bar interval to reduce noise while still allowing\n   early entry.\n3. Defining the opening high as the highest high of the first N bars,\n   and entering short when price closes below that high after having\n   made a new high (a reversal confirmation).\n4. Using a fixed risk based on the opening range rather than an ATR,\n   to keep the structure simple and symmetric.\n5. Adding a minimum opening range filter to avoid trading in very quiet\n   sessions where the reversal signal is likely noise.\n6. Requiring the reversal bar to be a relatively strong down bar,\n   indicating actual selling pressure rather than a minor pullback.\n7. Only trading if the opening high is above the first bar's close by\n   at least a minimum amount, to ensure a meaningful rally to reverse.\n\"\"\"\n\n\nclass Strategy:\n    def __init__(\n        self,\n        *,\n        interval: str = \"1m\",\n        opening_minutes: int = 15,\n        lookback: int = 5,\n        risk_mult: float = 0.5,\n        min_range: float = 2.0,\n        bearish_body_mult: float = 0.5,\n        min_rally: float = 1.0,\n        size: int = 1,\n    ):\n        self.interval = interval\n        self.opening_minutes = opening_minutes\n        self.lookback = lookback\n        self.risk_mult = risk_mult\n        self.min_range = min_range\n        self.bearish_body_mult = bearish_body_mult\n        self.min_rally = min_rally\n        self.size = size\n\n        self._session = None\n        self._traded_this_session = False\n        self._opening_high = None\n        self._bars_seen = 0\n        self._first_close = None\n\n    def setup(self, ctx) -> None:\n        ctx.subscribe(self.interval)\n\n    def on_bars(self, ctx) -> None:\n        if not ctx.actionable:\n            return\n        if ctx.position or ctx.working_order_ids:\n            return\n\n        # Reset per-session state on session change.\n        if ctx.session != self._session:\n            self._session = ctx.session\n            self._traded_this_session = False\n            self._opening_high = None\n            self._bars_seen = 0\n            self._first_close = None\n\n        if self._traded_this_session:\n            return\n\n        # Only trade during the opening window.\n        session_elapsed = (ctx.ts - ctx.session_start) / 60_000_000_000\n        if session_elapsed > self.opening_minutes:\n            return\n\n        if self.interval not in ctx.bars:\n            return\n\n        history = ctx.history(self.interval)\n        if len(history) < 1:\n            return\n\n        last = history[-1]\n        self._bars_seen += 1\n\n        # Track the first bar's close for the rally filter.\n        if self._bars_seen == 1:\n            self._first_close = last.close\n\n        # Need enough bars to establish an opening high.\n        if self._bars_seen < self.lookback:\n            if self._opening_high is None or last.high > self._opening_high:\n                self._opening_high = last.high\n            return\n\n        # Update opening high with the current bar.\n        if last.high > self._opening_high:\n            self._opening_high = last.high\n\n        # Signal: price made a new opening high and then closed below it.\n        # Require a meaningful opening range to filter quiet sessions.\n        opening_range = self._opening_high - min(\n            b.low for b in history.last(self._bars_seen)\n        )\n        if opening_range < self.min_range:\n            return\n\n        # Require a meaningful rally above the first bar's close.\n        if self._first_close is not None:\n            rally = self._opening_high - self._first_close\n            if rally < self.min_rally:\n                return\n\n        # Require a bearish reversal bar: close below open and a body that is\n        # at least a fraction of the bar's range.\n        bar_range = last.high - last.low\n        if bar_range <= 0:\n            return\n        body = last.open - last.close\n        if last.close >= last.open or body < self.bearish_body_mult * bar_range:\n            return\n\n        # Risk is a fraction of the distance from the high to the close.\n        risk = self.risk_mult * (self._opening_high - last.close)\n        if risk <= 0:\n            return\n        ctx.sell(\n            size=self.size,\n            stop_offset=risk,\n            target_offset=risk,\n            tag=\"opening-reversal-short\",\n        )\n        self._traded_this_session = True\n\n    def on_fill(self, ctx) -> None:\n        pass\n\n    def on_lifecycle(self, ctx) -> None:\n        pass\n",
+    "source_sha256": "fa8c2234977b04a4ab0c54ac2a2f789d943b03798a1c52d656a54df950ef53be",
+    "strategy_digest": "fa8c2234977b04a4"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.1,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "37fcea5a90f37b7b05faaab7e15e74990878bbaba226b41171965908b2a40b91",
+        "path": "config/hypotheses/nq-opening-reversal.md"
+      },
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 65536,
+      "model": "deepseek-v4-pro",
+      "model_served_at_registration": "deepseek-v4-pro",
+      "null_source": "round_turn_mc",
+      "probe_before_trial": true,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real NQ futures trades, 384 scored sessions on the pre-registered train split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side. NQ is $20 a point, so a round trip costs about $4.00 a contract. At high turnover this dominates: the baseline strategy on this split traded 103,355 times and paid more in commission than it made gross.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "nq-s05b-01",
+    "budget": 100,
+    "campaign_id": "nq-s05b-01",
+    "dataset": "nq-trades",
+    "profile": "nq-train",
+    "q": 0.05,
+    "record_digest": "ffe99921d35b0ba6be21c954452c99851c71729e41974fa44518ec8056a3530b",
+    "record_digest_now": "ffe99921d35b0ba6be21c954452c99851c71729e41974fa44518ec8056a3530b",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-10-04T20:18:30+00:00"
+  },
+  "deflation_view": {
+    "best_score": 0.12519111831691807,
+    "clears_selection_bar": false,
+    "expected_max_under_null": 0.1880654001079954,
+    "margin": -0.06287428179107735,
+    "n_sessions": 384,
+    "n_trials": 100,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.09566192314320714,
+      "best_label": "39:fa8c2234",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0005,
+          "far": 0.09566192314320714,
+          "holm_accepted": false,
+          "holm_critical": 0.0005,
+          "index": 39,
+          "label": "39:fa8c2234",
+          "rank": 1
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.001,
+          "far": 0.09566192314320714,
+          "holm_accepted": false,
+          "holm_critical": 0.000505050505050505,
+          "index": 59,
+          "label": "59:14e68bae",
+          "rank": 2
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0015,
+          "far": 0.09566192314320714,
+          "holm_accepted": false,
+          "holm_critical": 0.0005102040816326531,
+          "index": 76,
+          "label": "76:0bcff489",
+          "rank": 3
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.002,
+          "far": 0.09566192314320714,
+          "holm_accepted": false,
+          "holm_critical": 0.0005154639175257732,
+          "index": 87,
+          "label": "87:e00792f6",
+          "rank": 4
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0025000000000000005,
+          "far": 0.09680465479019289,
+          "holm_accepted": false,
+          "holm_critical": 0.0005208333333333333,
+          "index": 31,
+          "label": "31:78401819",
+          "rank": 5
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.003,
+          "far": 0.09827420720250794,
+          "holm_accepted": false,
+          "holm_critical": 0.0005263157894736842,
+          "index": 90,
+          "label": "90:3db1736c",
+          "rank": 6
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0035000000000000005,
+          "far": 0.09827420720250794,
+          "holm_accepted": false,
+          "holm_critical": 0.0005319148936170213,
+          "index": 92,
+          "label": "92:68d655d3",
+          "rank": 7
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.004,
+          "far": 0.11629800589023145,
+          "holm_accepted": false,
+          "holm_critical": 0.0005376344086021505,
+          "index": 57,
+          "label": "57:8c030500",
+          "rank": 8
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0045,
+          "far": 0.14373625546030339,
+          "holm_accepted": false,
+          "holm_critical": 0.0005434782608695652,
+          "index": 61,
+          "label": "61:998fac9d",
+          "rank": 9
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005000000000000001,
+          "far": 0.1703282390620601,
+          "holm_accepted": false,
+          "holm_critical": 0.0005494505494505495,
+          "index": 97,
+          "label": "97:1b71d282",
+          "rank": 10
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0055000000000000005,
+          "far": 0.21761995171678333,
+          "holm_accepted": false,
+          "holm_critical": 0.0005555555555555556,
+          "index": 22,
+          "label": "22:d964f621",
+          "rank": 11
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.006,
+          "far": 0.21761995171678333,
+          "holm_accepted": false,
+          "holm_critical": 0.0005617977528089888,
+          "index": 29,
+          "label": "29:6b085c07",
+          "rank": 12
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.006500000000000001,
+          "far": 0.21761995171678333,
+          "holm_accepted": false,
+          "holm_critical": 0.0005681818181818183,
+          "index": 30,
+          "label": "30:810e40bf",
+          "rank": 13
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.007000000000000001,
+          "far": 0.22913796714808343,
+          "holm_accepted": false,
+          "holm_critical": 0.0005747126436781609,
+          "index": 48,
+          "label": "48:aa062231",
+          "rank": 14
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0075,
+          "far": 0.3523836475259743,
+          "holm_accepted": false,
+          "holm_critical": 0.0005813953488372093,
+          "index": 60,
+          "label": "60:9674e39d",
+          "rank": 15
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.008,
+          "far": 0.36724846429893776,
+          "holm_accepted": false,
+          "holm_critical": 0.0005882352941176471,
+          "index": 70,
+          "label": "70:4e7fec3d",
+          "rank": 16
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0085,
+          "far": 0.46940570861421993,
+          "holm_accepted": false,
+          "holm_critical": 0.0005952380952380953,
+          "index": 26,
+          "label": "26:7d7a4b7e",
+          "rank": 17
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.009,
+          "far": 0.4709298598176891,
+          "holm_accepted": false,
+          "holm_critical": 0.0006024096385542169,
+          "index": 65,
+          "label": "65:c60ccfdc",
+          "rank": 18
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.009500000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006097560975609756,
+          "index": 0,
+          "label": "0:dcd358db",
+          "rank": 19
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006172839506172839,
+          "index": 2,
+          "label": "2:f6a172b3",
+          "rank": 20
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0105,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000625,
+          "index": 4,
+          "label": "4:00e3e58f",
+          "rank": 21
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.011000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006329113924050633,
+          "index": 5,
+          "label": "5:23bd7f82",
+          "rank": 22
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.011500000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000641025641025641,
+          "index": 6,
+          "label": "6:497d5f6c",
+          "rank": 23
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.012,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006493506493506494,
+          "index": 7,
+          "label": "7:a8122cba",
+          "rank": 24
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0125,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006578947368421052,
+          "index": 9,
+          "label": "9:2b598eb3",
+          "rank": 25
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.013000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006666666666666668,
+          "index": 10,
+          "label": "10:e6a7aa5b",
+          "rank": 26
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.013500000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006756756756756757,
+          "index": 11,
+          "label": "11:9c9cce58",
+          "rank": 27
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.014000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006849315068493151,
+          "index": 15,
+          "label": "15:1424b984",
+          "rank": 28
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.014499999999999999,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006944444444444445,
+          "index": 17,
+          "label": "17:e70740ef",
+          "rank": 29
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007042253521126761,
+          "index": 18,
+          "label": "18:2363cb00",
+          "rank": 30
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0155,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007142857142857143,
+          "index": 19,
+          "label": "19:e4c478e0",
+          "rank": 31
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.016,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007246376811594203,
+          "index": 25,
+          "label": "25:b5c47719",
+          "rank": 32
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0165,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007352941176470588,
+          "index": 27,
+          "label": "27:e7d699ef",
+          "rank": 33
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.017,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007462686567164179,
+          "index": 38,
+          "label": "38:546cdba9",
+          "rank": 34
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.017499999999999998,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007575757575757576,
+          "index": 40,
+          "label": "40:3141e715",
+          "rank": 35
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.018,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007692307692307692,
+          "index": 41,
+          "label": "41:458ec527",
+          "rank": 36
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0185,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.00078125,
+          "index": 42,
+          "label": "42:cf3cee7b",
+          "rank": 37
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.019000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007936507936507937,
+          "index": 43,
+          "label": "43:f42e4e7d",
+          "rank": 38
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.019500000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008064516129032258,
+          "index": 49,
+          "label": "49:d2a7de55",
+          "rank": 39
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000819672131147541,
+          "index": 50,
+          "label": "50:812c4283",
+          "rank": 40
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0205,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008333333333333334,
+          "index": 51,
+          "label": "51:4d2068eb",
+          "rank": 41
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.021,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008474576271186442,
+          "index": 52,
+          "label": "52:2a9d78e9",
+          "rank": 42
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.021500000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008620689655172415,
+          "index": 55,
+          "label": "55:3dca9acc",
+          "rank": 43
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.022000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008771929824561404,
+          "index": 58,
+          "label": "58:c96ea829",
+          "rank": 44
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.022500000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008928571428571429,
+          "index": 62,
+          "label": "62:a13e877f",
+          "rank": 45
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.023000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0009090909090909091,
+          "index": 63,
+          "label": "63:16da2a5e",
+          "rank": 46
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0235,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000925925925925926,
+          "index": 66,
+          "label": "66:a1f4230b",
+          "rank": 47
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.024,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0009433962264150943,
+          "index": 75,
+          "label": "75:c4039759",
+          "rank": 48
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0245,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0009615384615384616,
+          "index": 77,
+          "label": "77:bb253129",
+          "rank": 49
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000980392156862745,
+          "index": 80,
+          "label": "80:ce208bd0",
+          "rank": 50
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025500000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001,
+          "index": 81,
+          "label": "81:96af13fd",
+          "rank": 51
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.026000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010204081632653062,
+          "index": 83,
+          "label": "83:ceb9d880",
+          "rank": 52
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.026500000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010416666666666667,
+          "index": 85,
+          "label": "85:d135aeae",
+          "rank": 53
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.027000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010638297872340426,
+          "index": 88,
+          "label": "88:1b4c5e9f",
+          "rank": 54
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.027500000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010869565217391304,
+          "index": 91,
+          "label": "91:4a2b7a8f",
+          "rank": 55
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011111111111111111,
+          "index": 94,
+          "label": "94:c353db2a",
+          "rank": 56
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028499999999999998,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011363636363636365,
+          "index": 95,
+          "label": "95:8dd7b9b7",
+          "rank": 57
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028999999999999998,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011627906976744186,
+          "index": 96,
+          "label": "96:c59c5bec",
+          "rank": 58
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0295,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011904761904761906,
+          "index": 99,
+          "label": "99:0f9bfe09",
+          "rank": 59
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0012195121951219512,
+          "index": 1,
+          "label": "1:ff0a9459",
+          "rank": 60
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0305,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00125,
+          "index": 3,
+          "label": "3:2f6903e5",
+          "rank": 61
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.031,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001282051282051282,
+          "index": 8,
+          "label": "8:398a53fe",
+          "rank": 62
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0315,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0013157894736842105,
+          "index": 12,
+          "label": "12:c6571c24",
+          "rank": 63
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.032,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0013513513513513514,
+          "index": 13,
+          "label": "13:d78df539",
+          "rank": 64
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0325,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001388888888888889,
+          "index": 14,
+          "label": "14:56923674",
+          "rank": 65
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.033,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0014285714285714286,
+          "index": 16,
+          "label": "16:aeb1c964",
+          "rank": 66
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0335,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0014705882352941176,
+          "index": 20,
+          "label": "20:39e842d5",
+          "rank": 67
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0015151515151515152,
+          "index": 21,
+          "label": "21:4bb39d4f",
+          "rank": 68
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034499999999999996,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0015625,
+          "index": 23,
+          "label": "23:8b504bd9",
+          "rank": 69
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034999999999999996,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0016129032258064516,
+          "index": 24,
+          "label": "24:793da8fd",
+          "rank": 70
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0355,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0016666666666666668,
+          "index": 28,
+          "label": "28:a9fcadb9",
+          "rank": 71
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.036,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001724137931034483,
+          "index": 32,
+          "label": "32:436351ca",
+          "rank": 72
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0365,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0017857142857142859,
+          "index": 33,
+          "label": "33:f63324d1",
+          "rank": 73
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.037,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001851851851851852,
+          "index": 34,
+          "label": "34:b89ad82f",
+          "rank": 74
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.037500000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0019230769230769232,
+          "index": 35,
+          "label": "35:6ca89fb4",
+          "rank": 75
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.038000000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002,
+          "index": 36,
+          "label": "36:05f95b37",
+          "rank": 76
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.038500000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0020833333333333333,
+          "index": 37,
+          "label": "37:24519dfa",
+          "rank": 77
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03900000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002173913043478261,
+          "index": 44,
+          "label": "44:e977f1b0",
+          "rank": 78
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03950000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002272727272727273,
+          "index": 45,
+          "label": "45:ed7261b7",
+          "rank": 79
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04000000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002380952380952381,
+          "index": 46,
+          "label": "46:29b81dc4",
+          "rank": 80
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04050000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0025,
+          "index": 47,
+          "label": "47:d6006543",
+          "rank": 81
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.041,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "index": 53,
+          "label": "53:3dc3f825",
+          "rank": 82
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0415,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "index": 54,
+          "label": "54:f381961b",
+          "rank": 83
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.042,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "index": 56,
+          "label": "56:a6978e7e",
+          "rank": 84
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0425,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.003125,
+          "index": 64,
+          "label": "64:cce1a6bf",
+          "rank": 85
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.043000000000000003,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "index": 67,
+          "label": "67:f7037908",
+          "rank": 86
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.043500000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "index": 68,
+          "label": "68:6cb92ecb",
+          "rank": 87
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.044000000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "index": 69,
+          "label": "69:068ac4d1",
+          "rank": 88
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.044500000000000005,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "index": 71,
+          "label": "71:ef03f56a",
+          "rank": 89
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045000000000000005,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "index": 72,
+          "label": "72:67f1fc5e",
+          "rank": 90
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045500000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.005,
+          "index": 73,
+          "label": "73:8ee81f8f",
+          "rank": 91
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.046000000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "index": 74,
+          "label": "74:fd8052ac",
+          "rank": 92
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04650000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00625,
+          "index": 78,
+          "label": "78:709529e7",
+          "rank": 93
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.047,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "index": 79,
+          "label": "79:ce270980",
+          "rank": 94
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0475,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "index": 82,
+          "label": "82:f3dcd16e",
+          "rank": 95
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.048,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.01,
+          "index": 84,
+          "label": "84:b932c9c4",
+          "rank": 96
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0485,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0125,
+          "index": 86,
+          "label": "86:8ad958ce",
+          "rank": 97
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.049,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "index": 89,
+          "label": "89:3c3e225f",
+          "rank": 98
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0495,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.025,
+          "index": 93,
+          "label": "93:b0c75285",
+          "rank": 99
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 98,
+          "label": "98:aef01403",
+          "rank": 100
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 100,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "55e5bc63c3c1c843adc81652dea3b084a32f7ca85900ce5276ec3c780047e752",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 59,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 0.2765843905484894,
+    "null_max_mean": 0.18207589071675917,
+    "null_max_quantiles": {
+      "0.01": 0.3331068952826395,
+      "0.05": 0.2765843905484894,
+      "0.1": 0.253042596521745,
+      "0.2": 0.22519045277282962,
+      "0.5": 0.17592551299867143
+    },
+    "observed_best": 0.12519111831691807,
+    "p": 0.8724127587241276,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/nq-s05b-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "63e2af7b7ea62218e7a809a396a689ce7b14d6ada6aec71f028fe2f995bbac9d",
+        "outcome": "completed",
+        "score": -0.1707258397216132,
+        "strategy_digest": "dcd358dbf295f1f2"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "8bc4a02b7c08cef37dbb1299d1dee90c37e6808d8e56c2d72de731c780b2ba9d",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "ff0a94597a0fff59"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "12b18f6a82615dd639c72fcc61bc2ccbd26674279225ce01a91d33c362ee3341",
+        "outcome": "completed",
+        "score": -0.1824036591783101,
+        "strategy_digest": "f6a172b33ae1c96c"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "5c6d9941535db5f5a6305e78010cef43593afafc2aa62077c76ffcda163d567e",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "2f6903e50c01cf34"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "84bab8eb6d53e2b10ad5138531fc377ccdc62b996be613e791bbcda9f3f70edc",
+        "outcome": "completed",
+        "score": -0.17069783782108547,
+        "strategy_digest": "00e3e58fa593037a"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "353445b72bfa81a08660fb09456ac412a6f158c7650554c484ecd40239514927",
+        "outcome": "completed",
+        "score": -0.08093593016177045,
+        "strategy_digest": "23bd7f829f2ffa19"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "fa4bf5ce41768af88e5eede465a66e29bee9fea82eaf088cdb7a91862938cb9d",
+        "outcome": "completed",
+        "score": -0.16496524008214608,
+        "strategy_digest": "497d5f6c8d1bc23c"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "63e2af7b7ea62218e7a809a396a689ce7b14d6ada6aec71f028fe2f995bbac9d",
+        "outcome": "completed",
+        "score": -0.1707258397216132,
+        "strategy_digest": "a8122cba96f65982"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "3cd2fac05b6b87b6f842f038e7b75af768717cb2a78728180f18086bf1476db8",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "398a53fecc8e7d08"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "6e3412f5b356c3bb332f0a09727685e22a4377f104fe27ac44f26217fd802733",
+        "outcome": "completed",
+        "score": -0.28672025779640276,
+        "strategy_digest": "2b598eb349e223eb"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "353445b72bfa81a08660fb09456ac412a6f158c7650554c484ecd40239514927",
+        "outcome": "completed",
+        "score": -0.08093593016177045,
+        "strategy_digest": "e6a7aa5b0ec47837"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "42a757f932e0eab526450200fc0756ca0eea681cbac1db45e8a96ddabc788e59",
+        "outcome": "completed",
+        "score": -0.029858634441252297,
+        "strategy_digest": "9c9cce58b7bac0bf"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "ceac72ab1ccb5d4336be6f22deb067c75fe993b2c355e04dd09521c7b7e5dc6a",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "c6571c240b4ad4a4"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "bd2aad9beef154eb7f615e9eb4623d8ca74f6fa031b015954513a82201d40f75",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "d78df5392d7bc6d1"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "a3fe36597675b1c2a27d17a9635d92814751bfd05ab6d5f8156052470f1b5837",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "56923674a0dce562"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "8b1e5d3e8f27e057f0362102b14c3729aefa62b9354c6d6693401532f64bf60d",
+        "outcome": "completed",
+        "score": -0.3871250426549595,
+        "strategy_digest": "1424b984a4d68cc4"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "ab6175c6c816abb77d9d8b66b08d179db261d7b8e4db684cbca6a5c10ad36790",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "aeb1c964df5e52f2"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "3beb26c95266c61139cacb68748621d4e626a3ef567a2b91fe0f4a0d34274dfa",
+        "outcome": "completed",
+        "score": -0.0666109219945147,
+        "strategy_digest": "e70740efa91b15f0"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "2439196648138f32119b99e860b7271ef5df0689a38d07114b6da40be135905c",
+        "outcome": "completed",
+        "score": -0.03105182448249809,
+        "strategy_digest": "2363cb004c6302d9"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": "e9d6289680be074d419a25192df3f2100b08a784dd744028f41fb9e0ee788caf",
+        "outcome": "completed",
+        "score": -0.5989357636590456,
+        "strategy_digest": "e4c478e0cb3730e0"
+      },
+      {
+        "campaign_index": 20,
+        "fill_log_digest": "5e81deb9f68758435181d386a6d304c26ef07b3da818eaf6ad7eec58afbcf6a1",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "39e842d541afc14b"
+      },
+      {
+        "campaign_index": 21,
+        "fill_log_digest": "e020b65890672bbf6c7c93d78f1c6355ad9d9037ef8d51ef3ac31802b992e255",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "4bb39d4f0fbc9d95"
+      },
+      {
+        "campaign_index": 22,
+        "fill_log_digest": "184eeef0b2c5762ce04522ce19d56f4d48af8c1ef9bef233f2d8f6717447ad0a",
+        "outcome": "completed",
+        "score": 0.05354961399698845,
+        "strategy_digest": "d964f621efcc6f33"
+      },
+      {
+        "campaign_index": 23,
+        "fill_log_digest": "ad67f24d40f0149d9302a4310dd841c0e6caf4cf70de23cbdce63d04e3b9b59d",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "8b504bd95367c368"
+      },
+      {
+        "campaign_index": 24,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "793da8fd2ad81241"
+      },
+      {
+        "campaign_index": 25,
+        "fill_log_digest": "1326c68d1ecff6c370e18b10eebc6655e64d6c257c8f13dcab001af3961cde37",
+        "outcome": "completed",
+        "score": -0.03167427605906336,
+        "strategy_digest": "b5c47719d3ddddcb"
+      },
+      {
+        "campaign_index": 26,
+        "fill_log_digest": "e1fd175909f48cee38aad04b475c249d8c8857a3605660b4403c1bf6f57448b2",
+        "outcome": "completed",
+        "score": -0.02057975742709629,
+        "strategy_digest": "7d7a4b7ebd22a27d"
+      },
+      {
+        "campaign_index": 27,
+        "fill_log_digest": "3653145bd62b7e0d536c58384a83397fd0a45cc609a6ec0a66ad4b7af6625945",
+        "outcome": "completed",
+        "score": -0.03779405887126453,
+        "strategy_digest": "e7d699ef7f42fb89"
+      },
+      {
+        "campaign_index": 28,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "a9fcadb92760d665"
+      },
+      {
+        "campaign_index": 29,
+        "fill_log_digest": "184eeef0b2c5762ce04522ce19d56f4d48af8c1ef9bef233f2d8f6717447ad0a",
+        "outcome": "completed",
+        "score": 0.05354961399698845,
+        "strategy_digest": "6b085c07316da22e"
+      },
+      {
+        "campaign_index": 30,
+        "fill_log_digest": "184eeef0b2c5762ce04522ce19d56f4d48af8c1ef9bef233f2d8f6717447ad0a",
+        "outcome": "completed",
+        "score": 0.05354961399698845,
+        "strategy_digest": "810e40bf2c1df897"
+      },
+      {
+        "campaign_index": 31,
+        "fill_log_digest": "745ce2a37870b0c58c7fd843ef4439ddecf603a41dfbdf4b551366122835fe53",
+        "outcome": "completed",
+        "score": 0.12444649154579521,
+        "strategy_digest": "7840181966c57119"
+      },
+      {
+        "campaign_index": 32,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "436351cafe3ce944"
+      },
+      {
+        "campaign_index": 33,
+        "fill_log_digest": "abc6a2a2a0eaea427d35ea96ba50c4caa354051db0b80247b544a9cfa0244371",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "f63324d1dbded058"
+      },
+      {
+        "campaign_index": 34,
+        "fill_log_digest": "9d5b190ae70b852f882079ff76aee7f80084c9aafcce87798c758981b0ee5016",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "b89ad82f2cbc68ee"
+      },
+      {
+        "campaign_index": 35,
+        "fill_log_digest": "7eddb67d6b1ff9bde483d6f9a90226517dc91771306799e9b347fcbd44082061",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "6ca89fb44676f3dd"
+      },
+      {
+        "campaign_index": 36,
+        "fill_log_digest": "b8e682b9279108b0f605d4e8c49c03246c9f7e4da6915c059a3a82656d4a1e9e",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "05f95b37e840bf20"
+      },
+      {
+        "campaign_index": 37,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "24519dfa74a8ff1a"
+      },
+      {
+        "campaign_index": 38,
+        "fill_log_digest": "23681c6ebec00ea87130a62d235f6a0bb0a1dde2d200b8ec8b53e1c80db7bf2d",
+        "outcome": "completed",
+        "score": -0.07870872903063453,
+        "strategy_digest": "546cdba9cf3f7fc6"
+      },
+      {
+        "campaign_index": 39,
+        "fill_log_digest": "6d1e0428f13bb96c3256c464d48949f764663d7f43a3b46e12747c7a520b0297",
+        "outcome": "completed",
+        "score": 0.12519111831691807,
+        "strategy_digest": "fa8c2234977b04a4"
+      },
+      {
+        "campaign_index": 40,
+        "fill_log_digest": "5093b3c825b93eeffc2c22a9a0d53ee633997304c820b2ba5fd6be8f81b11566",
+        "outcome": "completed",
+        "score": -0.21380433899652548,
+        "strategy_digest": "3141e7155ad29acc"
+      },
+      {
+        "campaign_index": 41,
+        "fill_log_digest": "61e8789da6e06de506e2f41abb6ee100cbb26aed976838f29dea3af9bb94525a",
+        "outcome": "completed",
+        "score": -0.11378159283179666,
+        "strategy_digest": "458ec527f04bf0ce"
+      },
+      {
+        "campaign_index": 42,
+        "fill_log_digest": "fc5dd2379fad49a436de0f8ef6675934e36bd04feac00f65e6236bc592990b37",
+        "outcome": "completed",
+        "score": -0.18264415957805943,
+        "strategy_digest": "cf3cee7be1711ab5"
+      },
+      {
+        "campaign_index": 43,
+        "fill_log_digest": "2dae2768882eda4169b44d7f589d0e777c97d08d07078f13292758df7c69ef23",
+        "outcome": "completed",
+        "score": -0.07994634415350628,
+        "strategy_digest": "f42e4e7d9911d114"
+      },
+      {
+        "campaign_index": 44,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "e977f1b082e93a28"
+      },
+      {
+        "campaign_index": 45,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "ed7261b76667fc2c"
+      },
+      {
+        "campaign_index": 46,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "29b81dc401f1c034"
+      },
+      {
+        "campaign_index": 47,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "d6006543fb1f1f2f"
+      },
+      {
+        "campaign_index": 48,
+        "fill_log_digest": "0fdb59a719efa1dd21472bbaa467a8954dc77d789143d14578155c62f857b24c",
+        "outcome": "completed",
+        "score": 0.0471099112087922,
+        "strategy_digest": "aa062231ba3c9155"
+      },
+      {
+        "campaign_index": 49,
+        "fill_log_digest": "b243f98276d20563fec018305ca7105d99031b2780329a44fe4ca38366a9371c",
+        "outcome": "completed",
+        "score": -0.22353978172226474,
+        "strategy_digest": "d2a7de55a3955e88"
+      },
+      {
+        "campaign_index": 50,
+        "fill_log_digest": "ff306cc90aad1d1aeac0cdd0aea185549120f3f063054e68d661f72594f679e5",
+        "outcome": "completed",
+        "score": -0.0602927799500467,
+        "strategy_digest": "812c4283367d0013"
+      },
+      {
+        "campaign_index": 51,
+        "fill_log_digest": "b243f98276d20563fec018305ca7105d99031b2780329a44fe4ca38366a9371c",
+        "outcome": "completed",
+        "score": -0.22353978172226474,
+        "strategy_digest": "4d2068eb0d302112"
+      },
+      {
+        "campaign_index": 52,
+        "fill_log_digest": "49fcdf077937fbbae1296fdfb051c0853e60682d067e7088fe2ac7ae45f16ae0",
+        "outcome": "completed",
+        "score": -0.25908557397757503,
+        "strategy_digest": "2a9d78e90c4f977d"
+      },
+      {
+        "campaign_index": 53,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "3dc3f825be909009"
+      },
+      {
+        "campaign_index": 54,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "f381961bccd3b560"
+      },
+      {
+        "campaign_index": 55,
+        "fill_log_digest": "f61eb49051c2db0fff75c73661c2e97a96acc9bca4a2168c6890625896e4accf",
+        "outcome": "completed",
+        "score": -0.047604133694712364,
+        "strategy_digest": "3dca9acc53d7ef71"
+      },
+      {
+        "campaign_index": 56,
+        "fill_log_digest": "573e1044987ccf778975607834efed85f5cedc495c3afff308c27162d53a079a",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "a6978e7e25cd8b1c"
+      },
+      {
+        "campaign_index": 57,
+        "fill_log_digest": "01d4281758c169f6b6863119673a6a1edc6943081c9ad250d14fc45d0e011c3b",
+        "outcome": "completed",
+        "score": 0.10872945076494943,
+        "strategy_digest": "8c030500261f5281"
+      },
+      {
+        "campaign_index": 58,
+        "fill_log_digest": "d42df1ba72d11507f170c50d30a11333dec2648fe0327f03cb23451216cee0e5",
+        "outcome": "completed",
+        "score": -0.07409573289389378,
+        "strategy_digest": "c96ea829077dff6d"
+      },
+      {
+        "campaign_index": 59,
+        "fill_log_digest": "6d1e0428f13bb96c3256c464d48949f764663d7f43a3b46e12747c7a520b0297",
+        "outcome": "completed",
+        "score": 0.12519111831691807,
+        "strategy_digest": "14e68baedb4f3cfc"
+      },
+      {
+        "campaign_index": 60,
+        "fill_log_digest": "f8adc25f3c5ff868190ddc54d2db3d4e15632b8b178db7aac6dc7b91b391d6f3",
+        "outcome": "completed",
+        "score": 0.002817235311229723,
+        "strategy_digest": "9674e39d0b4a8492"
+      },
+      {
+        "campaign_index": 61,
+        "fill_log_digest": "654fbe8cc72261c5a2e0bc23792f9748915920537f8aec20788c636fda5fa665",
+        "outcome": "completed",
+        "score": 0.08146869188001503,
+        "strategy_digest": "998fac9d51dfcd78"
+      },
+      {
+        "campaign_index": 62,
+        "fill_log_digest": "4c1909d5bb9da4de5c41e781107f7239f36c0000f85723811974217b673a4ae8",
+        "outcome": "completed",
+        "score": -0.07355641624168646,
+        "strategy_digest": "a13e877f42c55cd9"
+      },
+      {
+        "campaign_index": 63,
+        "fill_log_digest": "183cf667027d9b5092337b9ded361dfcd38c885369a76bff6925330158e87767",
+        "outcome": "completed",
+        "score": -0.03702631671724827,
+        "strategy_digest": "16da2a5eb5d525fd"
+      },
+      {
+        "campaign_index": 64,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "cce1a6bf7e9edf89"
+      },
+      {
+        "campaign_index": 65,
+        "fill_log_digest": "2198d90bdb50d5e95a742227f226cac62ef2bb69b4c851c19495d89455b2e33c",
+        "outcome": "completed",
+        "score": -0.021849711177020146,
+        "strategy_digest": "c60ccfdcf2c8105c"
+      },
+      {
+        "campaign_index": 66,
+        "fill_log_digest": "7699b22212eea91470843c278be026dbecf883cb1ae8f001bad5bff582544a2a",
+        "outcome": "completed",
+        "score": -0.35116341719044747,
+        "strategy_digest": "a1f4230b0f564c98"
+      },
+      {
+        "campaign_index": 67,
+        "fill_log_digest": "dc1bc385409e7a9722cb25aaf928090ab3cdbdb082f2691535643856d2915af8",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "f7037908e543b222"
+      },
+      {
+        "campaign_index": 68,
+        "fill_log_digest": "39eaf60327f381dd2ad408ac890bbf02fe289fd2abd52e9e76e2f4cd30e0dcdf",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "6cb92ecb95fc2072"
+      },
+      {
+        "campaign_index": 69,
+        "fill_log_digest": "24f22071e6f2fc4f879e016b5d270b4f29ac502444ccd3c429e5f07f6570406e",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "068ac4d1e120b361"
+      },
+      {
+        "campaign_index": 70,
+        "fill_log_digest": "79c41a906acf67e54478c684d8c3073a1925d9534c134effe24643d46535a7f7",
+        "outcome": "completed",
+        "score": -0.0006973586131907866,
+        "strategy_digest": "4e7fec3d8c073f1a"
+      },
+      {
+        "campaign_index": 71,
+        "fill_log_digest": "720520313ed9a78da4766569bfc03fd942eecaf005b6baf11c7113725a93573b",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "ef03f56a228e9576"
+      },
+      {
+        "campaign_index": 72,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "67f1fc5e369de290"
+      },
+      {
+        "campaign_index": 73,
+        "fill_log_digest": "a74715a2857fb0acf2045296a95f4b91aa41e4d7bd794a8bad7742d5d37c8c12",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "8ee81f8f7c57b9c6"
+      },
+      {
+        "campaign_index": 74,
+        "fill_log_digest": "7a847bf4b1d5cf9dc0bb02f598264edc74674cf29f6693c454a874eab644dcfb",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "fd8052ac6529b83c"
+      },
+      {
+        "campaign_index": 75,
+        "fill_log_digest": "ddacd873ca63ae4bbaa6e9a84dcd786a8c215f73a933c25d9a837d82d8e4ccc1",
+        "outcome": "completed",
+        "score": -0.0462967663821619,
+        "strategy_digest": "c4039759eb8f5f92"
+      },
+      {
+        "campaign_index": 76,
+        "fill_log_digest": "6d1e0428f13bb96c3256c464d48949f764663d7f43a3b46e12747c7a520b0297",
+        "outcome": "completed",
+        "score": 0.12519111831691807,
+        "strategy_digest": "0bcff489a2fcfdbc"
+      },
+      {
+        "campaign_index": 77,
+        "fill_log_digest": "b914e508624eb299062d462eb44e668fe73203f4158b3e8583a09489019105ee",
+        "outcome": "completed",
+        "score": -0.02971253815487965,
+        "strategy_digest": "bb253129b07f5c28"
+      },
+      {
+        "campaign_index": 78,
+        "fill_log_digest": "2a4b1b9ab581e3ca49580708a079705c38d134080fb16c19f900db91a58be2a6",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "709529e734b0da2a"
+      },
+      {
+        "campaign_index": 79,
+        "fill_log_digest": "f8ed6ec0665e100b1cd684c82b667b40c33ae00e2b6673648c48bda0c6e2f436",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "ce270980138c8c12"
+      },
+      {
+        "campaign_index": 80,
+        "fill_log_digest": "6f9a369836735f7d5eb3a9a4912f6002d33f9b099d8b97dd98c00d7c19b4b660",
+        "outcome": "completed",
+        "score": -0.0518869651813321,
+        "strategy_digest": "ce208bd044367b51"
+      },
+      {
+        "campaign_index": 81,
+        "fill_log_digest": "6a37b1cdc224ce17d34eae42b337c178189110d8a2c8ef2a8a5bdb1f81186ac2",
+        "outcome": "completed",
+        "score": -0.1399674554801459,
+        "strategy_digest": "96af13fd7fda3ead"
+      },
+      {
+        "campaign_index": 82,
+        "fill_log_digest": "90aff0cfffe72a259513a0eb8ffeb46e9f60ca8cceac7d52262e2889b2fcf5bb",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "f3dcd16e3a9e179c"
+      },
+      {
+        "campaign_index": 83,
+        "fill_log_digest": "03e25a17b2dd4f36cd3a0066c884fc75062adcbda4a23786b84cd39dd0c3f79a",
+        "outcome": "completed",
+        "score": -0.08903783302090372,
+        "strategy_digest": "ceb9d8802f80bc9e"
+      },
+      {
+        "campaign_index": 84,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "b932c9c4ff190f3c"
+      },
+      {
+        "campaign_index": 85,
+        "fill_log_digest": "ca5f20c873b00f7d734704614c490bf639838310c08f7de0e83efaaf656320c1",
+        "outcome": "completed",
+        "score": -0.08491869913402364,
+        "strategy_digest": "d135aeae4e428f8d"
+      },
+      {
+        "campaign_index": 86,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "8ad958ce8ff13ecb"
+      },
+      {
+        "campaign_index": 87,
+        "fill_log_digest": "6d1e0428f13bb96c3256c464d48949f764663d7f43a3b46e12747c7a520b0297",
+        "outcome": "completed",
+        "score": 0.12519111831691807,
+        "strategy_digest": "e00792f661c94845"
+      },
+      {
+        "campaign_index": 88,
+        "fill_log_digest": "8871d4d72978c7d5fb57eab667494d5169ed6730026dfc91048495db8b68368c",
+        "outcome": "completed",
+        "score": -0.030701356622968436,
+        "strategy_digest": "1b4c5e9f882779a1"
+      },
+      {
+        "campaign_index": 89,
+        "fill_log_digest": "476bec3fcb6956d61dafd892afbac9c0f38c6554feacb8d8a5cccee176599241",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "3c3e225fd152524a"
+      },
+      {
+        "campaign_index": 90,
+        "fill_log_digest": "a4416fd14e44b9db2b9922ff0e3e033d291bfd518bd3f2aa6882c8b09f63e279",
+        "outcome": "completed",
+        "score": 0.12291070234011356,
+        "strategy_digest": "3db1736c10c3f300"
+      },
+      {
+        "campaign_index": 91,
+        "fill_log_digest": "4cb91a1b134533271087bbbe7ecb1a2c2f2e5af81a3894fdd18fffe2a8084789",
+        "outcome": "completed",
+        "score": -0.16773231848020304,
+        "strategy_digest": "4a2b7a8feee4f5c4"
+      },
+      {
+        "campaign_index": 92,
+        "fill_log_digest": "a4416fd14e44b9db2b9922ff0e3e033d291bfd518bd3f2aa6882c8b09f63e279",
+        "outcome": "completed",
+        "score": 0.12291070234011356,
+        "strategy_digest": "68d655d34455c304"
+      },
+      {
+        "campaign_index": 93,
+        "fill_log_digest": "0bd7db6e032e92bf07fa6645c603a125268ba080e14bf06e95590b0202f5985a",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "b0c752854330b6f0"
+      },
+      {
+        "campaign_index": 94,
+        "fill_log_digest": "7739efe29ba39da12acc1e41f127a01e453dcccb7b27699311be84f87e0ab61e",
+        "outcome": "completed",
+        "score": -0.06448884517836437,
+        "strategy_digest": "c353db2ab8d8d454"
+      },
+      {
+        "campaign_index": 95,
+        "fill_log_digest": "3f65e3a4c0d236a5d9d0f644f0757360fada7a2164f27438b48d4ad715a9c3ff",
+        "outcome": "completed",
+        "score": -0.10641444455971014,
+        "strategy_digest": "8dd7b9b768c069cb"
+      },
+      {
+        "campaign_index": 96,
+        "fill_log_digest": "463dc5274103c942bfdb6c3b681a4cf798a9ffb9b2eb077675f2ff445a14297c",
+        "outcome": "completed",
+        "score": -0.27619955707847565,
+        "strategy_digest": "c59c5becfbaf8682"
+      },
+      {
+        "campaign_index": 97,
+        "fill_log_digest": "a5c272f80c25378e5e1f4db38d8f88d32cfc5bd6837bc28f87a2fd0589a6530b",
+        "outcome": "completed",
+        "score": 0.08012622214988285,
+        "strategy_digest": "1b71d28202c63156"
+      },
+      {
+        "campaign_index": 98,
+        "fill_log_digest": "1cb77eaf1096cf9f0668325843db14449f29d46e8b46eb62785a774faba51d88",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "aef01403b3e03fc6"
+      },
+      {
+        "campaign_index": 99,
+        "fill_log_digest": "746947ee142ceff7901b436fb2216f87cb24dd70b01b7476494dbdf7df13fa33",
+        "outcome": "completed",
+        "score": -0.1859348446531196,
+        "strategy_digest": "0f9bfe096947fa62"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 89,
+      "crashed": 11
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 100,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 0.4778743902443841,
+    "mean": -0.06733802844374549,
+    "min": -0.5551500420762433,
+    "n_draws": 590000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.11257557461075479
+  },
+  "provenance": {
+    "artifact_fingerprint": "8c2795dd8a3de2ef6981f1565d5065d6f47384549d080b77487ec611846393f4",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/auction-market-features.md": "c306848e27d52157a9e1ea478905aa4ad6e585b56b84bc892962aeeb02d826e9",
+      "config/hypotheses/flow-continuation-5m.md": "13516e4d73d2286805b68d526fe8590581c3ed64c418e44f2557a319ba7a4fea",
+      "config/hypotheses/flow-continuation.md": "2fd992b524213040d9b59c1ae1cde0b54404fc5ca779d9dc68d774c72dca0528",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-move-continuation-vs-giveback.md": "dd898b0ac0548576dafc2f61169a5334e834d48f7bc83d2cfcaf2c8901cfe876",
+      "config/hypotheses/nq-opening-reversal.md": "37fcea5a90f37b7b05faaab7e15e74990878bbaba226b41171965908b2a40b91",
+      "config/hypotheses/ohlcv-momentum-friction-ceiling.md": "ff9d1893266f2f7eeb05f0f27a2751e9e95a4ea58f8c38f236aa9fc9e7c867a6",
+      "config/hypotheses/opening-range-break-continuation-failure.md": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+      "config/hypotheses/opening-range-break-continuation-or-fade.md": "4e48d6e16fba78098a993549b2528853e8c4c909908d501cf1d6ad3309988440",
+      "config/hypotheses/opening-range-breakout-30m.md": "021eb8f94018416e4294293831f5c8d4370ac0bd6cb1c39b42f3b57771ea6128",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md": "4a97e2e35a2111d81a49331782789191c9765efdb5df34c7aefedeb7234cf557",
+      "config/hypotheses/outsized-move-continuation-refined.md": "25d9b544894e7d214729ba058d1783e6b0d3d16608e560346538076341626c77",
+      "config/hypotheses/outsized-move-continuation-vs-giveback.md": "00074ec0231d64452b65b1515e9669d711425a1220e6039b3e61abd1638766a6",
+      "config/hypotheses/session-move-continuation-robustness.md": "087be6eedd20f472989bdadf3944e054b3a0daa42cafb589170455bc6ecb44b3",
+      "config/prompts/family-review.md": "012935b192b8ca9ff3ed3a3c9635dfdab4df9f8f95dc1db1791f35bc8532fb82",
+      "config/prompts/hypothesis-refine.md": "c16601e03abf5b62933cbe86d816d88b9215897de58efdd4295ddd02e9b037be",
+      "config/prompts/hypothesis-review.md": "6d6e194e5f5b473d37e32d168d5404589c426115b54e714c9713a56b9ea81353",
+      "config/prompts/paper-distil.md": "0dcafaf00f0a1d990fd26880d532f3eac423a36b1488d1ebd7b28a8747fb4504",
+      "config/prompts/paper-rank.md": "b8acfdf9c01f9c3ec7c6e0c8da4ca1ff54f401c5e7bf60c41b6b366993c15784",
+      "config/prompts/paper-screen.md": "dc10f5d4cc98dd8aa463c81b79f1c710b648e70e2d9095c4245c100d02b9160a",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/prompts/strategy-review.md": "e71f9f8813ba4d9bea3f8830c31cb3818472302357615834c47d3e6d5ec7f518",
+      "config/run.yaml": "ac43831d4dba82b9d54cde4e6b0dee9ea6d3520aa43317a5c3d5b10d5d2b115b",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "dcd358dbf295f1f215278af88fda5047a4ffbac1845e477042066921aababe60"
+    },
+    "code_fingerprint": "3977a7a742a59477c7830f711cb8d1f06b62a18e7339a3641f3a563f271eddf7",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "1780999a09c5f53172887db2f7008c9235d2f685bf7f64ee487d213c8eef9361",
+    "git_sha": "519bca2579782ee92743bcdb529b1e35e875e4bf",
+    "isolation": {
+      "address_space": {
+        "active": false,
+        "mechanism": "unavailable: RLIMIT_AS/DATA/RSS cannot be set"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "scored campaigns should run on Linux; see docs/design/architecture.md",
+      "filesystem": {
+        "active": true,
+        "mechanism": "sandbox-exec profile (deprecated)"
+      },
+      "level": "best-effort",
+      "network": {
+        "active": true,
+        "mechanism": "denied by the same profile"
+      },
+      "platform": "Darwin",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "absent",
+    "python_version": "3.11.5",
+    "scoring_fingerprint": "89163b76ed81a20562b3ff001fe71a5f0df8a70b3f5652b1c6f3f98ee8437395"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-10-04T23:01:43+00:00"
+}

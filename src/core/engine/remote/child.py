@@ -181,8 +181,10 @@ class Window:
         if index < first or index >= self._total:
             raise WindowTooShort(
                 f"index {index} is outside the pushed window: the engine sent "
-                f"the last {len(self._items)} of {self._total}. Declare a longer "
-                f"window, or keep what you need on `self` as it arrives."
+                f"the last {len(self._items)} of {self._total}. The window is "
+                f"fixed by the committed profile and a strategy CANNOT change "
+                f"it -- keep what you need on `self` as it arrives instead, in "
+                f"the callback, and read it from there."
             )
         return self._items[index - first]
 
@@ -197,7 +199,14 @@ class Window:
         if first:
             raise WindowTooShort(
                 f"iterating would visit {self._total} items and the engine sent "
-                f"the last {len(self._items)}"
+                f"the last {len(self._items)}. The window is fixed by the "
+                f"committed profile and a strategy CANNOT change it. Either "
+                f"slice what you need -- `ctx.history('5m')[-20:]` is inside the "
+                f"window -- or accumulate on `self` as bars arrive. **Added "
+                f"2026-10-05: this message used to stop at the counts, and the "
+                f"companion one advised declaring a longer window, which is "
+                f"impossible. 18 trials across session-05b and session-06 died "
+                f"here, several retrying the advice.**"
             )
         return iter(self._items)
 
@@ -225,8 +234,10 @@ class Window:
         if k > len(self._items) and k <= self._total:
             raise WindowTooShort(
                 f"last({k}) reaches past the pushed window: the engine sent the "
-                f"last {len(self._items)} of {self._total}. Declare a longer "
-                "window, or keep what you need on `self` as it arrives."
+                f"last {len(self._items)} of {self._total}. The window is "
+                f"fixed by the committed profile and a strategy CANNOT change "
+                f"it -- ask for at most {len(self._items)}, or accumulate on "
+                f"`self` as bars arrive."
             )
         return tuple(self._items[-k:])
 
@@ -259,6 +270,24 @@ class _ClosedBars:
         except Exception:
             return False
         return any(bar.sub_id == sid for bar in self._ctx.closed)
+
+    def get(self, sub: "str | Subscription", default=None):
+        """`self[sub]` if that bar closed in this callback, else `default`.
+
+        **Added 2026-10-05 because its absence crashed 13 trials.** This object
+        answers "did my bar close just now", and the natural Python for that is
+        `ctx.bars.get("5m")` -- it supports `__getitem__`, `__contains__`,
+        `__len__` and `__iter__`, so a model reasonably reads it as a mapping and
+        reaches for the one mapping method it did not have. Every one of those
+        proposals was correct about what it wanted and died on the spelling.
+
+        Not a loosening of anything: it returns exactly what `sub in self` then
+        `self[sub]` returns, and no strategy could previously have called it.
+        """
+        try:
+            return self[sub]
+        except Exception:
+            return default
 
     def __len__(self) -> int:
         return len(self._ctx.closed)

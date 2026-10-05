@@ -599,6 +599,24 @@ class _ClosedBars:
         sid = self._ctx.sub_id(sub)
         return any(bar.sub_id == sid for bar in self._ctx.closed)
 
+    def get(self, sub: "str | Subscription", default=None):
+        """`self[sub]` if that bar closed in this callback, else `default`.
+
+        **Added 2026-10-05 because its absence crashed 13 trials.** This object
+        answers "did my bar close just now", and the natural Python for that is
+        `ctx.bars.get("5m")` -- it supports `__getitem__`, `__contains__`,
+        `__len__` and `__iter__`, so a model reasonably reads it as a mapping and
+        reaches for the one mapping method it did not have. Every one of those
+        proposals was correct about what it wanted and died on the spelling.
+
+        Not a loosening of anything: it returns exactly what `sub in self` then
+        `self[sub]` returns, and no strategy could previously have called it.
+        """
+        try:
+            return self[sub]
+        except Exception:
+            return default
+
     def __len__(self) -> int:
         return len(self._ctx.closed)
 

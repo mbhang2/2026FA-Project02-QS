@@ -244,8 +244,37 @@ def campaign_stage(name: str, stage: str, extra: list[str] | None = None,
                      label=f"{name} {stage}", retries=retries, backoff=backoff)
 
 
+def trials_run(name: str) -> int:
+    f = CAMPAIGNS / name / "ledger.jsonl"
+    if not f.is_file():
+        return 0
+    return len([x for x in f.read_text().splitlines() if x.strip()])
+
+
+def budget_of(name: str) -> int | None:
+    f = CAMPAIGNS / name / "campaign.json"
+    if not f.is_file():
+        return None
+    return (json.loads(f.read_text()).get("record") or {}).get("budget")
+
+
 def already_run(name: str) -> bool:
-    return (CAMPAIGNS / name / "ledger.jsonl").exists()
+    """Did this campaign FINISH its pre-registered budget?
+
+    **This was `ledger.jsonl exists`, and that lost a campaign.** nq-s06-03 died
+    at trial 36 of 100 on a gateway substitution; it has a ledger, so a
+    `--resume` would have called it "already run" and skipped it forever. The
+    campaign was recoverable the whole time -- `--stage run` resumes at
+    `len(rows)` -- and nothing would ever have resumed it.
+
+    A partial campaign now reads as unfinished, so a resume continues it to its
+    registered budget. That is the honest reading of a budget: 36 of 100 trials
+    is not a campaign that ran.
+    """
+    budget = budget_of(name)
+    if budget is None:
+        return (CAMPAIGNS / name / "ledger.jsonl").is_file()
+    return trials_run(name) >= budget
 
 
 def registered(name: str) -> bool:
@@ -351,7 +380,9 @@ def _main() -> int:
           f"  (once = go to the stop; twice = abort. Ctrl-C works if attached.)")
     print("  validation runs AT THE STOP, not per campaign (section 4)\n")
     for c in entries:
-        mark = "already run" if already_run(c["name"]) else "to run"
+        n, b = trials_run(c["name"]), budget_of(c["name"])
+        mark = ("already run" if already_run(c["name"])
+                else f"resume at {n}/{b}" if n and b else "to run")
         h = c.get("hypothesis")
         shown = (str(h).replace("config/hypotheses/", "") if h else
                  "(refined from the campaign before it -- not written yet)")
@@ -651,7 +682,8 @@ def _main() -> int:
           "  a second Ctrl-C from here aborts.\n")
     for name in names:
         if not already_run(name):
-            print(f"  {name}: no ledger, nothing to validate")
+            print(f"  {name}: did not finish its budget "
+                  f"({trials_run(name)}/{budget_of(name)}), nothing to validate")
             continue
         code, _ = campaign_stage(name, "validate")
         log["validation"][name] = "done" if code == 0 else "failed"

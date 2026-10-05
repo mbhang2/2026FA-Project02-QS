@@ -405,3 +405,68 @@ def test_the_crash_analysis_records_what_is_not_fixed():
     assert "mypy can only check what is typed" in flat
     assert "ARTIFACT_GLOBS" in flat
     assert "not separable from this campaign alone" in flat
+
+
+# --------------------------------------------------------------------------- #
+# crash prevention and mid-campaign recovery (2026-10-05)
+# --------------------------------------------------------------------------- #
+def test_closed_bars_supports_get():
+    """**13 trials died on `ctx.bars.get("5m")`.** The object answers "did my bar
+    close just now" and supports `__getitem__`, `__contains__`, `__len__` and
+    `__iter__`, so a model reads it as a mapping and reaches for the one mapping
+    method it did not have. Every one of those proposals was right about what it
+    wanted and died on the spelling.
+
+    Both copies: the in-process context and the remote child carry their own.
+    """
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from src.core.engine.context import _ClosedBars
+    assert hasattr(_ClosedBars, "get")
+    child = (REPO_ROOT / "src" / "core" / "engine" / "remote" / "child.py").read_text()
+    assert "def get(self, sub" in child, "the remote child needs it too"
+
+    class _Ctx:
+        def closed_ids(self):
+            return ()
+    b = _ClosedBars.__new__(_ClosedBars)
+    b._ctx = _Ctx()
+    assert b.get("5m") is None
+    assert b.get("5m", "d") == "d"
+
+
+def test_window_errors_do_not_advise_the_impossible():
+    """**18 trials died here, several retrying the advice.** The message said
+    "Declare a longer window", and a strategy CANNOT: the window is fixed by the
+    committed profile and `run.py` takes no arguments. An error that tells you to
+    do something impossible is worse than one that only states the fact."""
+    import re
+    child = (REPO_ROOT / "src" / "core" / "engine" / "remote" / "child.py").read_text()
+    # Adjacent f-string literals are joined before matching: flattening alone
+    # leaves the `" f"` between them in the middle of every wrapped sentence,
+    # which is the trap that made the first version of this test fail.
+    flat = " ".join(re.sub(r'"\s*f?"', "", child).split())
+    assert "Declare a longer window" not in flat
+    assert flat.count("fixed by the committed profile and a strategy CANNOT") == 3, (
+        "all three guards -- index, iteration and last(k) -- must say it. The "
+        "first version of this test asserted 2 and found the third site.")
+    # and both offer a remedy that exists
+    assert "accumulate on `self`" in flat
+    assert "keep what you need on `self` as it arrives" in flat
+    assert "ctx.history('5m')[-20:]" in flat, "name a slice that is inside it"
+
+
+def test_a_partial_campaign_is_resumable_not_finished():
+    """`already_run` was "ledger.jsonl exists", so nq-s06-03 -- dead at trial 36
+    of 100 -- would have been skipped by a resume as "already run" and lost. It
+    was recoverable the whole time: `--stage run` resumes at `len(rows)`."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_rs2", REPO_ROOT / "scripts" / "research_session.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    assert m.already_run("nq-s06-01") is True, "100/100 is finished"
+    if (REPO_ROOT / "runs" / "campaigns" / "nq-s06-03" / "campaign.json").exists():
+        assert m.trials_run("nq-s06-03") < m.budget_of("nq-s06-03")
+        assert m.already_run("nq-s06-03") is False, (
+            "36 of 100 trials is not a campaign that ran")

@@ -184,7 +184,7 @@ def on_bars(self, ctx):
 | `ctx.actionable` | `False` during warmup: bars are real, orders are ignored |
 | `ctx.last_price` | the most recent trade price |
 | `ctx.history(sub)` | every closed bar for a subscription, oldest first |
-| `ctx.bars` | the bars that closed **in this callback**; `"5m" in ctx.bars`, `ctx.bars["5m"]` |
+| `ctx.bars` | the bars that closed **in this callback**; `"5m" in ctx.bars`, `ctx.bars["5m"]`, `ctx.bars.get("5m")` |
 | `ctx.closed` | the same bars as a tuple; `ctx.closed_ids()` for their canonical ids |
 | `ctx.sub_id(sub)` | the canonical id of a subscription you declared |
 | `ctx.ticks()` | every trade event so far — **only populated if you subscribed to ticks** |
@@ -464,6 +464,13 @@ observe:
 
 **History is a window, and reaching past it raises.** Each callback carries the
 last N bars per subscription, N declared by the profile (512 by default).
+
+**You cannot change that number and you will be told if you reach past it.** The
+window is a committed profile setting and `run.py` takes no arguments, so
+`WindowTooShort` is not something to work around -- it means ask for less, or keep
+what you need on `self` as bars arrive and read it from there. `ctx.history("5m")`
+sliced to the last few hundred is inside the window; iterating the whole of it on
+a long session is not.
 `len(ctx.history("5m"))` is still the true total — the count is exact — but
 `ctx.history("5m")[0]` on a run that has seen 4,000 bars raises
 `WindowTooShort` rather than returning something. If you need more than the

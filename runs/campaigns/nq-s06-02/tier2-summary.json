@@ -1,0 +1,2010 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 92,
+    "diagnostics": {
+      "avg_holding_period_ns": 833992696103.7924,
+      "best_session_share": 0.054768782181323236,
+      "by_hour_utc": {
+        "00": -326.65000000000214,
+        "01": 210.29999999999976,
+        "02": 98.0000000000012,
+        "03": -71.19999999999978,
+        "04": 47.34999999999978,
+        "05": -205.89999999999944,
+        "06": -448.35000000000275,
+        "07": -21.8499999999992,
+        "08": 69.95000000000083,
+        "09": -31.650000000000055,
+        "10": -0.8999999999991406,
+        "11": 497.29999999999643,
+        "12": 394.0999999999966,
+        "13": -519.400000000001,
+        "14": -194.9999999999991,
+        "15": 938.1999999999944,
+        "16": 609.7499999999936,
+        "17": 94.79999999999936,
+        "18": -176.5500000000008,
+        "19": -438.0500000000038,
+        "20": -154.09999999999974,
+        "21": 126.1,
+        "22": -147.95,
+        "23": -73.65000000000002
+      },
+      "by_month": {
+        "2024-07": -494.0000000000091,
+        "2024-08": -382.2500000000007,
+        "2024-09": 39.85000000000022,
+        "2024-10": 205.15000000000188,
+        "2024-11": 876.549999999989,
+        "2024-12": -105.04999999999973,
+        "2025-01": 846.0999999999852,
+        "2025-02": -243.4000000000015,
+        "2025-03": 227.55000000000058,
+        "2025-04": 419.8999999999935,
+        "2025-05": -55.699999999998916,
+        "2025-06": -975.200000000011,
+        "2025-07": -62.79999999999805,
+        "2025-08": -82.24999999999787,
+        "2025-09": 60.20000000000048
+      },
+      "by_weekday": {
+        "Fri": -1011.2000000000191,
+        "Mon": -706.9000000000284,
+        "Sun": 6.349999999999998,
+        "Thu": 1082.6000000000663,
+        "Tue": 348.09999999998354,
+        "Wed": 555.6999999999817
+      },
+      "commission": 913.1,
+      "fill_model_spread": null,
+      "gross_pnl": 1187.75,
+      "max_drawdown": -1449.6948160075447,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 0.4906,
+        "exposure_share": 0.6589,
+        "return_dispersion": 0.29,
+        "trades_per_session": 0.2711
+      },
+      "profit_concentration_top5pct": 0.4814603443755612,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 253,
+      "trade_count": 4528,
+      "turnover_contracts_per_session": 23.778645833333332,
+      "win_rate": 0.44125441696113077
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 196,
+      "kurtosis": 7.638877633765295,
+      "metric": "sortino_per_session",
+      "min_exposed_fraction": 0.7,
+      "n_sessions": 384,
+      "net_pnl": 274.65,
+      "primary": 0.012055482672138162,
+      "primary_uncharged": 0.014576916367702574,
+      "reject_reason": "",
+      "rejected": false,
+      "sessions_exposed": 334,
+      "sharpe": 0.007426209367682172,
+      "significance": 0.23623824919762212,
+      "skew": 1.3108342019582042,
+      "sortino": 0.012055482672138162,
+      "trade_count": 4528
+    },
+    "source": "\"\"\"Opening-range breakout fade with a volatility-scaled threshold, a\ntime-stop exit, and a protective stop.\n\nThe question asks whether the move holds or the range wins. Prior\ncontinuation attempts have all lost money, suggesting the range may win\nmore often than the move holds. This strategy answers \"the range wins\" by\nfading breakouts back toward the opening range, but only when the breakout\nis not too large relative to the opening range itself.\n\nOpening range: high and low of the first 30 minutes of the regular-hours\nsession, tracked incrementally from 5-minute bars.\n\nBreakout definition: a 5-minute bar close beyond the opening range by at\nleast 0.1 * the average true range of the prior 10 sessions, but no more\nthan 1.5 times the opening range width. This filters out the strongest\nbreakouts, which are more likely to continue.\n\nDirection: always fade the breakout. A close above the range is sold; a\nclose below is bought.\n\nEntry: on the bar close that confirms the breakout.\n\nExit: a stated deadline of 10 minutes from entry, at which point the\nposition is closed at market. A protective stop is placed 0.1 average true\nranges beyond the entry, against the fade direction.\n\nThe rule acts on every session where a qualifying breakout occurs.\n\nState is kept on self to avoid WindowTooShort: the opening range is\naccumulated from bars as they close, and prior average true ranges are stored\nin a rolling list.\n\"\"\"\n\nfrom __future__ import annotations\n\n\nclass Strategy:\n    def __init__(\n        self,\n        *,\n        interval: str = \"5m\",\n        range_minutes: int = 30,\n        breakout_mult: float = 0.1,\n        max_breakout_range_mult: float = 1.5,\n        size: int = 1,\n        hold_minutes: int = 10,\n        stop_mult: float = 0.1,\n        lookback_sessions: int = 10,\n    ):\n        self.interval = interval\n        self.range_minutes = range_minutes\n        self.breakout_mult = breakout_mult\n        self.max_breakout_range_mult = max_breakout_range_mult\n        self.size = size\n        self.hold_minutes = hold_minutes\n        self.stop_mult = stop_mult\n        self.lookback_sessions = lookback_sessions\n\n        self._session = None\n        self._session_open_ts = None\n        self._range_high = None\n        self._range_low = None\n        self._entry_ts = None\n        self._prior_atrs: list[float] = []\n        self._current_session_high = None\n        self._current_session_low = None\n        self._current_session_close = None\n\n    def setup(self, ctx):\n        ctx.subscribe(self.interval)\n\n    def on_bars(self, ctx):\n        if not ctx.actionable:\n            return\n\n        # Session boundary: reset state and store the prior session's average\n        # true range.\n        if ctx.session != self._session:\n            if self._session is not None:\n                if (\n                    self._current_session_high is not None\n                    and self._current_session_low is not None\n                    and self._current_session_close is not None\n                ):\n                    prev_close = self._current_session_close\n                    true_range = max(\n                        self._current_session_high - self._current_session_low,\n                        abs(self._current_session_high - prev_close),\n                        abs(self._current_session_low - prev_close),\n                    )\n                    self._prior_atrs.append(true_range)\n                    if len(self._prior_atrs) > self.lookback_sessions:\n                        self._prior_atrs.pop(0)\n\n            self._session = ctx.session\n            self._session_open_ts = ctx.session_start\n            self._range_high = None\n            self._range_low = None\n            self._entry_ts = None\n            self._current_session_high = None\n            self._current_session_low = None\n            self._current_session_close = None\n\n        # Track the session's high, low, and close from all bars.\n        for bar in ctx.closed:\n            if self._current_session_high is None:\n                self._current_session_high = bar.high\n                self._current_session_low = bar.low\n            else:\n                self._current_session_high = max(self._current_session_high, bar.high)\n                self._current_session_low = min(self._current_session_low, bar.low)\n            self._current_session_close = bar.close\n\n        # Manage existing position: close at deadline\n        if ctx.position:\n            if self._entry_ts is not None:\n                elapsed = (ctx.ts - self._entry_ts) / 1_000_000_000\n                if elapsed >= self.hold_minutes * 60:\n                    ctx.close()\n                    self._entry_ts = None\n            return\n\n        # No position: collect opening range and look for breakout\n        if self.interval not in ctx.bars:\n            return\n        bar = ctx.bars[self.interval]\n\n        range_end_ts = self._session_open_ts + self.range_minutes * 60 * 1_000_000_000\n\n        # Accumulate opening range from bars that start within the first\n        # range_minutes of the session.\n        if bar.open_ts < range_end_ts:\n            if self._range_high is None:\n                self._range_high = bar.high\n                self._range_low = bar.low\n            else:\n                self._range_high = max(self._range_high, bar.high)\n                self._range_low = min(self._range_low, bar.low)\n            return\n\n        # Opening range is complete; require it to be non-degenerate\n        if self._range_high is None or self._range_low is None:\n            return\n        range_width = self._range_high - self._range_low\n        if range_width <= 0:\n            return\n\n        # Compute breakout threshold from recent average true ranges\n        if len(self._prior_atrs) >= self.lookback_sessions:\n            avg_atr = sum(self._prior_atrs) / len(self._prior_atrs)\n            threshold = self.breakout_mult * avg_atr\n            stop_distance = self.stop_mult * avg_atr\n        else:\n            threshold = self.breakout_mult * range_width\n            stop_distance = self.stop_mult * range_width\n\n        last = bar\n        breakout_up = last.close > self._range_high + threshold\n        breakout_down = last.close < self._range_low - threshold\n\n        if not (breakout_up or breakout_down):\n            return\n\n        # Filter out very large breakouts relative to the opening range\n        max_breakout = self.max_breakout_range_mult * range_width\n        if breakout_up and (last.close - self._range_high) > max_breakout:\n            return\n        if breakout_down and (self._range_low - last.close) > max_breakout:\n            return\n\n        # Always fade the breakout, with a protective stop against the fade\n        if breakout_up:\n            ctx.sell(\n                size=self.size,\n                stop_offset=stop_distance,\n                tag=\"range-fade-short\",\n            )\n        else:\n            ctx.buy(\n                size=self.size,\n                stop_offset=stop_distance,\n                tag=\"range-fade-long\",\n            )\n\n        self._entry_ts = ctx.ts\n\n    def on_fill(self, ctx):\n        pass\n\n    def on_lifecycle(self, ctx):\n        pass\n",
+    "source_sha256": "09b92587168177eae60e73899748798871564b9959ad5dbdff00c96519799122",
+    "strategy_digest": "09b92587168177ea"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.1,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "4c41b63249ae6113d53a032cde5c13651d107b7bf77450043f82d58e33488bfe",
+        "path": "config/hypotheses/opening-range-break-resolution.md"
+      },
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 65536,
+      "model": "deepseek-v4-pro",
+      "model_served_at_registration": "deepseek-v4-pro",
+      "null_source": "round_turn_mc",
+      "probe_before_trial": true,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real NQ futures trades, 384 scored sessions on the pre-registered train split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side. NQ is $20 a point, so a round trip costs about $4.00 a contract. At high turnover this dominates: the baseline strategy on this split traded 103,355 times and paid more in commission than it made gross.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "nq-s06-02",
+    "budget": 100,
+    "campaign_id": "nq-s06-02",
+    "dataset": "nq-trades",
+    "profile": "nq-train",
+    "q": 0.05,
+    "record_digest": "cb346bfd3a813442962f69e5e1a1c73231154399e19e3330b3f86d2c60c54db1",
+    "record_digest_now": "cb346bfd3a813442962f69e5e1a1c73231154399e19e3330b3f86d2c60c54db1",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-10-05T05:07:58+00:00"
+  },
+  "deflation_view": {
+    "best_score": 0.012055482672138162,
+    "clears_selection_bar": false,
+    "expected_max_under_null": 0.1880654001079954,
+    "margin": -0.17600991743585725,
+    "n_sessions": 384,
+    "n_trials": 100,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.31753323163920727,
+      "best_label": "92:09b92587",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0005,
+          "far": 0.31753323163920727,
+          "holm_accepted": false,
+          "holm_critical": 0.0005,
+          "index": 92,
+          "label": "92:09b92587",
+          "rank": 1
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.001,
+          "far": 0.31753323163920727,
+          "holm_accepted": false,
+          "holm_critical": 0.000505050505050505,
+          "index": 96,
+          "label": "96:09b92587",
+          "rank": 2
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0015,
+          "far": 0.42596131145016075,
+          "holm_accepted": false,
+          "holm_critical": 0.0005102040816326531,
+          "index": 99,
+          "label": "99:0892bd89",
+          "rank": 3
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.002,
+          "far": 0.48455718693523353,
+          "holm_accepted": false,
+          "holm_critical": 0.0005154639175257732,
+          "index": 87,
+          "label": "87:9a2847b2",
+          "rank": 4
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0025000000000000005,
+          "far": 0.48455718693523353,
+          "holm_accepted": false,
+          "holm_critical": 0.0005208333333333333,
+          "index": 89,
+          "label": "89:9a2847b2",
+          "rank": 5
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.003,
+          "far": 0.48455718693523353,
+          "holm_accepted": false,
+          "holm_critical": 0.0005263157894736842,
+          "index": 93,
+          "label": "93:9a2847b2",
+          "rank": 6
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0035000000000000005,
+          "far": 0.48455718693523353,
+          "holm_accepted": false,
+          "holm_critical": 0.0005319148936170213,
+          "index": 94,
+          "label": "94:3210667e",
+          "rank": 7
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.004,
+          "far": 0.48455718693523353,
+          "holm_accepted": false,
+          "holm_critical": 0.0005376344086021505,
+          "index": 95,
+          "label": "95:9a2847b2",
+          "rank": 8
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0045,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0005434782608695652,
+          "index": 2,
+          "label": "2:b0cac1ba",
+          "rank": 9
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0005494505494505495,
+          "index": 3,
+          "label": "3:710049b9",
+          "rank": 10
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0055000000000000005,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0005555555555555556,
+          "index": 4,
+          "label": "4:be6957aa",
+          "rank": 11
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.006,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0005617977528089888,
+          "index": 5,
+          "label": "5:eaf15b69",
+          "rank": 12
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.006500000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0005681818181818183,
+          "index": 28,
+          "label": "28:5e5002ad",
+          "rank": 13
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.007000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0005747126436781609,
+          "index": 32,
+          "label": "32:16314bc3",
+          "rank": 14
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0075,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0005813953488372093,
+          "index": 36,
+          "label": "36:d8cb86df",
+          "rank": 15
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.008,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0005882352941176471,
+          "index": 40,
+          "label": "40:d40c704a",
+          "rank": 16
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0085,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0005952380952380953,
+          "index": 44,
+          "label": "44:358823c9",
+          "rank": 17
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.009,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006024096385542169,
+          "index": 45,
+          "label": "45:64b22167",
+          "rank": 18
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.009500000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006097560975609756,
+          "index": 46,
+          "label": "46:19a23662",
+          "rank": 19
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006172839506172839,
+          "index": 47,
+          "label": "47:15111cf4",
+          "rank": 20
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0105,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000625,
+          "index": 49,
+          "label": "49:66dd083d",
+          "rank": 21
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.011000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006329113924050633,
+          "index": 50,
+          "label": "50:58881fdd",
+          "rank": 22
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.011500000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000641025641025641,
+          "index": 51,
+          "label": "51:58881fdd",
+          "rank": 23
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.012,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006493506493506494,
+          "index": 52,
+          "label": "52:d8b7a91d",
+          "rank": 24
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0125,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006578947368421052,
+          "index": 54,
+          "label": "54:69d68e28",
+          "rank": 25
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.013000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006666666666666668,
+          "index": 55,
+          "label": "55:6b5756d2",
+          "rank": 26
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.013500000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006756756756756757,
+          "index": 56,
+          "label": "56:743adab9",
+          "rank": 27
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.014000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006849315068493151,
+          "index": 57,
+          "label": "57:69d68e28",
+          "rank": 28
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.014499999999999999,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0006944444444444445,
+          "index": 58,
+          "label": "58:68d17819",
+          "rank": 29
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007042253521126761,
+          "index": 59,
+          "label": "59:d0b1a918",
+          "rank": 30
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0155,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007142857142857143,
+          "index": 60,
+          "label": "60:68d17819",
+          "rank": 31
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.016,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007246376811594203,
+          "index": 61,
+          "label": "61:2ee709ca",
+          "rank": 32
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0165,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007352941176470588,
+          "index": 62,
+          "label": "62:051003f3",
+          "rank": 33
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.017,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007462686567164179,
+          "index": 63,
+          "label": "63:bbe8572a",
+          "rank": 34
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.017499999999999998,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007575757575757576,
+          "index": 66,
+          "label": "66:f6d60caf",
+          "rank": 35
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.018,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007692307692307692,
+          "index": 67,
+          "label": "67:8ce59130",
+          "rank": 36
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0185,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.00078125,
+          "index": 68,
+          "label": "68:4bafcdd7",
+          "rank": 37
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.019000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0007936507936507937,
+          "index": 69,
+          "label": "69:4bafcdd7",
+          "rank": 38
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.019500000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008064516129032258,
+          "index": 70,
+          "label": "70:451e6c25",
+          "rank": 39
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000819672131147541,
+          "index": 71,
+          "label": "71:df2a103a",
+          "rank": 40
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0205,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008333333333333334,
+          "index": 72,
+          "label": "72:7e16f614",
+          "rank": 41
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.021,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008474576271186442,
+          "index": 73,
+          "label": "73:df2a103a",
+          "rank": 42
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.021500000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008620689655172415,
+          "index": 74,
+          "label": "74:df2a103a",
+          "rank": 43
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.022000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008771929824561404,
+          "index": 75,
+          "label": "75:84167633",
+          "rank": 44
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.022500000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0008928571428571429,
+          "index": 76,
+          "label": "76:2b2c6bbd",
+          "rank": 45
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.023000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0009090909090909091,
+          "index": 77,
+          "label": "77:b9b65197",
+          "rank": 46
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0235,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000925925925925926,
+          "index": 78,
+          "label": "78:8b01f00f",
+          "rank": 47
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.024,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0009433962264150943,
+          "index": 79,
+          "label": "79:b517617b",
+          "rank": 48
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0245,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0009615384615384616,
+          "index": 80,
+          "label": "80:b517617b",
+          "rank": 49
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.000980392156862745,
+          "index": 82,
+          "label": "82:c86373f5",
+          "rank": 50
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025500000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001,
+          "index": 83,
+          "label": "83:6ccd88fe",
+          "rank": 51
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.026000000000000002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010204081632653062,
+          "index": 84,
+          "label": "84:bf40cde0",
+          "rank": 52
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.026500000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010416666666666667,
+          "index": 85,
+          "label": "85:d9c3845f",
+          "rank": 53
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.027000000000000003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010638297872340426,
+          "index": 86,
+          "label": "86:c86373f5",
+          "rank": 54
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.027500000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010869565217391304,
+          "index": 88,
+          "label": "88:28a2a4d5",
+          "rank": 55
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028000000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011111111111111111,
+          "index": 90,
+          "label": "90:99ca35d4",
+          "rank": 56
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028499999999999998,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011363636363636365,
+          "index": 91,
+          "label": "91:486222a6",
+          "rank": 57
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028999999999999998,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0011627906976744186,
+          "index": 0,
+          "label": "0:7e1f45e5",
+          "rank": 58
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0295,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0011904761904761906,
+          "index": 1,
+          "label": "1:6a101d2d",
+          "rank": 59
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0012195121951219512,
+          "index": 6,
+          "label": "6:5790f50d",
+          "rank": 60
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0305,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00125,
+          "index": 7,
+          "label": "7:5112f23c",
+          "rank": 61
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.031,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001282051282051282,
+          "index": 8,
+          "label": "8:d89df91d",
+          "rank": 62
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0315,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0013157894736842105,
+          "index": 9,
+          "label": "9:5790f50d",
+          "rank": 63
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.032,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0013513513513513514,
+          "index": 10,
+          "label": "10:39493bec",
+          "rank": 64
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0325,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001388888888888889,
+          "index": 11,
+          "label": "11:5790f50d",
+          "rank": 65
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.033,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0014285714285714286,
+          "index": 12,
+          "label": "12:9e147be1",
+          "rank": 66
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0335,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0014705882352941176,
+          "index": 13,
+          "label": "13:5790f50d",
+          "rank": 67
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0015151515151515152,
+          "index": 14,
+          "label": "14:83850c52",
+          "rank": 68
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034499999999999996,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0015625,
+          "index": 15,
+          "label": "15:9d3317bc",
+          "rank": 69
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034999999999999996,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0016129032258064516,
+          "index": 16,
+          "label": "16:83850c52",
+          "rank": 70
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0355,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0016666666666666668,
+          "index": 17,
+          "label": "17:5790f50d",
+          "rank": 71
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.036,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001724137931034483,
+          "index": 18,
+          "label": "18:60f08ca3",
+          "rank": 72
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0365,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0017857142857142859,
+          "index": 19,
+          "label": "19:37f4f969",
+          "rank": 73
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.037,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001851851851851852,
+          "index": 20,
+          "label": "20:37f4f969",
+          "rank": 74
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.037500000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0019230769230769232,
+          "index": 21,
+          "label": "21:19207339",
+          "rank": 75
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.038000000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002,
+          "index": 22,
+          "label": "22:60f08ca3",
+          "rank": 76
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.038500000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0020833333333333333,
+          "index": 23,
+          "label": "23:3fcd4889",
+          "rank": 77
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03900000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002173913043478261,
+          "index": 24,
+          "label": "24:aafe7ecf",
+          "rank": 78
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03950000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002272727272727273,
+          "index": 25,
+          "label": "25:ac8a3dcd",
+          "rank": 79
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04000000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002380952380952381,
+          "index": 26,
+          "label": "26:79696ec9",
+          "rank": 80
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04050000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0025,
+          "index": 27,
+          "label": "27:2b313c75",
+          "rank": 81
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.041,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "index": 29,
+          "label": "29:8ed4daae",
+          "rank": 82
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0415,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "index": 30,
+          "label": "30:2f2e0e58",
+          "rank": 83
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.042,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "index": 31,
+          "label": "31:2f2e0e58",
+          "rank": 84
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0425,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.003125,
+          "index": 33,
+          "label": "33:2f2e0e58",
+          "rank": 85
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.043000000000000003,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "index": 34,
+          "label": "34:2f2e0e58",
+          "rank": 86
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.043500000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "index": 35,
+          "label": "35:2f2e0e58",
+          "rank": 87
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.044000000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "index": 37,
+          "label": "37:b47c13c3",
+          "rank": 88
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.044500000000000005,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "index": 38,
+          "label": "38:2f2e0e58",
+          "rank": 89
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045000000000000005,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "index": 39,
+          "label": "39:fe202239",
+          "rank": 90
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045500000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.005,
+          "index": 41,
+          "label": "41:ac1ae1b3",
+          "rank": 91
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.046000000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "index": 42,
+          "label": "42:06a75dd2",
+          "rank": 92
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04650000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00625,
+          "index": 43,
+          "label": "43:3690e827",
+          "rank": 93
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.047,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "index": 48,
+          "label": "48:673fa648",
+          "rank": 94
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0475,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "index": 53,
+          "label": "53:e4c49dae",
+          "rank": 95
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.048,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.01,
+          "index": 64,
+          "label": "64:74f74e5c",
+          "rank": 96
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0485,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0125,
+          "index": 65,
+          "label": "65:c491adf0",
+          "rank": 97
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.049,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "index": 81,
+          "label": "81:83834b2d",
+          "rank": 98
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0495,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.025,
+          "index": 97,
+          "label": "97:80764f4c",
+          "rank": 99
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 98,
+          "label": "98:f6c40ab0",
+          "rank": 100
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 100,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "908c5e5c3f6c4fd4bf397035a49b4673a0d5c90f7ec977767a1ac5c3f75ff8c2",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 57,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 0.46089214620264424,
+    "null_max_mean": 0.2760690212770216,
+    "null_max_quantiles": {
+      "0.01": 0.6027273064873241,
+      "0.05": 0.46089214620264424,
+      "0.1": 0.4034015910946995,
+      "0.2": 0.34234384767838666,
+      "0.5": 0.25769593756122977
+    },
+    "observed_best": 0.012055482672138162,
+    "p": 1.0,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/nq-s06-02/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "16bf03ba0d5d5f4a5144c34663daa1d72a2f19bd20d7dadba6e015c363d13d0e",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "7e1f45e56bbc0b08"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "fcc8b1fd1b7f9452094f2a49eb8ac3bd32d22f37825b575ec5c1e31855eca9f3",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "6a101d2d897e9741"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "0da833ff126a447bb091f27e0ae10d90401ff0b0a61e905f388f6c769a96f56d",
+        "outcome": "completed",
+        "score": -0.05103103630798287,
+        "strategy_digest": "b0cac1bad0fc1379"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "f5b1ba56f6ae4c1227bc8f8c33bc2aa357646fcb2fdacb8f16fa1841ad7275d1",
+        "outcome": "completed",
+        "score": -0.0534377605585792,
+        "strategy_digest": "710049b99e80f93f"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "0da833ff126a447bb091f27e0ae10d90401ff0b0a61e905f388f6c769a96f56d",
+        "outcome": "completed",
+        "score": -0.05103103630798287,
+        "strategy_digest": "be6957aa3cffc6a9"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "0da833ff126a447bb091f27e0ae10d90401ff0b0a61e905f388f6c769a96f56d",
+        "outcome": "completed",
+        "score": -0.05103103630798287,
+        "strategy_digest": "eaf15b69a0078c8d"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "5790f50d84d4ab55"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "dfa878b13b36eb6016935b1d70afdcad44a328fc87eb49b9fe6898b1a8821aeb",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "5112f23c4115594c"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "b5d94989c470f5c38cc26b74823a482ce0b5769772293e962909b3adae281759",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "d89df91d99d449ab"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "5790f50d84d4ab55"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "39493bec5f6cba47"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "5790f50d84d4ab55"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "9e147be1492c5e75"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "5790f50d84d4ab55"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "83850c521f2e2622"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "9d3317bc9127ac77"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "83850c521f2e2622"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "5790f50d84d4ab55"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "60f08ca36c07bf2a"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "37f4f969e7a080f6"
+      },
+      {
+        "campaign_index": 20,
+        "fill_log_digest": "50c3879c4e4688a4597ddc8523e08bdeb96784711a0516fa18c5c880afb130fc",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "37f4f969e7a080f6"
+      },
+      {
+        "campaign_index": 21,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "192073390cba8136"
+      },
+      {
+        "campaign_index": 22,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "60f08ca36c07bf2a"
+      },
+      {
+        "campaign_index": 23,
+        "fill_log_digest": "7e7bdef2f8cc7c6739381cc26ffc503728e81d2954c7753a44d560b7ce5e1307",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "3fcd48890cb87386"
+      },
+      {
+        "campaign_index": 24,
+        "fill_log_digest": "60dddfe2f40ae4e7f53646b8218845fbb3e891bd8925608aec2b03b350675c42",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "aafe7ecf5e31ed93"
+      },
+      {
+        "campaign_index": 25,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "ac8a3dcdc8d0f42a"
+      },
+      {
+        "campaign_index": 26,
+        "fill_log_digest": "7e7bdef2f8cc7c6739381cc26ffc503728e81d2954c7753a44d560b7ce5e1307",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "79696ec9511b45cc"
+      },
+      {
+        "campaign_index": 27,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "2b313c75d9b3fda8"
+      },
+      {
+        "campaign_index": 28,
+        "fill_log_digest": "3aeaa42e73827510c312c1b867dcc16fd60a581b3c925f392ea6ed81e89b5c46",
+        "outcome": "completed",
+        "score": -0.07436647154384472,
+        "strategy_digest": "5e5002add9295c7c"
+      },
+      {
+        "campaign_index": 29,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "8ed4daae5cd29415"
+      },
+      {
+        "campaign_index": 30,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "2f2e0e58746308b6"
+      },
+      {
+        "campaign_index": 31,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "2f2e0e58746308b6"
+      },
+      {
+        "campaign_index": 32,
+        "fill_log_digest": "3aeaa42e73827510c312c1b867dcc16fd60a581b3c925f392ea6ed81e89b5c46",
+        "outcome": "completed",
+        "score": -0.07436647154384472,
+        "strategy_digest": "16314bc346bad66d"
+      },
+      {
+        "campaign_index": 33,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "2f2e0e58746308b6"
+      },
+      {
+        "campaign_index": 34,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "2f2e0e58746308b6"
+      },
+      {
+        "campaign_index": 35,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "2f2e0e58746308b6"
+      },
+      {
+        "campaign_index": 36,
+        "fill_log_digest": "3aeaa42e73827510c312c1b867dcc16fd60a581b3c925f392ea6ed81e89b5c46",
+        "outcome": "completed",
+        "score": -0.07436647154384472,
+        "strategy_digest": "d8cb86df48fe9b37"
+      },
+      {
+        "campaign_index": 37,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "b47c13c3e2560dcf"
+      },
+      {
+        "campaign_index": 38,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "2f2e0e58746308b6"
+      },
+      {
+        "campaign_index": 39,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "fe20223981c0e53b"
+      },
+      {
+        "campaign_index": 40,
+        "fill_log_digest": "9ae78a92413842d0b0255a10aa7da4c38c1b74d8a873a933b378b4e1bcb8e6c7",
+        "outcome": "completed",
+        "score": -0.04273561782617547,
+        "strategy_digest": "d40c704aead16904"
+      },
+      {
+        "campaign_index": 41,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "ac1ae1b3047d251a"
+      },
+      {
+        "campaign_index": 42,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "06a75dd2b8a5cd86"
+      },
+      {
+        "campaign_index": 43,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "3690e82765ec1c0a"
+      },
+      {
+        "campaign_index": 44,
+        "fill_log_digest": "9ae78a92413842d0b0255a10aa7da4c38c1b74d8a873a933b378b4e1bcb8e6c7",
+        "outcome": "completed",
+        "score": -0.04273561782617547,
+        "strategy_digest": "358823c9073330d2"
+      },
+      {
+        "campaign_index": 45,
+        "fill_log_digest": "d2bcb1b4788987d0790cc14d0a34a2c6ec63e64c66b73bedbb1dc43d4af52186",
+        "outcome": "completed",
+        "score": -0.031324391437273696,
+        "strategy_digest": "64b2216793cd083f"
+      },
+      {
+        "campaign_index": 46,
+        "fill_log_digest": "fff496b30c7bab17d6ae6abd53b1b840cbe7f018e76b50d3dac081d659c1ba08",
+        "outcome": "completed",
+        "score": -0.09195824177568361,
+        "strategy_digest": "19a2366284d108c2"
+      },
+      {
+        "campaign_index": 47,
+        "fill_log_digest": "9ae78a92413842d0b0255a10aa7da4c38c1b74d8a873a933b378b4e1bcb8e6c7",
+        "outcome": "completed",
+        "score": -0.04273561782617547,
+        "strategy_digest": "15111cf48c00632a"
+      },
+      {
+        "campaign_index": 48,
+        "fill_log_digest": "8c5db3799b7a768d2b50d4013b769fd70397104e7d2813389fdfa9b7166476ab",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "673fa6484b9397b3"
+      },
+      {
+        "campaign_index": 49,
+        "fill_log_digest": "fff496b30c7bab17d6ae6abd53b1b840cbe7f018e76b50d3dac081d659c1ba08",
+        "outcome": "completed",
+        "score": -0.09195824177568361,
+        "strategy_digest": "66dd083dfe4f8f94"
+      },
+      {
+        "campaign_index": 50,
+        "fill_log_digest": "6a43991bbbd0beb4e02ff261946f7df3dbb7a8d4a55982f25e5c23813599155a",
+        "outcome": "completed",
+        "score": -0.07879622285556509,
+        "strategy_digest": "58881fdd5677c8a9"
+      },
+      {
+        "campaign_index": 51,
+        "fill_log_digest": "6a43991bbbd0beb4e02ff261946f7df3dbb7a8d4a55982f25e5c23813599155a",
+        "outcome": "completed",
+        "score": -0.07879622285556509,
+        "strategy_digest": "58881fdd5677c8a9"
+      },
+      {
+        "campaign_index": 52,
+        "fill_log_digest": "6a43991bbbd0beb4e02ff261946f7df3dbb7a8d4a55982f25e5c23813599155a",
+        "outcome": "completed",
+        "score": -0.07879622285556509,
+        "strategy_digest": "d8b7a91d127fe980"
+      },
+      {
+        "campaign_index": 53,
+        "fill_log_digest": "3d897b1ceb1e03ec2cfe67ea74ff9d0b034ee0263b225ee5db0496d4f08c393e",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "e4c49daeb6800b27"
+      },
+      {
+        "campaign_index": 54,
+        "fill_log_digest": "401a45956f387adc5ae9e3fb9c6f786b4a0bf99f7eaa36fe07609cce7e16109e",
+        "outcome": "completed",
+        "score": -0.1380276553754912,
+        "strategy_digest": "69d68e2884202201"
+      },
+      {
+        "campaign_index": 55,
+        "fill_log_digest": "e5632090efb601c940c1f8025f9d94634c1a41bb861668cb59f7703901f85d5d",
+        "outcome": "completed",
+        "score": -0.029567269295373518,
+        "strategy_digest": "6b5756d2df116060"
+      },
+      {
+        "campaign_index": 56,
+        "fill_log_digest": "7ed40132e7b1a1cc4c242408953f27ba18c51a675eaf68cd82687b5fa0d15a34",
+        "outcome": "completed",
+        "score": -0.16175495425238692,
+        "strategy_digest": "743adab9c042f97e"
+      },
+      {
+        "campaign_index": 57,
+        "fill_log_digest": "401a45956f387adc5ae9e3fb9c6f786b4a0bf99f7eaa36fe07609cce7e16109e",
+        "outcome": "completed",
+        "score": -0.1380276553754912,
+        "strategy_digest": "69d68e2884202201"
+      },
+      {
+        "campaign_index": 58,
+        "fill_log_digest": "e3f6b7f51ba5473315f368bc0f4fafd9db094ff8f5ba6cdb663820d952d51d60",
+        "outcome": "completed",
+        "score": -0.05422666403108394,
+        "strategy_digest": "68d178197f573624"
+      },
+      {
+        "campaign_index": 59,
+        "fill_log_digest": "70e12a7556db7ef044c245850de9a5ecdb53d5db9749363116a44d3dcb708225",
+        "outcome": "completed",
+        "score": -0.14666165542786394,
+        "strategy_digest": "d0b1a9185a1e7028"
+      },
+      {
+        "campaign_index": 60,
+        "fill_log_digest": "e3f6b7f51ba5473315f368bc0f4fafd9db094ff8f5ba6cdb663820d952d51d60",
+        "outcome": "completed",
+        "score": -0.05422666403108394,
+        "strategy_digest": "68d178197f573624"
+      },
+      {
+        "campaign_index": 61,
+        "fill_log_digest": "f0c919f31f7c5a6091c406b29e42f517793fee2251e9e2e34a4dc0d63b00d293",
+        "outcome": "completed",
+        "score": -0.14588739448752064,
+        "strategy_digest": "2ee709ca62daea04"
+      },
+      {
+        "campaign_index": 62,
+        "fill_log_digest": "8fef7cadddf4794c7989fd07cfcd3cd34421df572c67f173912e1e0e748337fe",
+        "outcome": "completed",
+        "score": -0.05422666403108394,
+        "strategy_digest": "051003f337412385"
+      },
+      {
+        "campaign_index": 63,
+        "fill_log_digest": "b7fffd0e574bb06d981c4c5391241c6622ccd3dcb88cd3e3dbb2311f3a668331",
+        "outcome": "completed",
+        "score": -0.12554187721803103,
+        "strategy_digest": "bbe8572aacf59a3d"
+      },
+      {
+        "campaign_index": 64,
+        "fill_log_digest": "4f4a44f6667f7fb721dc3845d518d1e3bc92f03de4d5cd62ffd0a0626400e80d",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "74f74e5ccbacd4ff"
+      },
+      {
+        "campaign_index": 65,
+        "fill_log_digest": "9069393e871c8f1a3a173d27c107e5d0fd6f212bf09701ab66131db61327b6ca",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "c491adf0415bd65d"
+      },
+      {
+        "campaign_index": 66,
+        "fill_log_digest": "b7fffd0e574bb06d981c4c5391241c6622ccd3dcb88cd3e3dbb2311f3a668331",
+        "outcome": "completed",
+        "score": -0.12554187721803103,
+        "strategy_digest": "f6d60caf8613d5d3"
+      },
+      {
+        "campaign_index": 67,
+        "fill_log_digest": "666d3c7c359a25b7a5deae353899cd99ef21c85d8d8a9d0790ab664a26758f30",
+        "outcome": "completed",
+        "score": -0.15438084089546555,
+        "strategy_digest": "8ce5913044f7c3a6"
+      },
+      {
+        "campaign_index": 68,
+        "fill_log_digest": "666d3c7c359a25b7a5deae353899cd99ef21c85d8d8a9d0790ab664a26758f30",
+        "outcome": "completed",
+        "score": -0.15438084089546555,
+        "strategy_digest": "4bafcdd7059ee14c"
+      },
+      {
+        "campaign_index": 69,
+        "fill_log_digest": "666d3c7c359a25b7a5deae353899cd99ef21c85d8d8a9d0790ab664a26758f30",
+        "outcome": "completed",
+        "score": -0.15438084089546555,
+        "strategy_digest": "4bafcdd7059ee14c"
+      },
+      {
+        "campaign_index": 70,
+        "fill_log_digest": "a67efef19c56e4e5d06876c8ee0289aa2ab7bcee40eb47c0b249ba470414c75e",
+        "outcome": "completed",
+        "score": -0.2395121278342367,
+        "strategy_digest": "451e6c25d9757369"
+      },
+      {
+        "campaign_index": 71,
+        "fill_log_digest": "4ff7cbc263df8a035333ca9c4e2db4a0cca1cb76c3ae2e61fe5d1e03b0a42b35",
+        "outcome": "completed",
+        "score": -0.12160416521772985,
+        "strategy_digest": "df2a103a24ab9bb7"
+      },
+      {
+        "campaign_index": 72,
+        "fill_log_digest": "87662e39d3fea4a988458cb9e770821c85b2d702589c0c74906917132635e569",
+        "outcome": "completed",
+        "score": -0.09782771263953895,
+        "strategy_digest": "7e16f61477eeddce"
+      },
+      {
+        "campaign_index": 73,
+        "fill_log_digest": "4ff7cbc263df8a035333ca9c4e2db4a0cca1cb76c3ae2e61fe5d1e03b0a42b35",
+        "outcome": "completed",
+        "score": -0.12160416521772985,
+        "strategy_digest": "df2a103a24ab9bb7"
+      },
+      {
+        "campaign_index": 74,
+        "fill_log_digest": "4ff7cbc263df8a035333ca9c4e2db4a0cca1cb76c3ae2e61fe5d1e03b0a42b35",
+        "outcome": "completed",
+        "score": -0.12160416521772985,
+        "strategy_digest": "df2a103a24ab9bb7"
+      },
+      {
+        "campaign_index": 75,
+        "fill_log_digest": "04638c58e232fc3b55b6bc94e05e89c206c8bb27cd6e8b1016c7ae62eadb4fcc",
+        "outcome": "completed",
+        "score": -0.16954738006419898,
+        "strategy_digest": "8416763329cc3091"
+      },
+      {
+        "campaign_index": 76,
+        "fill_log_digest": "1d162610442bef15e106a2fec2bb793b74fb4408698adfa87d75b9afaa472bfb",
+        "outcome": "completed",
+        "score": -0.04611269994362313,
+        "strategy_digest": "2b2c6bbd875e55f4"
+      },
+      {
+        "campaign_index": 77,
+        "fill_log_digest": "204764634bfc465eeddd8194fdc2e85802af4260376a5881c79f20670151a284",
+        "outcome": "completed",
+        "score": -0.15169986421068388,
+        "strategy_digest": "b9b65197e40913a1"
+      },
+      {
+        "campaign_index": 78,
+        "fill_log_digest": "f5a8fcecf3711e5d9a74af6cdec23e67393b6968ab9d65501778737a14dd0835",
+        "outcome": "completed",
+        "score": -0.13058624490668308,
+        "strategy_digest": "8b01f00f50d74e4c"
+      },
+      {
+        "campaign_index": 79,
+        "fill_log_digest": "35e23fa516c07c448dc5361fee5d849708ca0010d7eab13a1881629d52cf4272",
+        "outcome": "completed",
+        "score": -0.10685049203106572,
+        "strategy_digest": "b517617b8f438946"
+      },
+      {
+        "campaign_index": 80,
+        "fill_log_digest": "35e23fa516c07c448dc5361fee5d849708ca0010d7eab13a1881629d52cf4272",
+        "outcome": "completed",
+        "score": -0.10685049203106572,
+        "strategy_digest": "b517617b8f438946"
+      },
+      {
+        "campaign_index": 81,
+        "fill_log_digest": "a98182c35a7a916751815c791a144eafed9f2ab0c14c991905a66679fd08ad06",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "83834b2d861c5423"
+      },
+      {
+        "campaign_index": 82,
+        "fill_log_digest": "e0440483c88fa38e6f084ecb98db1b3420ad011c88dd0312f898c1d35dc5bf2e",
+        "outcome": "completed",
+        "score": -0.10678039203008764,
+        "strategy_digest": "c86373f5e5313749"
+      },
+      {
+        "campaign_index": 83,
+        "fill_log_digest": "57d2339920ffcab2491c839dd0b952648ebc5665e4e542f82c499ced282cc6d4",
+        "outcome": "completed",
+        "score": -0.10685049203106572,
+        "strategy_digest": "6ccd88fe545704e7"
+      },
+      {
+        "campaign_index": 84,
+        "fill_log_digest": "9df390f7479477370cab7c8b9f085df1b95e9dc5d4fd0b4d9334272c74aa4380",
+        "outcome": "completed",
+        "score": -0.16387679573849162,
+        "strategy_digest": "bf40cde03a9d61a7"
+      },
+      {
+        "campaign_index": 85,
+        "fill_log_digest": "e0440483c88fa38e6f084ecb98db1b3420ad011c88dd0312f898c1d35dc5bf2e",
+        "outcome": "completed",
+        "score": -0.10678039203008764,
+        "strategy_digest": "d9c3845fda746e7e"
+      },
+      {
+        "campaign_index": 86,
+        "fill_log_digest": "e0440483c88fa38e6f084ecb98db1b3420ad011c88dd0312f898c1d35dc5bf2e",
+        "outcome": "completed",
+        "score": -0.10678039203008764,
+        "strategy_digest": "c86373f5e5313749"
+      },
+      {
+        "campaign_index": 87,
+        "fill_log_digest": "fe2d908b6a7081e651381983f2834adf8ea60c684feb75687a4a9dd023399ba0",
+        "outcome": "completed",
+        "score": -0.02427620771129883,
+        "strategy_digest": "9a2847b22745b237"
+      },
+      {
+        "campaign_index": 88,
+        "fill_log_digest": "a36a6aada2ceb819d8a78019440c653b3e84fb067b3b8ba28f07fcf57a707843",
+        "outcome": "completed",
+        "score": -0.13241930270755023,
+        "strategy_digest": "28a2a4d5fcebef2f"
+      },
+      {
+        "campaign_index": 89,
+        "fill_log_digest": "fe2d908b6a7081e651381983f2834adf8ea60c684feb75687a4a9dd023399ba0",
+        "outcome": "completed",
+        "score": -0.02427620771129883,
+        "strategy_digest": "9a2847b22745b237"
+      },
+      {
+        "campaign_index": 90,
+        "fill_log_digest": "2b34a90377f9409b31744d4fd124f62cee43dd95a840768f22dd64d502505eb6",
+        "outcome": "completed",
+        "score": -0.0709523523546236,
+        "strategy_digest": "99ca35d4296b7c2e"
+      },
+      {
+        "campaign_index": 91,
+        "fill_log_digest": "a36a6aada2ceb819d8a78019440c653b3e84fb067b3b8ba28f07fcf57a707843",
+        "outcome": "completed",
+        "score": -0.13241930270755023,
+        "strategy_digest": "486222a636dd54c7"
+      },
+      {
+        "campaign_index": 92,
+        "fill_log_digest": "72e5c5ede6e4ff134ad881cbab73b329a41dc26bda916ee05b02319fb140f690",
+        "outcome": "completed",
+        "score": 0.012055482672138162,
+        "strategy_digest": "09b92587168177ea"
+      },
+      {
+        "campaign_index": 93,
+        "fill_log_digest": "fe2d908b6a7081e651381983f2834adf8ea60c684feb75687a4a9dd023399ba0",
+        "outcome": "completed",
+        "score": -0.02427620771129883,
+        "strategy_digest": "9a2847b22745b237"
+      },
+      {
+        "campaign_index": 94,
+        "fill_log_digest": "fe2d908b6a7081e651381983f2834adf8ea60c684feb75687a4a9dd023399ba0",
+        "outcome": "completed",
+        "score": -0.02427620771129883,
+        "strategy_digest": "3210667e8ec99be6"
+      },
+      {
+        "campaign_index": 95,
+        "fill_log_digest": "fe2d908b6a7081e651381983f2834adf8ea60c684feb75687a4a9dd023399ba0",
+        "outcome": "completed",
+        "score": -0.02427620771129883,
+        "strategy_digest": "9a2847b22745b237"
+      },
+      {
+        "campaign_index": 96,
+        "fill_log_digest": "72e5c5ede6e4ff134ad881cbab73b329a41dc26bda916ee05b02319fb140f690",
+        "outcome": "completed",
+        "score": 0.012055482672138162,
+        "strategy_digest": "09b92587168177ea"
+      },
+      {
+        "campaign_index": 97,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "80764f4c721c04fe"
+      },
+      {
+        "campaign_index": 98,
+        "fill_log_digest": "7cb545851c552fdeec7739a1c7fcc3b4b9c5bac38cb24981ea9a4d5407dc51ad",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "f6c40ab07839fadd"
+      },
+      {
+        "campaign_index": 99,
+        "fill_log_digest": "ba6fdf11ac97e33609c7d49bdf2becea3cfb89a779976e7c324471140f79db7d",
+        "outcome": "completed",
+        "score": -0.013312858604222256,
+        "strategy_digest": "0892bd89a7a07883"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 65,
+      "crashed": 35
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 100,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 1.3451436196068374,
+    "mean": -0.00040841006783211536,
+    "min": -0.24697733121768312,
+    "n_draws": 570000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.0840774918188613
+  },
+  "provenance": {
+    "artifact_fingerprint": "602b8bcfcb58281b26d77369d158fdf0a290b2a427a75164d42e361794c20a6d",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/auction-market-features.md": "c306848e27d52157a9e1ea478905aa4ad6e585b56b84bc892962aeeb02d826e9",
+      "config/hypotheses/flow-continuation-5m.md": "13516e4d73d2286805b68d526fe8590581c3ed64c418e44f2557a319ba7a4fea",
+      "config/hypotheses/flow-continuation.md": "2fd992b524213040d9b59c1ae1cde0b54404fc5ca779d9dc68d774c72dca0528",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-move-continuation-vs-giveback.md": "dd898b0ac0548576dafc2f61169a5334e834d48f7bc83d2cfcaf2c8901cfe876",
+      "config/hypotheses/nq-opening-reversal.md": "37fcea5a90f37b7b05faaab7e15e74990878bbaba226b41171965908b2a40b91",
+      "config/hypotheses/ohlcv-momentum-friction-ceiling.md": "ff9d1893266f2f7eeb05f0f27a2751e9e95a4ea58f8c38f236aa9fc9e7c867a6",
+      "config/hypotheses/opening-range-break-continuation-failure.md": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+      "config/hypotheses/opening-range-break-continuation-or-fade.md": "4e48d6e16fba78098a993549b2528853e8c4c909908d501cf1d6ad3309988440",
+      "config/hypotheses/opening-range-break-resolution.md": "4c41b63249ae6113d53a032cde5c13651d107b7bf77450043f82d58e33488bfe",
+      "config/hypotheses/opening-range-breakout-30m.md": "021eb8f94018416e4294293831f5c8d4370ac0bd6cb1c39b42f3b57771ea6128",
+      "config/hypotheses/opening-range-direction-agnostic.md": "48775a6bedc23838d451279d05dc15c2660300bb598e5cf508f3c677fa22d7e4",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md": "4a97e2e35a2111d81a49331782789191c9765efdb5df34c7aefedeb7234cf557",
+      "config/hypotheses/outsized-move-continuation-refined.md": "25d9b544894e7d214729ba058d1783e6b0d3d16608e560346538076341626c77",
+      "config/hypotheses/outsized-move-continuation-vs-giveback.md": "00074ec0231d64452b65b1515e9669d711425a1220e6039b3e61abd1638766a6",
+      "config/hypotheses/session-move-continuation-robustness.md": "087be6eedd20f472989bdadf3944e054b3a0daa42cafb589170455bc6ecb44b3",
+      "config/prompts/family-review.md": "012935b192b8ca9ff3ed3a3c9635dfdab4df9f8f95dc1db1791f35bc8532fb82",
+      "config/prompts/hypothesis-refine.md": "c16601e03abf5b62933cbe86d816d88b9215897de58efdd4295ddd02e9b037be",
+      "config/prompts/hypothesis-review.md": "6d6e194e5f5b473d37e32d168d5404589c426115b54e714c9713a56b9ea81353",
+      "config/prompts/paper-distil.md": "0dcafaf00f0a1d990fd26880d532f3eac423a36b1488d1ebd7b28a8747fb4504",
+      "config/prompts/paper-rank.md": "b8acfdf9c01f9c3ec7c6e0c8da4ca1ff54f401c5e7bf60c41b6b366993c15784",
+      "config/prompts/paper-screen.md": "dc10f5d4cc98dd8aa463c81b79f1c710b648e70e2d9095c4245c100d02b9160a",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/prompts/strategy-review.md": "e71f9f8813ba4d9bea3f8830c31cb3818472302357615834c47d3e6d5ec7f518",
+      "config/run.yaml": "ac43831d4dba82b9d54cde4e6b0dee9ea6d3520aa43317a5c3d5b10d5d2b115b",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "6a101d2d897e9741190e9075ebe96b9977d2649fe604bfa0c275df9d3d43072c"
+    },
+    "code_fingerprint": "3977a7a742a59477c7830f711cb8d1f06b62a18e7339a3641f3a563f271eddf7",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "1780999a09c5f53172887db2f7008c9235d2f685bf7f64ee487d213c8eef9361",
+    "git_sha": "2708d35c7e89ca2135b8640d1c2f1193208c00ad",
+    "isolation": {
+      "address_space": {
+        "active": false,
+        "mechanism": "unavailable: RLIMIT_AS/DATA/RSS cannot be set"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "scored campaigns should run on Linux; see docs/design/architecture.md",
+      "filesystem": {
+        "active": true,
+        "mechanism": "sandbox-exec profile (deprecated)"
+      },
+      "level": "best-effort",
+      "network": {
+        "active": true,
+        "mechanism": "denied by the same profile"
+      },
+      "platform": "Darwin",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "absent",
+    "python_version": "3.11.5",
+    "scoring_fingerprint": "89163b76ed81a20562b3ff001fe71a5f0df8a70b3f5652b1c6f3f98ee8437395"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-10-05T06:52:34+00:00"
+}

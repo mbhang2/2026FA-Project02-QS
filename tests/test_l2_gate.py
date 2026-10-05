@@ -190,8 +190,18 @@ def test_the_candidate_lister_runs_offline_and_reports_the_real_tree():
     # and not a finding. Eleven campaigns are listed here, two are positive on
     # validation, and one of those two was rejected by every other tier that
     # looked at it.
+    # 2026-10-05: session-06 added two more, and one of them should not be here
+    # at all. **nq-s06-03 was validated in error** -- it died at trial 36 of 100
+    # on a gateway substitution, so `nulls` and `report` never ran and it has no
+    # train-side gate, yet it was handed a validation look and its +0.1371 became
+    # that session's L2 observed best. `research_session.py` no longer validates a
+    # campaign that did not complete, but the artefact exists and the lister reads
+    # validation.json, so it stays in this pool. Its status.json says so.
+    #
+    # Four of fourteen validated campaigns are positive on validation, and two of
+    # the four were rejected on train. Rule (a) is a floor, not a finding.
     positive = [c["campaign_id"] for c in cands if c["rule_a"]]
-    assert positive == ["nq-s02-01", "nq-s05b-01"], (
+    assert positive == ["nq-s02-01", "nq-s05b-01", "nq-s06-01", "nq-s06-03"], (
         f"the set of winners positive on validation changed: {positive}. "
         "Update this deliberately and look closely at whichever one is new -- "
         "every previous campaign's winner lost money on validation.")

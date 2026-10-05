@@ -199,15 +199,28 @@ TRANSIENT = ("ModelSubstituted", "ReadTimeout", "ConnectTimeout", "Timeout",
 # is hours; waiting ten minutes for the endpoint is the cheapest thing here.
 STAGE_BACKOFF_S = (30, 120, 300, 600, 600)
 MAX_STAGE_RETRIES = len(STAGE_BACKOFF_S)
+# **The run stage waits longer, because it is the expensive one to lose.**
+# 2026-10-05: nq-s06-03 was substituted at trial 36 of 100 and the substitution
+# outlasted all five attempts above -- 27 minutes was not enough, where the
+# window measured on 2026-09-30 was "several minutes". A run stage is ~2 hours of
+# work and resumes where it stopped, so another half hour of waiting is cheap
+# against losing it. The other stages are minutes and keep the shorter budget.
+#
+# This is not the fix that matters, and it is recorded here so nobody thinks it
+# is: the fix is that a failed run no longer spends a validation look. Inflating
+# a retry budget buys time against an outage, never correctness.
+RUN_BACKOFF_S = STAGE_BACKOFF_S + (900, 900)
+MAX_RUN_RETRIES = len(RUN_BACKOFF_S)
 
 
-def _retrying(argv: list[str], *, label: str, retries: int = 0):
+def _retrying(argv: list[str], *, label: str, retries: int = 0, backoff: tuple | None = None):
     """Run it, and try again on a fault that is the endpoint's rather than ours.
 
     Used by the campaign stages AND by the refinement. The refinement was left
     out of this on 2026-09-30 and a single `ReadTimeout` on the gateway preflight
     ended a five-campaign session after one campaign.
     """
+    schedule = backoff or STAGE_BACKOFF_S
     code, body = 1, ""
     for attempt in range(retries + 1):
         code, body = _run(argv, label=label + (f" (retry {attempt})"
@@ -217,7 +230,7 @@ def _retrying(argv: list[str], *, label: str, retries: int = 0):
         hit = next((t for t in TRANSIENT if t in body), None)
         if hit is None:
             return code, body
-        wait = STAGE_BACKOFF_S[min(attempt, len(STAGE_BACKOFF_S) - 1)]
+        wait = schedule[min(attempt, len(schedule) - 1)]
         print(f"      {hit} is the endpoint's fault, not ours. Waiting {wait}s, "
               f"then retrying.", flush=True)
         time.sleep(wait)
@@ -225,10 +238,10 @@ def _retrying(argv: list[str], *, label: str, retries: int = 0):
 
 
 def campaign_stage(name: str, stage: str, extra: list[str] | None = None,
-                   *, retries: int = 0):
+                   *, retries: int = 0, backoff: tuple | None = None):
     return _retrying([PY, "scripts/nq_campaign.py", "--stage", stage,
                       "--name", name, *(extra or [])],
-                     label=f"{name} {stage}", retries=retries)
+                     label=f"{name} {stage}", retries=retries, backoff=backoff)
 
 
 def already_run(name: str) -> bool:
@@ -495,11 +508,22 @@ def _main() -> int:
                     log["campaigns"][name] = "register failed"
                     continue
             for stage in ("run", "nulls", "report"):
-                code, _ = campaign_stage(
+                code, body = campaign_stage(
                     name, stage,
-                    retries=MAX_STAGE_RETRIES if stage == "run" else 0)
+                    retries=MAX_RUN_RETRIES if stage == "run" else 0,
+                    backoff=RUN_BACKOFF_S if stage == "run" else None)
                 if code:
-                    log["campaigns"][name] = f"{stage} failed"
+                    # **Say WHY, in the record.** nq-s06-03's record said only
+                    # "run failed"; the cause -- a gateway ModelSubstituted that
+                    # outlasted every retry -- was in a stage log nobody reading
+                    # the session record would open. A failure whose reason lives
+                    # somewhere else gets diagnosed as something else.
+                    why = next((t for t in TRANSIENT if t in body), None)
+                    log["campaigns"][name] = (
+                        f"{stage} failed"
+                        + (f": {why} outlasted {MAX_RUN_RETRIES} retries"
+                           if why else ""))
+                    log[f"{stage}_failed_after"] = name
                     break
             else:
                 log["campaigns"][name] = "complete"
@@ -534,7 +558,25 @@ def _main() -> int:
         "dropping them from the family is not family-shrinking because there is "
         "nothing of theirs to drop." if stopped_by_cue else
         "every campaign in the plan, written before the session ran.")
-    names = completed if stopped_by_cue else names
+    # **Only a campaign that COMPLETED is validated, cue or no cue.** This read
+    # `completed if stopped_by_cue else names`, so a human stop validated what
+    # ran and every other ending validated the whole declared family whether it
+    # ran or not.
+    #
+    # On 2026-10-05 nq-s06-03 died at trial 36 of 100 on a gateway
+    # `ModelSubstituted`. `nulls` and `report` therefore never ran, so it had no
+    # train-side gate at all -- its champion was picked by the carry rule alone,
+    # never corrected and never audited -- and it was handed a validation look
+    # anyway. Its +0.1371 then became the L2's observed best, over two campaigns
+    # that had completed 100 trials each. The L2 failed, so nothing was claimed;
+    # had it passed, the pass would have rested on the campaign that did not run.
+    #
+    # The refinement-failure path learned this on 2026-09-30 -- "a cue is a
+    # decision; a timeout is not, and the two must not share a code path" -- and
+    # the run-failure path never did. One rule now covers both: validation is for
+    # campaigns that executed their pre-registered budget and were gated.
+    excluded = [n for n in names if n not in completed]
+    names = completed
 
     if a.train_only:
         log["train_only"] = True
@@ -585,12 +627,11 @@ def _main() -> int:
     # Nothing downstream could detect that: the L2 reports the M it was given.
     # So it is refused here, where the difference is still visible.
     planned = [str(c["name"]) for c in entries]
-    missing = [n for n in planned
-               if "no question" in str(log["campaigns"].get(n, ""))]
-    if missing and not stopped_by_cue:
+    missing = excluded if not stopped_by_cue else []
+    if missing:
         print("\nphase 2 REFUSED: the declared family is incomplete.\n")
         for n in missing:
-            print(f"    {n}: {log['campaigns'][n]}")
+            print(f"    {n}: {log['campaigns'].get(n, 'never started')}")
         print("\n  Validation is one look per campaign and §4 puts it at the "
               "stop so it\n  is taken once, over the family that was declared. "
               f"{len(missing)} of {len(planned)}\n  campaigns never ran, so "

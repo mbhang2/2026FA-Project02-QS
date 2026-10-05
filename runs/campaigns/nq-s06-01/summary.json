@@ -1,0 +1,1071 @@
+{
+  "campaign_id": "nq-s06-01",
+  "record_digest": "8ee1aecb45d4984f6f00c5fd8b5c4755bb9606f97d7e9cc14a147c56f3b165f5",
+  "record_tampered": false,
+  "budget": 100,
+  "q": 0.05,
+  "n_trials": 100,
+  "harness_failures": 0,
+  "unaccounted": 0,
+  "outcomes": {
+    "completed": 97,
+    "crashed": 3
+  },
+  "per_trial_accepts_at_0.001": 0,
+  "diagnostics_only": {
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "correction": {
+      "n": 100,
+      "q": 0.05,
+      "bh_discoveries": 0,
+      "holm_discoveries": 0,
+      "uncorrected_discoveries": 27,
+      "best_far": 0.003417686697590031,
+      "best_label": "54:19e8df2e",
+      "decisions": [
+        {
+          "index": 54,
+          "label": "54:19e8df2e",
+          "far": 0.003417686697590031,
+          "rank": 1,
+          "bh_critical": 0.0005,
+          "bh_accepted": false,
+          "holm_critical": 0.0005,
+          "holm_accepted": false
+        },
+        {
+          "index": 64,
+          "label": "64:1e4ff459",
+          "far": 0.003417686697590031,
+          "rank": 2,
+          "bh_critical": 0.001,
+          "bh_accepted": false,
+          "holm_critical": 0.000505050505050505,
+          "holm_accepted": false
+        },
+        {
+          "index": 79,
+          "label": "79:36dfec81",
+          "far": 0.005525112686418342,
+          "rank": 3,
+          "bh_critical": 0.0015,
+          "bh_accepted": false,
+          "holm_critical": 0.0005102040816326531,
+          "holm_accepted": false
+        },
+        {
+          "index": 86,
+          "label": "86:b0dddc3c",
+          "far": 0.005525112686418342,
+          "rank": 4,
+          "bh_critical": 0.002,
+          "bh_accepted": false,
+          "holm_critical": 0.0005154639175257732,
+          "holm_accepted": false
+        },
+        {
+          "index": 97,
+          "label": "97:06d3734d",
+          "far": 0.005525112686418342,
+          "rank": 5,
+          "bh_critical": 0.0025000000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0005208333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 98,
+          "label": "98:06d3734d",
+          "far": 0.005525112686418342,
+          "rank": 6,
+          "bh_critical": 0.003,
+          "bh_accepted": false,
+          "holm_critical": 0.0005263157894736842,
+          "holm_accepted": false
+        },
+        {
+          "index": 76,
+          "label": "76:30b2846f",
+          "far": 0.006424780340096329,
+          "rank": 7,
+          "bh_critical": 0.0035000000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0005319148936170213,
+          "holm_accepted": false
+        },
+        {
+          "index": 81,
+          "label": "81:789d0423",
+          "far": 0.006518912961071049,
+          "rank": 8,
+          "bh_critical": 0.004,
+          "bh_accepted": false,
+          "holm_critical": 0.0005376344086021505,
+          "holm_accepted": false
+        },
+        {
+          "index": 56,
+          "label": "56:3bed3a1c",
+          "far": 0.008611595314488317,
+          "rank": 9,
+          "bh_critical": 0.0045,
+          "bh_accepted": false,
+          "holm_critical": 0.0005434782608695652,
+          "holm_accepted": false
+        },
+        {
+          "index": 92,
+          "label": "92:db4ca7b5",
+          "far": 0.010424756036765737,
+          "rank": 10,
+          "bh_critical": 0.005000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0005494505494505495,
+          "holm_accepted": false
+        },
+        {
+          "index": 95,
+          "label": "95:db4ca7b5",
+          "far": 0.010424756036765737,
+          "rank": 11,
+          "bh_critical": 0.0055000000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0005555555555555556,
+          "holm_accepted": false
+        },
+        {
+          "index": 96,
+          "label": "96:db4ca7b5",
+          "far": 0.010424756036765737,
+          "rank": 12,
+          "bh_critical": 0.006,
+          "bh_accepted": false,
+          "holm_critical": 0.0005617977528089888,
+          "holm_accepted": false
+        },
+        {
+          "index": 80,
+          "label": "80:982a3897",
+          "far": 0.021998311215354005,
+          "rank": 13,
+          "bh_critical": 0.006500000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0005681818181818183,
+          "holm_accepted": false
+        },
+        {
+          "index": 19,
+          "label": "19:60789952",
+          "far": 0.023815809964633023,
+          "rank": 14,
+          "bh_critical": 0.007000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0005747126436781609,
+          "holm_accepted": false
+        },
+        {
+          "index": 20,
+          "label": "20:dea6fe81",
+          "far": 0.023815809964633023,
+          "rank": 15,
+          "bh_critical": 0.0075,
+          "bh_accepted": false,
+          "holm_critical": 0.0005813953488372093,
+          "holm_accepted": false
+        },
+        {
+          "index": 21,
+          "label": "21:5f841bfb",
+          "far": 0.023815809964633023,
+          "rank": 16,
+          "bh_critical": 0.008,
+          "bh_accepted": false,
+          "holm_critical": 0.0005882352941176471,
+          "holm_accepted": false
+        },
+        {
+          "index": 46,
+          "label": "46:a43ca02c",
+          "far": 0.023815809964633023,
+          "rank": 17,
+          "bh_critical": 0.0085,
+          "bh_accepted": false,
+          "holm_critical": 0.0005952380952380953,
+          "holm_accepted": false
+        },
+        {
+          "index": 90,
+          "label": "90:66436d2e",
+          "far": 0.02499754093194137,
+          "rank": 18,
+          "bh_critical": 0.009,
+          "bh_accepted": false,
+          "holm_critical": 0.0006024096385542169,
+          "holm_accepted": false
+        },
+        {
+          "index": 44,
+          "label": "44:3e119e38",
+          "far": 0.025105560593477218,
+          "rank": 19,
+          "bh_critical": 0.009500000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0006097560975609756,
+          "holm_accepted": false
+        },
+        {
+          "index": 57,
+          "label": "57:a2bac33f",
+          "far": 0.025195096929199648,
+          "rank": 20,
+          "bh_critical": 0.010000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0006172839506172839,
+          "holm_accepted": false
+        },
+        {
+          "index": 18,
+          "label": "18:65af6f85",
+          "far": 0.03123805687140796,
+          "rank": 21,
+          "bh_critical": 0.0105,
+          "bh_accepted": false,
+          "holm_critical": 0.000625,
+          "holm_accepted": false
+        },
+        {
+          "index": 72,
+          "label": "72:0f18a7f5",
+          "far": 0.03376704138744857,
+          "rank": 22,
+          "bh_critical": 0.011000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0006329113924050633,
+          "holm_accepted": false
+        },
+        {
+          "index": 50,
+          "label": "50:6e796a75",
+          "far": 0.03510735166732504,
+          "rank": 23,
+          "bh_critical": 0.011500000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.000641025641025641,
+          "holm_accepted": false
+        },
+        {
+          "index": 75,
+          "label": "75:07f0c4e3",
+          "far": 0.03750495803753931,
+          "rank": 24,
+          "bh_critical": 0.012,
+          "bh_accepted": false,
+          "holm_critical": 0.0006493506493506494,
+          "holm_accepted": false
+        },
+        {
+          "index": 78,
+          "label": "78:4c28eaf5",
+          "far": 0.03750495803753931,
+          "rank": 25,
+          "bh_critical": 0.0125,
+          "bh_accepted": false,
+          "holm_critical": 0.0006578947368421052,
+          "holm_accepted": false
+        },
+        {
+          "index": 51,
+          "label": "51:91dea61e",
+          "far": 0.045439676250237704,
+          "rank": 26,
+          "bh_critical": 0.013000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0006666666666666668,
+          "holm_accepted": false
+        },
+        {
+          "index": 59,
+          "label": "59:8f96fdc7",
+          "far": 0.04833420361347381,
+          "rank": 27,
+          "bh_critical": 0.013500000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0006756756756756757,
+          "holm_accepted": false
+        },
+        {
+          "index": 38,
+          "label": "38:6310dd39",
+          "far": 0.05184398574787599,
+          "rank": 28,
+          "bh_critical": 0.014000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0006849315068493151,
+          "holm_accepted": false
+        },
+        {
+          "index": 39,
+          "label": "39:dae3cf98",
+          "far": 0.057805419897187064,
+          "rank": 29,
+          "bh_critical": 0.014499999999999999,
+          "bh_accepted": false,
+          "holm_critical": 0.0006944444444444445,
+          "holm_accepted": false
+        },
+        {
+          "index": 41,
+          "label": "41:8f7c2387",
+          "far": 0.057805419897187064,
+          "rank": 30,
+          "bh_critical": 0.015,
+          "bh_accepted": false,
+          "holm_critical": 0.0007042253521126761,
+          "holm_accepted": false
+        },
+        {
+          "index": 40,
+          "label": "40:bad12bbb",
+          "far": 0.0645631026092437,
+          "rank": 31,
+          "bh_critical": 0.0155,
+          "bh_accepted": false,
+          "holm_critical": 0.0007142857142857143,
+          "holm_accepted": false
+        },
+        {
+          "index": 62,
+          "label": "62:af148f92",
+          "far": 0.06560529570037706,
+          "rank": 32,
+          "bh_critical": 0.016,
+          "bh_accepted": false,
+          "holm_critical": 0.0007246376811594203,
+          "holm_accepted": false
+        },
+        {
+          "index": 27,
+          "label": "27:7211d870",
+          "far": 0.06902996500714673,
+          "rank": 33,
+          "bh_critical": 0.0165,
+          "bh_accepted": false,
+          "holm_critical": 0.0007352941176470588,
+          "holm_accepted": false
+        },
+        {
+          "index": 66,
+          "label": "66:0874b163",
+          "far": 0.07376416149312576,
+          "rank": 34,
+          "bh_critical": 0.017,
+          "bh_accepted": false,
+          "holm_critical": 0.0007462686567164179,
+          "holm_accepted": false
+        },
+        {
+          "index": 68,
+          "label": "68:f3be9c09",
+          "far": 0.07376416149312576,
+          "rank": 35,
+          "bh_critical": 0.017499999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.0007575757575757576,
+          "holm_accepted": false
+        },
+        {
+          "index": 24,
+          "label": "24:b5e05781",
+          "far": 0.07850611737862437,
+          "rank": 36,
+          "bh_critical": 0.018,
+          "bh_accepted": false,
+          "holm_critical": 0.0007692307692307692,
+          "holm_accepted": false
+        },
+        {
+          "index": 52,
+          "label": "52:b851f176",
+          "far": 0.08310235952618626,
+          "rank": 37,
+          "bh_critical": 0.0185,
+          "bh_accepted": false,
+          "holm_critical": 0.00078125,
+          "holm_accepted": false
+        },
+        {
+          "index": 17,
+          "label": "17:9c95c8bf",
+          "far": 0.08838906743279544,
+          "rank": 38,
+          "bh_critical": 0.019000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0007936507936507937,
+          "holm_accepted": false
+        },
+        {
+          "index": 15,
+          "label": "15:daacc56e",
+          "far": 0.09753023112813194,
+          "rank": 39,
+          "bh_critical": 0.019500000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0008064516129032258,
+          "holm_accepted": false
+        },
+        {
+          "index": 45,
+          "label": "45:c36bddbf",
+          "far": 0.10416144534409524,
+          "rank": 40,
+          "bh_critical": 0.020000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.000819672131147541,
+          "holm_accepted": false
+        },
+        {
+          "index": 48,
+          "label": "48:8dbabc18",
+          "far": 0.10416144534409524,
+          "rank": 41,
+          "bh_critical": 0.0205,
+          "bh_accepted": false,
+          "holm_critical": 0.0008333333333333334,
+          "holm_accepted": false
+        },
+        {
+          "index": 42,
+          "label": "42:486ca185",
+          "far": 0.10753709367847032,
+          "rank": 42,
+          "bh_critical": 0.021,
+          "bh_accepted": false,
+          "holm_critical": 0.0008474576271186442,
+          "holm_accepted": false
+        },
+        {
+          "index": 30,
+          "label": "30:c6d61f95",
+          "far": 0.1086642993244577,
+          "rank": 43,
+          "bh_critical": 0.021500000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0008620689655172415,
+          "holm_accepted": false
+        },
+        {
+          "index": 22,
+          "label": "22:20bf13ca",
+          "far": 0.11654619201650147,
+          "rank": 44,
+          "bh_critical": 0.022000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0008771929824561404,
+          "holm_accepted": false
+        },
+        {
+          "index": 33,
+          "label": "33:70bcd30d",
+          "far": 0.11922656465610686,
+          "rank": 45,
+          "bh_critical": 0.022500000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0008928571428571429,
+          "holm_accepted": false
+        },
+        {
+          "index": 70,
+          "label": "70:b6260015",
+          "far": 0.14150728901004084,
+          "rank": 46,
+          "bh_critical": 0.023000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0009090909090909091,
+          "holm_accepted": false
+        },
+        {
+          "index": 8,
+          "label": "8:5ce74509",
+          "far": 0.17289991429027718,
+          "rank": 47,
+          "bh_critical": 0.0235,
+          "bh_accepted": false,
+          "holm_critical": 0.000925925925925926,
+          "holm_accepted": false
+        },
+        {
+          "index": 12,
+          "label": "12:e4813e8b",
+          "far": 0.18882649566393322,
+          "rank": 48,
+          "bh_critical": 0.024,
+          "bh_accepted": false,
+          "holm_critical": 0.0009433962264150943,
+          "holm_accepted": false
+        },
+        {
+          "index": 1,
+          "label": "1:7d817a03",
+          "far": 0.20272610426323426,
+          "rank": 49,
+          "bh_critical": 0.0245,
+          "bh_accepted": false,
+          "holm_critical": 0.0009615384615384616,
+          "holm_accepted": false
+        },
+        {
+          "index": 5,
+          "label": "5:7d817a03",
+          "far": 0.20272610426323426,
+          "rank": 50,
+          "bh_critical": 0.025,
+          "bh_accepted": false,
+          "holm_critical": 0.000980392156862745,
+          "holm_accepted": false
+        },
+        {
+          "index": 6,
+          "label": "6:7d817a03",
+          "far": 0.20272610426323426,
+          "rank": 51,
+          "bh_critical": 0.025500000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.001,
+          "holm_accepted": false
+        },
+        {
+          "index": 9,
+          "label": "9:2216ed2c",
+          "far": 0.20272610426323426,
+          "rank": 52,
+          "bh_critical": 0.026000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0010204081632653062,
+          "holm_accepted": false
+        },
+        {
+          "index": 28,
+          "label": "28:467b6394",
+          "far": 0.21098061287453748,
+          "rank": 53,
+          "bh_critical": 0.026500000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0010416666666666667,
+          "holm_accepted": false
+        },
+        {
+          "index": 82,
+          "label": "82:75d28152",
+          "far": 0.21506485051044283,
+          "rank": 54,
+          "bh_critical": 0.027000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0010638297872340426,
+          "holm_accepted": false
+        },
+        {
+          "index": 84,
+          "label": "84:e035743e",
+          "far": 0.21506485051044283,
+          "rank": 55,
+          "bh_critical": 0.027500000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0010869565217391304,
+          "holm_accepted": false
+        },
+        {
+          "index": 14,
+          "label": "14:371e5108",
+          "far": 0.24833039725361844,
+          "rank": 56,
+          "bh_critical": 0.028000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0011111111111111111,
+          "holm_accepted": false
+        },
+        {
+          "index": 7,
+          "label": "7:79000858",
+          "far": 0.2568740108909246,
+          "rank": 57,
+          "bh_critical": 0.028499999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.0011363636363636365,
+          "holm_accepted": false
+        },
+        {
+          "index": 35,
+          "label": "35:27a1b170",
+          "far": 0.26269735845623143,
+          "rank": 58,
+          "bh_critical": 0.028999999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.0011627906976744186,
+          "holm_accepted": false
+        },
+        {
+          "index": 37,
+          "label": "37:27a1b170",
+          "far": 0.26269735845623143,
+          "rank": 59,
+          "bh_critical": 0.0295,
+          "bh_accepted": false,
+          "holm_critical": 0.0011904761904761906,
+          "holm_accepted": false
+        },
+        {
+          "index": 43,
+          "label": "43:65975f8b",
+          "far": 0.26362414022098557,
+          "rank": 60,
+          "bh_critical": 0.03,
+          "bh_accepted": false,
+          "holm_critical": 0.0012195121951219512,
+          "holm_accepted": false
+        },
+        {
+          "index": 10,
+          "label": "10:0bb09512",
+          "far": 0.28996174616142734,
+          "rank": 61,
+          "bh_critical": 0.0305,
+          "bh_accepted": false,
+          "holm_critical": 0.00125,
+          "holm_accepted": false
+        },
+        {
+          "index": 73,
+          "label": "73:73fe07d5",
+          "far": 0.2953271390093612,
+          "rank": 62,
+          "bh_critical": 0.031,
+          "bh_accepted": false,
+          "holm_critical": 0.001282051282051282,
+          "holm_accepted": false
+        },
+        {
+          "index": 83,
+          "label": "83:effd466d",
+          "far": 0.3829147399265567,
+          "rank": 63,
+          "bh_critical": 0.0315,
+          "bh_accepted": false,
+          "holm_critical": 0.0013157894736842105,
+          "holm_accepted": false
+        },
+        {
+          "index": 2,
+          "label": "2:e34011be",
+          "far": 0.4817096848609253,
+          "rank": 64,
+          "bh_critical": 0.032,
+          "bh_accepted": false,
+          "holm_critical": 0.0013513513513513514,
+          "holm_accepted": false
+        },
+        {
+          "index": 3,
+          "label": "3:99c754cb",
+          "far": 0.5,
+          "rank": 65,
+          "bh_critical": 0.0325,
+          "bh_accepted": false,
+          "holm_critical": 0.001388888888888889,
+          "holm_accepted": false
+        },
+        {
+          "index": 4,
+          "label": "4:fba85ce3",
+          "far": 0.5,
+          "rank": 66,
+          "bh_critical": 0.033,
+          "bh_accepted": false,
+          "holm_critical": 0.0014285714285714286,
+          "holm_accepted": false
+        },
+        {
+          "index": 16,
+          "label": "16:70df97b1",
+          "far": 0.5,
+          "rank": 67,
+          "bh_critical": 0.0335,
+          "bh_accepted": false,
+          "holm_critical": 0.0014705882352941176,
+          "holm_accepted": false
+        },
+        {
+          "index": 23,
+          "label": "23:614c9bc9",
+          "far": 0.5,
+          "rank": 68,
+          "bh_critical": 0.034,
+          "bh_accepted": false,
+          "holm_critical": 0.0015151515151515152,
+          "holm_accepted": false
+        },
+        {
+          "index": 25,
+          "label": "25:614c9bc9",
+          "far": 0.5,
+          "rank": 69,
+          "bh_critical": 0.034499999999999996,
+          "bh_accepted": false,
+          "holm_critical": 0.0015625,
+          "holm_accepted": false
+        },
+        {
+          "index": 26,
+          "label": "26:614c9bc9",
+          "far": 0.5,
+          "rank": 70,
+          "bh_critical": 0.034999999999999996,
+          "bh_accepted": false,
+          "holm_critical": 0.0016129032258064516,
+          "holm_accepted": false
+        },
+        {
+          "index": 29,
+          "label": "29:4db60eba",
+          "far": 0.5,
+          "rank": 71,
+          "bh_critical": 0.0355,
+          "bh_accepted": false,
+          "holm_critical": 0.0016666666666666668,
+          "holm_accepted": false
+        },
+        {
+          "index": 65,
+          "label": "65:de574861",
+          "far": 0.5,
+          "rank": 72,
+          "bh_critical": 0.036,
+          "bh_accepted": false,
+          "holm_critical": 0.001724137931034483,
+          "holm_accepted": false
+        },
+        {
+          "index": 77,
+          "label": "77:9480b2ed",
+          "far": 0.5,
+          "rank": 73,
+          "bh_critical": 0.0365,
+          "bh_accepted": false,
+          "holm_critical": 0.0017857142857142859,
+          "holm_accepted": false
+        },
+        {
+          "index": 87,
+          "label": "87:26e93142",
+          "far": 0.5,
+          "rank": 74,
+          "bh_critical": 0.037,
+          "bh_accepted": false,
+          "holm_critical": 0.001851851851851852,
+          "holm_accepted": false
+        },
+        {
+          "index": 88,
+          "label": "88:3ea78c1c",
+          "far": 0.5,
+          "rank": 75,
+          "bh_critical": 0.037500000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0019230769230769232,
+          "holm_accepted": false
+        },
+        {
+          "index": 89,
+          "label": "89:26e93142",
+          "far": 0.5,
+          "rank": 76,
+          "bh_critical": 0.038000000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.002,
+          "holm_accepted": false
+        },
+        {
+          "index": 91,
+          "label": "91:26e93142",
+          "far": 0.5,
+          "rank": 77,
+          "bh_critical": 0.038500000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0020833333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 93,
+          "label": "93:fde53d54",
+          "far": 0.5,
+          "rank": 78,
+          "bh_critical": 0.03900000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.002173913043478261,
+          "holm_accepted": false
+        },
+        {
+          "index": 94,
+          "label": "94:26e93142",
+          "far": 0.5,
+          "rank": 79,
+          "bh_critical": 0.03950000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.002272727272727273,
+          "holm_accepted": false
+        },
+        {
+          "index": 99,
+          "label": "99:26e93142",
+          "far": 0.5,
+          "rank": 80,
+          "bh_critical": 0.04000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.002380952380952381,
+          "holm_accepted": false
+        },
+        {
+          "index": 0,
+          "label": "0:d1c81d6e",
+          "far": 1.0,
+          "rank": 81,
+          "bh_critical": 0.04050000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0025,
+          "holm_accepted": false
+        },
+        {
+          "index": 11,
+          "label": "11:f6ff3d08",
+          "far": 1.0,
+          "rank": 82,
+          "bh_critical": 0.041,
+          "bh_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "holm_accepted": false
+        },
+        {
+          "index": 13,
+          "label": "13:9a0ac48c",
+          "far": 1.0,
+          "rank": 83,
+          "bh_critical": 0.0415,
+          "bh_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "holm_accepted": false
+        },
+        {
+          "index": 31,
+          "label": "31:9c74429e",
+          "far": 1.0,
+          "rank": 84,
+          "bh_critical": 0.042,
+          "bh_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "holm_accepted": false
+        },
+        {
+          "index": 32,
+          "label": "32:c302d382",
+          "far": 1.0,
+          "rank": 85,
+          "bh_critical": 0.0425,
+          "bh_accepted": false,
+          "holm_critical": 0.003125,
+          "holm_accepted": false
+        },
+        {
+          "index": 34,
+          "label": "34:9d456dfc",
+          "far": 1.0,
+          "rank": 86,
+          "bh_critical": 0.043000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "holm_accepted": false
+        },
+        {
+          "index": 36,
+          "label": "36:06d6c80d",
+          "far": 1.0,
+          "rank": 87,
+          "bh_critical": 0.043500000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "holm_accepted": false
+        },
+        {
+          "index": 47,
+          "label": "47:41027949",
+          "far": 1.0,
+          "rank": 88,
+          "bh_critical": 0.044000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "holm_accepted": false
+        },
+        {
+          "index": 49,
+          "label": "49:517f969e",
+          "far": 1.0,
+          "rank": 89,
+          "bh_critical": 0.044500000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "holm_accepted": false
+        },
+        {
+          "index": 53,
+          "label": "53:b1549372",
+          "far": 1.0,
+          "rank": 90,
+          "bh_critical": 0.045000000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "holm_accepted": false
+        },
+        {
+          "index": 55,
+          "label": "55:68af4a91",
+          "far": 1.0,
+          "rank": 91,
+          "bh_critical": 0.045500000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.005,
+          "holm_accepted": false
+        },
+        {
+          "index": 58,
+          "label": "58:a053d89c",
+          "far": 1.0,
+          "rank": 92,
+          "bh_critical": 0.046000000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "holm_accepted": false
+        },
+        {
+          "index": 60,
+          "label": "60:ea3c60ab",
+          "far": 1.0,
+          "rank": 93,
+          "bh_critical": 0.04650000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.00625,
+          "holm_accepted": false
+        },
+        {
+          "index": 61,
+          "label": "61:a053d89c",
+          "far": 1.0,
+          "rank": 94,
+          "bh_critical": 0.047,
+          "bh_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "holm_accepted": false
+        },
+        {
+          "index": 63,
+          "label": "63:a053d89c",
+          "far": 1.0,
+          "rank": 95,
+          "bh_critical": 0.0475,
+          "bh_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 67,
+          "label": "67:aeaa47a3",
+          "far": 1.0,
+          "rank": 96,
+          "bh_critical": 0.048,
+          "bh_accepted": false,
+          "holm_critical": 0.01,
+          "holm_accepted": false
+        },
+        {
+          "index": 69,
+          "label": "69:833fdeb4",
+          "far": 1.0,
+          "rank": 97,
+          "bh_critical": 0.0485,
+          "bh_accepted": false,
+          "holm_critical": 0.0125,
+          "holm_accepted": false
+        },
+        {
+          "index": 71,
+          "label": "71:d83b0185",
+          "far": 1.0,
+          "rank": 98,
+          "bh_critical": 0.049,
+          "bh_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "holm_accepted": false
+        },
+        {
+          "index": 74,
+          "label": "74:d83b0185",
+          "far": 1.0,
+          "rank": 99,
+          "bh_critical": 0.0495,
+          "bh_accepted": false,
+          "holm_critical": 0.025,
+          "holm_accepted": false
+        },
+        {
+          "index": 85,
+          "label": "85:45df9e32",
+          "far": 1.0,
+          "rank": 100,
+          "bh_critical": 0.05,
+          "bh_accepted": false,
+          "holm_critical": 0.05,
+          "holm_accepted": false
+        }
+      ],
+      "expected_max_note": ""
+    }
+  },
+  "wall_clock_s": 0.0,
+  "gate": {
+    "n_trials": 80,
+    "b": 10000,
+    "observed_best": 0.3953280414739049,
+    "p": 0.014898510148985102,
+    "p_floor": 9.999000099990002e-05,
+    "at_floor": false,
+    "reject": true,
+    "q": 0.05,
+    "null_max_mean": 0.20708491565222417,
+    "null_max_quantiles": {
+      "0.5": 0.19454686134682264,
+      "0.2": 0.24415756902686292,
+      "0.1": 0.2782043642727751,
+      "0.05": 0.3167929964151345,
+      "0.01": 0.4441292969707841
+    },
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "is_the_gate": true,
+    "observed_best_positive": true,
+    "accept": true,
+    "floor_note": "accept = reject AND observed_best > 0. The second term is not a formality: under a sign-flip null a losing high-turnover candidate can clear the first one decisively."
+  },
+  "uncorrected": {
+    "best_score": 0.3953280414739049,
+    "best_far": 0.003417686697590031,
+    "n_at_or_below_q": 27,
+    "reading": "what a report with no correction would say: the best of 100 candidates scored +0.3953 at a nominal false-acceptance rate of 0.003418"
+  },
+  "deflation": {
+    "best_score": 0.3953280414739049,
+    "expected_max_under_null": 0.1880654001079954,
+    "margin": 0.20726264136590947,
+    "clears_selection_bar": true,
+    "n_trials": 100,
+    "n_sessions": 384,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "null_source": "round_turn_mc",
+  "error_control_note": "This campaign's null is the sign-flip over round turns, not the conditional null, so Task 38's FWER of 0.060 CI [0.041, 0.088] does NOT describe it. The figure that does is Task 57's, measured on this configuration (round_turn_mc x max_of_n, q = 0.05, B = 10,000) at both N = 10 and N = 50: 0 acceptances in 400 campaigns per arm, FWER below about 0.010 at 95%, below 0.005 pooled over 800. It is conservative rather than merely correct, and Task 59 prices the conservatism: 80% power at a signal strength of 0.287 against 0.242 for the conditional null. See docs/design/pre-registration.md sections 3a and 3b."
+}

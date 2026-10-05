@@ -296,3 +296,112 @@ def test_refining_after_a_stop_is_refused_rather_than_improvised():
         capture_output=True, text=True, cwd=str(REPO_ROOT))
     assert "REFUSED" in (proc.stdout + proc.stderr)
     assert "validation" in (proc.stdout + proc.stderr).lower()
+
+
+# --------------------------------------------------------------------------- #
+# only a completed campaign is validated (2026-10-05)
+# --------------------------------------------------------------------------- #
+def test_validation_is_only_for_campaigns_that_completed():
+    """**The look nq-s06-03 should never have had.** It died at trial 36 of 100
+    on a gateway `ModelSubstituted`, so `nulls` and `report` never ran and it had
+    no train-side gate at all -- its champion was picked by the carry rule alone,
+    never corrected, never audited. It was validated anyway, and its +0.1371
+    became the L2's observed best over two campaigns that had completed 100
+    trials each.
+
+    The line was `names = completed if stopped_by_cue else names`: a human stop
+    validated what ran, and every other ending validated the whole declared
+    family whether it ran or not. The refinement-failure path learned this on
+    2026-09-30; the run-failure path never did.
+    """
+    src = (REPO_ROOT / "scripts" / "research_session.py").read_text()
+    assert "names = completed\n" in src
+    assert "names = completed if stopped_by_cue else names" not in src
+    assert "excluded = [n for n in names if n not in completed]" in src
+
+
+def test_the_phase_2_guard_keys_on_completion_not_on_having_a_question():
+    """My first version of this guard only caught campaigns with no question,
+    which is why it missed nq-s06-03 -- that one had a question, registered
+    fine, and failed mid-run. A guard narrower than the rule it protects is a
+    guard that will be surprised again."""
+    src = (REPO_ROOT / "scripts" / "research_session.py").read_text()
+    assert "missing = excluded if not stopped_by_cue else []" in src
+    assert '"no question" in str(log["campaigns"]' not in src
+    # a human cue is still a decision and still validates what ran
+    i = src.index("missing = excluded")
+    assert "stopped_by_cue" in src[i:i + 120]
+
+
+def test_a_truncated_campaign_had_no_gate_which_is_the_point():
+    """Stated against the artefacts: nq-s06-03 has a validation.json and no
+    tier2-summary.json. That combination should be impossible and is the
+    signature of the defect."""
+    d = REPO_ROOT / "runs" / "campaigns" / "nq-s06-03"
+    if not d.exists():
+        return
+    assert (d / "validation.json").exists(), "it was validated"
+    assert not (d / "tier2-summary.json").exists(), (
+        "it never had a train gate -- if this file now exists the campaign was "
+        "completed later and this test should be retired")
+
+
+# --------------------------------------------------------------------------- #
+# Amendment 7 reaches every agent (2026-10-05)
+# --------------------------------------------------------------------------- #
+def test_the_probe_is_armed_on_every_agent_not_just_the_first():
+    """**Three of every four proposals skipped Amendment 7.** `stage_run` armed
+    the probe on `agent` and Amendment 12 then built the other `width - 1` with
+    `agent_for(...)`, which arms nothing. Measured: 41 probe rows for 100 trials
+    in nq-s06-01, 42 for 100 in nq-s06-02 -- and nq-s06-02 then crashed 35 of
+    100 proposals on two API-misuse shapes the probe catches in one synthetic
+    run, because three quarters of them never got the chance to repair."""
+    assert "def _arm_probe(a) -> None:" in SRC
+    assert SRC.count("_arm_probe(") == 3, "one definition, two call sites"
+    # the extra agents are armed where they are built
+    i = SRC.index("for _ in range(width - 1):")
+    assert "_arm_probe(extra)" in SRC[i:i + 400]
+
+
+def test_probe_coverage_is_measured_against_trials_not_asserted_as_a_flag():
+    """`probe_before_trial: true` was in every affected campaign's record. A test
+    that asserts the flag passes while the probe reaches a quarter of proposals,
+    which is what happened -- so coverage is counted instead.
+
+    Campaigns run BEFORE the fix are expected to fail this and are named, rather
+    than the threshold being lowered until they pass.
+    """
+    import json
+    broken = {"nq-s05b-01", "nq-s06-01", "nq-s06-02", "nq-s06-03"}
+    camps = REPO_ROOT / "runs" / "campaigns"
+    for d in sorted(camps.glob("*/probe-ledger.jsonl")):
+        name = d.parent.name
+        rec = d.parent / "campaign.json"
+        if not rec.is_file():
+            continue
+        r = (json.loads(rec.read_text()).get("record") or {})
+        if not r.get("probe_before_trial") or (r.get("generation_width") or 1) < 2:
+            continue
+        led = d.parent / "ledger.jsonl"
+        trials = len([x for x in led.read_text().splitlines() if x.strip()])
+        rows = len([x for x in d.read_text().splitlines() if x.strip()])
+        if name in broken:
+            assert rows < trials, (
+                f"{name} was run before the probe fix and should show the gap; "
+                f"if it no longer does, retire it from `broken`")
+        else:
+            assert rows >= trials, (
+                f"{name}: {rows} probe rows for {trials} trials -- Amendment 7 "
+                f"reached only {rows / trials:.0%} of proposals")
+
+
+def test_the_crash_analysis_records_what_is_not_fixed():
+    """Annotating the strategy template would turn both crash shapes into static
+    errors, but `config/prompts/strategy-agent.md` is in ARTIFACT_GLOBS, so it
+    moves the artifact fingerprint of every later campaign. Left as a decision,
+    and said so."""
+    f = REPO_ROOT / "docs" / "reviews" / "crash-analysis" / "README.md"
+    flat = " ".join(f.read_text().split())
+    assert "mypy can only check what is typed" in flat
+    assert "ARTIFACT_GLOBS" in flat
+    assert "not separable from this campaign alone" in flat

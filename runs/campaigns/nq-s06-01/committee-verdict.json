@@ -1,0 +1,93 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Code uses `daily[-2]` for prior-session bias (always a closed bar regardless of whether the history includes the forming daily bar), opening range is built from completed 5m bars, and breakout/limit logic reads only the just-closed 1m bar and `ctx.last_price`; no access to scorer, dataset, split, or future-dated state was found.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "Session-return kurtosis of 57.5 and skew of 5.56 are extreme (normal kurtosis is 3), and the Sharpe (0.143) is ~3x lower than the Sortino (0.395); together these are strong indicators the reported Sortino is carried by a small number of extreme positive sessions, but no session-level concentration data (e.g., top-k session contribution to mean return) is provided to confirm or rule this out",
+        "No out-of-sample validation was run (_validation: NOT RUN), so the statistics describe only in-sample fit and I have no way to assess whether the tail shape and Sortino generalize",
+        "n_nulls = 80 draws of the null maximum is modest for estimating the upper tail of the max distribution across 100 candidates; the reported p = 0.0149 (149/10001 from b = 10000 resamples) is well above the p_floor, but its precision depends on the coarser 80-draw null-max estimate underneath"
+      ],
+      "confidence_note": "I cannot see per-session return series, top-k session contribution, or any leave-one-out / concentration diagnostics, so the extreme kurtosis/skew-driven concentration concern cannot be resolved from the given evidence.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+      ],
+      "confidence_note": "",
+      "error": "HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Single-month concentration: 2025-04 contributes 3770 of total P&L \u2248 8489, i.e. ~44% of all profit from one month out of 18; removing that month leaves roughly half the result.",
+        "Single-hour concentration: hour 17 UTC alone contributes 2256 (~27% of total P&L), and hours 14-17 UTC together contribute 5129 (~60% of total P&L), so the result is dominated by one slice of the trading day.",
+        "Top-heavy session distribution: profit_concentration_top5pct = 0.47, i.e. the top 5% of sessions deliver roughly half of all profit, and 225 of 384 sessions with exposure are losing sessions (~59% losing rate).",
+        "The by-month series is highly erratic with 7 of 18 months negative (some deeply, e.g. -708 in 2025-01 and -310 in 2024-10) and one outlier month driving nearly half the total; this is the signature of a strategy whose P&L is carried by a few events rather than broadly distributed edge."
+      ],
+      "confidence_note": "Without per-trade records, per-session P&L distribution beyond the summary stats, or any out-of-sample run, I cannot say whether this concentration is a structural feature of the strategy or an artifact of the training window, but the in-sample concentration is material enough to distrust the headline result on its own.",
+      "error": null
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 3,
+  "seats_failed": [
+    "economics"
+  ],
+  "incomplete": true,
+  "incomplete_note": "One or more auditors never ran, so this campaign was judged by fewer seats than the committee has. Their failure is recorded as a VETO because no verdict is not no veto, but the reading 'the committee looked at this' is weaker than it appears.",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 2193,
+      "completion_tokens": 2319,
+      "reasoning_tokens": 1961,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 2321,
+      "completion_tokens": 4610,
+      "reasoning_tokens": 4509,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 13504,
+      "completion_tokens": 6350,
+      "reasoning_tokens": 6040,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "proposer_model": "deepseek-v4-pro",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

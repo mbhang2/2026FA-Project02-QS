@@ -1,0 +1,9 @@
+{
+  "budget": 100,
+  "counts_toward_n": 36,
+  "gated": false,
+  "status": "abandoned",
+  "summary": "Registered for session-06 and abandoned after 36 of 100 trials. The proposer call raised ModelSubstituted: the gateway answered 'gemini-3.1-pro-preview' when asked for 'deepseek-v4-pro', and the substitution outlasted all five retries of the generic 28-minute backoff. Because the run stage failed, `nulls` and `report` never ran, so this campaign has NO train-side gate: there is no tier2-summary.json and its champion was chosen by the carry rule alone, never corrected and never audited. **It was then validated anyway, which was a defect in research_session.py: `names = completed if stopped_by_cue else names` validated the whole declared family whenever the session ended any other way.** Its validation primary of +0.137063 became session-06's L2 observed best, above two campaigns that had completed 100 trials each. The L2 failed at p = 0.4434, so nothing was claimed. Fixed 2026-10-05: only a campaign that completed is validated. The validation artefact is left in place rather than deleted -- the 36 trials were real looks and count toward N -- and this file is the record that its validation should never have been taken.",
+  "trials_run": 36,
+  "validated_in_error": true
+}

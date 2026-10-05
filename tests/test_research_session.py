@@ -287,7 +287,21 @@ def test_a_transient_endpoint_fault_is_retried_and_the_guard_is_not_softened():
     assert "must NOT be softened" in FLAT
     assert "not to believe it" in FLAT
     # only `run` is retried -- nulls and report are deterministic
-    assert 'retries=MAX_STAGE_RETRIES if stage == "run" else 0' in SRC
+    assert 'retries=MAX_RUN_RETRIES if stage == "run" else 0' in SRC
+    assert 'backoff=RUN_BACKOFF_S if stage == "run" else None' in SRC
+    # and the run stage waits LONGER than the others, because it is the
+    # expensive one to lose: nq-s06-03 died at trial 36 of 100 when a
+    # substitution outlasted the 28-minute generic budget.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_rs", REPO_ROOT / "scripts" / "research_session.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    assert sum(m.RUN_BACKOFF_S) > sum(m.STAGE_BACKOFF_S)
+    assert m.STAGE_BACKOFF_S == tuple(m.RUN_BACKOFF_S[:len(m.STAGE_BACKOFF_S)]), (
+        "the run schedule extends the generic one rather than replacing it")
+    # widening a retry budget is not the fix and the code must say so
+    assert "never correctness" in FLAT
 
 
 def test_a_verdict_about_a_different_family_is_never_this_sessions_result():

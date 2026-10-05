@@ -1,0 +1,98 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The strategy only reads prior-session state (self._prior_atrs) and accumulates current-session state from ctx.closed bars, with the decision executed after ctx.actionable; I could not verify harness semantics for ctx.bars[self.interval] (whether it is the just-closed bar or the forming bar) but the code pattern and the docstring's 'entry on the bar close' suggest closed-bar semantics and nothing in the code reaches for future data, the scorer, the dataset, or the split.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The gate rejected (p=1.0, observed best 0.012 far below the null-max 5% quantile 0.46) and every view is coherent with that: 0 uncorrected/BH/Holm discoveries, negative deflation margin, p nowhere near the resolution floor, and the winner's Sortino rests on 196 downside sessions out of 384 and 4528 trades, so no degenerate denominator or session concentration is in play; what I cannot see is the prior-campaign look count, the per-session return series behind the concentration check, and any out-of-sample evidence (validation was not run), none of which matters for a result that claims nothing.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "Costs decide the outcome: commission paid is 913.1 points against gross P&L of 1187.75 points \u2014 77% of gross is consumed by commission alone. Net P&L of 274.65 points is entirely a residue of cost assumptions.",
+        "Per-trade gross edge is 0.262 points (1187.75 / 4528) while commission per round trip is 0.202 points. That leaves 0.06 points of gross edge per trade above commission \u2014 well inside any plausible spread. fill_model_spread is null, so no explicit spread was applied; NQ's minimum tick is 0.25 points (~$5), and any realistic round-trip spread of ~0.25 points on top of commission (total cost ~0.45 points) flips the strategy negative in real terms. Reported positive net P&L is an artifact of zero-spread fills.",
+        "Reported avg_holding_period_ns \u2248 834 seconds \u2248 13.9 minutes exceeds the strategy's own stated 10-minute deadline (hold_minutes=10, deadline enforced via ctx.close()). Either the deadline is not being enforced as stated or the reported holding period is measured differently from the rule the docstring claims to implement; either way the economics of a 'short-horizon fade' are not the economics the code is actually running."
+      ],
+      "confidence_note": "No per-session P&L distribution, no per-month/hour breakdown, and no evidence about how much of the 274.65-point net survives a realistic spread model were provided; concentration risk flagged in the pre-registration could not be checked.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Time concentration: 2024-11 (+876.55) and 2025-01 (+846.10) alone produce +1722.65 against a total of roughly +275; removing those two of fifteen months flips the total to approximately -1248. The result is the sample's two best months, not the sample.",
+        "Session-level concentration: profit_concentration_top5pct = 5.83, i.e. the best ~19 of 384 sessions contribute 583% of net profit \u2014 meaning the remaining ~365 sessions lose about 4.8x the total profit. Remove those sessions and the campaign is a substantial loser. best_session_share of 5.5% is fine, but the top-5% figure is not.",
+        "Hour-of-day concentration: hours 15 (+938) and 16 (+610) UTC alone account for +1548 against +275 net (\u2248563% of total); excluding those two of 24 hours the total goes to approximately -1273. No structural reason is offered for why US-cash-session hours should persistently hold the entire edge.",
+        "Weekday concentration: Thursday alone contributes +1082.6 against +275 net (\u2248394% of total), while Monday (-707) and Friday (-1011) are both deeply negative. Excluding Thursday flips the campaign sign.",
+        "Loss-rate structure: downside_sessions = 196 out of sessions_with_exposure = 253, i.e. roughly 77% of sessions lose money while a small tail of big winners pays for everything. Combined with the concentration figures above, the reported net is produced by a handful of outlier sessions rather than a broad, repeatable edge."
+      ],
+      "confidence_note": "Per-trade and per-session distributions (return histograms, holding-period and instrument breakdowns, filter/config attribution) were not provided, so I cannot tell which specific rules or symbols drive the concentrated tail \u2014 but the month/hour/weekday and top-5% concentration alone are sufficient to call the result narrow.",
+      "error": null
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 2058,
+      "completion_tokens": 2139,
+      "reasoning_tokens": 1640,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 12623,
+      "completion_tokens": 2257,
+      "reasoning_tokens": 2078,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4987,
+      "completion_tokens": 3867,
+      "reasoning_tokens": 3473,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 2328,
+      "completion_tokens": 5177,
+      "reasoning_tokens": 5052,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "proposer_model": "deepseek-v4-pro",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

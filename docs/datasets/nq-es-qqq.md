@@ -356,6 +356,43 @@ one instrument, effective N is trades/day × days. The harness-level requirement
 the metric be invariant to turnover, leverage and universe size — is an open question in
 the harness plan.
 
+## 2025-04 carries a disproportionate share of every champion's profit
+
+Observed 2026-10-05 across 21 campaigns, and it is a property of the DATA rather
+than of any one strategy. Of the four campaigns whose robustness auditor vetoed
+for single-month concentration, **three name 2025-04**, and they are three
+unrelated questions:
+
+| campaign | question | 2025-04's share of profit |
+|---|---|---|
+| `nq-t72b-03` | intraday continuation (Task 72 control arm) | **143%** |
+| `nq-s05b-01` | short-side fade of the opening move | 57% |
+| `nq-s06-01` | the opening range, direction left open | 44% |
+
+The fourth, `nq-ml-02`, names 2025-10 at 59%.
+
+143% is not a typo: that champion earned more in April 2025 than its entire net
+over 18 months, so the rest of the sample lost money. A strategy whose edge is
+one month is a strategy about that month.
+
+**What this is and is not.** It is not "April 2025 is a trap to be excluded" --
+removing a month because results concentrate there is fitting the calendar, and
+the exposure floor and the robustness auditor already catch the shape. It is a
+warning about **reading** a result: a positive Sortino on this split is more
+likely to be one volatile month than an edge, and the first question to ask of
+any champion here is which month it came from.
+
+**A correction worth keeping, because it is the easy mistake.** Counting every
+month any auditor mentions does NOT show this: on that count 2025-04, 2025-11 and
+2025-12 tie at four mentions each, because auditors enumerate monthly P&L for
+reasons other than concentration. The signal is only in the vetoes that cite a
+single month's *share*. A tally of mentions would have said there is nothing here.
+
+**Related:** Sortino is the scored metric and penalises only downside deviation,
+so a few large winners in one volatile month score well on it. `nq-s06-01`'s
+champion had Sortino 0.395 against Sharpe 0.143 with kurtosis 57.5 -- a 2.8x gap
+is the readable signature, and it is worth computing both before believing either.
+
 ## Falsified hypothesis families — do not re-explore
 
 Already falsified **on this data**; pre-register as excluded and log the exclusion. They

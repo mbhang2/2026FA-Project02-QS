@@ -513,15 +513,31 @@ def stage_run(name: str) -> None:
     model = (record.agent_config or {}).get("model", MODEL)
     agent = agent_for(champion if champion.exists() else None, hyp_path,
                       record.profile, model)
-    if record.probe_before_trial:
-        # Amendment 7, from the record. The probe writes `purpose: check` rows
-        # to the campaign's own probe ledger, beside the trial ledger and never
-        # in it, so `global_n()` cannot pick them up and a reader can see every
-        # synthetic run that happened.
+    def _arm_probe(a) -> None:
+        """Amendment 7 on one agent, from the record.
+
+        The probe writes `purpose: check` rows to the campaign's own probe
+        ledger, beside the trial ledger and never in it, so `global_n()` cannot
+        pick them up and a reader can see every synthetic run that happened.
+
+        **A function because Amendment 12 made more than one agent.** This used
+        to be inline on `agent` alone, and the generational block then built
+        `width - 1` more with `agent_for(...)`, which arms nothing -- so in a
+        width-4 campaign 3 of every 4 proposals skipped the probe entirely.
+        Measured on nq-s06-01: 41 probe rows for 100 trials. nq-s06-02 then
+        crashed 33 of 80 proposals on two API-misuse shapes the probe catches in
+        one synthetic run, because three quarters of them never got the chance
+        to repair.
+        """
+        if not record.probe_before_trial:
+            return
         import functools
         from src.core.loop.probe import probe_source
-        agent.probe_before_trial = True
-        agent.probe = functools.partial(probe_source, ledger=d / "probe-ledger.jsonl")
+        a.probe_before_trial = True
+        a.probe = functools.partial(probe_source, ledger=d / "probe-ledger.jsonl")
+
+    _arm_probe(agent)
+    if record.probe_before_trial:
         print("  probe before trial: ON (Amendment 7); synthetic rows in "
               "probe-ledger.jsonl", flush=True)
     # **Amendment 12: generations.** W trials share one history and run at the
@@ -542,9 +558,13 @@ def stage_run(name: str) -> None:
         # The agents are per-slot: `propose` is a model call and an LLMAgent
         # carries its own drain log, so W of them is W bills, not one shared and
         # raced.
-        agents = [agent] + [agent_for(champion if champion.exists() else None,
-                                      hyp_path, record.profile, model)
-                            for _ in range(width - 1)]
+        agents = [agent]
+        for _ in range(width - 1):
+            extra = agent_for(champion if champion.exists() else None,
+                              hyp_path, record.profile, model)
+            # Every agent, not just the first. See `_arm_probe`.
+            _arm_probe(extra)
+            agents.append(extra)
     else:
         agents = [agent]
 

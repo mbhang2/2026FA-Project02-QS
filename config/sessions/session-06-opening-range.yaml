@@ -1,0 +1,61 @@
+# Session 06 -- the opening range, direction left open. One family, three
+# campaigns, N = 100.
+#
+#   .venv/bin/python scripts/research_session.py \
+#       --plan config/sessions/session-06-opening-range.yaml
+#
+# Michael asked for this on 2026-10-04: a fresh family on the opening range,
+# NOT committed to a direction -- breakout or fade, the strategy chooses.
+# 300 trials. Global N 1,196 -> ~1,496.
+#
+# THE FIFTH FAMILY ON THIS RANGE, and the record of the other four is the reason
+# the question is phrased the way it is:
+#
+#   nq-s04-01  30m breakout            best +0.0377  p 0.948  n_nulls 11  VETO
+#   nq-s04-02  break continuation fail best +0.0374  p 0.935  n_nulls  8  VETO
+#   nq-s04-03  continuation OR fade    best -inf     p 1.000  n_nulls  0  VETO
+#   nq-s05b-01 short-side fade         best +0.1252  p 0.872  n_nulls 59  VETO
+#
+# nq-s04-03 asked almost exactly this question and produced NO MEASUREMENT: ten
+# of its twenty candidates were exposed in 20-39 sessions of 384, so nothing
+# reached the correction. That is why a fifth attempt is defensible -- the third
+# returned no answer rather than a negative one -- and it is why the question now
+# says, in its own terms and without naming any threshold, that a rule has to
+# act on the ordinary run of sessions.
+#
+# TWO THINGS THE QUESTION RULES OUT, each having already eaten a campaign:
+#   - multi-stage confirmation gating, which docs/datasets/nq-es-qqq.md lists
+#     under "Falsified hypothesis families -- do not re-explore"
+#   - the Sunday Globex reopen. nq-s05b-01's champion earned almost everything in
+#     two hours of Sunday evening and the committee vetoed it for exactly that.
+#
+# THE EXPOSURE FLOOR IS UNTOUCHED. Michael's call on 2026-10-04 was to leave
+# min_exposed alone, so it is unset here and takes the config default as every
+# previous campaign did. The question addresses the floor by asking for a rule
+# that acts, which is the legitimate lever; moving the floor to fit the
+# candidates is not.
+#
+# AMENDMENT 12: generation_width 4, so each campaign's 100 trials run as 25
+# generations of 4. Measured on nq-s05b-01: 150 min for 100 trials against ~380
+# sequential. It costs power -- four proposals from one history are correlated,
+# so the effective looks are fewer than 100 and max_of_n over-corrects, which is
+# the safe direction. Read Amendment 12 before quoting a number from here.
+#
+# WHAT THIS RUN CANNOT TELL US. At N = 20 the control arm measured p spanning
+# 0.077 -> 0.952 on one unchanged question. N = 100 is tighter but still short of
+# the registered N >= 400, and three p values from three refinements are not a
+# trend.
+#
+# The holdout is NOT armed.
+
+session: session-06-opening-range
+
+family:
+  seed: config/hypotheses/opening-range-direction-agnostic.md
+  iterations: 3
+  refine: true
+  n: 100
+  generation_width: 4
+  model: deepseek-v4-pro
+  profile: nq-train
+  prefix: nq-s06

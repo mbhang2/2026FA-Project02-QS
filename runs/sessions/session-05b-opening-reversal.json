@@ -3,33 +3,17 @@
   "session": "session-05b-opening-reversal",
   "plan": "config/sessions/session-05b-opening-reversal.yaml",
   "declared_family": [],
-  "started": "2026-10-04T23:04:35+00:00",
+  "started": "2026-10-04T23:15:37+00:00",
   "campaigns": {
-    "nq-s05b-01": "skipped (resume)",
-    "nq-s05b-02": "no question: the refinement before it did not produce one",
-    "nq-s05b-03": "no question: the refinement before it did not produce one"
+    "nq-s05b-01": "skipped (resume); refinement FAILED",
+    "nq-s05b-02": "not started (the session aborted on a failure)",
+    "nq-s05b-03": "not started (the session aborted on a failure)"
   },
-  "validation": {
-    "nq-s05b-01": "done"
-  },
-  "l2": {
-    "error": "the L2 gate exited 1 and no verdict about this family was produced.",
-    "declared_family": [
-      "nq-s05b-01",
-      "nq-s05b-02",
-      "nq-s05b-03"
-    ],
-    "verdict_file_family": [
-      "nq-s04-01",
-      "nq-s04-02",
-      "nq-s04-03"
-    ],
-    "note": "a verdict file exists but is about a different family, so it is NOT this session's result and is not recorded as one",
-    "stderr_tail": "not scored on validation, so cannot be in a family: nq-s05b-02, nq-s05b-03\n"
-  },
+  "validation": "NOT RUN -- the session aborted on a failure",
+  "l2": null,
+  "refinement_failed_after": "nq-s05b-01",
   "stopped_by_cue": false,
   "family_note": "every campaign in the plan, written before the session ran.",
-  "holdout_check_clear": false,
-  "holdout": "checked only; not armed",
-  "finished": "2026-10-04T23:05:37+00:00"
+  "aborted_by_failure": true,
+  "finished": "2026-10-04T23:15:37+00:00"
 }

@@ -11,6 +11,7 @@ from __future__ import annotations
 import collections
 import importlib.util
 import json
+import re
 import pathlib
 
 import pytest
@@ -251,7 +252,17 @@ def test_the_assembled_context_carries_no_validation_number():
             continue
         checked += 1
         for form in (f"{primary:.4f}", f"{primary:.3f}", f"{primary:.2f}"):
-            assert form.lstrip("-") not in ctx, (
+            # **As a whole number, not as a substring.** `0.02` is inside
+            # `0.0256`, which is nq-mvp-01's Sharpe quoted in an auditor's
+            # objection -- a TRAIN-side number that belongs in this context.
+            # nq-s05b-01 validating to +0.0165 made the 2-decimal form collide
+            # with it and the test accused the ranker of a §4 leak it had not
+            # committed. Same shape as the `-inf`/"reinforcement" false positive
+            # fixed here on 2026-10-04: a short numeric string matched loosely
+            # finds itself everywhere, and a leak test that cries wolf stops
+            # being read.
+            bare = form.lstrip("-")
+            assert not re.search(rf"(?<![\d.]){re.escape(bare)}(?![\d])", ctx), (
                 f"{d.parent.name}'s validation score {form} reached the ranker")
     assert checked >= 6, (
         f"only {checked} finite validation score(s) on disk -- this test is "

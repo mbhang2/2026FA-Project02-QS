@@ -373,8 +373,12 @@ def test_a_failed_refinement_never_reuses_the_parent_question():
     assert "refinement FAILED" in SRC
     assert "question for the next campaign" in SRC
     assert "no question: the refinement" in SRC
-    # and it aborts rather than quietly continuing
-    assert "aborted_by_failure = True" in SRC
+    # and it aborts rather than quietly continuing. `_refine_after` now returns
+    # that flag instead of assigning it, because the resume path calls the same
+    # function -- so the assertion is on the return and on both call sites
+    # binding it, which is what actually stops the loop.
+    assert "return parent, True" in SRC
+    assert SRC.count("aborted_by_failure = _refine_after(") == 2
 
 
 def test_an_infrastructure_failure_does_not_spend_validation_looks():
@@ -440,7 +444,11 @@ def test_a_control_family_runs_the_same_question_every_time(tmp_path):
 
 
 def test_a_control_family_never_calls_the_refiner():
-    assert 'if fam and refines and name != entries[-1]["name"]:' in SRC
+    # The guard moved into `_refine_after` and is stated as an early return, so
+    # it reads inverted. Same three conditions, same meaning: a control family
+    # (`refine: false`) never reaches the refiner.
+    assert 'if not (fam and refines and name != entries[-1]["name"]):' in SRC
+    assert "return parent, False" in SRC
     assert 'refines = fam.get("refine", True)' in SRC
     assert "`refine: false` is the control arm" in FLAT
 

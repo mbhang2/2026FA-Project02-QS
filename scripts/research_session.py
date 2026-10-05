@@ -380,6 +380,74 @@ def _main() -> int:
     aborted_by_failure = False
     completed: list[str] = []
     cur_hypothesis = (ROOT / str(fam["seed"])) if fam else None
+    def _refine_after(name: str, parent: pathlib.Path) -> tuple[pathlib.Path, bool]:
+        """Write the next campaign's question from this one. `(parent, aborted)`.
+
+        **Called from the normal path AND from the resume path.** It used to
+        live inside the stage loop's `else:`, so a `--resume` that skipped a
+        completed campaign skipped its refinement too -- and the family then had
+        no question for campaign 2, was passed over, and the session validated
+        one campaign of a declared three. One definition, two callers.
+
+        **Refining here, inside phase 1, is what makes it legal.**
+        `refine_hypothesis.py` refuses if any validation artefact is readable for
+        the campaign it is given; during phase 1 none exists, because validation
+        runs at the stop. The ordering enforces §4 rather than a promise to be
+        careful -- and on a resume AFTER a stop it refuses, which is correct and
+        is why that case aborts rather than improvising.
+        """
+        if not (fam and refines and name != entries[-1]["name"]):
+            return parent, False
+        if all(e.get("hypothesis") is not None for e in entries if e["name"] != name):
+            return parent, False          # every successor already has one
+        nxt = next(e for e in entries
+                   if e["name"] != name and e.get("hypothesis") is None)
+        # **Do NOT pass the campaign's model.** This used to send `c["model"]` --
+        # the PROPOSER's model -- so the refiner ran on whatever wrote the
+        # strategies and `refine_hypothesis`'s own choice could never take effect
+        # inside a session. Same shape as the committee defect in
+        # `nq_campaign.py`, where the auditors inherited the proposer's model.
+        #
+        # The refiner picks its own (mimo-v2.6-pro: one call does the thinking,
+        # so 738 s is affordable where 20 calls a campaign would not be).
+        # `refine_model:` in the plan overrides it.
+        refine_argv = [PY, "scripts/refine_hypothesis.py",
+                       "--campaign", name,
+                       "--parent", str(parent), "--commit"]
+        if fam.get("refine_model"):
+            refine_argv += ["--model", str(fam["refine_model"])]
+        code, out = _retrying(refine_argv,
+                              label=f"{name} refine -> next question",
+                              retries=MAX_STAGE_RETRIES)
+        written = [ln.split("wrote ", 1)[1].split("  ")[0].strip()
+                   for ln in out.splitlines() if ln.startswith("wrote ")]
+        if code or not written:
+            log["campaigns"][name] = (
+                str(log["campaigns"].get(name, "")) + "; refinement FAILED")
+            log["refinement_failed_after"] = name
+            # **A broken session does not spend validation looks.** This used to
+            # set stopped_by_cue, which made an infrastructure failure behave
+            # like a human deciding to stop -- and a human deciding to stop means
+            # "validate what we have". On 2026-09-30 a single ReadTimeout
+            # therefore spent nq-s02-01's one validation look on a session that
+            # never executed its plan. A cue is a decision; a
+            # timeout is not, and the two must not share a code path.
+            print(f"\n  the refinement after {name} failed after "
+                  f"{MAX_STAGE_RETRIES} retries, so there is no\n  "
+                  f"question for the next campaign.\n  STOPPING WITHOUT VALIDATING. "
+                  f"Validation is one look per campaign and this session did "
+                  f"not run its plan;\n  spending those looks on a broken "
+                  f"session would cost them for nothing.\n  Fix the endpoint "
+                  f"and start a fresh family, or cue the stop deliberately if "
+                  f"you want these validated.", flush=True)
+            return parent, True
+        nxt["hypothesis"] = written[0]
+        log.setdefault("refinements", []).append(
+            {"after": name, "wrote": written[0],
+             "machine_written": True, "amendment": 11})
+        print(f"      next question: {written[0]}", flush=True)
+        return ROOT / written[0], False
+
     for c in entries:
         if stopped_by_cue or aborted_by_failure:
             log["campaigns"][str(c["name"])] = (
@@ -390,6 +458,21 @@ def _main() -> int:
         if a.resume and already_run(name):
             print(f"  {name}: already has a ledger, skipping")
             log["campaigns"][name] = "skipped (resume)"
+            # **But its refinement still has to run.** Skipping the campaign
+            # used to skip this too, so a resumed family never got a question
+            # for the campaign after it: on 2026-10-04 nq-s05b-02 and -03 were
+            # passed over and the session validated a family of one. The
+            # campaign's own question comes from its record rather than from
+            # whatever the loop happened to be carrying.
+            rec = CAMPAIGNS / name / "campaign.json"
+            if rec.is_file():
+                hp = (json.loads(rec.read_text()).get("record") or {}
+                      ).get("hypothesis_path")
+                if hp:
+                    cur_hypothesis = ROOT / hp
+            cur_hypothesis, aborted_by_failure = _refine_after(
+                name, cur_hypothesis)
+            record.write_text(json.dumps(log, indent=2) + "\n")
             continue
         try:
             if not registered(name):
@@ -426,64 +509,8 @@ def _main() -> int:
                 # artefact is readable for the campaign it is given; during
                 # phase 1 none exists, because validation runs at the stop. The
                 # ordering enforces §4 rather than a promise to be careful.
-                if fam and refines and name != entries[-1]["name"]:
-                    nxt = next(e for e in entries
-                               if e["name"] != name
-                               and e.get("hypothesis") is None)
-                    # **Do NOT pass the campaign's model.** This used to send
-                    # `c["model"]` -- the PROPOSER's model -- so the refiner ran
-                    # on whatever wrote the strategies, and `refine_hypothesis`'s
-                    # own choice could never take effect inside a session. Same
-                    # shape as the committee defect in `nq_campaign.py`, where
-                    # the auditors inherit the proposer's model too.
-                    #
-                    # The refiner picks its own (mimo-v2.6-pro: one call does the
-                    # thinking, so 738 s is affordable where 20 calls a campaign
-                    # would not be). `refine_model:` in the plan overrides it.
-                    refine_argv = [PY, "scripts/refine_hypothesis.py",
-                                   "--campaign", name,
-                                   "--parent", str(cur_hypothesis), "--commit"]
-                    if fam.get("refine_model"):
-                        refine_argv += ["--model", str(fam["refine_model"])]
-                    code, out = _retrying(
-                        refine_argv,
-                        label=f"{name} refine -> next question",
-                        retries=MAX_STAGE_RETRIES)
-                    written = [ln.split("wrote ", 1)[1].split("  ")[0].strip()
-                               for ln in out.splitlines() if ln.startswith("wrote ")]
-                    if code or not written:
-                        log["campaigns"][name] += "; refinement FAILED"
-                        log["refinement_failed_after"] = name
-                        # **A broken session does not spend validation looks.**
-                        # This used to set stopped_by_cue, which made an
-                        # infrastructure failure behave like a human deciding to
-                        # stop -- and a human deciding to stop means "validate
-                        # what we have". On 2026-09-30 a single ReadTimeout
-                        # therefore spent nq-s02-01's one validation look on a
-                        # session that never executed its plan. A cue is a
-                        # decision; a timeout is not, and the two must not share
-                        # a code path.
-                        aborted_by_failure = True
-                        print(f"\n  the refinement after {name} failed after "
-                              f"{MAX_STAGE_RETRIES} retries, so there is no "
-                              f"question for the next campaign.\n"
-                              f"  STOPPING WITHOUT VALIDATING. Validation is one "
-                              f"look per campaign and this session did not run "
-                              f"its plan;\n  spending those looks on a broken "
-                              f"session would cost them for nothing. The "
-                              f"{len(completed)} campaign(s) that ran keep their "
-                              f"looks unspent.\n  Fix the endpoint and start a "
-                              f"fresh family, or cue the stop deliberately if "
-                              f"you want these validated.",
-                              flush=True)
-                    else:
-                        nxt["hypothesis"] = written[0]
-                        cur_hypothesis = ROOT / written[0]
-                        log.setdefault("refinements", []).append(
-                            {"after": name, "wrote": written[0],
-                             "machine_written": True,
-                             "amendment": 11})
-                        print(f"      next question: {written[0]}", flush=True)
+                cur_hypothesis, aborted_by_failure = _refine_after(
+                    name, cur_hypothesis)
         except KeyboardInterrupt:
             # **Section 4's stop, taken by a human who has seen no validation
             # number** -- there are none yet, phase 2 has not run. That is the

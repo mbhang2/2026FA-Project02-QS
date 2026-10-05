@@ -179,8 +179,19 @@ def test_the_candidate_lister_runs_offline_and_reports_the_real_tree():
     # because the five-campaign family it belonged to died on a network timeout
     # after one campaign; and that campaign's committee never ran, for the same
     # reason, so no auditor has read it.
+    # **nq-s05b-01 joined this set on 2026-10-04, and it is the more
+    # instructive member.** Its L1 gate on TRAIN rejected it at p = 0.8724 and
+    # its committee vetoed on robustness -- all profit in two UTC hours, 74% on
+    # Sundays, 57% in one month, which is the Globex weekly open and not the RTH
+    # open its question asked about. It then validated to +0.0165 and cleared
+    # rule (a) anyway.
+    #
+    # That is the clearest demonstration available of why rule (a) is a FLOOR
+    # and not a finding. Eleven campaigns are listed here, two are positive on
+    # validation, and one of those two was rejected by every other tier that
+    # looked at it.
     positive = [c["campaign_id"] for c in cands if c["rule_a"]]
-    assert positive == ["nq-s02-01"], (
+    assert positive == ["nq-s02-01", "nq-s05b-01"], (
         f"the set of winners positive on validation changed: {positive}. "
         "Update this deliberately and look closely at whichever one is new -- "
         "every previous campaign's winner lost money on validation.")

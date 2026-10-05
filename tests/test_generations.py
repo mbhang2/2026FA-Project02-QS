@@ -258,3 +258,41 @@ def test_a_truncated_family_cannot_spend_its_validation_looks():
 def test_resume_skipping_a_campaign_is_recorded_as_such():
     src = (REPO_ROOT / "scripts" / "research_session.py").read_text()
     assert 'log["campaigns"][name] = "skipped (resume)"' in src
+
+
+def test_a_resumed_campaign_still_produces_the_next_question():
+    """**The other half of the 2026-10-04 loss.** The refinement lived inside
+    the stage loop's `else:`, so a `--resume` that skipped a completed campaign
+    skipped its refinement too; nq-s05b-02 and -03 then had no question, were
+    passed over, and the session validated one campaign of a declared three.
+
+    One definition, two callers -- and the resume path takes the campaign's own
+    question from its record rather than from whatever the loop was carrying,
+    because resuming at campaign 2 must refine from campaign 2's question and
+    not from the seed.
+    """
+    src = (REPO_ROOT / "scripts" / "research_session.py").read_text()
+    assert "def _refine_after(" in src
+    assert src.count("_refine_after(") == 3, "one definition, two call sites"
+    skip = src[src.index('log["campaigns"][name] = "skipped (resume)"'):]
+    skip = skip[:skip.index("        try:")]
+    assert "_refine_after(" in skip, "the resume path must refine"
+    assert "hypothesis_path" in skip, "and from the campaign's OWN question"
+
+
+def test_refining_after_a_stop_is_refused_rather_than_improvised():
+    """`refine_hypothesis.py` refuses when a validation artefact is readable
+    (§4: the information must not be in the room). A resume AFTER the stop
+    therefore cannot continue the family, and must abort rather than carry on
+    -- which is what makes putting validation at the stop meaningful."""
+    import subprocess
+    import sys
+    d = REPO_ROOT / "runs" / "campaigns" / "nq-s05b-01"
+    if not (d / "validation.json").exists():
+        return
+    proc = subprocess.run(
+        [sys.executable, "scripts/refine_hypothesis.py", "--campaign",
+         "nq-s05b-01", "--dry-run"],
+        capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert "REFUSED" in (proc.stdout + proc.stderr)
+    assert "validation" in (proc.stdout + proc.stderr).lower()

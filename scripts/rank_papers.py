@@ -54,7 +54,12 @@ def _prompt_digest() -> str:
     import hashlib
     return hashlib.sha256(PROMPT.read_bytes()).hexdigest()[:16]
 HYPOTHESES = ROOT / "config" / "hypotheses"
-CAMPAIGNS = ROOT / "runs" / "campaigns"
+# Amendment 13: `runs/` unless a rehearsal redirects it. A rehearsal
+# writes under `.scratch/`, which `runlog.ledger_paths()` does not read,
+# so its trials are invisible to `global_n()` by construction.
+import os as _os
+_RUNS = pathlib.Path(_os.environ.get("PRACTICUM_RUNS_ROOT") or (ROOT / "runs"))
+CAMPAIGNS = _RUNS / "campaigns"
 DATASET_DOC = ROOT / "docs" / "datasets" / "nq-es-qqq.md"
 
 # **gemini-2.5-pro, not claude-haiku-4-5.** Measured 2026-10-03 against the

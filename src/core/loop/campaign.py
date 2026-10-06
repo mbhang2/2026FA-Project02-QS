@@ -213,7 +213,7 @@ def declares_fit(source: str) -> bool:
 
 def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
               index: int, allow_fitted: bool | None = None,
-              root: Path | None = None) -> dict:
+              root: Path | None = None, purpose: str = "trial") -> dict:
     """One proposal, one isolated run, one ledger row. Returns the row.
 
     The strategy file is written, `run.py` is invoked exactly as a human would
@@ -249,7 +249,11 @@ def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
     strategy_path.write_text(source)
     try:
         subprocess.run(
-            [sys.executable, "run.py", "--human", "--quiet", "--purpose", "trial",
+            # **`purpose` is an argument only so a rehearsal can say `check`
+            # (Amendment 13).** It defaults to `trial` and no agent reaches it:
+            # the campaign driver passes it, and the driver takes it from the
+            # rehearsal flag, not from the record and never from a proposal.
+            [sys.executable, "run.py", "--human", "--quiet", "--purpose", purpose,
              "--profile", profile, "--ledger", str(ledger)],
             capture_output=True, text=True, cwd=str(root),
         )

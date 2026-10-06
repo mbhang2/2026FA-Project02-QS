@@ -2027,3 +2027,71 @@ trial enters the next generation's history, winners and losers alike.
 §3 said the agent is shown "its own prior trials with their scores". Under this
 amendment it is shown **every trial completed before its generation began**,
 which is the same sentence at W = 1.
+
+## Amendment 13 — 2026-10-05 — a session may be rehearsed, and a rehearsal is not a look
+
+**Status: IN FORCE from 2026-10-05, signed off by Michael.**
+
+### Why it was asked for
+
+Every defect that has cost this project something irreversible was found by
+running a real session:
+
+| defect | what it cost |
+|---|---|
+| a `ReadTimeout` ended a five-campaign session after one | nq-s02-01's validation look |
+| `--resume` skipped the refinement that writes question k+1 | three validation looks, on a family of one |
+| the parallel merge dropped `fills/` | nq-s05b-01's nulls; `n_nulls = 0` and `p = 1.0` on 45 scored candidates |
+| `generation_width` never reached the registration | two trials, and a campaign that ran as a chain |
+| Amendment 7's probe armed on 1 agent of 4 | 35 crashes in one campaign |
+| a failed run still spent validation looks | nq-s06-03's look, on a campaign with no gate |
+
+**None of those is data-dependent.** Every one is a structural fault in the
+orchestration that a run against synthetic data would have produced identically.
+The most dangerous single act in this protocol -- the holdout -- has been
+rehearsable since §8 was written (`runs/holdout-rehearsal.json`). The thing the
+project does every night has not been.
+
+### What it permits
+
+`scripts/rehearse.py` runs the **whole session chain** -- register, run, nulls,
+report, committee, refinement, validation, L2, holdout check -- against the
+`rehearsal` profile, and **the trials it runs are not looks**.
+
+Three things make that true, and the first two are structural rather than
+promises:
+
+1. **It runs on `synthetic` data.** N is looks taken at *our market data*, and a
+   synthetic run takes none. This is the whole justification; the other two
+   points only stop it being circumvented.
+2. **Its ledgers live outside `runs/`.** `runlog.ledger_paths()` reads
+   `runs/ledger.jsonl` and `runs/campaigns/**` and nothing else, so a rehearsal
+   under `.scratch/` is invisible to `global_n()` by construction -- the same
+   argument that makes Amendment 12's worker ledgers safe.
+3. **Every row is `purpose: check`**, as Amendment 7's probe rows already are.
+
+### What it does NOT permit
+
+**A rehearsal may not run against `nq`.** The profile is fixed in the code, not
+passed in, for the same reason `run.py` takes no dataset argument: an argument
+that selects the data is an argument that can select our data.
+
+**A rehearsal result may not support any claim about the market.** It is a test
+of the machinery. Its L2 verdict, its p, its champion are all about synthetic
+data with a planted signal and mean nothing about NQ.
+
+**It does not replace the real thing.** A session that has been rehearsed can
+still fail for a reason only the real endpoint or the real data produces --
+a gateway substitution, a model that writes different code against a real
+question. The claim is narrower: the five faults above would have been caught
+before they cost anything, and faults of that shape will be.
+
+### The argument against
+
+**A rehearsal that diverges from the real path tests the wrong thing.** If the
+rehearsal takes a different code path -- a stub engine, a different driver -- it
+proves nothing about the driver that runs at night. This is why it runs the real
+`research_session.py` and the real `nq_campaign.py` with only the profile and
+the output root changed, and why `scripts/rehearse.py` asserts afterwards that a
+gate ran, nulls were computed and the committee was asked. A green rehearsal
+that skipped a stage is worse than no rehearsal.

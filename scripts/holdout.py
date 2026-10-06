@@ -72,12 +72,25 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import prereg  # noqa: E402  -- after sys.path is set above
 
-CAMPAIGNS = ROOT / "runs" / "campaigns"
-L2_VERDICT = ROOT / "runs" / "l2-verdict.json"
+# Amendment 13: `runs/` unless a rehearsal redirects it. A rehearsal
+# writes under `.scratch/`, which `runlog.ledger_paths()` does not read,
+# so its trials are invisible to `global_n()` by construction.
+import os as _os
+_RUNS = pathlib.Path(_os.environ.get("PRACTICUM_RUNS_ROOT") or (ROOT / "runs"))
+CAMPAIGNS = _RUNS / "campaigns"
+L2_VERDICT = _RUNS / "l2-verdict.json"
+# **The one look, and its refusal, are ALWAYS in the real `runs/`.**
+# Amendment 13 lets a rehearsal redirect everything else, and this must not
+# follow: the holdout split is the real market data wherever the output goes, so
+# a redirected RESULT would let `PRACTICUM_RUNS_ROOT=...` find no prior result,
+# take a SECOND real look, and write the record somewhere nobody checks. §8
+# gives 73 sessions one look ever, and "ever" cannot be scoped by an environment
+# variable. The rehearsal of the holdout is `REHEARSAL`, which predates this and
+# already runs against synthetic data.
 RESULT = ROOT / "runs" / "holdout-result.json"
-REHEARSAL = ROOT / "runs" / "holdout-rehearsal.json"
+REHEARSAL = _RUNS / "holdout-rehearsal.json"
 PREREG = ROOT / "docs" / "design" / "pre-registration.md"
-LIVE_WEIGHTS = ROOT / "runs" / "current.weights"
+LIVE_WEIGHTS = _RUNS / "current.weights"
 STRATEGY = ROOT / "src" / "strategies" / "current.py"
 B_NULL = 10_000
 Q = 0.05
@@ -136,12 +149,12 @@ def champion_of(campaign: str) -> dict:
     digest = v.get("winner_digest")
     src = d / "sources" / f"{digest}.py"
     if not src.exists():
-        src = ROOT / "runs" / "sources" / f"{digest}.py"
+        src = _RUNS / "sources" / f"{digest}.py"
     if not src.exists():
         raise FileNotFoundError(f"no stored source for winner {digest}")
     weights = None
     for cand in (d / "weights" / f"{digest}.weights",
-                 ROOT / "runs" / "weights" / f"{digest}.weights"):
+                 _RUNS / "weights" / f"{digest}.weights"):
         if cand.exists():
             weights = cand
             break
@@ -405,7 +418,7 @@ def main() -> int:
     if not a.rehearse:
         print(f"  reason           {a.reason}")
 
-    ledger = (ROOT / "runs" / ("holdout-rehearsal.jsonl" if a.rehearse
+    ledger = (_RUNS / ("holdout-rehearsal.jsonl" if a.rehearse
                                else "holdout.jsonl"))
     # **A rehearsal unlocks too, and must.** The lock is what the real look turns,
     # so a rehearsal that skips it tests everything except the thing most likely to

@@ -77,8 +77,21 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import prereg  # noqa: E402
 
-CAMPAIGNS = ROOT / "runs" / "campaigns"
-HYPOTHESES = ROOT / "config" / "hypotheses"
+# Amendment 13: `runs/` unless a rehearsal redirects it. A rehearsal
+# writes under `.scratch/`, which `runlog.ledger_paths()` does not read,
+# so its trials are invisible to `global_n()` by construction.
+import os as _os
+_RUNS = pathlib.Path(_os.environ.get("PRACTICUM_RUNS_ROOT") or (ROOT / "runs"))
+CAMPAIGNS = _RUNS / "campaigns"
+# **A rehearsal writes its questions under its own root, never into
+# `config/hypotheses/`.** Amendment 13: a rehearsal must not mutate the real
+# pre-registration directory. The first one did -- it machine-committed
+# `outsized-move-continuation.md` into the repo from a run against synthetic
+# data, a question no human had read and that says nothing about the market.
+# Stated limit of the rehearsal: it therefore does not exercise the real commit
+# path, only everything up to it.
+HYPOTHESES = (_RUNS / "hypotheses") if _os.environ.get("PRACTICUM_RUNS_ROOT") \
+    else (ROOT / "config" / "hypotheses")
 PROMPT = ROOT / "config" / "prompts" / "hypothesis-refine.md"
 REGISTRY = ROOT / "data" / "papers" / "registry.json"
 
@@ -670,6 +683,9 @@ def main() -> int:
         parent.splitlines(), md.splitlines(),
         fromfile=str(parent_path.relative_to(ROOT)),
         tofile=str(dest.relative_to(ROOT)), lineterm=""))
+    # The real `config/hypotheses/` always exists; a rehearsal's does not until
+    # the first question is written into it.
+    dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(md if md.endswith("\n") else md + "\n")
     print(f"\nwrote {dest.relative_to(ROOT)}  ({words} words)")
     print(f"  mechanical gates passed: shape, lint, grounding, family, "
@@ -684,6 +700,11 @@ def main() -> int:
         print("  ** at least one seat never read this question. That is not "
               "the same as no objection. **")
 
+    if a.commit and _os.environ.get("PRACTICUM_RUNS_ROOT"):
+        print("\n  REHEARSAL: written but NOT committed. Amendment 13 -- a "
+              "rehearsal does not\n  touch the real pre-registration, so the "
+              "git commit is the one step it cannot test.")
+        return 0
     if not a.commit:
         print("\nNOT committed. Read it, then commit it -- or pass --commit, "
               "which Amendment 11 permits.")

@@ -52,7 +52,12 @@ import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-CAMPAIGNS = ROOT / "runs" / "campaigns"
+# Amendment 13: `runs/` unless a rehearsal redirects it. A rehearsal
+# writes under `.scratch/`, which `runlog.ledger_paths()` does not read,
+# so its trials are invisible to `global_n()` by construction.
+import os as _os
+_RUNS = pathlib.Path(_os.environ.get("PRACTICUM_RUNS_ROOT") or (ROOT / "runs"))
+CAMPAIGNS = _RUNS / "campaigns"
 
 UNRESOLVED = ("VETO", "CANNOT_TELL")
 

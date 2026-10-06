@@ -127,7 +127,26 @@ def test_arming_cannot_be_decided_after_seeing_a_validation_number():
     phase2 = SRC.index("phase 2: validation at the stop")
     assert parse < phase2, "the flag is read at launch, before any number exists"
     assert "input(" not in SRC, "no interactive prompt may arm it mid-session"
-    assert "os.environ" not in SRC, "no environment read may arm it mid-session"
+    # **Narrowed 2026-10-05, and narrowed rather than dropped.** This banned the
+    # string `environ` outright, which is the right instinct for the holdout and
+    # which caught Amendment 13's `PRACTICUM_RUNS_ROOT` immediately. That read
+    # cannot arm anything -- it happens at module import, before argv is parsed,
+    # and it sets only where output goes; `holdout.py`'s RESULT is pinned to the
+    # real `runs/` precisely so a redirected root cannot find "no prior look".
+    #
+    # So the rule becomes: the ONE permitted environment read is the output
+    # root, and it is read before the parser exists. A second one, or that one
+    # moved later, fails here.
+    import re
+    reads = [m.start() for m in re.finditer(r"environ", SRC)]
+    assert len(reads) == 1, (
+        f"{len(reads)} environment reads; exactly one is permitted and it is "
+        f"the Amendment 13 output root")
+    assert "PRACTICUM_RUNS_ROOT" in SRC[reads[0] - 80:reads[0] + 80]
+    assert reads[0] < parse, (
+        "the output root is read at import, before argv is parsed -- an "
+        "environment read AFTER the parser could be set in response to a "
+        "validation number")
 
 
 def test_the_family_is_the_plan_and_the_plan_is_written_first():

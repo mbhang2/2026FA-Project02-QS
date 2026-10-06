@@ -43,7 +43,16 @@ sys.path.insert(0, str(ROOT))
 import yaml  # noqa: E402
 
 PROFILE = "nq-train"
-OUT = ROOT / "runs" / "campaigns"
+# **Amendment 13: where campaign output goes.** `runs/` unless a rehearsal
+# redirects it. `runlog.ledger_paths()` reads `runs/ledger.jsonl` and
+# `runs/campaigns/**` and nothing else, so a rehearsal writing under `.scratch/`
+# is invisible to `global_n()` by construction rather than by a purpose filter
+# anyone could forget -- the same argument that makes Amendment 12's worker
+# ledgers safe. Read from the environment because the session driver and the
+# campaign driver are separate processes.
+import os as _os
+_RUNS = pathlib.Path(_os.environ.get("PRACTICUM_RUNS_ROOT") or (ROOT / "runs"))
+OUT = _RUNS / "campaigns"
 # **Not haiku, and docs/setup/MODEL-ACCESS.md says why in one line:**
 # `claude-haiku-4-5` passes a small prompt and is substituted to
 # `gemini-3.1-pro-preview` at our real proposal prompt of ~167,000 characters.
@@ -600,6 +609,18 @@ def stage_run(name: str) -> None:
                 if not target.exists():
                     target.write_bytes(f.read_bytes())
 
+    # **Amendment 13: a rehearsal's trials are `purpose: check`.** Derived from
+    # the profile in the committed record, not from a flag -- the `rehearsal`
+    # profile is synthetic, and a run against synthetic data is not a look at
+    # our market data. Tying it to the record means no caller can relabel a real
+    # campaign's trials, which is the property run.py's own `--purpose` rule
+    # exists to protect.
+    purpose = "check" if record.profile == "rehearsal" else "trial"
+    if purpose == "check":
+        print("  REHEARSAL: profile 'rehearsal' is synthetic, so these trials "
+              "are purpose=check and count toward no N (Amendment 13)",
+              flush=True)
+
     t0 = time.monotonic()
     for gen_start in range(start, record.budget, width):
         gen = list(range(gen_start, min(gen_start + width, record.budget)))
@@ -619,13 +640,14 @@ def stage_run(name: str) -> None:
                 return i, slot, source, run_trial(
                     source, profile=record.profile, ledger=ledger,
                     campaign_id=record.campaign_id, index=i,
-                    allow_fitted=record.allow_fitted_proposals)
+                    allow_fitted=record.allow_fitted_proposals,
+                    purpose=purpose)
             w = workers[slot]
             wledger = w / "runs" / "ledger.jsonl"
             row = run_trial(source, profile=record.profile, ledger=wledger,
                             campaign_id=record.campaign_id, index=i,
                             allow_fitted=record.allow_fitted_proposals,
-                            root=w)
+                            root=w, purpose=purpose)
             _merge(w, wledger)
             return i, slot, source, row
 
@@ -722,7 +744,18 @@ def stage_nulls(name: str) -> None:
         print(f"{name}: nulls already computed")
         return
     rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines() if x.strip()]
-    profile = cfg()["profiles"][PROFILE]
+    # **The campaign's OWN profile, not the module default.** This read
+    # `cfg()["profiles"][PROFILE]`, so the null was always reassembled onto the
+    # nq-train calendar whatever the campaign actually ran on. Every real
+    # campaign to date ran on nq-train or nq-train-fitted, which share a dataset
+    # and split, so it was invisible -- a campaign on any other profile got a
+    # calendar its round turns do not appear in, and `null_sample` returned ZERO
+    # draws for every candidate. Found 2026-10-05 by the first synthetic session
+    # rehearsal: the log said "384 scored sessions" for a campaign that scored
+    # 105.
+    from src.core.loop.campaign import CampaignRecord as _CR
+    _rec, _ = _CR.read(d / "campaign.json")
+    profile = cfg()["profiles"][_rec.profile]
     commission = profile["commission_per_contract"]
 
     # The same dataset the trials ran on, built the same way `run.py` builds it,

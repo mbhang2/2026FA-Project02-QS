@@ -68,7 +68,12 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 REGISTRY = ROOT / "data" / "papers" / "registry.json"
-CAMPAIGNS = ROOT / "runs" / "campaigns"
+# Amendment 13: `runs/` unless a rehearsal redirects it. A rehearsal
+# writes under `.scratch/`, which `runlog.ledger_paths()` does not read,
+# so its trials are invisible to `global_n()` by construction.
+import os as _os
+_RUNS = pathlib.Path(_os.environ.get("PRACTICUM_RUNS_ROOT") or (ROOT / "runs"))
+CAMPAIGNS = _RUNS / "campaigns"
 
 # Everything this record may carry. A closed set, so adding a score means editing
 # this list and reading the docstring above that says why not.

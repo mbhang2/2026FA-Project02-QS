@@ -154,6 +154,21 @@ class SyntheticDataset:
         warm, _ = sessions_for(self._calendar, split, warmup)
         return set(warm)
 
+    def scored_sessions(self, split: Split, warmup: int = 0) -> list[int]:
+        """The actionable sessions of a split -- the same definition `nq.py`
+        uses, from the same `sessions_for` helper this class already calls.
+
+        **Added 2026-10-05 because its absence made the null path untestable.**
+        `nq_campaign.stage_nulls` reassembles the sign-flip null onto a session
+        calendar and asks the dataset for it; only the NQ dataset had the
+        method, so the whole correction could be exercised on real market data
+        or not at all. The first synthetic session rehearsal stopped here. It is
+        not in the `Dataset` protocol, which is why the gap went unnoticed --
+        worth knowing, and left as a separate question from filling it.
+        """
+        _, live = sessions_for(self._calendar, split, warmup)
+        return list(live)
+
     # ---- schedule ---------------------------------------------------------- #
     def _schedule(self) -> None:
         """Session lengths, bounds and volatility, fixed up front.

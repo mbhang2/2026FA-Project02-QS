@@ -110,8 +110,10 @@ def test_the_real_documents_current_statuses():
     # against the thing that would make it true instead of trusting a snapshot.
     # 12 signed 2026-10-04: trials in generations, not a chain. The first
     # amendment here that trades statistical power for wall clock.
-    expected = {1: True, 2: True, 3: True, 4: True, 5: True, 6: True,
-                7: True, 8: True, 9: True, 10: True, 11: True, 12: True}
+    # 13 signed 2026-10-05: a session may be rehearsed on synthetic data, and a
+    # rehearsal is not a look.
+    expected = {1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
+                8: True, 9: True, 10: True, 11: True, 12: True, 13: True}
     actual = {n: ok for n, ok, _ in mod.all_amendments()}
     assert actual == expected, actual
 

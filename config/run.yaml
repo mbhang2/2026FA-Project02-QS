@@ -78,6 +78,28 @@ profiles:
     action_cap: 64
     history_window: 512
 
+  # **Amendment 13: the profile a session rehearsal runs on.** The `campaign`
+  # profile above, with a commission added so `--stage register` will accept it
+  # -- the synthetic profiles could not be registered at all, which is why the
+  # Amendment 12 proof had to spend real trials on nq-train to test a piece of
+  # orchestration.
+  #
+  # Synthetic data, so no trial run here is a look at our market data. It is NOT
+  # reachable from the command line: `scripts/rehearse.py` fixes it in code, for
+  # the same reason `run.py` takes no dataset argument -- an argument that
+  # selects the data is an argument that can select ours.
+  rehearsal:
+    dataset: synthetic
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 0
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+    commission_per_contract: 0.62
+
   # Task 37's positive control. The same campaign profile in every respect --
   # train split, unfavorable fills, seed 1, same caps and budgets -- with a
   # planted signal of known strength and nothing else changed. Two strengths,

@@ -470,3 +470,89 @@ def test_a_partial_campaign_is_resumable_not_finished():
         assert m.trials_run("nq-s06-03") < m.budget_of("nq-s06-03")
         assert m.already_run("nq-s06-03") is False, (
             "36 of 100 trials is not a campaign that ran")
+
+
+# --------------------------------------------------------------------------- #
+# Amendment 13: the session is rehearsable (2026-10-05)
+# --------------------------------------------------------------------------- #
+def test_amendment_13_is_in_force():
+    import sys
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import prereg
+    assert prereg.in_force(13)
+
+
+def test_a_rehearsal_cannot_reach_the_market_data():
+    """The profile is fixed in code and is not an argument -- the same rule
+    `run.py` follows, for the same reason: an argument that selects the data is
+    an argument that can select ours. The MODEL is an argument, because which
+    model answers is an endpoint fact that changes hourly."""
+    src = (REPO_ROOT / "scripts" / "rehearse.py").read_text()
+    assert 'PROFILE = "rehearsal"' in src
+    assert '"--profile"' not in src, "the profile must not be selectable"
+    assert '"--model"' in src
+    import yaml
+    prof = yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text())
+    assert prof["profiles"]["rehearsal"]["dataset"] == "synthetic"
+
+
+def test_the_one_look_refusal_is_not_redirectable():
+    """Amendment 13 lets a rehearsal redirect its output root. The holdout's
+    refusal must NOT follow: the holdout split is the real market data wherever
+    the output goes, so a redirected RESULT would let the env var find no prior
+    result and take a SECOND real look. "Ever" cannot be scoped by an
+    environment variable."""
+    src = (REPO_ROOT / "scripts" / "holdout.py").read_text()
+    assert 'RESULT = ROOT / "runs" / "holdout-result.json"' in src
+    assert 'RESULT = _RUNS' not in src
+
+
+def test_a_rehearsal_does_not_touch_the_real_pre_registration():
+    """The first rehearsal machine-committed a question into
+    `config/hypotheses/` from a run against synthetic data -- a question no
+    human had read, saying nothing about the market."""
+    import re
+    src = (REPO_ROOT / "scripts" / "refine_hypothesis.py").read_text()
+    assert 'PRACTICUM_RUNS_ROOT' in src
+    i = src.index("HYPOTHESES =")
+    assert "_RUNS" in src[i:i + 200] and "config" in src[i:i + 200]
+    # comment markers and adjacent string literals both broken out first
+    flat = " ".join(re.sub(r'"\s*f?"', "", re.sub(r"^\s*#\s?", "", src,
+                                                 flags=re.M)).split())
+    assert "rehearsal does not" in flat
+    assert "git commit is the one step it cannot test" in flat
+
+
+def test_the_rehearsal_checks_rather_than_assumes():
+    """A green rehearsal that skipped the nulls would be worse than none. Each
+    assertion below corresponds to a defect that actually cost something."""
+    src = (REPO_ROOT / "scripts" / "rehearse.py").read_text()
+    for must in ("every null sample is EMPTY", "no gate verdict",
+                 "the committee was never asked", "not purpose=check",
+                 "no fills merged back", "Amendment 7 is not reaching them all",
+                 "did not write every next question", "no L2 verdict"):
+        assert must in src, must
+
+
+def test_the_null_calendar_comes_from_the_campaigns_own_profile():
+    """`stage_nulls` read the module default, so the null was always reassembled
+    onto the nq-train calendar whatever the campaign ran on. Invisible while
+    every campaign used nq-train; on any other profile every candidate got ZERO
+    draws. Found by the first synthetic rehearsal."""
+    src = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    i = src.index("def stage_nulls")
+    body = src[i:src.index("\ndef ", i + 10)]
+    assert 'cfg()["profiles"][_rec.profile]' in body
+    assert 'profile = cfg()["profiles"][PROFILE]' not in body
+
+
+def test_synthetic_implements_scored_sessions():
+    """Only the NQ dataset had it, so the whole correction could be exercised on
+    real market data or not at all."""
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from src.core.data.synthetic import SyntheticDataset
+    from src.core.types import Split
+    assert hasattr(SyntheticDataset, "scored_sessions")
+    d = SyntheticDataset()
+    assert len(d.scored_sessions(Split.TRAIN, 0)) > 0

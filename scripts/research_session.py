@@ -143,8 +143,10 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-CAMPAIGNS = ROOT / "runs" / "campaigns"
-SESSIONS = ROOT / "runs" / "sessions"
+import os as _os
+_RUNS = pathlib.Path(_os.environ.get("PRACTICUM_RUNS_ROOT") or (ROOT / "runs"))
+CAMPAIGNS = _RUNS / "campaigns"
+SESSIONS = _RUNS / "sessions"
 PY = sys.executable
 
 
@@ -701,7 +703,11 @@ def _main() -> int:
     # different family's verdict, in a session record, labelled as its own. That
     # is worse than no verdict, and it is the fifth time in this project that a
     # number has reached a consumer it was not about.
-    verdict = ROOT / "runs" / "l2-verdict.json"
+    # `_RUNS`, so a rehearsal reads the verdict ITS l2_gate wrote. Hardcoded,
+    # this read the real `runs/l2-verdict.json` during a rehearsal and found a
+    # verdict about nq-s06 -- which the guard below correctly refused to treat as
+    # this session's result, and that refusal is how the bug was visible at all.
+    verdict = _RUNS / "l2-verdict.json"
     v = json.loads(verdict.read_text()) if verdict.exists() else None
     got = sorted((v or {}).get("campaigns") or [])
     if code != 0 or v is None or got != sorted(names):

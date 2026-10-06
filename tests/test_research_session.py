@@ -537,3 +537,24 @@ def test_the_refiner_keeps_its_own_model_rather_than_the_proposers():
         "the campaign's model must not reach the refiner")
     assert 'if fam.get("refine_model"):' in SRC, "but a plan may override it"
     assert "Do NOT pass the campaign's model" in SRC
+
+
+def test_a_session_that_produced_nothing_exits_non_zero():
+    """**It returned 0, so a session where NOTHING ran reported success.** That
+    is how the first rehearsal printed "session driver exited 0" over a session
+    that died at its very first register. For anything automated -- cron, CI, a
+    human reading `$?` -- a failure that reads as a pass is the same class of
+    fault as the ones that cost validation looks.
+
+    The rule is this codebase's own, from the refinement-failure path: a cue is a
+    decision and a failure is not. A human who stopped the session got what they
+    asked for; a session that produced nothing for any other reason did not do
+    its job, whatever its log says.
+    """
+    assert "return 0 if stopped_by_cue else 1" in SRC
+    assert "return 0 if (completed or stopped_by_cue) else 1" in SRC, (
+        "--train-only asks for phases 2-4 to be skipped, not for zero campaigns")
+    flat = " ".join(SRC.split())
+    assert "no campaign completed, and nothing asked for that" in flat
+    # and the reason is in the record, not only on stdout
+    assert 'log["produced_nothing"]' in SRC

@@ -624,7 +624,9 @@ def _main() -> int:
               f"campaign(s) ran and are reported;\n  none is validated, so every "
               f"one of their looks is still available.\n  wrote "
               f"{record.relative_to(ROOT)}")
-        return 0
+        # Same rule: `--train-only` asks for phases 2-4 to be skipped, not for
+        # zero campaigns. Nothing completed is a failure here too.
+        return 0 if (completed or stopped_by_cue) else 1
 
     if aborted_by_failure:
         log["aborted_by_failure"] = True
@@ -639,12 +641,28 @@ def _main() -> int:
         return 1
 
     if not names:
-        print("\n  no campaign produced a winner, so there is nothing to "
-              "validate and no family\n  to correct over. Stopping here.")
+        # **Exit non-zero unless a human asked for this.** It returned 0, so a
+        # session where NOTHING ran reported success -- which is how the first
+        # rehearsal printed "session driver exited 0" over a session that had
+        # died at its very first register. For anything automated that is the
+        # same class of fault as the ones that cost validation looks: a failure
+        # that reads as a pass.
+        #
+        # The rule is this codebase's own, from the refinement-failure path: a
+        # cue is a decision and a failure is not. A human who stopped the session
+        # got what they asked for; a session that produced nothing for any other
+        # reason did not do its job, whatever its log says.
+        why = ("the human cue arrived before any campaign completed"
+               if stopped_by_cue else
+               "no campaign completed, and nothing asked for that")
+        print(f"\n  no campaign produced a winner, so there is nothing to "
+              f"validate and no family\n  to correct over: {why}.\n"
+              f"  Stopping here.")
         log["finished"] = dt.datetime.now(dt.timezone.utc).isoformat(
             timespec="seconds")
+        log["produced_nothing"] = why
         record.write_text(json.dumps(log, indent=2) + "\n")
-        return 0
+        return 0 if stopped_by_cue else 1
 
     # ---- phase 2: validation, all of them, now ------------------------------
     #

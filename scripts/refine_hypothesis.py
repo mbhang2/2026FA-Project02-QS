@@ -441,12 +441,22 @@ def family_changed(parent: str, child: str) -> str:
     #
     # It still cannot catch a drift that keeps the title. That one needs
     # `family_findings_agentic`, which is the point of having both.
-    if overlap < 0.34 or body < 0.30:
-        why = ("its heading shares only" if overlap < 0.34 else
-               "its heading shares")
-        return (f"the revision looks like a different question: {why} "
-                f"{overlap:.0%} of the parent's content words and the "
-                f"bodies are {body:.0%} similar.\n    parent: {ph}\n    child:  "
+    # **The title term is the gate; the body term is context.** `and` made this
+    # nearly inert (body similarity is always high, so it vetoed the gate); `or`
+    # then produced the opposite false positive, caught 2026-10-07 by the
+    # pre-flight rehearsal: a revision with an IDENTICAL heading -- 100% of the
+    # parent's content words -- and a rewritten body at 7% similarity was called
+    # a different question. It plainly is not; it is the same question restated.
+    #
+    # The two terms measure different things. A changed heading is strong
+    # evidence the question changed. A rewritten body under the SAME heading is
+    # a judgement call, and `family_findings_agentic` is the seat that exists to
+    # make it -- it is shown both texts and asked whether they are one question.
+    # So the mechanical gate rules on the title and reports the body.
+    if overlap < 0.34:
+        return (f"the revision looks like a different question: its heading "
+                f"shares only {overlap:.0%} of the parent's content words "
+                f"(bodies are {body:.0%} similar, reported not ruled on).\n    parent: {ph}\n    child:  "
                 f"{ch}")
     return ""
 

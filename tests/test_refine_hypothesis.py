@@ -349,15 +349,27 @@ def test_the_real_refinements_in_this_repo_still_pass():
     assert checked >= 5, f"only {checked} real refinements found to check"
 
 
-def test_the_gate_is_or_not_and_and_says_why():
+def test_the_mechanical_gate_rules_on_the_title_and_reports_the_body():
     import re as _re
     src = (REPO_ROOT / "scripts" / "refine_hypothesis.py").read_text()
     # the justification lives in a comment block, so strip the markers before
     # flattening or every line break becomes a stray '#'
     bare = " ".join(_re.sub(r"^\s*#\s?", "", src, flags=_re.M).split())
-    assert "if overlap < 0.34 or body < 0.30:" in src
+    # **Both halves of this have been wrong, in opposite directions.** `and` made
+    # the gate nearly inert, because body similarity is always high and that term
+    # vetoed the whole gate. `or` then produced the opposite false positive, and
+    # the pre-flight rehearsal caught it before a 26-hour run: a revision with an
+    # IDENTICAL heading and a rewritten body at 7% similarity was called a
+    # different question. It is the same question restated.
+    #
+    # The terms measure different things. A changed heading is strong evidence
+    # the question changed; a rewritten body under the same heading is a
+    # judgement, and `family_findings_agentic` is the seat that makes it.
+    assert "if overlap < 0.34:" in src
+    assert "or body < 0.30" not in src
     assert "made this gate very nearly inert" in bare
-    # and it admits what it still cannot do
+    assert "reported not ruled on" in bare
+    # and it still admits what it cannot do alone
     assert "It still cannot catch a drift that keeps the title" in bare
 
 

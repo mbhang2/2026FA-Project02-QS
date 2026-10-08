@@ -273,7 +273,18 @@ CITATION_MARKED = re.compile(r"(?:arXiv:|arxiv:)\s*(\d{4}\.\d{4,5})(?:v\d+)?"
 # familiar. `10.` plus a registrant code is unambiguous enough to treat as a
 # citation whether or not it is marked, unlike a bare arXiv-shaped number, which
 # can be a quantity.
-DOI_ID = re.compile(r"\b(10\.\d{4,9}/[^\s\]\)\}>,;\"']+)")
+# **Trailing delimiters are not part of the identifier.** The character class
+# excluded whitespace and a few brackets but not a backtick, so a DOI written in
+# markdown code -- `10.2139/ssrn.7364204`, which is how anyone naturally writes
+# one -- captured the closing backtick, missed the registry, and was refused as
+# invented. Caught 2026-10-07 by the pre-flight rehearsal on a paper the registry
+# actually holds. The trailing strip is belt and braces for the delimiters nobody
+# has thought of yet.
+DOI_ID = re.compile(r"\b(10\.\d{4,9}/[^\s\]\)\}>,;\"'`]+)")
+
+
+def _clean_doi(d: str) -> str:
+    return d.rstrip(".,;:'\"`)]}>")
 OPENALEX_ID = re.compile(r"\b([Ww]\d{6,12})\b")
 
 
@@ -316,7 +327,7 @@ def citations(claim: str, known: "set[str] | None" = None) -> set[str]:
             found.add(bare)
     # A DOI is a citation on sight: the shape cannot be a quantity.
     out = {c.split("v")[0] for c in found}
-    out |= {d.rstrip(".").lower() for d in DOI_ID.findall(claim)}
+    out |= {_clean_doi(d).lower() for d in DOI_ID.findall(claim)}
     # An OpenAlex id only counts when we hold it -- `W` plus digits is too thin
     # a shape to assume, and a lone "W2252579905" in prose is unlikely but a
     # false positive here would refuse a clean file.

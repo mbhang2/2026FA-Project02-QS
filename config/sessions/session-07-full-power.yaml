@@ -1,0 +1,68 @@
+# Session 07 -- THE FULL-POWER RUN. Three campaigns at the registered N.
+#
+#   .venv/bin/python scripts/research_session.py \
+#       --plan config/sessions/session-07-full-power.yaml
+#
+# **This is the one thing the framework has never demonstrated.** §2 of the
+# pre-registration says "campaigns as large as affordable, at least N = 400";
+# every one of the 37 campaigns run so far has been N = 20 or N = 100, and the
+# reason has never been that 20 is defensible -- §2 says it is not -- but that
+# 400 was unaffordable one trial at a time. Amendment 12 made it affordable.
+#
+# 1,200 trials. Global N 1,432 -> ~2,632, which nearly doubles the project's
+# looks in one session. Each campaign's correction is self-contained; the global
+# count is disclosure, not a bar.
+#
+# WIDTH 4, NOT 8, and the reason is this machine. Measured 2026-10-07 before
+# launch: 17 GB RAM with swap at 7.2 of 8 GB used and 47.7M pageouts -- already
+# swapping hard. Eight workers at ~585 MB each would push it deeper, which both
+# negates the speedup and risks the memory watchdog that HAS killed a campaign
+# here mid-trial. W=4 is proven on this machine (nq-s06-01 ran 100 trials at it).
+#
+# COST: ~8.5 h per campaign at the measured 1.28 min/trial, so ~26 h for the
+# family plus nulls, reports, refinements, validation and L2. It will span more
+# than one sitting. That is safe now in a way it was not a week ago:
+#   - a partial campaign RESUMES (already_run compares trials to the budget)
+#   - a resumed campaign still writes the next question
+#   - a failed run no longer spends a validation look
+#   - a truncated family cannot reach phase 2 at all
+# Each of those was a defect that cost real looks, and each is now a test.
+#
+# THE QUESTION is the direction-agnostic opening range, committed 2026-10-04 and
+# unchanged: lint-clean, grounding-clean, hypothesis reviewer NO_OBJECTION.
+#
+# **It is the fifth family pointed at this range, and that must be said out
+# loud.** The four before it: 30m breakout (p 0.948), break-continuation-failure
+# (p 0.935), continuation-or-fade (no measurement at all, n_nulls 0), and
+# short-side fade (p 0.872, committee VETO). Each campaign's correction is
+# self-contained, but asking one question five times is multiplicity this
+# project DISCLOSES rather than corrects, and any claim from this session has to
+# carry that sentence.
+#
+# Why this question rather than a fresh one: session-06 left it UNRESOLVED
+# rather than answered. Its second campaign returned 0 positive candidates of
+# 36, which reads as "no non-tail edge" -- but 35 of its 100 proposals crashed,
+# because Amendment 7's probe was armed on one agent in four. That bug is fixed
+# and the two dominant crash shapes are gone by construction, so this run can
+# read a result the last one could not.
+#
+# PRE-FLIGHT, run before this plan and not optional: scripts/rehearse.py on
+# deepseek-v4-pro, the same model this session registers. The gateway
+# substituted that model for over 24 hours on 2026-10-05/06 and recovered
+# 2026-10-07; the rehearsal is how that is checked for 25 minutes instead of 36
+# trials into a campaign.
+#
+# The exposure floor is untouched -- Michael's standing call.
+# The holdout is NOT armed.
+
+session: session-07-full-power
+
+family:
+  seed: config/hypotheses/opening-range-direction-agnostic.md
+  iterations: 3
+  refine: true
+  n: 400
+  generation_width: 4
+  model: deepseek-v4-pro
+  profile: nq-train
+  prefix: nq-s07

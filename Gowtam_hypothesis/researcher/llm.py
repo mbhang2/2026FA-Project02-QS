@@ -26,8 +26,33 @@ import requests
 DEFAULT_BASE_URL = os.environ.get("LITELLM_BASE_URL", "https://llm-proxy.invalid/v1")
 
 
+def _provider(base_url: str) -> str:
+    """A human hint about the gateway, from the URL only (never the key)."""
+    host = base_url.split("://")[-1].split("/")[0].lower()
+    if "llm-proxy" in host:
+        return "team LiteLLM gateway"
+    return host
+
+
 class LLMError(RuntimeError):
-    """The call did not produce a usable answer. Never retried."""
+    """The call did not produce a usable answer. Never retried.
+
+    The message never contains the API key. Extra attributes carry the HTTP
+    context a caller needs to triage a failure (WAF 403 vs LiteLLM 403 vs 400
+    vs auth), so a block is reported as "HTTP 403 ..." instead of a misleading
+    "no JSON".
+    """
+
+    def __init__(self, msg: str, *, status: int | None = None,
+                 model: str = "", endpoint: str = "", provider: str = "",
+                 content_type: str = "", body: str = "") -> None:
+        super().__init__(msg)
+        self.status = status
+        self.model = model
+        self.endpoint = endpoint
+        self.provider = provider
+        self.content_type = content_type
+        self.body = body  # already truncated by the caller; never the key
 
 
 class ModelSubstituted(RuntimeError):
@@ -71,14 +96,28 @@ def call(model: str, messages: list[dict], *, temperature: float = 0.7,
         raise LLMError(f"{type(exc).__name__}: {exc}") from None
 
     if resp.status_code != 200:
-        raise LLMError(f"HTTP {resp.status_code}: {resp.text[:200]}")
+        raise LLMError(
+            f"HTTP {resp.status_code}",
+            status=resp.status_code, model=model,
+            endpoint=f"{base_url}/chat/completions",
+            provider=_provider(base_url),
+            content_type=resp.headers.get("content-type", ""),
+            body=resp.text[:300],
+        )
 
     try:
         payload = resp.json()
         usage = payload.get("usage") or {}
         text = payload["choices"][0]["message"]["content"] or ""
     except (ValueError, KeyError, IndexError) as exc:
-        raise LLMError(f"unparseable envelope: {exc}") from None
+        raise LLMError(
+            f"unparseable envelope: {exc}",
+            status=resp.status_code, model=model,
+            endpoint=f"{base_url}/chat/completions",
+            provider=_provider(base_url),
+            content_type=resp.headers.get("content-type", ""),
+            body=resp.text[:300],
+        ) from None
 
     served = str(payload.get("model") or "")
     if served and not _same_model(model, served):

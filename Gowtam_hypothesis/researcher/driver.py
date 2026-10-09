@@ -20,13 +20,14 @@ date.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import generate, leak_lint, llm
+from . import generate, grounding, leak_lint, llm
 from .feasibility import DatasetCaps, Infeasible, feasible
 from .render import render
 from .retrieval import retrieve
@@ -109,23 +110,43 @@ def run(ask: str, *, budget: int = 3, caps: DatasetCaps = DatasetCaps(),
 
     llm.preflight(generate.PROPOSE_MODEL)  # refuse to run on a substituted model
 
-    families = generate.decompose(ask)[:MAX_FAMILIES]
+    try:
+        families = generate.decompose(ask)[:MAX_FAMILIES]
+    except generate.PassBlocked as exc:
+        # A blocked decompose is a recorded outcome, not a crash: the ask could
+        # not be broken into families at all, so there is nothing to propose.
+        event = {"family": "(decompose)", "at": time.time(),
+                 "outcome": "blocked", "reason": f"{type(exc).__name__}: {exc}"}
+        result.blocked.append(event)
+        _append_log(log_dir, result.ask, event)
+        result.log_path = _log_path(log_dir)
+        return result
+
     for family in families[:budget]:
         event = {"family": family, "at": time.time()}
+        rec_for_ledger = None
         try:
             clips = retrieve(family, per_backend=per_backend)
             rec = generate.generate_hypothesis(
-                family, clips, finalize=lambda r: _lint_findings(r, clips))
+                family, clips,
+                finalize=lambda r: _lint_findings(r, clips),
+                advisory=lambda r: grounding.check_claims(r, clips))
+            rec_for_ledger = rec
             if not feasible(rec, caps):
                 raise Infeasible("; ".join(_caps_violations(rec, caps)))
             path = _write(rec, output_dir)
             result.emitted.append(rec)
             event.update({"outcome": "emitted", "id": rec.id, "path": str(path)})
+            _append_ledger(output_dir, family, "emitted", rec_for_ledger)
         except (generate.PassBlocked, Infeasible, LintRejected,
                 RailUnavailable, llm.LLMError, llm.ModelSubstituted) as exc:
+            if isinstance(exc, generate.PassBlocked) and exc.record:
+                rec_for_ledger = exc.record
+            # If rec was created but failed feasibility/lint, rec_for_ledger is already set
             event.update({"outcome": "blocked",
                           "reason": f"{type(exc).__name__}: {exc}"})
             result.blocked.append(event)
+            _append_ledger(output_dir, family, "blocked", rec_for_ledger)
         _append_log(log_dir, result.ask, event)
 
     result.log_path = _log_path(log_dir)
@@ -182,3 +203,27 @@ def _append_log(log_dir: Path | None, ask: str, event: dict) -> None:
 
 def _log_path(log_dir: Path) -> Path:
     return log_dir / "research_log.jsonl"
+
+
+def _append_ledger(output_dir: Path, family: str, outcome: str, rec: HypothesisRecord | None = None) -> None:
+    ledger_path = output_dir / "ledger.jsonl"
+    entry = {
+        "id": rec.id if rec else "unknown",
+        "family": family,
+        "outcome": outcome,
+        "spec_hash": None,
+        "grid_size": 0
+    }
+    if rec and hasattr(rec, "specification") and hasattr(rec.specification, "get_total_grid_size"):
+        spec_repr = json.dumps({
+            "signal_def": rec.specification.signal_def,
+            "entry_rule": rec.specification.entry_rule,
+            "exit_rule": rec.specification.exit_rule,
+            "parameters": [{"name": p.name, "min": p.min_val, "max": p.max_val, "step": p.step} for p in rec.specification.parameters]
+        }, sort_keys=True)
+        entry["spec_hash"] = hashlib.sha256(spec_repr.encode()).hexdigest()
+        entry["grid_size"] = rec.specification.get_total_grid_size()
+        
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with open(ledger_path, "a") as f:
+        f.write(json.dumps(entry) + "\n")

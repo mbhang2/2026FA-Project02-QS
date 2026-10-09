@@ -128,6 +128,7 @@ def orchestrate(trajectories: list[Trajectory]) -> OrchestrationDecision:
     system = ("You decide research direction from trajectories only. "
               "Never infer a significance measure. Return JSON only.")
     data = None
+    last_reply = ""
     for attempt in (0, 1):
         prompt = user if attempt == 0 else (
             user + "\n\nReply with the JSON object only, on one line, no "
@@ -137,13 +138,32 @@ def orchestrate(trajectories: list[Trajectory]) -> OrchestrationDecision:
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
             ], temperature=0.0, max_tokens=1024)
-        except (LLMError, ModelSubstituted) as exc:
-            raise generate.PassBlocked(f"orchestrate call failed: {exc}") from None
+        except ModelSubstituted as exc:
+            raise generate.PassBlocked(
+                f"orchestrate model mismatch: {exc}; asked {ORCHESTRATE_MODEL!r}")
+        except LLMError as exc:
+            # An HTTP/transport failure must surface loudly -- status, endpoint,
+            # model, provider -- never as a misleading "no JSON". The message
+            # never contains the API key.
+            detail = (
+                f"orchestrate LLM request failed:\n"
+                f"  HTTP {exc.status if exc.status is not None else '?'}\n"
+                f"  model={exc.model or ORCHESTRATE_MODEL}\n"
+                f"  endpoint={exc.endpoint}\n"
+                f"  provider={exc.provider}\n"
+                f"  content-type={exc.content_type or '(none)'}"
+            )
+            if exc.body:
+                detail += f"\n  body={exc.body!r}"
+            raise generate.PassBlocked(detail) from None
         data = llm.extract_json(comp.text)
         if data is not None:
             break
+        last_reply = comp.text
     if data is None:
-        raise generate.PassBlocked("orchestrate returned no JSON")
+        raise generate.PassBlocked(
+            "orchestrate returned no parseable JSON after one retry; "
+            f"last reply={last_reply[:300]!r}")
     return OrchestrationDecision(
         next_ask=str(data.get("next_ask", "")).strip(),
         why=str(data.get("why", "")).strip(),
@@ -153,7 +173,8 @@ def orchestrate(trajectories: list[Trajectory]) -> OrchestrationDecision:
 
 
 def run_campaign(campaign_name: str, *, cwd: Path = REPO_ROOT,
-                 dry_run: bool = False, profile: str = PROFILE) -> None:
+                 dry_run: bool = False, profile: str = PROFILE,
+                 hypothesis_id: str | None = None) -> None:
     """Run the committed campaign flow for one emitted hypothesis.
 
     Not re-implemented here: the campaign script owns register/run/nulls/report
@@ -161,8 +182,13 @@ def run_campaign(campaign_name: str, *, cwd: Path = REPO_ROOT,
     researcher wrote (`config/hypotheses/<id>.md`) into the script's `--hypothesis`
     and the profile choice, then runs the four stages in order. `dry_run=True`
     prints the commands instead of executing them.
+
+    `campaign_name` names the pre-registration directory; `hypothesis_id` names
+    the hypothesis file (defaults to `campaign_name`), so a timestamped campaign
+    name can still read back the un-stamped hypothesis markdown.
     """
-    hyp = REPO_ROOT / "config" / "hypotheses" / f"{campaign_name}.md"
+    hid = hypothesis_id or campaign_name
+    hyp = REPO_ROOT / "config" / "hypotheses" / f"{hid}.md"
     if not hyp.exists():
         raise FileNotFoundError(
             f"no emitted hypothesis at {hyp}; the researcher must write it "
@@ -213,11 +239,14 @@ def read_trajectory(name: str, *, cwd: Path = REPO_ROOT) -> Trajectory:
 
 
 def run_loop(ask: str, *, emit_fn, campaign_fn=run_campaign, max_iterations: int = 2,
-             dry_run: bool = True, log_dir: Path | None = None) -> LoopResult:
+             dry_run: bool = True, log_dir: Path | None = None,
+             trajectory_fn=None) -> LoopResult:
     """The outer loop. `emit_fn(ask)` from the researcher; `campaign_fn` runs one.
 
-    `emit_fn` and `campaign_fn` are seams so the loop is testable offline without
-    a real researcher batch or a 3-hour campaign.
+    `emit_fn`, `campaign_fn`, and `trajectory_fn` are seams so the loop is
+    testable offline without a real researcher batch or a 3-hour campaign.
+    `trajectory_fn(name)` maps a hypothesis id to the campaign name under which
+    its trajectory was written (default: the id itself).
     """
     result = LoopResult()
     deadline = time.monotonic() + WALL_CLOCK_S
@@ -227,13 +256,26 @@ def run_loop(ask: str, *, emit_fn, campaign_fn=run_campaign, max_iterations: int
     for _ in range(max_iterations):
         if time.monotonic() > deadline:
             break
-        emitted = emit_fn(current_ask)
+        try:
+            emitted = emit_fn(current_ask)
+        except (generate.PassBlocked, LLMError, ModelSubstituted) as exc:
+            # A blocked emit ends the loop rather than crashing it: the research
+            # and campaigns up to here are already recorded, and a terminally
+            # non-responsive model is not a direction.
+            print(f"emit pass failed ({type(exc).__name__}: {exc}); "
+                  "stopping the loop", flush=True)
+            break
         for rec in emitted[:MAX_CAMPAIGNS_PER_LOOP]:
             campaign_fn(rec.id, dry_run=dry_run)
             if dry_run:
                 trajectories.append(Trajectory(outcome="dry_run", score_dir="flat"))
             else:
-                trajectories.append(read_trajectory(rec.id))
+                name = trajectory_fn(rec.id) if trajectory_fn else rec.id
+                trajectories.append(read_trajectory(name))
+        if not trajectories:
+            print("No hypotheses were successfully emitted/run; stopping the loop", flush=True)
+            break
+
         try:
             decision = orchestrate(trajectories)
         except generate.PassBlocked as exc:
@@ -248,4 +290,54 @@ def run_loop(ask: str, *, emit_fn, campaign_fn=run_campaign, max_iterations: int
         current_ask = decision.next_ask
         result.iterations += 1
 
+    return result
+
+
+def full_run(ask: str, *, budget: int = 1, profile: str = PROFILE,
+             max_iterations: int = 2, output_dir: Path | None = None,
+             dry_run: bool = False) -> LoopResult:
+    """One command: research the ask, then run the L1 loop through to report.
+
+    The single entry point that chains the researcher and the campaign loop
+    into one run:
+
+    1. ``driver.run`` decomposes the ask and emits up to ``budget`` hypotheses
+       into ``config/hypotheses/``.
+    2. Each emitted hypothesis is run through the full campaign sequence
+       (register -> run -> nulls -> report) under a unique, timestamped
+       campaign name so a re-run never collides with a prior pre-registration.
+    3. The whitelisted trajectory is read back and fed to the orchestration
+       pass, which names the next direction; the loop repeats.
+
+    This is ``run_loop`` with a live, non-colliding ``emit_fn``/``campaign_fn``
+    bound by default. It is NOT a dry run: campaigns execute for real.
+    """
+    from . import driver
+
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+
+    def emit(ask_: str):
+        return driver.run(ask_, budget=budget, output_dir=output_dir).emitted
+
+    def campaign(name: str, *, dry_run: bool = False):
+        # A unique per-run name: the researcher may emit the same hypothesis id
+        # across iterations, and `register` refuses to overwrite. The timestamp
+        # suffix keeps each live campaign its own pre-registration, while the
+        # hypothesis file on disk stays keyed by the un-stamped id.
+        run_campaign(f"{name}-{stamp}", profile=profile, dry_run=dry_run,
+                     hypothesis_id=name)
+
+    def trajectory(name: str) -> Trajectory:
+        return read_trajectory(f"{name}-{stamp}")
+
+    # Re-bind the loop against the stamped campaign naming, live.
+    result = run_loop(
+        ask,
+        emit_fn=emit,
+        campaign_fn=campaign,
+        max_iterations=max_iterations,
+        dry_run=dry_run,
+        trajectory_fn=trajectory,
+    )
+    # The stamped trajectories are what a caller (or a human) reads back.
     return result

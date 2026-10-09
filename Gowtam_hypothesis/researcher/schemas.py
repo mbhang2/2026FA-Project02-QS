@@ -62,6 +62,38 @@ class DataRequires:
 
 
 @dataclass(frozen=True, slots=True)
+class ParameterDef:
+    name: str
+    min_val: float
+    max_val: float
+    step: float
+
+    @property
+    def grid_size(self) -> int:
+        if self.step <= 0:
+            return 1
+        return max(1, int((self.max_val - self.min_val) / self.step) + 1)
+
+
+@dataclass(frozen=True, slots=True)
+class SpecData:
+    signal_def: str
+    entry_rule: str
+    exit_rule: str
+    parameters: tuple[ParameterDef, ...]
+    bar_size: str
+    session_filter: str
+    cost_assumption: str
+    data_fields_required: tuple[str, ...]
+
+    def get_total_grid_size(self) -> int:
+        total = 1
+        for p in self.parameters:
+            total *= p.grid_size
+        return total
+
+
+@dataclass(frozen=True, slots=True)
 class HypothesisRecord:
     """The contract. One falsifiable mechanism, source-bound, data-scoped."""
 
@@ -69,6 +101,7 @@ class HypothesisRecord:
     mechanism: str            # WHY it should work -- the economic/behavioral story
     falsifiable: str          # a single if-true-then-X sentence
     operationalize: str       # features, in the strategy API's vocabulary
+    specification: SpecData   # the precise typed spec
     data_requires: DataRequires
     sources: tuple[SourceClaim, ...]
     confidence_prior: str = ""
@@ -89,6 +122,27 @@ class HypothesisRecord:
         if not self.operationalize.strip():
             raise InvalidRecord("operationalize is empty -- a mechanism that "
                                 "cannot be expressed as features is a short story")
+        
+        # C1 Typed Spec checks
+        if not self.specification.signal_def.strip():
+            raise InvalidRecord("specification.signal_def is empty")
+        if not self.specification.entry_rule.strip():
+            raise InvalidRecord("specification.entry_rule is empty")
+        if not self.specification.exit_rule.strip():
+            raise InvalidRecord("specification.exit_rule is empty")
+        if not self.specification.cost_assumption.strip():
+            raise InvalidRecord("specification.cost_assumption is empty -- must include spread/slippage model")
+            
+        allowed_fields = {"open", "high", "low", "close", "volume", "vwap"}
+        for f in self.specification.data_fields_required:
+            if f.lower() not in allowed_fields:
+                raise InvalidRecord(f"specification requires unknown data field: {f}")
+                
+        lookahead_re = re.compile(r"(_t\+1|\[t\+1\]|future|next bar|t\+1)", re.IGNORECASE)
+        for text in [self.specification.signal_def, self.specification.entry_rule, self.specification.exit_rule]:
+            if lookahead_re.search(text):
+                raise InvalidRecord(f"lookahead bias detected in specification rule: {text}")
+
         if not self.sources:
             raise InvalidRecord("no sources -- an unsourced claim is dropped, "
                                 "not emitted")

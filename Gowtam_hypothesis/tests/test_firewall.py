@@ -1,7 +1,7 @@
 import pytest
 
 from researcher import leak_lint, feasibility
-from researcher.schemas import DataRequires, HypothesisRecord, SourceClaim
+from researcher.schemas import DataRequires, HypothesisRecord, SpecData, ParameterDef, SourceClaim
 
 
 @pytest.mark.parametrize("text", [
@@ -30,6 +30,16 @@ def _rec(interval="5m", ticks=False, spreads=False) -> HypothesisRecord:
     return HypothesisRecord(
         id="x-1", mechanism="m", falsifiable="If real then X.",
         operationalize="o",
+        specification=SpecData(
+        signal_def="x=1",
+        entry_rule="x>0",
+        exit_rule="x<0",
+        parameters=(ParameterDef("p1", 1, 10, 1),),
+        bar_size="5m",
+        session_filter="all",
+        cost_assumption="1bp",
+        data_fields_required=("close",)
+    ),
         data_requires=DataRequires(interval=interval, needs_ticks=ticks,
                                    needs_spreads=spreads),
         sources=(SourceClaim(claim="c", source_url="https://a.b"),),

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import requests
 
-from . import arxiv, semantic_scholar
+from . import arxiv, searxng, semantic_scholar
 from .fetch import Extracted, FetchError, fetch_and_extract
 
 
@@ -24,7 +24,7 @@ class SourceClip:
     title: str
     url: str
     summary: str
-    backend: str  # "arxiv" | "semantic_scholar"
+    backend: str  # "arxiv" | "semantic_scholar" | "searxng"
 
 
 def _norm_title(title: str) -> str:
@@ -48,7 +48,7 @@ def _relax(query: str) -> str:
 
 
 def _search_backends(query: str, per_backend: int) -> list[SourceClip]:
-    """One query across both backends, no cross-query de-dup."""
+    """One query across all backends, no cross-query de-dup."""
     clips: list[SourceClip] = []
     try:
         for e in arxiv.search(query, max_results=per_backend):
@@ -61,6 +61,12 @@ def _search_backends(query: str, per_backend: int) -> list[SourceClip]:
             clips.append(SourceClip(title=p.title, url=p.url, summary=p.abstract,
                                     backend="semantic_scholar"))
     except semantic_scholar.SemanticScholarError:
+        pass
+    try:
+        for r in searxng.search(query, limit=per_backend):
+            clips.append(SourceClip(title=r.title, url=r.url, summary=r.content,
+                                    backend="searxng"))
+    except searxng.SearxngError:
         pass
     return clips
 
@@ -85,7 +91,7 @@ def _dedup(clips: list[SourceClip]) -> list[SourceClip]:
 
 def retrieve(query: str, *, per_backend: int = 8, fetch_fulltext: bool = False,
              min_sources: int = 2) -> list[SourceClip]:
-    """Query arxiv + semantic scholar with query relaxation, de-dup, return clips.
+    """Query arxiv + semantic scholar + searxng with relaxation, de-dup, return clips.
 
     Relaxation handles the thin-corpus case: a family phrased too precisely for
     the quantitative-finance literature ("intraday momentum in equity index

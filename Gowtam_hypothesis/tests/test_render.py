@@ -4,7 +4,7 @@ import sys
 import pytest
 
 from researcher.render import render
-from researcher.schemas import DataRequires, HypothesisRecord, SourceClaim
+from researcher.schemas import DataRequires, HypothesisRecord, SpecData, ParameterDef, SourceClaim
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
@@ -19,6 +19,16 @@ def _record() -> HypothesisRecord:
         operationalize="Measure the session move against its own realised "
                        "range so far; fade it after a threshold in units of "
                        "that range.",
+        specification=SpecData(
+        signal_def="x=1",
+        entry_rule="x>0",
+        exit_rule="x<0",
+        parameters=(ParameterDef("p1", 1, 10, 1),),
+        bar_size="5m",
+        session_filter="all",
+        cost_assumption="1bp",
+        data_fields_required=("close",)
+    ),
         data_requires=DataRequires(interval="5m"),
         sources=(SourceClaim(claim="the effect is real in equity index "
                                    "intraday bars",

@@ -28,12 +28,36 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--live", action="store_true",
                    help="with --loop: actually launch campaigns "
                         "(default is dry-run)")
+    p.add_argument("--full", action="store_true",
+                   help="full pipeline: research then run the L1 loop live "
+                        "(register/run/nulls/report per hypothesis)")
+    p.add_argument("--max-iterations", type=int, default=None,
+                   help="with --full/--loop: max loop iterations "
+                        "(default 2 for --full, built-in for --loop)")
+    p.add_argument("--profile", type=str, default=None,
+                   help="with --full: campaign profile (default xauusd-train)")
+    p.add_argument("--dry-run", action="store_true",
+                   help="with --full: print campaign commands instead of running")
     return p
 
 
 def _main(argv: list[str]) -> int:
     args = _parser().parse_args(argv)
     ask = " ".join(args.ask)
+
+    if args.full:
+        kwargs = {"budget": args.budget}
+        if args.max_iterations is not None:
+            kwargs["max_iterations"] = args.max_iterations
+        if args.profile is not None:
+            kwargs["profile"] = args.profile
+        if args.dry_run:
+            kwargs["dry_run"] = True
+        result = orchestrator.full_run(ask, **kwargs)
+        print(f"full pipeline complete; iterations={result.iterations}")
+        for d in result.decisions:
+            print(f"  next -> {d.next_ask!r}  ({d.why!r})")
+        return 0
 
     if args.loop:
         from .driver import run as _emit

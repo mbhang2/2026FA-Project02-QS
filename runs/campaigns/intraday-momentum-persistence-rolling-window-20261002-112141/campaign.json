@@ -1,0 +1,57 @@
+{
+  "digest": "53a55e440a0eec5c5e6502514af90aeb2a9fb4a589db26c21623d0c62bfa7112",
+  "record": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.03,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "b8098024b0a41376419abc4fd72e2593ba082ec42165a5ffcb0baa28ea131fa1",
+        "path": "config/hypotheses/intraday-momentum-persistence-rolling-window.md"
+      },
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "model_served_at_registration": "claude-haiku-4-5",
+      "null_source": "round_turn_mc",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: XAUUSD spot gold quotes, 1290 sessions on the pre-registered train split.\n\nFill model: quotes-unfavorable -- a fill requires a price move strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.03 per unit per side. Gold quotes in USD per troy ounce, mid near $2,000. The quotes fill model does not walk the bid/ask spread, so this commission already includes the half-spread: a round trip costs roughly 0.06 points per unit (~3 bps).\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "budget": 50,
+    "campaign_id": "intraday-momentum-persistence-rolling-window-20261002-112141",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "xauusd",
+    "hypothesis_digest": "b8098024b0a41376419abc4fd72e2593ba082ec42165a5ffcb0baa28ea131fa1",
+    "hypothesis_path": "config/hypotheses/intraday-momentum-persistence-rolling-window.md",
+    "note": "MVP campaign, governed by docs/design/pre-registration.md. Real xauusd train split. The model proposes one strategy at a time and edits the champion; the null is the sign-flip over round turns (section 3b), NOT the conditional null, so the measured FWER of 0.060 does not describe this campaign.",
+    "profile": "xauusd-train",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-10-02T16:21:59+00:00"
+  }
+}

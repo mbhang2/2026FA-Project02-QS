@@ -356,11 +356,13 @@ def test_the_probe_is_armed_on_every_agent_not_just_the_first():
     in nq-s06-01, 42 for 100 in nq-s06-02 -- and nq-s06-02 then crashed 35 of
     100 proposals on two API-misuse shapes the probe catches in one synthetic
     run, because three quarters of them never got the chance to repair."""
-    assert "def _arm_probe(a) -> None:" in SRC
-    assert SRC.count("_arm_probe(") == 3, "one definition, two call sites"
+    # the signature gained a per-worker `root` on 2026-10-10; see the probe-race
+    # test below for why
+    assert "def _arm_probe(a, root" in SRC
+    assert SRC.count("_arm_probe(") >= 3, "one definition, call sites for every agent"
     # the extra agents are armed where they are built
-    i = SRC.index("for _ in range(width - 1):")
-    assert "_arm_probe(extra)" in SRC[i:i + 400]
+    i = SRC.index("for slot in range(1, width):")
+    assert "_arm_probe(extra, workers[slot])" in SRC[i:i + 400]
 
 
 def test_probe_coverage_is_measured_against_trials_not_asserted_as_a_flag():
@@ -556,3 +558,146 @@ def test_synthetic_implements_scored_sessions():
     assert hasattr(SyntheticDataset, "scored_sessions")
     d = SyntheticDataset()
     assert len(d.scored_sessions(Split.TRAIN, 0)) > 0
+
+
+# --------------------------------------------------------------------------- #
+# the post-session-07 queue (2026-10-10)
+# --------------------------------------------------------------------------- #
+def test_a_p_value_at_the_floor_is_reported_as_a_bound():
+    """**And raising `b` is NOT the fix, measured.** nq-s07-01 returned
+    p = 9.999e-05 = 1/(b+1) with zero exceedances and was vetoed for reporting a
+    censoring limit as a probability. But its observed best (+0.6262) lies beyond
+    the entire null support, whose largest value across 3,980,000 pooled draws is
+    +0.5873 -- a simulated maximum is assembled from those draws, so no `b` can
+    reach it. Raising b to a million would print p = 1e-6 for identical evidence.
+    So the gate discloses the bound instead of manufacturing precision."""
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from src.core.scoring.correction import max_of_n
+    r = max_of_n([[0.0, 0.1, 0.2]] * 5, 0.9, b=1000, q=0.05)
+    assert r["p_is_bound"] is True and r["exceedances"] == 0
+    assert r["beyond_null_support"] is True
+    assert r["null_support_max"] == 0.2
+    assert abs(r["margin_over_support"] - 0.7) < 1e-9
+    assert "UPPER BOUND" in r["p_note"] and "Raising b cannot resolve" in r["p_note"]
+    # and a resolved p says nothing of the kind
+    r2 = max_of_n([[0.0, 0.5, 1.0]] * 5, 0.4, b=1000, q=0.05)
+    assert r2["p_is_bound"] is False and "p_note" not in r2
+
+
+def test_a_committee_seat_retries_both_failure_modes():
+    """Session 07 lost 6 of 12 seat-runs to 502s; campaign 3 was judged by one
+    auditor of four. A gateway fault arrives two ways -- `LLMUnavailable` is
+    RETURNED as CANNOT_TELL, `ModelSubstituted` RAISES -- and a retry handling
+    only one dies on the other, which is what my first attempt did."""
+    import importlib
+    R = importlib.import_module("audit.committee.review")
+    assert sum(R.SEAT_BACKOFF_S) >= 1500, "the substitution window outlasted 27 min once"
+    src = (REPO_ROOT / "audit" / "committee" / "review.py").read_text()
+    body = src[src.index("def _one("):src.index("\ndef ", src.index("def _one("))]
+    assert "except ModelSubstituted" in body and "except LLMUnavailable" in body
+    assert "time.sleep" in body
+    # a non-transient fault must NOT be retried
+    assert R._is_transient(Exception("HTTP 502 Proxy Error"))
+    assert not R._is_transient(Exception("ContentPolicyViolationError"))
+
+
+def test_a_score_in_a_hypothesis_is_linted():
+    """A hand-written seed carried three campaigns' best Sortinos into 400
+    proposal prompts. Narrow by measurement: P&L in points, moments and DOIs are
+    legitimately in these files and none of them match."""
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from src.core.loop.hypothesis import findings
+    hit = lambda t: any("is a score" in x for x in findings(t))
+    assert hit("their best candidates scored +0.038 and +0.037")
+    assert hit("found +0.125, and was vetoed")
+    for ok in ("net +116.5 points", "doi-10.2139/ssrn.7364204",
+               "a drawdown of -1266.25 points", "skew 1.679, kurtosis 7.99",
+               "the total goes to -152", "384 sessions over 30 minutes"):
+        assert not hit(ok), ok
+
+
+def test_one_paper_cited_twice_is_reported():
+    """Campaign 3 cited openalex-W7214001983 and -W7214046383: consecutive Zenodo
+    DOIs for one paper, reading as two corroborating sources. Both verify
+    correctly -- we hold both rows -- so the collision is reported, not refused."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "grounding", REPO_ROOT / "scripts" / "grounding.py")
+    g = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(g)
+    import json
+    reg = json.loads((REPO_ROOT / "data" / "papers" / "registry.json").read_text())["papers"]
+    marked = [k for k, v in reg.items() if v.get("duplicate_of")]
+    assert marked, "the registry should mark duplicate rows rather than delete them"
+    assert all(reg[reg[k]["duplicate_of"]].get("duplicate_of") is None
+               for k in marked), "a duplicate must point at a canonical row"
+    d = g.duplicate_citations("see openalex-W7214001983 and openalex-W7214046383")
+    assert d and "are one paper" in d[0]
+
+
+def test_close_lets_the_callers_tag_win():
+    """`close()` hardcoded `tag="close"` and splatted `**kw`, so a strategy that
+    passed a tag -- documented as legal, and advertised by `close(**kw)` -- got
+    `_order() got multiple values for keyword argument 'tag'`. Three of
+    nq-s07-02's crashes were the model doing a reasonable thing."""
+    import inspect
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from src.core.engine.context import BaseContext
+    import re
+    src = inspect.getsource(BaseContext.close)
+    # comments stripped first: the fix's own comment quotes the old code, which
+    # is what made the first version of this assertion fail on itself
+    code = re.sub(r"#.*$", "", src, flags=re.M)
+    assert 'tag="close", **kw' not in code
+    assert '**{"tag": "close", **kw}' in code
+
+
+def test_the_agent_facing_docs_are_fingerprinted():
+    """`llm.py` pastes strategy-api.md and data.md into every proposal prompt,
+    exactly as it pastes the prompt template -- so both shape every strategy and
+    one of the two was hashed while the other was not."""
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from src.core.scoring.integrity import ARTIFACT_GLOBS, _resolve, repo_root
+    assert "docs/agent/*.md" in ARTIFACT_GLOBS
+    files = {str(p.relative_to(repo_root())) for p in _resolve(ARTIFACT_GLOBS, repo_root())}
+    assert "docs/agent/strategy-api.md" in files
+    assert "docs/agent/data.md" in files
+
+
+def test_the_probe_writes_its_own_workers_strategy_file():
+    """**Under Amendment 12 the probe raced through one file.**
+    `probe_source` defaults to the REPOSITORY's `src/strategies/current.py` and
+    `_arm_probe` passed no path, so all `width` agents probed through it: agent A
+    wrote its source, B overwrote it, and A's `run.py` loaded B's strategy -- a
+    probe result attributed to the wrong candidate, the exact fault worker
+    isolation exists to prevent. It also left the repository's file dirty at the
+    end of session 07, so `pytest` could not collect until someone restored it.
+
+    The scored trials were never affected: `run_trial` takes `root`. Only the
+    probe leaked, and only its attribution.
+    """
+    src = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
+    assert "def _arm_probe(a, root: pathlib.Path | None = None) -> None:" in src
+    assert 'strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")' in src
+    # every agent gets its own worker, including the first
+    assert "_arm_probe(agent, workers[0])" in src
+    assert "_arm_probe(extra, workers[slot])" in src
+    # and probe_source must still accept the override
+    import inspect
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from src.core.loop.probe import probe_source
+    assert "strategy_path" in inspect.signature(probe_source).parameters
+
+
+def test_the_reference_strategy_is_committed_clean():
+    """A campaign or probe that leaves a candidate in `src/strategies/current.py`
+    breaks collection for the whole suite -- three test modules import
+    `MomentumStrategy` from it. This is the canary."""
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from src.strategies.current import MomentumStrategy  # noqa: F401

@@ -1,0 +1,74 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "CANNOT_TELL",
+  "is_veto": false,
+  "vetoed_by": [],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Code reviewed for lookahead, future-dated state, evaluation peeking, and session-boundary issues; all bar fields are consumed in on_bars after the structural bar-close guarantee, ctx.ts is the present timestamp, and no imports reference scoring/evaluation internals, but I could not observe the harness's actual bar-close behavior at runtime.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+      ],
+      "confidence_note": "",
+      "error": "HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+      ],
+      "confidence_note": "",
+      "error": "HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+    },
+    {
+      "axis": "robustness",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+      ],
+      "confidence_note": "",
+      "error": "HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 1,
+  "seats_failed": [
+    "statistics",
+    "economics",
+    "robustness"
+  ],
+  "incomplete": true,
+  "incomplete_note": "One or more auditors never ran, so this campaign was judged by fewer seats than the committee has. Their failure is recorded as a VETO because no verdict is not no veto, but the reading 'the committee looked at this' is weaker than it appears.",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4000,
+      "completion_tokens": 2454,
+      "reasoning_tokens": 2359,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "proposer_model": "deepseek-v4-pro",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

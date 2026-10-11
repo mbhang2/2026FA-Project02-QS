@@ -181,6 +181,22 @@ ARTIFACT_GLOBS = (
     "data/nq-session-closes.json",
     "data/dbn-version-equivalence.json",
     "src/strategies/current.py",     # the strategy's own source, at load and after
+    "docs/agent/*.md",               # **the documents the proposing agent READS.**
+                                     # `src/core/loop/llm.py` pastes
+                                     # `strategy-api.md` and `data.md` into every
+                                     # proposal prompt, exactly as it pastes the
+                                     # prompt template above -- so both shape every
+                                     # strategy written, and one of the two was
+                                     # hashed while the other was not. Added
+                                     # 2026-10-10, signed off by Michael: an edit
+                                     # to strategy-api.md on 2026-10-05 moved no
+                                     # fingerprint, so campaigns before and after
+                                     # it are recorded as having run under
+                                     # identical artefacts. They did not. The
+                                     # `docs/` exclusion below still holds for
+                                     # prose a RESULT does not depend on; these two
+                                     # files are input to the agent, not commentary
+                                     # about it.
 )
 
 # Deliberately not in the set, each for a reason rather than by omission:

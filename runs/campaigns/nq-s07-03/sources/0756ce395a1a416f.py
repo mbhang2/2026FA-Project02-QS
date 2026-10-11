@@ -1,0 +1,325 @@
+"""Opening range fade with prior-day realized volatility for the breakout scale.
+
+Variant of #92. The campaign calls for "leaving the range" to be measured in
+volatility-scaled terms using trailing realized volatility from prior days of
+this instrument, not necessarily the current session's evolving ATR. In #92
+the 1-minute ATR buffer is cleared every session, so by the time the first
+trades are taken (roughly 20 minutes after the opening range is ready, with
+~900 Globex one-minute bars already accumulated) the trailing 150-bar ATR is
+dominated by the current session's overnight Globex action, not by prior days.
+
+This version records an average 1-minute true range for each completed session
+(the average of that session's last 150 one-minute true ranges) and carries the
+mean of the last five such session values as the prior-day realized-volatility
+scale. The opening-range breakout threshold and the minimum-range-width filter
+use this prior-day scale. The breakout-bar range filter and the bracket
+distances continue to use the current session's ATR, because those are risk
+and current-conditions quantities rather than the "has price left the range"
+definition itself.
+
+Everything else is retained from #92: the two order-flow filters, the
+one-entry-per-session rule, the 20-110 minute entry window after the range is
+ready, and the 0.8/3.0 ATR stop/target bracket relative to current ATR.
+"""
+
+from __future__ import annotations
+
+from collections import deque
+from typing import Optional
+
+from src.core.types import NS_PER_SECOND
+
+NS_PER_MINUTE = 60 * NS_PER_SECOND
+NS_PER_HOUR = 3600 * NS_PER_SECOND
+
+
+class Strategy:
+    def __init__(
+        self,
+        *,
+        interval: str = "1m",
+        opening_range_minutes: int = 30,
+        vol_lookback: int = 150,
+        prior_session_atr_lookback: int = 150,
+        prior_atr_sessions: int = 5,
+        breakout_vol_mult: float = 0.8,
+        stop_vol_mult: float = 0.8,
+        target_vol_mult: float = 3.0,
+        max_hold_minutes: int = 100,
+        min_wait_after_range_minutes: int = 20,
+        trade_window_minutes: int = 110,
+        bar_range_vol_mult: float = 2.0,
+        min_range_width_vol_mult: float = 1.0,
+        max_breakout_imbalance: float = 0.20,
+        max_breakout_delta_abs_mult: float = 2.0,
+        session_close_margin_minutes: int = 5,
+        size: int = 1,
+    ) -> None:
+        self.interval = interval
+        self.opening_range_bars = opening_range_minutes  # 1m bars
+        self.vol_lookback = vol_lookback
+        self.prior_session_atr_lookback = prior_session_atr_lookback
+        self.prior_atr_sessions = prior_atr_sessions
+        self.breakout_vol_mult = breakout_vol_mult
+        self.stop_vol_mult = stop_vol_mult
+        self.target_vol_mult = target_vol_mult
+        self.max_hold_ns = max_hold_minutes * NS_PER_MINUTE
+        self.min_wait_after_range_ns = min_wait_after_range_minutes * NS_PER_MINUTE
+        self.trade_window_ns = trade_window_minutes * NS_PER_MINUTE
+        self.bar_range_vol_mult = bar_range_vol_mult
+        self.min_range_width_vol_mult = min_range_width_vol_mult
+        self.max_breakout_imbalance = max_breakout_imbalance
+        self.max_breakout_delta_abs_mult = max_breakout_delta_abs_mult
+        self.session_close_margin_ns = session_close_margin_minutes * NS_PER_MINUTE
+        self.size = size
+
+        # Session state
+        self.current_session: Optional[int] = None
+        self.rth_open_ts: int = 0
+        self.range_high: Optional[float] = None
+        self.range_low: Optional[float] = None
+        self.range_ready: bool = False
+        self.range_ready_ts: int = 0
+        self.entry_taken: bool = False
+
+        # Volatility state (ATR)
+        self.last_close: Optional[float] = None
+        self.true_ranges: deque[float] = deque(maxlen=2000)
+
+        # Prior-day realized volatility state.
+        # Each completed session contributes one average 1m true range, and we
+        # average the last `prior_atr_sessions` of those session-level values.
+        self.prior_session_atrs: deque[float] = deque(maxlen=prior_atr_sessions)
+        self.prior_atr: Optional[float] = None
+
+        # Order-flow state: absolute delta per bar, for the second filter
+        self.abs_deltas: deque[float] = deque(maxlen=2000)
+
+        # Trade state
+        self.entry_time: Optional[int] = None
+        self.entry_order_id: Optional[int] = None
+
+    def setup(self, ctx) -> None:
+        ctx.subscribe(self.interval)
+
+    def _reset_session(self, ctx) -> None:
+        """Reset per-session state for a new session.
+
+        Before clearing the current true-range buffer we compute the previous
+        session's realized 1m ATR. The breakout threshold then uses the average
+        of the last few sessions' ATRs, which is genuinely prior-day volatility
+        rather than today's Globex volatility once the ranges are cleared.
+        """
+        # Compute previous session's realized 1m ATR, if available.
+        if len(self.true_ranges) >= self.prior_session_atr_lookback:
+            recent = list(self.true_ranges)[-self.prior_session_atr_lookback:]
+            session_atr = sum(recent) / len(recent)
+            self.prior_session_atrs.append(session_atr)
+
+        if self.prior_session_atrs:
+            self.prior_atr = sum(self.prior_session_atrs) / len(self.prior_session_atrs)
+        else:
+            self.prior_atr = None
+
+        self.current_session = ctx.session
+        # RTH open is 15.5 hours after Globex session start (17:00 CT -> 8:30 CT)
+        self.rth_open_ts = ctx.session_start + int(15.5 * NS_PER_HOUR)
+        self.range_high = None
+        self.range_low = None
+        self.range_ready = False
+        self.range_ready_ts = 0
+        self.entry_taken = False
+        self.entry_time = None
+        self.entry_order_id = None
+        # Reset current-session volatility only; prior_atr now holds prior days.
+        self.last_close = None
+        self.true_ranges.clear()
+        # Clear order-flow history for the new session.
+        self.abs_deltas.clear()
+
+    def _update_opening_range(self, bar) -> None:
+        """Accumulate high/low from bars within the opening range window."""
+        if self.range_ready:
+            return
+        if bar.open_ts < self.rth_open_ts:
+            return
+        opening_range_end = self.rth_open_ts + self.opening_range_bars * NS_PER_MINUTE
+        if bar.open_ts >= opening_range_end:
+            self.range_ready = True
+            self.range_ready_ts = bar.open_ts
+            return
+        if self.range_high is None:
+            self.range_high = bar.high
+            self.range_low = bar.low
+        else:
+            self.range_high = max(self.range_high, bar.high)
+            self.range_low = min(self.range_low, bar.low)
+
+    def _update_atr(self, bar) -> None:
+        """Update the current session's true range buffer."""
+        if self.last_close is None:
+            tr = bar.high - bar.low
+        else:
+            tr = max(
+                bar.high - bar.low,
+                abs(bar.high - self.last_close),
+                abs(bar.low - self.last_close),
+            )
+        self.true_ranges.append(tr)
+        self.last_close = bar.close
+
+    def _atr(self) -> float:
+        """Average current-session true range over the lookback window."""
+        if len(self.true_ranges) < self.vol_lookback:
+            return 0.0
+        recent = list(self.true_ranges)[-self.vol_lookback:]
+        return sum(recent) / len(recent)
+
+    def _avg_abs_delta(self) -> float:
+        """Average absolute signed volume over the lookback window."""
+        if len(self.abs_deltas) < self.vol_lookback:
+            return 0.0
+        recent = list(self.abs_deltas)[-self.vol_lookback:]
+        return sum(recent) / len(recent)
+
+    def _exit_position(self, ctx) -> None:
+        """Cancel bracket legs and flatten the position."""
+        if self.entry_order_id is not None:
+            legs = ctx.find_orders(parent_id=self.entry_order_id)
+            for leg in legs:
+                ctx.cancel(leg.id)
+        if ctx.position:
+            ctx.close()
+        self.entry_order_id = None
+        self.entry_time = None
+
+    def on_bars(self, ctx) -> None:
+        if ctx.session != self.current_session:
+            self._reset_session(ctx)
+
+        # Only process our interval
+        bar = ctx.bars.get(self.interval)
+        if bar is None:
+            return
+
+        # Update current-session ATR and order-flow history always, even warmup
+        self._update_atr(bar)
+        self.abs_deltas.append(abs(bar.delta))
+
+        # Update opening range
+        self._update_opening_range(bar)
+
+        if not ctx.actionable:
+            return
+
+        # Manage existing position
+        if ctx.position:
+            if self.entry_time is not None and ctx.ts - self.entry_time > self.max_hold_ns:
+                self._exit_position(ctx)
+                return
+            if ctx.session_end - ctx.ts < self.session_close_margin_ns:
+                self._exit_position(ctx)
+                return
+            return
+
+        if ctx.working_order_ids:
+            return
+        if self.entry_taken:
+            return
+        if not self.range_ready or self.range_high is None or self.range_low is None:
+            return
+        if len(self.true_ranges) < self.vol_lookback:
+            return
+        if len(self.abs_deltas) < self.vol_lookback:
+            return
+
+        # Time filter
+        time_since_range_ready = bar.close_ts - self.range_ready_ts
+        if time_since_range_ready < self.min_wait_after_range_ns:
+            return
+        if time_since_range_ready > self.trade_window_ns:
+            return
+
+        current_atr = self._atr()
+        if current_atr <= 0 and self.prior_atr is None:
+            return
+
+        # The "has price left the opening range" threshold is measured against
+        # prior-day realized volatility. Risk distances use the current session's
+        # ATR when it is available.
+        vol_scale = self.prior_atr if self.prior_atr is not None else current_atr
+        risk_atr = current_atr if current_atr > 0 else vol_scale
+        if vol_scale <= 0 or risk_atr <= 0:
+            return
+
+        # Opening range width filter: require range to be meaningful on the
+        # same prior-day volatility scale.
+        range_width = self.range_high - self.range_low
+        if range_width < self.min_range_width_vol_mult * vol_scale:
+            return
+
+        # Bar range filter: skip extremely volatile breakout bars.
+        bar_range = bar.high - bar.low
+        if bar_range > self.bar_range_vol_mult * risk_atr:
+            return
+
+        threshold = self.breakout_vol_mult * vol_scale
+        stop_offset = self.stop_vol_mult * risk_atr
+        target_offset = self.target_vol_mult * risk_atr
+        volume = max(1, bar.volume)
+        avg_abs_delta = self._avg_abs_delta()
+
+        # Fade the breakout: sell on upside breakout, buy on downside breakout.
+        # Skip breakouts whose signed volume is strongly aligned with the move.
+        if bar.close > self.range_high + threshold:
+            if bar.delta > self.max_breakout_imbalance * volume:
+                return
+            if (
+                avg_abs_delta > 0
+                and bar.delta > self.max_breakout_delta_abs_mult * avg_abs_delta
+            ):
+                return
+            order_id = ctx.sell(
+                size=self.size,
+                stop_offset=stop_offset,
+                target_offset=target_offset,
+                tag="fade_short",
+            )
+            if order_id is not None:
+                self.entry_taken = True
+                self.entry_order_id = order_id
+        elif bar.close < self.range_low - threshold:
+            if bar.delta < -self.max_breakout_imbalance * volume:
+                return
+            if (
+                avg_abs_delta > 0
+                and bar.delta < -self.max_breakout_delta_abs_mult * avg_abs_delta
+            ):
+                return
+            order_id = ctx.buy(
+                size=self.size,
+                stop_offset=stop_offset,
+                target_offset=target_offset,
+                tag="fade_long",
+            )
+            if order_id is not None:
+                self.entry_taken = True
+                self.entry_order_id = order_id
+
+    def on_fill(self, ctx) -> None:
+        fill = ctx.fill
+        if fill.position != 0 and self.entry_time is None:
+            self.entry_time = ctx.ts
+        elif fill.position == 0:
+            self.entry_time = None
+            self.entry_order_id = None
+
+    def on_lifecycle(self, ctx) -> None:
+        event = ctx.event
+        if event.order_id == self.entry_order_id and event.kind in (
+            "day_expired",
+            "cancel_confirmed",
+            "order_rejected",
+        ):
+            self.entry_order_id = None
+            self.entry_time = None

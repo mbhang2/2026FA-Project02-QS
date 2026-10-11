@@ -278,19 +278,57 @@ def max_of_n(
     p = (1 + exceed) / (b + 1)
     quantiles = {str(a): float(np.quantile(maxima, 1 - a))
                  for a in (0.5, 0.2, 0.1, 0.05, 0.01)}
-    return {
+
+    # **When nothing exceeded, `p` is a BOUND and the result says so.**
+    #
+    # nq-s07-01 returned p = 9.999e-05 = 1/(b+1) with zero exceedances, and its
+    # statistics auditor vetoed it for reporting a censoring limit as a measured
+    # probability. The obvious response -- raise `b` -- is the wrong one, and
+    # measuring it says why: the observed best was +0.6262 while the largest
+    # value anywhere in the 3,980,000 pooled null draws was +0.5873. A simulated
+    # maximum is assembled from those draws, so it CANNOT reach the observation
+    # at any `b`. Raising b to a million would print p = 1e-6 for identical
+    # evidence, which is manufactured precision and worse than the floor.
+    #
+    # So the honest fix is disclosure, not more draws. `p_is_bound` says the
+    # number is an upper bound; `null_support_max` is the hard ceiling on any
+    # simulated maximum, which is what a reader needs to tell "just past the
+    # bar" from "outside the null's reach entirely"; and `margin_over_support`
+    # quantifies the latter, where `p` cannot.
+    support_max = float(max(float(s.max()) for s in usable))
+    out = {
         "n_trials": len(usable),
         "b": b,
         "observed_best": float(observed_best),
         "p": p,
         "p_floor": 1.0 / (b + 1),
         "at_floor": p <= 1.0 / (b + 1) + 1e-12,
+        "exceedances": exceed,
+        "p_is_bound": exceed == 0,
+        "null_support_max": support_max,
+        "beyond_null_support": float(observed_best) > support_max,
+        "margin_over_support": float(observed_best) - support_max,
         "reject": p <= q,
         "q": q,
         "null_max_mean": float(maxima.mean()),
         "null_max_quantiles": quantiles,
         "note": MAX_OF_N_NOTE,
     }
+    if exceed == 0:
+        out["p_note"] = (
+            f"ZERO of {b} simulated maxima reached the observation, so p is an "
+            f"UPPER BOUND of {p:.3g} and not a measured probability. Report it as "
+            f"'p < {p:.3g}'."
+            + (f" Raising b cannot resolve it further: the observation "
+               f"({observed_best:+.4f}) lies beyond the entire null support, "
+               f"whose largest value is {support_max:+.4f}, and a simulated "
+               f"maximum is assembled from those draws. The informative "
+               f"quantity here is the margin over that support, "
+               f"{float(observed_best) - support_max:+.4f}, not p."
+               if float(observed_best) > support_max else
+               f" The null support reaches {support_max:+.4f}, above the "
+               f"observation, so a larger b MAY resolve this."))
+    return out
 
 
 def _iqr(sample) -> float:

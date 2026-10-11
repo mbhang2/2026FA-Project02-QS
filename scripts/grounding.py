@@ -335,6 +335,37 @@ def citations(claim: str, known: "set[str] | None" = None) -> set[str]:
     return out
 
 
+def duplicate_citations(claim: str, registry: "dict | None" = None) -> list[str]:
+    """Cited ids that are the SAME paper under different registry keys.
+
+    Campaign 3's question cited `openalex-W7214001983` and
+    `openalex-W7214046383` -- consecutive Zenodo DOIs for one paper -- and read
+    as though two sources corroborated it. Both ids verify, correctly: we hold
+    both rows. What is wrong is the impression, so this reports the collision
+    instead of refusing it, and the caller decides.
+    """
+    if registry is None:
+        f = ROOT / "data" / "papers" / "registry.json"
+        if not f.exists():
+            return []
+        registry = json.loads(f.read_text())["papers"]
+    cited = citations(claim)
+    # map every cited id to the row it belongs to, then to that row's canon
+    canon: dict[str, list[str]] = {}
+    for pid, row in registry.items():
+        ids = {pid, pid.split("v")[0]}
+        if row.get("doi"):
+            ids.add(row["doi"].lower())
+        if row.get("openalex_id"):
+            ids.add(str(row["openalex_id"]))
+        hit = next((c for c in cited if c in ids or c.lower() in
+                    {i.lower() for i in ids}), None)
+        if hit:
+            canon.setdefault(row.get("duplicate_of") or pid, []).append(hit)
+    return [f"{sorted(v)} are one paper ({k})"
+            for k, v in canon.items() if len(set(v)) > 1]
+
+
 def unverifiable_citations(claim: str, known: "set[str] | None" = None) -> list[str]:
     """Cited ids that are in no registry we hold. Non-empty means refuse."""
     known = registry_ids() if known is None else known
@@ -352,6 +383,8 @@ def findings(claim: str, *sources: str) -> list[str]:
     out += [f"cites {c!r}, which is in no registry we hold -- a paper nobody "
             f"has fetched, screened or ranked here" for c in
             unverifiable_citations(claim)]
+    out += [f"cites one paper twice: {d} -- two ids for one claim read as two "
+            f"sources" for d in duplicate_citations(claim)]
     return out
 
 

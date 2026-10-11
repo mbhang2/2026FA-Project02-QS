@@ -434,7 +434,15 @@ class BaseContext:
         if pos == 0:
             raise ContextError("close() with no position open")
         side = Side.SELL if pos > 0 else Side.BUY
-        return self._order(side, abs(pos), reduce_only=True, tag="close", **kw)
+        # **The caller's tag wins.** This read `tag="close", **kw`, so a
+        # strategy that passed a tag -- which `docs/agent/strategy-api.md`
+        # documents as legal, "free text; lands in the blotter row", and which
+        # `close(**kw)` advertises by accepting anything -- got
+        # `_order() got multiple values for keyword argument 'tag'`. Three of
+        # nq-s07-02's crashes were that: the model did a reasonable thing and the
+        # engine raised a TypeError at it. "close" stays the default.
+        return self._order(side, abs(pos), reduce_only=True,
+                           **{"tag": "close", **kw})
 
     def _order(
         self,

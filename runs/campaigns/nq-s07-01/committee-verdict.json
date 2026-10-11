@@ -1,0 +1,88 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Source reviewed for lookahead, future-dated state, evaluation peeking, and session-boundary confusion; all state derives from closed bars and harness metadata (session_start/end), and no scoring/dataset/split/seed access exists \u2014 but I could not see the harness's bar-emission contract to verify that `ctx.bars.get(...)` only ever returns closed bars.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "The gate's p-value sits exactly at the Monte Carlo resolution floor: p = 9.999e-05 = p_floor = 1/(b+1) with b = 10000, and the report itself flags at_floor = true. With 0 exceedances out of 10000 max-statistic draws the simulation cannot resolve how small p is -- it only establishes p <= 1e-4 -- so the decisive number is a censoring limit, not a measured probability.",
+        "The per-trial FAR column is censored at its own resolution floor of 0.0005: ranks 1 through 204 all carry best_far = 0.0005 exactly (204-way tie at the top), so the uncorrected/BH/Holm views cannot resolve or even order the head of the campaign. The BH(336) vs Holm(0) split is an artifact of that floor -- Holm's first threshold is 0.05/400 = 0.000125, below the 0.0005 floor, so Holm can never advance while BH's step-up accepts everything tied at 0.0005. The three views therefore disagree for a mechanical reason (floor + the documented 10-17x FAR miscalibration), not for a statistical one, and none of the three per-trial p-values is usable as evidence.",
+        "The campaign winner was never evaluated on the validation split (_validation: NOT RUN), so the reported score, sortino and margin are all in-sample; there is no out-of-sample number anywhere in the evidence that could corroborate the 0.626 best score or the 0.400 deflation margin."
+      ],
+      "confidence_note": "I could not see a per-session PnL series, so I could not test whether the reported skew of 2.60 and kurtosis of 10.62 mean one or two of the 384 sessions are carrying the sortino.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The docstring is technical (focused on size-scaling tweaks to #384) and does not articulate the economic hypothesis development; the actual current hypothesis lives in the class docstring 'Follow strong-close opening-range breakouts and fade weak-close ones' and the mode-selection logic \u2014 both arms of the original question are exercised with a stated condition (close_location vs close_strength threshold), so the direction-open framing is respected. Economics look healthy: commission is 1.24% of gross, net P&L is positive, holding period is ~28 minutes, sessions with exposure is 95% of 384, and 559 fills are far from degenerate; I cannot tell whether the trade_count metric counts fills or round trips, which would slightly change the read on per-session participation but not materially.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+      ],
+      "confidence_note": "",
+      "error": "HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 3,
+  "seats_failed": [
+    "robustness"
+  ],
+  "incomplete": true,
+  "incomplete_note": "One or more auditors never ran, so this campaign was judged by fewer seats than the committee has. Their failure is recorded as a VETO because no verdict is not no veto, but the reading 'the committee looked at this' is weaker than it appears.",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 5674,
+      "completion_tokens": 2035,
+      "reasoning_tokens": 1937,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 8003,
+      "completion_tokens": 4445,
+      "reasoning_tokens": 4248,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 49030,
+      "completion_tokens": 7207,
+      "reasoning_tokens": 6736,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "proposer_model": "deepseek-v4-pro",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

@@ -522,7 +522,7 @@ def stage_run(name: str) -> None:
     model = (record.agent_config or {}).get("model", MODEL)
     agent = agent_for(champion if champion.exists() else None, hyp_path,
                       record.profile, model)
-    def _arm_probe(a) -> None:
+    def _arm_probe(a, root: pathlib.Path | None = None) -> None:
         """Amendment 7 on one agent, from the record.
 
         The probe writes `purpose: check` rows to the campaign's own probe
@@ -543,7 +543,22 @@ def stage_run(name: str) -> None:
         import functools
         from src.core.loop.probe import probe_source
         a.probe_before_trial = True
-        a.probe = functools.partial(probe_source, ledger=d / "probe-ledger.jsonl")
+        # **`strategy_path` per worker, and without it the probe raced.**
+        # `probe_source` defaults to the REPOSITORY's
+        # `src/strategies/current.py`, and this passed no path -- so under
+        # Amendment 12 all `width` agents probed through one file. Agent A wrote
+        # its source, B overwrote it, and A's `run.py` then loaded B's strategy:
+        # a probe result attributed to the wrong candidate, which is the exact
+        # fault worker isolation exists to prevent. It also left the repository's
+        # file dirty at the end of session 07, so the test suite could not even
+        # collect until someone restored it.
+        #
+        # The scored TRIALS were never affected -- `run_trial` takes `root` and
+        # writes the worker's file -- so session 07's results stand. Only the
+        # probe leaked, and only its attribution.
+        a.probe = functools.partial(
+            probe_source, ledger=d / "probe-ledger.jsonl",
+            strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")
 
     _arm_probe(agent)
     if record.probe_before_trial:
@@ -567,12 +582,15 @@ def stage_run(name: str) -> None:
         # The agents are per-slot: `propose` is a model call and an LLMAgent
         # carries its own drain log, so W of them is W bills, not one shared and
         # raced.
+        # Re-armed on its own worker: `_arm_probe(agent)` above pointed it at
+        # the repository, which is right at width 1 and a race above it.
+        _arm_probe(agent, workers[0])
         agents = [agent]
-        for _ in range(width - 1):
+        for slot in range(1, width):
             extra = agent_for(champion if champion.exists() else None,
                               hyp_path, record.profile, model)
-            # Every agent, not just the first. See `_arm_probe`.
-            _arm_probe(extra)
+            # Every agent, on its own worker. See `_arm_probe`.
+            _arm_probe(extra, workers[slot])
             agents.append(extra)
     else:
         agents = [agent]

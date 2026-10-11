@@ -1,0 +1,26 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "Seats re-run 2026-10-10 that returned CANNOT_TELL with HTTP 502 in the committed verdict. Written BESIDE committee-verdict.json and never over it: the committed artefact records what the campaign's committee actually did, and a seat that failed then did fail then. This is a later, separate read; it cannot change the recorded verdict and does not.",
+  "can_approve": false,
+  "seats": {
+    "leakage": {
+      "verdict": "PASS",
+      "reasons": [],
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 3
+    },
+    "economics": {
+      "verdict": "VETO",
+      "reasons": [
+        "The hypothesis explicitly requires 'decided-one-way, decided-the-other, and undetermined as three counts' and forbids letting a time-out speak for either account. The strategy's on_bars deadline block force-closes at max_hold_minutes=120 (or 30 minutes before RTH close) and on_fill treats every exit identically (the fill.position == 0 branch simply clears state) with no tracking of whether the close was a trailing-stop hit or a time limit; the economic evidence likewise reports only trade_count=362 with no outcome split. With an average holding period of 5331 s (~88.8 min) against a 120-minute max hold, a material share of the 362 trades almost certainly ran to the time limit, and whether those timeouts ended with the breakout holding or with price returning to the range is exactly the measurement the guardrail forbids conflating. The 2840.6-point net P&L therefore cannot be read as an answer to 'does the move hold or does the range win' and may substantially reflect the exit convention rather than the mechanism under test.",
+        "The single stated change from trial #158 -- hard_deadline_minutes 5 -> 30 to 'avoid late, low-probability trades' -- is inert given the other parameters: entry_cutoff = min(rth_open + entry_window_minutes=120 min, rth_close - hard_deadline) = 10:30 CT whether hard_deadline is 5 or 30 minutes, and the trade deadline is dominated by max_hold_minutes=120 (a 10:30 entry deadlines at 12:30, well before rth_close - 30 min = 14:45). The claimed economic refinement therefore does not correspond to any behavioral change in the code; the reported primary score 0.1370689 is essentially #158's 0.1370, and the campaign's winner carries none of the improvement the docstring attributes to it."
+      ],
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 4
+    }
+  }
+}

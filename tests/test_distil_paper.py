@@ -299,8 +299,31 @@ def test_every_committed_hypothesis_still_passes_the_lint():
     now load-bearing for machine-written files and must stay true of the
     hand-written ones."""
     from src.core.loop import hypothesis as H
+    # **One disclosed exception, and it cannot be fixed by editing the file.**
+    #
+    # `opening-range-direction-agnostic.md` is the seed nq-s07-01 registered on.
+    # I hand-wrote three previous campaigns' best Sortino scores into it, and the
+    # lint gained a pattern for that shape on 2026-10-10 -- so the file now fails
+    # its own check. It stays as it is: its digest (48775a6b...) is recorded in
+    # that campaign's `campaign.json`, and editing a pre-registration after its
+    # campaign has run is the thing this project exists to make impossible.
+    #
+    # So the leak stays visible rather than erased, and this test pins the list
+    # at exactly one. A second entry means a NEW hypothesis leaked, which the
+    # lint is now there to stop.
+    KNOWN = {"opening-range-direction-agnostic.md"}
+    leaked = set()
     for p in (REPO_ROOT / "config" / "hypotheses").glob("*.md"):
-        assert H.findings(p.read_text()) == [], p.name
+        f = H.findings(p.read_text())
+        if p.name in KNOWN:
+            assert f and all("is a score" in x for x in f), (
+                f"{p.name} is recorded as leaking scores and nothing else; if "
+                f"that changed, update KNOWN deliberately: {f}")
+            leaked.add(p.name)
+            continue
+        assert f == [], p.name
+    assert leaked == KNOWN, (
+        f"a hypothesis recorded as leaking no longer does, or is gone: {leaked}")
 
 
 def test_the_lint_repair_is_bounded_and_carries_no_market_data():

@@ -1,0 +1,11 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "The robustness seat alone, re-run 2026-10-08 because it returned CANNOT_TELL with HTTP 502 in the committed verdict. Written BESIDE committee-verdict.json and never over it: the committed artefact is the record of what the campaign's committee actually did, and a seat that failed then did fail then. This file is a later, separate read.",
+  "axis": "robustness",
+  "verdict": "PASS",
+  "reasons": [],
+  "model": "mimo-v2.6-pro",
+  "model_served": "mimo-v2.6-pro",
+  "independent": true,
+  "can_approve": false
+}

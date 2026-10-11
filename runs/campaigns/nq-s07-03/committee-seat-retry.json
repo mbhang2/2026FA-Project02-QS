@@ -1,0 +1,38 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "Seats re-run 2026-10-10 that returned CANNOT_TELL with HTTP 502 in the committed verdict. Written BESIDE committee-verdict.json and never over it: the committed artefact records what the campaign's committee actually did, and a seat that failed then did fail then. This is a later, separate read; it cannot change the recorded verdict and does not.",
+  "can_approve": false,
+  "seats": {
+    "statistics": {
+      "verdict": "PASS",
+      "reasons": [],
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 3
+    },
+    "economics": {
+      "verdict": "VETO",
+      "reasons": [
+        "The module docstring explicitly states the hard exit was moved from 17:00 UTC to 16:45 UTC specifically to 'capture the range-win move when it has been decided and avoid holding through the very end of the profitable hour, where a late reversal may occur.' This fits the exit convention to the observed hour-by-hour P&L profile of prior campaigns on the same training data (the docstring cites 'the campaign record shows the settled outcome of an opening-range departure is concentrated in the 16:00-17:00 UTC band'). The pre-registration explicitly warned that 'what is not worth having is ... one that is really a measurement of the exit convention or of the clock.' A 15-minute refinement whose stated rationale is to shave the tail of a profitable clock hour is exactly that artifact.",
+        "Without sensitivity evidence (net P&L at the prior 3.5h exit, at 3.0h, at 4.0h, etc.), the measured 1537-point net cannot be attributed to an opening-range mechanism rather than to the tuned exit convention. The campaign record from the pre-registration already flagged that dropping hour 16 alone took the prior rule to -152 and hour 17 to -917 \u2014 so the whole edge lived inside a two-hour window, and moving the exit 15 minutes earlier to fit inside that window is fitting to the same in-sample hour concentration the pre-registration told the agent not to buy its answer from."
+      ],
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1
+    },
+    "robustness": {
+      "verdict": "VETO",
+      "reasons": [
+        "By-hour concentration: 1364 of 1537 total (~89%) is generated in just two hours (14 and 15 UTC). Only four hours of the day have any exposure at all, and no reason is given for why the edge should persist in those hours (or be worth 89% of the result if conditions in the open shift).",
+        "Single-month concentration: April 2025 contributes 512.87 of 1537 total (~33%). Removing that one month cuts the training result by a third; the next-best month is 166. The distribution is not broad-based across the 18-month window.",
+        "Lopsided session outcomes: 287 of 384 sessions (75%) are downside, and the top 5% of sessions produce 38.7% of profit. The positive total is carried by a small minority of winning sessions rather than a pervasive edge, so it plausibly hinges on those specific sessions recurring."
+      ],
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1
+    }
+  }
+}

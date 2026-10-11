@@ -84,6 +84,27 @@ BANNED: tuple[tuple[str, str], ...] = (
     (r"\breject(?:ed|s|ion)?\b", "is the gate's verdict"),
     (r"\b(?:\d+|n)\s+trials?\b|trial count|number of trials", "is N"),
     (r"correction", "is the correction"),
+    # **A signed decimal under 1 is the gate's metric, as a number.**
+    #
+    # The lint banned the gate's VOCABULARY and never its output, so on
+    # 2026-10-04 a hand-written seed carried three previous campaigns' best
+    # Sortino scores -- "scored +0.038 and +0.037", "found +0.125" -- into every
+    # one of nq-s07-01's 400 proposal prompts. Section 3 allows the agent its OWN
+    # prior trials' scores and nothing else; three other campaigns' were not on
+    # that list. It passed because no check looked at numbers.
+    #
+    # Deliberately narrow. Measured against all 20 committed hypotheses: this
+    # catches that one file and nothing else. P&L in points (+116.5, -1266.25),
+    # moments (skew 1.679), DOIs (10.2139/...) and bare integers (-152) are all
+    # legitimately in these files -- the refiner is shown turnover, exposure and
+    # where the money came from -- and none of them match. What matches is a
+    # signed decimal of magnitude under one, which is the shape a Sortino takes
+    # and almost nothing else in this vocabulary does.
+    #
+    # Machine-written questions were already caught by `grounding.findings`,
+    # which demands every number appear in a source. Human-written ones are
+    # linted but never grounded, so this closes the gap for them.
+    (r"[+-]0\.\d{2,5}\b", "is a score -- the gate's own output, as a number"),
 )
 
 # Lines the lint does not read. A hypothesis file may need to say, in a comment

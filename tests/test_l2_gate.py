@@ -200,8 +200,18 @@ def test_the_candidate_lister_runs_offline_and_reports_the_real_tree():
     #
     # Four of fourteen validated campaigns are positive on validation, and two of
     # the four were rejected on train. Rule (a) is a floor, not a finding.
+    # **Session 07 added the two that make this list worth reading.**
+    # nq-s07-02 is the highest validation score in the project's history
+    # (+0.2694) and its TRAIN gate rejected it at p = 1.0, its best candidate
+    # coming in below the null's expected maximum. nq-s07-01, which passed train
+    # at the Monte Carlo floor, is absent: it validated to -0.2542.
+    #
+    # Six of seventeen validated campaigns are positive out of sample, and the
+    # train ranking of session 07's three was exactly inverted against it. Rule
+    # (a) is a floor, not a finding, and this list is the evidence.
     positive = [c["campaign_id"] for c in cands if c["rule_a"]]
-    assert positive == ["nq-s02-01", "nq-s05b-01", "nq-s06-01", "nq-s06-03"], (
+    assert positive == ["nq-s02-01", "nq-s05b-01", "nq-s06-01", "nq-s06-03",
+                        "nq-s07-02", "nq-s07-03"], (
         f"the set of winners positive on validation changed: {positive}. "
         "Update this deliberately and look closely at whichever one is new -- "
         "every previous campaign's winner lost money on validation.")

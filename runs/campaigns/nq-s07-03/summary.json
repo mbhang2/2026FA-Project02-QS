@@ -1,0 +1,4071 @@
+{
+  "campaign_id": "nq-s07-03",
+  "record_digest": "55b5a02d4ebcb3489a3b04e747b6b01d1eb01fe770aa48f24c9460af3faafbf3",
+  "record_tampered": false,
+  "budget": 400,
+  "q": 0.05,
+  "n_trials": 400,
+  "harness_failures": 0,
+  "unaccounted": 0,
+  "outcomes": {
+    "completed": 380,
+    "crashed": 20
+  },
+  "per_trial_accepts_at_0.001": 0,
+  "diagnostics_only": {
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "correction": {
+      "n": 400,
+      "q": 0.05,
+      "bh_discoveries": 175,
+      "holm_discoveries": 0,
+      "uncorrected_discoveries": 204,
+      "best_far": 0.008017528785639393,
+      "best_label": "273:e9d9e2d3",
+      "decisions": [
+        {
+          "index": 273,
+          "label": "273:e9d9e2d3",
+          "far": 0.008017528785639393,
+          "rank": 1,
+          "bh_critical": 0.000125,
+          "bh_accepted": true,
+          "holm_critical": 0.000125,
+          "holm_accepted": false
+        },
+        {
+          "index": 281,
+          "label": "281:5e438b9e",
+          "far": 0.008017528785639393,
+          "rank": 2,
+          "bh_critical": 0.00025,
+          "bh_accepted": true,
+          "holm_critical": 0.00012531328320802005,
+          "holm_accepted": false
+        },
+        {
+          "index": 292,
+          "label": "292:01054351",
+          "far": 0.008017528785639393,
+          "rank": 3,
+          "bh_critical": 0.000375,
+          "bh_accepted": true,
+          "holm_critical": 0.0001256281407035176,
+          "holm_accepted": false
+        },
+        {
+          "index": 293,
+          "label": "293:01054351",
+          "far": 0.008017528785639393,
+          "rank": 4,
+          "bh_critical": 0.0005,
+          "bh_accepted": true,
+          "holm_critical": 0.00012594458438287153,
+          "holm_accepted": false
+        },
+        {
+          "index": 294,
+          "label": "294:01054351",
+          "far": 0.008017528785639393,
+          "rank": 5,
+          "bh_critical": 0.0006250000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00012626262626262626,
+          "holm_accepted": false
+        },
+        {
+          "index": 295,
+          "label": "295:01054351",
+          "far": 0.008017528785639393,
+          "rank": 6,
+          "bh_critical": 0.00075,
+          "bh_accepted": true,
+          "holm_critical": 0.00012658227848101267,
+          "holm_accepted": false
+        },
+        {
+          "index": 307,
+          "label": "307:ec60e224",
+          "far": 0.008017528785639393,
+          "rank": 7,
+          "bh_critical": 0.0008750000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.0001269035532994924,
+          "holm_accepted": false
+        },
+        {
+          "index": 310,
+          "label": "310:9023defc",
+          "far": 0.008017528785639393,
+          "rank": 8,
+          "bh_critical": 0.001,
+          "bh_accepted": true,
+          "holm_critical": 0.0001272264631043257,
+          "holm_accepted": false
+        },
+        {
+          "index": 314,
+          "label": "314:f3249b24",
+          "far": 0.008017528785639393,
+          "rank": 9,
+          "bh_critical": 0.001125,
+          "bh_accepted": true,
+          "holm_critical": 0.00012755102040816328,
+          "holm_accepted": false
+        },
+        {
+          "index": 316,
+          "label": "316:7eb4245b",
+          "far": 0.008017528785639393,
+          "rank": 10,
+          "bh_critical": 0.0012500000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00012787723785166242,
+          "holm_accepted": false
+        },
+        {
+          "index": 317,
+          "label": "317:7eb4245b",
+          "far": 0.008017528785639393,
+          "rank": 11,
+          "bh_critical": 0.0013750000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.0001282051282051282,
+          "holm_accepted": false
+        },
+        {
+          "index": 318,
+          "label": "318:7eb4245b",
+          "far": 0.008017528785639393,
+          "rank": 12,
+          "bh_critical": 0.0015,
+          "bh_accepted": true,
+          "holm_critical": 0.00012853470437017997,
+          "holm_accepted": false
+        },
+        {
+          "index": 319,
+          "label": "319:7eb4245b",
+          "far": 0.008017528785639393,
+          "rank": 13,
+          "bh_critical": 0.0016250000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.0001288659793814433,
+          "holm_accepted": false
+        },
+        {
+          "index": 320,
+          "label": "320:4064bb72",
+          "far": 0.008017528785639393,
+          "rank": 14,
+          "bh_critical": 0.0017500000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.00012919896640826875,
+          "holm_accepted": false
+        },
+        {
+          "index": 326,
+          "label": "326:3eeff38a",
+          "far": 0.008017528785639393,
+          "rank": 15,
+          "bh_critical": 0.001875,
+          "bh_accepted": true,
+          "holm_critical": 0.00012953367875647668,
+          "holm_accepted": false
+        },
+        {
+          "index": 329,
+          "label": "329:046484b6",
+          "far": 0.008017528785639393,
+          "rank": 16,
+          "bh_critical": 0.002,
+          "bh_accepted": true,
+          "holm_critical": 0.00012987012987012987,
+          "holm_accepted": false
+        },
+        {
+          "index": 331,
+          "label": "331:6ff7bfee",
+          "far": 0.008017528785639393,
+          "rank": 17,
+          "bh_critical": 0.002125,
+          "bh_accepted": true,
+          "holm_critical": 0.00013020833333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 332,
+          "label": "332:3f4f1336",
+          "far": 0.008017528785639393,
+          "rank": 18,
+          "bh_critical": 0.00225,
+          "bh_accepted": true,
+          "holm_critical": 0.00013054830287206266,
+          "holm_accepted": false
+        },
+        {
+          "index": 334,
+          "label": "334:3f4f1336",
+          "far": 0.008017528785639393,
+          "rank": 19,
+          "bh_critical": 0.0023750000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.00013089005235602096,
+          "holm_accepted": false
+        },
+        {
+          "index": 336,
+          "label": "336:0760909d",
+          "far": 0.008017528785639393,
+          "rank": 20,
+          "bh_critical": 0.0025000000000000005,
+          "bh_accepted": true,
+          "holm_critical": 0.00013123359580052493,
+          "holm_accepted": false
+        },
+        {
+          "index": 340,
+          "label": "340:9d9b9ea4",
+          "far": 0.008017528785639393,
+          "rank": 21,
+          "bh_critical": 0.002625,
+          "bh_accepted": true,
+          "holm_critical": 0.00013157894736842105,
+          "holm_accepted": false
+        },
+        {
+          "index": 341,
+          "label": "341:04455ff5",
+          "far": 0.008017528785639393,
+          "rank": 22,
+          "bh_critical": 0.0027500000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.00013192612137203166,
+          "holm_accepted": false
+        },
+        {
+          "index": 342,
+          "label": "342:1defbd78",
+          "far": 0.008017528785639393,
+          "rank": 23,
+          "bh_critical": 0.0028750000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.00013227513227513228,
+          "holm_accepted": false
+        },
+        {
+          "index": 344,
+          "label": "344:8bd62b40",
+          "far": 0.008017528785639393,
+          "rank": 24,
+          "bh_critical": 0.003,
+          "bh_accepted": true,
+          "holm_critical": 0.00013262599469496023,
+          "holm_accepted": false
+        },
+        {
+          "index": 345,
+          "label": "345:47a47f0b",
+          "far": 0.008017528785639393,
+          "rank": 25,
+          "bh_critical": 0.003125,
+          "bh_accepted": true,
+          "holm_critical": 0.00013297872340425532,
+          "holm_accepted": false
+        },
+        {
+          "index": 347,
+          "label": "347:c1583a5c",
+          "far": 0.008017528785639393,
+          "rank": 26,
+          "bh_critical": 0.0032500000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.00013333333333333334,
+          "holm_accepted": false
+        },
+        {
+          "index": 349,
+          "label": "349:79fe6840",
+          "far": 0.008017528785639393,
+          "rank": 27,
+          "bh_critical": 0.0033750000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.00013368983957219252,
+          "holm_accepted": false
+        },
+        {
+          "index": 350,
+          "label": "350:5b17c6e1",
+          "far": 0.008017528785639393,
+          "rank": 28,
+          "bh_critical": 0.0035000000000000005,
+          "bh_accepted": true,
+          "holm_critical": 0.00013404825737265417,
+          "holm_accepted": false
+        },
+        {
+          "index": 352,
+          "label": "352:a5a2e63f",
+          "far": 0.008017528785639393,
+          "rank": 29,
+          "bh_critical": 0.0036249999999999998,
+          "bh_accepted": true,
+          "holm_critical": 0.00013440860215053763,
+          "holm_accepted": false
+        },
+        {
+          "index": 353,
+          "label": "353:40d0e83e",
+          "far": 0.008017528785639393,
+          "rank": 30,
+          "bh_critical": 0.00375,
+          "bh_accepted": true,
+          "holm_critical": 0.00013477088948787063,
+          "holm_accepted": false
+        },
+        {
+          "index": 354,
+          "label": "354:f566ad9d",
+          "far": 0.008017528785639393,
+          "rank": 31,
+          "bh_critical": 0.003875,
+          "bh_accepted": true,
+          "holm_critical": 0.00013513513513513514,
+          "holm_accepted": false
+        },
+        {
+          "index": 355,
+          "label": "355:482f36ae",
+          "far": 0.008017528785639393,
+          "rank": 32,
+          "bh_critical": 0.004,
+          "bh_accepted": true,
+          "holm_critical": 0.00013550135501355014,
+          "holm_accepted": false
+        },
+        {
+          "index": 360,
+          "label": "360:6213d3fc",
+          "far": 0.008017528785639393,
+          "rank": 33,
+          "bh_critical": 0.004125,
+          "bh_accepted": true,
+          "holm_critical": 0.0001358695652173913,
+          "holm_accepted": false
+        },
+        {
+          "index": 364,
+          "label": "364:e3243d0a",
+          "far": 0.008017528785639393,
+          "rank": 34,
+          "bh_critical": 0.00425,
+          "bh_accepted": true,
+          "holm_critical": 0.00013623978201634878,
+          "holm_accepted": false
+        },
+        {
+          "index": 365,
+          "label": "365:8a200522",
+          "far": 0.008017528785639393,
+          "rank": 35,
+          "bh_critical": 0.0043749999999999995,
+          "bh_accepted": true,
+          "holm_critical": 0.0001366120218579235,
+          "holm_accepted": false
+        },
+        {
+          "index": 366,
+          "label": "366:a76de4eb",
+          "far": 0.008017528785639393,
+          "rank": 36,
+          "bh_critical": 0.0045,
+          "bh_accepted": true,
+          "holm_critical": 0.00013698630136986303,
+          "holm_accepted": false
+        },
+        {
+          "index": 367,
+          "label": "367:bce21f7a",
+          "far": 0.008017528785639393,
+          "rank": 37,
+          "bh_critical": 0.004625,
+          "bh_accepted": true,
+          "holm_critical": 0.00013736263736263736,
+          "holm_accepted": false
+        },
+        {
+          "index": 378,
+          "label": "378:abb8ceef",
+          "far": 0.008017528785639393,
+          "rank": 38,
+          "bh_critical": 0.004750000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00013774104683195594,
+          "holm_accepted": false
+        },
+        {
+          "index": 395,
+          "label": "395:65365f6b",
+          "far": 0.008272235664553852,
+          "rank": 39,
+          "bh_critical": 0.004875000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00013812154696132598,
+          "holm_accepted": false
+        },
+        {
+          "index": 305,
+          "label": "305:5718ab13",
+          "far": 0.008288588608585841,
+          "rank": 40,
+          "bh_critical": 0.005000000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00013850415512465375,
+          "holm_accepted": false
+        },
+        {
+          "index": 289,
+          "label": "289:18e85767",
+          "far": 0.008585127957244792,
+          "rank": 41,
+          "bh_critical": 0.005125,
+          "bh_accepted": true,
+          "holm_critical": 0.0001388888888888889,
+          "holm_accepted": false
+        },
+        {
+          "index": 361,
+          "label": "361:40f0c781",
+          "far": 0.008585127957244792,
+          "rank": 42,
+          "bh_critical": 0.00525,
+          "bh_accepted": true,
+          "holm_critical": 0.0001392757660167131,
+          "holm_accepted": false
+        },
+        {
+          "index": 308,
+          "label": "308:2976422d",
+          "far": 0.009111838320814712,
+          "rank": 43,
+          "bh_critical": 0.0053750000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.00013966480446927376,
+          "holm_accepted": false
+        },
+        {
+          "index": 276,
+          "label": "276:77d98ecc",
+          "far": 0.009116006091479525,
+          "rank": 44,
+          "bh_critical": 0.0055000000000000005,
+          "bh_accepted": true,
+          "holm_critical": 0.0001400560224089636,
+          "holm_accepted": false
+        },
+        {
+          "index": 277,
+          "label": "277:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 45,
+          "bh_critical": 0.005625000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.0001404494382022472,
+          "holm_accepted": false
+        },
+        {
+          "index": 278,
+          "label": "278:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 46,
+          "bh_critical": 0.005750000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00014084507042253522,
+          "holm_accepted": false
+        },
+        {
+          "index": 285,
+          "label": "285:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 47,
+          "bh_critical": 0.005875,
+          "bh_accepted": true,
+          "holm_critical": 0.00014124293785310735,
+          "holm_accepted": false
+        },
+        {
+          "index": 286,
+          "label": "286:77d98ecc",
+          "far": 0.009116006091479525,
+          "rank": 48,
+          "bh_critical": 0.006,
+          "bh_accepted": true,
+          "holm_critical": 0.000141643059490085,
+          "holm_accepted": false
+        },
+        {
+          "index": 287,
+          "label": "287:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 49,
+          "bh_critical": 0.006125,
+          "bh_accepted": true,
+          "holm_critical": 0.00014204545454545457,
+          "holm_accepted": false
+        },
+        {
+          "index": 296,
+          "label": "296:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 50,
+          "bh_critical": 0.00625,
+          "bh_accepted": true,
+          "holm_critical": 0.00014245014245014247,
+          "holm_accepted": false
+        },
+        {
+          "index": 297,
+          "label": "297:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 51,
+          "bh_critical": 0.0063750000000000005,
+          "bh_accepted": true,
+          "holm_critical": 0.00014285714285714287,
+          "holm_accepted": false
+        },
+        {
+          "index": 298,
+          "label": "298:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 52,
+          "bh_critical": 0.006500000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00014326647564469916,
+          "holm_accepted": false
+        },
+        {
+          "index": 299,
+          "label": "299:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 53,
+          "bh_critical": 0.006625000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00014367816091954023,
+          "holm_accepted": false
+        },
+        {
+          "index": 311,
+          "label": "311:2de83cfb",
+          "far": 0.009116006091479525,
+          "rank": 54,
+          "bh_critical": 0.006750000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00014409221902017292,
+          "holm_accepted": false
+        },
+        {
+          "index": 322,
+          "label": "322:7e25c02e",
+          "far": 0.009116006091479525,
+          "rank": 55,
+          "bh_critical": 0.006875000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00014450867052023122,
+          "holm_accepted": false
+        },
+        {
+          "index": 323,
+          "label": "323:8cda2357",
+          "far": 0.009116006091479525,
+          "rank": 56,
+          "bh_critical": 0.007000000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00014492753623188405,
+          "holm_accepted": false
+        },
+        {
+          "index": 328,
+          "label": "328:f0dcbf95",
+          "far": 0.009116006091479525,
+          "rank": 57,
+          "bh_critical": 0.007124999999999999,
+          "bh_accepted": true,
+          "holm_critical": 0.00014534883720930232,
+          "holm_accepted": false
+        },
+        {
+          "index": 330,
+          "label": "330:34fd35c1",
+          "far": 0.009116006091479525,
+          "rank": 58,
+          "bh_critical": 0.0072499999999999995,
+          "bh_accepted": true,
+          "holm_critical": 0.0001457725947521866,
+          "holm_accepted": false
+        },
+        {
+          "index": 337,
+          "label": "337:0ed60e95",
+          "far": 0.009116006091479525,
+          "rank": 59,
+          "bh_critical": 0.007375,
+          "bh_accepted": true,
+          "holm_critical": 0.00014619883040935673,
+          "holm_accepted": false
+        },
+        {
+          "index": 338,
+          "label": "338:0ed60e95",
+          "far": 0.009116006091479525,
+          "rank": 60,
+          "bh_critical": 0.0075,
+          "bh_accepted": true,
+          "holm_critical": 0.0001466275659824047,
+          "holm_accepted": false
+        },
+        {
+          "index": 346,
+          "label": "346:2dceefe5",
+          "far": 0.009116006091479525,
+          "rank": 61,
+          "bh_critical": 0.007625,
+          "bh_accepted": true,
+          "holm_critical": 0.00014705882352941178,
+          "holm_accepted": false
+        },
+        {
+          "index": 368,
+          "label": "368:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 62,
+          "bh_critical": 0.00775,
+          "bh_accepted": true,
+          "holm_critical": 0.00014749262536873156,
+          "holm_accepted": false
+        },
+        {
+          "index": 373,
+          "label": "373:06dbc769",
+          "far": 0.009116006091479525,
+          "rank": 63,
+          "bh_critical": 0.007875,
+          "bh_accepted": true,
+          "holm_critical": 0.00014792899408284024,
+          "holm_accepted": false
+        },
+        {
+          "index": 374,
+          "label": "374:cd3a4158",
+          "far": 0.009116006091479525,
+          "rank": 64,
+          "bh_critical": 0.008,
+          "bh_accepted": true,
+          "holm_critical": 0.00014836795252225521,
+          "holm_accepted": false
+        },
+        {
+          "index": 388,
+          "label": "388:77d98ecc",
+          "far": 0.009116006091479525,
+          "rank": 65,
+          "bh_critical": 0.008125,
+          "bh_accepted": true,
+          "holm_critical": 0.00014880952380952382,
+          "holm_accepted": false
+        },
+        {
+          "index": 389,
+          "label": "389:bf55d178",
+          "far": 0.009116006091479525,
+          "rank": 66,
+          "bh_critical": 0.00825,
+          "bh_accepted": true,
+          "holm_critical": 0.00014925373134328358,
+          "holm_accepted": false
+        },
+        {
+          "index": 390,
+          "label": "390:10e80fbe",
+          "far": 0.009116006091479525,
+          "rank": 67,
+          "bh_critical": 0.008375,
+          "bh_accepted": true,
+          "holm_critical": 0.0001497005988023952,
+          "holm_accepted": false
+        },
+        {
+          "index": 288,
+          "label": "288:41e11742",
+          "far": 0.00945283140700636,
+          "rank": 68,
+          "bh_critical": 0.0085,
+          "bh_accepted": true,
+          "holm_critical": 0.00015015015015015017,
+          "holm_accepted": false
+        },
+        {
+          "index": 290,
+          "label": "290:41e11742",
+          "far": 0.00945283140700636,
+          "rank": 69,
+          "bh_critical": 0.008624999999999999,
+          "bh_accepted": true,
+          "holm_critical": 0.00015060240963855423,
+          "holm_accepted": false
+        },
+        {
+          "index": 291,
+          "label": "291:41e11742",
+          "far": 0.00945283140700636,
+          "rank": 70,
+          "bh_critical": 0.008749999999999999,
+          "bh_accepted": true,
+          "holm_critical": 0.00015105740181268882,
+          "holm_accepted": false
+        },
+        {
+          "index": 280,
+          "label": "280:75f6a71f",
+          "far": 0.009537642432847522,
+          "rank": 71,
+          "bh_critical": 0.008875,
+          "bh_accepted": true,
+          "holm_critical": 0.00015151515151515152,
+          "holm_accepted": false
+        },
+        {
+          "index": 268,
+          "label": "268:4f625d13",
+          "far": 0.0099349041873757,
+          "rank": 72,
+          "bh_critical": 0.009,
+          "bh_accepted": true,
+          "holm_critical": 0.00015197568389057752,
+          "holm_accepted": false
+        },
+        {
+          "index": 379,
+          "label": "379:7101ae14",
+          "far": 0.010085236451561976,
+          "rank": 73,
+          "bh_critical": 0.009125,
+          "bh_accepted": true,
+          "holm_critical": 0.0001524390243902439,
+          "holm_accepted": false
+        },
+        {
+          "index": 275,
+          "label": "275:2bcbd285",
+          "far": 0.011079617348573274,
+          "rank": 74,
+          "bh_critical": 0.00925,
+          "bh_accepted": true,
+          "holm_critical": 0.00015290519877675843,
+          "holm_accepted": false
+        },
+        {
+          "index": 141,
+          "label": "141:abc54210",
+          "far": 0.011235404823915137,
+          "rank": 75,
+          "bh_critical": 0.009375000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00015337423312883436,
+          "holm_accepted": false
+        },
+        {
+          "index": 146,
+          "label": "146:e721c738",
+          "far": 0.011235404823915137,
+          "rank": 76,
+          "bh_critical": 0.009500000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00015384615384615385,
+          "holm_accepted": false
+        },
+        {
+          "index": 147,
+          "label": "147:ed699bd8",
+          "far": 0.011235404823915137,
+          "rank": 77,
+          "bh_critical": 0.009625000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00015432098765432098,
+          "holm_accepted": false
+        },
+        {
+          "index": 148,
+          "label": "148:e097975e",
+          "far": 0.011235404823915137,
+          "rank": 78,
+          "bh_critical": 0.009750000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00015479876160990713,
+          "holm_accepted": false
+        },
+        {
+          "index": 152,
+          "label": "152:578733e9",
+          "far": 0.011235404823915137,
+          "rank": 79,
+          "bh_critical": 0.009875000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00015527950310559007,
+          "holm_accepted": false
+        },
+        {
+          "index": 153,
+          "label": "153:1bc9076c",
+          "far": 0.011235404823915137,
+          "rank": 80,
+          "bh_critical": 0.010000000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00015576323987538941,
+          "holm_accepted": false
+        },
+        {
+          "index": 154,
+          "label": "154:a9e8259d",
+          "far": 0.011235404823915137,
+          "rank": 81,
+          "bh_critical": 0.010125000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00015625,
+          "holm_accepted": false
+        },
+        {
+          "index": 155,
+          "label": "155:ccde028f",
+          "far": 0.011235404823915137,
+          "rank": 82,
+          "bh_critical": 0.01025,
+          "bh_accepted": true,
+          "holm_critical": 0.00015673981191222572,
+          "holm_accepted": false
+        },
+        {
+          "index": 156,
+          "label": "156:0f0e17b7",
+          "far": 0.011235404823915137,
+          "rank": 83,
+          "bh_critical": 0.010375,
+          "bh_accepted": true,
+          "holm_critical": 0.00015723270440251574,
+          "holm_accepted": false
+        },
+        {
+          "index": 161,
+          "label": "161:bb09f611",
+          "far": 0.011235404823915137,
+          "rank": 84,
+          "bh_critical": 0.0105,
+          "bh_accepted": true,
+          "holm_critical": 0.0001577287066246057,
+          "holm_accepted": false
+        },
+        {
+          "index": 162,
+          "label": "162:c938162f",
+          "far": 0.011235404823915137,
+          "rank": 85,
+          "bh_critical": 0.010625,
+          "bh_accepted": true,
+          "holm_critical": 0.00015822784810126583,
+          "holm_accepted": false
+        },
+        {
+          "index": 163,
+          "label": "163:47282e25",
+          "far": 0.011235404823915137,
+          "rank": 86,
+          "bh_critical": 0.010750000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00015873015873015873,
+          "holm_accepted": false
+        },
+        {
+          "index": 168,
+          "label": "168:fd2122b1",
+          "far": 0.011235404823915137,
+          "rank": 87,
+          "bh_critical": 0.010875000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00015923566878980894,
+          "holm_accepted": false
+        },
+        {
+          "index": 169,
+          "label": "169:fd2122b1",
+          "far": 0.011235404823915137,
+          "rank": 88,
+          "bh_critical": 0.011000000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.0001597444089456869,
+          "holm_accepted": false
+        },
+        {
+          "index": 170,
+          "label": "170:fd2122b1",
+          "far": 0.011235404823915137,
+          "rank": 89,
+          "bh_critical": 0.011125000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00016025641025641026,
+          "holm_accepted": false
+        },
+        {
+          "index": 180,
+          "label": "180:a87e86a6",
+          "far": 0.011235404823915137,
+          "rank": 90,
+          "bh_critical": 0.011250000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.0001607717041800643,
+          "holm_accepted": false
+        },
+        {
+          "index": 182,
+          "label": "182:88e70b20",
+          "far": 0.011235404823915137,
+          "rank": 91,
+          "bh_critical": 0.011375000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00016129032258064516,
+          "holm_accepted": false
+        },
+        {
+          "index": 183,
+          "label": "183:e10a5894",
+          "far": 0.011235404823915137,
+          "rank": 92,
+          "bh_critical": 0.011500000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00016181229773462783,
+          "holm_accepted": false
+        },
+        {
+          "index": 196,
+          "label": "196:abc54210",
+          "far": 0.011235404823915137,
+          "rank": 93,
+          "bh_critical": 0.011625000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00016233766233766234,
+          "holm_accepted": false
+        },
+        {
+          "index": 197,
+          "label": "197:abc54210",
+          "far": 0.011235404823915137,
+          "rank": 94,
+          "bh_critical": 0.01175,
+          "bh_accepted": true,
+          "holm_critical": 0.00016286644951140066,
+          "holm_accepted": false
+        },
+        {
+          "index": 198,
+          "label": "198:abc54210",
+          "far": 0.011235404823915137,
+          "rank": 95,
+          "bh_critical": 0.011875,
+          "bh_accepted": true,
+          "holm_critical": 0.00016339869281045753,
+          "holm_accepted": false
+        },
+        {
+          "index": 199,
+          "label": "199:abc54210",
+          "far": 0.011235404823915137,
+          "rank": 96,
+          "bh_critical": 0.012,
+          "bh_accepted": true,
+          "holm_critical": 0.0001639344262295082,
+          "holm_accepted": false
+        },
+        {
+          "index": 200,
+          "label": "200:607c74f6",
+          "far": 0.011235404823915137,
+          "rank": 97,
+          "bh_critical": 0.012125,
+          "bh_accepted": true,
+          "holm_critical": 0.0001644736842105263,
+          "holm_accepted": false
+        },
+        {
+          "index": 208,
+          "label": "208:e5933f21",
+          "far": 0.011235404823915137,
+          "rank": 98,
+          "bh_critical": 0.01225,
+          "bh_accepted": true,
+          "holm_critical": 0.00016501650165016502,
+          "holm_accepted": false
+        },
+        {
+          "index": 213,
+          "label": "213:fececebb",
+          "far": 0.011235404823915137,
+          "rank": 99,
+          "bh_critical": 0.012375,
+          "bh_accepted": true,
+          "holm_critical": 0.00016556291390728477,
+          "holm_accepted": false
+        },
+        {
+          "index": 215,
+          "label": "215:4f2fe736",
+          "far": 0.011235404823915137,
+          "rank": 100,
+          "bh_critical": 0.0125,
+          "bh_accepted": true,
+          "holm_critical": 0.00016611295681063124,
+          "holm_accepted": false
+        },
+        {
+          "index": 217,
+          "label": "217:b61a7ff5",
+          "far": 0.011235404823915137,
+          "rank": 101,
+          "bh_critical": 0.012625,
+          "bh_accepted": true,
+          "holm_critical": 0.0001666666666666667,
+          "holm_accepted": false
+        },
+        {
+          "index": 219,
+          "label": "219:abc54210",
+          "far": 0.011235404823915137,
+          "rank": 102,
+          "bh_critical": 0.012750000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00016722408026755855,
+          "holm_accepted": false
+        },
+        {
+          "index": 221,
+          "label": "221:6c55ecf5",
+          "far": 0.011235404823915137,
+          "rank": 103,
+          "bh_critical": 0.012875000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00016778523489932888,
+          "holm_accepted": false
+        },
+        {
+          "index": 226,
+          "label": "226:abc54210",
+          "far": 0.011235404823915137,
+          "rank": 104,
+          "bh_critical": 0.013000000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00016835016835016836,
+          "holm_accepted": false
+        },
+        {
+          "index": 227,
+          "label": "227:15de9c61",
+          "far": 0.011235404823915137,
+          "rank": 105,
+          "bh_critical": 0.013125000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00016891891891891893,
+          "holm_accepted": false
+        },
+        {
+          "index": 229,
+          "label": "229:a2fcc87f",
+          "far": 0.011235404823915137,
+          "rank": 106,
+          "bh_critical": 0.013250000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00016949152542372882,
+          "holm_accepted": false
+        },
+        {
+          "index": 233,
+          "label": "233:32a01cb9",
+          "far": 0.011235404823915137,
+          "rank": 107,
+          "bh_critical": 0.013375000000000001,
+          "bh_accepted": true,
+          "holm_critical": 0.00017006802721088437,
+          "holm_accepted": false
+        },
+        {
+          "index": 237,
+          "label": "237:5d682963",
+          "far": 0.011235404823915137,
+          "rank": 108,
+          "bh_critical": 0.013500000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00017064846416382253,
+          "holm_accepted": false
+        },
+        {
+          "index": 245,
+          "label": "245:36486185",
+          "far": 0.011235404823915137,
+          "rank": 109,
+          "bh_critical": 0.013625000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00017123287671232877,
+          "holm_accepted": false
+        },
+        {
+          "index": 246,
+          "label": "246:d18049e1",
+          "far": 0.011235404823915137,
+          "rank": 110,
+          "bh_critical": 0.013750000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.0001718213058419244,
+          "holm_accepted": false
+        },
+        {
+          "index": 247,
+          "label": "247:d70e49cc",
+          "far": 0.011235404823915137,
+          "rank": 111,
+          "bh_critical": 0.013875000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.0001724137931034483,
+          "holm_accepted": false
+        },
+        {
+          "index": 253,
+          "label": "253:3ca3de64",
+          "far": 0.011235404823915137,
+          "rank": 112,
+          "bh_critical": 0.014000000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.0001730103806228374,
+          "holm_accepted": false
+        },
+        {
+          "index": 255,
+          "label": "255:ffc0df24",
+          "far": 0.011235404823915137,
+          "rank": 113,
+          "bh_critical": 0.014124999999999999,
+          "bh_accepted": true,
+          "holm_critical": 0.00017361111111111112,
+          "holm_accepted": false
+        },
+        {
+          "index": 258,
+          "label": "258:59695c3a",
+          "far": 0.011235404823915137,
+          "rank": 114,
+          "bh_critical": 0.014249999999999999,
+          "bh_accepted": true,
+          "holm_critical": 0.00017421602787456446,
+          "holm_accepted": false
+        },
+        {
+          "index": 261,
+          "label": "261:db4c8346",
+          "far": 0.011235404823915137,
+          "rank": 115,
+          "bh_critical": 0.014374999999999999,
+          "bh_accepted": true,
+          "holm_critical": 0.00017482517482517483,
+          "holm_accepted": false
+        },
+        {
+          "index": 264,
+          "label": "264:4cff87f0",
+          "far": 0.011235404823915137,
+          "rank": 116,
+          "bh_critical": 0.014499999999999999,
+          "bh_accepted": true,
+          "holm_critical": 0.00017543859649122808,
+          "holm_accepted": false
+        },
+        {
+          "index": 265,
+          "label": "265:a365ce58",
+          "far": 0.011235404823915137,
+          "rank": 117,
+          "bh_critical": 0.014624999999999999,
+          "bh_accepted": true,
+          "holm_critical": 0.00017605633802816902,
+          "holm_accepted": false
+        },
+        {
+          "index": 269,
+          "label": "269:82c996ba",
+          "far": 0.011235404823915137,
+          "rank": 118,
+          "bh_critical": 0.01475,
+          "bh_accepted": true,
+          "holm_critical": 0.000176678445229682,
+          "holm_accepted": false
+        },
+        {
+          "index": 201,
+          "label": "201:1a47026c",
+          "far": 0.012413615205376554,
+          "rank": 119,
+          "bh_critical": 0.014875,
+          "bh_accepted": true,
+          "holm_critical": 0.0001773049645390071,
+          "holm_accepted": false
+        },
+        {
+          "index": 92,
+          "label": "92:2f9c3618",
+          "far": 0.012528514839365273,
+          "rank": 120,
+          "bh_critical": 0.015,
+          "bh_accepted": true,
+          "holm_critical": 0.00017793594306049823,
+          "holm_accepted": false
+        },
+        {
+          "index": 99,
+          "label": "99:3dc158ea",
+          "far": 0.012528514839365273,
+          "rank": 121,
+          "bh_critical": 0.015125,
+          "bh_accepted": true,
+          "holm_critical": 0.00017857142857142857,
+          "holm_accepted": false
+        },
+        {
+          "index": 101,
+          "label": "101:89537efc",
+          "far": 0.012528514839365273,
+          "rank": 122,
+          "bh_critical": 0.01525,
+          "bh_accepted": true,
+          "holm_critical": 0.00017921146953405018,
+          "holm_accepted": false
+        },
+        {
+          "index": 102,
+          "label": "102:ab18aab7",
+          "far": 0.012528514839365273,
+          "rank": 123,
+          "bh_critical": 0.015375,
+          "bh_accepted": true,
+          "holm_critical": 0.00017985611510791367,
+          "holm_accepted": false
+        },
+        {
+          "index": 106,
+          "label": "106:6d6a7cb6",
+          "far": 0.012528514839365273,
+          "rank": 124,
+          "bh_critical": 0.0155,
+          "bh_accepted": true,
+          "holm_critical": 0.0001805054151624549,
+          "holm_accepted": false
+        },
+        {
+          "index": 107,
+          "label": "107:bf857d25",
+          "far": 0.012528514839365273,
+          "rank": 125,
+          "bh_critical": 0.015625,
+          "bh_accepted": true,
+          "holm_critical": 0.00018115942028985507,
+          "holm_accepted": false
+        },
+        {
+          "index": 112,
+          "label": "112:fb286f1f",
+          "far": 0.012528514839365273,
+          "rank": 126,
+          "bh_critical": 0.01575,
+          "bh_accepted": true,
+          "holm_critical": 0.00018181818181818183,
+          "holm_accepted": false
+        },
+        {
+          "index": 117,
+          "label": "117:2f1b2bb0",
+          "far": 0.012528514839365273,
+          "rank": 127,
+          "bh_critical": 0.015875,
+          "bh_accepted": true,
+          "holm_critical": 0.00018248175182481753,
+          "holm_accepted": false
+        },
+        {
+          "index": 119,
+          "label": "119:6e58e462",
+          "far": 0.012528514839365273,
+          "rank": 128,
+          "bh_critical": 0.016,
+          "bh_accepted": true,
+          "holm_critical": 0.00018315018315018315,
+          "holm_accepted": false
+        },
+        {
+          "index": 122,
+          "label": "122:4b38a91d",
+          "far": 0.012528514839365273,
+          "rank": 129,
+          "bh_critical": 0.016125,
+          "bh_accepted": true,
+          "holm_critical": 0.0001838235294117647,
+          "holm_accepted": false
+        },
+        {
+          "index": 124,
+          "label": "124:96660f0d",
+          "far": 0.012528514839365273,
+          "rank": 130,
+          "bh_critical": 0.01625,
+          "bh_accepted": true,
+          "holm_critical": 0.0001845018450184502,
+          "holm_accepted": false
+        },
+        {
+          "index": 128,
+          "label": "128:36c3a7a5",
+          "far": 0.012528514839365273,
+          "rank": 131,
+          "bh_critical": 0.016375,
+          "bh_accepted": true,
+          "holm_critical": 0.0001851851851851852,
+          "holm_accepted": false
+        },
+        {
+          "index": 132,
+          "label": "132:c3523e88",
+          "far": 0.012528514839365273,
+          "rank": 132,
+          "bh_critical": 0.0165,
+          "bh_accepted": true,
+          "holm_critical": 0.00018587360594795541,
+          "holm_accepted": false
+        },
+        {
+          "index": 134,
+          "label": "134:3ace6361",
+          "far": 0.012528514839365273,
+          "rank": 133,
+          "bh_critical": 0.016625,
+          "bh_accepted": true,
+          "holm_critical": 0.00018656716417910448,
+          "holm_accepted": false
+        },
+        {
+          "index": 137,
+          "label": "137:5512b444",
+          "far": 0.012528514839365273,
+          "rank": 134,
+          "bh_critical": 0.01675,
+          "bh_accepted": true,
+          "holm_critical": 0.00018726591760299626,
+          "holm_accepted": false
+        },
+        {
+          "index": 79,
+          "label": "79:7c2310bf",
+          "far": 0.013045163755663749,
+          "rank": 135,
+          "bh_critical": 0.016875,
+          "bh_accepted": true,
+          "holm_critical": 0.00018796992481203009,
+          "holm_accepted": false
+        },
+        {
+          "index": 89,
+          "label": "89:ff209478",
+          "far": 0.013045163755663749,
+          "rank": 136,
+          "bh_critical": 0.017,
+          "bh_accepted": true,
+          "holm_critical": 0.00018867924528301889,
+          "holm_accepted": false
+        },
+        {
+          "index": 93,
+          "label": "93:43d09cea",
+          "far": 0.013045163755663749,
+          "rank": 137,
+          "bh_critical": 0.017125,
+          "bh_accepted": true,
+          "holm_critical": 0.0001893939393939394,
+          "holm_accepted": false
+        },
+        {
+          "index": 282,
+          "label": "282:29fed0a9",
+          "far": 0.01349783817428939,
+          "rank": 138,
+          "bh_critical": 0.017249999999999998,
+          "bh_accepted": true,
+          "holm_critical": 0.00019011406844106465,
+          "holm_accepted": false
+        },
+        {
+          "index": 321,
+          "label": "321:f5cd7775",
+          "far": 0.01349783817428939,
+          "rank": 139,
+          "bh_critical": 0.017374999999999998,
+          "bh_accepted": true,
+          "holm_critical": 0.00019083969465648855,
+          "holm_accepted": false
+        },
+        {
+          "index": 348,
+          "label": "348:398f4b40",
+          "far": 0.01349783817428939,
+          "rank": 140,
+          "bh_critical": 0.017499999999999998,
+          "bh_accepted": true,
+          "holm_critical": 0.00019157088122605365,
+          "holm_accepted": false
+        },
+        {
+          "index": 304,
+          "label": "304:74323d5a",
+          "far": 0.013762122249827017,
+          "rank": 141,
+          "bh_critical": 0.017625,
+          "bh_accepted": true,
+          "holm_critical": 0.0001923076923076923,
+          "holm_accepted": false
+        },
+        {
+          "index": 358,
+          "label": "358:f3e20c5a",
+          "far": 0.013762122249827017,
+          "rank": 142,
+          "bh_critical": 0.01775,
+          "bh_accepted": true,
+          "holm_critical": 0.00019305019305019305,
+          "holm_accepted": false
+        },
+        {
+          "index": 399,
+          "label": "399:a6c01b71",
+          "far": 0.013762122249827017,
+          "rank": 143,
+          "bh_critical": 0.017875,
+          "bh_accepted": true,
+          "holm_critical": 0.0001937984496124031,
+          "holm_accepted": false
+        },
+        {
+          "index": 370,
+          "label": "370:f75dac56",
+          "far": 0.013872476588218113,
+          "rank": 144,
+          "bh_critical": 0.018,
+          "bh_accepted": true,
+          "holm_critical": 0.0001945525291828794,
+          "holm_accepted": false
+        },
+        {
+          "index": 371,
+          "label": "371:f75dac56",
+          "far": 0.013872476588218113,
+          "rank": 145,
+          "bh_critical": 0.018125,
+          "bh_accepted": true,
+          "holm_critical": 0.0001953125,
+          "holm_accepted": false
+        },
+        {
+          "index": 84,
+          "label": "84:39c88154",
+          "far": 0.013968237079669517,
+          "rank": 146,
+          "bh_critical": 0.01825,
+          "bh_accepted": true,
+          "holm_critical": 0.00019607843137254904,
+          "holm_accepted": false
+        },
+        {
+          "index": 129,
+          "label": "129:4a908447",
+          "far": 0.014375220486575045,
+          "rank": 147,
+          "bh_critical": 0.018375,
+          "bh_accepted": true,
+          "holm_critical": 0.00019685039370078743,
+          "holm_accepted": false
+        },
+        {
+          "index": 98,
+          "label": "98:07e57a68",
+          "far": 0.015109910893177855,
+          "rank": 148,
+          "bh_critical": 0.0185,
+          "bh_accepted": true,
+          "holm_critical": 0.0001976284584980237,
+          "holm_accepted": false
+        },
+        {
+          "index": 110,
+          "label": "110:1ca8ce55",
+          "far": 0.015109910893177855,
+          "rank": 149,
+          "bh_critical": 0.018625,
+          "bh_accepted": true,
+          "holm_critical": 0.0001984126984126984,
+          "holm_accepted": false
+        },
+        {
+          "index": 111,
+          "label": "111:1ca8ce55",
+          "far": 0.015109910893177855,
+          "rank": 150,
+          "bh_critical": 0.018750000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.00019920318725099602,
+          "holm_accepted": false
+        },
+        {
+          "index": 133,
+          "label": "133:7dcbda52",
+          "far": 0.015109910893177855,
+          "rank": 151,
+          "bh_critical": 0.018875000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.0002,
+          "holm_accepted": false
+        },
+        {
+          "index": 144,
+          "label": "144:507da1ee",
+          "far": 0.015109910893177855,
+          "rank": 152,
+          "bh_critical": 0.019000000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.00020080321285140563,
+          "holm_accepted": false
+        },
+        {
+          "index": 150,
+          "label": "150:df859046",
+          "far": 0.015109910893177855,
+          "rank": 153,
+          "bh_critical": 0.019125000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.00020161290322580645,
+          "holm_accepted": false
+        },
+        {
+          "index": 160,
+          "label": "160:543552d1",
+          "far": 0.015109910893177855,
+          "rank": 154,
+          "bh_critical": 0.019250000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.00020242914979757087,
+          "holm_accepted": false
+        },
+        {
+          "index": 171,
+          "label": "171:6772e100",
+          "far": 0.015109910893177855,
+          "rank": 155,
+          "bh_critical": 0.019375000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.0002032520325203252,
+          "holm_accepted": false
+        },
+        {
+          "index": 176,
+          "label": "176:2aa678f6",
+          "far": 0.015109910893177855,
+          "rank": 156,
+          "bh_critical": 0.019500000000000003,
+          "bh_accepted": true,
+          "holm_critical": 0.00020408163265306123,
+          "holm_accepted": false
+        },
+        {
+          "index": 192,
+          "label": "192:032ca4c3",
+          "far": 0.015109910893177855,
+          "rank": 157,
+          "bh_critical": 0.019625000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.00020491803278688525,
+          "holm_accepted": false
+        },
+        {
+          "index": 194,
+          "label": "194:f86432f8",
+          "far": 0.015109910893177855,
+          "rank": 158,
+          "bh_critical": 0.019750000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.000205761316872428,
+          "holm_accepted": false
+        },
+        {
+          "index": 207,
+          "label": "207:79ce2dac",
+          "far": 0.015109910893177855,
+          "rank": 159,
+          "bh_critical": 0.019875000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.0002066115702479339,
+          "holm_accepted": false
+        },
+        {
+          "index": 211,
+          "label": "211:79ce2dac",
+          "far": 0.015109910893177855,
+          "rank": 160,
+          "bh_critical": 0.020000000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.00020746887966804981,
+          "holm_accepted": false
+        },
+        {
+          "index": 248,
+          "label": "248:2792947a",
+          "far": 0.015109910893177855,
+          "rank": 161,
+          "bh_critical": 0.020125000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.00020833333333333335,
+          "holm_accepted": false
+        },
+        {
+          "index": 260,
+          "label": "260:efe7317b",
+          "far": 0.015109910893177855,
+          "rank": 162,
+          "bh_critical": 0.020250000000000004,
+          "bh_accepted": true,
+          "holm_critical": 0.0002092050209205021,
+          "holm_accepted": false
+        },
+        {
+          "index": 262,
+          "label": "262:cbd2a109",
+          "far": 0.015109910893177855,
+          "rank": 163,
+          "bh_critical": 0.020375,
+          "bh_accepted": true,
+          "holm_critical": 0.0002100840336134454,
+          "holm_accepted": false
+        },
+        {
+          "index": 263,
+          "label": "263:a5037a48",
+          "far": 0.015109910893177855,
+          "rank": 164,
+          "bh_critical": 0.0205,
+          "bh_accepted": true,
+          "holm_critical": 0.0002109704641350211,
+          "holm_accepted": false
+        },
+        {
+          "index": 73,
+          "label": "73:6f172b10",
+          "far": 0.015538430864077496,
+          "rank": 165,
+          "bh_critical": 0.020625,
+          "bh_accepted": true,
+          "holm_critical": 0.00021186440677966104,
+          "holm_accepted": false
+        },
+        {
+          "index": 78,
+          "label": "78:ca9e165d",
+          "far": 0.015538430864077496,
+          "rank": 166,
+          "bh_critical": 0.02075,
+          "bh_accepted": true,
+          "holm_critical": 0.00021276595744680854,
+          "holm_accepted": false
+        },
+        {
+          "index": 50,
+          "label": "50:fd88a53c",
+          "far": 0.015539600105850811,
+          "rank": 167,
+          "bh_critical": 0.020875,
+          "bh_accepted": true,
+          "holm_critical": 0.00021367521367521368,
+          "holm_accepted": false
+        },
+        {
+          "index": 69,
+          "label": "69:95ad4d8d",
+          "far": 0.015539600105850811,
+          "rank": 168,
+          "bh_critical": 0.021,
+          "bh_accepted": true,
+          "holm_critical": 0.0002145922746781116,
+          "holm_accepted": false
+        },
+        {
+          "index": 74,
+          "label": "74:eddf3672",
+          "far": 0.015539600105850811,
+          "rank": 169,
+          "bh_critical": 0.021125,
+          "bh_accepted": true,
+          "holm_critical": 0.00021551724137931037,
+          "holm_accepted": false
+        },
+        {
+          "index": 76,
+          "label": "76:53be76b9",
+          "far": 0.015539600105850811,
+          "rank": 170,
+          "bh_critical": 0.02125,
+          "bh_accepted": true,
+          "holm_critical": 0.00021645021645021645,
+          "holm_accepted": false
+        },
+        {
+          "index": 381,
+          "label": "381:58f77060",
+          "far": 0.01606431608158052,
+          "rank": 171,
+          "bh_critical": 0.021375,
+          "bh_accepted": true,
+          "holm_critical": 0.0002173913043478261,
+          "holm_accepted": false
+        },
+        {
+          "index": 382,
+          "label": "382:ce64af47",
+          "far": 0.016391002658272362,
+          "rank": 172,
+          "bh_critical": 0.021500000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.0002183406113537118,
+          "holm_accepted": false
+        },
+        {
+          "index": 238,
+          "label": "238:91893d37",
+          "far": 0.016659345911838194,
+          "rank": 173,
+          "bh_critical": 0.021625000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.0002192982456140351,
+          "holm_accepted": false
+        },
+        {
+          "index": 239,
+          "label": "239:91893d37",
+          "far": 0.016659345911838194,
+          "rank": 174,
+          "bh_critical": 0.021750000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00022026431718061675,
+          "holm_accepted": false
+        },
+        {
+          "index": 244,
+          "label": "244:bc667727",
+          "far": 0.016659345911838194,
+          "rank": 175,
+          "bh_critical": 0.021875000000000002,
+          "bh_accepted": true,
+          "holm_critical": 0.00022123893805309737,
+          "holm_accepted": false
+        },
+        {
+          "index": 81,
+          "label": "81:be6dfa53",
+          "far": 0.02263875017308114,
+          "rank": 176,
+          "bh_critical": 0.022000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.00022222222222222223,
+          "holm_accepted": false
+        },
+        {
+          "index": 90,
+          "label": "90:cfacf863",
+          "far": 0.02263875017308114,
+          "rank": 177,
+          "bh_critical": 0.022125000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.00022321428571428573,
+          "holm_accepted": false
+        },
+        {
+          "index": 91,
+          "label": "91:c8310bf4",
+          "far": 0.02263875017308114,
+          "rank": 178,
+          "bh_critical": 0.022250000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0002242152466367713,
+          "holm_accepted": false
+        },
+        {
+          "index": 80,
+          "label": "80:0f2f9f0e",
+          "far": 0.02297475734950311,
+          "rank": 179,
+          "bh_critical": 0.022375000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00022522522522522523,
+          "holm_accepted": false
+        },
+        {
+          "index": 82,
+          "label": "82:89e7b41c",
+          "far": 0.02297475734950311,
+          "rank": 180,
+          "bh_critical": 0.022500000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00022624434389140272,
+          "holm_accepted": false
+        },
+        {
+          "index": 83,
+          "label": "83:e230eac6",
+          "far": 0.02297475734950311,
+          "rank": 181,
+          "bh_critical": 0.022625000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00022727272727272727,
+          "holm_accepted": false
+        },
+        {
+          "index": 149,
+          "label": "149:9157dc57",
+          "far": 0.023355045153551492,
+          "rank": 182,
+          "bh_critical": 0.022750000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00022831050228310504,
+          "holm_accepted": false
+        },
+        {
+          "index": 164,
+          "label": "164:2ef90779",
+          "far": 0.023355045153551492,
+          "rank": 183,
+          "bh_critical": 0.022875000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00022935779816513763,
+          "holm_accepted": false
+        },
+        {
+          "index": 59,
+          "label": "59:d128ff75",
+          "far": 0.02360750185056734,
+          "rank": 184,
+          "bh_critical": 0.023000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0002304147465437788,
+          "holm_accepted": false
+        },
+        {
+          "index": 105,
+          "label": "105:05f7a988",
+          "far": 0.02470673232165275,
+          "rank": 185,
+          "bh_critical": 0.023125000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0002314814814814815,
+          "holm_accepted": false
+        },
+        {
+          "index": 272,
+          "label": "272:0b432e67",
+          "far": 0.024873191298286246,
+          "rank": 186,
+          "bh_critical": 0.023250000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00023255813953488373,
+          "holm_accepted": false
+        },
+        {
+          "index": 387,
+          "label": "387:ae737662",
+          "far": 0.024873191298286246,
+          "rank": 187,
+          "bh_critical": 0.023375000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00023364485981308412,
+          "holm_accepted": false
+        },
+        {
+          "index": 53,
+          "label": "53:ea947e90",
+          "far": 0.02733989703468371,
+          "rank": 188,
+          "bh_critical": 0.0235,
+          "bh_accepted": false,
+          "holm_critical": 0.0002347417840375587,
+          "holm_accepted": false
+        },
+        {
+          "index": 136,
+          "label": "136:0756ce39",
+          "far": 0.02754266721779248,
+          "rank": 189,
+          "bh_critical": 0.023625,
+          "bh_accepted": false,
+          "holm_critical": 0.0002358490566037736,
+          "holm_accepted": false
+        },
+        {
+          "index": 188,
+          "label": "188:158ab5f5",
+          "far": 0.029501004096167724,
+          "rank": 190,
+          "bh_critical": 0.02375,
+          "bh_accepted": false,
+          "holm_critical": 0.00023696682464454977,
+          "holm_accepted": false
+        },
+        {
+          "index": 306,
+          "label": "306:69d55b24",
+          "far": 0.030647078790971304,
+          "rank": 191,
+          "bh_critical": 0.023875,
+          "bh_accepted": false,
+          "holm_critical": 0.0002380952380952381,
+          "holm_accepted": false
+        },
+        {
+          "index": 52,
+          "label": "52:dde008ce",
+          "far": 0.03412198391138791,
+          "rank": 192,
+          "bh_critical": 0.024,
+          "bh_accepted": false,
+          "holm_critical": 0.00023923444976076556,
+          "holm_accepted": false
+        },
+        {
+          "index": 279,
+          "label": "279:803cd25b",
+          "far": 0.038419250080259655,
+          "rank": 193,
+          "bh_critical": 0.024125,
+          "bh_accepted": false,
+          "holm_critical": 0.0002403846153846154,
+          "holm_accepted": false
+        },
+        {
+          "index": 109,
+          "label": "109:e92383fe",
+          "far": 0.038726989578146395,
+          "rank": 194,
+          "bh_critical": 0.02425,
+          "bh_accepted": false,
+          "holm_critical": 0.00024154589371980678,
+          "holm_accepted": false
+        },
+        {
+          "index": 55,
+          "label": "55:ff1b3ffb",
+          "far": 0.03938088348483849,
+          "rank": 195,
+          "bh_critical": 0.024375,
+          "bh_accepted": false,
+          "holm_critical": 0.00024271844660194176,
+          "holm_accepted": false
+        },
+        {
+          "index": 68,
+          "label": "68:a28f2b04",
+          "far": 0.03938088348483849,
+          "rank": 196,
+          "bh_critical": 0.0245,
+          "bh_accepted": false,
+          "holm_critical": 0.00024390243902439027,
+          "holm_accepted": false
+        },
+        {
+          "index": 47,
+          "label": "47:fa0fed84",
+          "far": 0.04245701629808718,
+          "rank": 197,
+          "bh_critical": 0.024625,
+          "bh_accepted": false,
+          "holm_critical": 0.00024509803921568627,
+          "holm_accepted": false
+        },
+        {
+          "index": 120,
+          "label": "120:0ee886a9",
+          "far": 0.04353130465029311,
+          "rank": 198,
+          "bh_critical": 0.02475,
+          "bh_accepted": false,
+          "holm_critical": 0.00024630541871921186,
+          "holm_accepted": false
+        },
+        {
+          "index": 309,
+          "label": "309:34f1a63e",
+          "far": 0.04452031748911819,
+          "rank": 199,
+          "bh_critical": 0.024875,
+          "bh_accepted": false,
+          "holm_critical": 0.00024752475247524753,
+          "holm_accepted": false
+        },
+        {
+          "index": 377,
+          "label": "377:2626f92f",
+          "far": 0.04452031748911819,
+          "rank": 200,
+          "bh_critical": 0.025,
+          "bh_accepted": false,
+          "holm_critical": 0.0002487562189054727,
+          "holm_accepted": false
+        },
+        {
+          "index": 384,
+          "label": "384:5c3fe5a9",
+          "far": 0.04452031748911819,
+          "rank": 201,
+          "bh_critical": 0.025124999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.00025,
+          "holm_accepted": false
+        },
+        {
+          "index": 385,
+          "label": "385:552efc9a",
+          "far": 0.04452031748911819,
+          "rank": 202,
+          "bh_critical": 0.02525,
+          "bh_accepted": false,
+          "holm_critical": 0.0002512562814070352,
+          "holm_accepted": false
+        },
+        {
+          "index": 386,
+          "label": "386:9d01dcc7",
+          "far": 0.04452031748911819,
+          "rank": 203,
+          "bh_critical": 0.025374999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.0002525252525252525,
+          "holm_accepted": false
+        },
+        {
+          "index": 108,
+          "label": "108:4fa665b1",
+          "far": 0.045069489862269524,
+          "rank": 204,
+          "bh_critical": 0.025500000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0002538071065989848,
+          "holm_accepted": false
+        },
+        {
+          "index": 113,
+          "label": "113:9f575d5d",
+          "far": 0.05402260040983794,
+          "rank": 205,
+          "bh_critical": 0.025625,
+          "bh_accepted": false,
+          "holm_critical": 0.00025510204081632655,
+          "holm_accepted": false
+        },
+        {
+          "index": 212,
+          "label": "212:ceb8ac95",
+          "far": 0.056206716875632695,
+          "rank": 206,
+          "bh_critical": 0.025750000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0002564102564102564,
+          "holm_accepted": false
+        },
+        {
+          "index": 114,
+          "label": "114:0fb06613",
+          "far": 0.056489811031190044,
+          "rank": 207,
+          "bh_critical": 0.025875,
+          "bh_accepted": false,
+          "holm_critical": 0.0002577319587628866,
+          "holm_accepted": false
+        },
+        {
+          "index": 115,
+          "label": "115:09f6ed5d",
+          "far": 0.056489811031190044,
+          "rank": 208,
+          "bh_critical": 0.026000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.00025906735751295336,
+          "holm_accepted": false
+        },
+        {
+          "index": 143,
+          "label": "143:88be0947",
+          "far": 0.056489811031190044,
+          "rank": 209,
+          "bh_critical": 0.026125,
+          "bh_accepted": false,
+          "holm_critical": 0.00026041666666666666,
+          "holm_accepted": false
+        },
+        {
+          "index": 284,
+          "label": "284:8dfd539c",
+          "far": 0.05825754188393246,
+          "rank": 210,
+          "bh_critical": 0.026250000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0002617801047120419,
+          "holm_accepted": false
+        },
+        {
+          "index": 103,
+          "label": "103:a4540f00",
+          "far": 0.05845291791769889,
+          "rank": 211,
+          "bh_critical": 0.026375,
+          "bh_accepted": false,
+          "holm_critical": 0.0002631578947368421,
+          "holm_accepted": false
+        },
+        {
+          "index": 97,
+          "label": "97:9cef032a",
+          "far": 0.059988860060971386,
+          "rank": 212,
+          "bh_critical": 0.026500000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00026455026455026457,
+          "holm_accepted": false
+        },
+        {
+          "index": 257,
+          "label": "257:b087e6ac",
+          "far": 0.06021122454741895,
+          "rank": 213,
+          "bh_critical": 0.026625,
+          "bh_accepted": false,
+          "holm_critical": 0.00026595744680851064,
+          "holm_accepted": false
+        },
+        {
+          "index": 41,
+          "label": "41:0aa53b34",
+          "far": 0.06087852016288949,
+          "rank": 214,
+          "bh_critical": 0.026750000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00026737967914438503,
+          "holm_accepted": false
+        },
+        {
+          "index": 232,
+          "label": "232:fea93436",
+          "far": 0.061742238606074466,
+          "rank": 215,
+          "bh_critical": 0.026875,
+          "bh_accepted": false,
+          "holm_critical": 0.00026881720430107527,
+          "holm_accepted": false
+        },
+        {
+          "index": 121,
+          "label": "121:42be7431",
+          "far": 0.06538508353111964,
+          "rank": 216,
+          "bh_critical": 0.027000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0002702702702702703,
+          "holm_accepted": false
+        },
+        {
+          "index": 138,
+          "label": "138:a9973b3f",
+          "far": 0.06699813016304215,
+          "rank": 217,
+          "bh_critical": 0.027125,
+          "bh_accepted": false,
+          "holm_critical": 0.0002717391304347826,
+          "holm_accepted": false
+        },
+        {
+          "index": 185,
+          "label": "185:208cf5be",
+          "far": 0.06934671644077857,
+          "rank": 218,
+          "bh_critical": 0.027250000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.000273224043715847,
+          "holm_accepted": false
+        },
+        {
+          "index": 312,
+          "label": "312:ba881583",
+          "far": 0.08228410847278403,
+          "rank": 219,
+          "bh_critical": 0.027375,
+          "bh_accepted": false,
+          "holm_critical": 0.0002747252747252747,
+          "holm_accepted": false
+        },
+        {
+          "index": 130,
+          "label": "130:d01dc0ad",
+          "far": 0.08229123981320387,
+          "rank": 220,
+          "bh_critical": 0.027500000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.00027624309392265195,
+          "holm_accepted": false
+        },
+        {
+          "index": 190,
+          "label": "190:feb4a5cb",
+          "far": 0.08510656189644186,
+          "rank": 221,
+          "bh_critical": 0.027625,
+          "bh_accepted": false,
+          "holm_critical": 0.0002777777777777778,
+          "holm_accepted": false
+        },
+        {
+          "index": 56,
+          "label": "56:2eabc750",
+          "far": 0.0900620349471506,
+          "rank": 222,
+          "bh_critical": 0.027750000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0002793296089385475,
+          "holm_accepted": false
+        },
+        {
+          "index": 123,
+          "label": "123:e626b214",
+          "far": 0.0967226178186677,
+          "rank": 223,
+          "bh_critical": 0.027875,
+          "bh_accepted": false,
+          "holm_critical": 0.0002808988764044944,
+          "holm_accepted": false
+        },
+        {
+          "index": 72,
+          "label": "72:404ba9ac",
+          "far": 0.09810142428739567,
+          "rank": 224,
+          "bh_critical": 0.028000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0002824858757062147,
+          "holm_accepted": false
+        },
+        {
+          "index": 58,
+          "label": "58:0f59ec33",
+          "far": 0.1006476763829953,
+          "rank": 225,
+          "bh_critical": 0.028125,
+          "bh_accepted": false,
+          "holm_critical": 0.00028409090909090913,
+          "holm_accepted": false
+        },
+        {
+          "index": 274,
+          "label": "274:58747fd9",
+          "far": 0.10179977955397483,
+          "rank": 226,
+          "bh_critical": 0.028249999999999997,
+          "bh_accepted": false,
+          "holm_critical": 0.00028571428571428574,
+          "holm_accepted": false
+        },
+        {
+          "index": 49,
+          "label": "49:f02a7a70",
+          "far": 0.11776545508038291,
+          "rank": 227,
+          "bh_critical": 0.028375,
+          "bh_accepted": false,
+          "holm_critical": 0.00028735632183908046,
+          "holm_accepted": false
+        },
+        {
+          "index": 145,
+          "label": "145:f8ac4e69",
+          "far": 0.11810319031076949,
+          "rank": 228,
+          "bh_critical": 0.028499999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.00028901734104046245,
+          "holm_accepted": false
+        },
+        {
+          "index": 251,
+          "label": "251:a806fb2d",
+          "far": 0.1192723066650828,
+          "rank": 229,
+          "bh_critical": 0.028625,
+          "bh_accepted": false,
+          "holm_critical": 0.00029069767441860465,
+          "holm_accepted": false
+        },
+        {
+          "index": 396,
+          "label": "396:48e74ff8",
+          "far": 0.12387759119116418,
+          "rank": 230,
+          "bh_critical": 0.028749999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.00029239766081871346,
+          "holm_accepted": false
+        },
+        {
+          "index": 30,
+          "label": "30:ef10f541",
+          "far": 0.12526233113508445,
+          "rank": 231,
+          "bh_critical": 0.028875,
+          "bh_accepted": false,
+          "holm_critical": 0.00029411764705882356,
+          "holm_accepted": false
+        },
+        {
+          "index": 186,
+          "label": "186:aaa3d7d4",
+          "far": 0.12706378422252157,
+          "rank": 232,
+          "bh_critical": 0.028999999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.0002958579881656805,
+          "holm_accepted": false
+        },
+        {
+          "index": 195,
+          "label": "195:08d06a41",
+          "far": 0.13382507076740446,
+          "rank": 233,
+          "bh_critical": 0.029125,
+          "bh_accepted": false,
+          "holm_critical": 0.00029761904761904765,
+          "holm_accepted": false
+        },
+        {
+          "index": 252,
+          "label": "252:e0f142e8",
+          "far": 0.13382507076740446,
+          "rank": 234,
+          "bh_critical": 0.029249999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.0002994011976047904,
+          "holm_accepted": false
+        },
+        {
+          "index": 266,
+          "label": "266:c56a05f0",
+          "far": 0.13382507076740446,
+          "rank": 235,
+          "bh_critical": 0.029375000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.00030120481927710846,
+          "holm_accepted": false
+        },
+        {
+          "index": 216,
+          "label": "216:e797cbaa",
+          "far": 0.13627955491552726,
+          "rank": 236,
+          "bh_critical": 0.0295,
+          "bh_accepted": false,
+          "holm_critical": 0.00030303030303030303,
+          "holm_accepted": false
+        },
+        {
+          "index": 357,
+          "label": "357:e8a526ce",
+          "far": 0.13888043017760113,
+          "rank": 237,
+          "bh_critical": 0.029625000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0003048780487804878,
+          "holm_accepted": false
+        },
+        {
+          "index": 24,
+          "label": "24:bd4bb5bc",
+          "far": 0.14102714014643725,
+          "rank": 238,
+          "bh_critical": 0.02975,
+          "bh_accepted": false,
+          "holm_critical": 0.00030674846625766873,
+          "holm_accepted": false
+        },
+        {
+          "index": 131,
+          "label": "131:a440dafd",
+          "far": 0.14660856092118718,
+          "rank": 239,
+          "bh_critical": 0.029875000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.00030864197530864197,
+          "holm_accepted": false
+        },
+        {
+          "index": 151,
+          "label": "151:b111ccd7",
+          "far": 0.1540227409306494,
+          "rank": 240,
+          "bh_critical": 0.03,
+          "bh_accepted": false,
+          "holm_critical": 0.00031055900621118014,
+          "holm_accepted": false
+        },
+        {
+          "index": 33,
+          "label": "33:35c895e2",
+          "far": 0.15967428232002573,
+          "rank": 241,
+          "bh_critical": 0.030125000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0003125,
+          "holm_accepted": false
+        },
+        {
+          "index": 302,
+          "label": "302:71944d9d",
+          "far": 0.16094925947732006,
+          "rank": 242,
+          "bh_critical": 0.03025,
+          "bh_accepted": false,
+          "holm_critical": 0.0003144654088050315,
+          "holm_accepted": false
+        },
+        {
+          "index": 19,
+          "label": "19:06366fe3",
+          "far": 0.16941248934004427,
+          "rank": 243,
+          "bh_critical": 0.030375000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.00031645569620253165,
+          "holm_accepted": false
+        },
+        {
+          "index": 301,
+          "label": "301:1d1a5e6f",
+          "far": 0.1903656017705105,
+          "rank": 244,
+          "bh_critical": 0.0305,
+          "bh_accepted": false,
+          "holm_critical": 0.00031847133757961787,
+          "holm_accepted": false
+        },
+        {
+          "index": 303,
+          "label": "303:1d1a5e6f",
+          "far": 0.1903656017705105,
+          "rank": 245,
+          "bh_critical": 0.030625000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0003205128205128205,
+          "holm_accepted": false
+        },
+        {
+          "index": 325,
+          "label": "325:7fb99e96",
+          "far": 0.1903656017705105,
+          "rank": 246,
+          "bh_critical": 0.03075,
+          "bh_accepted": false,
+          "holm_critical": 0.0003225806451612903,
+          "holm_accepted": false
+        },
+        {
+          "index": 223,
+          "label": "223:7069039a",
+          "far": 0.190464108049199,
+          "rank": 247,
+          "bh_critical": 0.030875000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0003246753246753247,
+          "holm_accepted": false
+        },
+        {
+          "index": 5,
+          "label": "5:c2b19efd",
+          "far": 0.19652037848959608,
+          "rank": 248,
+          "bh_critical": 0.031,
+          "bh_accepted": false,
+          "holm_critical": 0.00032679738562091506,
+          "holm_accepted": false
+        },
+        {
+          "index": 243,
+          "label": "243:2e98cacd",
+          "far": 0.19675615525266957,
+          "rank": 249,
+          "bh_critical": 0.031125000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0003289473684210526,
+          "holm_accepted": false
+        },
+        {
+          "index": 44,
+          "label": "44:73135c92",
+          "far": 0.20349056445177138,
+          "rank": 250,
+          "bh_critical": 0.03125,
+          "bh_accepted": false,
+          "holm_critical": 0.00033112582781456954,
+          "holm_accepted": false
+        },
+        {
+          "index": 13,
+          "label": "13:83048775",
+          "far": 0.20378304342707732,
+          "rank": 251,
+          "bh_critical": 0.031375,
+          "bh_accepted": false,
+          "holm_critical": 0.0003333333333333334,
+          "holm_accepted": false
+        },
+        {
+          "index": 38,
+          "label": "38:843f805b",
+          "far": 0.2073680270553416,
+          "rank": 252,
+          "bh_critical": 0.0315,
+          "bh_accepted": false,
+          "holm_critical": 0.00033557046979865775,
+          "holm_accepted": false
+        },
+        {
+          "index": 17,
+          "label": "17:fc3e8381",
+          "far": 0.2143516072128745,
+          "rank": 253,
+          "bh_critical": 0.031625,
+          "bh_accepted": false,
+          "holm_critical": 0.00033783783783783786,
+          "holm_accepted": false
+        },
+        {
+          "index": 359,
+          "label": "359:10af3954",
+          "far": 0.21464872508120678,
+          "rank": 254,
+          "bh_critical": 0.03175,
+          "bh_accepted": false,
+          "holm_critical": 0.00034013605442176874,
+          "holm_accepted": false
+        },
+        {
+          "index": 26,
+          "label": "26:27231b3e",
+          "far": 0.23364916008135242,
+          "rank": 255,
+          "bh_critical": 0.031875,
+          "bh_accepted": false,
+          "holm_critical": 0.00034246575342465754,
+          "holm_accepted": false
+        },
+        {
+          "index": 376,
+          "label": "376:d88866ea",
+          "far": 0.23483437387863068,
+          "rank": 256,
+          "bh_critical": 0.032,
+          "bh_accepted": false,
+          "holm_critical": 0.0003448275862068966,
+          "holm_accepted": false
+        },
+        {
+          "index": 96,
+          "label": "96:9fd26cb3",
+          "far": 0.25208242232000266,
+          "rank": 257,
+          "bh_critical": 0.032125,
+          "bh_accepted": false,
+          "holm_critical": 0.00034722222222222224,
+          "holm_accepted": false
+        },
+        {
+          "index": 158,
+          "label": "158:f283f4a1",
+          "far": 0.25208242232000266,
+          "rank": 258,
+          "bh_critical": 0.03225,
+          "bh_accepted": false,
+          "holm_critical": 0.00034965034965034965,
+          "holm_accepted": false
+        },
+        {
+          "index": 45,
+          "label": "45:40e47d03",
+          "far": 0.2535034920143322,
+          "rank": 259,
+          "bh_critical": 0.032375,
+          "bh_accepted": false,
+          "holm_critical": 0.00035211267605633805,
+          "holm_accepted": false
+        },
+        {
+          "index": 4,
+          "label": "4:bee4b378",
+          "far": 0.25827448934939734,
+          "rank": 260,
+          "bh_critical": 0.0325,
+          "bh_accepted": false,
+          "holm_critical": 0.0003546099290780142,
+          "holm_accepted": false
+        },
+        {
+          "index": 165,
+          "label": "165:f2303864",
+          "far": 0.266369958559788,
+          "rank": 261,
+          "bh_critical": 0.032625,
+          "bh_accepted": false,
+          "holm_critical": 0.00035714285714285714,
+          "holm_accepted": false
+        },
+        {
+          "index": 65,
+          "label": "65:738664ed",
+          "far": 0.26661801960079934,
+          "rank": 262,
+          "bh_critical": 0.03275,
+          "bh_accepted": false,
+          "holm_critical": 0.00035971223021582735,
+          "holm_accepted": false
+        },
+        {
+          "index": 139,
+          "label": "139:319e3289",
+          "far": 0.27113156492738244,
+          "rank": 263,
+          "bh_critical": 0.032875,
+          "bh_accepted": false,
+          "holm_critical": 0.00036231884057971015,
+          "holm_accepted": false
+        },
+        {
+          "index": 324,
+          "label": "324:b303fd61",
+          "far": 0.2721694393802996,
+          "rank": 264,
+          "bh_critical": 0.033,
+          "bh_accepted": false,
+          "holm_critical": 0.00036496350364963507,
+          "holm_accepted": false
+        },
+        {
+          "index": 335,
+          "label": "335:084496b1",
+          "far": 0.2721694393802996,
+          "rank": 265,
+          "bh_critical": 0.033125,
+          "bh_accepted": false,
+          "holm_critical": 0.0003676470588235294,
+          "holm_accepted": false
+        },
+        {
+          "index": 356,
+          "label": "356:9a40e304",
+          "far": 0.2721694393802996,
+          "rank": 266,
+          "bh_critical": 0.03325,
+          "bh_accepted": false,
+          "holm_critical": 0.0003703703703703704,
+          "holm_accepted": false
+        },
+        {
+          "index": 70,
+          "label": "70:3846eabd",
+          "far": 0.2757041822066346,
+          "rank": 267,
+          "bh_critical": 0.033375,
+          "bh_accepted": false,
+          "holm_critical": 0.00037313432835820896,
+          "holm_accepted": false
+        },
+        {
+          "index": 67,
+          "label": "67:03968dc9",
+          "far": 0.29067683868111194,
+          "rank": 268,
+          "bh_critical": 0.0335,
+          "bh_accepted": false,
+          "holm_critical": 0.00037593984962406017,
+          "holm_accepted": false
+        },
+        {
+          "index": 14,
+          "label": "14:35ac0b8f",
+          "far": 0.3034966333655621,
+          "rank": 269,
+          "bh_critical": 0.033625,
+          "bh_accepted": false,
+          "holm_critical": 0.0003787878787878788,
+          "holm_accepted": false
+        },
+        {
+          "index": 66,
+          "label": "66:63da85e0",
+          "far": 0.310331804761883,
+          "rank": 270,
+          "bh_critical": 0.03375,
+          "bh_accepted": false,
+          "holm_critical": 0.0003816793893129771,
+          "holm_accepted": false
+        },
+        {
+          "index": 220,
+          "label": "220:bad6e87d",
+          "far": 0.31490457678484807,
+          "rank": 271,
+          "bh_critical": 0.033875,
+          "bh_accepted": false,
+          "holm_critical": 0.0003846153846153846,
+          "holm_accepted": false
+        },
+        {
+          "index": 241,
+          "label": "241:cfbf62ae",
+          "far": 0.31490457678484807,
+          "rank": 272,
+          "bh_critical": 0.034,
+          "bh_accepted": false,
+          "holm_critical": 0.0003875968992248062,
+          "holm_accepted": false
+        },
+        {
+          "index": 283,
+          "label": "283:59739ad3",
+          "far": 0.3393643300949943,
+          "rank": 273,
+          "bh_critical": 0.034125,
+          "bh_accepted": false,
+          "holm_critical": 0.000390625,
+          "holm_accepted": false
+        },
+        {
+          "index": 300,
+          "label": "300:726689c7",
+          "far": 0.3393643300949943,
+          "rank": 274,
+          "bh_critical": 0.03425,
+          "bh_accepted": false,
+          "holm_critical": 0.00039370078740157485,
+          "holm_accepted": false
+        },
+        {
+          "index": 313,
+          "label": "313:3e5953c9",
+          "far": 0.3393643300949943,
+          "rank": 275,
+          "bh_critical": 0.034375,
+          "bh_accepted": false,
+          "holm_critical": 0.0003968253968253968,
+          "holm_accepted": false
+        },
+        {
+          "index": 315,
+          "label": "315:56ab44aa",
+          "far": 0.3393643300949943,
+          "rank": 276,
+          "bh_critical": 0.034499999999999996,
+          "bh_accepted": false,
+          "holm_critical": 0.0004,
+          "holm_accepted": false
+        },
+        {
+          "index": 327,
+          "label": "327:226bfec4",
+          "far": 0.3393643300949943,
+          "rank": 277,
+          "bh_critical": 0.034625,
+          "bh_accepted": false,
+          "holm_critical": 0.0004032258064516129,
+          "holm_accepted": false
+        },
+        {
+          "index": 333,
+          "label": "333:5a3adf1c",
+          "far": 0.3393643300949943,
+          "rank": 278,
+          "bh_critical": 0.034749999999999996,
+          "bh_accepted": false,
+          "holm_critical": 0.0004065040650406504,
+          "holm_accepted": false
+        },
+        {
+          "index": 343,
+          "label": "343:90f34e4a",
+          "far": 0.3393643300949943,
+          "rank": 279,
+          "bh_critical": 0.034875,
+          "bh_accepted": false,
+          "holm_critical": 0.0004098360655737705,
+          "holm_accepted": false
+        },
+        {
+          "index": 362,
+          "label": "362:2beb1b85",
+          "far": 0.3393643300949943,
+          "rank": 280,
+          "bh_critical": 0.034999999999999996,
+          "bh_accepted": false,
+          "holm_critical": 0.0004132231404958678,
+          "holm_accepted": false
+        },
+        {
+          "index": 363,
+          "label": "363:be2aa881",
+          "far": 0.3393643300949943,
+          "rank": 281,
+          "bh_critical": 0.035125,
+          "bh_accepted": false,
+          "holm_critical": 0.0004166666666666667,
+          "holm_accepted": false
+        },
+        {
+          "index": 372,
+          "label": "372:0be3f18d",
+          "far": 0.3393643300949943,
+          "rank": 282,
+          "bh_critical": 0.03525,
+          "bh_accepted": false,
+          "holm_critical": 0.0004201680672268908,
+          "holm_accepted": false
+        },
+        {
+          "index": 397,
+          "label": "397:a6b155b6",
+          "far": 0.3393643300949943,
+          "rank": 283,
+          "bh_critical": 0.035375000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0004237288135593221,
+          "holm_accepted": false
+        },
+        {
+          "index": 236,
+          "label": "236:f2917c05",
+          "far": 0.3429717376117398,
+          "rank": 284,
+          "bh_critical": 0.0355,
+          "bh_accepted": false,
+          "holm_critical": 0.00042735042735042735,
+          "holm_accepted": false
+        },
+        {
+          "index": 88,
+          "label": "88:a8776390",
+          "far": 0.3564296079682931,
+          "rank": 285,
+          "bh_critical": 0.035625000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.00043103448275862074,
+          "holm_accepted": false
+        },
+        {
+          "index": 87,
+          "label": "87:40aec461",
+          "far": 0.3849029848786221,
+          "rank": 286,
+          "bh_critical": 0.03575,
+          "bh_accepted": false,
+          "holm_critical": 0.0004347826086956522,
+          "holm_accepted": false
+        },
+        {
+          "index": 369,
+          "label": "369:05baff28",
+          "far": 0.40903697750370294,
+          "rank": 287,
+          "bh_critical": 0.035875000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0004385964912280702,
+          "holm_accepted": false
+        },
+        {
+          "index": 214,
+          "label": "214:2deef852",
+          "far": 0.42691910989553805,
+          "rank": 288,
+          "bh_critical": 0.036,
+          "bh_accepted": false,
+          "holm_critical": 0.00044247787610619474,
+          "holm_accepted": false
+        },
+        {
+          "index": 60,
+          "label": "60:5caa6c0f",
+          "far": 0.4275314610555469,
+          "rank": 289,
+          "bh_critical": 0.036125000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.00044642857142857147,
+          "holm_accepted": false
+        },
+        {
+          "index": 375,
+          "label": "375:97052371",
+          "far": 0.4290028723203773,
+          "rank": 290,
+          "bh_critical": 0.03625,
+          "bh_accepted": false,
+          "holm_critical": 0.00045045045045045046,
+          "holm_accepted": false
+        },
+        {
+          "index": 383,
+          "label": "383:4585ccea",
+          "far": 0.4290028723203773,
+          "rank": 291,
+          "bh_critical": 0.036375000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.00045454545454545455,
+          "holm_accepted": false
+        },
+        {
+          "index": 57,
+          "label": "57:84124e08",
+          "far": 0.4449217779955074,
+          "rank": 292,
+          "bh_critical": 0.0365,
+          "bh_accepted": false,
+          "holm_critical": 0.00045871559633027525,
+          "holm_accepted": false
+        },
+        {
+          "index": 64,
+          "label": "64:a196fb9a",
+          "far": 0.4475782310174578,
+          "rank": 293,
+          "bh_critical": 0.036625000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.000462962962962963,
+          "holm_accepted": false
+        },
+        {
+          "index": 250,
+          "label": "250:70bd4cb3",
+          "far": 0.45216636844283775,
+          "rank": 294,
+          "bh_critical": 0.03675,
+          "bh_accepted": false,
+          "holm_critical": 0.00046728971962616824,
+          "holm_accepted": false
+        },
+        {
+          "index": 46,
+          "label": "46:2a5c9011",
+          "far": 0.4817653658577785,
+          "rank": 295,
+          "bh_critical": 0.036875000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0004716981132075472,
+          "holm_accepted": false
+        },
+        {
+          "index": 224,
+          "label": "224:ce31f45f",
+          "far": 0.4821396403756867,
+          "rank": 296,
+          "bh_critical": 0.037,
+          "bh_accepted": false,
+          "holm_critical": 0.0004761904761904762,
+          "holm_accepted": false
+        },
+        {
+          "index": 202,
+          "label": "202:cc19db32",
+          "far": 0.4903776647689526,
+          "rank": 297,
+          "bh_critical": 0.037125000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0004807692307692308,
+          "holm_accepted": false
+        },
+        {
+          "index": 1,
+          "label": "1:465c20aa",
+          "far": 0.5,
+          "rank": 298,
+          "bh_critical": 0.03725,
+          "bh_accepted": false,
+          "holm_critical": 0.00048543689320388353,
+          "holm_accepted": false
+        },
+        {
+          "index": 7,
+          "label": "7:f9f43a47",
+          "far": 0.5,
+          "rank": 299,
+          "bh_critical": 0.037375000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0004901960784313725,
+          "holm_accepted": false
+        },
+        {
+          "index": 15,
+          "label": "15:f713b7f2",
+          "far": 0.5,
+          "rank": 300,
+          "bh_critical": 0.037500000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0004950495049504951,
+          "holm_accepted": false
+        },
+        {
+          "index": 20,
+          "label": "20:a5bbcc70",
+          "far": 0.5,
+          "rank": 301,
+          "bh_critical": 0.037625,
+          "bh_accepted": false,
+          "holm_critical": 0.0005,
+          "holm_accepted": false
+        },
+        {
+          "index": 21,
+          "label": "21:63b9d8b7",
+          "far": 0.5,
+          "rank": 302,
+          "bh_critical": 0.037750000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.000505050505050505,
+          "holm_accepted": false
+        },
+        {
+          "index": 22,
+          "label": "22:5a5b2a0f",
+          "far": 0.5,
+          "rank": 303,
+          "bh_critical": 0.037875,
+          "bh_accepted": false,
+          "holm_critical": 0.0005102040816326531,
+          "holm_accepted": false
+        },
+        {
+          "index": 23,
+          "label": "23:5a5b2a0f",
+          "far": 0.5,
+          "rank": 304,
+          "bh_critical": 0.038000000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0005154639175257732,
+          "holm_accepted": false
+        },
+        {
+          "index": 25,
+          "label": "25:729cc7b1",
+          "far": 0.5,
+          "rank": 305,
+          "bh_critical": 0.038125,
+          "bh_accepted": false,
+          "holm_critical": 0.0005208333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 28,
+          "label": "28:820626c6",
+          "far": 0.5,
+          "rank": 306,
+          "bh_critical": 0.038250000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0005263157894736842,
+          "holm_accepted": false
+        },
+        {
+          "index": 29,
+          "label": "29:44a9ff9c",
+          "far": 0.5,
+          "rank": 307,
+          "bh_critical": 0.038375,
+          "bh_accepted": false,
+          "holm_critical": 0.0005319148936170213,
+          "holm_accepted": false
+        },
+        {
+          "index": 31,
+          "label": "31:01949f58",
+          "far": 0.5,
+          "rank": 308,
+          "bh_critical": 0.038500000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0005376344086021505,
+          "holm_accepted": false
+        },
+        {
+          "index": 35,
+          "label": "35:269fa4bd",
+          "far": 0.5,
+          "rank": 309,
+          "bh_critical": 0.038625,
+          "bh_accepted": false,
+          "holm_critical": 0.0005434782608695652,
+          "holm_accepted": false
+        },
+        {
+          "index": 37,
+          "label": "37:defec7f6",
+          "far": 0.5,
+          "rank": 310,
+          "bh_critical": 0.03875000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0005494505494505495,
+          "holm_accepted": false
+        },
+        {
+          "index": 39,
+          "label": "39:a0567f9e",
+          "far": 0.5,
+          "rank": 311,
+          "bh_critical": 0.038875,
+          "bh_accepted": false,
+          "holm_critical": 0.0005555555555555556,
+          "holm_accepted": false
+        },
+        {
+          "index": 42,
+          "label": "42:aa33dfc1",
+          "far": 0.5,
+          "rank": 312,
+          "bh_critical": 0.03900000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0005617977528089888,
+          "holm_accepted": false
+        },
+        {
+          "index": 43,
+          "label": "43:71d2870c",
+          "far": 0.5,
+          "rank": 313,
+          "bh_critical": 0.039125,
+          "bh_accepted": false,
+          "holm_critical": 0.0005681818181818183,
+          "holm_accepted": false
+        },
+        {
+          "index": 51,
+          "label": "51:8912063d",
+          "far": 0.5,
+          "rank": 314,
+          "bh_critical": 0.03925000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0005747126436781609,
+          "holm_accepted": false
+        },
+        {
+          "index": 54,
+          "label": "54:cce9452b",
+          "far": 0.5,
+          "rank": 315,
+          "bh_critical": 0.039375,
+          "bh_accepted": false,
+          "holm_critical": 0.0005813953488372093,
+          "holm_accepted": false
+        },
+        {
+          "index": 61,
+          "label": "61:0276e15b",
+          "far": 0.5,
+          "rank": 316,
+          "bh_critical": 0.03950000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0005882352941176471,
+          "holm_accepted": false
+        },
+        {
+          "index": 62,
+          "label": "62:cb5818fb",
+          "far": 0.5,
+          "rank": 317,
+          "bh_critical": 0.039625,
+          "bh_accepted": false,
+          "holm_critical": 0.0005952380952380953,
+          "holm_accepted": false
+        },
+        {
+          "index": 63,
+          "label": "63:bac6a917",
+          "far": 0.5,
+          "rank": 318,
+          "bh_critical": 0.03975000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0006024096385542169,
+          "holm_accepted": false
+        },
+        {
+          "index": 71,
+          "label": "71:834d689d",
+          "far": 0.5,
+          "rank": 319,
+          "bh_critical": 0.039875,
+          "bh_accepted": false,
+          "holm_critical": 0.0006097560975609756,
+          "holm_accepted": false
+        },
+        {
+          "index": 85,
+          "label": "85:2fef79ed",
+          "far": 0.5,
+          "rank": 320,
+          "bh_critical": 0.04000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0006172839506172839,
+          "holm_accepted": false
+        },
+        {
+          "index": 86,
+          "label": "86:be04ab14",
+          "far": 0.5,
+          "rank": 321,
+          "bh_critical": 0.040125,
+          "bh_accepted": false,
+          "holm_critical": 0.000625,
+          "holm_accepted": false
+        },
+        {
+          "index": 94,
+          "label": "94:0b001474",
+          "far": 0.5,
+          "rank": 322,
+          "bh_critical": 0.04025000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0006329113924050633,
+          "holm_accepted": false
+        },
+        {
+          "index": 95,
+          "label": "95:df228c4c",
+          "far": 0.5,
+          "rank": 323,
+          "bh_critical": 0.040375,
+          "bh_accepted": false,
+          "holm_critical": 0.000641025641025641,
+          "holm_accepted": false
+        },
+        {
+          "index": 104,
+          "label": "104:3559cbe8",
+          "far": 0.5,
+          "rank": 324,
+          "bh_critical": 0.04050000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.0006493506493506494,
+          "holm_accepted": false
+        },
+        {
+          "index": 116,
+          "label": "116:16157049",
+          "far": 0.5,
+          "rank": 325,
+          "bh_critical": 0.040625,
+          "bh_accepted": false,
+          "holm_critical": 0.0006578947368421052,
+          "holm_accepted": false
+        },
+        {
+          "index": 118,
+          "label": "118:4b253aaf",
+          "far": 0.5,
+          "rank": 326,
+          "bh_critical": 0.04075,
+          "bh_accepted": false,
+          "holm_critical": 0.0006666666666666668,
+          "holm_accepted": false
+        },
+        {
+          "index": 125,
+          "label": "125:4301ce0b",
+          "far": 0.5,
+          "rank": 327,
+          "bh_critical": 0.040875,
+          "bh_accepted": false,
+          "holm_critical": 0.0006756756756756757,
+          "holm_accepted": false
+        },
+        {
+          "index": 126,
+          "label": "126:6546e2f9",
+          "far": 0.5,
+          "rank": 328,
+          "bh_critical": 0.041,
+          "bh_accepted": false,
+          "holm_critical": 0.0006849315068493151,
+          "holm_accepted": false
+        },
+        {
+          "index": 127,
+          "label": "127:038abe41",
+          "far": 0.5,
+          "rank": 329,
+          "bh_critical": 0.041125,
+          "bh_accepted": false,
+          "holm_critical": 0.0006944444444444445,
+          "holm_accepted": false
+        },
+        {
+          "index": 135,
+          "label": "135:9756a403",
+          "far": 0.5,
+          "rank": 330,
+          "bh_critical": 0.04125,
+          "bh_accepted": false,
+          "holm_critical": 0.0007042253521126761,
+          "holm_accepted": false
+        },
+        {
+          "index": 142,
+          "label": "142:3120791a",
+          "far": 0.5,
+          "rank": 331,
+          "bh_critical": 0.041375,
+          "bh_accepted": false,
+          "holm_critical": 0.0007142857142857143,
+          "holm_accepted": false
+        },
+        {
+          "index": 157,
+          "label": "157:b03d6f5e",
+          "far": 0.5,
+          "rank": 332,
+          "bh_critical": 0.0415,
+          "bh_accepted": false,
+          "holm_critical": 0.0007246376811594203,
+          "holm_accepted": false
+        },
+        {
+          "index": 159,
+          "label": "159:51092570",
+          "far": 0.5,
+          "rank": 333,
+          "bh_critical": 0.041625,
+          "bh_accepted": false,
+          "holm_critical": 0.0007352941176470588,
+          "holm_accepted": false
+        },
+        {
+          "index": 166,
+          "label": "166:20b7aefc",
+          "far": 0.5,
+          "rank": 334,
+          "bh_critical": 0.04175,
+          "bh_accepted": false,
+          "holm_critical": 0.0007462686567164179,
+          "holm_accepted": false
+        },
+        {
+          "index": 167,
+          "label": "167:8e3f9bd3",
+          "far": 0.5,
+          "rank": 335,
+          "bh_critical": 0.041875,
+          "bh_accepted": false,
+          "holm_critical": 0.0007575757575757576,
+          "holm_accepted": false
+        },
+        {
+          "index": 172,
+          "label": "172:7d9c5562",
+          "far": 0.5,
+          "rank": 336,
+          "bh_critical": 0.042,
+          "bh_accepted": false,
+          "holm_critical": 0.0007692307692307692,
+          "holm_accepted": false
+        },
+        {
+          "index": 174,
+          "label": "174:901940fb",
+          "far": 0.5,
+          "rank": 337,
+          "bh_critical": 0.042125,
+          "bh_accepted": false,
+          "holm_critical": 0.00078125,
+          "holm_accepted": false
+        },
+        {
+          "index": 177,
+          "label": "177:07a2180a",
+          "far": 0.5,
+          "rank": 338,
+          "bh_critical": 0.04225,
+          "bh_accepted": false,
+          "holm_critical": 0.0007936507936507937,
+          "holm_accepted": false
+        },
+        {
+          "index": 179,
+          "label": "179:10e6c654",
+          "far": 0.5,
+          "rank": 339,
+          "bh_critical": 0.042375,
+          "bh_accepted": false,
+          "holm_critical": 0.0008064516129032258,
+          "holm_accepted": false
+        },
+        {
+          "index": 187,
+          "label": "187:5c5100ec",
+          "far": 0.5,
+          "rank": 340,
+          "bh_critical": 0.0425,
+          "bh_accepted": false,
+          "holm_critical": 0.000819672131147541,
+          "holm_accepted": false
+        },
+        {
+          "index": 189,
+          "label": "189:bb579397",
+          "far": 0.5,
+          "rank": 341,
+          "bh_critical": 0.042625,
+          "bh_accepted": false,
+          "holm_critical": 0.0008333333333333334,
+          "holm_accepted": false
+        },
+        {
+          "index": 193,
+          "label": "193:fc8d5517",
+          "far": 0.5,
+          "rank": 342,
+          "bh_critical": 0.04275,
+          "bh_accepted": false,
+          "holm_critical": 0.0008474576271186442,
+          "holm_accepted": false
+        },
+        {
+          "index": 203,
+          "label": "203:ad76edb5",
+          "far": 0.5,
+          "rank": 343,
+          "bh_critical": 0.042875,
+          "bh_accepted": false,
+          "holm_critical": 0.0008620689655172415,
+          "holm_accepted": false
+        },
+        {
+          "index": 209,
+          "label": "209:1fd01317",
+          "far": 0.5,
+          "rank": 344,
+          "bh_critical": 0.043000000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.0008771929824561404,
+          "holm_accepted": false
+        },
+        {
+          "index": 210,
+          "label": "210:1fd01317",
+          "far": 0.5,
+          "rank": 345,
+          "bh_critical": 0.043125000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0008928571428571429,
+          "holm_accepted": false
+        },
+        {
+          "index": 222,
+          "label": "222:4297e5ee",
+          "far": 0.5,
+          "rank": 346,
+          "bh_critical": 0.043250000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0009090909090909091,
+          "holm_accepted": false
+        },
+        {
+          "index": 228,
+          "label": "228:6cefdea2",
+          "far": 0.5,
+          "rank": 347,
+          "bh_critical": 0.043375000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.000925925925925926,
+          "holm_accepted": false
+        },
+        {
+          "index": 240,
+          "label": "240:6a1b0459",
+          "far": 0.5,
+          "rank": 348,
+          "bh_critical": 0.043500000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0009433962264150943,
+          "holm_accepted": false
+        },
+        {
+          "index": 242,
+          "label": "242:6fa3896c",
+          "far": 0.5,
+          "rank": 349,
+          "bh_critical": 0.043625000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0009615384615384616,
+          "holm_accepted": false
+        },
+        {
+          "index": 249,
+          "label": "249:92483513",
+          "far": 0.5,
+          "rank": 350,
+          "bh_critical": 0.043750000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.000980392156862745,
+          "holm_accepted": false
+        },
+        {
+          "index": 256,
+          "label": "256:9853744d",
+          "far": 0.5,
+          "rank": 351,
+          "bh_critical": 0.043875,
+          "bh_accepted": false,
+          "holm_critical": 0.001,
+          "holm_accepted": false
+        },
+        {
+          "index": 267,
+          "label": "267:850e8173",
+          "far": 0.5,
+          "rank": 352,
+          "bh_critical": 0.044000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0010204081632653062,
+          "holm_accepted": false
+        },
+        {
+          "index": 271,
+          "label": "271:63bb39b0",
+          "far": 0.5,
+          "rank": 353,
+          "bh_critical": 0.044125,
+          "bh_accepted": false,
+          "holm_critical": 0.0010416666666666667,
+          "holm_accepted": false
+        },
+        {
+          "index": 392,
+          "label": "392:19b9df12",
+          "far": 0.5,
+          "rank": 354,
+          "bh_critical": 0.044250000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0010638297872340426,
+          "holm_accepted": false
+        },
+        {
+          "index": 0,
+          "label": "0:7ec56d9e",
+          "far": 1.0,
+          "rank": 355,
+          "bh_critical": 0.044375,
+          "bh_accepted": false,
+          "holm_critical": 0.0010869565217391304,
+          "holm_accepted": false
+        },
+        {
+          "index": 2,
+          "label": "2:b3f1ffaf",
+          "far": 1.0,
+          "rank": 356,
+          "bh_critical": 0.044500000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0011111111111111111,
+          "holm_accepted": false
+        },
+        {
+          "index": 3,
+          "label": "3:23877753",
+          "far": 1.0,
+          "rank": 357,
+          "bh_critical": 0.044625,
+          "bh_accepted": false,
+          "holm_critical": 0.0011363636363636365,
+          "holm_accepted": false
+        },
+        {
+          "index": 6,
+          "label": "6:5a88669f",
+          "far": 1.0,
+          "rank": 358,
+          "bh_critical": 0.044750000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0011627906976744186,
+          "holm_accepted": false
+        },
+        {
+          "index": 8,
+          "label": "8:3f620abd",
+          "far": 1.0,
+          "rank": 359,
+          "bh_critical": 0.044875,
+          "bh_accepted": false,
+          "holm_critical": 0.0011904761904761906,
+          "holm_accepted": false
+        },
+        {
+          "index": 9,
+          "label": "9:67d09a3c",
+          "far": 1.0,
+          "rank": 360,
+          "bh_critical": 0.045000000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0012195121951219512,
+          "holm_accepted": false
+        },
+        {
+          "index": 10,
+          "label": "10:aa3333da",
+          "far": 1.0,
+          "rank": 361,
+          "bh_critical": 0.045125,
+          "bh_accepted": false,
+          "holm_critical": 0.00125,
+          "holm_accepted": false
+        },
+        {
+          "index": 11,
+          "label": "11:f6399206",
+          "far": 1.0,
+          "rank": 362,
+          "bh_critical": 0.045250000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.001282051282051282,
+          "holm_accepted": false
+        },
+        {
+          "index": 12,
+          "label": "12:1b4ba1a0",
+          "far": 1.0,
+          "rank": 363,
+          "bh_critical": 0.045375,
+          "bh_accepted": false,
+          "holm_critical": 0.0013157894736842105,
+          "holm_accepted": false
+        },
+        {
+          "index": 16,
+          "label": "16:2e4c316b",
+          "far": 1.0,
+          "rank": 364,
+          "bh_critical": 0.045500000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0013513513513513514,
+          "holm_accepted": false
+        },
+        {
+          "index": 18,
+          "label": "18:75153767",
+          "far": 1.0,
+          "rank": 365,
+          "bh_critical": 0.045625,
+          "bh_accepted": false,
+          "holm_critical": 0.001388888888888889,
+          "holm_accepted": false
+        },
+        {
+          "index": 27,
+          "label": "27:fe8c1954",
+          "far": 1.0,
+          "rank": 366,
+          "bh_critical": 0.045750000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0014285714285714286,
+          "holm_accepted": false
+        },
+        {
+          "index": 32,
+          "label": "32:75939b61",
+          "far": 1.0,
+          "rank": 367,
+          "bh_critical": 0.045875,
+          "bh_accepted": false,
+          "holm_critical": 0.0014705882352941176,
+          "holm_accepted": false
+        },
+        {
+          "index": 34,
+          "label": "34:b8e31528",
+          "far": 1.0,
+          "rank": 368,
+          "bh_critical": 0.046000000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0015151515151515152,
+          "holm_accepted": false
+        },
+        {
+          "index": 36,
+          "label": "36:1e6f4532",
+          "far": 1.0,
+          "rank": 369,
+          "bh_critical": 0.046125,
+          "bh_accepted": false,
+          "holm_critical": 0.0015625,
+          "holm_accepted": false
+        },
+        {
+          "index": 40,
+          "label": "40:f4bf2828",
+          "far": 1.0,
+          "rank": 370,
+          "bh_critical": 0.046250000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.0016129032258064516,
+          "holm_accepted": false
+        },
+        {
+          "index": 48,
+          "label": "48:f4bf2828",
+          "far": 1.0,
+          "rank": 371,
+          "bh_critical": 0.046375,
+          "bh_accepted": false,
+          "holm_critical": 0.0016666666666666668,
+          "holm_accepted": false
+        },
+        {
+          "index": 75,
+          "label": "75:b2f19234",
+          "far": 1.0,
+          "rank": 372,
+          "bh_critical": 0.04650000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.001724137931034483,
+          "holm_accepted": false
+        },
+        {
+          "index": 77,
+          "label": "77:298aff44",
+          "far": 1.0,
+          "rank": 373,
+          "bh_critical": 0.046625,
+          "bh_accepted": false,
+          "holm_critical": 0.0017857142857142859,
+          "holm_accepted": false
+        },
+        {
+          "index": 100,
+          "label": "100:3d906c80",
+          "far": 1.0,
+          "rank": 374,
+          "bh_critical": 0.04675000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.001851851851851852,
+          "holm_accepted": false
+        },
+        {
+          "index": 140,
+          "label": "140:5b61268f",
+          "far": 1.0,
+          "rank": 375,
+          "bh_critical": 0.046875,
+          "bh_accepted": false,
+          "holm_critical": 0.0019230769230769232,
+          "holm_accepted": false
+        },
+        {
+          "index": 173,
+          "label": "173:f4bf2828",
+          "far": 1.0,
+          "rank": 376,
+          "bh_critical": 0.047,
+          "bh_accepted": false,
+          "holm_critical": 0.002,
+          "holm_accepted": false
+        },
+        {
+          "index": 175,
+          "label": "175:f4bf2828",
+          "far": 1.0,
+          "rank": 377,
+          "bh_critical": 0.047125,
+          "bh_accepted": false,
+          "holm_critical": 0.0020833333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 178,
+          "label": "178:e670cea0",
+          "far": 1.0,
+          "rank": 378,
+          "bh_critical": 0.04725,
+          "bh_accepted": false,
+          "holm_critical": 0.002173913043478261,
+          "holm_accepted": false
+        },
+        {
+          "index": 181,
+          "label": "181:81c48800",
+          "far": 1.0,
+          "rank": 379,
+          "bh_critical": 0.047375,
+          "bh_accepted": false,
+          "holm_critical": 0.002272727272727273,
+          "holm_accepted": false
+        },
+        {
+          "index": 184,
+          "label": "184:f4bf2828",
+          "far": 1.0,
+          "rank": 380,
+          "bh_critical": 0.0475,
+          "bh_accepted": false,
+          "holm_critical": 0.002380952380952381,
+          "holm_accepted": false
+        },
+        {
+          "index": 191,
+          "label": "191:ddbb11e7",
+          "far": 1.0,
+          "rank": 381,
+          "bh_critical": 0.047625,
+          "bh_accepted": false,
+          "holm_critical": 0.0025,
+          "holm_accepted": false
+        },
+        {
+          "index": 204,
+          "label": "204:825e1905",
+          "far": 1.0,
+          "rank": 382,
+          "bh_critical": 0.04775,
+          "bh_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "holm_accepted": false
+        },
+        {
+          "index": 205,
+          "label": "205:56bae679",
+          "far": 1.0,
+          "rank": 383,
+          "bh_critical": 0.047875,
+          "bh_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "holm_accepted": false
+        },
+        {
+          "index": 206,
+          "label": "206:825e1905",
+          "far": 1.0,
+          "rank": 384,
+          "bh_critical": 0.048,
+          "bh_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "holm_accepted": false
+        },
+        {
+          "index": 218,
+          "label": "218:f4bf2828",
+          "far": 1.0,
+          "rank": 385,
+          "bh_critical": 0.048125,
+          "bh_accepted": false,
+          "holm_critical": 0.003125,
+          "holm_accepted": false
+        },
+        {
+          "index": 225,
+          "label": "225:c56fe661",
+          "far": 1.0,
+          "rank": 386,
+          "bh_critical": 0.04825,
+          "bh_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "holm_accepted": false
+        },
+        {
+          "index": 230,
+          "label": "230:f4bf2828",
+          "far": 1.0,
+          "rank": 387,
+          "bh_critical": 0.048375,
+          "bh_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "holm_accepted": false
+        },
+        {
+          "index": 231,
+          "label": "231:f4bf2828",
+          "far": 1.0,
+          "rank": 388,
+          "bh_critical": 0.0485,
+          "bh_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "holm_accepted": false
+        },
+        {
+          "index": 234,
+          "label": "234:21a00c3d",
+          "far": 1.0,
+          "rank": 389,
+          "bh_critical": 0.048625,
+          "bh_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "holm_accepted": false
+        },
+        {
+          "index": 235,
+          "label": "235:86f2d8d7",
+          "far": 1.0,
+          "rank": 390,
+          "bh_critical": 0.04875,
+          "bh_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "holm_accepted": false
+        },
+        {
+          "index": 254,
+          "label": "254:6be2337a",
+          "far": 1.0,
+          "rank": 391,
+          "bh_critical": 0.048875,
+          "bh_accepted": false,
+          "holm_critical": 0.005,
+          "holm_accepted": false
+        },
+        {
+          "index": 259,
+          "label": "259:f4bf2828",
+          "far": 1.0,
+          "rank": 392,
+          "bh_critical": 0.049,
+          "bh_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "holm_accepted": false
+        },
+        {
+          "index": 270,
+          "label": "270:f4bf2828",
+          "far": 1.0,
+          "rank": 393,
+          "bh_critical": 0.049125,
+          "bh_accepted": false,
+          "holm_critical": 0.00625,
+          "holm_accepted": false
+        },
+        {
+          "index": 339,
+          "label": "339:efc3cc96",
+          "far": 1.0,
+          "rank": 394,
+          "bh_critical": 0.04925,
+          "bh_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "holm_accepted": false
+        },
+        {
+          "index": 351,
+          "label": "351:59bc4c34",
+          "far": 1.0,
+          "rank": 395,
+          "bh_critical": 0.049375,
+          "bh_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 380,
+          "label": "380:cfdf77ca",
+          "far": 1.0,
+          "rank": 396,
+          "bh_critical": 0.0495,
+          "bh_accepted": false,
+          "holm_critical": 0.01,
+          "holm_accepted": false
+        },
+        {
+          "index": 391,
+          "label": "391:01a48d11",
+          "far": 1.0,
+          "rank": 397,
+          "bh_critical": 0.049625,
+          "bh_accepted": false,
+          "holm_critical": 0.0125,
+          "holm_accepted": false
+        },
+        {
+          "index": 393,
+          "label": "393:f4bf2828",
+          "far": 1.0,
+          "rank": 398,
+          "bh_critical": 0.04975,
+          "bh_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "holm_accepted": false
+        },
+        {
+          "index": 394,
+          "label": "394:f4bf2828",
+          "far": 1.0,
+          "rank": 399,
+          "bh_critical": 0.049875,
+          "bh_accepted": false,
+          "holm_critical": 0.025,
+          "holm_accepted": false
+        },
+        {
+          "index": 398,
+          "label": "398:c8dd8cea",
+          "far": 1.0,
+          "rank": 400,
+          "bh_critical": 0.05,
+          "bh_accepted": false,
+          "holm_critical": 0.05,
+          "holm_accepted": false
+        }
+      ],
+      "expected_max_note": ""
+    }
+  },
+  "wall_clock_s": 0.0,
+  "gate": {
+    "n_trials": 354,
+    "b": 10000,
+    "observed_best": 0.3846863986188078,
+    "p": 0.0082991700829917,
+    "p_floor": 9.999000099990002e-05,
+    "at_floor": false,
+    "reject": true,
+    "q": 0.05,
+    "null_max_mean": 0.24288973179802534,
+    "null_max_quantiles": {
+      "0.5": 0.23634150320022074,
+      "0.2": 0.27499997377539104,
+      "0.1": 0.30087831054505804,
+      "0.05": 0.322870436887477,
+      "0.01": 0.382734991527778
+    },
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "is_the_gate": true,
+    "observed_best_positive": true,
+    "accept": true,
+    "floor_note": "accept = reject AND observed_best > 0. The second term is not a formality: under a sign-flip null a losing high-turnover candidate can clear the first one decisively."
+  },
+  "uncorrected": {
+    "best_score": 0.3846863986188078,
+    "best_far": 0.008017528785639393,
+    "n_at_or_below_q": 204,
+    "reading": "what a report with no correction would say: the best of 400 candidates scored +0.3847 at a nominal false-acceptance rate of 0.008018"
+  },
+  "deflation": {
+    "best_score": 0.3846863986188078,
+    "expected_max_under_null": 0.22572993520029486,
+    "margin": 0.15895646341851297,
+    "clears_selection_bar": true,
+    "n_trials": 400,
+    "n_sessions": 384,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "null_source": "round_turn_mc",
+  "error_control_note": "This campaign's null is the sign-flip over round turns, not the conditional null, so Task 38's FWER of 0.060 CI [0.041, 0.088] does NOT describe it. The figure that does is Task 57's, measured on this configuration (round_turn_mc x max_of_n, q = 0.05, B = 10,000) at both N = 10 and N = 50: 0 acceptances in 400 campaigns per arm, FWER below about 0.010 at 95%, below 0.005 pooled over 800. It is conservative rather than merely correct, and Task 59 prices the conservatism: 80% power at a signal strength of 0.287 against 0.242 for the conditional null. See docs/design/pre-registration.md sections 3a and 3b."
+}

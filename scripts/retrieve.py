@@ -93,6 +93,7 @@ def worth_distilling() -> list[dict]:
     rows = [v for v in json.loads(REGISTRY.read_text())["papers"].values()
             if v.get("feasibility") in ("direct", "adaptable")
             and not v.get("hypothesis_path")
+            and not v.get("duplicate_of")      # the registry marks the copies
             and (v.get("relevance") == "high" or v.get("gate_relevance") == "high")]
     rows.sort(key=lambda v: (order.get(v.get("relevance")),
                              order.get(v.get("gate_relevance"))))

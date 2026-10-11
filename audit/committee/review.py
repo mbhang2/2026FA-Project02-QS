@@ -290,16 +290,60 @@ def prompt_digests() -> dict:
 
 # --------------------------------------------------------------------------- #
 
+# **A gateway fault reaches us two different ways, and both must be retried.**
+# A 502 or a timeout raises `LLMUnavailable`, which `_one` used to convert
+# straight into a CANNOT_TELL verdict. A substitution raises `ModelSubstituted`,
+# which propagates by design, because a committee that ran on a model its record
+# does not name means nothing.
+#
+# Session 07 lost **6 of 12 seat-runs** to 502s: campaign 3 was judged by one
+# auditor of four and its artefact still reads "the committee looked at this".
+# Re-running those five seats by hand afterwards needed 11 attempts and hit
+# timeouts, 502s AND a substitution -- a retry that handles only one of the two
+# paths dies on the other, which is exactly what my first attempt at it did.
+#
+# Progressive, matching `research_session.STAGE_BACKOFF_S`: the substitution
+# window was measured at several minutes on 2026-09-30 and outlasted 27 minutes
+# on 2026-10-05, so short retries are not enough.
+SEAT_BACKOFF_S = (30, 120, 300, 600, 600)
+_TRANSIENT = ("502", "503", "504", "ReadTimeout", "ConnectTimeout", "Timeout",
+              "ConnectionError", "RemoteDisconnected", "ServiceUnavailable")
+
+
+def _is_transient(exc: Exception) -> bool:
+    blob = f"{type(exc).__name__}: {exc}"
+    return any(t in blob for t in _TRANSIENT)
+
+
 def _one(axis: str, client: Client, summary: dict, source: str | None,
          hypothesis: str | None) -> AuditorVerdict:
-    try:
-        got = client.ask(_prompt(axis), _slice(axis, summary, source, hypothesis))
-    except ModelSubstituted:
-        raise
-    except LLMUnavailable as exc:
-        return AuditorVerdict(axis=axis, verdict="CANNOT_TELL",
-                              reasons=(f"the auditor did not run: {exc}",),
-                              error=str(exc))
+    import time
+    last = None
+    for attempt in range(len(SEAT_BACKOFF_S) + 1):
+        try:
+            got = client.ask(_prompt(axis), _slice(axis, summary, source, hypothesis))
+            break
+        except ModelSubstituted as exc:
+            last = exc                      # retried, never accepted
+        except LLMUnavailable as exc:
+            if not _is_transient(exc):
+                return AuditorVerdict(
+                    axis=axis, verdict="CANNOT_TELL",
+                    reasons=(f"the auditor did not run: {exc}",), error=str(exc))
+            last = exc
+        if attempt == len(SEAT_BACKOFF_S):
+            # Exhausted. Still CANNOT_TELL -- no verdict is not no veto -- but the
+            # reason now says how hard we tried, so a reader can tell a flaky
+            # endpoint from a seat nobody asked.
+            return AuditorVerdict(
+                axis=axis, verdict="CANNOT_TELL",
+                reasons=(f"the auditor did not run after "
+                         f"{len(SEAT_BACKOFF_S) + 1} attempts over "
+                         f"{sum(SEAT_BACKOFF_S) // 60} minutes: {last}",),
+                error=str(last))
+        time.sleep(SEAT_BACKOFF_S[attempt])
+    else:                                   # pragma: no cover - loop always breaks
+        raise AssertionError("unreachable")
     verdict = str(got.get("verdict", "")).upper()
     if verdict not in VERDICTS:
         return AuditorVerdict(

@@ -1,0 +1,85 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+      ],
+      "confidence_note": "",
+      "error": "HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "All views (gate p=1.0/REJECT, deflation margin -0.089, BH/Holm/uncorrected 0 discoveries) cohere on a rejection with no inflated claim to undermine; denominators are healthy (384 sessions, 235 downside sessions, 362 trades), p is not at the floor, but I could not see per-session return distributions, prior-campaign look count, or the validation split (NOT RUN), and a few display fields (null_max_quantiles 0.01 and some FAR entries) are corrupted by redaction while the decision-bearing numbers are intact.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+      ],
+      "confidence_note": "",
+      "error": "HTTP 502: <!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>502 Proxy Error</title>\n</head><body>\n<h1>Proxy Error</h1>\n<p>The proxy server received an invalid\r\nresponse from an upstream ser"
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "By-hour UTC is severely concentrated: hours 16 (+2992) and 17 (+3758) generate all the profit, while hours 14 (-2454) and 15 (-2503) are strongly negative. Removing hour 16 alone flips total P&L negative (-152); removing hour 17 alone flips it to -917. The result is essentially the intraday window of 16-17 UTC, not a broadly distributed edge.",
+        "No stated mechanism is given for why profit should persist in exactly these two hours while the strategy simultaneously trades two other hours that consistently lose money \u2014 this looks like an unfiltered time-of-day exposure rather than a deliberate regime.",
+        "61% of sessions lose money (235/384) and the top 5% of trades supply 39% of profit, consistent with a strategy reliant on a narrow set of large winners rather than broad-based edge; combined with the hourly concentration this further indicates fragility.",
+        "Monthly distribution is also narrow at the top: the three biggest months (2025-04 +1161, 2025-11 +897, 2024-08 +720) together contribute ~2778 of the ~2840 net, so removing them takes the result to roughly breakeven."
+      ],
+      "confidence_note": "I cannot see any out-of-sample evidence, nor trade-level or session-level P&L series, nor a stated rationale for the intraday window; my judgement rests solely on the concentration signals visible in the by-hour, by-month, and outcome aggregates.",
+      "error": null
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 2,
+  "seats_failed": [
+    "leakage",
+    "economics"
+  ],
+  "incomplete": true,
+  "incomplete_note": "One or more auditors never ran, so this campaign was judged by fewer seats than the committee has. Their failure is recorded as a VETO because no verdict is not no veto, but the reading 'the committee looked at this' is weaker than it appears.",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 49530,
+      "completion_tokens": 3536,
+      "reasoning_tokens": 3374,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 1693,
+      "completion_tokens": 5183,
+      "reasoning_tokens": 4806,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "proposer_model": "deepseek-v4-pro",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

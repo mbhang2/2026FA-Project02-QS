@@ -123,6 +123,11 @@ campaigns:
     generation_width: 4        # optional; Amendment 12. Omit or 1 for the
                                # chain. Above 1, trials of a generation share
                                # one history and run at the same time.
+                               # `auto` lets scripts/capacity.py measure this
+                               # machine and choose, ONCE for the whole plan,
+                               # before campaign 1 registers. The number it
+                               # picks is written into every member's
+                               # pre-registration as an ordinary declaration.
 ```
 
 Written before the session starts, and copied into the session record. `--resume`
@@ -346,6 +351,44 @@ def _main() -> int:
                    for k in range(iterations)]
     if not entries:
         sys.exit("the plan names no campaigns")
+
+    # **`generation_width: auto` is decided ONCE, for the whole plan.**
+    # Brian's conditioning stage, at the only granularity that is coherent here:
+    # the L2 gate corrects over a declared family, and W decides what each agent
+    # sees, so two members of one family running at different widths would be
+    # two different search procedures inside one multiplicity correction. Per
+    # campaign would also re-measure a loaded laptop mid-session and drift
+    # downward as the night went on.
+    #
+    # Decided before campaign 1 registers, which is still before anything is
+    # spent, and then written into every member's pre-registration as an
+    # ordinary declared integer.
+    widths = {c.get("generation_width") for c in entries}
+    if "auto" in widths:
+        if widths - {"auto"}:
+            sys.exit("a plan sets generation_width: auto on some campaigns and "
+                     "a number on others. W decides what each agent sees, so "
+                     "one family runs at one width: use auto for all or none.")
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import capacity as capacity_mod
+        # The default comes from `nq_campaign` rather than being retyped here:
+        # a plan that omits `profile` gets whatever that script's default is,
+        # and two copies of that string would be one rename from disagreeing
+        # about which profile was measured.
+        import nq_campaign as campaign_mod
+        prof = next((c.get("profile") for c in entries if c.get("profile")), None)
+        decision = capacity_mod.decide(prof or campaign_mod.PROFILE)
+        if decision["verdict"] != "OK":
+            sys.exit(f"cannot decide a generation width for this session: "
+                     f"{decision['reason']}")
+        for c in entries:
+            c["generation_width"] = decision["width"]
+        print(f"capacity decided generation_width={decision['width']} for all "
+              f"{len(entries)} campaign(s) ({decision['reason']})", flush=True)
+        if decision.get("unproven_width"):
+            print(f"  NOTE: {decision['unproven_width']}", flush=True)
+        if decision.get("warning"):
+            print(f"  capacity WARNING: {decision['warning']}", flush=True)
 
     names = [str(c["name"]) for c in entries]
     if len(set(names)) != len(names):

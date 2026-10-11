@@ -52,6 +52,11 @@ GIB = 1073741824
 # is a factor of 1024 in the direction that says a trial needs 780 GiB.
 _RU_MAXRSS_TO_BYTES = 1 if platform.system() == "Darwin" else 1024
 
+# The widest W whose isolation has actually been proven: `worker_tree.py --prove`
+# on 2026-10-04 ran 4 workers and every one reproduced the sequential score
+# bit-identically. Not a cap -- a fact `decide` reports when it chooses wider.
+PROVEN_WIDTH = 4
+
 
 # --------------------------------------------------------------------------- #
 # what the machine is
@@ -353,6 +358,74 @@ def plan(width: int, profile: str, *, headroom: float = 0.85) -> dict:
     return out
 
 
+def decide(profile: str, *, ceiling: int | None = None,
+           measure_if_missing: bool = True, quiet: bool = False) -> dict:
+    """Choose W for a pre-registration, and show the work.
+
+    **Why this is allowed to choose, when the run stage is not.** W decides what
+    each agent sees, so it has to be fixed before any trial is spent -- not
+    because a machine must not pick it, but because it must not be re-picked
+    once numbers exist. Registration is the moment where both are true: no trial
+    has run, no score exists, and whatever is chosen here is written into the
+    pre-registration and frozen there with everything else. A W re-derived at
+    run time would be adaptation; a W derived at registration is a declaration
+    that happens to have been computed rather than typed.
+
+    So `--generation-width auto` is answered HERE, and `--stage run` keeps
+    refusing: if capacity fell between registering and running, the right
+    outcome is still a human deciding, because the declared number is now part
+    of the record.
+
+    Measures the machine if it has never been measured for this profile. That is
+    the conditioning step, it costs one `purpose=check` trial, and N does not
+    count it.
+    """
+    fp = footprint(profile)
+    measured_now = False
+    if fp is None and measure_if_missing:
+        if not quiet:
+            print(f"  no footprint for {profile!r} on this machine yet; "
+                  f"measuring one purpose=check trial (outside N)", flush=True)
+        measure_trial(profile, quiet=quiet)
+        measured_now = True
+
+    p = plan(1, profile)
+    if p["verdict"] == "UNKNOWN":
+        return {"width": None, "verdict": "UNKNOWN", "reason": p["reason"],
+                "plan": p, "measured_now": measured_now}
+
+    width = p["max_width"]
+    limiter = p["binding"]
+    if ceiling is not None and ceiling < width:
+        width, limiter = ceiling, f"ceiling ({ceiling}) set by the caller"
+    width = max(1, width)
+
+    # Re-planned at the width actually chosen, so the recorded plan and the
+    # decision describe the same run rather than the probe's W=1.
+    p = plan(width, profile)
+    out = {"width": width, "verdict": "OK", "plan": p, "binding": limiter,
+           "max_width": p["max_width"], "ceiling": ceiling,
+           "measured_now": measured_now, "machine": p["machine"],
+           "profile": profile,
+           "footprint_bytes": (p["footprint"] or {}).get("peak_rss_bytes"),
+           "decided_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),
+           "reason": f"W={width}, bound by {limiter}"}
+
+    # Isolation has only ever been PROVEN at four workers (worker_tree.py
+    # --prove, 2026-10-04, 4/4 bit-identical to the sequential score). A wider
+    # run is not forbidden -- `stage_run` calls `worker_tree.verify(width)`
+    # every time -- but the record should say that the width was never put
+    # through the equivalence proof rather than quietly implying it was.
+    if width > PROVEN_WIDTH:
+        out["unproven_width"] = (
+            f"W={width} exceeds the widest isolation proof on record "
+            f"(W={PROVEN_WIDTH}). `scripts/worker_tree.py --prove --create "
+            f"{width}` spends only purpose=check runs and would close that gap.")
+    if p.get("warning"):
+        out["warning"] = p["warning"]
+    return out
+
+
 def render(p: dict) -> None:
     c, m, d = p["cores"], p["memory"], p["disk"]
     print(f"machine {p['machine']}  {c['brand']}")
@@ -396,11 +469,30 @@ def main(argv=None) -> int:
                     help="declared generation_width to check; exits 1 if refused")
     ap.add_argument("--recommend", action="store_true",
                     help="the largest W this machine carries, to DECLARE next time")
+    ap.add_argument("--decide", action="store_true",
+                    help="choose W for a pre-registration, measuring first if "
+                         "this machine has never been measured for the profile")
+    ap.add_argument("--ceiling", type=int, default=None,
+                    help="never choose a W above this, whatever the machine says")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
 
     if a.measure:
         measure_trial(a.profile)
+
+    if a.decide:
+        d = decide(a.profile, ceiling=a.ceiling)
+        if a.json:
+            print(json.dumps(d, indent=2, sort_keys=True))
+            return 0 if d["verdict"] == "OK" else 2
+        if d["verdict"] != "OK":
+            print(d["reason"], file=sys.stderr)
+            return 2
+        render(d["plan"])
+        print(f"\n  DECIDED W={d['width']}  ({d['reason']})")
+        if d.get("unproven_width"):
+            print(f"  NOTE: {d['unproven_width']}")
+        return 0
 
     p = plan(a.width or 1, a.profile)
     if a.json:

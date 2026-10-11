@@ -409,6 +409,30 @@ def stage_register(name: str, hypothesis: pathlib.Path,
     agent_cfg["probe_before_trial"] = bool(cc.get("probe_before_trial"))
 
     d.mkdir(parents=True, exist_ok=True)
+    # **`--generation-width auto`: the conditioning stage decides W here.**
+    # Brian asked for a pre-run script that sizes parallelism to the machine.
+    # Registration is where that can be honest: `stage_run` still refuses rather
+    # than resizes, because by then the number is in the record and re-deriving
+    # it would make the search path depend on the load at the moment the run
+    # happened to start. Here nothing has been spent yet, so a measured W is a
+    # declaration that was computed instead of typed -- and the evidence it was
+    # computed from is written beside the record.
+    capacity_decision = None
+    if generation_width == "auto":
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import capacity as capacity_mod
+        capacity_decision = capacity_mod.decide(profile_name)
+        if capacity_decision["verdict"] != "OK":
+            sys.exit(f"cannot decide a generation width: "
+                     f"{capacity_decision['reason']}")
+        generation_width = capacity_decision["width"]
+        print(f"  capacity decided generation_width={generation_width} "
+              f"({capacity_decision['reason']})", flush=True)
+        if capacity_decision.get("unproven_width"):
+            print(f"  NOTE: {capacity_decision['unproven_width']}", flush=True)
+        if capacity_decision.get("warning"):
+            print(f"  capacity WARNING: {capacity_decision['warning']}", flush=True)
+
     record = CampaignRecord(
         campaign_id=name, profile=profile_name, budget=cc["n_trials"],
         q=cc["q"],
@@ -455,6 +479,12 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         record.seed_digest = hashlib.sha256(seed_text.encode()).hexdigest()[:16]
         print(f"  seeded champion from {record.seed_path}  ({record.seed_digest})")
     digest = record.write(d / "campaign.json")
+    if capacity_decision is not None:
+        # Beside `campaign.json`, never inside it: the record's digest is
+        # re-verified by every later stage, and a machine measurement belongs in
+        # the provenance rather than in the thing being fingerprinted.
+        (d / "capacity-at-registration.json").write_text(
+            json.dumps(capacity_decision, indent=2, sort_keys=True) + "\n")
     print(f"  registered {name}  N={cc['n_trials']}  q={cc['q']}  "
           f"null_source={cc['null_source']}  correction={cc['correction']}")
     print(f"  digest {digest}")
@@ -1032,6 +1062,25 @@ def stage_report(name: str) -> None:
     _record_outcome(name)
 
 
+def _width_arg(v: str):
+    """`--generation-width N` or `--generation-width auto`.
+
+    `auto` is resolved at REGISTRATION, where choosing is legitimate: no trial
+    has run and no score exists, so a computed W is still a declaration frozen
+    with the rest of the pre-registration. It is not accepted on later stages --
+    they read the number the record already fixed.
+    """
+    if v == "auto":
+        return "auto"
+    try:
+        n = int(v)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{v!r} is neither an integer nor 'auto'")
+    if n < 1:
+        raise argparse.ArgumentTypeError("generation width is at least 1")
+    return n
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -1059,7 +1108,7 @@ def main() -> int:
                     help="proceed even though the machine cannot carry the "
                          "declared generation_width; the reason is recorded in "
                          "the campaign's capacity.json")
-    ap.add_argument("--generation-width", type=int, default=None,
+    ap.add_argument("--generation-width", type=_width_arg, default=None,
                     help="Amendment 12: how many trials share one history and "
                          "run at the same time; --stage register only, frozen "
                          "into campaign.json. Omit or 1 for the chain every "
@@ -1133,6 +1182,11 @@ def main() -> int:
                 or a.probe:
             sys.exit(f"--n, --model, --min-exposed and --probe apply to --stage "
                      f"register only; --stage {a.stage} reads them from campaign.json.")
+        if a.generation_width == "auto":
+            sys.exit("--generation-width auto applies to --stage register only. "
+                     "A later stage reads the width the record already fixed; "
+                     "re-deciding it would change what each agent sees "
+                     "mid-campaign.")
         if a.ignore_capacity and a.stage != "run":
             sys.exit(f"--ignore-capacity applies to --stage run only; "
                      f"--stage {a.stage} builds no workers.")

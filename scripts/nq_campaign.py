@@ -460,7 +460,7 @@ def stage_register(name: str, hypothesis: pathlib.Path,
     print(f"  digest {digest}")
 
 
-def stage_run(name: str) -> None:
+def stage_run(name: str, ignore_capacity: str | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord, run_trial
 
     d = OUT / name
@@ -477,6 +477,45 @@ def stage_run(name: str) -> None:
         print(f"{name}: all {record.budget} trials already run")
         return
     print(f"{name}: resuming at trial {start} of {record.budget}", flush=True)
+
+    width = max(1, int(record.generation_width or 1))
+    # **The conditioning stage (Brian, 2026-10-11).** Ask the machine what it
+    # can carry BEFORE building anything, rather than letting it find out at
+    # trial 300 of 400. The full test suite was killed by memory pressure on
+    # this machine the same day; a campaign is the same accident with three
+    # days of wall clock attached.
+    #
+    # It REFUSES rather than lowering W, and that is the whole design decision.
+    # `generation_width` is pre-registered and stamped on every ledger row
+    # because it decides what each agent SEES -- `shown` is snapshotted once per
+    # generation below, so at W=4 trials 0-3 propose blind and 4-7 see 0-3,
+    # while at W=8 all eight propose blind. Sizing W from whatever hardware is
+    # to hand would make the search path a property of the laptop, and a
+    # quietly narrowed run is a different experiment wearing the same campaign
+    # id. W = 1 can never be refused: `max_width` floors at 1.
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import capacity as capacity_mod
+    cap = capacity_mod.plan(width, record.profile)
+    (d / "capacity.json").write_text(
+        json.dumps({**cap, "ignored": ignore_capacity}, indent=2, sort_keys=True) + "\n")
+    print(f"  capacity: W={width} {cap['verdict']}"
+          + (f"; machine carries W<={cap['max_width']}, bound by {cap['binding']}"
+             if cap.get("binding") else f"; {cap['reason']}"), flush=True)
+    if cap.get("warning"):
+        print(f"  capacity WARNING: {cap['warning']}", flush=True)
+    if cap["verdict"] != "OK" and not ignore_capacity:
+        capacity_mod.render(cap)
+        sys.exit(
+            f"refusing to start {name} at W={width}: {cap['reason']}.\n"
+            f"W is NOT being lowered for you -- generation_width is "
+            f"pre-registered and changes what each agent sees, so a narrower "
+            f"run is a different experiment. Either free capacity, re-register "
+            f"at W<={cap.get('max_width', 1)}, or pass --ignore-capacity "
+            f"'<reason>' to proceed on the record.")
+    if ignore_capacity and cap["verdict"] != "OK":
+        print(f"  capacity OVERRIDDEN: {ignore_capacity}", flush=True)
+
+
 
     # **A killed trial leaves the candidate behind.** `run_trial` restores
     # `current.py` in a `finally`, which a SIGKILL does not run -- and on this
@@ -568,7 +607,6 @@ def stage_run(name: str) -> None:
     # same time; the next generation sees all of them. W = 1 is the chain the
     # first eighteen campaigns ran, and it keeps running in THIS repository
     # rather than in a worker, so nothing about a W = 1 campaign changes.
-    width = max(1, int(record.generation_width or 1))
     workers = []
     if width > 1:
         sys.path.insert(0, str(ROOT / "scripts"))
@@ -1017,6 +1055,10 @@ def main() -> int:
                     help="Amendment 6 exposure floor for this campaign, in (0, 1]; "
                          "--stage register only, frozen into campaign.json. Default "
                          "is campaign.min_exposed_fraction in config/run.yaml.")
+    ap.add_argument("--ignore-capacity", default=None, metavar="REASON",
+                    help="proceed even though the machine cannot carry the "
+                         "declared generation_width; the reason is recorded in "
+                         "the campaign's capacity.json")
     ap.add_argument("--generation-width", type=int, default=None,
                     help="Amendment 12: how many trials share one history and "
                          "run at the same time; --stage register only, frozen "
@@ -1091,8 +1133,14 @@ def main() -> int:
                 or a.probe:
             sys.exit(f"--n, --model, --min-exposed and --probe apply to --stage "
                      f"register only; --stage {a.stage} reads them from campaign.json.")
-        {"run": stage_run, "nulls": stage_nulls,
-         "validate": stage_validate, "report": stage_report}[a.stage](a.name)
+        if a.ignore_capacity and a.stage != "run":
+            sys.exit(f"--ignore-capacity applies to --stage run only; "
+                     f"--stage {a.stage} builds no workers.")
+        if a.stage == "run":
+            stage_run(a.name, ignore_capacity=a.ignore_capacity)
+        else:
+            {"nulls": stage_nulls, "validate": stage_validate,
+             "report": stage_report}[a.stage](a.name)
     return 0
 
 

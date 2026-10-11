@@ -1,0 +1,20 @@
+{
+  "bfda0b2f6483a041": {
+    "machine": {
+      "brand": "Apple M1 Pro",
+      "cores_total": 10,
+      "memory_total": 17179869184,
+      "platform": "Darwin"
+    },
+    "profiles": {
+      "nq-train": {
+        "measured_at": "2026-10-11T17:41:59+00:00",
+        "peak_rss_bytes": 918650880,
+        "profile": "nq-train",
+        "purpose": "check",
+        "python": "3.11.5",
+        "wall_s": 299.60417529195547
+      }
+    }
+  }
+}

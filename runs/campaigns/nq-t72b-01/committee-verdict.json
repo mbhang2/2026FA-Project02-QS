@@ -1,0 +1,56 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the runtime implementation of ctx.history/actionable, but the strategy source uses only the last closed bar and incrementally updated session state, with no future access or evaluation peeking.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see per-session PnL concentration, so a few outlier sessions could still be driving the high kurtosis and Sortino, but the reported session and trade counts do not show a degenerate denominator and the gate p-value is not at the resolution floor.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: empty reply: finish_reason='length', completion_tokens=16384, reasoning_tokens=16384, max_tokens=16384"
+      ],
+      "confidence_note": "",
+      "error": "empty reply: finish_reason='length', completion_tokens=16384, reasoning_tokens=16384, max_tokens=16384"
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "PnL is heavily concentrated by weekday: Monday ($2,345.70) and Thursday ($2,155.95) together account for about 83.9% of total PnL ($5,363.25), while Tuesday and Sunday are negative. No reason is given for why this weekday pattern would persist.",
+        "PnL is concentrated by hour: 14 UTC ($1,859.75) and 11 UTC ($1,120.15) together account for about 55.6% of total PnL, with several hours negative. This looks like a narrow intraday regime rather than broad behavior.",
+        "Monthly PnL is concentrated: April 2025 alone is $2,173.60, about 40.5% of total PnL, and February+April 2025 are about 63.1% of total PnL.",
+        "242 of 295 sessions with exposure are downside sessions, so gains appear concentrated in a minority of sessions even though the best single session is only about 4.8% of total PnL."
+      ],
+      "confidence_note": "I could not see the redacted top-5% profit concentration or any validation/out-of-sample evidence, but the visible calendar and session concentration is sufficient to veto on robustness.",
+      "error": null
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

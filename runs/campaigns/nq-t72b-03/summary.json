@@ -1,0 +1,271 @@
+{
+  "campaign_id": "nq-t72b-03",
+  "record_digest": "57ef1a99d85c1b7443b1ade7200b93185966485536a5a33b6457f3dc4d233c40",
+  "record_tampered": false,
+  "budget": 20,
+  "q": 0.05,
+  "n_trials": 20,
+  "harness_failures": 0,
+  "unaccounted": 0,
+  "outcomes": {
+    "completed": 17,
+    "crashed": 3
+  },
+  "per_trial_accepts_at_0.001": 0,
+  "diagnostics_only": {
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "correction": {
+      "n": 20,
+      "q": 0.05,
+      "bh_discoveries": 0,
+      "holm_discoveries": 0,
+      "uncorrected_discoveries": 0,
+      "best_far": 0.23909592667206203,
+      "best_label": "None:ba473b00",
+      "decisions": [
+        {
+          "index": 14,
+          "label": "None:ba473b00",
+          "far": 0.23909592667206203,
+          "rank": 1,
+          "bh_critical": 0.0025000000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.0025,
+          "holm_accepted": false
+        },
+        {
+          "index": 7,
+          "label": "None:18e2be2c",
+          "far": 0.2695305530277539,
+          "rank": 2,
+          "bh_critical": 0.005000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "holm_accepted": false
+        },
+        {
+          "index": 8,
+          "label": "None:f3affadd",
+          "far": 0.2695305530277539,
+          "rank": 3,
+          "bh_critical": 0.0075,
+          "bh_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "holm_accepted": false
+        },
+        {
+          "index": 16,
+          "label": "None:a87b3fe1",
+          "far": 0.28883821350578615,
+          "rank": 4,
+          "bh_critical": 0.010000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "holm_accepted": false
+        },
+        {
+          "index": 19,
+          "label": "None:ab55cdc8",
+          "far": 0.40267868789285144,
+          "rank": 5,
+          "bh_critical": 0.0125,
+          "bh_accepted": false,
+          "holm_critical": 0.003125,
+          "holm_accepted": false
+        },
+        {
+          "index": 2,
+          "label": "None:1b1917c7",
+          "far": 0.44547716571557483,
+          "rank": 6,
+          "bh_critical": 0.015,
+          "bh_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "holm_accepted": false
+        },
+        {
+          "index": 17,
+          "label": "None:2ba1b02d",
+          "far": 0.4518467968620228,
+          "rank": 7,
+          "bh_critical": 0.017499999999999998,
+          "bh_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "holm_accepted": false
+        },
+        {
+          "index": 13,
+          "label": "None:c14e0681",
+          "far": 0.4528507997160949,
+          "rank": 8,
+          "bh_critical": 0.020000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "holm_accepted": false
+        },
+        {
+          "index": 1,
+          "label": "None:9e80d99d",
+          "far": 0.5,
+          "rank": 9,
+          "bh_critical": 0.022500000000000003,
+          "bh_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "holm_accepted": false
+        },
+        {
+          "index": 4,
+          "label": "None:618c60e1",
+          "far": 0.5,
+          "rank": 10,
+          "bh_critical": 0.025,
+          "bh_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "holm_accepted": false
+        },
+        {
+          "index": 5,
+          "label": "None:1eb6dc03",
+          "far": 0.5,
+          "rank": 11,
+          "bh_critical": 0.027500000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.005,
+          "holm_accepted": false
+        },
+        {
+          "index": 9,
+          "label": "None:42979816",
+          "far": 0.5,
+          "rank": 12,
+          "bh_critical": 0.03,
+          "bh_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "holm_accepted": false
+        },
+        {
+          "index": 11,
+          "label": "None:6895ceff",
+          "far": 0.5,
+          "rank": 13,
+          "bh_critical": 0.0325,
+          "bh_accepted": false,
+          "holm_critical": 0.00625,
+          "holm_accepted": false
+        },
+        {
+          "index": 12,
+          "label": "None:85bf54f0",
+          "far": 0.5,
+          "rank": 14,
+          "bh_critical": 0.034999999999999996,
+          "bh_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "holm_accepted": false
+        },
+        {
+          "index": 15,
+          "label": "None:867ec6e2",
+          "far": 0.5,
+          "rank": 15,
+          "bh_critical": 0.037500000000000006,
+          "bh_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 18,
+          "label": "None:db93ec56",
+          "far": 0.5,
+          "rank": 16,
+          "bh_critical": 0.04000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.01,
+          "holm_accepted": false
+        },
+        {
+          "index": 0,
+          "label": "None:ea5c85f3",
+          "far": 1.0,
+          "rank": 17,
+          "bh_critical": 0.0425,
+          "bh_accepted": false,
+          "holm_critical": 0.0125,
+          "holm_accepted": false
+        },
+        {
+          "index": 3,
+          "label": "None:f592ba85",
+          "far": 1.0,
+          "rank": 18,
+          "bh_critical": 0.045000000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "holm_accepted": false
+        },
+        {
+          "index": 6,
+          "label": "None:ea5c85f3",
+          "far": 1.0,
+          "rank": 19,
+          "bh_critical": 0.0475,
+          "bh_accepted": false,
+          "holm_critical": 0.025,
+          "holm_accepted": false
+        },
+        {
+          "index": 10,
+          "label": "None:ea5c85f3",
+          "far": 1.0,
+          "rank": 20,
+          "bh_critical": 0.05,
+          "bh_accepted": false,
+          "holm_critical": 0.05,
+          "holm_accepted": false
+        }
+      ],
+      "expected_max_note": ""
+    }
+  },
+  "wall_clock_s": 0.0,
+  "gate": {
+    "n_trials": 16,
+    "b": 10000,
+    "observed_best": 0.05190014625335893,
+    "p": 0.9521047895210479,
+    "p_floor": 9.999000099990002e-05,
+    "at_floor": false,
+    "reject": false,
+    "q": 0.05,
+    "null_max_mean": 0.12447686318022629,
+    "null_max_quantiles": {
+      "0.5": 0.1179237625985266,
+      "0.2": 0.16381638863688117,
+      "0.1": 0.19118419993626357,
+      "0.05": 0.218612238999756,
+      "0.01": 0.2772084963941454
+    },
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "is_the_gate": true,
+    "observed_best_positive": true,
+    "accept": false,
+    "floor_note": "accept = reject AND observed_best > 0. The second term is not a formality: under a sign-flip null a losing high-turnover candidate can clear the first one decisively."
+  },
+  "uncorrected": {
+    "best_score": 0.05190014625335893,
+    "best_far": 0.23909592667206203,
+    "n_at_or_below_q": 0,
+    "reading": "what a report with no correction would say: the best of 20 candidates scored +0.0519 at a nominal false-acceptance rate of 0.2391"
+  },
+  "deflation": {
+    "best_score": 0.05190014625335893,
+    "expected_max_under_null": 0.13424647135262335,
+    "margin": -0.08234632509926443,
+    "clears_selection_bar": false,
+    "n_trials": 20,
+    "n_sessions": 384,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "null_source": "round_turn_mc",
+  "error_control_note": "This campaign's null is the sign-flip over round turns, not the conditional null, so Task 38's FWER of 0.060 CI [0.041, 0.088] does NOT describe it. The figure that does is Task 57's, measured on this configuration (round_turn_mc x max_of_n, q = 0.05, B = 10,000) at both N = 10 and N = 50: 0 acceptances in 400 campaigns per arm, FWER below about 0.010 at 95%, below 0.005 pooled over 800. It is conservative rather than merely correct, and Task 59 prices the conservatism: 80% power at a signal strength of 0.287 against 0.242 for the conditional null. See docs/design/pre-registration.md sections 3a and 3b."
+}

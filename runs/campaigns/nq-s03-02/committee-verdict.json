@@ -1,0 +1,56 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the harness's definition of ctx.actionable, ctx.history, or ctx.now, so I cannot verify that history[-1] is always the last closed bar and that ctx.now is the bar's close time rather than the current wall-clock time.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the strategy code or any prior campaign history, but the statistics presented are internally consistent and show no evidence of a degenerate metric, session concentration, or p-value floor issues.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: reply was not JSON: Expecting value: line 1 column 1 (char 0); '```json\\n{\"verdict\": \"VETO\",\\n \"reasons\": [\\n   \"The strategy\\'s net P&L is -610.75 index points and gross P&L is -124.75 points, with commission of 486.0 points. The primary score is -0.2898 (Sortino per'"
+      ],
+      "confidence_note": "",
+      "error": "reply was not JSON: Expecting value: line 1 column 1 (char 0); '```json\\n{\"verdict\": \"VETO\",\\n \"reasons\": [\\n   \"The strategy\\'s net P&L is -610.75 index points and gross P&L is -124.75 points, with commission of 486.0 points. The primary score is -0.2898 (Sortino per'"
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "The result is heavily concentrated in time: 2024-11 (+19.75), 2025-06 (+9.35), 2025-11 (+53.60), and 2025-12 (+20.85) are the only positive months, and 2025-11 alone is larger than the sum of all other positive months. Removing 2025-11 would flip the overall result deeply negative.",
+        "The best single session accounts for 2.6% of total profit, and the top 5% of sessions account for 31.3% of profit, indicating the result depends on a small number of sessions rather than being broad-based across the 384 sessions.",
+        "The by-hour breakdown shows the only substantial positive hour is 04:00 UTC (+31.15), with most other hours negative, suggesting behaviour concentrated in one part of the day without a stated reason for why that would persist.",
+        "The by-weekday breakdown is uniformly negative across all weekdays, with no positive weekday, indicating the result is not distributed across the week."
+      ],
+      "confidence_note": "I could not see the per-trade distribution or the strategy parameters, so I cannot assess whether the concentration is driven by a specific fitted rule or a few large trades.",
+      "error": null
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

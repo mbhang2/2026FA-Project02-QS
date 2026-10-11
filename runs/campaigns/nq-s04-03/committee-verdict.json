@@ -1,0 +1,96 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "No source code for the winning candidate was provided, so I cannot inspect it for lookahead, future-dated state, evaluation peeking, or session-boundary confusion."
+      ],
+      "confidence_note": "I could not see any code, so I could not verify the structural guarantees against leakage.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "The gate's observed_best is -Infinity and p is 1.0, with accepted_any false and verdict REJECT. There is no positive result to believe; the campaign produced no candidate that survived the gate.",
+        "The best_candidate_score is empty ({}), so there is no score, ratio, or metric to evaluate for degeneracy or concentration \u2014 the campaign's statistical output is effectively absent.",
+        "The null_moments are unavailable because there were fewer than two null draws, so the null distribution used for the gate could not be estimated from the campaign's own nulls."
+      ],
+      "confidence_note": "I could not see the strategy code or any per-trial score distributions, but the gate and score evidence supplied show no accepted result and no measurable best candidate.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: reply was not JSON: Expecting value: line 1 column 1 (char 0); '```json\\n{\"verdict\": \"CANNOT_TELL\",\\n \"reasons\": [\"The winning strategy\\'s source is unavailable (\\'NO SOURCE AVAILABLE.\\'), so I cannot verify that the code implements the hypothesis, that the docstring s'"
+      ],
+      "confidence_note": "",
+      "error": "reply was not JSON: Expecting value: line 1 column 1 (char 0); '```json\\n{\"verdict\": \"CANNOT_TELL\",\\n \"reasons\": [\"The winning strategy\\'s source is unavailable (\\'NO SOURCE AVAILABLE.\\'), so I cannot verify that the code implements the hypothesis, that the docstring s'"
+    },
+    {
+      "axis": "robustness",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "No per-month, per-hour, per-weekday, session, or trade concentration data was provided. The robustness axis cannot be assessed without these breakdowns."
+      ],
+      "confidence_note": "I could not see any distributional evidence across time or trades, so I cannot judge whether the result is broad-based or narrow.",
+      "error": null
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 3,
+  "seats_failed": [
+    "economics"
+  ],
+  "incomplete": true,
+  "incomplete_note": "One or more auditors never ran, so this campaign was judged by fewer seats than the committee has. Their failure is recorded as a VETO because no verdict is not no veto, but the reading 'the committee looked at this' is weaker than it appears.",
+  "usage": [
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 862,
+      "completion_tokens": 85,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 3561,
+      "completion_tokens": 178,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 761,
+      "completion_tokens": 81,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 2972,
+      "completion_tokens": 184,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

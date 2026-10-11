@@ -1,0 +1,55 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the harness's exact bar lifecycle or ctx.bars definition, but the source contains no future access, evaluation peeking, or session-close use.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see per-session return concentration or prior campaign counts, but the visible gate, deflation, and correction views are coherent and no p-value is at the resolution floor.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: empty reply: finish_reason='length', completion_tokens=16384, reasoning_tokens=16385, max_tokens=16384"
+      ],
+      "confidence_note": "",
+      "error": "empty reply: finish_reason='length', completion_tokens=16384, reasoning_tokens=16385, max_tokens=16384"
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "The net result is concentrated in a single month: 2025-04 contributes 1,851.8 of the total 1,292.75 net profit (~143%); excluding 2025-04 leaves the campaign net negative at about -559.05.",
+        "The result is also concentrated in a single weekday: Monday contributes 2,176.9 of the total 1,292.75 (~168%); excluding Monday flips the sign to about -884.15.",
+        "Intraday distribution is narrow: the 14 UTC hour alone contributes 1,127.6 of the total 1,292.75 (~87%), with large offsets at 17 and 20 UTC, so the result is not spread across the session."
+      ],
+      "confidence_note": "I could not see the redacted top-5% profit concentration or individual session/trade detail, but the monthly and weekday breakdowns are sufficient to identify concentration.",
+      "error": null
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

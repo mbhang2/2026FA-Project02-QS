@@ -1,0 +1,53 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the harness's per-bar view implementation or the exact definition of ctx.actionable, so I cannot verify that history[-1] is always a closed bar at the decision point.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see how many prior campaigns were run, so I cannot judge whether this is a first look or the best of many looks.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the validation split results, the other auditors' axes, or whether the consolidation-bar entry logic was actually exercised by the 1096 trades versus the trigger firing without consolidation.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Result is heavily concentrated in time: 2025-03 (869.7), 2025-10 (486.6), and 2025-11 (905.0) together contribute over 2,260 of the total, while 10 of 18 months are negative. The campaign's profit appears to come from a few months rather than being broadly distributed.",
+        "The best single session accounts for 5.24% of total profit, and with 254 of 384 sessions being downside sessions, the result is fragile to removal of a small number of winning sessions.",
+        "Hourly distribution is erratic and regime-dependent: hour 19 contributes +667.6 while hour 18 contributes -508.75, and hour 16 contributes -337.8. This suggests the strategy's edge is concentrated in specific intraday windows with no stated rationale for why those windows would persist."
+      ],
+      "confidence_note": "I could not see the per-trade distribution or the strategy parameters, so I cannot assess whether the concentration is driven by a few specific trades or by a fitted rule.",
+      "error": null
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

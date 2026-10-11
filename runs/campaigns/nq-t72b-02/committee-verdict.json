@@ -1,0 +1,57 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: empty reply: finish_reason='length', completion_tokens=16384, reasoning_tokens=16384, max_tokens=16384"
+      ],
+      "confidence_note": "",
+      "error": "empty reply: finish_reason='length', completion_tokens=16384, reasoning_tokens=16384, max_tokens=16384"
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the exact p-value (redacted) or per-session concentration, but the gate, deflation, and BH/Holm views are coherent and the metric denominator is not degenerate.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "the auditor did not run: empty reply: finish_reason='length', completion_tokens=16384, reasoning_tokens=16384, max_tokens=16384"
+      ],
+      "confidence_note": "",
+      "error": "empty reply: finish_reason='length', completion_tokens=16384, reasoning_tokens=16384, max_tokens=16384"
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Net P&L is heavily concentrated in one weekday: Friday contributes 831.50 of the total 945.95 (87.9%), while Wednesday and Sunday are net negative; no reason is given for why a Friday-specific effect should persist.",
+        "Net P&L is concentrated in a narrow UTC window: hours 02 and 06 together contribute 717.55 of 945.95 (75.9%), with hour 02 alone contributing 411.40 (43.5%); this is a specific intraday regime with no stated rationale.",
+        "The top three months (2025-06, 2025-07, 2025-12) contribute 840.30 of the 945.95 net (88.8%), so the result is not spread across the sample period."
+      ],
+      "confidence_note": "I could not see trade-level or validation-split evidence, but the provided breakdowns are sufficient to identify temporal concentration.",
+      "error": null
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

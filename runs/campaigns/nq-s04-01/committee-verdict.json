@@ -1,0 +1,93 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the harness's definition of ctx.actionable or ctx.history, so I relied on the stated structural guarantee that history[-1] is the last closed bar and actionable bars are closed.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the strategy code or any prior campaign history, but the statistics presented are internally consistent and show no evidence of a degenerate metric or concentration-driven result.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "The docstring states the opening window is identified using a fixed -6 Chicago offset and acknowledges the sample spans DST changes, but the code applies the same fixed offset to every session. During DST periods the actual Chicago offset is -5, so the 08:30-09:00 window is shifted by one hour on those sessions. The opening range is therefore built from the wrong bars for a substantial portion of the sample, and the hypothesis explicitly required locating the open in Chicago time across DST changes. This is a concrete implementation error that invalidates the measured result.",
+        "The hypothesis asks whether a break of the opening range continues or fails back into it, and the docstring correctly frames this as testing the failure arm. The code implements the fade direction correctly (sell above the high, buy below the low), so the direction is not the issue. The veto is solely the DST/timezone error."
+      ],
+      "confidence_note": "I could not see the other auditors' axes (statistical validity, look-ahead, robustness), and I could not verify the fill model or whether the 375 trades over 384 sessions represent a degenerate near-inactivity optimum, though the trade count appears reasonable on its face.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Extreme concentration in time: hour 15 UTC alone accounts for 3632.2 of total profit, while most other hours are negative or near zero. The result is effectively an hour-15 phenomenon.",
+        "Dependence on a single weekday: Friday (1284.4) and Thursday (1035.3) carry nearly all profit, while Wednesday is -1266.3. The sign of the result flips by weekday, indicating the strategy is not broad-based across the week.",
+        "Severe monthly instability: November 2025 alone is -885.9, and several months are negative. The result is not stable across months and is dominated by a few positive months (e.g., 2024-10, 2025-03, 2025-06).",
+        "Best session share is 2.3% of total profit, and top 5% of sessions account for 20.6% of profit, indicating meaningful dependence on a small number of sessions."
+      ],
+      "confidence_note": "I could not see per-trade or per-session detail beyond the aggregates, nor any rationale for the hour/weekday concentration, but the provided breakdowns are sufficient to identify time concentration.",
+      "error": null
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 1950,
+      "completion_tokens": 66,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 3568,
+      "completion_tokens": 58,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 1488,
+      "completion_tokens": 273,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 4011,
+      "completion_tokens": 270,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

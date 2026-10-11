@@ -76,3 +76,30 @@ better than catching them in a synthetic run -- but it changes what every
 proposal is asked to write, and `config/prompts/strategy-agent.md` is in
 `ARTIFACT_GLOBS`, so it changes the artifact fingerprint of every campaign after
 it. That is a pre-registration-adjacent change and not one to make quietly.
+
+## What the probe fix actually costs, measured 2026-10-07
+
+Arming Amendment 7 on every agent rather than one in four is not free, and the
+first full-power campaign put a number on it:
+
+| | probe runs / trial | min / trial | crashed |
+|---|---|---|---|
+| `nq-s06-01`, probe on 1 agent of 4 | 0.4 | 1.28 | 3% |
+| `nq-s07-01`, probe on all 4 | **4.1** | **3.4** | **0%** |
+
+**4.1 probe runs per trial means the typical proposal needs about three
+synthetic repairs before it passes.** That is the clearest possible evidence for
+why `nq-s06-02` crashed 35 of 100 trials: three quarters of its proposals never
+got the chance to repair, and the ones that did were repairing three times each.
+Median agent latency with the probe in the loop is 295 s per proposal.
+
+So the trade is **2.7x wall clock for a crash rate of zero**, and it is worth
+paying: a crashed trial spends a slot of the pre-registered budget and returns
+no measurement, while a probe repair spends seconds of synthetic compute and
+returns a candidate that can be scored.
+
+**It changes session planning, which is the practical point.** A campaign at
+N = 400 is ~23 h at width 4, not the ~8.5 h the pre-probe rate implied, so a
+three-campaign family is about three days rather than one. Michael's call on
+2026-10-07 was to pay it: the demonstration the framework lacks is a full family
+at the registered N, and the resume path now makes a multi-sitting run safe.

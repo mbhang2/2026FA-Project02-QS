@@ -1,0 +1,59 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the harness implementation of ctx.history, ctx.actionable, or ctx.session, so I verified the strategy's own logic only; the structural guarantees are assumed to be enforced by the harness.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "The best candidate's Sortino is estimated from only 69 downside sessions out of 384 total sessions, and only 284 trades across those sessions. The denominator of the Sortino ratio is therefore based on a small, highly skewed subset (skew 6.70, kurtosis 77.93), making the headline metric unreliable in the strategy's favour.",
+        "The result appears to rest on a handful of sessions: skew of 6.70 and kurtosis of 77.93 indicate extreme right-tail concentration, meaning a small number of sessions likely dominate the net PnL and the Sortino score. The evidence does not show any session-level concentration analysis to rule this out.",
+        "The gate p-value of 0.0008999 is only about 9x above the resolution floor of 9.999e-05, and the observed best score is redacted, so it is not possible to verify that the p-value is not effectively at the simulation's resolution limit."
+      ],
+      "confidence_note": "I could not see the actual observed best score or the per-session return distribution, so I could not directly verify concentration or whether the p-value is materially above the floor.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the fill model's slippage assumptions or whether the 284 trades are concentrated in a few sessions, which would affect whether the measured edge survives realistic execution.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Concentration in time: May 2025 alone contributes 7186.62 of the total profit, which is roughly 25% of the entire campaign's cumulative return and more than 3x the next-best month. The result is heavily dependent on a single month.",
+        "Concentration in time: the best single session accounts for 12.36% of total profit (best_session_share = 0.1236). With only 384 sessions, one session contributing over an eighth of all profit means the result is fragile to removing a single day.",
+        "Concentration by hour: hour 22 UTC contributes 6546.45 and hour 17 contributes 4364.95, together roughly 40% of total profit, while several other hours are negative. The strategy's edge is concentrated in a narrow part of the trading day with no stated reason for why this would persist.",
+        "Concentration by weekday: Wednesday contributes only 559.35 while Thursday contributes 6212.90 and Sunday 5528.70. The result is unevenly distributed across weekdays, with Wednesday contributing less than 10% of the best weekday's total."
+      ],
+      "confidence_note": "I could not see the per-trade distribution, the strategy parameters, or any out-of-sample evidence, so I judged robustness only from the time and session breakdowns provided.",
+      "error": null
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

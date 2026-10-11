@@ -1,108 +1,78 @@
 {
-  "m_campaigns": 6,
+  "m_campaigns": 3,
   "campaigns": [
-    "nq-flowcont-01",
-    "nq-flowcont-5m",
-    "nq-ml-02",
-    "nq-ml-03",
-    "nq-orderflow-01",
-    "nq-orderflow-02"
+    "nq-s07-01",
+    "nq-s07-02",
+    "nq-s07-03"
   ],
   "b": 10000,
   "q": 0.05,
-  "observed_best": -0.8455065960966258,
-  "best_campaign": "nq-orderflow-01",
+  "observed_best": 0.26940652068142884,
+  "best_campaign": "nq-s07-02",
   "rule_a_sortino_positive": {
-    "nq-flowcont-01": false,
-    "nq-flowcont-5m": false,
-    "nq-ml-02": false,
-    "nq-ml-03": false,
-    "nq-orderflow-01": false,
-    "nq-orderflow-02": false
+    "nq-s07-01": false,
+    "nq-s07-02": true,
+    "nq-s07-03": true
   },
-  "rule_a_pass": false,
+  "rule_a_pass": true,
   "incomplete": [],
   "note": "max_of_m is max_of_n with the campaign as the unit, and that is deliberate rather than lazy: section 4 of the pre-registration chooses it over a Holm budget because it uses the actual null distribution of the maximum, and says the L2 gate INHERITS the family-wise error rate measured for that machinery (0.060, CI [0.041, 0.088] at R = 150, Task 38) rather than needing its own calibration study. A second implementation of the same simulation would be a second thing to calibrate.",
   "per_campaign": [
     {
-      "campaign_id": "nq-flowcont-01",
-      "validation_primary": -0.7866997098661094,
-      "null_mean": -0.772418543911076,
-      "null_sd": 0.010794523274321316,
-      "sds_above_own_null": -1.3230010804651555
+      "campaign_id": "nq-s07-01",
+      "validation_primary": -0.2541766907583952,
+      "null_mean": 0.0350884590360412,
+      "null_sd": 0.24330203669452974,
+      "sds_above_own_null": -1.188913803288931
     },
     {
-      "campaign_id": "nq-flowcont-5m",
-      "validation_primary": -0.2178564804675991,
-      "null_mean": -0.17397766011822038,
-      "null_sd": 0.126729399549278,
-      "sds_above_own_null": -0.34624026078744796
+      "campaign_id": "nq-s07-02",
+      "validation_primary": 0.26940652068142884,
+      "null_mean": 0.008926837546551322,
+      "null_sd": 0.15780142172874093,
+      "sds_above_own_null": 1.650680204786998
     },
     {
-      "campaign_id": "nq-ml-02",
-      "validation_primary": -0.18452936814967413,
-      "null_mean": -0.014302970398978597,
-      "null_sd": 0.22140585915524078,
-      "sds_above_own_null": -0.7688432383866577
-    },
-    {
-      "campaign_id": "nq-ml-03",
-      "validation_primary": -0.05573144958405279,
-      "null_mean": -0.07027172863225019,
-      "null_sd": 0.14536804149380209,
-      "sds_above_own_null": 0.10002390414551564
-    },
-    {
-      "campaign_id": "nq-orderflow-01",
-      "validation_primary": -0.8455065960966258,
-      "null_mean": -0.8933931189084524,
-      "null_sd": 0.0415994857092555,
-      "sds_above_own_null": 1.1511325679964424
-    },
-    {
-      "campaign_id": "nq-orderflow-02",
-      "validation_primary": -0.4655074255769659,
-      "null_mean": -0.40752862826697467,
-      "null_sd": 0.07326377243342537,
-      "sds_above_own_null": -0.7913706240376365
+      "campaign_id": "nq-s07-03",
+      "validation_primary": 0.14547818274047788,
+      "null_mean": -0.002447559761497335,
+      "null_sd": 0.15874770735257385,
+      "sds_above_own_null": 0.9318291581587167
     }
   ],
   "standardised_view": {
-    "best_campaign": "nq-orderflow-01",
-    "observed_best_sds": 1.1511325679964424,
-    "p": 0.6036396360363964,
+    "best_campaign": "nq-s07-02",
+    "observed_best_sds": 1.650680204786998,
+    "p": 0.1703829617038296,
     "reject": false,
-    "null_max_mean": 1.337488437019097,
+    "null_max_mean": 0.842299133458738,
     "note": "diagnostic unless statistic='standardised' set the verdict. The maximum over (observed - null mean) / null sd per campaign, which is the pivotal form step_down_max already assumes. Task 70 measured the raw maximum as valid but blind: on our six real validation nulls, whose sds differ by 20x, it named two of the six campaigns the best of M zero times in 4,000 families and a third of them once, and it rejected at 0.0505 against an eight-sigma planted effect in a tight-null campaign where the standardised maximum rejected at 1.0000."
   },
   "statistic": "standardised",
-  "p": 0.6036396360363964,
+  "p": 0.1703829617038296,
   "p_floor": 9.999000099990002e-05,
   "at_floor": false,
   "reject": false,
-  "null_max_mean": 1.337488437019097,
+  "null_max_mean": 0.842299133458738,
   "null_max_quantiles": {
-    "0.5": 1.1511325679964424,
-    "0.2": 1.885256400733226,
-    "0.1": 2.3970683106583475,
-    "0.05": 2.909370103155077,
-    "0.01": 4.1983972206753055
+    "0.5": 0.6716462242688311,
+    "0.2": 1.5032850101590398,
+    "0.1": 2.1416202419263675,
+    "0.05": 2.806484699510886,
+    "0.01": 4.292039163852907
   },
   "raw_view": {
-    "best_campaign": "nq-ml-03",
-    "observed_best": -0.05573144958405279,
-    "p": 0.7321267873212679,
+    "best_campaign": "nq-s07-02",
+    "observed_best": 0.26940652068142884,
+    "p": 0.20227977202279773,
     "reject": false
   },
   "passes": false,
   "verdict": "FAIL",
   "schema": "l2-verdict/1",
   "declared_family": [
-    "nq-flowcont-01",
-    "nq-flowcont-5m",
-    "nq-ml-02",
-    "nq-ml-03",
-    "nq-orderflow-01",
-    "nq-orderflow-02"
+    "nq-s07-01",
+    "nq-s07-02",
+    "nq-s07-03"
   ]
 }

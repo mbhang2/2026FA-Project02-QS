@@ -1,0 +1,94 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the harness's definition of ctx.bars, ctx.actionable, or bar.close_ts, so I cannot verify that the bar passed to on_bars is always a closed bar; the strategy itself contains no lookahead, future-dated state, scorer access, or session-boundary confusion.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the strategy code, the validation split results, or any prior campaign history beyond this single campaign's recorded look count.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "The strategy's docstring claims 'No position is carried into the afternoon session' and that the target of 0.25x range width 'keeps the holding period short', but the measured average holding period is 18,921,814,034,363 ns, which is approximately 5.26 hours. A fade of a 30-minute opening-range break held for over five hours is not the short-term reversion the hypothesis describes; it is a position carried deep into hours the question makes no claim about, contradicting the hypothesis's own requirement that the strategy 'must not carry a position into hours it makes no claim about'.",
+        "The hypothesis explicitly requires the strategy to 'say where it expects to be out of the market' and warns that profit accruing at hour 15 UTC from a position opened around hour 13 is 'a different claim than the one written here'. The measured average holding period of ~5.26 hours means the fade position, entered shortly after 09:00 Chicago, is on average still live into the early afternoon, directly violating this stated constraint.",
+        "The economic evidence shows a positive net P&L of 1133.41 points but a max drawdown of -1302.70 points, meaning the strategy's worst peak-to-trough loss exceeds its entire net profit. A result whose drawdown is larger than its total net gain is not economically meaningful as a tradable edge; the strategy would have been net negative at its worst point despite the positive final score."
+      ],
+      "confidence_note": "I could not see the hour-of-day, weekday, or month-by-month P&L splits that the hypothesis explicitly requires as part of the claim, nor any validation-split evidence, so I judged only the aggregate economics and the holding-period mismatch visible in the provided evidence.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Result is heavily concentrated in a few hours: hours 14 and 15 UTC alone contribute 1125.48 + 1857.15 = 2982.63, while total across all listed hours is only about 1133.4. Removing hour 15 (1857.15) flips the aggregate sign negative, and removing hours 14+15 together makes the rest of the distribution clearly negative.",
+        "The strategy is also concentrated by weekday: Thursday contributes 1062.55 while Tuesday, Wednesday, and Sunday are negative. The positive result is not broad-based across days.",
+        "Best single session accounts for 1.72% of total profit, and top 5% of sessions account for 21.8% of profit, indicating meaningful tail dependence even if not a single-session flip.",
+        "Monthly results are unstable: 5 of 18 months are negative, and the largest positive months (2025-08: 589.50, 2025-10: 694.92) are isolated spikes rather than a consistent regime."
+      ],
+      "confidence_note": "I could not see per-trade timing, parameter values, or whether the hour/day concentration aligns with a stated rationale, but the time concentration alone is sufficient to veto on robustness.",
+      "error": null
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 2396,
+      "completion_tokens": 89,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 3564,
+      "completion_tokens": 52,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 5327,
+      "completion_tokens": 393,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "deepseek-v4-pro",
+      "prompt_tokens": 1520,
+      "completion_tokens": 285,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the harness's definition of ctx.history or ctx.actionable, so I cannot verify that history[-1] is a closed bar rather than the forming bar, but the code itself contains no explicit lookahead, future-dated state, scorer access, or session-boundary confusion.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the strategy code or any out-of-sample validation, but the statistics presented are internally consistent and show no vetoable degeneracy on my axis.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could not see the per-session or per-hour P&L distribution, so I cannot verify the revision's core requirement that the effect is present across the ordinary run of sessions rather than concentrated in a few sessions or hours.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Concentration in time: 2025-02 alone contributes 579.85 of the total, while 2025-12 loses -438.83 and 2025-07 loses -243.15. The result is dominated by a small number of months, with several large negative months, indicating the outcome is not broad-based across the sample.",
+        "Concentration by weekday: Friday (1166.0) and Tuesday (652.2) carry nearly all the profit, while Wednesday loses -578.5. The result is heavily dependent on two weekdays, with no stated reason for why this pattern would persist.",
+        "Dependence on a single session: best_session_share is 0.0248, meaning the single best session accounts for about 2.5% of total profit. With 384 sessions, a single session contributing this much is a concentration risk; removing it could materially change the result.",
+        "Profit concentration: top 5% of sessions account for 32.0% of profit, indicating the result is driven by a small tail of sessions rather than a consistent edge across trades."
+      ],
+      "confidence_note": "I could not see the per-trade distribution or the actual session-level time series, only aggregate breakdowns, so I cannot assess whether the concentration is even more extreme at finer granularity.",
+      "error": null
+    }
+  ],
+  "model": "deepseek-v4-pro",
+  "model_served": "deepseek-v4-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "496b944a00727a49",
+    "statistics.md": "b7471556c6784238"
+  }
+}

@@ -1,0 +1,642 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 13,
+    "diagnostics": {
+      "avg_holding_period_ns": 15818514423171.305,
+      "best_session_share": 0.04793211112855864,
+      "by_hour_utc": {
+        "00": 230.8999999999985,
+        "01": 428.04999999999905,
+        "02": -207.19999999999993,
+        "03": 245.1,
+        "04": -123.9,
+        "05": 432.4,
+        "06": 151.4000000000001,
+        "07": 573.7999999999997,
+        "08": -216.44999999999993,
+        "09": 108.85000000000002,
+        "10": -192.44999999999996,
+        "11": 1120.1500000000003,
+        "12": -364.95000000000016,
+        "13": 151.54999999999924,
+        "14": 1859.7500000000027,
+        "15": -497.3000000000003,
+        "16": -105.49999999999991,
+        "17": 484.94999999999993,
+        "18": 273.64999999999986,
+        "19": 392.4999999999998,
+        "20": 515.3999999999997,
+        "21": 545.55,
+        "22": -234.84999999999974,
+        "23": -208.1499999999996
+      },
+      "by_month": {
+        "2024-07": 354.84999999999945,
+        "2024-08": 212.25000000000014,
+        "2024-09": -507.10000000000036,
+        "2024-10": 358.39999999999964,
+        "2024-11": -86.85,
+        "2024-12": 427.29999999999995,
+        "2025-01": 315.2999999999995,
+        "2025-02": 1211.8500000000004,
+        "2025-03": 83.15000000000003,
+        "2025-04": 2173.6000000000035,
+        "2025-05": 665.1499999999994,
+        "2025-06": 362.1,
+        "2025-07": 445.35000000000014,
+        "2025-08": -292.89999999999975,
+        "2025-09": -210.8999999999999,
+        "2025-10": 317.5000000000001,
+        "2025-11": -11.650000000000343,
+        "2025-12": -454.1500000000009
+      },
+      "by_weekday": {
+        "Fri": 843.2999999999987,
+        "Mon": 2345.7000000000075,
+        "Sun": -66.84999999999995,
+        "Thu": 2155.950000000007,
+        "Tue": -205.65000000000208,
+        "Wed": 290.79999999999654
+      },
+      "commission": 108.0,
+      "fill_model_spread": null,
+      "gross_pnl": 5471.25,
+      "max_drawdown": -1548.0402604210349,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 9.305,
+        "exposure_share": 0.7682,
+        "return_dispersion": 0.4754,
+        "trades_per_session": 0.0323
+      },
+      "profit_concentration_top5pct": 0.4521877572536365,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 295,
+      "trade_count": 540,
+      "turnover_contracts_per_session": 2.8125,
+      "win_rate": 0.3425925925925926
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 242,
+      "kurtosis": 7.587559708033215,
+      "metric": "sortino_per_session",
+      "min_exposed_fraction": 0.7,
+      "n_sessions": 384,
+      "net_pnl": 5363.25,
+      "primary": 0.2114637421591023,
+      "primary_uncharged": 0.21388469106222704,
+      "reject_reason": "",
+      "rejected": false,
+      "sessions_exposed": 303,
+      "sharpe": 0.10573466240969656,
+      "significance": 4.143826139114142,
+      "skew": 1.8549505578447127,
+      "sortino": 0.2114637421591023,
+      "trade_count": 540
+    },
+    "source": "\"\"\"Investigate whether an outsized intra-session move continues, with a mild trend filter.\n\nHypothesis: after a move that is large relative to the session's own realised\nrange so far, price continues in the same direction, especially when the move\naligns with the session's overall direction. We measure \"outsized\" as the\nabsolute change over the last `lookback` bars exceeding a fraction\n(`threshold_mult`) of the session's high-low range so far. When triggered, we\nenter in the direction of that move with a protective bracket sized off the\nmove itself.\n\nThis refines the best prior continuation strategy (#12) by adding a mild\ndirectional filter: if the session has a clear net direction (absolute change\nfrom open exceeds `direction_threshold` times the session range), we only take\nsignals in that direction. This filters out counter-trend spikes that are more\nlikely to reverse, while keeping the signal definition otherwise unchanged to\npreserve exposure. The session range is tracked incrementally from closed bars,\nso no lookahead. We require a minimum number of bars and a minimum range before\nacting to avoid noise. The bracket offsets are multiples of the triggering\nmove, capped to avoid absurd levels.\n\"\"\"\n\nfrom collections import deque\n\n\nclass Strategy:\n    def __init__(\n        self,\n        interval: str = \"5m\",\n        lookback: int = 3,\n        threshold_mult: float = 0.5,\n        stop_mult: float = 0.75,\n        target_mult: float = 2.0,\n        min_bars: int = 5,\n        min_range: float = 0.5,\n        direction_threshold: float = 0.25,\n        size: int = 1,\n    ):\n        self.interval = interval\n        self.lookback = lookback\n        self.threshold_mult = threshold_mult\n        self.stop_mult = stop_mult\n        self.target_mult = target_mult\n        self.min_bars = min_bars\n        self.min_range = min_range\n        self.direction_threshold = direction_threshold\n        self.size = size\n\n        # Session state\n        self.session = None\n        self.session_high = None\n        self.session_low = None\n        self.session_open = None\n        self.bars_in_session = 0\n        self.recent_closes: deque[float] = deque(maxlen=lookback + 1)\n\n    def setup(self, ctx):\n        ctx.subscribe(self.interval)\n\n    def on_bars(self, ctx):\n        if not ctx.actionable:\n            return\n\n        # Update session state on session change\n        if ctx.session != self.session:\n            self.session = ctx.session\n            self.session_high = None\n            self.session_low = None\n            self.session_open = None\n            self.bars_in_session = 0\n            self.recent_closes.clear()\n\n        history = ctx.history(self.interval)\n        if len(history) == 0:\n            return\n        bar = history[-1]  # the bar that just closed\n\n        # First bar of session: set open\n        if self.session_open is None:\n            self.session_open = bar.open\n\n        self.bars_in_session += 1\n        if self.session_high is None or bar.high > self.session_high:\n            self.session_high = bar.high\n        if self.session_low is None or bar.low < self.session_low:\n            self.session_low = bar.low\n        self.recent_closes.append(bar.close)\n\n        # Need enough bars and a meaningful range\n        if self.bars_in_session < self.min_bars:\n            return\n        session_range = self.session_high - self.session_low\n        if session_range < self.min_range:\n            return\n\n        # Need enough closes to compute the move\n        if len(self.recent_closes) < self.lookback + 1:\n            return\n\n        # Compute move over lookback bars\n        move = self.recent_closes[-1] - self.recent_closes[0]\n        if abs(move) < self.threshold_mult * session_range:\n            return\n\n        # Directional filter: if session has a clear direction, require alignment\n        session_change = bar.close - self.session_open\n        if abs(session_change) > self.direction_threshold * session_range:\n            if move > 0 and session_change <= 0:\n                return\n            if move < 0 and session_change >= 0:\n                return\n\n        # Already in a position or have working orders\n        if ctx.position or ctx.working_order_ids:\n            return\n\n        # Determine direction and place order with bracket\n        stop_offset = min(self.stop_mult * abs(move), session_range * 0.5)\n        target_offset = min(self.target_mult * abs(move), session_range * 1.0)\n        if move > 0:\n            ctx.buy(\n                size=self.size,\n                stop_offset=stop_offset,\n                target_offset=target_offset,\n                tag=\"outsized-trend-filter-long\",\n            )\n        else:\n            ctx.sell(\n                size=self.size,\n                stop_offset=stop_offset,\n                target_offset=target_offset,\n                tag=\"outsized-trend-filter-short\",\n            )\n\n    def on_fill(self, ctx):\n        pass\n\n    def on_lifecycle(self, ctx):\n        pass\n",
+    "source_sha256": "03d7788ff221f8b3b175d9d07f10e823d9b0b13704f8193a8636122be2058fe2",
+    "strategy_digest": "03d7788ff221f8b3"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.1,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+        "path": "config/hypotheses/intraday-continuation.md"
+      },
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 65536,
+      "model": "deepseek-v4-pro",
+      "model_served_at_registration": "deepseek-v4-pro",
+      "null_source": "round_turn_mc",
+      "probe_before_trial": false,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real NQ futures trades, 384 scored sessions on the pre-registered train split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side. NQ is $20 a point, so a round trip costs about $4.00 a contract. At high turnover this dominates: the baseline strategy on this split traded 103,355 times and paid more in commission than it made gross.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "nq-t72b-01",
+    "budget": 20,
+    "campaign_id": "nq-t72b-01",
+    "dataset": "nq-trades",
+    "profile": "nq-train",
+    "q": 0.05,
+    "record_digest": "6bd5215716caf4e03727237bba599ee63ffad8d3e2f0781fdd6a80f1d145e9f9",
+    "record_digest_now": "6bd5215716caf4e03727237bba599ee63ffad8d3e2f0781fdd6a80f1d145e9f9",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-10-01T17:25:13+00:00"
+  },
+  "deflation_view": {
+    "best_score": 0.2114637421591023,
+    "clears_selection_bar": true,
+    "expected_max_under_null": 0.13424647135262335,
+    "margin": 0.07721727080647894,
+    "n_sessions": 384,
+    "n_trials": 20,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.026174869173378898,
+      "best_label": "None:03d7788f",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0025000000000000005,
+          "far": 0.026174869173378898,
+          "holm_accepted": false,
+          "holm_critical": 0.0025,
+          "index": 13,
+          "label": "None:03d7788f",
+          "rank": 1
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005000000000000001,
+          "far": 0.031791521960469964,
+          "holm_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "index": 14,
+          "label": "None:678cf8cb",
+          "rank": 2
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0075,
+          "far": 0.03679786431971704,
+          "holm_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "index": 12,
+          "label": "None:c9450abf",
+          "rank": 3
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010000000000000002,
+          "far": 0.05493646143835535,
+          "holm_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "index": 18,
+          "label": "None:8214fc2c",
+          "rank": 4
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0125,
+          "far": 0.08315089658664623,
+          "holm_accepted": false,
+          "holm_critical": 0.003125,
+          "index": 0,
+          "label": "None:d2cedf58",
+          "rank": 5
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015,
+          "far": 0.11884584220328027,
+          "holm_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "index": 5,
+          "label": "None:ac40742b",
+          "rank": 6
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.017499999999999998,
+          "far": 0.21052070040584564,
+          "holm_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "index": 15,
+          "label": "None:7c2c3c6f",
+          "rank": 7
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020000000000000004,
+          "far": 0.24346914433359812,
+          "holm_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "index": 1,
+          "label": "None:02bc0c9a",
+          "rank": 8
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.022500000000000003,
+          "far": 0.24346914433359812,
+          "holm_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "index": 10,
+          "label": "None:fc19a8c4",
+          "rank": 9
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025,
+          "far": 0.3283573068204106,
+          "holm_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "index": 9,
+          "label": "None:039f9459",
+          "rank": 10
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.027500000000000004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.005,
+          "index": 6,
+          "label": "None:81b80b12",
+          "rank": 11
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "index": 2,
+          "label": "None:2921a1ce",
+          "rank": 12
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0325,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00625,
+          "index": 3,
+          "label": "None:3322a8ed",
+          "rank": 13
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034999999999999996,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "index": 4,
+          "label": "None:2f8d4df7",
+          "rank": 14
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.037500000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "index": 7,
+          "label": "None:85dac2f3",
+          "rank": 15
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04000000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.01,
+          "index": 8,
+          "label": "None:be107fe2",
+          "rank": 16
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0425,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0125,
+          "index": 11,
+          "label": "None:b679e16d",
+          "rank": 17
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045000000000000005,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "index": 16,
+          "label": "None:52114b1e",
+          "rank": 18
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.0475,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.025,
+          "index": 17,
+          "label": "None:9acb1d87",
+          "rank": 19
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 19,
+          "label": "None:6eec14b5",
+          "rank": 20
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 20,
+      "q": 0.05,
+      "uncorrected_discoveries": 3
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "a61fb4737ef1902650a2b28677e4b40fc696271865f0f022a10b04bc4d6ae0d0",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 11,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 0.22789064795592456,
+    "null_max_mean": 0.1269326288132577,
+    "null_max_quantiles": {
+      "0.01": 0.2864212581497189,
+      "0.05": 0.22789064795592456,
+      "0.1": 0.20061016537261153,
+      "0.2": 0.16872478418463477,
+      "0.5": 0.12040357890411921
+    },
+    "observed_best": 0.2114637421591023,
+    "p": 0.07689231076892311,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/nq-t72b-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "551e502912872e7780953ee464e799372c3a92a116059311ad74a6962a4f1509",
+        "outcome": "completed",
+        "score": 0.12336381812611055,
+        "strategy_digest": "d2cedf58d59fa086"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "2c79ddccbb3bed896550d0927c2dce75efcdcfff788254705f3e46e1c6bc23df",
+        "outcome": "completed",
+        "score": 0.03899791450907695,
+        "strategy_digest": "02bc0c9a6453220f"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "25ca3e50843ea57c4201c16a950d2dd7f5a5cb11adb115f319b5d9945112ad2a",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "2921a1ce08a6d201"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "558ee6c3b740641d8779f02388ad4293a98ba671cde24e232ff2a09d56f6b980",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "3322a8ed895556b7"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "d600a4ca265b04ac865d8b8407d103a8a9aa366700b5a0e5608d83a3c62d487e",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "2f8d4df7fc1a4629"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "33934c975031065267a4e80e6cac060a4019d6754869d4fc348ead2526c1cf29",
+        "outcome": "completed",
+        "score": 0.09150704110487588,
+        "strategy_digest": "ac40742b9793a3ad"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "6a0f48f0284e034042e9f63dea52aa4e4466d725daf59b986eccf979817fb538",
+        "outcome": "completed",
+        "score": -0.034935779796332375,
+        "strategy_digest": "81b80b121deb9e65"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "c0f8ae2040fb39f7b19afada95422f3c4873d8a163f5fbc5d9400553122783fd",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "85dac2f302d65087"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "87f63c25a7b1ce5121658b89bf4b189a94a4d30a03b7f25423c613fc757e83b2",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "be107fe2ee27e751"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "efcfb86a037ad7406958e59c330f87151445959e93d9093354fcee564dabeccd",
+        "outcome": "completed",
+        "score": 0.008824137097384568,
+        "strategy_digest": "039f94597d6ac001"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "2c79ddccbb3bed896550d0927c2dce75efcdcfff788254705f3e46e1c6bc23df",
+        "outcome": "completed",
+        "score": 0.03899791450907695,
+        "strategy_digest": "fc19a8c46f67df8f"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "39143432ee1afb7b1e62fedb9e8cb2fed4d1ba1ae14bbe240ceb48f231a3a32d",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "b679e16db76b58bb"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "0ecb40ed9c9223c963e04770a14308bc8f5aed6ffb148d387523204b38b0b5dc",
+        "outcome": "completed",
+        "score": 0.18760078889409268,
+        "strategy_digest": "c9450abf4a2fb7db"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "328544645b9c86c915510c6d7beec451217ea118994f4cfa81782e1b3ddc1634",
+        "outcome": "completed",
+        "score": 0.2114637421591023,
+        "strategy_digest": "03d7788ff221f8b3"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "7742359861873f81d40ba705ad8415cdf7cca63f60d3edadde091b9e0da6bd5c",
+        "outcome": "completed",
+        "score": 0.2050899992831594,
+        "strategy_digest": "678cf8cb31c28d7f"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "854cb244832845b63ea40041596bad5a6f8f6f1d9eb9c0c89baf590046cdfe13",
+        "outcome": "completed",
+        "score": 0.06265137022303818,
+        "strategy_digest": "7c2c3c6fb3f81564"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "47eb06ad830fc6a5be262c541a2c2fc9a542e86b24a20c5bc9a546459bddb319",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "52114b1eace6d609"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "08e348412897363c27e3dda32bda57da6c2a76332609ed6a7fff910dfbc4c374",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "9acb1d877eb053c2"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "c5ccbe1353deec396025ce8d65294d68eaf9a832854de53b1c5678c4592585bf",
+        "outcome": "completed",
+        "score": 0.14867233273621508,
+        "strategy_digest": "8214fc2cc02a14fa"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": "ffa0074940d5f50eb90e671b5f2ed61efca93613387b71c92d69fd049cf6885b",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "6eec14b5f917b78c"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 20
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 20,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 0.4367202275219957,
+    "mean": -0.0007618449420839572,
+    "min": -0.2528636696172444,
+    "n_draws": 110000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.0742448900216957
+  },
+  "provenance": {
+    "artifact_fingerprint": "3793790c3537d0ea95f8146504dc5d0b0ea6191d6e4c6063efb1490a575efe70",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/auction-market-features.md": "c306848e27d52157a9e1ea478905aa4ad6e585b56b84bc892962aeeb02d826e9",
+      "config/hypotheses/flow-continuation-5m.md": "13516e4d73d2286805b68d526fe8590581c3ed64c418e44f2557a319ba7a4fea",
+      "config/hypotheses/flow-continuation.md": "2fd992b524213040d9b59c1ae1cde0b54404fc5ca779d9dc68d774c72dca0528",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-move-continuation-vs-giveback.md": "dd898b0ac0548576dafc2f61169a5334e834d48f7bc83d2cfcaf2c8901cfe876",
+      "config/hypotheses/ohlcv-momentum-friction-ceiling.md": "ff9d1893266f2f7eeb05f0f27a2751e9e95a4ea58f8c38f236aa9fc9e7c867a6",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md": "4a97e2e35a2111d81a49331782789191c9765efdb5df34c7aefedeb7234cf557",
+      "config/hypotheses/outsized-move-continuation-refined.md": "25d9b544894e7d214729ba058d1783e6b0d3d16608e560346538076341626c77",
+      "config/hypotheses/outsized-move-continuation-vs-giveback.md": "00074ec0231d64452b65b1515e9669d711425a1220e6039b3e61abd1638766a6",
+      "config/prompts/hypothesis-refine.md": "daee4903bf828372027c8b621b887300e925f1fbd53748f3726ed4ec9bdb4935",
+      "config/prompts/paper-distil.md": "971a1182703900db7bd99b9e7c451c4b1ac65fd6cd3278c24017d788d3fab698",
+      "config/prompts/paper-rank.md": "6a608dc685cabaee8807cebe11a36b9a212e19de626dc9de9002fa769e72b449",
+      "config/prompts/paper-screen.md": "dc10f5d4cc98dd8aa463c81b79f1c710b648e70e2d9095c4245c100d02b9160a",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/run.yaml": "3c738f0d04620dac2e3c7bb5bf469d620a516eeea7bacbbb75c95a968cbb1079",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "d2cedf58d59fa0863a8d204d90b4ce4a7d858a11ea02f176b7218b4f91910205"
+    },
+    "code_fingerprint": "ae269399e6949425838fb7af83a9f296b02e8f89afb8339e2af39481498ea314",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "1780999a09c5f53172887db2f7008c9235d2f685bf7f64ee487d213c8eef9361",
+    "git_sha": "7c736a77ef19efa00f0e1e4fadf43a8d6b51e2ca",
+    "isolation": {
+      "address_space": {
+        "active": false,
+        "mechanism": "unavailable: RLIMIT_AS/DATA/RSS cannot be set"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "scored campaigns should run on Linux; see docs/design/architecture.md",
+      "filesystem": {
+        "active": true,
+        "mechanism": "sandbox-exec profile (deprecated)"
+      },
+      "level": "best-effort",
+      "network": {
+        "active": true,
+        "mechanism": "denied by the same profile"
+      },
+      "platform": "Darwin",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.11.5",
+    "scoring_fingerprint": "89163b76ed81a20562b3ff001fe71a5f0df8a70b3f5652b1c6f3f98ee8437395"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-10-01T18:52:06+00:00"
+}

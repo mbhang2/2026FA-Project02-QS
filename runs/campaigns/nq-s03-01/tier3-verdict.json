@@ -1,0 +1,36 @@
+{
+  "schema": "tier3-audit-verdict/1",
+  "verdict": "CANNOT_TELL",
+  "is_veto": false,
+  "escalate_to_human": true,
+  "reasons": [
+    "isolation level is 'best-effort': on this platform the strategy process cannot be given a memory ceiling, so a resource-exhaustion escape cannot be ruled out from the record alone",
+    "the deflated-Sharpe bar sits BELOW the observed best while tier 2 rejected: a deflation computed from one pooled null would have reported a discovery here. Tier 2's per-candidate nulls are the reason it did not, and this cross-check is not evidence against tier 2 -- it is evidence about the pooled-null assumption"
+  ],
+  "checks": {
+    "deflation_cross_check": {
+      "available": true,
+      "n_trials": 20,
+      "pooled_null_mean": -0.43395168134621703,
+      "pooled_null_sd": 0.20109968800521935,
+      "e_max_closed_form_daksh": -0.05171990537463844,
+      "e_max_simulated_harness": 0.03258466692560594,
+      "difference": -0.08430457230024438,
+      "observed_best": 0.13211300833243486,
+      "closed_form_bar_cleared": true,
+      "simulated_bar_cleared": true,
+      "agree_on_the_margin": true,
+      "gate_p": 0.0785921407859214,
+      "gate_verdict": "REJECT",
+      "neither_is_the_gate": "Both numbers are E[max], the DSR-style margin. The gate is P(max >= observed) over the whole simulated distribution, which is a different and stricter question -- Task 36 found `deflation_view` clearing its bar in both arms while the gate rejected both.",
+      "note": "The two routes assume different things about the null. The closed form assumes N draws from ONE null; `max_of_n` takes the maximum over N draws from N DIFFERENT nulls, because the conditional framing (Task 32) made the null per-candidate. Where the per-candidate nulls differ in location, the pooled mean sits below the candidates that actually drive the maximum, and the closed form's bar comes out too LOW -- the opposite of its direction on homogeneous input, which Task 42 measured as +0.017 to +0.036 high."
+    },
+    "unknowns": [
+      "isolation level is 'best-effort': on this platform the strategy process cannot be given a memory ceiling, so a resource-exhaustion escape cannot be ruled out from the record alone",
+      "the deflated-Sharpe bar sits BELOW the observed best while tier 2 rejected: a deflation computed from one pooled null would have reported a discovery here. Tier 2's per-candidate nulls are the reason it did not, and this cross-check is not evidence against tier 2 -- it is evidence about the pooled-null assumption"
+    ]
+  },
+  "can_promote": false,
+  "promotion_note": "Tier 3 cannot promote. The verdict type has three members and none of them means approval; PASS means nothing was found to veto. An auditor that only removes candidates is safe with an uncharacterised error rate, and this one's has not been characterised.",
+  "n_trials_provenance": "read from the tier-2 campaign summary; N as runs/ledger.jsonl defines it -- every trial including crashes, global across datasets, written as the trials happen. Tier 3 displays and sanity-checks it and never recomputes a bar from it."
+}

@@ -1,0 +1,65 @@
+{
+  "digest": "c68bdabc6bbed179b380d1c1a79a22c68ee70970fc901843794ed7c44aca5afd",
+  "record": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.1,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+        "path": "config/hypotheses/opening-range-break-continuation-failure.md"
+      },
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 65536,
+      "model": "deepseek-v4-pro",
+      "model_served_at_registration": "deepseek-v4-pro",
+      "null_source": "round_turn_mc",
+      "probe_before_trial": true,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real NQ futures trades, 384 scored sessions on the pre-registered train split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side. NQ is $20 a point, so a round trip costs about $4.00 a contract. At high turnover this dominates: the baseline strategy on this split traded 103,355 times and paid more in commission than it made gross.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "allow_fitted_proposals": false,
+    "budget": 20,
+    "campaign_id": "nq-s04-02",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "nq-trades",
+    "hypothesis_digest": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+    "hypothesis_path": "config/hypotheses/opening-range-break-continuation-failure.md",
+    "min_exposed_fraction": 0.7,
+    "note": "MVP campaign, governed by docs/design/pre-registration.md. Real NQ train split. The model proposes one strategy at a time and edits the champion; the null is the sign-flip over round turns (section 3b), NOT the conditional null. The conditional null's FWER of 0.060 therefore does not describe this campaign; the figure that does is Task 57's, measured on this exact configuration at this exact N: 0 acceptances in 400 campaigns, FWER below about 0.010 at 95%. It is conservative, and Task 59 prices that -- 80% power at a signal strength of 0.287 against 0.242 for the conditional null.",
+    "probe_before_trial": true,
+    "profile": "nq-train",
+    "q": 0.05,
+    "seed_digest": null,
+    "seed_path": null,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-10-03T20:28:08+00:00"
+  }
+}

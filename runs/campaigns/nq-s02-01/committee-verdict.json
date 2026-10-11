@@ -1,0 +1,6 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "ERROR",
+  "error": "ReadTimeout: HTTPSConnectionPool(host='llm-proxy.invalid', port=443): Read timed out. (read timeout=60)",
+  "note": "The committee did not run. This is NOT a pass: the MVP rule reads 'no veto' as approval, and no verdict is not no veto."
+}

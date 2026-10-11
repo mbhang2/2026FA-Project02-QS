@@ -14,6 +14,7 @@ the one thing the ledger cannot afford to lose.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -269,3 +270,105 @@ def test_a_replay_is_logged_but_not_into_the_ledger(tmp_path):
     assert len(logged) == 1
     assert logged[0]["purpose"] == "replay"
     assert logged[0]["replay_of"]["blotter_digest"] == row["blotter_digest"]
+
+
+# --------------------------------------------------------------------------- #
+# recomputing a fingerprint from history, cheaply
+# --------------------------------------------------------------------------- #
+def test_the_narrow_archive_hashes_exactly_what_the_whole_tree_did():
+    """`code_fingerprint_at` asks git only for the paths it hashes.
+
+    The unfiltered archive of this repository is 751 MB, nearly all of it the
+    committed campaign records, and the fingerprint reads 0.66 MB of it. That
+    was costing the check ~1.98 TB of tar to learn 57 distinct answers.
+
+    The saving is only legitimate if the hash does not move, so this recomputes
+    the pre-change implementation and compares. Two commits rather than all 57:
+    the full archive is the expensive thing being removed, and the exhaustive
+    57-sha comparison was run once when the change was made.
+    """
+    rows = ledger_check.load_rows(LEDGER)
+    shas = [r["git_sha"] for r in rows if r.get("git_sha") and r.get("code_fingerprint")]
+    assert shas, "no row names a commit; this test proves nothing"
+
+    def whole_tree(sha):
+        import tempfile
+        archive = subprocess.run(["git", "archive", sha], cwd=REPO_ROOT,
+                                 capture_output=True)
+        assert archive.returncode == 0, sha
+        with tempfile.TemporaryDirectory() as tmp:
+            assert subprocess.run(["tar", "-x", "-C", tmp], input=archive.stdout,
+                                  capture_output=True).returncode == 0
+            return integrity.code_fingerprint(Path(tmp))
+
+    for sha in ("HEAD", shas[0]):
+        assert ledger_check.code_fingerprint_at(sha) == whole_tree(sha), (
+            f"narrowing the archive changed the fingerprint at {sha[:12]}; the "
+            f"pathspec no longer covers everything SOURCE_GLOBS hashes")
+
+
+def test_the_pathspec_cannot_fall_behind_source_globs():
+    """The failure this guards is silent and in the safe direction looking
+    backwards: a glob added to SOURCE_GLOBS but not to the archive's pathspec
+    would hash files that were never extracted, so every historical row would
+    be recomputed as a mismatch and reported as uncommitted edits. Deriving the
+    pathspec from the globs is what makes that impossible, so assert it is
+    derived and not transcribed."""
+    src = (REPO_ROOT / "scripts" / "ledger_check.py").read_text()
+    body = src.split("def _code_fingerprint_at_uncached", 1)[1].split("\ndef ", 1)[0]
+    body = re.sub(r"^\s*#.*$", "", body, flags=re.M)
+    assert "integrity.SOURCE_GLOBS" in body, (
+        "the pathspec is no longer derived from SOURCE_GLOBS; a glob added "
+        "there would stop being archived")
+    for glob in integrity.SOURCE_GLOBS:
+        root = glob.split("*", 1)[0].rstrip("/") or glob
+        out = subprocess.run(["git", "archive", "HEAD", "--", root],
+                             cwd=REPO_ROOT, capture_output=True)
+        assert out.returncode == 0, f"{root!r} is not archivable at HEAD"
+
+
+def test_a_commit_is_fingerprinted_once_however_many_rows_name_it():
+    """2,700 archive-eligible rows across the ledgers name 57 commits. The
+    answer is a function of the commit, so the row count must not be what
+    drives git."""
+    calls = []
+    real = ledger_check.subprocess.run
+
+    def counting(cmd, *a, **kw):
+        if isinstance(cmd, list) and cmd[:2] == ["git", "archive"]:
+            calls.append(cmd[2])
+        return real(cmd, *a, **kw)
+
+    ledger_check._FP_CACHE.clear()
+    ledger_check.subprocess.run = counting
+    try:
+        sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT,
+                             capture_output=True, text=True).stdout.strip()
+        first = ledger_check.code_fingerprint_at(sha)
+        for _ in range(12):
+            assert ledger_check.code_fingerprint_at(sha) == first
+    finally:
+        ledger_check.subprocess.run = real
+        ledger_check._FP_CACHE.clear()
+    assert len(calls) == 1, (
+        f"13 lookups of one commit ran {len(calls)} archives; the memo is gone")
+
+
+def test_the_history_check_is_memoised_too():
+    calls = []
+    real = ledger_check.subprocess.run
+
+    def counting(cmd, *a, **kw):
+        if isinstance(cmd, list) and cmd[:2] == ["git", "merge-base"]:
+            calls.append(cmd)
+        return real(cmd, *a, **kw)
+
+    ledger_check._HIST_CACHE.clear()
+    ledger_check.subprocess.run = counting
+    try:
+        for _ in range(20):
+            assert ledger_check.sha_is_in_history("HEAD") is True
+    finally:
+        ledger_check.subprocess.run = real
+        ledger_check._HIST_CACHE.clear()
+    assert len(calls) == 1, f"20 lookups ran {len(calls)} merge-base calls"

@@ -144,13 +144,24 @@ def _current_environment() -> str:
     return _ENVIRONMENT
 
 
+# Both answers below are functions of the commit alone, and the ledger asks
+# for them once per row while holding only a few dozen distinct commits: 2,700
+# archive-eligible rows across the 39 ledgers name 57 shas. Memoised per
+# process, which is the right scope -- a check that ran long enough for HEAD to
+# move underneath it would be answering about two different repositories.
+_HIST_CACHE: dict[str, bool] = {}
+_FP_CACHE: dict[str, str | None] = {}
+
+
 def sha_is_in_history(sha: str) -> bool:
     if not sha:
         return False
-    return subprocess.run(
-        ["git", "merge-base", "--is-ancestor", sha, "HEAD"],
-        cwd=REPO_ROOT, capture_output=True,
-    ).returncode == 0
+    if sha not in _HIST_CACHE:
+        _HIST_CACHE[sha] = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", sha, "HEAD"],
+            cwd=REPO_ROOT, capture_output=True,
+        ).returncode == 0
+    return _HIST_CACHE[sha]
 
 
 def code_fingerprint_at(sha: str) -> str | None:
@@ -160,10 +171,35 @@ def code_fingerprint_at(sha: str) -> str | None:
     this runs against a working tree someone is using, and a check that moves
     HEAD to answer a question is a check that can lose work.
     """
-    archive = subprocess.run(["git", "archive", sha], cwd=REPO_ROOT,
-                             capture_output=True)
+    if sha in _FP_CACHE:
+        return _FP_CACHE[sha]
+    _FP_CACHE[sha] = result = _code_fingerprint_at_uncached(sha)
+    return result
+
+
+def _code_fingerprint_at_uncached(sha: str) -> str | None:
+    # Ask git only for the paths the fingerprint actually hashes. An unfiltered
+    # `git archive` of this repository is 751 MB -- the committed campaign
+    # records are most of it -- and `integrity.SOURCE_GLOBS` reads 0.66 MB of
+    # that: `src/core/**/*.py` and `run.py`. The digest is over paths relative
+    # to the extraction root, and a pathspec'd archive keeps full repo-relative
+    # paths, so the hash is unchanged -- verified bit-identical against the
+    # unfiltered archive at HEAD and at four historical shas from the ledgers.
+    #
+    # Derived from SOURCE_GLOBS rather than written out, so that adding a glob
+    # cannot silently leave its files out of the archive they are hashed from.
+    pathspec = sorted({g.split("*", 1)[0].rstrip("/") or g
+                       for g in integrity.SOURCE_GLOBS})
+    archive = subprocess.run(["git", "archive", sha, "--", *pathspec],
+                             cwd=REPO_ROOT, capture_output=True)
     if archive.returncode != 0:
-        return None
+        # A commit predating one of those paths makes the pathspec unmatchable,
+        # and git fails the whole archive rather than skipping it. Fall back to
+        # the whole tree: slow, but it answers.
+        archive = subprocess.run(["git", "archive", sha], cwd=REPO_ROOT,
+                                 capture_output=True)
+        if archive.returncode != 0:
+            return None
     with tempfile.TemporaryDirectory() as tmp:
         extract = subprocess.run(["tar", "-x", "-C", tmp], input=archive.stdout,
                                  capture_output=True)

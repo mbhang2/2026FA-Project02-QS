@@ -135,3 +135,121 @@ def test_the_duplicate_cost_is_stated():
     """Two screens and two rank calls on one paper is the cheap half. The
     expensive half is offering the same claim twice as a question to register."""
     assert "two campaigns on one idea" in FLAT or "counted as two" in FLAT
+
+
+# --------------------------------------------------------------------------- #
+# dedup after the fact, not only at ingest
+# --------------------------------------------------------------------------- #
+def test_title_dedup_only_ever_guarded_the_ingest_path():
+    """`main()` drops a duplicate before registering it, so a pair that entered
+    under titles `title_key` could not match -- or entered before any dedup rule
+    existed -- stayed live forever with nothing looking again. `--dedup` is the
+    pass that looks again."""
+    assert "def dedup_registry" in SRC
+    assert "--dedup" in SRC
+
+
+def test_the_body_catches_what_a_title_cannot():
+    """**The measured pair.** `openalex-W7110598479` ("Analysis of the Time
+    Series Characteristics of Intraday Momentum on the Tokyo Stock Exchange")
+    and `openalex-W7208348673` (the same title in Japanese) hold byte-identical
+    bodies: same 18,720 chars, same digest, same month, one row per language.
+    Neither has a DOI, neither records authors, and their titles share no token,
+    so DOI dedup, `title_key` and any author heuristic all miss them."""
+    mod = _mod()
+    a, b = "openalex-W7110598479", "openalex-W7208348673"
+    da, db = mod.body_digest(a), mod.body_digest(b)
+    assert da is not None and da == db, "the pair no longer has identical bodies"
+    assert mod.title_key("Analysis of the Time Series Characteristics") != \
+        mod.title_key("東証日内モーメンタムの時系列的特徴に関する考察")
+    assert mod.body_digest("no-such-paper-id") is None
+
+
+def test_the_corpus_records_that_pair_as_a_duplicate():
+    import json
+    mod = _mod()
+    reg = json.loads((REPO_ROOT / "data" / "papers" / "registry.json").read_text())
+    rows = reg["papers"]
+    marked = [r for r in rows.values() if r.get("duplicate_reason") == "identical body"]
+    assert marked, "the body-digest rule has never been applied to the corpus"
+    for r in marked:
+        canon = rows[r["duplicate_of"]]
+        assert not canon.get("duplicate_of"), "a duplicate points at a duplicate"
+
+
+def test_the_canonical_row_never_orphans_a_decision():
+    """A row some campaign or hypothesis already points at must survive, because
+    marking it a duplicate would orphan that reference."""
+    mod = _mod()
+    used = {"id": "b", "campaign_ids": ["nq-s07-02"]}
+    rich = {"id": "a", "doi": "10.1/x", "published": "2020-01-01"}
+    assert mod._canonical([rich, used]) is used
+    hyp = {"id": "c", "hypothesis_path": "config/hypotheses/x.md"}
+    assert mod._canonical([rich, hyp]) is hyp
+
+
+def test_the_canonical_order_is_completeness_then_readability():
+    mod = _mod()
+    doi = {"id": "b", "doi": "10.1/x"}
+    dated = {"id": "a", "published": "2020-01-01"}
+    assert mod._canonical([dated, doi]) is doi, "a DOI should outrank a date"
+    jp = {"id": "a", "published": "2023-11-01", "title": "東証日内モーメンタム"}
+    en = {"id": "b", "published": "2023-11-01", "title": "Intraday Momentum"}
+    assert mod._canonical([jp, en]) is en, (
+        "between rows equal on metadata, keep the title a reader can recognise")
+    assert mod._mostly_ascii("Intraday Momentum")
+    assert not mod._mostly_ascii("東証日内モーメンタムの時系列的特徴に関する考察")
+
+
+def test_a_dropped_title_is_carried_across_and_not_lost():
+    """The canonical is chosen on metadata completeness, which can leave the live
+    row holding a title nobody here reads."""
+    import json
+    reg = json.loads((REPO_ROOT / "data" / "papers" / "registry.json").read_text())
+    canon = reg["papers"]["openalex-W7208348673"]
+    assert any("Intraday Momentum" in t for t in (canon.get("also_titled") or [])), (
+        "the English title was dropped rather than carried across")
+
+
+def test_dedup_marks_and_never_deletes():
+    body = SRC.split("def dedup_registry", 1)[1].split("\ndef ", 1)[0]
+    for forbidden in ("del reg[", ".pop(", "remove("):
+        assert forbidden not in body, f"{forbidden} removes a row"
+    assert "duplicate_of" in body
+
+
+def test_every_existing_mark_is_re_derivable_by_the_committed_rules():
+    """The 43 rows marked before this pass existed were marked by hand. If the
+    committed rules cannot reproduce them, the registry holds judgements nobody
+    can re-derive."""
+    import json
+    mod = _mod()
+    rows = json.loads(
+        (REPO_ROOT / "data" / "papers" / "registry.json").read_text())["papers"]
+    marked = [r for r in rows.values() if r.get("duplicate_of")]
+    assert len(marked) >= 43
+    orphans = []
+    for r in marked:
+        canon = rows.get(r["duplicate_of"])
+        if canon is None:
+            orphans.append(r["id"]); continue
+        same_body = (mod.body_digest(r["id"]) is not None
+                     and mod.body_digest(r["id"]) == mod.body_digest(canon["id"]))
+        same_doi = bool(r.get("doi")) and \
+            (r.get("doi") or "").lower() == (canon.get("doi") or "").lower()
+        same_title = mod.title_key(r.get("title", "")) == \
+            mod.title_key(canon.get("title", ""))
+        if not (same_body or same_doi or same_title):
+            orphans.append(r["id"])
+    assert not orphans, f"not re-derivable: {orphans}"
+
+
+def test_resolve_oa_closes_a_hardcoded_none_and_sends_no_new_address():
+    """The Crossref branch sets `oa_url: None` unconditionally, so every Crossref
+    row entered with no address for its body. `--resolve-oa` asks OpenAlex about
+    a DOI we already hold, using an API this pipeline already calls."""
+    assert "def oa_for_doi" in SRC and "--resolve-oa" in SRC
+    body = SRC.split("def oa_for_doi", 1)[1].split("\ndef ", 1)[0]
+    assert "OPENALEX" in body, "it is not using the API this pipeline already calls"
+    assert "mailto" not in body.lower(), (
+        "a contact address is being added to this request that was not there")

@@ -94,6 +94,14 @@ def worth_distilling() -> list[dict]:
             if v.get("feasibility") in ("direct", "adaptable")
             and not v.get("hypothesis_path")
             and not v.get("duplicate_of")      # the registry marks the copies
+            # **And not another system's task post.** 14 records in this corpus
+            # are an automated research swarm's queue, deposited on Zenodo with
+            # real DOIs and indexed as scholarly works; 13 were in the survivor
+            # pool and 8 were rated `direct`. Distilling one would register a
+            # hypothesis whose cited evidence is a YouTube video, with a DOI
+            # that makes it look sourced and a grounding check that passes
+            # because the claim really is in the record.
+            and not v.get("not_research")
             and (v.get("relevance") == "high" or v.get("gate_relevance") == "high")]
     rows.sort(key=lambda v: (order.get(v.get("relevance")),
                              order.get(v.get("gate_relevance"))))

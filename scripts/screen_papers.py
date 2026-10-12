@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
@@ -184,6 +185,90 @@ def screen_one(client, paper: dict, body: str = "") -> dict:
             "claim": str(out.get("claim") or "").strip()}
 
 
+# **Not every indexed record is a research report.** Measured 2026-10-12: 15
+# registry rows are another automated research system's task queue, deposited on
+# Zenodo with real DOIs by "E8 Intelligence Research" and indexed by OpenAlex as
+# scholarly works. Their abstracts open "IDEA: AUTO VIDEO SCOUT -- evaluate this
+# trading strategy video for the swarm" and name a YouTube video as the subject.
+#
+# Eight were rated `direct` and one was one of only two top-tier (direct + high)
+# candidates in the whole corpus -- they score well precisely because they are on
+# this project's exact topic. A hypothesis distilled from one would cite a real
+# DOI, pass `grounding.py` (the claim genuinely IS in the source), and rest on a
+# YouTube video. That is the sharpest failure this corpus can produce, and it is
+# not the screen's fault: the screen is asked "can this be tested on one
+# instrument", and the honest answer for "backtest the 30-minute opening range"
+# is yes.
+#
+# So it is caught before the model is asked, on provenance rather than judgement:
+# these markers are facts about the record, not opinions about the claim. Each
+# pattern is justified by a record in the corpus rather than invented.
+NOT_RESEARCH = (
+    (r"\bIDEA:\s*AUTO\b", "abstract is an automated task instruction"),
+    (r"\bfor the swarm\b", "abstract addresses an agent swarm, not a reader"),
+    (r"\bVIDEO SCOUT\b", "record is a video-review task post"),
+    (r"\bTG AUTO\b", "record is an auto-generated proposal post"),
+    (r"^\s*LAB #\d+", "record is a numbered lab-note post, not a paper"),
+    (r"\bNew edge proposed:", "record is a proposal post, not a finding"),
+    (r"youtube\.com/watch|youtu\.be/", "the cited subject is a YouTube video"),
+)
+
+
+def not_research(title: str, abstract: str) -> str | None:
+    """A reason this record is not a research report, or None.
+
+    Deterministic and offline on purpose: it runs before the model call, so a
+    record like this costs nothing to reject -- and with the gateway budget
+    exhausted (2026-10-12) a filter that needs no model is the only kind that
+    can run at all.
+    """
+    blob = f"{title or ''}\n{abstract or ''}"
+    for pattern, reason in NOT_RESEARCH:
+        if re.search(pattern, blob, re.I | re.M):
+            return reason
+    return None
+
+
+def mark_not_research(dry_run: bool = False) -> int:
+    """Flag records already in the registry that are not research reports."""
+    reg = json.loads(REGISTRY.read_text())
+    hits = []
+    for row in reg["papers"].values():
+        if row.get("not_research") or row.get("duplicate_of"):
+            continue
+        reason = not_research(row.get("title", ""), _abstract_of(row))
+        if reason:
+            hits.append((row, reason))
+    if not hits:
+        print("no non-research records among the live rows")
+        return 0
+    for row, reason in sorted(hits, key=lambda h: h[0]["id"]):
+        flag = "direct/adaptable" if row.get("feasibility") in ("direct", "adaptable") else "-"
+        print(f"  {row['id']:24} {flag:17} {reason}")
+        print(f"      {row.get('title','')[:74]}")
+        if not dry_run:
+            row["not_research"] = reason
+    surv = sum(1 for r, _ in hits if r.get("feasibility") in ("direct", "adaptable"))
+    print(f"\n  {len(hits)} record(s), {surv} of them currently in the survivor pool")
+    if dry_run:
+        print("  dry run: nothing written")
+        return 0
+    REGISTRY.write_text(json.dumps(reg, indent=2, sort_keys=True) + "\n")
+    print("  registry updated")
+    return 0
+
+
+def _abstract_of(row: dict) -> str:
+    """The abstract, which lives in the raw record and not in the registry row."""
+    f = ROOT / "data" / "papers" / "raw" / f"{row.get('id')}.json"
+    if not f.exists():
+        return ""
+    try:
+        return str(json.loads(f.read_text()).get("abstract") or "")
+    except (OSError, ValueError):
+        return ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -196,12 +281,18 @@ def main() -> int:
                     help="re-judge already-screened papers we hold a body for. "
                          "The first verdict is preserved as "
                          "feasibility_first_pass when it changes.")
+    ap.add_argument("--mark-not-research", action="store_true",
+                    help="flag registry records that are not research reports "
+                         "(automated task posts, video reviews). Deterministic, "
+                         "offline, and it runs before any model call")
     ap.add_argument("--dry-run", action="store_true",
                     help="screen and print, write nothing back")
     a = ap.parse_args()
 
     if not REGISTRY.exists():
         sys.exit(f"no registry at {REGISTRY}. Run scripts/fetch_papers.py first.")
+    if a.mark_not_research:
+        return mark_not_research(dry_run=a.dry_run)
     reg = json.loads(REGISTRY.read_text())
     if a.rescreen:
         # **Only papers we hold a body for.** Re-running the same input expecting
@@ -216,6 +307,7 @@ def main() -> int:
         # so a 40-paper measurement actually covered 21.
         todo = [p for p in reg["papers"].values()
                 if p.get("status") == "screened"
+                and not p.get("not_research")
                 and (TEXT_DIR / f"{p['id']}.txt").exists()
                 and (a.force_rescreen or p.get("screened_on") != "fulltext")][:a.limit]
         if not todo:
@@ -226,7 +318,8 @@ def main() -> int:
                      "evidence -- which is a re-roll, so say why.")
     else:
         todo = [p for p in reg["papers"].values()
-                if p["status"] == "unread"][:a.limit]
+                if p["status"] == "unread"
+                and not p.get("not_research")][:a.limit]
     if not todo:
         print("nothing unread"); return 0
 

@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import importlib.util
 import json
 import pathlib
@@ -75,6 +76,7 @@ CROSSREF = "https://api.crossref.org/works"
 MAILTO = "mbhang2@illinois.edu"
 USER_AGENT = f"2026FA-Project02-2-QS/0.1 (practicum research; mailto:{MAILTO})"
 RATE_LIMIT_S = 1.0
+TEXT_DIR = pathlib.Path(__file__).resolve().parents[1] / "data" / "papers" / "text"
 
 # OpenAlex types that are a paper. `dataset`, `peer-review` and the rest are not
 # claims we can test.
@@ -331,6 +333,131 @@ def title_key(title: str) -> str:
     return " ".join(t.split())
 
 
+def body_digest(pid: str) -> str | None:
+    """sha256 of a paper's stored body, or None if we hold no body.
+
+    **The signal that catches what a title cannot.** Measured 2026-10-12: two
+    registry rows, `openalex-W7110598479` ("Analysis of the Time Series
+    Characteristics of Intraday Momentum on the ...") and `openalex-W7208348673`
+    ("東証日内モーメンタムの時系列的特徴に関する考察"), hold byte-identical bodies --
+    same 18,720 chars, same digest, same month, one row per language. Neither
+    has a DOI, neither records authors, and their titles share no token, so DOI
+    dedup, `title_key` and any author heuristic all miss them. The body does not
+    care which language the metadata is in.
+    """
+    f = TEXT_DIR / f"{pid}.txt"
+    if not f.exists():
+        return None
+    return hashlib.sha256(f.read_bytes()).hexdigest()
+
+
+def _mostly_ascii(title: str) -> bool:
+    letters = [c for c in title if c.isalpha()]
+    return bool(letters) and sum(c.isascii() for c in letters) / len(letters) > 0.7
+
+
+def _canonical(rows: list[dict]) -> dict:
+    """Which row of a duplicate group survives as the live one.
+
+    Ordered so the choice never destroys a decision: a row some campaign or
+    hypothesis already points at wins, because marking it a duplicate would
+    orphan that reference. Then a DOI, then a date, then the smallest id purely
+    so two runs of this agree.
+    """
+    def rank(r):
+        return (
+            0 if (r.get("campaign_ids") or r.get("hypothesis_path")) else 1,
+            0 if r.get("doi") else 1,
+            0 if r.get("published") else 1,
+            # Every downstream prompt and report prints the title, so between
+            # two rows that are otherwise equal, keep the one a reader on this
+            # team can recognise. This is what separated the measured pair: one
+            # row titled "Analysis of the Time Series Characteristics of
+            # Intraday Momentum..." and one titled the same thing in Japanese.
+            0 if _mostly_ascii(r.get("title") or "") else 1,
+            r.get("id") or "",
+        )
+    return sorted(rows, key=rank)[0]
+
+
+def find_duplicates(reg: dict) -> list[dict]:
+    """Groups of registry rows that are the same paper, with the reason."""
+    live = [r for r in reg["papers"].values() if not r.get("duplicate_of")]
+    groups: list[dict] = []
+    seen: set[str] = set()
+
+    def collect(key_fn, reason):
+        buckets: dict[str, list[dict]] = {}
+        for r in live:
+            if r.get("id") in seen:
+                continue
+            k = key_fn(r)
+            if k:
+                buckets.setdefault(k, []).append(r)
+        for k, rows in sorted(buckets.items()):
+            if len(rows) < 2:
+                continue
+            keep = _canonical(rows)
+            groups.append({"reason": reason, "key": k, "keep": keep["id"],
+                           "drop": sorted(r["id"] for r in rows
+                                          if r["id"] != keep["id"])})
+            seen.update(r["id"] for r in rows)
+
+    # Body first: it is the strongest evidence and the only one that crosses
+    # languages. Then DOI, then the title key the ingest path already uses, so
+    # retro-dedup and fetch-time dedup cannot drift apart.
+    collect(lambda r: body_digest(r.get("id") or ""), "identical body")
+    collect(lambda r: (r.get("doi") or "").lower() or None, "same DOI")
+    collect(lambda r: title_key(r.get("title", "")) or None, "same title")
+    return groups
+
+
+def dedup_registry(dry_run: bool = False) -> int:
+    """Mark duplicates already in the registry.
+
+    **`title_key` only ever protected the ingest path**: `main()` drops a
+    duplicate before it is registered, so a pair that entered under titles it
+    could not match -- or entered before a dedup rule existed -- stays live
+    forever and nothing looks again. This is the pass that looks again, and it
+    MARKS rather than deletes, because a row carries decisions: its screen
+    verdict, its rank, and possibly a campaign that cites it.
+    """
+    fp = _fetch_papers_mod()
+    reg = fp.load_registry()
+    groups = find_duplicates(reg)
+    if not groups:
+        print("no duplicates among the live rows")
+        return 0
+    marked = 0
+    for g in groups:
+        print(f"  {g['reason']:16} keep {g['keep']}")
+        for pid in g["drop"]:
+            print(f"                   drop {pid}")
+            if not dry_run:
+                reg["papers"][pid]["duplicate_of"] = g["keep"]
+                reg["papers"][pid]["duplicate_reason"] = g["reason"]
+                # **Carry the dropped title across, don't lose it.** The
+                # canonical is chosen on metadata completeness, which can leave
+                # the live row holding a title nobody here reads -- the measured
+                # pair kept the Japanese row because it alone had a publication
+                # date. One alias field means the corpus stays auditable without
+                # merging two sources' claims about the same paper.
+                drop_title = (reg["papers"][pid].get("title") or "").strip()
+                keep_row = reg["papers"][g["keep"]]
+                if drop_title and drop_title != (keep_row.get("title") or "").strip():
+                    aka = keep_row.setdefault("also_titled", [])
+                    if drop_title not in aka:
+                        aka.append(drop_title)
+            marked += 1
+    print(f"\n  {len(groups)} group(s), {marked} row(s) to mark")
+    if dry_run:
+        print("  dry run: nothing written")
+        return 0
+    fp.REGISTRY.write_text(json.dumps(reg, indent=2, sort_keys=True) + "\n")
+    print("  registry updated")
+    return 0
+
+
 def _fetch_papers_mod():
     spec = importlib.util.spec_from_file_location(
         "fetch_papers", pathlib.Path(__file__).with_name("fetch_papers.py"))
@@ -342,6 +469,10 @@ def _fetch_papers_mod():
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--dedup", action="store_true",
+                    help="mark duplicates already in the registry: identical "
+                         "stored body, same DOI, or the same title key the "
+                         "ingest path uses. Marks, never deletes")
     ap.add_argument("--resolve-oa", action="store_true",
                     help="backfill oa_url for rows that carry a DOI and have no "
                          "address, by asking OpenAlex about the DOI. No search, "
@@ -364,6 +495,10 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
+    if a.dedup:
+        if a.term:
+            sys.exit("--dedup does no search; drop --term.")
+        return dedup_registry(dry_run=a.dry_run)
     if a.resolve_oa:
         if a.term:
             sys.exit("--resolve-oa does no search; drop --term. It only fills in "

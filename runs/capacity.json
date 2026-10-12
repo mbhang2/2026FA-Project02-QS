@@ -21,6 +21,16 @@
           "samples": 229,
           "wall_s": 346.3909337082878,
           "width": 4
+        },
+        "8": {
+          "baseline_available": 4695441408,
+          "drop": 1921515520,
+          "floor_available": 2773925888,
+          "measured_at": "2026-10-12T03:53:58+00:00",
+          "profile": "nq-train",
+          "samples": 405,
+          "wall_s": 629.516076666303,
+          "width": 8
         }
       }
     },

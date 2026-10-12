@@ -404,13 +404,14 @@ def test_decide_stops_at_the_widest_width_actually_known_good(machine):
     memory can no longer refuse -- recommending a width whose isolation was
     never proven and which has never completed a trial, on the strength of a
     model just caught being wrong in the other direction."""
-    machine(cores_fast=8, available=4 * GIB, per_trial=GIB, history=(4, 1404))
+    machine(cores_fast=16, cores_total=16, available=4 * GIB, per_trial=GIB,
+            history=(4, 1404))
     d = capacity.decide("nq-train", measure_if_missing=False)
-    assert d["width"] == 4
+    assert d["width"] == capacity.PROVEN_WIDTH == 8
     assert "known-good ceiling" in d["binding"]
-    assert d["plan"]["max_width"] == 8
+    assert d["plan"]["max_width"] == 16
     assert "--prove" in d["headroom_note"]
-    assert "--ceiling 8" in d["headroom_note"]
+    assert "--ceiling 16" in d["headroom_note"]
 
 
 def test_decide_never_falls_below_the_proven_width(machine):
@@ -457,8 +458,8 @@ def test_decide_says_so_when_a_ceiling_pushes_past_the_proven_width(machine):
     `stage_run` verifies isolation every time -- but the record must not imply
     the equivalence proof covered 8 when it covered 4."""
     machine(cores_fast=16, cores_total=16, available=256 * GIB, per_trial=GIB)
-    d = capacity.decide("nq-train", ceiling=8, measure_if_missing=False)
-    assert d["width"] == 8 > capacity.PROVEN_WIDTH
+    d = capacity.decide("nq-train", ceiling=12, measure_if_missing=False)
+    assert d["width"] == 12 > capacity.PROVEN_WIDTH
     assert "unproven_width" in d and "--prove" in d["unproven_width"]
     narrow = capacity.decide("nq-train", ceiling=capacity.PROVEN_WIDTH,
                              measure_if_missing=False)
@@ -575,3 +576,95 @@ def test_a_measurement_that_did_not_fit_does_cap(machine):
     assert p["binding"] == "memory (measured W=4)"
     assert p["max_width"] == 3
     assert p["verdict"] == "REFUSE"
+
+
+# --------------------------------------------------------------------------- #
+# fitting is not the same as being worth using
+# --------------------------------------------------------------------------- #
+def test_throughput_is_trials_per_second_not_width(machine):
+    machine(concurrency={1: {"drop": GIB, "wall_s": 300.0},
+                         4: {"drop": GIB, "wall_s": 330.0},
+                         8: {"drop": GIB, "wall_s": 700.0}})
+    t = capacity.throughput("nq-train")
+    assert t[1] == pytest.approx(1 / 300)
+    assert t[4] == pytest.approx(4 / 330)
+    assert t[8] == pytest.approx(8 / 700)
+    assert t[4] > t[8], "the measured case: four is faster per trial than eight"
+
+
+def test_a_tie_resolves_to_the_narrower_width(machine):
+    """**The measured case on this machine.** W=8 reproduces the sequential
+    score exactly and completes eight trials in 653-778 s against four in 330 s,
+    so throughput is flat. A tie goes to the narrower width: it pages less, has
+    the longer track record, and loses less when a trial dies."""
+    machine(cores_fast=8, available=256 * GIB, per_trial=GIB,
+            concurrency={4: {"drop": GIB, "wall_s": 330.0},
+                         8: {"drop": GIB, "wall_s": 653.0}})
+    fast, table = capacity.fastest_width("nq-train")
+    assert table[8] >= table[4] * (1 - capacity.THROUGHPUT_MARGIN), (
+        "these two should be within the margin; otherwise this tests nothing")
+    assert fast == 4
+    d = capacity.decide("nq-train", measure_if_missing=False)
+    assert d["width"] == 4
+    assert "measured throughput" in d["binding"]
+
+
+def test_a_clearly_faster_wider_width_does_win(machine):
+    """The margin must not become a reason to never parallelise."""
+    machine(cores_fast=8, available=256 * GIB, per_trial=GIB,
+            concurrency={2: {"drop": GIB, "wall_s": 300.0},
+                         8: {"drop": GIB, "wall_s": 330.0}})
+    assert capacity.fastest_width("nq-train")[0] == 8
+    assert capacity.decide("nq-train", measure_if_missing=False)["width"] == 8
+
+
+def test_one_measurement_is_not_a_comparison(machine):
+    """With a single width timed there is nothing to compare, so the ceiling
+    fallback has to carry it rather than a throughput claim from one point."""
+    machine(cores_fast=16, cores_total=16, available=256 * GIB, per_trial=GIB,
+            history=(4, 1404), concurrency={4: {"drop": GIB, "wall_s": 330.0}})
+    assert capacity.fastest_width("nq-train")[0] is None
+    d = capacity.decide("nq-train", measure_if_missing=False)
+    assert "known-good ceiling" in d["binding"]
+    assert "--measure-concurrency" in d["binding"]
+
+
+def test_throughput_cannot_exceed_a_sound_constraint(machine):
+    machine(cores_fast=2, available=256 * GIB, per_trial=GIB,
+            concurrency={2: {"drop": GIB, "wall_s": 300.0},
+                         8: {"drop": GIB, "wall_s": 300.0}})
+    d = capacity.decide("nq-train", measure_if_missing=False)
+    assert d["width"] == 2, "throughput invented capacity the machine lacks"
+    assert d["binding"] == "cores"
+
+
+def test_an_explicit_ceiling_overrides_the_throughput_judgement(machine):
+    """A caller naming a width has a reason the measurements do not know."""
+    machine(cores_fast=8, available=256 * GIB, per_trial=GIB,
+            concurrency={4: {"drop": GIB, "wall_s": 330.0},
+                         8: {"drop": GIB, "wall_s": 653.0}})
+    d = capacity.decide("nq-train", ceiling=8, measure_if_missing=False)
+    assert d["width"] == 8, "the ceiling did not override the throughput advice"
+    # Throughput alone would have cut this to 4; the ceiling is why it did not.
+    assert "throughput" not in d["binding"]
+    assert capacity.decide("nq-train", measure_if_missing=False)["width"] == 4
+
+
+def test_the_decision_records_the_throughput_it_used(machine):
+    machine(concurrency={4: {"drop": GIB, "wall_s": 330.0},
+                         8: {"drop": GIB, "wall_s": 653.0}})
+    d = capacity.decide("nq-train", measure_if_missing=False)
+    assert set(d["throughput_trials_per_s"]) == {"4", "8"}
+
+
+def test_proven_width_is_about_correctness_and_not_speed():
+    """`PROVEN_WIDTH` moved to 8 because `--equivalence` showed 8/8 runs
+    bit-identical to sequential in two reps. It did NOT move because 8 is fast;
+    the same run showed it is not. Keeping the two separate is the point: safety
+    is proven by equivalence, and the width to use is chosen by throughput."""
+    assert capacity.PROVEN_WIDTH == 8
+    src = (REPO_ROOT / "scripts" / "capacity.py").read_text()
+    note = src.split("PROVEN_WIDTH = 8", 1)[0][-1400:]
+    assert "equivalence" in note and "bit-identical" in note
+    assert "no throughput gained" in note or "3.73x" in note, (
+        "the constant no longer records that the wider width bought nothing")

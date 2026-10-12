@@ -53,10 +53,25 @@ GIB = 1073741824
 # is a factor of 1024 in the direction that says a trial needs 780 GiB.
 _RU_MAXRSS_TO_BYTES = 1 if platform.system() == "Darwin" else 1024
 
-# The widest W whose isolation has actually been proven: `worker_tree.py --prove`
-# on 2026-10-04 ran 4 workers and every one reproduced the sequential score
-# bit-identically. Not a cap -- a fact `decide` reports when it chooses wider.
-PROVEN_WIDTH = 4
+# The widest W whose isolation and determinism have actually been proven.
+# `worker_tree.py --equivalence` on 2026-10-11 ran a sequential baseline and two
+# reps of EIGHT concurrent trials on real NQ data: 8/8 bit-identical to the
+# sequential -0.9773068944724839 in both reps. (2026-10-04 had proven 4.)
+#
+# **Correct is not the same as fast, and here they part company.** The same run
+# measured 778.4 s and 652.7 s for eight trials against 330 s for four and 308 s
+# for one -- so W=8 is 3.16-3.77x where W=4 is 3.73x, i.e. twice the trials for
+# twice the wall clock and no throughput gained, because the machine pages (103k
+# pages out, swap at 8.24 GiB, compressor at 7.73 GiB during the run). So this
+# constant says what is SAFE, and measured throughput below is what decides.
+PROVEN_WIDTH = 8
+
+# How much faster a wider W must actually be before it is preferred. Ties go to
+# the narrower width, which pages less, carries the longer track record, and has
+# the smaller blast radius if a trial dies. The one judgement call in the
+# throughput logic, stated rather than buried: at 10% the W=4 and W=8
+# measurements on this machine are a tie, and the tie resolves to 4.
+THROUGHPUT_MARGIN = 0.10
 
 
 # --------------------------------------------------------------------------- #
@@ -351,6 +366,28 @@ def measure_concurrency(profile: str, width: int, *, quiet: bool = False) -> dic
     return entry
 
 
+def throughput(profile: str) -> dict[int, float]:
+    """Trials per second at each measured width. The number that matters.
+
+    A width that fits is not a width worth using: eight concurrent trials on
+    this machine complete correctly and take twice as long as four, so the
+    cores are busy and nothing is gained. Capacity answers "can it", this
+    answers "should it".
+    """
+    return {k: k / c["wall_s"] for k, c in concurrency_costs(profile).items()
+            if c.get("wall_s")}
+
+
+def fastest_width(profile: str) -> tuple[int | None, dict[int, float]]:
+    """The narrowest width within `THROUGHPUT_MARGIN` of the best measured one."""
+    t = throughput(profile)
+    if len(t) < 2:
+        return None, t
+    best = max(t.values())
+    good = [k for k, v in sorted(t.items()) if v >= best * (1 - THROUGHPUT_MARGIN)]
+    return (good[0] if good else None), t
+
+
 def concurrency_costs(profile: str) -> dict[int, dict]:
     raw = (load_store().get(machine_id(), {}).get("concurrency", {}) or {}).get(profile, {})
     return {int(k): v for k, v in raw.items()}
@@ -587,24 +624,42 @@ def decide(profile: str, *, ceiling: int | None = None,
     width = p["max_width"]
     limiter = p["binding"]
 
-    # **The default ceiling is the widest width this project has actually run.**
-    # Without it, `decide` on this machine would answer 8 -- cores allow it and
-    # memory can no longer refuse -- and recommend a width whose isolation was
-    # never proven and which has never completed a trial here, on the strength
-    # of a model that was just caught being wrong in the other direction. So the
-    # recommendation stops at known ground: the widest proven width, or the
-    # widest the ledger shows completing, whichever is larger. Widening is a
-    # deliberate act -- `--ceiling N` -- and `--prove` is what should precede it.
+    # **Measured throughput decides, when there is any.** The sound constraints
+    # above answer whether a width fits; they cannot answer whether it is worth
+    # using. On this machine W=8 fits, reproduces the sequential score exactly,
+    # and gains nothing -- eight trials take twice as long as four. So where two
+    # or more widths have been measured, the recommendation is the NARROWEST
+    # within `THROUGHPUT_MARGIN` of the fastest, and the ceiling-based rule below
+    # is only the fallback for a machine that has never been timed.
+    #
+    # An explicit `--ceiling` replaces this whole judgement, because a caller who
+    # names a width has a reason the measurements do not know about.
+    fast, table = fastest_width(profile)
+    out_tput = {str(k): round(v, 6) for k, v in sorted(table.items())}
     hist_w = (p.get("history") or {}).get("width") or 1
     hist_n = (p.get("history") or {}).get("completed") or 0
     known = max(PROVEN_WIDTH, hist_w if hist_n >= EVIDENCE_MIN_TRIALS else 1)
-    effective_ceiling = ceiling if ceiling is not None else known
-    if effective_ceiling < width:
-        width = effective_ceiling
-        limiter = (f"ceiling {effective_ceiling} set by the caller"
-                   if ceiling is not None else
-                   f"known-good ceiling {known} (widest proven or completed "
-                   f"width); cores alone would allow {p['max_width']}")
+
+    if ceiling is not None:
+        if ceiling < width:
+            width = ceiling
+            limiter = f"ceiling {ceiling} set by the caller"
+    elif fast is not None:
+        if fast < width:
+            width = fast
+            limiter = (
+                f"measured throughput: W={fast} at "
+                f"{table[fast]*3600:.1f} trials/h is within "
+                f"{THROUGHPUT_MARGIN:.0%} of the best measured width and is the "
+                f"narrowest that is; the sound constraints would allow "
+                f"{p['max_width']}")
+    elif known < width:
+        # Never timed here. Stop at known ground rather than at what cores allow.
+        width = known
+        limiter = (f"known-good ceiling {known} (widest proven or completed "
+                   f"width); cores alone would allow {p['max_width']}. No "
+                   f"throughput measured -- `--measure-concurrency` would "
+                   f"replace this guess with a number.")
     width = max(1, width)
 
     # Re-planned at the width actually chosen, so the recorded plan and the
@@ -615,6 +670,7 @@ def decide(profile: str, *, ceiling: int | None = None,
            "measured_now": measured_now, "machine": p["machine"],
            "profile": profile,
            "footprint_bytes": (p["footprint"] or {}).get("peak_rss_bytes"),
+           "throughput_trials_per_s": out_tput,
            "decided_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),
            "reason": f"W={width}, bound by {limiter}"}
 

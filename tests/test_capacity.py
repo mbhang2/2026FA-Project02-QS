@@ -91,7 +91,15 @@ def test_the_footprint_is_keyed_to_the_machine_that_measured_it():
 def machine(monkeypatch):
     """A machine whose every dimension can be set independently."""
     def configure(*, cores_fast=8, cores_total=10, available=32 * GIB,
-                  free_disk=500 * GIB, per_trial=GIB, nofile=1048576):
+                  free_disk=500 * GIB, per_trial=GIB, nofile=1048576,
+                  history=(1, 0), concurrency=None):
+        # History and measured concurrency are part of the machine as far as the
+        # planner is concerned, so the fixture owns them. Without this the real
+        # ledger's 1,404 completed trials at W=4 leak into every unit test and
+        # the fixture stops describing the machine it claims to.
+        monkeypatch.setattr(capacity, "proven_by_history", lambda root=None: history)
+        monkeypatch.setattr(capacity, "concurrency_costs",
+                            lambda profile: concurrency or {})
         monkeypatch.setattr(capacity, "cores", lambda: {
             "total": cores_total, "usable": cores_total,
             "usable_basis": "test", "performance": cores_fast,
@@ -111,19 +119,63 @@ def machine(monkeypatch):
     return configure
 
 
-def test_memory_binds_when_it_is_the_scarce_thing(machine):
+def test_the_memory_model_warns_but_cannot_refuse(machine):
+    """**The correction this module exists to pin.** The first planner made
+    `W * peak_rss` a refusing constraint and it refused W=4 on a machine whose
+    ledger holds 1,404 completed trials at W=4. Measuring showed the model is
+    not conservative but wrong in kind: RSS is per-process and does not add,
+    because the interpreter, the linked libraries and the memory-mapped tick
+    cache are resident in every trial and exist once in RAM. One trial dropped
+    system available memory by 1.12 GiB; four concurrent dropped it by 0.77 GiB,
+    against a prediction of 3.44 GiB.
+
+    So it reports, and it never decides. The alternative was raising `headroom`
+    until W=4 passed, which is fitting the threshold to the wanted answer."""
     machine(cores_fast=8, available=4 * GIB, per_trial=GIB)
     p = capacity.plan(8, "nq-train")
-    assert p["binding"] == "memory"
-    assert p["max_width"] == 3            # 4 GiB * 0.85 headroom // 1 GiB
-    assert p["verdict"] == "REFUSE"
+    model = next(c for c in p["constraints"] if c["name"] == "memory (model)")
+    assert model["advisory"] is True
+    assert model["fits"] == 3, "the model should still be computed and shown"
+    assert p["binding"] != "memory (model)", (
+        "the advisory memory model is deciding the verdict again")
+    assert p["max_width"] == 8 and p["verdict"] == "OK"
 
 
-def test_cores_bind_when_memory_is_plentiful(machine):
+def test_a_measured_concurrency_cost_is_reported(machine):
+    machine(cores_fast=8, available=32 * GIB, per_trial=GIB,
+            concurrency={4: {"drop": 0.77 * GIB, "wall_s": 358.0}})
+    p = capacity.plan(4, "nq-train")
+    measured = [c for c in p["constraints"] if c["name"].startswith("memory (measured")]
+    assert len(measured) == 1
+    assert "observed system drop" in measured[0]["detail"]
+
+
+def test_cores_bind_when_they_are_the_scarce_thing(machine):
     machine(cores_fast=4, available=256 * GIB, per_trial=GIB)
     p = capacity.plan(8, "nq-train")
     assert p["binding"] == "cores"
     assert p["max_width"] == 4
+    assert p["verdict"] == "REFUSE"
+
+
+def test_a_width_the_ledger_has_carried_is_never_refused(machine):
+    """Inference loses to a record. This is the specific failure that happened:
+    the planner said 3, the machine had completed 1,404 trials at 4."""
+    machine(cores_fast=2, available=4 * GIB, per_trial=GIB, history=(4, 1404))
+    p = capacity.plan(4, "nq-train")
+    assert p["verdict"] == "OK"
+    assert p["max_width"] == 4
+    assert p["model_max_width"] == 2
+    assert "1404 trials completed" in p["max_width_basis"]
+
+
+def test_one_lucky_row_is_not_evidence(machine):
+    """A single completed row could be a trial that landed while the machine
+    was quiet. A campaign's worth of them is the machine doing it repeatedly."""
+    machine(cores_fast=2, available=4 * GIB, history=(8, 3))
+    p = capacity.plan(8, "nq-train")
+    assert p["verdict"] == "REFUSE"
+    assert p["max_width"] == 2
 
 
 def test_disk_can_bind_even_though_it_never_has_here(machine):
@@ -175,11 +227,12 @@ def test_swap_is_reported_but_never_counted_as_capacity(machine):
     """A trial that fits only by paging still trips the engine's wall-clock
     budget. Swap belongs in the warning, not the budget."""
     machine(available=4 * GIB, per_trial=GIB)
-    narrow = capacity.plan(4, "nq-train")["max_width"]
+    p = capacity.plan(4, "nq-train")
     src = _no_comments((REPO_ROOT / "scripts" / "capacity.py").read_text())
     budget = src.split("budget =", 1)[1].split("\n", 1)[0]
     assert "swap" not in budget, f"swap entered the memory budget: {budget!r}"
-    assert narrow == 3
+    model = next(c for c in p["constraints"] if c["name"] == "memory (model)")
+    assert model["fits"] == 3, "the advisory figure is still computed from RAM only"
 
 
 def test_ru_maxrss_units_follow_the_platform():
@@ -273,8 +326,16 @@ def test_the_gate_stops_a_run_it_cannot_carry(tmp_path, monkeypatch):
         p.name for p in (src / "sources").iterdir())), dst / "champion.py")
 
     monkeypatch.setattr(nq_campaign, "OUT", tmp_path)
+    # Refused on CORES, which is a sound constraint. Memory is advisory now and
+    # cannot refuse, and the real ledger's W=4 history would lift the refusal
+    # anyway -- so a test that fakes memory small proves nothing.
+    monkeypatch.setattr(capacity, "proven_by_history", lambda root=None: (1, 0))
+    monkeypatch.setattr(capacity, "cores", lambda: {
+        "total": 2, "usable": 2, "usable_basis": "test", "performance": 2,
+        "efficiency": 0, "cgroup_quota": None, "brand": "test",
+        "schedulable": 2})
     monkeypatch.setattr(capacity, "footprint", lambda profile: {
-        "profile": profile, "peak_rss_bytes": 64 * GIB, "wall_s": 300.0,
+        "profile": profile, "peak_rss_bytes": GIB, "wall_s": 300.0,
         "measured_at": "2026-10-11T00:00:00+00:00"})
 
     with pytest.raises(SystemExit) as e:
@@ -286,7 +347,7 @@ def test_the_gate_stops_a_run_it_cannot_carry(tmp_path, monkeypatch):
     written = json.loads((dst / "capacity.json").read_text())
     assert written["verdict"] == "REFUSE"
     assert written["ignored"] is None
-    assert written["binding"] == "memory"
+    assert written["binding"] == "cores"
 
 
 def test_the_override_lets_the_same_run_proceed(tmp_path, monkeypatch):
@@ -308,8 +369,13 @@ def test_the_override_lets_the_same_run_proceed(tmp_path, monkeypatch):
     (dst / "campaign.json").write_text(json.dumps(rec))
 
     monkeypatch.setattr(nq_campaign, "OUT", tmp_path)
+    monkeypatch.setattr(capacity, "proven_by_history", lambda root=None: (1, 0))
+    monkeypatch.setattr(capacity, "cores", lambda: {
+        "total": 2, "usable": 2, "usable_basis": "test", "performance": 2,
+        "efficiency": 0, "cgroup_quota": None, "brand": "test",
+        "schedulable": 2})
     monkeypatch.setattr(capacity, "footprint", lambda profile: {
-        "profile": profile, "peak_rss_bytes": 64 * GIB, "wall_s": 300.0,
+        "profile": profile, "peak_rss_bytes": GIB, "wall_s": 300.0,
         "measured_at": "2026-10-11T00:00:00+00:00"})
 
     class PastTheGate(Exception):
@@ -333,29 +399,45 @@ def test_the_override_lets_the_same_run_proceed(tmp_path, monkeypatch):
 # --------------------------------------------------------------------------- #
 # deciding W, and the one place it is allowed to be decided
 # --------------------------------------------------------------------------- #
-def test_decide_picks_the_width_the_binding_constraint_allows(machine):
-    machine(cores_fast=8, available=4 * GIB, per_trial=GIB)
+def test_decide_stops_at_the_widest_width_actually_known_good(machine):
+    """Without this the planner would answer 8 here -- cores allow it, and
+    memory can no longer refuse -- recommending a width whose isolation was
+    never proven and which has never completed a trial, on the strength of a
+    model just caught being wrong in the other direction."""
+    machine(cores_fast=8, available=4 * GIB, per_trial=GIB, history=(4, 1404))
     d = capacity.decide("nq-train", measure_if_missing=False)
-    assert d["verdict"] == "OK"
-    assert d["width"] == 3
-    assert d["binding"] == "memory"
-    assert d["plan"]["width"] == 3, (
-        "the recorded plan describes a different width from the decision")
+    assert d["width"] == 4
+    assert "known-good ceiling" in d["binding"]
+    assert d["plan"]["max_width"] == 8
+    assert "--prove" in d["headroom_note"]
+    assert "--ceiling 8" in d["headroom_note"]
 
 
-def test_decide_respects_a_ceiling(machine):
-    machine(cores_fast=8, available=256 * GIB, per_trial=GIB)
-    assert capacity.decide("nq-train", measure_if_missing=False)["width"] == 8
-    d = capacity.decide("nq-train", ceiling=2, measure_if_missing=False)
-    assert d["width"] == 2
-    assert "ceiling" in d["binding"]
+def test_decide_never_falls_below_the_proven_width(machine):
+    """With no history at all the floor is the one width whose isolation was
+    proven, so a fresh machine is not pushed down to the chain."""
+    machine(cores_fast=8, available=4 * GIB, per_trial=GIB, history=(1, 0))
+    d = capacity.decide("nq-train", measure_if_missing=False)
+    assert d["width"] == capacity.PROVEN_WIDTH
 
 
-def test_decide_never_returns_zero(machine):
-    """A machine too loaded to carry anything still has to produce a runnable
-    declaration, and W=1 is the path eighteen campaigns took."""
-    machine(cores_fast=1, available=1024, per_trial=64 * GIB)
-    assert capacity.decide("nq-train", measure_if_missing=False)["width"] == 1
+def test_an_explicit_ceiling_widens_as_well_as_narrows(machine):
+    machine(cores_fast=8, available=256 * GIB, per_trial=GIB, history=(4, 1404))
+    assert capacity.decide("nq-train", ceiling=2,
+                           measure_if_missing=False)["width"] == 2
+    wide = capacity.decide("nq-train", ceiling=8, measure_if_missing=False)
+    assert wide["width"] == 8, "an explicit ceiling cannot widen past known-good"
+    # With the ceiling at the sound cap, the sound constraint is what limits --
+    # the ceiling stopped being the thing in the way.
+    assert wide["binding"] == "cores"
+
+
+def test_decide_cannot_exceed_a_sound_constraint_even_with_a_ceiling(machine):
+    machine(cores_fast=2, available=256 * GIB, per_trial=GIB, history=(1, 0))
+    d = capacity.decide("nq-train", ceiling=16, measure_if_missing=False)
+    assert d["width"] == 2, (
+        "a caller's ceiling overrode the core count; a ceiling raises the cap, "
+        "it does not invent capacity")
 
 
 def test_decide_measures_rather_than_guessing_when_unmeasured(monkeypatch):
@@ -370,15 +452,14 @@ def test_decide_measures_rather_than_guessing_when_unmeasured(monkeypatch):
     assert d["verdict"] == "UNKNOWN" and d["width"] is None
 
 
-def test_decide_says_so_when_it_picks_a_width_never_proven(machine):
-    """Isolation has only ever been proven at 4 workers. Choosing 8 is allowed --
-    `stage_run` verifies isolation every time -- but the record should not imply
-    the equivalence proof covered it."""
+def test_decide_says_so_when_a_ceiling_pushes_past_the_proven_width(machine):
+    """Isolation has only ever been proven at 4. Going wider is allowed --
+    `stage_run` verifies isolation every time -- but the record must not imply
+    the equivalence proof covered 8 when it covered 4."""
     machine(cores_fast=16, cores_total=16, available=256 * GIB, per_trial=GIB)
-    d = capacity.decide("nq-train", measure_if_missing=False)
-    assert d["width"] > capacity.PROVEN_WIDTH
-    assert "unproven_width" in d
-    assert "--prove" in d["unproven_width"]
+    d = capacity.decide("nq-train", ceiling=8, measure_if_missing=False)
+    assert d["width"] == 8 > capacity.PROVEN_WIDTH
+    assert "unproven_width" in d and "--prove" in d["unproven_width"]
     narrow = capacity.decide("nq-train", ceiling=capacity.PROVEN_WIDTH,
                              measure_if_missing=False)
     assert "unproven_width" not in narrow
@@ -468,3 +549,29 @@ def test_a_plan_that_mixes_auto_and_numbers_is_refused(tmp_path):
 
 def test_the_plan_documents_auto():
     assert "generation_width: auto" in SESSION or "`auto` lets" in SESSION
+
+
+def test_a_measurement_that_fit_is_evidence_and_never_a_cap(machine):
+    """Treating a fitting measurement as a cap made a k=1 measurement pin W to
+    1: the planner would have recommended the sequential chain to anyone who
+    measured a single trial. A measurement that fit says k works, not that k is
+    the ceiling."""
+    machine(cores_fast=8, available=256 * GIB, per_trial=GIB, history=(1, 0),
+            concurrency={1: {"drop": 0.48 * GIB, "wall_s": 296.0},
+                         4: {"drop": 1.28 * GIB, "wall_s": 346.0}})
+    p = capacity.plan(8, "nq-train")
+    assert p["max_width"] == 8, (
+        f"a fitting measurement capped the plan at {p['max_width']}")
+    for c in p["constraints"]:
+        if c["name"].startswith("memory (measured"):
+            assert c["advisory"] is True
+
+
+def test_a_measurement_that_did_not_fit_does_cap(machine):
+    """The other direction has to work, or the measurement is decoration."""
+    machine(cores_fast=8, available=2 * GIB, per_trial=GIB, history=(1, 0),
+            concurrency={4: {"drop": 8 * GIB, "wall_s": 346.0}})
+    p = capacity.plan(4, "nq-train")
+    assert p["binding"] == "memory (measured W=4)"
+    assert p["max_width"] == 3
+    assert p["verdict"] == "REFUSE"

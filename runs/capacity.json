@@ -1,5 +1,29 @@
 {
   "bfda0b2f6483a041": {
+    "concurrency": {
+      "nq-train": {
+        "1": {
+          "baseline_available": 3911712768,
+          "drop": 514179072,
+          "floor_available": 3397533696,
+          "measured_at": "2026-10-12T01:47:29+00:00",
+          "profile": "nq-train",
+          "samples": 196,
+          "wall_s": 296.0719168325886,
+          "width": 1
+        },
+        "4": {
+          "baseline_available": 3982229504,
+          "drop": 1376550912,
+          "floor_available": 2605678592,
+          "measured_at": "2026-10-12T01:53:16+00:00",
+          "profile": "nq-train",
+          "samples": 229,
+          "wall_s": 346.3909337082878,
+          "width": 4
+        }
+      }
+    },
     "machine": {
       "brand": "Apple M1 Pro",
       "cores_total": 10,

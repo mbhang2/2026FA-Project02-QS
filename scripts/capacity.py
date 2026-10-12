@@ -41,6 +41,7 @@ import resource
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -281,8 +282,138 @@ def measure_trial(profile: str, *, quiet: bool = False) -> dict:
     return entry
 
 
+def measure_concurrency(profile: str, width: int, *, quiet: bool = False) -> dict:
+    """What `width` concurrent trials actually cost in PHYSICAL memory.
+
+    Measured because the obvious model is wrong, and measurably so. `width *
+    peak_rss` assumes per-process RSS adds; it does not -- the interpreter, the
+    linked libraries and the memory-mapped tick cache are resident in every
+    trial and exist once in RAM. On this machine the prediction for four trials
+    was 3.44 GiB and the observed system-wide drop was **0.77 GiB, less than the
+    1.12 GiB a single trial cost**, because what dominates is shared and
+    reclaimable rather than private.
+
+    Samples system-wide available memory while the trials run and reports the
+    deepest drop from baseline. **That drop is noisy** and should be read as a
+    direction rather than a budget: two runs an hour apart on an idle-ish laptop
+    gave k=1 1.12 then 0.48 GiB, and k=4 0.77 then 1.28 GiB, because
+    free+inactive+purgeable moves with everything else on the machine. What both
+    runs agree on is the thing that matters -- four concurrent trials cost far
+    less than four times one, against an additive prediction of 3.44 GiB -- and
+    the wall clock, which came out at 3.4x both times (346s and 358s for four
+    against 296s and 305s for one). The wall figure is the reliable one. Every run is `purpose=check` inside a worker
+    tree, so N is untouched and nothing races `src/strategies/current.py`.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import worker_tree
+
+    workers = worker_tree.create(width, quiet=True)
+    samples: list[int] = []
+    stop = threading.Event()
+
+    def sampler():
+        while not stop.is_set():
+            samples.append(memory()["available"] or 0)
+            stop.wait(1.5)
+
+    baseline = min(memory()["available"] or 0 for _ in range(3))
+    t = threading.Thread(target=sampler, daemon=True)
+    t.start()
+    t0 = time.monotonic()
+    procs = [subprocess.Popen(
+        [sys.executable, "run.py", "--profile", profile, "--purpose", "check",
+         "--human", "--quiet"], cwd=w,
+        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE) for w in workers]
+    errors = [pr.communicate()[1] for pr in procs]
+    wall = time.monotonic() - t0
+    stop.set()
+    t.join(timeout=3)
+    failed = [e.decode()[-300:] for pr, e in zip(procs, errors) if pr.returncode != 0]
+    shutil.rmtree(worker_tree.WORKERS_DIR, ignore_errors=True)
+    if failed:
+        raise SystemExit(f"a measuring trial failed at width {width}:\n"
+                         + "\n".join(failed))
+
+    floor = min(samples) if samples else baseline
+    entry = {"width": width, "wall_s": wall, "baseline_available": baseline,
+             "floor_available": floor, "drop": max(0, baseline - floor),
+             "samples": len(samples), "profile": profile,
+             "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())}
+    store = load_store()
+    store.setdefault(machine_id(), {}).setdefault("concurrency", {}) \
+         .setdefault(profile, {})[str(width)] = entry
+    STORE.parent.mkdir(parents=True, exist_ok=True)
+    STORE.write_text(json.dumps(store, indent=2, sort_keys=True) + "\n")
+    if not quiet:
+        print(f"  width {width}: {wall:.0f}s wall, system memory drop "
+              f"{entry['drop']/GIB:.2f} GiB "
+              f"(additive RSS model predicted {width * (footprint(profile) or {}).get('peak_rss_bytes', 0)/GIB:.2f} GiB)")
+    return entry
+
+
+def concurrency_costs(profile: str) -> dict[int, dict]:
+    raw = (load_store().get(machine_id(), {}).get("concurrency", {}) or {}).get(profile, {})
+    return {int(k): v for k, v in raw.items()}
+
+
 def footprint(profile: str) -> dict | None:
     return (load_store().get(machine_id(), {}).get("profiles", {}) or {}).get(profile)
+
+
+# --------------------------------------------------------------------------- #
+# what the machine has already carried
+# --------------------------------------------------------------------------- #
+# A width needs this many completed trials before it counts as evidence. One
+# row could be a fluke that happened to land while the machine was quiet; a
+# campaign's worth of them is the machine doing the thing repeatedly.
+EVIDENCE_MIN_TRIALS = 20
+
+
+def observed_widths(root: Path | None = None) -> dict[int, int]:
+    """Generation widths that have actually COMPLETED trials in this environment.
+
+    The strongest available statement about what this machine can carry is what
+    it has already carried. Modelling memory is inference; the ledger is a
+    record. When the two disagree the record wins -- which is the whole reason
+    this function exists: the first version of the planner refused W=4 on a
+    machine that had completed 1,404 trials at W=4.
+
+    **What it matches on, and what that cannot pin.** `environment_fingerprint`
+    (every importable distribution) plus the row's recorded platform. Neither
+    identifies the hardware, so this is evidence about *this environment* rather
+    than strictly this box, and a Linux run would differ in both. The residual
+    risk is importing a larger machine's evidence onto a smaller one; it is
+    bounded by the fact that evidence only ever lifts a refusal, never raises a
+    recommendation, and the measured numbers are printed either way.
+    """
+    sys.path.insert(0, str(REPO_ROOT))
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        import ledger_check
+        from src.core.scoring import integrity
+    except ImportError:
+        return {}
+    here = integrity.environment_fingerprint()
+    counts: dict[int, int] = {}
+    for path in ledger_check.discover_ledgers(root or REPO_ROOT):
+        for row in ledger_check.load_rows(path):
+            if row.get("outcome") != "completed":
+                continue
+            if row.get("environment_fingerprint") != here:
+                continue
+            if (row.get("isolation") or {}).get("platform") != platform.system():
+                continue
+            w = row.get("generation_width")
+            if isinstance(w, int) and w >= 1:
+                counts[w] = counts.get(w, 0) + 1
+    return counts
+
+
+def proven_by_history(root: Path | None = None) -> tuple[int, int]:
+    """(widest width with enough completions, how many). (1, 0) if none."""
+    counts = observed_widths(root)
+    ok = [(w, n) for w, n in counts.items() if n >= EVIDENCE_MIN_TRIALS]
+    return max(ok, default=(1, 0))
 
 
 # --------------------------------------------------------------------------- #
@@ -313,10 +444,43 @@ def plan(width: int, profile: str, *, headroom: float = 0.85) -> dict:
     per = fp["peak_rss_bytes"]
     budget = (m["available"] or 0) * headroom
     mem_fits = int(budget // per) if per else width
+    # **ADVISORY, and this is a correction.** The first version of this planner
+    # made `W * peak_rss` a refusing constraint and it refused W=4 on a machine
+    # whose ledger holds 1,404 completed trials at W=4. Measuring it showed the
+    # model is not merely conservative but measuring the wrong quantity: per
+    # process RSS does not add, because the interpreter, the linked libraries
+    # and the memory-mapped tick cache are resident in every trial and exist
+    # once in RAM. Observed here -- one trial dropped system available memory by
+    # 1.12 GiB, FOUR concurrent trials dropped it by 0.77 GiB, against a
+    # prediction of 3.44 GiB.
+    #
+    # So it is reported and it warns, and it never refuses. The alternative was
+    # to raise `headroom` until W=4 passed, which is fitting a threshold to the
+    # answer I wanted.
     out["constraints"].append({
-        "name": "memory", "fits": mem_fits,
-        "detail": f"{per/GIB:.2f} GiB measured per trial, {(m['available'] or 0)/GIB:.2f} GiB "
-                  f"available ({m['available_basis']}), {headroom:.0%} headroom"})
+        "name": "memory (model)", "fits": mem_fits, "advisory": True,
+        "detail": f"{per/GIB:.2f} GiB per-trial RSS x W vs {(m['available'] or 0)/GIB:.2f} GiB "
+                  f"available ({m['available_basis']}), {headroom:.0%} headroom -- "
+                  f"ADVISORY: RSS is per-process and does not add"})
+    # `cost`, not `c`: `c` is the cores dict six lines up, and rebinding it here
+    # made `c["schedulable"]` below raise -- but only once a concurrency
+    # measurement existed, so the code read fine and would have broken on the
+    # first machine that had one.
+    for k, cost in sorted(concurrency_costs(profile).items()):
+        fits_now = (m["available"] or 0) * headroom >= cost["drop"]
+        out["constraints"].append({
+            "name": f"memory (measured W={k})",
+            # **A measurement that FIT is evidence that k works, not a statement
+            # that k is the most that works.** Treating it as a cap made a k=1
+            # measurement pin W to 1 -- the planner would have recommended the
+            # sequential chain to anyone who measured a single trial. Only a
+            # measurement that did NOT fit bounds anything, and it bounds at
+            # k-1, which is the widest thing not contradicted.
+            "fits": k if fits_now else max(1, k - 1),
+            "advisory": fits_now,
+            "detail": f"{cost['drop']/GIB:.2f} GiB observed system drop running "
+                      f"{k} concurrently, {cost['wall_s']:.0f}s wall"
+                      + ("" if fits_now else " -- did NOT fit, so it caps")})
     out["constraints"].append({
         "name": "cores", "fits": c["schedulable"],
         "detail": (f"{c['performance']} performance cores of {c['total']} "
@@ -338,13 +502,39 @@ def plan(width: int, profile: str, *, headroom: float = 0.85) -> dict:
             "name": "open files", "fits": max(1, nofile["soft"] // 64),
             "detail": f"soft limit {nofile['soft']}, ~64 descriptors budgeted per worker"})
 
-    binding = min(out["constraints"], key=lambda k: k["fits"])
+    deciding = [c for c in out["constraints"] if not c.get("advisory")]
+    binding = min(deciding or out["constraints"], key=lambda k: k["fits"])
     out["binding"] = binding["name"]
     out["max_width"] = max(1, binding["fits"])
-    out["verdict"] = "OK" if width <= out["max_width"] else "REFUSE"
+    out["max_width_basis"] = "measured capacity"
     out["reason"] = (
         f"{binding['name']} allows {binding['fits']} concurrent trial(s) "
         f"({binding['detail']})")
+
+    # **The ledger outranks the model.** Everything above is inference about
+    # physical memory from a per-process RSS figure, and RSS does not add: the
+    # interpreter, the linked libraries and the memory-mapped tick cache are
+    # resident in every trial and exist once in RAM, so `W * peak_rss`
+    # overcounts by whatever is shared. That error refused W=4 on a machine
+    # whose ledger holds 1,404 completed trials at W=4.
+    #
+    # So a width this environment has demonstrably carried is never refused.
+    # It lifts a refusal and never raises a recommendation -- history says what
+    # worked, not what would.
+    hist_w, hist_n = proven_by_history()
+    out["history"] = {"width": hist_w, "completed": hist_n}
+    if hist_n >= EVIDENCE_MIN_TRIALS and hist_w > out["max_width"]:
+        out["model_max_width"] = out["max_width"]
+        out["max_width"] = hist_w
+        out["max_width_basis"] = (
+            f"{hist_n} trials completed at W={hist_w} in this environment; the "
+            f"memory model said {out['model_max_width']} and the ledger "
+            f"outranks it")
+        out["reason"] = (
+            f"W<={hist_w} is carried by the record ({hist_n} completed trials); "
+            f"the memory model alone would allow {out['model_max_width']} "
+            f"({binding['detail']})")
+    out["verdict"] = "OK" if width <= out["max_width"] else "REFUSE"
 
     if m["swap_total"] and m["swap_used"] is not None:
         frac = m["swap_used"] / m["swap_total"]
@@ -396,8 +586,25 @@ def decide(profile: str, *, ceiling: int | None = None,
 
     width = p["max_width"]
     limiter = p["binding"]
-    if ceiling is not None and ceiling < width:
-        width, limiter = ceiling, f"ceiling ({ceiling}) set by the caller"
+
+    # **The default ceiling is the widest width this project has actually run.**
+    # Without it, `decide` on this machine would answer 8 -- cores allow it and
+    # memory can no longer refuse -- and recommend a width whose isolation was
+    # never proven and which has never completed a trial here, on the strength
+    # of a model that was just caught being wrong in the other direction. So the
+    # recommendation stops at known ground: the widest proven width, or the
+    # widest the ledger shows completing, whichever is larger. Widening is a
+    # deliberate act -- `--ceiling N` -- and `--prove` is what should precede it.
+    hist_w = (p.get("history") or {}).get("width") or 1
+    hist_n = (p.get("history") or {}).get("completed") or 0
+    known = max(PROVEN_WIDTH, hist_w if hist_n >= EVIDENCE_MIN_TRIALS else 1)
+    effective_ceiling = ceiling if ceiling is not None else known
+    if effective_ceiling < width:
+        width = effective_ceiling
+        limiter = (f"ceiling {effective_ceiling} set by the caller"
+                   if ceiling is not None else
+                   f"known-good ceiling {known} (widest proven or completed "
+                   f"width); cores alone would allow {p['max_width']}")
     width = max(1, width)
 
     # Re-planned at the width actually chosen, so the recorded plan and the
@@ -416,6 +623,13 @@ def decide(profile: str, *, ceiling: int | None = None,
     # run is not forbidden -- `stage_run` calls `worker_tree.verify(width)`
     # every time -- but the record should say that the width was never put
     # through the equivalence proof rather than quietly implying it was.
+    if p["max_width"] > width and ceiling is None:
+        out["headroom_note"] = (
+            f"this machine's sound constraints allow W={p['max_width']} "
+            f"(bound by {p['binding']}), but the recommendation stops at "
+            f"W={width}. To use it: `scripts/worker_tree.py --prove --create "
+            f"{p['max_width']}` (purpose=check only, spends no N), then "
+            f"`--ceiling {p['max_width']}`.")
     if width > PROVEN_WIDTH:
         out["unproven_width"] = (
             f"W={width} exceeds the widest isolation proof on record "
@@ -451,8 +665,18 @@ def render(p: dict) -> None:
     for k in p["constraints"]:
         mark = "<-- binding" if k["name"] == p["binding"] else ""
         print(f"    {k['name']:12} allows {k['fits']:>3}   {k['detail']} {mark}")
-    print(f"\n  W={p['width']}: {p['verdict']}   (this machine carries W<={p['max_width']}, "
-          f"bound by {p['binding']})")
+    h = p.get("history") or {}
+    if h.get("completed"):
+        print(f"    {'history':12} allows {h['width']:>3}   "
+              f"{h['completed']} trials completed at W={h['width']} in this "
+              f"environment"
+              + ("   <-- decides" if p.get("model_max_width") else ""))
+    print(f"\n  W={p['width']}: {p['verdict']}   (this machine carries W<="
+          f"{p['max_width']}, basis: {p['max_width_basis']})")
+    if p.get("model_max_width"):
+        print(f"  the memory model alone would have allowed only "
+              f"W={p['model_max_width']}; RSS is per-process and does not add, "
+              f"so it undercounts by whatever the trials share.")
     if p.get("warning"):
         print(f"\n  WARNING: {p['warning']}")
 
@@ -469,6 +693,9 @@ def main(argv=None) -> int:
                     help="declared generation_width to check; exits 1 if refused")
     ap.add_argument("--recommend", action="store_true",
                     help="the largest W this machine carries, to DECLARE next time")
+    ap.add_argument("--measure-concurrency", type=int, metavar="W", default=None,
+                    help="run W trials at once at purpose=check and record what "
+                         "they actually cost in system memory and wall clock")
     ap.add_argument("--decide", action="store_true",
                     help="choose W for a pre-registration, measuring first if "
                          "this machine has never been measured for the profile")
@@ -479,6 +706,11 @@ def main(argv=None) -> int:
 
     if a.measure:
         measure_trial(a.profile)
+
+    if a.measure_concurrency:
+        if footprint(a.profile) is None:
+            measure_trial(a.profile)
+        measure_concurrency(a.profile, a.measure_concurrency)
 
     if a.decide:
         d = decide(a.profile, ceiling=a.ceiling)

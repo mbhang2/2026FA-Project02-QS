@@ -360,7 +360,29 @@ def main() -> int:
     TEXT_DIR.mkdir(parents=True, exist_ok=True)
     counts: dict[str, int] = {}
     for pid in todo:
-        text, source = fetch(pid)
+        # **The arXiv path is only for arXiv ids.** `fetch()` asks
+        # `arxiv.org/html/<id>`, and for an OpenAlex row that is
+        # `arxiv.org/html/openalex-W1030441327`, which 404s -- so before this,
+        # running the full-text stage over a non-arXiv survivor could only fail.
+        # `fetch_url` has existed since 2026-10-04 and handled exactly this, but
+        # nothing in THIS file called it: the only caller was
+        # `screen_papers.py`, which pulls a body as a side effect of screening.
+        # So non-arXiv coverage depended on whether screening happened to run
+        # with that code present, which is why 122 OpenAlex rows carry
+        # `fulltext_source: null` -- never attempted rather than attempted and
+        # refused.
+        row = reg["papers"][pid]
+        text, source = "", "no-path"
+        if row.get("source") == "arxiv":
+            text, source = fetch(pid)
+        if not text and row.get("oa_url"):
+            text, source = fetch_url(row["oa_url"])
+        elif not text and not row.get("oa_url") and row.get("source") != "arxiv":
+            # Neither an arXiv id nor an open-access link. Counted out loud
+            # rather than silently skipped: these are the papers a DOI-based
+            # lookup would be for, and "we have no address for the body" is a
+            # different fact from "we fetched it and it was too short".
+            source = "no-oa-url" + ("-has-doi" if row.get("doi") else "")
         counts[source] = counts.get(source, 0) + 1
         raw = ROOT / "data" / "papers" / "raw" / f"{pid}.json"
         abstract = len(str(

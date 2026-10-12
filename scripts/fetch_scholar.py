@@ -234,6 +234,88 @@ def search_crossref(terms: tuple[str, ...], since: str | None, limit: int,
     return out, skipped
 
 
+def oa_for_doi(doi: str) -> tuple[str | None, bool, str]:
+    """Ask OpenAlex whether a free copy of this DOI exists. `(url, is_oa, note)`.
+
+    **Closes a hardcoded `None`.** The Crossref branch above sets
+    `"oa_url": None` unconditionally, because Crossref's metadata does not say
+    where a free copy lives. So every Crossref row entered the corpus with no
+    address for its body, and the full-text stage could only record that it had
+    none -- measured 2026-10-11: of 111 survivors, 55 had no body and 35 of
+    those had no address, 24 of them Crossref rows, 31 of them carrying a DOI.
+    Among them "Reversal, Momentum and Intraday Returns", judged `direct`.
+
+    OpenAlex indexes by DOI and reports open-access locations, and this pipeline
+    already calls OpenAlex for its own search -- so this is one existing stage
+    asking an API it already uses about an identifier it already holds, not a
+    new source. No email is sent: the polite pool is optional and a contact
+    address is not this script's to hand out.
+    """
+    import requests
+
+    ref = doi.strip().removeprefix("https://doi.org/").removeprefix("doi:")
+    try:
+        r = requests.get(f"{OPENALEX}/doi:{ref}",
+                         params={"select": "id,open_access,primary_location"},
+                         timeout=60, headers={"User-Agent": USER_AGENT})
+    except Exception as exc:                                     # noqa: BLE001
+        return None, False, f"error-{type(exc).__name__}"
+    if r.status_code == 404:
+        return None, False, "not-in-openalex"
+    if r.status_code != 200:
+        return None, False, f"http-{r.status_code}"
+    try:
+        w = r.json()
+    except ValueError:
+        return None, False, "unreadable-json"
+    oa = w.get("open_access") or {}
+    loc = w.get("primary_location") or {}
+    url = oa.get("oa_url") or loc.get("pdf_url")
+    return url, bool(oa.get("is_oa")), "resolved" if url else "no-free-copy"
+
+
+def resolve_missing_oa(limit: int | None = None, *, survivors_only: bool = True,
+                       dry_run: bool = False) -> int:
+    """Backfill `oa_url` on rows that carry a DOI and have no address yet."""
+    import collections
+
+    fp = _fetch_papers_mod()
+    reg = fp.load_registry()
+    rows = [r for r in reg["papers"].values()
+            if r.get("doi") and not r.get("oa_url") and not r.get("duplicate_of")]
+    if survivors_only:
+        rows = [r for r in rows if r.get("feasibility") in ("direct", "adaptable")]
+    rows.sort(key=lambda r: r["id"])
+    if limit:
+        rows = rows[:limit]
+    if not rows:
+        print("nothing to resolve")
+        return 0
+    print(f"resolving open-access locations for {len(rows)} row(s) by DOI\n")
+    notes: collections.Counter = collections.Counter()
+    found = 0
+    for r in rows:
+        url, is_oa, note = oa_for_doi(r["doi"])
+        notes[note] += 1
+        if url:
+            found += 1
+            if not dry_run:
+                r["oa_url"] = url
+                r["is_oa"] = is_oa
+                r["oa_resolved_on"] = dt.datetime.now(dt.timezone.utc) \
+                    .strftime("%Y-%m-%d")
+        print(f"  {r['id']:34} {note:16} {(url or '')[:58]}")
+        time.sleep(RATE_LIMIT_S)
+    print(f"\n  {dict(notes)}")
+    print(f"  {found} of {len(rows)} now have an address for their body")
+    if dry_run:
+        print("  dry run: nothing written")
+        return 0
+    fp.REGISTRY.write_text(json.dumps(reg, indent=2, sort_keys=True) + "\n")
+    print("  registry updated")
+    return 0
+
+
 def title_key(title: str) -> str:
     """A title reduced to what makes it the same paper.
 
@@ -260,7 +342,13 @@ def _fetch_papers_mod():
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--term", action="append", required=True,
+    ap.add_argument("--resolve-oa", action="store_true",
+                    help="backfill oa_url for rows that carry a DOI and have no "
+                         "address, by asking OpenAlex about the DOI. No search, "
+                         "no new rows; it only fills in where a free copy lives")
+    ap.add_argument("--all-rows", action="store_true",
+                    help="with --resolve-oa, every row and not only survivors")
+    ap.add_argument("--term", action="append",
                     help="repeatable; searched in title and abstract")
     ap.add_argument("--since", default=None, help="YYYY-MM-DD published-after bound")
     ap.add_argument("--max-results", type=int, default=50,
@@ -275,6 +363,16 @@ def main() -> int:
                          "unread.")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
+
+    if a.resolve_oa:
+        if a.term:
+            sys.exit("--resolve-oa does no search; drop --term. It only fills in "
+                     "where a free copy of an already-registered DOI lives.")
+        return resolve_missing_oa(
+            a.max_results if a.max_results != 50 else None,
+            survivors_only=not a.all_rows, dry_run=a.dry_run)
+    if not a.term:
+        sys.exit("--term is required unless --resolve-oa")
 
     fp = _fetch_papers_mod()
     terms = tuple(a.term)

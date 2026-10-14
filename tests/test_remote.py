@@ -683,3 +683,69 @@ def test_the_child_loads_only_the_allowlisted_harness_modules(tmp_path):
                        for m in loaded), forbidden
     assert reply["walked"] > 1000
     assert not reply["hits"], reply["hits"]
+
+
+# --------------------------------------------------------------------------- #
+# the protocol allowlist is a second copy of a signature
+# --------------------------------------------------------------------------- #
+def test_the_order_allowlist_matches_the_signature_it_guards():
+    """**Measured drift, 2026-10-14, costing 16 trials.** `ACTIONS["buy"]` is a
+    hand-maintained copy of `BaseContext._order`'s keyword-only parameters, and
+    the two had drifted in both directions at once:
+
+      * `target` was accepted by `_order` and documented in
+        `docs/agent/strategy-api.md` -- the file pasted into every proposal
+        prompt, which says absolute `stop`/`target` prices are "usually what you
+        mean" -- but was absent here, so `sell does not take ['target']` fired
+        13 times across the session campaigns. `stop` was allowed and `target`
+        was not.
+      * `expire_ns` was allowed here and does not exist anywhere else: `_order`
+        takes `expire_ts`, and so does the documentation in four places
+        including the error text `a GTD order needs expire_ts=<nanoseconds>`.
+        Every GTD order the documentation asked for was refused by the
+        transport, 3 times, and the key that was permitted could never be sent.
+
+    In both directions the agent did what it was told and the protocol refused
+    it, which is the most expensive kind of bug this repo can have: it is
+    charged to the research budget as a crashed trial, and a crashed trial still
+    counts toward N.
+    """
+    import inspect
+
+    from src.core.engine.context import BaseContext
+    from src.core.engine.remote.protocol import ACTIONS
+
+    signature = {name for name, param
+                 in inspect.signature(BaseContext._order).parameters.items()
+                 if param.kind is param.KEYWORD_ONLY}
+    for op in ("buy", "sell"):
+        allowed = ACTIONS[op] - {"size"}          # size is positional on _order
+        assert allowed == signature, (
+            f"{op} allowlist has drifted from _order's signature.\n"
+            f"  accepted by _order, refused by the protocol: "
+            f"{sorted(signature - allowed)}\n"
+            f"  allowed by the protocol, unknown to _order: "
+            f"{sorted(allowed - signature)}")
+
+
+def test_the_documented_bracket_keywords_all_survive_the_protocol():
+    """The agent is shown `stop`/`target` as absolute prices and
+    `stop_offset`/`target_offset` as positive distances. All four have to reach
+    the engine, or the document is lying to the proposer."""
+    from src.core.engine.remote.protocol import ACTIONS, validate
+
+    for key in ("stop", "target", "stop_offset", "target_offset", "expire_ts"):
+        assert key in ACTIONS["buy"], f"{key} is documented but not transportable"
+        validate([{"op": "buy", "size": 1, key: 1.0}])
+
+
+def test_an_unknown_keyword_is_still_refused():
+    """Widening the allowlist must not turn it into a sieve."""
+    import pytest as _pytest
+
+    from src.core.engine.remote.protocol import ProtocolError, validate
+
+    with _pytest.raises(ProtocolError):
+        validate([{"op": "buy", "size": 1, "unlock_holdout": True}])
+    with _pytest.raises(ProtocolError):
+        validate([{"op": "buy", "size": 1, "expire_ns": 1}])

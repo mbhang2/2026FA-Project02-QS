@@ -191,8 +191,35 @@ def on_bars(self, ctx):
 
 `ctx.history(...)` returns a `HistoryView`. It supports `len()`, iteration,
 indexing (`view[0]`, `view[-1]`), slicing, and `view.last(k)` for the `k` most
-recent oldest-first. Slices and `last()` come back as tuples. Short history is a
-legitimate state — check `len()` rather than catching an exception.
+recent oldest-first. Slices and `last()` come back as tuples.
+
+**`len()` is not how much you can read.** It is the true number of bars that have
+closed; the engine pushes only the last N of them, N from the profile. So
+`len(h)` can say 384 while `h[0]` raises `WindowTooShort`, and iterating the
+whole view raises for the same reason. This is the single most common way a
+trial crashes — 25 of 162 crashed trials across the session campaigns, more than
+any other cause.
+
+Use `last(k)`, which is bounded by what exists and returns fewer than `k`
+rather than raising:
+
+```python
+# WRONG -- len() passes, the loop crashes
+h = ctx.history("5m")
+if len(h) >= 200:
+    highs = [b.high for b in h]          # WindowTooShort
+    first = h[0]                         # WindowTooShort
+
+# RIGHT -- ask for what you need, take what you get
+recent = ctx.history("5m").last(200)     # a tuple, 0..200 long
+if len(recent) < 200:
+    return                               # warmup; a legitimate state
+highs = [b.high for b in recent]
+```
+
+If you need more history than the window holds, accumulate it on `self` as it
+arrives in `on_bars`. Nothing gives you back a bar the engine has already
+dropped.
 
 `ctx.bars` is empty outside `on_bars`: nothing closed at the instant of a fill,
 a tick or a session open. For the most recent close whenever it happened, use
@@ -806,7 +833,10 @@ crash. The whitelist is in `src/core/engine/remote/protocol.py`.
 ### Reached past the pushed window — `WindowTooShort`
 
 `ctx.history(...)` carries the last N bars, N from the profile. `len()` is the
-true total; an index older than the window raises. Keep what you need on `self`.
+true total; an index older than the window raises, and so does iterating the
+whole view. Use `view.last(k)`, which returns what exists instead of raising, and
+keep anything older on `self` as it arrives. See section 4 for the two idioms
+side by side — this is the most common cause of a crashed trial in this project.
 
 ### The holdout
 

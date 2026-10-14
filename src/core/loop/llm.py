@@ -101,8 +101,28 @@ def template_digest(path: Path = TEMPLATE_PATH) -> str:
 
 
 # A transport failure is retried this many times before the proposal is blocked.
-MAX_TRANSPORT_RETRIES = 3
-TRANSPORT_BACKOFF_S = (15, 60, 180)
+#
+# **Raised 2026-10-14 to match the committee's, because 4 minutes was not
+# enough.** The first version of this -- 3 attempts over (15, 60, 180), about
+# four minutes -- was added on 2026-10-01 after 24 trials had been lost to
+# gateway `ReadTimeout`. Session 07 then lost **71 more trials to
+# `agent_blocked: call_failed` with this retry already in place**: 59 in
+# nq-s07-02 and 12 in nq-s07-03, 5.9% of a 1,200-trial budget. The same session
+# lost 6 of 12 committee seats to the same gateway, and `review.py` answered
+# that with `SEAT_BACKOFF_S = (30, 120, 300, 600, 600)` -- about 27 minutes.
+# There was no reason for the proposer to give up seven times sooner than the
+# auditor; it was simply written first and never revisited.
+#
+# The cost of waiting is wall clock. The cost of not waiting is a trial that
+# **still counts toward N** -- `global_n` counts crashed trials, deliberately,
+# because the look happened -- so every abandoned call inflates `max_of_n`'s
+# multiplicity correction while contributing no candidate to it. Waiting is
+# cheaper than that.
+#
+# Only 429 and 5xx reach here (see `_one_attempt`), so an exhausted budget
+# (HTTP 422) still fails immediately instead of sleeping 27 minutes to no end.
+MAX_TRANSPORT_RETRIES = 5
+TRANSPORT_BACKOFF_S = (30, 120, 300, 600, 600)
 
 
 class LLMTransportError(RuntimeError):

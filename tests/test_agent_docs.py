@@ -98,3 +98,65 @@ def test_the_generated_data_reference_is_current():
         result.stderr.strip()
         or "docs/agent/data.md is stale; run scripts/gen_agent_data.py"
     )
+
+
+# --------------------------------------------------------------------------- #
+# the document the proposer is shown must not promise what the engine refuses
+# --------------------------------------------------------------------------- #
+API_DOC = REPO_ROOT / "docs" / "agent" / "strategy-api.md"
+
+
+def test_every_order_keyword_the_doc_lists_can_actually_be_sent():
+    """**The most expensive bug shape this repo has.** `strategy-api.md` is
+    pasted verbatim into every proposal prompt, so a keyword it documents and
+    the transport refuses is an instruction to crash. Measured 2026-10-14:
+    `target` was documented as an absolute bracket price ("usually what you
+    mean") and missing from the protocol allowlist, and `expire_ts` was
+    documented as required for GTD while the allowlist carried a nonexistent
+    `expire_ns` -- 16 crashed trials between them, each charged to N.
+    """
+    import re
+
+    from src.core.engine.remote.protocol import ACTIONS
+
+    text = API_DOC.read_text()
+    # the order-keyword table: rows of the form `| `name` | meaning |`
+    table = text.split("### Orders", 1)[1].split("### ", 1)[0]
+    documented = set()
+    for line in table.splitlines():
+        if not line.startswith("|"):
+            continue
+        first_cell = line.split("|")[1]           # the keyword column
+        for name in re.findall(r"`([a-z_]+)`", first_cell):
+            documented.add(name)
+    assert {"stop", "target", "stop_offset", "target_offset"} <= documented, (
+        "the bracket keywords vanished from the doc table; this test is blind")
+    sendable = ACTIONS["buy"] | {"size"}
+    promised_but_refused = sorted(documented - sendable)
+    assert not promised_but_refused, (
+        f"strategy-api.md documents order keywords the protocol refuses: "
+        f"{promised_but_refused}. The proposer is being told to crash.")
+
+
+def test_the_doc_does_not_tell_the_agent_to_check_len_and_index():
+    """`len()` on a `HistoryView` is the true number of closed bars, while the
+    engine pushes only the last N. "Check `len()`" followed by indexing or
+    iterating is therefore a crash, and it was the single most common one --
+    25 of 162 crashed trials. The doc used to recommend exactly that."""
+    text = API_DOC.read_text()
+    assert "check `len()` rather than catching an exception" not in text, (
+        "the doc is back to recommending the idiom that caused 25 crashes")
+    assert "`len()` is not how much you can read" in text
+    assert "last(200)" in text or "last(k)" in text, (
+        "the doc no longer shows the bounded idiom")
+
+
+def test_the_doc_and_the_engine_agree_that_last_is_the_safe_call():
+    """`last(k)` must keep returning what exists rather than raising, or the
+    advice above becomes wrong in the other direction."""
+    from src.core.engine.view import HistoryView
+
+    view = HistoryView([1, 2, 3])
+    assert view.last(10) == (1, 2, 3)
+    assert view.last(2) == (2, 3)
+    assert view.last(0) == ()

@@ -58,10 +58,29 @@ class SetupPayloadTooLarge(RuntimeError):
 # whitelist.
 ACTIONS = {
     "subscribe": {"interval", "emit_empty"},
-    "buy": {"size", "type", "limit", "stop", "tif", "stop_offset",
-            "target_offset", "tag", "reduce_only", "expire_ns", "trigger"},
-    "sell": {"size", "type", "limit", "stop", "tif", "stop_offset",
-             "target_offset", "tag", "reduce_only", "expire_ns", "trigger"},
+    # **Keep this in step with `BaseContext._order`'s keyword-only parameters.**
+    # It is a second copy of that signature, and on 2026-10-14 the two were
+    # found to have drifted in both directions at once, costing 16 trials:
+    #
+    #   * `target` was accepted by `_order` and documented in
+    #     `docs/agent/strategy-api.md` -- which is pasted into every proposal
+    #     prompt, and which says absolute `stop`/`target` prices are "usually
+    #     what you mean" -- but was missing here, so `sell does not take
+    #     ['target']` fired 13 times. `stop` was allowed and `target` was not,
+    #     an asymmetry nothing ever intended.
+    #   * `expire_ns` was allowed here and does not exist: `_order` takes
+    #     `expire_ts`, and so does the documentation, in four places including
+    #     the error text `a GTD order needs expire_ts=<nanoseconds>`. So every
+    #     GTD order the documentation asked for was rejected by the transport,
+    #     3 times, and the key that was allowed could never be sent at all.
+    #
+    # In both cases the agent did exactly what it was told and the protocol
+    # refused it. `test_remote.py` now asserts this set equals the signature,
+    # so the next drift fails a test instead of a trial.
+    "buy": {"size", "type", "limit", "stop", "target", "tif", "stop_offset",
+            "target_offset", "tag", "reduce_only", "expire_ts", "trigger"},
+    "sell": {"size", "type", "limit", "stop", "target", "tif", "stop_offset",
+             "target_offset", "tag", "reduce_only", "expire_ts", "trigger"},
     "close": {"tag"},
     "cancel": {"order_id"},
     "cancel_all": set(),

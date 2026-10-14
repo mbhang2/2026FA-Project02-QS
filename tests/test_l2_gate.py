@@ -209,9 +209,23 @@ def test_the_candidate_lister_runs_offline_and_reports_the_real_tree():
     # Six of seventeen validated campaigns are positive out of sample, and the
     # train ranking of session 07's three was exactly inverted against it. Rule
     # (a) is a floor, not a finding, and this list is the evidence.
+    #
+    # **nq-t72b-02 joined on 2026-10-14, and it is the most informative entry
+    # here precisely because it is not a result.** It is a member of the Task 72b
+    # CONTROL arm: three campaigns that ran `intraday-continuation.md` with
+    # `refine: false`, the same unchanged question three times, to measure what
+    # best-of-N does on its own. Validating them was the point -- the control had
+    # train numbers and no out-of-sample ones, so nothing could be compared
+    # against it. They came back -0.0827, **+0.0603**, -0.1539.
+    #
+    # So an unchanged question, refined by nobody, cleared rule (a) one time in
+    # three. Rule (a) is a floor in the most literal sense: a coin lands on it.
+    # The useful quantity is the ceiling the control reached, +0.0603, because
+    # five campaigns in this pool beat it and that is the first statement about
+    # validation this project can make that has a denominator.
     positive = [c["campaign_id"] for c in cands if c["rule_a"]]
     assert positive == ["nq-s02-01", "nq-s05b-01", "nq-s06-01", "nq-s06-03",
-                        "nq-s07-02", "nq-s07-03"], (
+                        "nq-s07-02", "nq-s07-03", "nq-t72b-02"], (
         f"the set of winners positive on validation changed: {positive}. "
         "Update this deliberately and look closely at whichever one is new -- "
         "every previous campaign's winner lost money on validation.")

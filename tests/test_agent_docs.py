@@ -160,3 +160,24 @@ def test_the_doc_and_the_engine_agree_that_last_is_the_safe_call():
     assert view.last(10) == (1, 2, 3)
     assert view.last(2) == (2, 3)
     assert view.last(0) == ()
+
+
+def test_the_doc_states_which_side_each_bracket_leg_sits_on():
+    """10 trials died on `ContextError: stop X must be below/above the entry Y`.
+    Four put a short's stop below its entry -- the long-side arrangement -- and
+    the doc never tabulated the four cases, so the agent had to infer them."""
+    text = " ".join(API_DOC.read_text().split())
+    assert "after `buy()` (long)" in text and "after `sell()` (short)" in text
+    assert "validated against the actual FILL" in text or \
+        "checked against the actual FILL" in text, (
+        "the doc no longer says a bracket is checked against the fill rather "
+        "than against the price the strategy computed from")
+
+
+def test_the_doc_recommends_offsets_for_a_market_entry():
+    """The remaining six were absolute stops derived from the pre-fill price,
+    landing a tick on the wrong side once the market order filled. The offsets
+    are measured from the fill and cannot invert."""
+    text = " ".join(API_DOC.read_text().split())
+    assert "stop_offset=4.0" in text, "the safe idiom is no longer shown"
+    assert "cannot invert" in text

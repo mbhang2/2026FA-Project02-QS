@@ -308,9 +308,37 @@ bracket.
 
 ### Brackets
 
-Give `stop`/`target` **or** `stop_offset`/`target_offset`, never both. Absolute
-prices are usually what you mean — "stop below that swing low" is a level — but a
-distance is the only form available before a market order's fill price is known.
+Give `stop`/`target` **or** `stop_offset`/`target_offset`, never both.
+
+**Which side a bracket leg must sit on, and this is validated:**
+
+| | `stop` | `target` |
+|---|---|---|
+| after `buy()` (long) | **below** the entry | **above** the entry |
+| after `sell()` (short) | **above** the entry | **below** the entry |
+
+Breaking that raises `ContextError` and the trial is gone. Four of the ten
+crashes of this kind in this project put a short's stop *below* its entry, which
+is the long-side arrangement.
+
+**`stop`/`target` are checked against the actual FILL, not against the price you
+computed from.** That is the trap, and it is the other six: a market order does
+not fill at the last trade price, so an absolute stop derived from the price you
+could see lands on the wrong side the moment the fill slips one tick. Measured
+here as `stop 20375.75 must be below the entry 20375.5 for a long` — a quarter
+of a point out — and once as a stop exactly equal to the entry.
+
+So for a **market** entry use the offsets, which are measured from the fill and
+cannot invert:
+
+```python
+ctx.buy(size=1, stop_offset=4.0, target_offset=6.0)   # safe: distances
+```
+
+Absolute levels are right when the level is the point — "stop below that swing
+low" — and then you want a `limit` entry, so the fill price is one you chose
+rather than one you were given. `stop_offset` and `target_offset` are positive
+distances in both directions; a zero or negative offset raises.
 
 The engine arms both legs as a reduce-only OCO pair **at the instant the entry
 fills**. When one fills the other is cancelled before any callback runs, so the

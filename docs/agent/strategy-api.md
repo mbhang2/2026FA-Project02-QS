@@ -107,7 +107,7 @@ same reads and the same order methods, plus one extra each:
 |---|---|
 | `on_bars` | `ctx.closed` — every `Bar` that closed at this instant; `ctx.closed_ids()` — their subscription ids |
 | `on_tick` | `ctx.tick` — the trade event |
-| `on_fill` | `ctx.fill` — the fill |
+| `on_fill` | `ctx.fill` — the fill; fields listed below |
 | `on_lifecycle` | `ctx.event` — the lifecycle event |
 
 ---
@@ -242,7 +242,37 @@ unknown arrives as `None`.
 | `ctx.working_order_ids` | ids of every order that can still do something, sorted |
 | `ctx.working_orders` | read-only `OrderView` copies of those orders |
 | `ctx.find_orders(...)` | the working orders matching `tag=`, `order_type=`, `side=`, `parent_id=` |
-| `ctx.fills` | fills since the previous callback |
+| `ctx.fills` | fields as `ctx.fill` below; fills since the previous callback |
+
+**What a fill carries, and what it does not.** `ctx.fill` in `on_fill` — and each
+element of `ctx.fills` — has exactly these fields:
+
+| Field | Meaning |
+|---|---|
+| `ts` | when it filled |
+| `seq` | sequence number within the instant |
+| `order_id` | the id of the order that filled |
+| `side` | buy or sell |
+| `price` | the fill price |
+| `size` | contracts filled |
+| `position` | your signed position *after* this fill |
+| `last_trade_price` | the market's last trade price |
+| `working_order_ids` | ids of every order that can still do something |
+
+**There is no `tag` on a fill.** `tag` lives on the *order*, so `fill.tag` raises
+`AttributeError` and the trial is gone — measured on 2026-10-15, 2 of the first 4
+trials of a campaign. The order's tag is one hop away:
+
+```python
+def on_fill(self, ctx):
+    mine = ctx.find_orders(tag="entry")          # by tag, among working orders
+    if ctx.fill.order_id in {o.id for o in mine}:
+        ...
+```
+
+Or keep your own mapping from `order_id` to meaning as the ids come back from
+`ctx.buy()` / `ctx.sell()`. A fill tells you *which order* filled, not what you
+called it.
 
 You are allowed to know how you are doing — you need it for risk logic and you
 would have it live. You are not allowed to know how you are being *judged*: there

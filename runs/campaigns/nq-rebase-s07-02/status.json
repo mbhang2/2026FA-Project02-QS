@@ -1,0 +1,8 @@
+{
+  "budget": 100,
+  "counts_toward_n": 4,
+  "gated": false,
+  "status": "abandoned",
+  "summary": "Registered 2026-10-15 as a re-baseline of nq-s07-02's question at N=100, to measure whether four harness fixes made this week had reduced the crash and probe-repair rates. Stopped by Michael's decision after 4 trials, one generation, because the run immediately surfaced a FIFTH defect of the same kind it was meant to measure: `AttributeError: 'FillEvent' object has no attribute 'tag'` killed 2 of the 4 trials. `docs/agent/strategy-api.md` never listed the fill's fields while telling the agent that `OrderView` carries a `tag` and that tags land in the blotter row, so the model inferred `fill.tag`. That doc is in ARTIFACT_GLOBS, so it cannot be corrected while trials are in flight -- the choice was to finish a run whose crash rate would measure the new bug rather than the fixes, or stop and restart clean. Stopped. The 4 trials were real looks and count toward N; global_n went 2632 to 2636. What the generation DID establish, and it is the reason the run was worth starting: zero `agent_blocked: call_failed` where nq-s07-02 had 59 of 400, so the proposer's backoff fix and the restored gateway are working. No train-side gate exists for this campaign: `nulls` and `report` never ran. Superseded by nq-rebase-s07-02b.",
+  "trials_run": 4
+}

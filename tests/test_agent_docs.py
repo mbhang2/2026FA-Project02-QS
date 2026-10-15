@@ -181,3 +181,46 @@ def test_the_doc_recommends_offsets_for_a_market_entry():
     text = " ".join(API_DOC.read_text().split())
     assert "stop_offset=4.0" in text, "the safe idiom is no longer shown"
     assert "cannot invert" in text
+
+
+def test_the_documented_fill_fields_are_exactly_the_real_ones():
+    """**The fifth gap of this shape, and the first one a campaign paid for in
+    front of me.** `ctx.fill` was described as "the fill" and its fields were
+    never listed, while the doc told the agent elsewhere that `OrderView`
+    carries a `tag` and that tags "land in the blotter row". The model inferred
+    `fill.tag`, which raises, and it killed **2 of the first 4 trials** of
+    nq-rebase-s07-02 on 2026-10-15.
+
+    Listing the fields is not enough on its own -- a list can go stale the next
+    time `FillEvent` gains or loses one -- so this asserts the documented set
+    equals the dataclass exactly, in both directions.
+    """
+    import re
+    from dataclasses import fields
+
+    from src.core.types import FillEvent
+
+    text = API_DOC.read_text()
+    assert "What a fill carries" in text, "the fill's fields are undocumented again"
+    block = text.split("What a fill carries", 1)[1].split("**There is no", 1)[0]
+    documented = set(re.findall(r"\|\s*`([a-z_]+)`\s*\|", block))
+    actual = {f.name for f in fields(FillEvent)}
+    assert documented == actual, (
+        f"the documented fill fields have drifted from FillEvent.\n"
+        f"  on the object, undocumented: {sorted(actual - documented)}\n"
+        f"  documented, not on the object: {sorted(documented - actual)}")
+
+
+def test_the_doc_says_plainly_that_a_fill_has_no_tag():
+    """The inference the model made is natural enough that stating the fields is
+    not sufficient; the absence has to be called out, with the route to the tag."""
+    from dataclasses import fields
+
+    from src.core.types import FillEvent
+
+    assert "tag" not in {f.name for f in fields(FillEvent)}, (
+        "FillEvent gained a tag -- delete this test and the warning in the doc")
+    text = " ".join(API_DOC.read_text().split())
+    assert "There is no `tag` on a fill" in text
+    assert "find_orders" in text and "order_id" in text, (
+        "the doc warns the tag is absent without showing how to reach it")

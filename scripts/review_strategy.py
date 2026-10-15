@@ -29,6 +29,40 @@ pre-registration -- the same reason `max_of_n` counts every candidate rather
 than the ones we liked. So this records, and a human decides whether a recorded
 objection should ever have stopped something.
 
+### That decision was taken on 2026-10-14: it does not gate.
+
+Michael decided it after the question was measured rather than argued, and the
+measurement is the reason to keep this paragraph rather than delete it.
+
+On `nq-s04-03`, the only campaign reviewed at the time, the verdicts were
+OBJECT 4, NO_OBJECTION 8, CANNOT_TELL 2, SEAT_FAILED 1. Against the one outcome
+that could be tested:
+
+  * **crashing** -- OBJECT crashed 2 of 4, NO_OBJECTION 3 of 8. Fisher exact
+    **p = 1.000**. No discrimination at all.
+  * **score** -- untestable. Every completed candidate in that campaign scored
+    `-inf`, so there was no variance for an objection to predict.
+
+Both CANNOT_TELL verdicts were files holding only a docstring and a raised
+exception, written to record a failed static check; the seat correctly said
+there was no logic to review, and `compile()` had already blocked them for free.
+
+So a gate would have changed the population `max_of_n` corrects over on the
+strength of a judgement with **zero demonstrated ability to sort candidates**,
+measured on fifteen of them from the worst campaign this project has run.
+
+**What the measurement did NOT say is that the seat is useless**, and the
+distinction matters for anyone revisiting this. Its reasoning was accurate: on
+`10caf22e` it said, score-blind, that the opening-range completion logic was
+flawed -- and the engine then threw `ContextError: stop 20377.0 must be below
+the entry 20377.0`, a degenerate zero-width range. Concern 2, "it can barely
+act", fired on the candidates that could barely act, in the campaign whose
+champion made four trades. Accurate diagnosis, non-discriminating verdict.
+
+Reopening this needs new evidence, and the cheap form of it is named: `--campaign`
+reads stored sources, so running this over campaigns that HAVE score variance
+(nq-s06-01, nq-s07-01/02/03) costs about eighty model calls and no trials.
+
 ## Score-blind, deliberately
 
 The scores are on disk next to the sources and this reads none of them. It is

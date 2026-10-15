@@ -534,3 +534,95 @@ def test_the_past_verdicts_are_not_claimed_to_be_independent():
     flat = " ".join(doc.split())
     assert "none of them was an independent check" in flat
     assert "nothing retroactively makes them one" in flat
+
+
+# --------------------------------------------------------------------------- #
+# robustness reads breadth, not concentration
+# --------------------------------------------------------------------------- #
+PROMPTS = Path(__file__).resolve().parents[1] / "audit" / "committee" / "prompts"
+
+
+def test_breadth_counts_positive_periods_not_the_biggest_one():
+    from audit.committee.review import _breadth
+
+    # nq-orderflow-02's shape: almost no concentration, almost no breadth.
+    wide_but_losing = {f"m{i}": (1.0 if i < 3 else -1.0) for i in range(18)}
+    assert _breadth(wide_but_losing) == {"positive": 3, "total": 18,
+                                         "share_positive": 0.1667}
+    # nq-s07-03's shape: a large best month AND most months positive.
+    broad = {f"m{i}": (1.0 if i < 15 else -1.0) for i in range(18)}
+    assert _breadth(broad)["share_positive"] == 0.8333
+
+
+def test_breadth_survives_missing_evidence():
+    """A campaign with no monthly breakdown must not crash the seat, and must
+    not be reported as zero positive months either -- absent is not narrow."""
+    from audit.committee.review import _breadth
+
+    for empty in (None, {}, {"m0": None}, "not a dict"):
+        got = _breadth(empty)
+        assert got["positive"] is None and got["share_positive"] is None
+
+
+def test_the_robustness_seat_is_handed_breadth():
+    """It was already shown `by_month` as a raw dict and could have counted for
+    itself, while `best_session_share` and `profit_concentration_top5pct` were
+    the named fields. The prominent numbers were the non-predictive ones."""
+    src = (Path(__file__).resolve().parents[1]
+           / "audit" / "committee" / "review.py").read_text()
+    block = src.split('if axis == "robustness":', 1)[1].split("raise ValueError", 1)[0]
+    for key in ("breadth_by_month", "breadth_by_weekday", "breadth_by_hour_utc"):
+        assert key in block, f"{key} is not given to the robustness seat"
+    assert block.index("breadth_by_month") < block.index("best_session_share"), (
+        "concentration is listed before breadth again")
+
+
+def test_the_robustness_prompt_leads_with_breadth():
+    """**The correction this test exists to hold.** Measured 2026-10-14 over the
+    16 campaigns with both a champion's diagnostics and an out-of-sample score:
+    every concentration measure correlated POSITIVELY with validation (top-5%
+    +0.217, best-session +0.089, best-month +0.412) and none was significant,
+    while share of positive months reached +0.584 at p = 0.018. Under the old
+    wording this seat vetoed 20 of 21 campaigns and decided 10 of the
+    committee's 22 vetoes alone."""
+    text = (PROMPTS / "robustness.md").read_text()
+    assert "Read breadth first" in text
+    assert "breadth_by_month" in text
+    assert text.index("Read breadth first") < text.index("best_session_share"), (
+        "the prompt puts concentration before breadth again")
+    assert "not a veto" in text and "Concentration alone" in text
+
+
+def test_the_prompt_records_the_measurement_behind_the_change():
+    """A prompt that changed for a reason should carry the reason, or the next
+    person restores the old wording because it reads more intuitively."""
+    # Normalised, because the prompt is hard-wrapped and a phrase can straddle
+    # a line break -- "16\ncampaigns" is the same justification as "16 campaigns".
+    text = " ".join((PROMPTS / "robustness.md").read_text().split())
+    for token in ("+0.584", "0.018", "16 campaigns", "nq-orderflow-02"):
+        assert token in text, f"the justification lost {token}"
+    assert "not a threshold" in text, (
+        "nothing stops a reader turning these correlations into a cutoff")
+
+
+def test_the_robustness_seat_still_may_not_veto_for_losing_money():
+    """Breadth correlates with out-of-sample performance, which makes it easy to
+    slide into 'it lost money, therefore veto'. That belongs to another axis."""
+    text = (PROMPTS / "robustness.md").read_text()
+    assert "A losing strategy is not by itself a robustness finding" in text
+    assert "Might not generalise" in text
+
+
+def test_every_seat_still_cannot_approve():
+    shared = (PROMPTS / "_shared.md").read_text()
+    assert "cannot approve" in shared
+    assert "VETO" in shared and "CANNOT_TELL" in shared
+
+
+def test_the_leakage_seat_is_meant_to_pass():
+    """Its 0 vetoes in 19 runs is the designed outcome, not an inert seat: the
+    harness prevents lookahead structurally and this seat verifies it. Recorded
+    because the veto-rate table makes it look broken at a glance."""
+    text = (PROMPTS / "leakage.md").read_text()
+    assert "verification, not prevention" in text
+    assert "PASS is correct" in text

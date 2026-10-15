@@ -152,6 +152,36 @@ class CommitteeVerdict:
 # evidence slices -- each auditor sees ONLY its own
 # --------------------------------------------------------------------------- #
 
+def _breadth(buckets: dict | None) -> dict:
+    """How many periods are positive, not how big the biggest one is.
+
+    **Measured 2026-10-14, and it is the reason this function exists.** Across
+    the 16 campaigns holding both a champion's diagnostics and a validation
+    score, every concentration measure correlated POSITIVELY with out-of-sample
+    performance -- top-5% share r = +0.217 (p = 0.42), best-session share
+    r = +0.089 (p = 0.74), best-month share r = +0.412 (p = 0.11). More
+    concentrated champions validated BETTER, and none of it was significant.
+
+    The one quantity that cleared 0.05 was the **share of periods that are
+    positive**: r = +0.584, p = 0.018. Breadth and concentration are not the
+    same thing and they can disagree sharply -- nq-orderflow-02's best month was
+    4.3% of its total, about as unconcentrated as a result gets, while only 3 of
+    its 18 months were positive, and it validated at -0.4655.
+
+    So the seat is handed both, and its prompt now leads with this one. n = 16
+    and this is a correlation, not a mechanism: it is grounds for which number
+    an auditor reads first, not for a threshold anybody computes.
+    """
+    if not isinstance(buckets, dict) or not buckets:
+        return {"positive": None, "total": 0, "share_positive": None}
+    vals = [v for v in buckets.values() if isinstance(v, (int, float))]
+    if not vals:
+        return {"positive": None, "total": 0, "share_positive": None}
+    pos = sum(1 for v in vals if v > 0)
+    return {"positive": pos, "total": len(vals),
+            "share_positive": round(pos / len(vals), 4)}
+
+
 def _validation_evidence(summary: dict) -> dict:
     """Section 5's three rules, or an explicit statement that they are missing.
 
@@ -259,6 +289,10 @@ def _slice(axis: str, summary: dict, source: str | None,
     if axis == "robustness":
         return json.dumps({
             **_validation_evidence(summary),
+            # Breadth first: it is the measured predictor. See `_breadth`.
+            "breadth_by_month": _breadth(diag.get("by_month")),
+            "breadth_by_weekday": _breadth(diag.get("by_weekday")),
+            "breadth_by_hour_utc": _breadth(diag.get("by_hour_utc")),
             "by_month": diag.get("by_month"),
             "by_hour_utc": diag.get("by_hour_utc"),
             "by_weekday": diag.get("by_weekday"),

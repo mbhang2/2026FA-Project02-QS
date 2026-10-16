@@ -469,6 +469,11 @@ def _fetch_papers_mod():
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--from-open-questions", action="store_true",
+                    help="take the search terms from this project's own standing "
+                         "auditor objections instead of typing them. Derived "
+                         "deterministically by open_questions.search_terms(); no "
+                         "model writes a search direction")
     ap.add_argument("--dedup", action="store_true",
                     help="mark duplicates already in the registry: identical "
                          "stored body, same DOI, or the same title key the "
@@ -506,13 +511,44 @@ def main() -> int:
         return resolve_missing_oa(
             a.max_results if a.max_results != 50 else None,
             survivors_only=not a.all_rows, dry_run=a.dry_run)
-    if not a.term:
-        sys.exit("--term is required unless --resolve-oa")
+    if not a.term and not a.from_open_questions:
+        sys.exit("--term is required unless --resolve-oa or "
+                 "--from-open-questions")
+    if a.term and a.from_open_questions:
+        sys.exit("--term and --from-open-questions are two different sources "
+                 "for the same field; pick one so the registry's `query` says "
+                 "which it was.")
 
     fp = _fetch_papers_mod()
-    terms = tuple(a.term)
-    query = (f"scholar terms={'|'.join(terms)} since={a.since or 'any'} "
-             f"source={a.source} require_abstract={a.require_abstract}")
+    if a.from_open_questions:
+        # **The provenance goes into `query`, which every row keeps.** A paper
+        # fetched this way is then traceable to the objection that went looking
+        # for it, which is the whole point of deriving the terms rather than
+        # typing them.
+        import open_questions
+        derived = [t for t in open_questions.search_terms() if t.get("term")]
+        if not derived:
+            sys.exit("no standing objection matched the term vocabulary, so "
+                     "there is nothing to search for. Either no campaign has "
+                     "an unresolved objection, or TERM_VOCABULARY cannot read "
+                     "the ones that exist -- `open_questions.py --terms` says "
+                     "which.")
+        terms = tuple(t["term"] for t in derived)
+        concepts = ",".join(t["concept"] for t in derived)
+        sources = sorted({c for t in derived for c in t["campaigns"]})
+        print(f"terms derived from {len(derived)} standing objection group(s): "
+              f"{concepts}")
+        for t in derived:
+            print(f"  [{t['concept']}] {t['from_objections']} objection(s) from "
+                  f"{','.join(t['campaigns'])}\n      {t['term']}")
+        query = (f"scholar from_open_questions concepts={concepts} "
+                 f"objection_campaigns={'|'.join(sources)} "
+                 f"terms={'|'.join(terms)} since={a.since or 'any'} "
+                 f"source={a.source} require_abstract={a.require_abstract}")
+    else:
+        terms = tuple(a.term)
+        query = (f"scholar terms={'|'.join(terms)} since={a.since or 'any'} "
+                 f"source={a.source} require_abstract={a.require_abstract}")
     print(f"querying: {query}  max={a.max_results}/term/source", flush=True)
 
     papers: list[dict] = []

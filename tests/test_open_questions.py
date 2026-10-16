@@ -136,3 +136,89 @@ def test_a_broken_committee_file_does_not_kill_a_ranking_run():
     i = src.index("import open_questions")
     assert "except Exception:" in src[i:i + 400]
     assert "Never fatal" in " ".join(src.split())
+
+
+# --------------------------------------------------------------------------- #
+# the loop's own complaints become its search terms
+# --------------------------------------------------------------------------- #
+def test_retrieval_was_blind_to_the_loop_and_now_is_not():
+    """**The gap this closed.** The whole 474-paper corpus came from five
+    hand-typed queries in September. `rank_papers.py` has read these objections
+    since 2026-10-06 -- so the ranker knew what we had failed on -- while
+    `fetch_scholar.py` required `--term` from a human, so the corpus could only
+    ever hold what somebody thought to search for before any of the complaints
+    existed. Seven of the ten standing objections are about whether an effect
+    persists across months, weekdays or sessions, and not one paper had ever
+    been fetched because of that."""
+    assert "def search_terms" in SRC
+    scholar = (REPO_ROOT / "scripts" / "fetch_scholar.py").read_text()
+    assert "--from-open-questions" in scholar
+    assert "open_questions.search_terms()" in " ".join(scholar.split())
+
+
+def test_no_model_turns_an_objection_into_a_search_direction():
+    """This module's own rule is that objections are quoted verbatim because "a
+    model writing our open questions is a model inventing research directions".
+    A model generating the search terms would be the same act one step removed:
+    it could send us looking in a literature nobody's data asked for. So the
+    mapping is a committed table and the derivation is pure string matching."""
+    mod = _mod()
+    body = SRC.split("def search_terms", 1)[1].split("\ndef ", 1)[0]
+    for forbidden in ("Client(", "chat/completions", "requests.", "ask(", "llm"):
+        assert forbidden not in body, f"search_terms reaches for {forbidden}"
+    assert isinstance(mod.TERM_VOCABULARY, tuple) and mod.TERM_VOCABULARY
+
+
+def test_every_vocabulary_entry_is_earned_by_text_in_the_corpus():
+    """A table of guesses about what junk might look like is how a filter starts
+    matching things nobody has seen. Each entry has to be readable off an
+    objection that actually exists."""
+    mod = _mod()
+    objections = [(o.get("objection") or "").lower()
+                  for o in mod.distinct(mod.collect())]
+    assert objections, "no standing objections; this test proves nothing"
+    unearned = []
+    for concept, needles, term in mod.TERM_VOCABULARY:
+        if not any(n in text for text in objections for n in needles):
+            unearned.append(concept)
+    assert not unearned, (
+        f"these vocabulary entries match nothing in the corpus: {unearned}. "
+        f"Either the objections changed or the entry was invented.")
+
+
+def test_a_derived_term_carries_the_objections_it_came_from():
+    """Provenance is the point. A paper fetched this way has to be traceable
+    back to the complaint that went looking for it."""
+    mod = _mod()
+    derived = [t for t in mod.search_terms() if t.get("term")]
+    assert derived
+    for t in derived:
+        assert t["from_objections"] >= 1
+        assert t["campaigns"] and all(c for c in t["campaigns"])
+        assert t["axes"] and all(a in ("robustness", "statistics", "economics",
+                                       "leakage") for a in t["axes"])
+
+
+def test_an_objection_the_vocabulary_cannot_read_is_counted_not_dropped():
+    """A silently unread objection is a gap nobody discovers. It is reported as
+    `unmatched` so the table's coverage is visible."""
+    mod = _mod()
+    fake = [{"campaign": "nq-x", "axis": "economics", "verdict": "VETO",
+             "objection": "the commission assumption understates the cost of "
+                          "crossing the spread at the open"}]
+    out = mod.search_terms(fake)
+    assert [t for t in out if t.get("unmatched")], (
+        "an objection matching no vocabulary entry vanished instead of being "
+        "reported")
+    assert not [t for t in out if t.get("term")]
+
+
+def test_the_two_term_sources_are_mutually_exclusive():
+    """`--term` and `--from-open-questions` write the same registry field, and a
+    row whose `query` cannot say which produced it is a row with no provenance."""
+    scholar = " ".join((REPO_ROOT / "scripts" / "fetch_scholar.py").read_text().split())
+    assert "--term and --from-open-questions are two different sources" in scholar
+    assert "from_open_questions concepts=" in scholar, (
+        "the derived query no longer records the concepts it searched for")
+    assert "objection_campaigns=" in scholar, (
+        "the derived query no longer records which campaigns complained")

@@ -175,6 +175,92 @@ def distinct(items: list[dict], limit: int = MAX_QUESTIONS) -> list[dict]:
     return kept
 
 
+# --------------------------------------------------------------------------- #
+# turning complaints into search terms
+# --------------------------------------------------------------------------- #
+# **The loop's retrieval was blind to the loop.** The whole 474-paper corpus came
+# from five hand-typed queries in September. `rank_papers.py` has read these
+# objections since 2026-10-06, so the ranker knows what we failed on -- but
+# `fetch_scholar.py` requires `--term` from a human, so the corpus can only ever
+# contain what somebody thought to search for before any of these complaints
+# existed. Seven of the ten standing objections are about whether an effect
+# persists across months, weekdays or sessions, and not one paper was ever
+# fetched because of that.
+#
+# **Deterministic, and no model touches it.** The module docstring's rule is that
+# objections are quoted verbatim because "a model writing our open questions is a
+# model inventing research directions". A model turning them into search terms
+# would be the same act one step removed: it could propose a literature to go
+# looking in that nobody's data asked for. So the mapping is a committed table,
+# every entry earned by text that is actually in the corpus, cited by the
+# objection it came from. If no objection matches an entry, that entry emits
+# nothing.
+TERM_VOCABULARY: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    # #3 nq-s03-01, #4 nq-s03-02, #5 nq-s03-03: "Result is heavily concentrated
+    # in time", "10 of 18 months are negative", "dominated by a small number of
+    # months", "Removing 2025-11 would flip the overall result deeply negative".
+    ("month concentration",
+     ("concentrated in time", "months are negative", "number of months",
+      "positive months", "broadly distributed", "broad-based across the sample"),
+     "intraday futures strategy profitability persistence across months"),
+    # #10 nq-s03-03: "Concentration by weekday: Friday and Tuesday carry nearly
+    # all the profit ... no stated reason for why this pattern would persist."
+    ("weekday concentration",
+     ("by weekday", "weekdays", "friday", "tuesday", "monday", "thursday"),
+     "day-of-week effect index futures intraday returns"),
+    # #7 nq-s01-continuation, #8 nq-s03-01, #9 nq-s03-02: "best single session
+    # accounts for", "top 5% of sessions account for 31.3% of profit", "fragile
+    # to removal of a small number of winning sessions", "extreme right-tail".
+    ("session concentration",
+     ("single session", "top 5%", "handful of sessions", "right-tail",
+      "fragile to removal", "small number of winning sessions"),
+     "outlier sensitivity of backtested trading rule returns"),
+    # #1 nq-mvp-01, #2 nq-s01-continuation, #6 nq-mvp-01: "estimated from only 3
+    # trades", "denominator of the Sortino ratio ... small, highly skewed
+    # subset", "skew 6.70, kurtosis 77.93", "the headline metric unreliable".
+    ("thin denominator",
+     ("denominator", "only 3 trades", "downside sessions", "kurtosis", "skew",
+      "unreliable", "degenerate metric", "small sample"),
+     "small sample bias in Sharpe and Sortino ratio estimation"),
+)
+
+
+def search_terms(items: list[dict] | None = None) -> list[dict]:
+    """Search phrases derived from the standing objections, with provenance.
+
+    Each returned dict carries the phrase, the concept that produced it, and the
+    campaigns and axes of every objection that matched -- so a paper fetched this
+    way can be traced back to the complaint that went looking for it.
+    """
+    items = distinct(collect()) if items is None else items
+    out: list[dict] = []
+    matched_any: set[int] = set()
+    for concept, needles, phrase in TERM_VOCABULARY:
+        hits = []
+        for i, o in enumerate(items):
+            text = (o.get("objection") or "").lower()
+            if any(n in text for n in needles):
+                hits.append(o)
+                matched_any.add(i)
+        if hits:
+            out.append({
+                "concept": concept,
+                "term": phrase,
+                "from_objections": len(hits),
+                "campaigns": sorted({h.get("campaign") for h in hits}),
+                "axes": sorted({h.get("axis") for h in hits}),
+            })
+    # Counted out loud rather than dropped: an objection the vocabulary cannot
+    # read is a gap in the table, and the only way anyone finds out is if the
+    # number is printed.
+    unmatched = [o for i, o in enumerate(items) if i not in matched_any]
+    for o in unmatched:
+        out.append({"concept": None, "term": None, "unmatched": True,
+                    "campaign": o.get("campaign"), "axis": o.get("axis"),
+                    "objection": (o.get("objection") or "")[:120]})
+    return out
+
+
 def block(limit: int = MAX_QUESTIONS) -> str:
     """The section the ranker is given. Empty string when there is nothing."""
     qs = distinct(collect(), limit)
@@ -200,7 +286,31 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--limit", type=int, default=MAX_QUESTIONS)
+    ap.add_argument("--terms", action="store_true",
+                    help="the search phrases these objections derive, with the "
+                         "objections each came from, and any objection the "
+                         "vocabulary could not read")
     a = ap.parse_args()
+
+    if a.terms:
+        derived = search_terms(distinct(collect(), a.limit))
+        used = [t for t in derived if t.get("term")]
+        skipped = [t for t in derived if t.get("unmatched")]
+        if a.json:
+            print(json.dumps({"terms": used, "unmatched": skipped}, indent=2))
+            return 0
+        for t in used:
+            print(f"  {t['concept']:22} {t['from_objections']} objection(s) "
+                  f"from {', '.join(t['campaigns'])}")
+            print(f"      {t['term']}")
+        if skipped:
+            print(f"\n  {len(skipped)} objection(s) the vocabulary cannot read "
+                  f"-- a gap in TERM_VOCABULARY, not in the objections:")
+            for t in skipped:
+                print(f"    [{t['axis']}] {t['campaign']}: {t['objection']}")
+        else:
+            print(f"\n  every standing objection matched the vocabulary.")
+        return 0
 
     allc = sorted(p.name for p in CAMPAIGNS.glob("*") if p.is_dir())
     usable, refused = [], []

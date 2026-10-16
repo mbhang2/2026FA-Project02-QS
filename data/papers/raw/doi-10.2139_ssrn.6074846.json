@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.6074846",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6074846",
+  "title": "Intraday Price Asymmetry and Next-Day Intraday Returns in the S&amp;amp;P 500",
+  "abstract": "This paper examines the relationship between intraday price asymmetry and next-day intraday returns in U.S. equity markets. It introduces a simple, range-based measure of intraday asymmetry constructed from daily open, high, and low prices to capture directional imbalances in intraday price movements relative to the opening level. Using more than two decades of data for the SPDR S&amp;P 500 ETF (SPY), the analysis documents a contrarian relationship between intraday asymmetry and subsequent intraday performance. Trading sessions characterized by negative intraday asymmetry are followed, on average, by stronger next-day intraday returns, while positive asymmetry is associated with weaker subsequent intraday performance, despite the long-run upward bias of equity markets. Conditional long and short exposures derived from the measure exhibit economically meaningful return patterns, with evidence of conditional return variation on the short side concentrated during periods of elevated volatility and market stress. The analysis is intentionally descriptive and does not rely on assumptions about order flow, trading volume, or specific microstructure mechanisms. The results are consistent with temporary price pressure and inventory-related dynamics rather than persistent intraday trends, highlighting information contained in the intraday price path that is not captured by standard return-based measures.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Francesco Valenti"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6074846",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

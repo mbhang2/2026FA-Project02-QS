@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.962004",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.962004",
+  "title": "Anomaly or Rationality: Explaining the Day-of-the-Week Effect on S&amp;P CNX Nifty Index-Returns During Different Settlement Regimes",
+  "abstract": "This paper examines the behaviour of S&amp;P CNX Nifty returns across the days-of-the-week during the different settlement regimes for the period of ten years from April 1995 to March 2005. During the fixed-day weekly settlement system, inflated returns are observed on first day of the settlement cycle on Wednesday. However, this Wednesday-effect vanishes when adjustment is made for the settlement-lag. The intra-week behaviour of market is rational rather then anomalous and market is appropriately adjusting the stock prices to cover the interest for the delay in settlement. The market seems to follow the trading-period hypothesis rather than the calendar-period hypothesis in making such adjustments. The impact of interest cost on stock returns is found significant during the fixed-day weekly settlement regime but it becomes feeble as the market switches over to rolling settlement system. After the implementation of rolling settlement system no any day-of-the-week effect is found in S&amp;P CNX Nifty index returns.",
+  "published": "2007",
+  "updated": "2007",
+  "authors": [
+    "K. N. Badhani"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.962004",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

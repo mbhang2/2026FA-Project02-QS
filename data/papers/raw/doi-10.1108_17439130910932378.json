@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.1108_17439130910932378",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.1108/17439130910932378",
+  "title": "Intraday return and volatility spill-over across international copper futures markets",
+  "abstract": "Purpose The purpose of this paper is to investigate the short-run return and volatility spill-overs across three major international copper futures markets: London Metal Exchange (LME), New York Mercantile Exchange (NYMEX), and Shanghai Futures Exchange (SHFE). Design/methodology/approach The analysis utilizes a dynamic conditional correlation GARCH model to explore the return and volatility relationships. Findings The return and volatility spill-overs between the two developed markets, LME and NYMEX, are bi-directional and significantly stronger when the NYMEX operates an electronic trading system. In addition, significant bi-directional return spill-over between the LME (developed market) and the SHFE (emerging market) and significant uni-directional volatility spill-over from the LME to the SHFE are documented. Research limitations/implications The evidence suggests that degree of market integration and trading mechanism play crucial roles in the return and volatility transmission across the three major copper futures markets. Higher level of market integration and easy access to trading information lead to faster information dissemination and help to establish stronger relationships of returns and volatility across the markets. This is consistent with the findings in the equity markets. Originality/value The study provides empirical evidence of short-run information transmission between developed and emerging copper futures markets.",
+  "published": "2009-02-20",
+  "updated": "2009-02-20",
+  "authors": [
+    "Donald Lien",
+    "Li Yang"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.1108/17439130910932378",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "International Journal of Managerial Finance",
+  "cited_by_count": null
+}

@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.243284",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.243284",
+  "title": "The Temporal Pattern of Trading Rule Returns and Central Bank Intervention: Intervention Does Not Generate Technical Trading Rule Profits",
+  "abstract": "This paper characterizes the temporal pattern of trading rule returns and official intervention for Australian, German, Swiss and U.S. data to investigate whether intervention generates technical trading rule profits. High frequency data show that abnormally high trading rule returns precede German, Swiss and U.S. intervention, disproving the hypothesis that intervention generates inefficiencies from which technical rules profit. Australian intervention precedes high trading rule returns, but trading/intervention patterns make it implausible that intervention actually generates those returns. Rather, intervention responds to exchange rate trends from which trading rules have recently profited.",
+  "published": "2000",
+  "updated": "2000",
+  "authors": [
+    "Christopher J. Neely"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.243284",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

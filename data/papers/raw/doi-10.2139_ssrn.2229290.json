@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.2139_ssrn.2229290",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.2229290",
+  "title": "Day of the Week Effect on Gold Returns",
+  "abstract": "Day of the week effect has vastly been investigated for stock markets, but commodity markets have got less attention in this regard. Present study is an attempt to investigate the day of the week effect on gold futures return. For the purpose of study, opening and closing prices of gold futures contract, traded on India\u2019s largest commodity exchange i.e. Multi Commodity Exchange of India Limited (MCX), have been analysed with the help of dummy variables. Daily return from close to close prices was calculated and was further decomposed into trading period return and non trading period return. Gold is traded on MCX six days a week, from Mondays through Saturdays; therefore dummies for all the six days have been applied. Period of study spans from 1st April 2006 to 31st March 2012. Data has been analysed by applying linear regression of dummy variables on return. But after applying linear regression, ARCH effect was found to be left. To account for ARCH effect, GARCH(1,1) model was applied. Extreme value analysis was also carried on with the help of chi-square test. Presence of day of the week effect was found in all the three types of return series, but the impact was more during non trading period than during trading period. Results of the study may be useful for commodity market players in timing their trading.",
+  "published": "2013",
+  "updated": "2013",
+  "authors": [
+    "Dr. Sunita Arora",
+    "Dr. Narender Garg"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.2229290",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

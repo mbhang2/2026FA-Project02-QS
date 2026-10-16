@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.2139_ssrn.3482450",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3482450",
+  "title": "Intraday Stock Returns Patterns Revisited. A Day of the Week and Market Trend Approach",
+  "abstract": "In this paper, we investigate the intraday behavior of the General index of the Athens Stock Exchange. We find evidence for a U shape pattern for both returns and volatility. Returns are positive at the opening and closing phases of a trading session, with the pattern being more pronounced in specific days of the week. Subsequent analysis for bull and bear markets shows evidence of an upward and a downward return pattern, respectively.",
+  "published": "2019",
+  "updated": "2019",
+  "authors": [
+    "Constantina Kottaridi",
+    "Emmanouil Skarmeas",
+    "Vasileios Pappas"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3482450",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

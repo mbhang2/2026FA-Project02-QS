@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.6467818",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.6467818",
+  "title": "Econometric Modelling and Algorithmic Trading of Bitcoin: ARIMA-GARCH Volatility Analysis and Backtested Strategy Evaluation",
+  "abstract": "This paper examines the time series properties of Bitcoin (BTC-USD) daily returns over the period January 2025 to January 2026 and develops two algorithmic trading strategies evaluated through rigorous backtesting methodology. Using Augmented Dickey-Fuller (ADF) testing, we confirm return stationarity and identify significant volatility clustering and leptokurtosis consistent with established stylised facts of financial time series. An ARIMA(1,0,1) model is estimated for the conditional mean, and a GARCH(1,1) model with Student-t innovations is fitted to the conditional variance, yielding high volatility persistence (\u03b1 + \u03b2 = 0.936) and confirming fat-tailed return dynamics (\u03bd = 4.33). Two contrasting algorithmic strategies \u2014 a trend-following Moving Average Crossover (20/50-day) and a mean-reversion RSI strategy (14-period, 30/70 thresholds) \u2014 are designed, implemented in Python, and evaluated with transaction costs (0.1% per trade) and risk controls. Over the out-of-sample period (July\u2013January 2026), during which Bitcoin declined 17.21%, the RSI strategy generated a positive return of +1.60% (Sharpe: 0.27) and the MA Crossover returned \u22123.61%, both substantially outperforming the passive Buy &amp;amp; Hold benchmark. Walk-forward analysis across 21 rolling windows further assesses strategy robustness. Critical limitations including overfitting risk, look-ahead bias, and model risk are discussed, alongside proposed enhancements incorporating GARCH-based dynamic position sizing and regime filtering.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Tejas paramashiva"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.6467818",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

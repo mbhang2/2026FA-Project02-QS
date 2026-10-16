@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.3959708",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.3959708",
+  "title": "Maximizing the Out-of-Sample Sharpe Ratio",
+  "abstract": "We derive analytical expressions for the expectation and variance of the out-of-sample Sharpe ratio of sample mean-variance portfolios, which allows us to design portfolio strategies with an optimal Sharpe ratio under estimation risk. This problem is mathematically more challenging than maximizing the out-of-sample utility, the standard objective in the literature on portfolio choice with estimation risk. When a risk-free asset is available, we show that maximizing the expected out-of-sample utility approximately--but not exactly--optimizes the expected out-of-sample Sharpe ratio. The two objectives, however, differ in the common setting with a full investment in risky assets. In this case, we derive the fully invested mean-variance portfolio that maximizes the expected out-of-sample Sharpe ratio, along with a robust version that penalizes the Sharpe ratio variance. Using simulated and empirical data, we find that our portfolio rules generally deliver a superior out-of-sample Sharpe ratio relative to the benchmarks. In particular, across different empirical configurations, an equally weighted combination of our four strategies delivers on average an annualized out-of-sample Sharpe ratio of 0.891 and 0.847 before and after transaction costs, respectively, compared with 0.760 and 0.732 for the global minimum-variance portfolio with nonlinear shrinkage, and 0.802 and 0.728 for a fully invested MAXSER portfolio.",
+  "published": "2021",
+  "updated": "2021",
+  "authors": [
+    "Nathan Lassance"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.3959708",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.46793_managsport16-2.044p",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.46793/managsport16-2.044p",
+  "title": "COMPARATIVE ANALYSIS OF THE RISK OF THE SPORTS INDEX APPLYING THE SHARPE, SORTINO AND TREYNOR RATIOS",
+  "abstract": "This paper evaluates the returns and risk of the European Football Clubs Index (EFCI), including Manchester United, Juventus, Benfica, and Celtic, using Sharpe, Sortino, and Treynor ratios. Bivariate portfolios are constructed using the minimum variance approach and optimal weights according to the Kroner and Ng formula. The index is hedged using a selection of precious metals, including gold, silver, platinum, and palladium. The findings indicates that the portfolio with gold achieves the best return-to-risk ratio (Sharpe 0.1186, Sortino 0.0801, Treynor 28.4340), while platinum provides the most effective protection against downside fluctuations (Sortino 0.1049, downside risk 0.4297). Silver and palladium demonstrate comparatively weaker performance, as evidenced by low or negative Sharpe and Sortino ratios, along with an inefficient Treynor ratio (-30.2617 for palladium). The findings confirm that hedging with precious metals significantly reduces the risk of a portfolio in which the European Football Clubs Index (EFCI) is the primary instrument, and that the effectiveness of the strategy depends on the performance measure applied. This paper contributes to the literature through a unique approach to the systematic hedging of sports indices with precious metals, highlighting both the practical applicability and the innovative nature of the methodology. The study is particularly valuable as there are very few existing works that address this topic, making it a novel contribution to research on sports index portfolio risk management.",
+  "published": "2025-12-30",
+  "updated": "2025-12-30",
+  "authors": [
+    "Ivana Puti\u0107",
+    "Suzana Balaban",
+    "Milica Simi\u0107"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.46793/managsport16-2.044p",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "Menad\u017ement u sportu",
+  "cited_by_count": null
+}

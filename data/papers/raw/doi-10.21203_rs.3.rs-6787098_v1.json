@@ -1,0 +1,23 @@
+{
+  "id": "doi-10.21203_rs.3.rs-6787098_v1",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.21203/rs.3.rs-6787098/v1",
+  "title": "The persistence of groundwater depletion in the United States across widely ranging futures",
+  "abstract": "Abstract Groundwater resources are essential for crop production, enabling irrigation in many arid regions of the world. With a growing dependence on groundwater to serve increasing crop demands, concerns have been raised regarding alarming rates of groundwater depletion at the global scale. Modeling efforts focused on projecting future groundwater depletion have been limited by key factors: exogenous assumptions of human demand for groundwater that are unresponsive to changing groundwater availability and cost, simplistic treatment of the physics of groundwater depletion, narrow application to localized contexts, and limited exploration of future uncertainties. To address these gaps, we introduce a new coupled human-natural modeling approach for process-rich, broad-exploration of groundwater depletion futures, initially deployed for the continental United States. Our results indicate persistent groundwater depletion across a range of hydrologic-economic futures, with many of the key agricultural regions of the U.S. encountering substantial depletion even in the absence of adverse hydrologic or economic change.",
+  "published": "2025-06-24",
+  "updated": "2025-06-24",
+  "authors": [
+    "Jim Yoon",
+    "Stephen Ferencz",
+    "Travis Thurber"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.21203/rs.3.rs-6787098/v1",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

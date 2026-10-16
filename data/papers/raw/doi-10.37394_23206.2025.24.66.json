@@ -1,0 +1,22 @@
+{
+  "id": "doi-10.37394_23206.2025.24.66",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.37394/23206.2025.24.66",
+  "title": "Shrinkage-Based Estimation of the Maximum Sharpe Ratio Portfolio via Minimization of Out-of-Sample Variance",
+  "abstract": "This paper addresses the problem of estimating the maximum Sharpe ratio portfolio in high-dimensional settings, i.e., when the number of assets in the portfolio k is not fixed but grows to infinity along with the sample size of historical data n, such that k/n tends to a constant c. Two cases are considered: c &lt; 1 and c &gt; 1. A shrinkage estimator is proposed. Based on the criterion of minimizing the out-of-sample variance of this estimator, the optimal shrinkage intensity is derived. Since this quantity depends on unknown parameters of the asset return distribution, consistent estimators for the shrinkage intensity are constructed using tools from random matrix theory. On this basis, a consistent shrinkage estimator of the maximum Sharpe ratio portfolio is proposed, which can be applied in practice. Simulation results demonstrate that the efficiency of the shrinkage estimator (measured by the relative deviation of its variance from the true value) is superior to that of the sample estimator for all values of c except when c is close to 0.",
+  "published": "2025-12-02",
+  "updated": "2025-12-02",
+  "authors": [
+    "Taras Zabolotskyy",
+    "Oleksandr Tsyapa"
+  ],
+  "categories": [
+    "journal-article"
+  ],
+  "abs_url": "https://doi.org/10.37394/23206.2025.24.66",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": "WSEAS TRANSACTIONS ON MATHEMATICS",
+  "cited_by_count": null
+}

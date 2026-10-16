@@ -1,0 +1,21 @@
+{
+  "id": "doi-10.2139_ssrn.7215519",
+  "source": "crossref",
+  "openalex_id": null,
+  "doi": "10.2139/ssrn.7215519",
+  "title": "The Finite-Sample Bias of the Sharpe Ratio Estimator",
+  "abstract": "Although the sample Sharpe ratio is a consistent estimator of its population counterpart, it is biased in finite samples, and the bias matters at the sample sizes common in performance evaluation. We show that the widely cited finite-sample correction of Christie (2005) rests on the incorrect claims. We then derive a general first-order bias expression through the longrun variance matrix of the moment conditions, valid for stationary strongly mixing returns, which yields analytical bias corrections under GARCH(1,1) and AR(1)-GARCH(1,1) returns; to our knowledge these are the first such results beyond independent or serially correlated observations. Monte Carlo experiments confirm the analytical findings and show that the corrections reduce the bias in every model considered.",
+  "published": "2026",
+  "updated": "2026",
+  "authors": [
+    "Fabrizio Ortega"
+  ],
+  "categories": [
+    "posted-content"
+  ],
+  "abs_url": "https://doi.org/10.2139/ssrn.7215519",
+  "oa_url": null,
+  "is_oa": false,
+  "venue": null,
+  "cited_by_count": null
+}

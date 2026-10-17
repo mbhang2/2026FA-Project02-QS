@@ -126,3 +126,17 @@ runs/current.weights
 # Deliberately NOT in .venv -- environment_fingerprint hashes every importable
 # distribution, and the engine never calls a PDF reader.
 .venv-tools/
+
+# **Third-party paper full texts -- never commit these.** `fetch_fulltext.py`
+# downloads the body of a paper so the screen can read more than an abstract,
+# and 315 of them (20 MB) were tracked until 2026-10-17. They are other
+# people's copyrighted work: the registry records `license: not recorded` for
+# every one of the 400 sampled, so we cannot show a right to redistribute any
+# of them, and an MIT licence on this repository would assert exactly that.
+#
+# They stay on disk and the pipeline still reads them -- `screen_papers.py`
+# screens on a body when one is present, and the tests need the files, not the
+# tracking. Anyone cloning this re-fetches with `scripts/fetch_fulltext.py`,
+# which is the honest arrangement: we hold what we were allowed to download,
+# and we redistribute none of it.
+data/papers/text/

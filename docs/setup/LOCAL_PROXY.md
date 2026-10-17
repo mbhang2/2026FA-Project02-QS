@@ -41,11 +41,24 @@ model_list:
     litellm_params:
       model: anthropic/claude-haiku-4-5
       api_key: os.environ/ANTHROPIC_API_KEY
-  - model_name: claude-sonnet-5
-    litellm_params:
-      model: anthropic/claude-sonnet-5
-      api_key: os.environ/ANTHROPIC_API_KEY
+
+litellm_settings:
+  drop_params: true        # tolerate harness fields Anthropic does not take
+
+general_settings:
+  master_key: sk-local-<generate one>
 ```
+
+**The master key is not optional** -- the proxy refuses to start without one,
+and the fix is to set it rather than to pass
+`LITELLM_DANGEROUSLY_PERMIT_WEAK_OR_UNSET_MASTER_KEY`. It authenticates the
+harness to the local proxy and has nothing to do with Anthropic; the harness
+sends it as `LITELLM_API_KEY`, so the two must match. Generate one with
+`python -c "import secrets; print('sk-local-'+secrets.token_urlsafe(24))"`.
+
+Both files already exist in `secrets/` on this machine, written 2026-10-17:
+`litellm-local.yaml` and `litellm-local.env`, the latter holding the two
+`export` lines so the shell setup is `source secrets/litellm-local.env`.
 
 **`model_name` is what the harness asks for and what the reply must say.** Keep
 the two sides identical. `preflight()` compares them and raises

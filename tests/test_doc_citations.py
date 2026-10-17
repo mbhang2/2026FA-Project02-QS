@@ -162,9 +162,26 @@ def test_the_allowlist_has_not_rotted():
     that are, in fact, fine.
     """
     stale = [p for p in ABSENT_BY_DESIGN
-             if (REPO_ROOT / p.rstrip("/")).exists()]
+             if (REPO_ROOT / p.rstrip("/")).exists() and not _git_ignored(p)]
     assert not stale, (
         f"these exist now and no longer need an exemption: {stale}")
+
+
+def _git_ignored(rel: str) -> bool:
+    """Is this path excluded from the repository?
+
+    The entry above is a claim about the REPOSITORY, and a git-ignored file can
+    sit in a working tree while being absent from every clone -- so its local
+    existence says nothing about whether the exemption is stale. Found on
+    2026-10-17: `secrets/litellm-local.yaml` is written by
+    `docs/setup/LOCAL_PROXY.md`'s instructions, exists on the machine that
+    followed them, and must never be committed. Without this the check would
+    demand the exemption be deleted and the next clone would fail the citation
+    test instead.
+    """
+    import subprocess
+    return subprocess.run(["git", "check-ignore", "-q", rel],
+                          cwd=REPO_ROOT, capture_output=True).returncode == 0
 
 
 def test_the_allowlist_is_still_cited():

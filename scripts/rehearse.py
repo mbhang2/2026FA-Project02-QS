@@ -145,7 +145,7 @@ def main() -> int:
     ap.add_argument("--campaigns", type=int, default=2)
     ap.add_argument("--n", type=int, default=4)
     ap.add_argument("--width", type=int, default=2)
-    ap.add_argument("--seed-hypothesis", type=pathlib.Path,
+    ap.add_argument("--seed-hypothesis", type=lambda x: pathlib.Path(x).resolve(),
                     default=ROOT / "config" / "hypotheses" / "intraday-continuation.md")
     ap.add_argument("--model", default="deepseek-v4-pro",
                     help="the proposer to rehearse with. The MODEL is an "

@@ -57,6 +57,13 @@ TOP_LEVEL = {
 # Cited on purpose, and absent on purpose. Each entry states which, because an
 # allowlist without reasons becomes the place failures go to be forgotten.
 ABSENT_BY_DESIGN: dict[str, str] = {
+    "secrets/litellm-local.yaml":
+        "**it must never exist here.** `docs/setup/LOCAL_PROXY.md` tells a "
+        "reader to write it when running the loop against their own API key, "
+        "and `.gitignore` excludes `secrets/*` with only `.gitkeep` excepted. A "
+        "committed copy would be a proxy configuration naming someone's models "
+        "and, sooner or later, their key. Cited so the setup can be followed; "
+        "absent so it cannot be leaked.",
     "runs/holdout-result.json":
         "**absent is the point.** Section 8 gives the holdout one look ever, and "
         "Amendment 9 makes this file's existence a refusal: `holdout.py` claims "

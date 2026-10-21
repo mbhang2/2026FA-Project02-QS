@@ -1,0 +1,23 @@
+{
+  "schema": "campaign-status/1",
+  "campaign_id": "nq-orderflow-absorption-01",
+  "status": "stopped_mid_run",
+  "recorded_at": "2026-10-21",
+  "recorded_by": "overnight run of 2026-10-21",
+  "trials_run": 36,
+  "trials_registered": 400,
+  "summary": "Stopped at 36 of 400 because the exposure floor the record claims was never the one enforced. No decision has been made about whether the pre-registration is spent.",
+  "why": [
+    "campaign.json records min_exposed_fraction 0.5, frozen at registration from --min-exposed. Every rejection in the ledger reads 'under the registered floor of 70%'. run.py:685 reads the floor from config/run.yaml (campaign.min_exposed_fraction: 0.70) and never opens campaign.json, so the registered override is recorded and not enforced.",
+    "It is not cosmetic. Trials 24 and 31 were exposed in 223 and 222 of 384 sessions: above the registered floor of 192 and below the enforced floor of 268. Both were scored -inf. At 36 trials that is 2 candidates wrongly discarded, and the same rate over 400 would throw away roughly 22.",
+    "A campaign whose record states one evaluation condition and whose trials ran under another is the failure this project treats as fatal, which is why the run was stopped rather than finished and annotated."
+  ],
+  "also_observed": [
+    "Throughput was 8.4 trials/h, not the ~42 the nq-train capacity measurement implies. Effective concurrency was 1.45x against a registered generation_width of 4: a generation finishes only when its slowest member does, and per-trial wall was heavy-tailed (median 234s, max 3195s).",
+    "The tail is out-of-scope candidates. One trial placed 103,467 trades against a hypothesis whose text says 'Not a scalping rule, at any frequency, for any reason'. 6 of 36 trials did not complete, against wall_clock_budget_s 7200.",
+    "At that rate 400 trials is about 43 hours, not an overnight run."
+  ],
+  "no_fix_applied": "The floor cannot be passed to run.py as an argument: run.py's docstring refuses evaluation conditions on the command line by design, and that refusal is a fix rather than an omission. The floor lives in config/run.yaml's campaign block and the nq-train profile does not carry one, so a per-campaign floor has no committed place to live. Making one is a change to Amendment 6's mechanics and is not a change to make unattended.",
+  "pre_registration_untouched": true,
+  "not_abandoned_because": "Nobody has decided that. The question in config/hypotheses/orderflow-absorption-at-carried-levels.md is unchanged and was committed at d0167b3 before any trial ran. If the decision IS to spend it, set status to 'abandoned' and say who decided and when. If the decision is to re-run, the 36 trials above are already counted in N and that cost does not come back."
+}

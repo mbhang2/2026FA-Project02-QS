@@ -1,0 +1,125 @@
+{
+  "binding": "measured throughput: W=4 at 41.6 trials/h is within 10% of the best measured width and is the narrowest that is; the sound constraints would allow 8",
+  "ceiling": null,
+  "decided_at": "2026-10-21T08:46:19+00:00",
+  "footprint_bytes": 918650880,
+  "headroom_note": "this machine's sound constraints allow W=8 (bound by cores), but the recommendation stops at W=4. To use it: `scripts/worker_tree.py --prove --create 8` (purpose=check only, spends no N), then `--ceiling 8`.",
+  "machine": "bfda0b2f6483a041",
+  "max_width": 8,
+  "measured_now": false,
+  "plan": {
+    "binding": "cores",
+    "constraints": [
+      {
+        "advisory": true,
+        "detail": "0.86 GiB per-trial RSS x W vs 4.08 GiB available (vm_stat free+inactive+purgeable), 85% headroom -- ADVISORY: RSS is per-process and does not add",
+        "fits": 4,
+        "name": "memory (model)"
+      },
+      {
+        "advisory": true,
+        "detail": "0.48 GiB observed system drop running 1 concurrently, 296s wall",
+        "fits": 1,
+        "name": "memory (measured W=1)"
+      },
+      {
+        "advisory": true,
+        "detail": "1.28 GiB observed system drop running 4 concurrently, 346s wall",
+        "fits": 4,
+        "name": "memory (measured W=4)"
+      },
+      {
+        "advisory": true,
+        "detail": "1.79 GiB observed system drop running 8 concurrently, 630s wall",
+        "fits": 8,
+        "name": "memory (measured W=8)"
+      },
+      {
+        "detail": "8 performance cores of 10 (2 efficiency, which a generation waits on)",
+        "fits": 8,
+        "name": "cores"
+      },
+      {
+        "detail": "10.5 GiB free (98% used), ~8 MiB budgeted per worker tree",
+        "fits": 1342,
+        "name": "disk"
+      },
+      {
+        "detail": "soft limit 1048576, ~64 descriptors budgeted per worker",
+        "fits": 16384,
+        "name": "open files"
+      }
+    ],
+    "cores": {
+      "brand": "Apple M1 Pro",
+      "cgroup_quota": null,
+      "efficiency": 2,
+      "performance": 8,
+      "schedulable": 8,
+      "total": 10,
+      "usable": 10,
+      "usable_basis": "os.cpu_count()"
+    },
+    "disk": {
+      "free": 11260518400,
+      "total": 494384795648,
+      "used_pct": 97.7223170091142
+    },
+    "footprint": {
+      "measured_at": "2026-10-11T17:41:59+00:00",
+      "peak_rss_bytes": 918650880,
+      "profile": "nq-train",
+      "purpose": "check",
+      "python": "3.11.5",
+      "wall_s": 299.60417529195547
+    },
+    "headroom": 0.85,
+    "history": {
+      "completed": 1406,
+      "width": 4
+    },
+    "limits": {
+      "RLIMIT_AS": {
+        "hard": 9223372036854775807,
+        "soft": 9223372036854775807,
+        "unlimited": true
+      },
+      "RLIMIT_NOFILE": {
+        "hard": 9223372036854775807,
+        "soft": 1048576,
+        "unlimited": false
+      },
+      "RLIMIT_NPROC": {
+        "hard": 4000,
+        "soft": 2666,
+        "unlimited": false
+      }
+    },
+    "machine": "bfda0b2f6483a041",
+    "max_width": 8,
+    "max_width_basis": "measured capacity",
+    "memory": {
+      "available": 4383948800,
+      "available_basis": "vm_stat free+inactive+purgeable",
+      "cgroup_limit": null,
+      "swap_total": 9663676416,
+      "swap_used": 8141731266,
+      "total": 17179869184
+    },
+    "profile": "nq-train",
+    "reason": "cores allows 8 concurrent trial(s) (8 performance cores of 10 (2 efficiency, which a generation waits on))",
+    "verdict": "OK",
+    "warning": "swap is 84% used (7.6 of 9.0 GiB) before the run starts. The memory figure above is physical headroom and does not count swap, but a machine already paging this hard has other processes that will want it back.",
+    "width": 4
+  },
+  "profile": "nq-train",
+  "reason": "W=4, bound by measured throughput: W=4 at 41.6 trials/h is within 10% of the best measured width and is the narrowest that is; the sound constraints would allow 8",
+  "throughput_trials_per_s": {
+    "1": 0.003378,
+    "4": 0.011548,
+    "8": 0.012708
+  },
+  "verdict": "OK",
+  "warning": "swap is 84% used (7.6 of 9.0 GiB) before the run starts. The memory figure above is physical headroom and does not count swap, but a machine already paging this hard has other processes that will want it back.",
+  "width": 4
+}

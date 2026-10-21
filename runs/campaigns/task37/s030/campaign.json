@@ -31,6 +31,7 @@
     },
     "agent_crash_fraction": 0.0,
     "agent_seed": 0,
+    "allow_fitted_proposals": null,
     "budget": 100,
     "campaign_id": "task37-s030",
     "corrections": [
@@ -39,9 +40,16 @@
       "expected_max"
     ],
     "dataset": "synthetic-s030",
+    "generation_width": null,
+    "hypothesis_digest": null,
+    "hypothesis_path": null,
+    "min_exposed_fraction": null,
     "note": "Task 37 positive control, planted strength 0.3. Chosen near the bar: the calibration reference scores +0.7708 here against the Task 36 best-of-100 null maximum of +0.8011, so a plausible strategy lands on the bar and clearing it takes a candidate better than the apparatus. Oracle ceiling +9.8190. Success takes BOTH conditions: the gate accepts at q, AND the accepted candidate exploits the planted mechanism rather than happening to look good. Stated before running: the rotation null preserves cyclic order and therefore retains between a third and a half of this signal (docs/reviews/task37/rotation-check.json), so the gate is expected to be conservative and a non-acceptance does not by itself mean the loop failed to find the edge.",
+    "probe_before_trial": null,
     "profile": "campaign-s030",
     "q": 0.05,
+    "seed_digest": null,
+    "seed_path": null,
     "split": "train",
     "stopping_rule": "fixed budget of 100; no early stop on any observed result, no extension if the last trial looks promising",
     "written_at": "2026-09-15T15:35:49+00:00"

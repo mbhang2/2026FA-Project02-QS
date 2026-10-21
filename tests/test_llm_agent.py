@@ -50,8 +50,17 @@ def _agent(**kw):
     test that does not run in CI."""
     import os
 
-    os.environ.setdefault("LITELLM_BASE_URL", "https://example.invalid/v1")
-    os.environ.setdefault("LITELLM_API_KEY", "not-a-key-and-never-sent")
+    # **Assigned, not `setdefault`.** `setdefault` defers to the shell, which
+    # is the opposite of what the docstring above promises: with a live
+    # LITELLM_BASE_URL exported, these agents pointed at the REAL gateway.
+    # Measured 2026-10-20 once the gateway came back -- the suite went from
+    # 136 s to >10 min at 7% CPU, sleeping through TRANSPORT_BACKOFF_S
+    # (30, 120, 300, 600, 600) on retries against a live endpoint. A test that
+    # behaves differently depending on who is running it is not a test, and
+    # one that can spend real tokens is worse. example.invalid cannot resolve,
+    # so leaking these values to later tests fails closed.
+    os.environ["LITELLM_BASE_URL"] = "https://example.invalid/v1"
+    os.environ["LITELLM_API_KEY"] = "not-a-key-and-never-sent"
     return llm.LLMAgent(model="test-model", **kw)
 
 
@@ -66,6 +75,19 @@ def _messages(agent, history=()) -> tuple[str, str]:
     prompt = agent._prompt(history, repair="")
     system, user = prompt.split("## USER", 1)
     return system.split("## SYSTEM", 1)[-1].strip(), user.strip()
+
+
+def test_the_suite_never_points_an_agent_at_a_real_endpoint(monkeypatch):
+    """A live LITELLM_BASE_URL in the shell must not reach the agent.
+
+    This used to be `os.environ.setdefault`, so whoever had the gateway
+    exported ran these tests against it: real calls, real tokens, and retries
+    that sleep through TRANSPORT_BACKOFF_S. The suite took >10 minutes at 7%
+    CPU on 2026-10-20 before anyone noticed it was not computing.
+    """
+    monkeypatch.setenv("LITELLM_BASE_URL", "https://gateway.example.com/v1")
+    monkeypatch.setenv("LITELLM_API_KEY", "sk-looks-real")
+    assert _agent().base_url == "https://example.invalid/v1"
 
 
 def test_nothing_sent_to_the_agent_mentions_the_gate():

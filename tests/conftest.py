@@ -70,3 +70,47 @@ def s3():
 @pytest.fixture(scope="session")
 def bucket() -> str:
     return os.environ["R2_BUCKET"]
+
+
+# --------------------------------------------------------------------------- #
+# The suite may not talk to a real endpoint.
+# --------------------------------------------------------------------------- #
+# Measured 2026-10-20, the day the gateway came back: the suite went from 136 s
+# to over ten minutes at 0% CPU, sleeping in `TRANSPORT_BACKOFF_S` on retries
+# against `llm-proxy.invalid`. Three test helpers used `os.environ.setdefault` for
+# `LITELLM_BASE_URL`, so anyone with the gateway exported ran those tests
+# against it -- real calls, real tokens, and a suite whose behaviour depended on
+# whose shell it was.
+#
+# Fixing the three helpers fixes those three. This fixture makes the whole class
+# of bug impossible to reintroduce: a test that reaches a real host fails, by
+# name, in milliseconds, instead of sleeping for twenty-seven minutes and
+# passing. Tests marked `live` are exempt -- reading the bucket is their entire
+# point -- and they already skip without R2 credentials.
+_ALLOWED_HOSTS = frozenset({"example.invalid", "localhost", "127.0.0.1", "::1"})
+
+
+@pytest.fixture(autouse=True)
+def _no_real_network(request, monkeypatch):
+    if "live" in request.node.keywords:
+        return
+    import urllib.parse
+
+    import requests.sessions
+
+    real = requests.sessions.Session.request
+
+    def guarded(self, method, url, *a, **kw):
+        host = (urllib.parse.urlparse(str(url)).hostname or "").lower()
+        if host not in _ALLOWED_HOSTS:
+            _rec = os.environ.get("NETGUARD_LOG")
+            if _rec:
+                with open(_rec, "a") as fh:
+                    fh.write(f"{request.node.nodeid}\t{method}\t{url}\n")
+            raise RuntimeError(
+                f"{request.node.nodeid} tried to reach {host!r} "
+                f"({method} {url}). Tests do not call real endpoints: point the "
+                f"client at example.invalid, or mark the test `live`.")
+        return real(self, method, url, *a, **kw)
+
+    monkeypatch.setattr(requests.sessions.Session, "request", guarded)

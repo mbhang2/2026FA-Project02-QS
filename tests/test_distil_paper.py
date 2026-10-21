@@ -109,6 +109,30 @@ class _Fake:
     def ask(self, system, user): self.seen = user; return self.payload
 
 
+@pytest.fixture(autouse=True)
+def _seat_client_is_never_real(monkeypatch):
+    """The reviewer seat builds its OWN client, so injecting `_Fake` is not
+    enough.
+
+    `distil_one` honours the client it is handed, but `_review_seat` loads
+    `scripts/review_hypothesis.py` and calls its `review()`, which builds its
+    own endpoint client. The seat fails open: any exception
+    becomes `DID-NOT-RUN ... NOT reviewed` and the distillation continues. So
+    these tests passed whatever the endpoint did -- and once the gateway came
+    back on 2026-10-20 they passed by making **13 real, billable POSTs to
+    the proxy per suite run**, which is also what took the suite from 136 s to
+    over ten minutes.
+
+    Every assertion in this file is about the lint, the repair loop or the
+    registry row, all of which use the injected client. None is about the seat
+    having run. So the seat is made to not-run deterministically instead of
+    accidentally, which is what these tests were already exercising.
+    """
+    monkeypatch.setattr(
+        dp, "_review_seat",
+        lambda md: ([], "DID-NOT-RUN (RuntimeError) -- NOT reviewed"))
+
+
 # --------------------------------------------------------------------------- #
 # refusal 1: the lint, before anything is written
 # --------------------------------------------------------------------------- #

@@ -39,8 +39,17 @@ COMMITTED = REPO_ROOT / "config" / "hypotheses" / "intraday-continuation.md"
 def _agent(**kw):
     import os
 
-    os.environ.setdefault("LITELLM_BASE_URL", "https://example.invalid/v1")
-    os.environ.setdefault("LITELLM_API_KEY", "not-a-key-and-never-sent")
+    # **Assigned, not `setdefault`.** `setdefault` defers to the shell, which
+    # is the opposite of what the docstring above promises: with a live
+    # LITELLM_BASE_URL exported, these agents pointed at the REAL gateway.
+    # Measured 2026-10-20 once the gateway came back -- the suite went from
+    # 136 s to >10 min at 7% CPU, sleeping through TRANSPORT_BACKOFF_S
+    # (30, 120, 300, 600, 600) on retries against a live endpoint. A test that
+    # behaves differently depending on who is running it is not a test, and
+    # one that can spend real tokens is worse. example.invalid cannot resolve,
+    # so leaking these values to later tests fails closed.
+    os.environ["LITELLM_BASE_URL"] = "https://example.invalid/v1"
+    os.environ["LITELLM_API_KEY"] = "not-a-key-and-never-sent"
     return llm.LLMAgent(model="test-model", **kw)
 
 

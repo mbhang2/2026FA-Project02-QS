@@ -121,6 +121,38 @@ def template_digest(path: Path = TEMPLATE_PATH) -> str:
 #
 # Only 429 and 5xx reach here (see `_one_attempt`), so an exhausted budget
 # (HTTP 422) still fails immediately instead of sleeping 27 minutes to no end.
+# **Every call opts out of the gateway's response cache.**
+#
+# Measured 2026-10-20, after the gateway came back: four identical requests to
+# `claude-haiku-4-5` at `temperature=0.7` returned ONE distinct answer -- the
+# first in 2.04 s and the next three in 0.18-0.25 s. With `cache: no-cache`,
+# four of four were distinct at ~0.97 s each. A 381-token completion in 0.12 s
+# is ~3,200 tok/s and is not a generation.
+#
+# Why this is not a performance question:
+#
+# 1. **The search stops searching.** The proposer runs at `temperature=0.7`
+#    precisely so that re-asking explores. A cache keyed on the request returns
+#    the same proposal however high the temperature, so the W agents of a
+#    generation -- which share a `shown` snapshot, and whose prompts therefore
+#    coincide before any history accumulates -- would spend W looks on one
+#    candidate. `global_n()` counts all W.
+# 2. **Retrying a failure re-serves the failure.** A repair call whose prompt
+#    repeats returns the identical broken code, so the retry cannot succeed and
+#    the trial is lost deterministically rather than occasionally.
+# 3. **It would silence the substitution guard.** `preflight` exists to read the
+#    `model` field; served from cache it reports whichever model answered
+#    earlier, which is exactly the failure Task 37 cost 35 trials to learn.
+# 4. **Task 37 would stop being a control.** Its validity rests on generating
+#    under Task 36's conditions, and Task 36 produced 200 distinct strategy
+#    digests from 200 trials, most-common x1. A cached run cannot match that.
+#
+# Sent as a body parameter, not the `x-litellm-no-cache` header: the header was
+# measured at 0.18 s (still cached) and the parameter at 0.68 s on the same
+# prompt. Assumes a LiteLLM-compatible endpoint, which is what `base_url` has
+# always meant here.
+NO_CACHE = {"no-cache": True}
+
 MAX_TRANSPORT_RETRIES = 5
 TRANSPORT_BACKOFF_S = (30, 120, 300, 600, 600)
 
@@ -640,6 +672,7 @@ class LLMAgent:
         # point of this call is to read the `model` field rather than to be
         # cheap.
         body = {"model": self.model, "max_tokens": 512, "temperature": 0,
+                "cache": NO_CACHE,
                 "messages": [{"role": "user", "content": "reply with: ok"}]}
         resp = requests.post(
             f"{self.base_url}/chat/completions", json=body,
@@ -707,6 +740,7 @@ class LLMAgent:
             "model": self.model,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
+            "cache": NO_CACHE,
             "messages": [
                 {"role": "system", "content": system.split("## SYSTEM", 1)[-1].strip()},
                 {"role": "user", "content": user.strip()},

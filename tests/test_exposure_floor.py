@@ -73,12 +73,88 @@ def test_the_scored_path_passes_it_to_both_scores():
         "candidate would still carry an uncharged figure")
 
 def test_config_default_and_record_field():
+    """**The literal used to be pinned at 0.70 here, and that was the wrong
+    assertion.** The floor is a per-campaign decision (Amendment 6), so the
+    committed value legitimately changes -- it went to 0.50 on 2026-10-21 for
+    orderflow-absorption-at-carried-levels. Pinning the number makes every
+    honest change a test failure; what matters is that it is a usable floor and
+    that nothing can claim a different one. The second property is asserted by
+    the two tests below.
+    """
     import yaml
     cfg = yaml.safe_load((REPO_ROOT / "config/run.yaml").read_text())
-    assert cfg["campaign"]["min_exposed_fraction"] == 0.70
+    floor = cfg["campaign"]["min_exposed_fraction"]
+    assert isinstance(floor, float) and 0.0 < floor <= 1.0, (
+        f"campaign.min_exposed_fraction is {floor!r}; run.py scores from this "
+        "value, so it has to be a fraction")
     from src.core.loop.campaign import CampaignRecord
     r = CampaignRecord(campaign_id="x", budget=1, profile="harness", q=0.05)
     assert r.min_exposed_fraction is None            # digest-safe for old records
+
+
+def test_registering_a_floor_that_disagrees_with_the_config_is_refused():
+    """`--min-exposed` is an assertion, not an override.
+
+    It used to write the flag into campaign.json while `run.py` went on reading
+    `config/run.yaml`, so a campaign registered at 0.5 was scored at 0.70.
+    nq-orderflow-absorption-01 lost trials 24 and 31 to it -- exposed in 223 and
+    222 of 384 sessions, over the registered floor of 192 and under the enforced
+    268, both scored -inf.
+    """
+    import subprocess
+    import yaml
+    cfg = yaml.safe_load((REPO_ROOT / "config/run.yaml").read_text())
+    disagrees = 0.123 if cfg["campaign"]["min_exposed_fraction"] != 0.123 else 0.456
+    proc = subprocess.run(
+        [sys.executable, "scripts/nq_campaign.py", "--stage", "register",
+         "--name", "zzz-floor-guard", "--n", "4",
+         "--hypothesis", "config/hypotheses/intraday-continuation.md",
+         "--min-exposed", str(disagrees)],
+        capture_output=True, text=True, cwd=str(REPO_ROOT))
+    out = proc.stdout + proc.stderr
+    assert proc.returncode != 0, f"it registered anyway:\n{out[-800:]}"
+    assert "disagrees with" in out, out[-800:]
+    # and it cost nothing remote: the preflight is below this check
+    assert "preflight" not in out, (
+        "the floor check must refuse before the network round trip:\n" + out[-800:])
+    assert not (REPO_ROOT / "runs/campaigns/zzz-floor-guard/campaign.json").exists()
+
+
+def test_a_campaign_cannot_run_under_a_floor_its_record_does_not_name():
+    """config/run.yaml is one line shared by every campaign, so a campaign
+    registered at 0.70 could otherwise be run -- or validated -- months later
+    under somebody else's 0.50, with nothing in the ledger to say so."""
+    import importlib.util
+    saved = sys.argv
+    sys.argv = ["nq_campaign"]
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "nqc_floor", REPO_ROOT / "scripts" / "nq_campaign.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    finally:
+        sys.argv = saved
+    live = mod.campaign_cfg().get("min_exposed_fraction")
+    from src.core.loop.campaign import CampaignRecord
+    import json
+    hits = []
+    for p in sorted((REPO_ROOT / "runs/campaigns").glob("*/campaign.json")):
+        try:
+            rec, _ = CampaignRecord.read(p)
+        except Exception:                                        # noqa: BLE001
+            continue
+        if getattr(rec, "min_exposed_fraction", None) not in (None, live):
+            hits.append(p.parent.name)
+    if not hits:
+        pytest.skip("no committed campaign disagrees with the live floor")
+    try:
+        mod._refuse_if_floor_drifted(hits[0])
+    except SystemExit as exc:
+        assert "does not name" in str(exc) or "now says" in str(exc), str(exc)
+    else:
+        raise AssertionError(
+            f"{hits[0]} registered a different floor than config/run.yaml and "
+            "was allowed to proceed")
 
 
 # --------------------------------------------------------------------------- #

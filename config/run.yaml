@@ -368,10 +368,25 @@ campaign:
   # MIN_SESSIONS already rejects -- never seen by the correction. Task 69
   # measured why: idle sessions pad Sortino's denominator by sqrt(N/exposed),
   # 2.67x at 14 of 100 and 1.20x at 70 of 100. Frozen into campaign.json at
-  # registration; `--min-exposed` overrides it there for a hypothesis that is
-  # genuinely rare (0.05) or genuinely daily (0.90). The floor never applies
-  # inside a null.
-  min_exposed_fraction: 0.70
+  # registration, and `--min-exposed` must AGREE with this value rather than
+  # override it -- see nq_campaign._refuse_if_floor_drifted. The floor never
+  # applies inside a null.
+  #
+  # **It used to say "--min-exposed overrides it there", and that was false.**
+  # `run.py` reads this key and never opens campaign.json, so a campaign
+  # registered with --min-exposed 0.5 recorded 0.5 and was scored at 0.70.
+  # nq-orderflow-absorption-01 lost trials 24 and 31 that way -- exposed in 223
+  # and 222 of 384 sessions, above the registered floor of 192 and below the
+  # enforced 268, both scored -inf. Fixing it by passing the floor to run.py was
+  # not available: run.py takes no evaluation condition on the command line, and
+  # that refusal is deliberate. So the value lives here, where run.py already
+  # looks, every stage checks the record still matches it, and a hypothesis that
+  # needs a different floor changes this line in a commit before it registers.
+  #
+  # 0.50 for orderflow-absorption-at-carried-levels, signed off by Michael
+  # 2026-10-21. A rare-event hypothesis can set 0.05 and a daily one 0.90; what
+  # it cannot do is claim one number and be scored by another.
+  min_exposed_fraction: 0.50
 
   # Amendment 7 (2026-09-25): run each proposal once on a SYNTHETIC profile
   # before its trial and tell the agent three facts -- crashed (with the

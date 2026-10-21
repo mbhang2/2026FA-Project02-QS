@@ -340,6 +340,33 @@ def stage_validate(name: str) -> None:
 
 # --------------------------------------------------------------------------- #
 
+def _refuse_if_floor_drifted(name: str) -> None:
+    """The floor in the record must still be the floor the scorer will apply.
+
+    `run.py` reads `campaign.min_exposed_fraction` from `config/run.yaml`. That
+    file is one line long and shared by every campaign, so a campaign
+    registered at 0.70 can be run -- or worse, validated -- months later under
+    somebody else's 0.50 and nothing in the ledger would say so. The record is
+    the claim; this is the check that it is still true.
+    """
+    from src.core.loop.campaign import CampaignRecord
+
+    path = OUT / name / "campaign.json"
+    if not path.exists():
+        return
+    record, _ = CampaignRecord.read(path)
+    registered = getattr(record, "min_exposed_fraction", None)
+    configured = campaign_cfg().get("min_exposed_fraction")
+    if registered != configured:
+        sys.exit(
+            f"{name} registered min_exposed_fraction {registered!r} and "
+            f"config/run.yaml now says {configured!r}.\n"
+            f"run.py scores from run.yaml, so continuing would run this "
+            f"campaign under a floor its own record does not name. Set "
+            f"campaign.min_exposed_fraction back to {registered!r} to continue "
+            f"this campaign, or register a new one for the floor you want.")
+
+
 def stage_register(name: str, hypothesis: pathlib.Path,
                    profile_name: str = PROFILE,
                    seed: pathlib.Path | None = None,
@@ -387,6 +414,26 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                 f"edits it would too:\n  {why[:600]}\nFix the seed and register "
                 "again.")
 
+    # **An assertion, not an override, and checked before the preflight.** It
+    # used to be `cc = {**cc, "min_exposed_fraction": min_exposed}`, which wrote
+    # the flag into the record while `run.py` went on reading run.yaml -- so the
+    # record claimed a floor nothing applied. The flag now says "I have already
+    # set this in run.yaml and I mean it", and disagreeing is a refusal rather
+    # than a silent divergence. It costs nothing remote, so it belongs above.
+    if min_exposed is not None:
+        if not (0.0 < min_exposed <= 1.0):
+            sys.exit(f"--min-exposed must be in (0, 1], got {min_exposed}")
+        configured = campaign_cfg().get("min_exposed_fraction")
+        if configured != min_exposed:
+            sys.exit(
+                f"--min-exposed {min_exposed} disagrees with "
+                f"campaign.min_exposed_fraction {configured!r} in "
+                f"config/run.yaml.\n"
+                f"run.py reads the floor from run.yaml and never opens "
+                f"campaign.json, so registering this way would record a floor "
+                f"that nothing enforces. Edit config/run.yaml to "
+                f"{min_exposed}, commit it, and register again.")
+
     print("preflight ...", flush=True)
     served = LLMAgent(model=model, temperature=0.7,
                         max_tokens=PROPOSER_MAX_TOKENS).preflight()
@@ -400,10 +447,6 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         if n_trials < 1:
             sys.exit(f"--n must be positive, got {n_trials}")
         cc = {**cc, "n_trials": n_trials}
-    if min_exposed is not None:
-        if not (0.0 < min_exposed <= 1.0):
-            sys.exit(f"--min-exposed must be in (0, 1], got {min_exposed}")
-        cc = {**cc, "min_exposed_fraction": min_exposed}
     if probe is not None:
         # Amendment 7. A flag at registration, frozen below; never read from
         # the config at run time.
@@ -1117,8 +1160,10 @@ def main() -> int:
                          f"Default {MODEL}.")
     ap.add_argument("--min-exposed", type=float, default=None,
                     help="Amendment 6 exposure floor for this campaign, in (0, 1]; "
-                         "--stage register only, frozen into campaign.json. Default "
-                         "is campaign.min_exposed_fraction in config/run.yaml.")
+                         "--stage register only. It must AGREE with "
+                         "campaign.min_exposed_fraction in config/run.yaml, "
+                         "which is what run.py actually scores from; "
+                         "disagreeing is refused rather than overridden.")
     ap.add_argument("--ignore-capacity", default=None, metavar="REASON",
                     help="proceed even though the machine cannot carry the "
                          "declared generation_width; the reason is recorded in "
@@ -1205,6 +1250,9 @@ def main() -> int:
         if a.ignore_capacity and a.stage != "run":
             sys.exit(f"--ignore-capacity applies to --stage run only; "
                      f"--stage {a.stage} builds no workers.")
+        # After the argument refusals: those are about this invocation and are
+        # free, this one reads the record off disk.
+        _refuse_if_floor_drifted(a.name)
         if a.stage == "run":
             stage_run(a.name, ignore_capacity=a.ignore_capacity)
         else:

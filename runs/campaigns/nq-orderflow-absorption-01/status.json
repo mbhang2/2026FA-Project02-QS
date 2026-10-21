@@ -1,7 +1,7 @@
 {
   "schema": "campaign-status/1",
   "campaign_id": "nq-orderflow-absorption-01",
-  "status": "stopped_mid_run",
+  "status": "abandoned",
   "recorded_at": "2026-10-21",
   "recorded_by": "overnight run of 2026-10-21",
   "trials_run": 36,
@@ -18,6 +18,9 @@
     "At that rate 400 trials is about 43 hours, not an overnight run."
   ],
   "no_fix_applied": "The floor cannot be passed to run.py as an argument: run.py's docstring refuses evaluation conditions on the command line by design, and that refusal is a fix rather than an omission. The floor lives in config/run.yaml's campaign block and the nq-train profile does not carry one, so a per-campaign floor has no committed place to live. Making one is a change to Amendment 6's mechanics and is not a change to make unattended.",
-  "pre_registration_untouched": true,
-  "not_abandoned_because": "Nobody has decided that. The question in config/hypotheses/orderflow-absorption-at-carried-levels.md is unchanged and was committed at d0167b3 before any trial ran. If the decision IS to spend it, set status to 'abandoned' and say who decided and when. If the decision is to re-run, the 36 trials above are already counted in N and that cost does not come back."
+  "pre_registration_untouched": false,
+  "abandoned_by": "Michael, 2026-10-21",
+  "abandoned_because": "Asked for the floor to be fixed and the campaign re-registered. The 36 trials were scored under a 0.70 floor the record does not name, so finishing this campaign would mean reporting 400 trials of which 36 ran under different evaluation conditions. Those 36 are already counted in N and that cost does not come back.",
+  "superseded_by": "nq-orderflow-absorption-02",
+  "fixed_in": "9790cb6 -- the floor is now asserted at registration and checked at every later stage"
 }

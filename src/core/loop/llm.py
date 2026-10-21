@@ -153,6 +153,15 @@ def template_digest(path: Path = TEMPLATE_PATH) -> str:
 # always meant here.
 NO_CACHE = {"no-cache": True}
 
+# The smallest `max_tokens` a preflight may send. A reasoning model spends its
+# budget before emitting a visible token, and the gateway reports the empty
+# output as `ContentPolicyViolationError: Response output was blocked`, which
+# reads like a refusal and is a truncation. Measured 2026-09-25 on
+# `gemini-3.1-pro-preview`: 4 of 4 failures at 16, HTTP 200 with an honest
+# `model` field at 64. Named so the test asserts the floor rather than scraping
+# the literal out of the call.
+PREFLIGHT_FLOOR_TOKENS = 512
+
 MAX_TRANSPORT_RETRIES = 5
 TRANSPORT_BACKOFF_S = (30, 120, 300, 600, 600)
 
@@ -671,8 +680,17 @@ class LLMAgent:
         # 512 rather than 64: the margin is free on a one-token answer, and the
         # point of this call is to read the `model` field rather than to be
         # cheap.
-        body = {"model": self.model, "max_tokens": 512, "temperature": 0,
-                "cache": NO_CACHE,
+        # **Probed at the size the campaign will really ask for, not at 512.**
+        # `max_tokens` is a cap, not a charge -- the answer is two tokens
+        # either way -- but it is part of what the endpoint routes on. A 512
+        # probe said `claude-haiku-4-5` while every 65,536 proposal was being
+        # answered by `gemini-3.1-pro-preview`, so the guard whose whole job is
+        # to catch substitution vouched for a run it had not tested. Floored at
+        # PREFLIGHT_FLOOR_TOKENS because a reasoning model spends its budget
+        # visible token, and an agent configured below that would truncate.
+        body = {"model": self.model,
+                "max_tokens": max(self.max_tokens, PREFLIGHT_FLOOR_TOKENS),
+                "temperature": 0, "cache": NO_CACHE,
                 "messages": [{"role": "user", "content": "reply with: ok"}]}
         resp = requests.post(
             f"{self.base_url}/chat/completions", json=body,

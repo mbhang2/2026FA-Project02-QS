@@ -77,10 +77,25 @@ DEFAULT_HYPOTHESIS = ROOT / "config" / "hypotheses" / "intraday-continuation.md"
 # fence closed. Third instance of one defect -- the committee client at 4,096
 # against deepseek, the preflight at 16, this.
 #
-# 65,536 is ~4x the largest reasoning budget measured and the replies are a few
+# 64,000 is ~4x the largest reasoning budget measured and the replies are a few
 # thousand tokens, so the ceiling stops being a variable. It is recorded in
 # every campaign record, so a campaign run under a different one is visible.
-PROPOSER_MAX_TOKENS = 65_536
+#
+# **It was 65,536 until 2026-10-20, and that silently cost every trial.**
+# `claude-haiku-4-5` tops out at 64,000 output tokens. The gateway does not
+# refuse a larger ask -- it falls through its wildcard route,
+# `fallbacks=[{'*': ['gemini-3.1-pro-preview']}]`, to a model that accepts it,
+# and answers HTTP 200 naming gemini. Bisected on the live endpoint:
+#
+#     49,152 -> claude-haiku-4-5        64,000 -> claude-haiku-4-5
+#     63,488 -> claude-haiku-4-5        64,256 -> gemini-3.1-pro-preview
+#     65,536 -> gemini-3.1-pro-preview  65,537 -> HTTP 400 from Vertex AI
+#
+# The 400 at 65,537 is the proof it had routed to Google. So the constant was
+# one step over a cliff it could not see, and `ModelSubstituted` fired on trial
+# 0 of every rehearsal. Task 36 and Task 37 were never affected: both run at
+# 16,384, which is what their records say.
+PROPOSER_MAX_TOKENS = 64_000
 
 B_NULL = 10_000
 

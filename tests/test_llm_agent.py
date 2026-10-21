@@ -345,11 +345,18 @@ def test_the_preflight_budget_covers_a_reasoning_models_thinking():
 
     src = inspect.getsource(llm.LLMAgent.preflight)
     assert '"max_tokens": 16,' not in src
-    budget = int(src.split('"max_tokens":')[1].split(",")[0].strip())
-    assert budget >= 256, (
-        f"the preflight asks for {budget} tokens; a reasoning model spends more "
-        "than that before its first visible token, and the failure arrives "
-        "disguised as a content-policy refusal")
+
+    # The budget is `max(self.max_tokens, PREFLIGHT_FLOOR_TOKENS)` since
+    # 2026-10-20 -- the probe now runs at the size the campaign will really ask
+    # for, because a 512-token probe said `claude-haiku-4-5` while every
+    # 65,536-token proposal was answered by `gemini-3.1-pro-preview`. So the
+    # floor is the thing to assert, and an agent can only ever raise it.
+    assert "PREFLIGHT_FLOOR_TOKENS" in src
+    assert llm.PREFLIGHT_FLOOR_TOKENS >= 256, (
+        f"the preflight floor is {llm.PREFLIGHT_FLOOR_TOKENS} tokens; a "
+        "reasoning model spends more than that before its first visible token, "
+        "and the failure arrives disguised as a content-policy refusal")
+    assert _agent(max_tokens=64).max_tokens == 64   # the agent is not rewritten
 
 
 def test_a_reply_with_no_code_block_says_whether_it_was_truncated():

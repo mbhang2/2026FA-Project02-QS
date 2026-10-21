@@ -48,6 +48,14 @@
         "purpose": "check",
         "python": "3.11.5",
         "wall_s": 299.60417529195547
+      },
+      "rehearsal": {
+        "measured_at": "2026-10-21T04:32:58+00:00",
+        "peak_rss_bytes": 52215808,
+        "profile": "rehearsal",
+        "purpose": "check",
+        "python": "3.11.5",
+        "wall_s": 1.3002877924591303
       }
     }
   }

@@ -1,0 +1,94 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "economics"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Source only; verified all reads come from history[-1] (the just-closed bar at actionable time) and session-relative bar counts, with no access to scorer, dataset, split, or future-dated state \u2014 but I cannot inspect the harness's per-bar view to independently confirm history[-1] excludes the forming bar.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The gate, BH/Holm diagnostics, and deflation margin all agree the result is unexceptional (p=0.237, 0 discoveries, margin -0.093), denominators are healthy (384 sessions, 298 downside, 428 trades), and no p-value sits at the resolution floor; I cannot see how many prior campaigns ran, but since nothing was accepted here that ambiguity is moot for this axis.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "The strategy never constructs a volume profile. The only thing it calls a 'level' is `round(price*4)/4` in `_is_near_natural_level` \u2014 the 0.25-point NQ tick grid. The hypothesis explicitly states 'It must condition on a level built from traded volume. A rule that would behave the same with the levels deleted is answering a different question.' This rule would: on tick-quoted NQ data closes already sit on the 0.25 grid, and the 0.50-point proximity tolerance is wide enough to accept essentially any close, so the 'level' filter is vacuous.",
+        "No point of control, value area, high-volume node or low-volume node is computed anywhere in the code. `current.volume` and `current.delta` are read only to compute `delta_ratio` for a single bar; nothing aggregates traded volume across bars or carries any level across sessions. The campaign's central construct is absent from the winning strategy.",
+        "The initiation question \u2014 the explicitly stated second half of the hypothesis \u2014 is not answered. Every entry is routed through the pending-setup mechanism, so the strategy ALWAYS waits for a confirming bar and can never take absorption alone. Every fill is tagged `tag=\"absorption\"`, so the record cannot distinguish 'absorption alone' from 'after confirming bar'. The hypothesis requires 'Every entry fill must carry a tag saying whether it was taken on absorption alone or after a confirming bar' and 'It must report what waiting for initiation cost or earned ... including the stop distance at entry both ways'. Neither is done.",
+        "Holding period is ~25 minutes (avg_holding_period_ns \u2248 1.52e9 ns \u2248 25.4 min at 5m bars) and 428 round turns over 384 sessions \u2248 1.1 per session. This is the same-session, high-round-turn shape the hypothesis explicitly excludes: 'It must hold for a move between levels. A rule doing many round turns a session for small moves has already been tried four times and is not what this asks.' The stated floor is meant to be met by multi-session holds toward the next level, not by same-session scalping.",
+        "The module docstring is entirely about defeating byte-identity in the synthetic evaluation harness via session-phase bar filtering (early/mid/late wick multipliers and 'confirming bar must occur in the same session phase'). None of this bears on the economics of absorption at carried volume levels; it is a search-process artifact made into a strategy filter. The claimed developed hypothesis has drifted off the registered question entirely.",
+        "Direction convention is at odds with the stated absorption mechanism. Absorption is defined as 'aggressive one-way flow ... and price does not go anywhere' \u2014 i.e. flow that failed to move price. Here `delta > 0` (net aggressive buying for the whole bar) plus a lower wick yields a long, and `delta < 0` plus an upper wick yields a short: the delta is bar-wide and is not restricted to the region of the tail where the failure supposedly occurred, so the rule is a bar-shape + bar-delta heuristic, not a test of flow-that-failed at a level."
+      ],
+      "confidence_note": "I could not see the per-fill tag record, the initiation-vs-no-initiation breakdown, or any session-level attribution of P&L, so I could not verify directly that the initiation comparison is missing from the record \u2014 the code alone makes it structurally impossible to produce; I also cannot see the validation split because it was not run.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Breadth is genuinely broad across all three time dimensions (11/17 months, 4/6 weekdays, 12/19 hours positive) with low single-session concentration (best_session_share 3.9%, top-5% concentration 27%), though nearly all net profit arises from Aug\u2013Dec 2025 after a net loss of ~80 over the prior 12 months; without strategy parameters, market-regime context, or out-of-sample validation, I could not determine whether that recent-month dominance reflects regime dependence or legitimate strategy behavior.",
+      "error": null
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 3357,
+      "completion_tokens": 289,
+      "reasoning_tokens": 199,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 45604,
+      "completion_tokens": 251,
+      "reasoning_tokens": 130,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 7284,
+      "completion_tokens": 2708,
+      "reasoning_tokens": 1930,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 2711,
+      "completion_tokens": 11807,
+      "reasoning_tokens": 11659,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "proposer_model": "claude-haiku-4-5",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  }
+}

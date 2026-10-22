@@ -28,7 +28,9 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import os
 import re
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Sequence
@@ -532,16 +534,52 @@ class NQDataset:
         ]
 
     def _write_cache(self, session: dt.date, ticks: list[Tick], sel: ContractSelection) -> None:
+        """Written to a temporary file and renamed into place.
+
+        **`data/` is symlinked into every worker tree, so this is the one path
+        a parallel campaign shares for writing.** `np.savez_compressed` used to
+        write straight to the final name, which is not atomic: with W workers on
+        a COLD cache they all miss the same session, all fetch it, and all write
+        the same file at once, and a reader can then open a half-written `.npz`.
+        The symptom would look like corrupt market data rather than a
+        concurrency bug, which is the expensive kind of wrong.
+
+        It has never fired here because our cache is warm -- 564 sessions, zero
+        misses, so 1,404 trials at W=4 never wrote anything. A fresh machine is
+        exactly the case where it would.
+
+        **No lock is needed, and that is a property of the key rather than
+        luck.** `_cache_path` is content-keyed on the two source ETags plus
+        `CACHE_VERSION`, so every writer of a given name writes identical bytes.
+        Last-one-wins is therefore indistinguishable from first-one-wins, and
+        all `os.replace` has to buy is that no reader sees a partial file. It is
+        atomic on POSIX within one filesystem, which the temporary file is
+        because it is created in the destination directory.
+        """
         if not self.spec.cache:
             return
         path = self._cache_path(session)
         path.parent.mkdir(parents=True, exist_ok=True)
         code = {Side.BUY: 1, Side.SELL: 2}
-        np.savez_compressed(
-            path,
-            ts=np.array([t.ts for t in ticks], dtype=np.int64),
-            price=np.array([t.price for t in ticks], dtype=np.float64),
-            size=np.array([t.size for t in ticks], dtype=np.int32),
-            side=np.array([code.get(t.side, 0) for t in ticks], dtype=np.int8),
-            meta=json.dumps(sel.as_dict()),
-        )
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".",
+                                   suffix=".tmp")
+        os.close(fd)
+        try:
+            # `np.savez_compressed` appends `.npz` unless the name already ends
+            # in it, so the temporary name is handed over with the suffix it
+            # will actually be written to.
+            np.savez_compressed(
+                tmp,
+                ts=np.array([t.ts for t in ticks], dtype=np.int64),
+                price=np.array([t.price for t in ticks], dtype=np.float64),
+                size=np.array([t.size for t in ticks], dtype=np.int32),
+                side=np.array([code.get(t.side, 0) for t in ticks], dtype=np.int8),
+                meta=json.dumps(sel.as_dict()),
+            )
+            os.replace(tmp + ".npz", path)
+        finally:
+            for leftover in (tmp, tmp + ".npz"):
+                try:
+                    os.unlink(leftover)
+                except FileNotFoundError:
+                    pass

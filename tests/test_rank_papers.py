@@ -227,6 +227,33 @@ def test_the_ranker_never_reads_a_papers_outcome():
         "a paper's campaign outcome reached the ranking prompt")
 
 
+def test_nothing_behind_the_ranker_context_reads_a_validation_artefact():
+    """The §4 guarantee, asserted on the inputs rather than on the rendering.
+
+    The text scan above can only catch a leak that survives as a recognisable
+    number, and it has produced three false positives by matching short ones.
+    This is the assertion that does not depend on formatting: `context_block`
+    is assembled from `campaign.json`, `tier2-summary.json` (the L1 gate on
+    TRAIN) and `committee-verdict.json`. `validation.json` is not among them,
+    and §4 is the reason -- campaign k+1 may depend on prior campaigns' train
+    results, never their validation.
+    """
+    import pathlib as _pl
+
+    roots = [REPO_ROOT / "scripts" / "rank_papers.py",
+             REPO_ROOT / "scripts" / "open_questions.py"]
+    for src_path in roots:
+        src = src_path.read_text()
+        assert "validation.json" not in src, (
+            f"{src_path.name} names validation.json; the ranker's context is "
+            "built from train-side artefacts only (section 4)")
+
+    # and the artefact really is on disk, so the assertion above is not vacuous
+    present = list((REPO_ROOT / "runs" / "campaigns").glob("*/validation.json"))
+    assert present, "no validation.json anywhere -- this test proves nothing"
+    assert isinstance(_pl.Path(present[0]), _pl.Path)
+
+
 def test_the_assembled_context_carries_no_validation_number():
     """The context block is built from committed artefacts. `closed_questions`
     reads each campaign's tier-2 summary, which is the L1 gate on TRAIN, and
@@ -251,7 +278,20 @@ def test_the_assembled_context_carries_no_validation_number():
         if not math.isfinite(primary):
             continue
         checked += 1
-        for form in (f"{primary:.4f}", f"{primary:.3f}", f"{primary:.2f}"):
+        # **Two decimals is too little information to accuse anyone with.**
+        # Third collision of this exact shape, 2026-10-22: nq-s07-01 validated
+        # to -0.25 and the context now contains a bare `0.25` because the
+        # economics seat's objection to nq-orderflow-absorption-02 quotes the
+        # NQ tick grid -- "`round(price*4)/4` ... the 0.25-point NQ tick grid".
+        # A tick size is not a validation score. The two earlier ones are
+        # recorded above ("inf" inside "reinforcement", `0.02` inside
+        # `0.0256`), and all three are the same mistake: a short numeric string
+        # matched loosely finds itself everywhere, and the project's own
+        # constants -- tick sizes, commissions, thresholds -- live in exactly
+        # that range. Three and four decimals are specific enough to be
+        # evidence; two is a coin flip, and the structural assertion below is
+        # what actually protects §4.
+        for form in (f"{primary:.4f}", f"{primary:.3f}"):
             # **As a whole number, not as a substring.** `0.02` is inside
             # `0.0256`, which is nq-mvp-01's Sharpe quoted in an auditor's
             # objection -- a TRAIN-side number that belongs in this context.

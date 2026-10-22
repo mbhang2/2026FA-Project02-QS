@@ -575,3 +575,113 @@ def test_where_the_calendar_and_the_data_disagree_it_is_recorded_not_silently_re
     for date, row in doc["sessions"].items():
         if date not in disagreements:
             assert row["resolved_close_ct"] == row["calendar_close_ct"], date
+
+# --------------------------------------------------------------------------- #
+# The session cache is the one path a parallel campaign shares for WRITING:
+# `data/` is symlinked into every worker tree. Before 2026-10-22 `_write_cache`
+# called `np.savez_compressed` straight to the final name, which is not atomic.
+# A warm cache hides it completely -- 564 sessions, zero misses -- so 1,404
+# trials at W=4 never wrote a byte. A fresh machine at W=20 is the case that
+# would: every worker misses the same session, fetches it, and writes the same
+# file at once, and a reader opens a truncated `.npz`. That reads as corrupt
+# market data rather than as a race.
+# --------------------------------------------------------------------------- #
+def _cache_only_dataset(tmp_path, monkeypatch):
+    """The real `_write_cache`/`_read_cache`, with only what they touch.
+
+    Deliberately not a constructed `NQDataset`: that needs the bucket, and the
+    methods under test need four attributes between them.
+    """
+    import datetime as dt
+
+    from src.core.data import nq as nqmod
+
+    monkeypatch.setattr(nqmod, "CACHE_ROOT", tmp_path / "sessions")
+    d = object.__new__(nqmod.NQDataset)
+    d.spec = nqmod.NQSpec()
+    day = dt.date(2025, 3, 11)
+    d._files = {day: "k-today", day - dt.timedelta(days=1): "k-yesterday"}
+    d._etag = {"k-today": "etag-a", "k-yesterday": "etag-b"}
+    d._contracts = {}
+    sel = nqmod.ContractSelection(
+        session=day.isoformat(), instrument_id=7, raw_symbol="NQH5",
+        volume=10, trades=2, share_of_session_volume=1.0)
+    ticks = [nqmod.Tick(1_000, 20000.25, 3, day.toordinal(), side=nqmod.Side.BUY),
+             nqmod.Tick(2_000, 20000.50, 1, day.toordinal(), side=nqmod.Side.SELL)]
+    return d, day, ticks, sel
+
+
+def test_the_session_cache_write_is_atomic(tmp_path, monkeypatch):
+    d, day, ticks, sel = _cache_only_dataset(tmp_path, monkeypatch)
+    d._write_cache(day, ticks, sel)
+    back = d._read_cache(day)
+    assert back is not None and len(back) == 2
+    assert [t.price for t in back] == [20000.25, 20000.50]
+    leftovers = [p.name for p in d._cache_path(day).parent.iterdir()
+                 if p.suffix == ".tmp" or ".tmp" in p.name]
+    assert not leftovers, f"temporary files were left behind: {leftovers}"
+
+
+def test_concurrent_writers_never_expose_a_partial_cache_file(tmp_path, monkeypatch):
+    """Twenty writers on one session, a reader hammering the same path.
+
+    The path is content-keyed on the two source ETags plus CACHE_VERSION, so
+    every writer writes identical bytes and last-one-wins is indistinguishable
+    from first-one-wins. The only thing that has to hold is that no reader ever
+    sees a half-written file.
+    """
+    import threading
+
+    d, day, ticks, sel = _cache_only_dataset(tmp_path, monkeypatch)
+    path = d._cache_path(day)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    errors: list[str] = []
+    stop = threading.Event()
+
+    def writer():
+        try:
+            for _ in range(6):
+                d._write_cache(day, ticks, sel)
+        except Exception as exc:                                 # noqa: BLE001
+            errors.append(f"writer: {type(exc).__name__}: {exc}")
+
+    def reader():
+        while not stop.is_set():
+            try:
+                if path.exists():
+                    got = d._read_cache(day)
+                    if got is not None and len(got) != 2:
+                        errors.append(f"reader saw {len(got)} ticks, expected 2")
+            except Exception as exc:                             # noqa: BLE001
+                errors.append(f"reader: {type(exc).__name__}: {exc}")
+
+    readers = [threading.Thread(target=reader) for _ in range(3)]
+    for t in readers:
+        t.start()
+    writers = [threading.Thread(target=writer) for _ in range(20)]
+    for t in writers:
+        t.start()
+    for t in writers:
+        t.join()
+    stop.set()
+    for t in readers:
+        t.join()
+
+    assert not errors, "a reader or writer saw a partial file:\n" + "\n".join(errors[:8])
+    assert d._read_cache(day) is not None
+    assert not [p.name for p in path.parent.iterdir() if ".tmp" in p.name]
+
+
+def test_the_cache_is_not_written_straight_to_its_final_name():
+    """Regression guard. The fix is `os.replace`; losing it is silent."""
+    import inspect
+
+    from src.core.data.nq import NQDataset
+
+    src = inspect.getsource(NQDataset._write_cache)
+    flat = " ".join(src.split())          # indentation is not the invariant
+    assert "os.replace" in flat, "the atomic rename is gone"
+    assert "savez_compressed( tmp," in flat, (
+        "savez must write the temporary file, not the destination")
+    assert "savez_compressed( path," not in flat, (
+        "savez is writing the destination directly again")

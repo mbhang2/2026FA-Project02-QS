@@ -33,6 +33,12 @@ vignettes/*.pdf
 .Rproj.user
 inst/doc
 *_cache*
+# ...but that glob is for cache DATA, not for source that happens to say
+# "cache". `scripts/warm_cache.py` was silently not added by `git add` on
+# 2026-10-22, while docs/design/architecture.md had already been committed
+# citing it -- so a clone would have had a doc naming a file that was not
+# there, and test_doc_citations would have failed for everyone but the author.
+!scripts/warm_cache.py
 *_files*
 *.bak
 *.sav*

@@ -383,10 +383,18 @@ campaign:
   # looks, every stage checks the record still matches it, and a hypothesis that
   # needs a different floor changes this line in a commit before it registers.
   #
-  # 0.50 for orderflow-absorption-at-carried-levels, signed off by Michael
-  # 2026-10-21. A rare-event hypothesis can set 0.05 and a daily one 0.90; what
-  # it cannot do is claim one number and be scored by another.
-  min_exposed_fraction: 0.50
+  # **Back to 0.70 on 2026-10-23, Michael's call.** It was 0.50 for
+  # nq-orderflow-absorption-02 (2026-10-21). Because this is one line shared by
+  # every campaign, 0.50 left the 27 campaigns registered at 0.70 unable to run
+  # or validate -- `_refuse_if_floor_drifted` refusing exactly as designed, but
+  # a serial bottleneck nobody wants standing. The two campaigns registered at
+  # 0.50 are both complete, so blocking them costs nothing and is the correct
+  # reading: neither should be re-run under a floor its record does not name.
+  #
+  # A rare-event hypothesis can set 0.05 and a daily one 0.90; what it cannot do
+  # is claim one number and be scored by another. Change this line, commit it,
+  # then register -- one floor at a time.
+  min_exposed_fraction: 0.70
 
   # Amendment 7 (2026-09-25): run each proposal once on a SYNTHETIC profile
   # before its trial and tell the agent three facts -- crashed (with the

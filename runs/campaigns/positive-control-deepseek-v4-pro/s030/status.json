@@ -1,16 +1,18 @@
 {
   "schema": "campaign-status/1",
   "campaign_id": "positive-control-deepseek-v4-pro-s030",
-  "status": "awaiting_rerun",
+  "status": "complete",
   "recorded_at": "2026-10-22",
   "recorded_by": "Michael, 2026-10-22",
   "planted_strength": 0.3,
-  "summary": "Registered 2026-10-22 and starting its FIRST run; no trial has run yet, so there is no ledger. 'awaiting_rerun' is the closest the vocabulary offers (awaiting_rerun | abandoned | complete) -- there is no 'registered, never run' state, and inventing one would fail the check that makes an unexplained empty registration impossible.",
+  "summary": "Complete. Task 37's apparatus on deepseek-v4-pro. Both arms accepted; see report.json. Still NOT comparable to Task 36's no-signal arms, which ran on claude-haiku-4-5 -- so this run does not measure whether this proposer would also produce a false accept on data with no planted edge.",
   "why": [
     "This is NOT Task 37. Task 37's claim is that only the DATA changes against Task 36, so it must use Task 36's proposer (claude-haiku-4-5). This uses deepseek-v4-pro and is therefore a different experiment that happens to share the apparatus, written to its own directory with its own campaign ids.",
     "What it can be compared to: Task 37's arms at the same planted strength, and its own other arm. What it CANNOT be compared to: Task 36's no-signal arms, because those ran on a different proposer -- so this run on its own cannot separate search from the self-flattery Task 36 measured.",
     "max_tokens is 100,000, not Task 37's 16,384. deepseek-v4-pro was measured emitting 88,799 completion tokens on a single call, 76,337 of them reasoning; 16,384 would truncate every trial. The parameter was sized from that measurement and frozen at registration."
   ],
   "why_run_it": "The committee vetoed nq-orderflow-absorption-02 because the winning strategy never built a volume profile. A rehearsal showed deepseek-v4-pro does build one, and passes the Amendment 11 refinement haiku failed 5 of 5 times. This asks the harder question the rehearsal cannot: with a known edge planted in the data, does this proposer find it and does the gate accept?",
-  "pre_registration_untouched": true
+  "pre_registration_untouched": true,
+  "completed_at": "2026-10-23",
+  "result": "ACCEPTED, p 9.999e-05, best +4.3050 vs null max q05 +2.5632, reproduction 97/97 exact"
 }

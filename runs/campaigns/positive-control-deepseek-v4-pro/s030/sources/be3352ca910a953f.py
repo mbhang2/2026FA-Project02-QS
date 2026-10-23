@@ -1,0 +1,320 @@
+"""Partial profit-taking on the ATR/delta momentum engine.
+
+The best single-target strategy (#93) is saturating around 4.3050 with
+target_mult just below the 3.50R cliff and stop_mult=1.30R.  This proposal
+changes the exit structure rather than another parameter sweep: it trades
+size=2 and splits the exit into a partial profit target at 2.0R for half the
+position and a final target at the same near-3.5R level for the remaining half.
+The initial stop still protects the full position at 1.30R and is trailed the
+same way as #93.  The motive: trades that reach 2R but fail before 3.5R still
+lock meaningful profit on one contract, while trades that run to 3.5R keep most
+of the previous edge on the second contract.
+
+All other decision rules (entry, ATR, delta/trend/flow filters, session margins,
+trailing) are exactly those of the best single-target trial #93.
+"""
+
+from __future__ import annotations
+
+
+class Strategy:
+    """ATR / delta momentum with partial profit-taking at 2R and 3.5R."""
+
+    def __init__(
+        self,
+        *,
+        interval: str = "1m",
+        manage_interval: str = "30s",
+        lookback: int = 8,
+        trend_window: int = 12,
+        flow_window: int = 6,
+        flow_min_frac: float = 0.5,
+        entry_frac: float = 0.20,
+        stop_mult: float = 1.30,
+        partial_target_mult: float = 2.0,
+        final_target_mult: float = 3.4999921875,
+        size: int = 2,
+        session_margin_frac: float = 0.10,
+        close_margin_frac: float = 0.05,
+        trail_activation_r: float = 1.0,
+        trail_mult: float = 1.5,
+    ):
+        self.interval = interval
+        self.manage_interval = manage_interval
+        self.lookback = lookback
+        self.trend_window = trend_window
+        self.flow_window = flow_window
+        self.flow_min_frac = flow_min_frac
+        self.entry_frac = entry_frac
+        self.stop_mult = stop_mult
+        self.partial_target_mult = partial_target_mult
+        self.final_target_mult = final_target_mult
+        self.size = size
+        self.session_margin_frac = session_margin_frac
+        self.close_margin_frac = close_margin_frac
+        self.trail_activation_r = trail_activation_r
+        self.trail_mult = trail_mult
+
+        self.entry_order_id = None
+        self.entry_direction = 0
+        self.entry_atr = None
+        self.best_price = None
+
+    def setup(self, ctx) -> None:
+        ctx.subscribe(self.interval)
+        ctx.subscribe(self.manage_interval)
+
+    def on_bars(self, ctx) -> None:
+        if not ctx.actionable:
+            return
+
+        if ctx.position:
+            self._manage_open_position(ctx)
+            return
+
+        if ctx.working_order_ids:
+            return
+
+        if self.interval not in ctx.bars:
+            return
+
+        session_len = ctx.session_end - ctx.session_start
+        if session_len > 0:
+            remaining = ctx.session_end - ctx.ts
+            if remaining < session_len * self.session_margin_frac:
+                return
+
+        hist = ctx.history(self.interval)
+        needed = max(
+            self.lookback + 1,
+            self.trend_window + 1,
+            self.flow_window + 1,
+        )
+        if len(hist) < needed:
+            return
+
+        recent = hist.last(self.lookback + 1)
+        prior = recent[:-1]
+        if len(prior) < 2:
+            return
+
+        trs = []
+        prev_close = prior[0].close
+        for bar in prior[1:]:
+            trs.append(
+                max(
+                    bar.high - bar.low,
+                    abs(bar.high - prev_close),
+                    abs(bar.low - prev_close),
+                )
+            )
+            prev_close = bar.close
+
+        if not trs:
+            return
+
+        atr = sum(trs) / len(trs)
+        if atr <= 0:
+            return
+
+        last = recent[-1]
+        body = last.close - last.open
+        threshold = self.entry_frac * atr
+
+        prior_trend = hist.last(self.trend_window + 1)[:-1]
+        if len(prior_trend) < self.trend_window:
+            return
+        trend_mean = sum(b.close for b in prior_trend) / self.trend_window
+        fast_uptrend = last.close > trend_mean
+        fast_downtrend = last.close < trend_mean
+
+        prior_flow = hist.last(self.flow_window + 1)[:-1]
+        if len(prior_flow) < self.flow_window:
+            return
+
+        flow_delta = sum(b.delta for b in prior_flow)
+        positive_flow_bars = sum(1 for b in prior_flow if b.delta > 0)
+        negative_flow_bars = sum(1 for b in prior_flow if b.delta < 0)
+        flow_min_bars = max(1, int(self.flow_window * self.flow_min_frac))
+
+        if (
+            body >= threshold
+            and last.delta > 0
+            and fast_uptrend
+            and flow_delta > 0
+            and positive_flow_bars >= flow_min_bars
+        ):
+            order_id = ctx.buy(size=self.size, tag="momentum-long")
+            if order_id is not None:
+                self.entry_order_id = order_id
+                self.entry_direction = 1
+                self.entry_atr = atr
+                self.best_price = None
+
+        elif (
+            body <= -threshold
+            and last.delta < 0
+            and fast_downtrend
+            and flow_delta < 0
+            and negative_flow_bars >= flow_min_bars
+        ):
+            order_id = ctx.sell(size=self.size, tag="momentum-short")
+            if order_id is not None:
+                self.entry_order_id = order_id
+                self.entry_direction = -1
+                self.entry_atr = atr
+                self.best_price = None
+
+    def _manage_open_position(self, ctx) -> None:
+        session_len = ctx.session_end - ctx.session_start
+        if session_len > 0:
+            remaining = ctx.session_end - ctx.ts
+            if remaining < session_len * self.close_margin_frac:
+                ctx.cancel_all()
+                ctx.close()
+                return
+
+        if self.entry_atr is None:
+            return
+
+        management_history = ctx.history(self.manage_interval)
+        if len(management_history) < 1:
+            return
+        bar = management_history[-1]
+
+        position = ctx.position
+        if position > 0:
+            if self.best_price is None:
+                self.best_price = ctx.average_entry_price
+            self.best_price = max(self.best_price, bar.high)
+
+            if (
+                self.best_price - ctx.average_entry_price
+                < self.trail_activation_r * self.entry_atr
+            ):
+                return
+
+            new_stop = self.best_price - self.trail_mult * self.entry_atr
+            original_stop = ctx.average_entry_price - self.stop_mult * self.entry_atr
+            new_stop = max(new_stop, original_stop)
+
+        elif position < 0:
+            if self.best_price is None:
+                self.best_price = ctx.average_entry_price
+            self.best_price = min(self.best_price, bar.low)
+
+            if (
+                ctx.average_entry_price - self.best_price
+                < self.trail_activation_r * self.entry_atr
+            ):
+                return
+
+            new_stop = self.best_price + self.trail_mult * self.entry_atr
+            original_stop = ctx.average_entry_price + self.stop_mult * self.entry_atr
+            new_stop = min(new_stop, original_stop)
+
+        else:
+            return
+
+        for stop_order in ctx.find_orders(tag="protective-stop"):
+            current_stop = stop_order.stop_price
+            if current_stop is None:
+                continue
+
+            if position > 0 and new_stop > current_stop:
+                ctx.modify(stop_order.id, trigger=new_stop)
+            elif position < 0 and new_stop < current_stop:
+                ctx.modify(stop_order.id, trigger=new_stop)
+            return
+
+    def on_fill(self, ctx) -> None:
+        fill = ctx.fill
+
+        if self.entry_order_id is not None and fill.order_id == self.entry_order_id:
+            # Entry fill: place a protective stop for the full position, then
+            # split profit taking between a partial target and a final target.
+            pos = fill.position
+            if pos == 0:
+                self._clear_state()
+                return
+
+            if self.entry_direction > 0:
+                stop_price = fill.price - self.stop_mult * self.entry_atr
+                partial_target = fill.price + self.partial_target_mult * self.entry_atr
+                final_target = fill.price + self.final_target_mult * self.entry_atr
+
+                ctx.sell(
+                    size=pos,
+                    type="stop",
+                    trigger=stop_price,
+                    reduce_only=True,
+                    tag="protective-stop",
+                )
+
+                half = pos // 2
+                rem = pos - half
+                if half > 0:
+                    ctx.sell(
+                        size=half,
+                        type="limit",
+                        limit=partial_target,
+                        reduce_only=True,
+                        tag="partial-profit",
+                    )
+                if rem > 0:
+                    ctx.sell(
+                        size=rem,
+                        type="limit",
+                        limit=final_target,
+                        reduce_only=True,
+                        tag="final-profit",
+                    )
+
+            elif self.entry_direction < 0:
+                stop_price = fill.price + self.stop_mult * self.entry_atr
+                partial_target = fill.price - self.partial_target_mult * self.entry_atr
+                final_target = fill.price - self.final_target_mult * self.entry_atr
+
+                ctx.buy(
+                    size=pos,
+                    type="stop",
+                    trigger=stop_price,
+                    reduce_only=True,
+                    tag="protective-stop",
+                )
+
+                half = pos // 2
+                rem = pos - half
+                if half > 0:
+                    ctx.buy(
+                        size=half,
+                        type="limit",
+                        limit=partial_target,
+                        reduce_only=True,
+                        tag="partial-profit",
+                    )
+                if rem > 0:
+                    ctx.buy(
+                        size=rem,
+                        type="limit",
+                        limit=final_target,
+                        reduce_only=True,
+                        tag="final-profit",
+                    )
+
+            self.entry_order_id = None
+            return
+
+        # Exit fill. If flat, clear stale working orders.
+        if ctx.position == 0:
+            ctx.cancel_all()
+            self._clear_state()
+
+    def _clear_state(self) -> None:
+        self.entry_order_id = None
+        self.entry_direction = 0
+        self.entry_atr = None
+        self.best_price = None
+
+    def on_lifecycle(self, ctx) -> None:
+        pass

@@ -114,3 +114,66 @@ def _no_real_network(request, monkeypatch):
         return real(self, method, url, *a, **kw)
 
     monkeypatch.setattr(requests.sessions.Session, "request", guarded)
+
+
+# --------------------------------------------------------------------------- #
+# The suite may not run while a campaign is running.
+# --------------------------------------------------------------------------- #
+# **Not caution: a shared mutable path.** `src/strategies/current.py` is one
+# hardwired location. A campaign writes each candidate there, runs it, and
+# restores the original -- and this suite touches the same file BOTH ways:
+# `tests/test_task7_interface.py` writes `STRATEGY_PATH`, and
+# `tests/test_remote.py` reads it. So running them together can make a test
+# read a campaign candidate, or make a trial score the suite's file while the
+# ledger records the candidate's digest. The second is the one that matters:
+# "the ledger would look clean and be wrong", which is what
+# `scripts/worker_tree.py` exists to prevent. `nq_campaign.py` at W>1 has
+# worker trees; `positive_control.py` has none at all.
+#
+# Measured 2026-10-22, by doing it: the full suite was run while
+# positive-control-deepseek-v4-pro arm s030 was at 39 of 100, and
+# `test_the_uniform_golden_set_holds_through_the_boundary` failed on two
+# parameterisations with mismatched fill-log digests. Those were not defects --
+# they were a test reading a trial's strategy. Whether a trial also scored the
+# wrong source could not be established from the ledger, because every stored
+# source still matched its recorded digest, which is exactly what the bad case
+# also looks like. `scripts/ledger_check.py --replay` is the only thing that
+# can tell, and it costs a full re-walk of the data.
+#
+# One refusal is cheaper than that, so this is a refusal.
+_CAMPAIGN_SCRIPTS = ("nq_campaign.py", "positive_control.py",
+                     "research_session.py", "rehearse.py", "llm_campaign.py")
+
+
+def _running_campaigns() -> list[str]:
+    import subprocess
+    try:
+        out = subprocess.run(["ps", "-Ao", "pid=,command="],
+                             capture_output=True, text=True, timeout=20).stdout
+    except Exception:                                            # noqa: BLE001
+        return []                 # cannot tell: do not block the suite on it
+    hits = []
+    for line in out.splitlines():
+        if any(s in line for s in _CAMPAIGN_SCRIPTS) and "pytest" not in line:
+            hits.append(" ".join(line.split()[:6]))
+    return hits
+
+
+def pytest_sessionstart(session):
+    busy = _running_campaigns()
+    if not busy:
+        return
+    why = os.environ.get("SUITE_DURING_CAMPAIGN_REASON", "").strip()
+    if why:
+        print(f"\nWARNING: running the suite during a campaign on purpose: {why}\n"
+              f"  {len(busy)} campaign process(es). If a trial fails to "
+              f"reproduce later, this is why.\n", flush=True)
+        return
+    raise pytest.UsageError(
+        "a campaign is running; the suite shares src/strategies/current.py with "
+        "it and both read and write that path.\n  "
+        + "\n  ".join(busy)
+        + "\n\nWait for it to finish. If you genuinely need both at once, set "
+          "SUITE_DURING_CAMPAIGN_REASON='<why>' -- it is printed and warns "
+          "rather than refusing, so the reason is in the log beside whatever "
+          "it breaks.")

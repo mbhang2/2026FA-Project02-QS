@@ -4,6 +4,79 @@
 
 The headline: **the frontier models are not available to us.** Of the 88 models the gateway lists, **28 return HTTP 403** and **19 silently answer as a different model**. What is left for the proposer is a short list.
 
+## 0. Re-measured 2026-10-22. The gateway changed; some of section 1-4 no longer holds
+
+Everything below this section is the 2026-10-03 sweep and is kept because it is
+what the decisions of that week were made on. The gateway went 503, came back,
+and behaves differently now. Where the two disagree, **this section is the
+current reading**.
+
+**`claude-haiku-4-5` ran 400 real trials with zero substitutions.**
+`nq-orderflow-absorption-02`, 2026-10-21/22, prompts averaging 145,415 input
+tokens -- well past the 167,489 characters (~42k tokens) at which section 1
+says haiku is substituted. So the claim "haiku cannot be the proposer" no
+longer holds as written, and **the substitution trigger has moved from prompt
+size to `max_tokens`**.
+
+**The trigger is now the output ceiling, and haiku's is 64,000.** Bisected on
+the live endpoint:
+
+    49,152 -> claude-haiku-4-5        64,000 -> claude-haiku-4-5
+    63,488 -> claude-haiku-4-5        64,256 -> gemini-3.1-pro-preview
+    65,536 -> gemini-3.1-pro-preview  65,537 -> HTTP 400 from Vertex AI
+
+The 400 at 65,537 is the proof it had routed to Google. `PROPOSER_MAX_TOKENS`
+was 65,536, so every `nq_campaign` trial on haiku raised `ModelSubstituted` on
+trial 0 until it was lowered. **`preflight` did not catch it** because it
+probed at a fixed 512 and the substitution depends on the request shape; it now
+probes at the agent's real `max_tokens`.
+
+**There is a response cache in front of the gateway.** Four identical requests
+at `temperature=0.7` returned ONE distinct answer -- the first in 2.04 s, the
+rest in 0.18-0.25 s. With `cache: {"no-cache": true}` in the body, four of four
+differed at ~0.97 s. The **body parameter works and the
+`x-litellm-no-cache` header does not**. Every call in both clients now sends
+it; see `NO_CACHE` in `src/core/loop/llm.py` and `audit/committee/llm.py` for
+why this is a correctness issue and not a performance one.
+
+**Authorised, re-checked at 64,000 output tokens.** Only four answer as
+themselves: `deepseek-v4-pro`, `minimax-m3`, `step-5-preview`,
+`gemini-3.1-pro-preview`. `deepseek-v4-pro` and `minimax-m3` were both verified
+honest up to **128,000**.
+
+**Still forbidden (403):** the whole Claude line above haiku -- `opus-5`,
+`opus-5-5`, `opus-4-8`, `sonnet-5`, `sonnet-5-5`, `fable-5-1` -- plus
+`gpt-6-sol`, `gpt-6.1-sol`, `gpt-6-astra`, `kimi-k3`, `qwen3.7-max`,
+`qwen3.8-max`, `glm-5.3`. This is a permissions setting on our key, not a
+capability limit: **worth asking Brian to unlock one**, since any of them would
+likely beat the authorised set.
+
+**Newly substituted, and one of them is a trap:**
+
+    claude-haiku-5-5 -> gemini-2.5-flash
+    grok-4.7         -> gemini-3.1-pro-preview
+    gemini-4-argon   -> gemini-3.1-pro-preview
+    longcat-2.0      -> gemini-3.1-pro-preview
+
+`claude-haiku-5-5` reads like a free upgrade from `claude-haiku-4-5` and is
+served by a Gemini flash model.
+
+**Do not register `gemini-3.1-pro-preview` as the proposer** even though it is
+honest. It is the wildcard fallback target, so a substitution INTO it is
+undetectable -- asked gemini, served gemini -- which gives up the guard that
+caught every case above.
+
+**`deepseek-v4-pro` is no longer a 10-second model.** Section 2 has it at 10.2 s
+and 3,507 reply characters. Measured 2026-10-22 it emits **up to 88,799
+completion tokens on one call, 76,337 of them reasoning**, and a rehearsal
+generation of four took 7-10 minutes against `claude-haiku-4-5`'s one. Size
+`max_tokens` from that, not from section 2: 16,384 truncates it on every call.
+
+**The admin endpoints are 403 for our key** -- `/key/info`, `/user/info`,
+`/spend/logs`, `/model/info`. So remaining budget and per-token prices cannot
+be read from here, and a mid-run budget refusal cannot be predicted. Only Brian
+can see them.
+
 ## 1. The only test that counts is the big one
 
 A model that answers a two-word prompt may still refuse ours. `claude-haiku-4-5` passes a small prompt and is **substituted to `gemini-3.1-pro-preview`** at our real proposal prompt of **167,489 characters** (~42k tokens). Every row below was tested at that size.

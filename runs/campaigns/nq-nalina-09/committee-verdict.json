@@ -1,0 +1,51 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "statistics"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I cannot see the harness implementation, but the strategy code uses standard historical data access without any apparent lookahead or leakage.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "VETO",
+      "reasons": [
+        "The gate rejected this campaign (p = 0.264 > q = 0.05), meaning the result is not statistically significant."
+      ],
+      "confidence_note": "I cannot see the strategy code or the number of prior campaigns.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The strategy implements a clear continuation logic following an outsized move, which aligns perfectly with the original hypothesis, and the economic metrics show a healthy number of trades and positive net P&L.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I cannot see the strategy logic or parameters to check for overfitting, but the profit distribution across time and sessions appears broad and healthy.",
+      "error": null
+    }
+  ],
+  "model": "gemini-3.1-pro-preview",
+  "model_served": "gemini-3.1-pro-preview",
+  "prompt_digests": {
+    "_shared.md": "6c98cee71c72b8f2",
+    "economics.md": "2e6f7da48b2c8468",
+    "leakage.md": "2e7a3a360a913af4",
+    "robustness.md": "50fa783b79be7f6b",
+    "statistics.md": "64fd14cf2dfc3201"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "ERROR",
+  "error": "LLMUnavailable: LITELLM_BASE_URL and LITELLM_API_KEY must both be set; the committee needs a model and will not silently skip itself",
+  "note": "The committee did not run. This is NOT a pass: the MVP rule reads 'no veto' as approval, and no verdict is not no veto."
+}

@@ -1,0 +1,12 @@
+numpy
+pandas
+
+[dataset-nq]
+boto3
+databento
+zstandard
+pandas_market_calendars
+PyYAML
+
+[dev]
+pytest

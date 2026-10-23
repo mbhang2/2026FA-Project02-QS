@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: l1-harness
+Version: 0.1.0
+Summary: Backtest simulator and research-loop harness for the MSFE practicum
+Requires-Python: >=3.11
+Requires-Dist: numpy
+Requires-Dist: pandas
+Provides-Extra: dataset-nq
+Requires-Dist: boto3; extra == "dataset-nq"
+Requires-Dist: databento; extra == "dataset-nq"
+Requires-Dist: zstandard; extra == "dataset-nq"
+Requires-Dist: pandas_market_calendars; extra == "dataset-nq"
+Requires-Dist: PyYAML; extra == "dataset-nq"
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"

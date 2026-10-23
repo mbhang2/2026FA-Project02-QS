@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-10-23T16:48:57.892738+00:00",
+  "question": "Build a profitable intraday scalping strategy for XAU/USD on 5-minute bars. The strategy must enter and exit within the same trading session (no overnight hold), use only OHLCV and VWAP bar data, be robust to spread and commission costs (0.06 round trip per unit), and express the entry/exit as a formula with at most 3 parameters. Mechanism preference: momentum or mean-reversion.",
+  "theme": "Momentum and trend",
+  "profile": "xauusd-research",
+  "total_campaigns": 2,
+  "promoted_count": 2,
+  "campaigns": [
+    {
+      "hypothesis_id": "mock-hypo-01-momentum-and-trend",
+      "hypothesis_title": "Mock Hypo 01 Momentum And Trend",
+      "mechanism": "Simulated mechanism for Momentum and trend family 1",
+      "bwis_score": 0.62,
+      "bwis_band": "mid",
+      "campaign_id": "mock-hypo-01-momentum-and-trend-20261023-164857",
+      "profile": "xauusd-research",
+      "trials_budget": 10,
+      "n_trials": 10,
+      "outcomes": {
+        "completed": 10
+      },
+      "observed_best": 0.245,
+      "null_max_mean": 0.12,
+      "p_value": 0.035,
+      "gate_accept": true,
+      "tier3_verdict": "PASS",
+      "can_promote": true,
+      "promotion_verdict": "PROMOTE",
+      "reasons": [
+        "Observed best score positive: 0.2450",
+        "Pre-registered multiple-testing gate ACCEPT",
+        "BWIS source credibility verified: mid (0.620)"
+      ],
+      "wall_clock_s": 0.0
+    },
+    {
+      "hypothesis_id": "mock-hypo-02-momentum-and-trend",
+      "hypothesis_title": "Mock Hypo 02 Momentum And Trend",
+      "mechanism": "Simulated mechanism for Momentum and trend family 2",
+      "bwis_score": 0.62,
+      "bwis_band": "mid",
+      "campaign_id": "mock-hypo-02-momentum-and-trend-20261023-164857",
+      "profile": "xauusd-research",
+      "trials_budget": 10,
+      "n_trials": 10,
+      "outcomes": {
+        "completed": 10
+      },
+      "observed_best": 0.245,
+      "null_max_mean": 0.12,
+      "p_value": 0.035,
+      "gate_accept": true,
+      "tier3_verdict": "PASS",
+      "can_promote": true,
+      "promotion_verdict": "PROMOTE",
+      "reasons": [
+        "Observed best score positive: 0.2450",
+        "Pre-registered multiple-testing gate ACCEPT",
+        "BWIS source credibility verified: mid (0.620)"
+      ],
+      "wall_clock_s": 0.0
+    }
+  ]
+}

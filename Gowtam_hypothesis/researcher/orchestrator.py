@@ -58,7 +58,11 @@ class TrajectoryLeak(RuntimeError):
     # The ONLY fields the orchestrator is shown. This is a whitelist, not a
     # blacklist: a blacklist over a growing row shape leaks the first field
     # somebody adds. Same argument as `llm._history_block`.
-    ALLOWED = {"outcome", "trades", "sessions", "score_dir", "turnover_dir"}
+    #
+    # bwis_band is a directional string ("high"/"mid"/"low"); the raw float
+    # is never passed through so the orchestrator cannot optimise against the
+    # calibration directly.
+    ALLOWED = {"outcome", "trades", "sessions", "score_dir", "turnover_dir", "bwis_band"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +72,7 @@ class Trajectory:
     sessions: int | None = None
     score_dir: str | None = None      # "up" | "down" | "flat" -- direction only
     turnover_dir: str | None = None   # "up" | "down" | "flat"
+    bwis_band: str | None = None      # "high" | "mid" | "low" -- source quality band
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +102,7 @@ def to_trajectory(row: dict) -> Trajectory:
         sessions=row.get("sessions"),
         score_dir=row.get("score_dir"),
         turnover_dir=row.get("turnover_dir"),
+        bwis_band=row.get("bwis_band"),
     )
 
 
@@ -111,13 +117,19 @@ def orchestrate(trajectories: list[Trajectory]) -> OrchestrationDecision:
     """
     rows = [json.dumps(
         {"outcome": t.outcome, "trades": t.trades, "sessions": t.sessions,
-         "score_dir": t.score_dir, "turnover_dir": t.turnover_dir})
+         "score_dir": t.score_dir, "turnover_dir": t.turnover_dir,
+         "bwis_band": t.bwis_band})
         for t in trajectories]
     user = (
         "You direct the next step of a quant research loop. You are shown only "
         "the TRAJECTORY of past campaigns (score direction, trade count, "
-        "turnover), never any significance measure, threshold, accept/reject "
+        "turnover, and bwis_band), never any significance measure, threshold, accept/reject "
         "verdict, or count of trials. If any such field appears, stop and say so.\n\n"
+        "bwis_band reflects the quality of cited sources: 'high' means institutional "
+        "or strong academic sources anchored the hypothesis; 'low' means sources were "
+        "weak or off-topic. Prefer deepening themes where bwis_band is high; flag "
+        "themes where it is consistently 'low' as needing better source coverage "
+        "before hypothesising further.\n\n"
         "Decide on the basis of what trajectories honestly suggest: which "
         "mechanism family to deepen, which to drop, and a genuinely new next "
         "direction. Do NOT declare any result a winner. Return JSON:\n"

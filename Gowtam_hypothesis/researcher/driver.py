@@ -102,7 +102,8 @@ def _write(rec: HypothesisRecord, output_dir: Path) -> Path:
 
 def run(ask: str, *, budget: int = 3, caps: DatasetCaps = DatasetCaps(),
         output_dir: Path | None = None, log_dir: Path | None = None,
-        per_backend: int = PER_BACKEND) -> RunResult:
+        per_backend: int = PER_BACKEND, theme: str = "",
+        feature_context: str = "") -> RunResult:
     """Emit up to `budget` hypotheses for `ask`. Never decides which is best."""
     output_dir = output_dir or DEFAULT_OUTPUT_DIR
     log_dir = log_dir or DEFAULT_LOG_DIR
@@ -129,8 +130,10 @@ def run(ask: str, *, budget: int = 3, caps: DatasetCaps = DatasetCaps(),
             clips = retrieve(family, per_backend=per_backend)
             rec = generate.generate_hypothesis(
                 family, clips,
-                finalize=lambda r: _lint_findings(r, clips),
-                advisory=lambda r: grounding.check_claims(r, clips))
+                finalize=lambda r: _lint_findings(r, clips, caps=caps),
+                advisory=lambda r: grounding.check_claims(r, clips),
+                theme=theme,
+                feature_context=feature_context)
             rec_for_ledger = rec
             if not feasible(rec, caps):
                 raise Infeasible("; ".join(_caps_violations(rec, caps)))
@@ -153,13 +156,14 @@ def run(ask: str, *, budget: int = 3, caps: DatasetCaps = DatasetCaps(),
     return result
 
 
-def _lint_findings(rec: HypothesisRecord, clips) -> list[str]:
+def _lint_findings(rec: HypothesisRecord, clips, caps: DatasetCaps = DatasetCaps()) -> list[str]:
     """Deterministic lint errors for a record, as refine-able feedback strings.
 
     Fed into `generate.generate_hypothesis(finalize=...)` so a gate-vocabulary or
     realized-outcome leak is refined out inside the loop rather than hard-blocked.
     Also flags a *hallucinated* citation: a source URL that was not among the
     retrieved clips is an invented reference, and the refine fixes it (or blocks).
+    Also flags feasibility/grid size violations so the model shrinks parameter ranges.
     """
     text = render(rec)
     errors: list[str] = []
@@ -171,6 +175,9 @@ def _lint_findings(rec: HypothesisRecord, clips) -> list[str]:
         _rail_lint(text, source=f"researcher:{rec.id}")
     except LintRejected as exc:
         errors.append(str(exc))
+
+    for v in _caps_violations(rec, caps):
+        errors.append(f"feasibility: {v}")
 
     clip_urls = {_norm_url(c.url) for c in clips}
     for sc in rec.sources:

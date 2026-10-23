@@ -35,6 +35,9 @@ import pathlib
 import sys
 import time
 
+from dotenv import load_dotenv
+load_dotenv()
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
@@ -92,16 +95,18 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path,
     profile = c["profiles"][profile_name]
     return LLMAgent(
         model=MODEL, temperature=0.7, max_tokens=16_384, show_history=True,
-        hypothesis=H.load(hypothesis), champion=champion,
+        hypothesis=H.load(hypothesis.resolve()), champion=champion,
         run_facts=run_facts(profile, profile.get("fact_sessions", 0)))
 
 
 # --------------------------------------------------------------------------- #
 
-def stage_register(name: str, hypothesis: pathlib.Path, profile_name: str) -> None:
+def stage_register(name: str, hypothesis: pathlib.Path, profile_name: str,
+                   trials: int | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
+    hypothesis = hypothesis.resolve()
     d = OUT / name
     if (d / "campaign.json").exists():
         sys.exit(f"{d / 'campaign.json'} already exists. A pre-registration is "
@@ -121,11 +126,12 @@ def stage_register(name: str, hypothesis: pathlib.Path, profile_name: str) -> No
     agent_cfg["commission_per_contract"] = profile["commission_per_contract"]
 
     d.mkdir(parents=True, exist_ok=True)
+    budget = trials if trials is not None else profile.get("n_trials", cc["n_trials"])
     record = CampaignRecord(
-        campaign_id=name, profile=profile_name, budget=cc["n_trials"], q=cc["q"],
+        campaign_id=name, profile=profile_name, budget=budget, q=cc["q"],
         agent="src.core.loop.llm.LLMAgent", dataset=dataset_name,
         split=profile["split"],
-        hypothesis_path=str(hypothesis.relative_to(ROOT)),
+        hypothesis_path=str(hypothesis.relative_to(ROOT.resolve())),
         hypothesis_digest=agent_cfg["hypothesis"]["digest"],
         agent_config=agent_cfg,
         note=("MVP campaign, governed by docs/design/pre-registration.md. Real "
@@ -136,12 +142,12 @@ def stage_register(name: str, hypothesis: pathlib.Path, profile_name: str) -> No
               "campaign."),
         written_at=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"))
     digest = record.write(d / "campaign.json")
-    print(f"  registered {name}  N={cc['n_trials']}  q={cc['q']}  "
+    print(f"  registered {name}  N={budget}  q={cc['q']}  "
           f"null_source={cc['null_source']}  correction={cc['correction']}")
     print(f"  digest {digest}")
 
 
-def stage_run(name: str) -> None:
+def stage_run(name: str, early_stop_trials: int | None = None, early_stop_hurdle: float = 0.0) -> None:
     from src.core.loop.campaign import CampaignRecord, run_trial
 
     d = OUT / name
@@ -200,12 +206,19 @@ def stage_run(name: str) -> None:
               f"best={best if best is None else round(best, 4)}  "
               f"{el / 60:.0f}m elapsed, eta {(el / done) * (record.budget - i - 1) / 60:.0f}m",
               flush=True)
-    print(f"{name}: {record.budget} trials in {(time.monotonic() - t0) / 60:.0f} min")
+
+        if early_stop_trials is not None and (i + 1) >= early_stop_trials:
+            if best is None or best < early_stop_hurdle:
+                print(f"  {name}: early stopping triggered at trial {i + 1}/{record.budget} "
+                      f"(best={best} < hurdle={early_stop_hurdle})", flush=True)
+                break
+    print(f"{name}: {len(rows)} trials completed in {(time.monotonic() - t0) / 60:.0f} min")
 
 
 def stage_nulls(name: str) -> None:
     """The sign-flip null per candidate. Seconds, not hours -- section 3b."""
     from src.core.engine.reconstruct import reconstruct
+    from src.core.loop.campaign import CampaignRecord
     from src.core.scoring import metrics
     from src.core.scoring.randomization import round_turn as rt
 
@@ -316,11 +329,17 @@ def main() -> int:
                     help="hypothesis file locked in at `register` time, and read "
                          "back from the record for `run` (default: "
                          "config/hypotheses/intraday-continuation.md)")
+    ap.add_argument("--trials", type=int, default=None,
+                    help="override trial budget at registration (defaults to profile or run.yaml)")
+    ap.add_argument("--early-stop-trials", type=int, default=None,
+                    help="minimum trials to run before early stopping check")
+    ap.add_argument("--early-stop-hurdle", type=float, default=0.0,
+                    help="hurdle required to continue past early-stop-trials")
     a = ap.parse_args()
     if a.stage == "register":
-        stage_register(a.name, a.hypothesis, a.profile)
+        stage_register(a.name, a.hypothesis, a.profile, trials=a.trials)
     elif a.stage == "run":
-        stage_run(a.name)  # hypothesis + profile re-read from the record
+        stage_run(a.name, early_stop_trials=a.early_stop_trials, early_stop_hurdle=a.early_stop_hurdle)
     elif a.stage == "nulls":
         stage_nulls(a.name)
     else:

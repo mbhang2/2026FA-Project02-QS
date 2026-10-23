@@ -39,11 +39,14 @@ _STOP = {"the", "a", "an", "in", "of", "for", "on", "and", "or", "within",
          "during", "across", "using", "via", "with", "to", "from", "at", "by"}
 
 
+from .relevance import filter_relevant
+
+
 def _relax(query: str) -> str:
-    """Drop the most constraining keyword, floor of one. Broadens a thin query."""
+    """Drop the most constraining keyword, floor of two content words. Broadens a thin query."""
     words = [w for w in query.split() if w.lower() not in _STOP]
     if len(words) <= 2:
-        return " ".join(words[:1])
+        return ""
     return " ".join(words[:-1])
 
 
@@ -71,12 +74,22 @@ def _search_backends(query: str, per_backend: int) -> list[SourceClip]:
     return clips
 
 
+def _is_junk_wiki(clip: SourceClip) -> bool:
+    if "wikipedia.org/wiki/" in clip.url.lower():
+        title = clip.title.strip().lower()
+        if len(title.split()) <= 1:
+            return True
+    return False
+
+
 def _dedup(clips: list[SourceClip]) -> list[SourceClip]:
     out: list[SourceClip] = []
     seen_titles: set[str] = set()
     seen_urls: set[str] = set()
     for c in clips:
         if not c.title and not c.url:
+            continue
+        if _is_junk_wiki(c):
             continue
         t, u = _norm_title(c.title), _norm_url(c.url)
         if t and t in seen_titles:
@@ -103,12 +116,13 @@ def retrieve(query: str, *, per_backend: int = 8, fetch_fulltext: bool = False,
     relaxed = query
     while len(clips) < min_sources:
         nxt = _relax(relaxed)
-        if nxt == relaxed or not nxt:
+        if not nxt or nxt == relaxed:
             break
         relaxed = nxt
         clips = _dedup(clips + _search_backends(relaxed, per_backend))
 
     clips = _dedup(clips)
+    clips = filter_relevant(clips, query, min_keep=min_sources)
 
     if fetch_fulltext:
         clips = [_with_fulltext(c) for c in clips]

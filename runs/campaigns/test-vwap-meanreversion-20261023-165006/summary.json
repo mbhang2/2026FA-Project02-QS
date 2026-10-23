@@ -1,0 +1,14 @@
+{
+  "n_trials": 5,
+  "outcomes": {
+    "completed": 5
+  },
+  "gate": {
+    "observed_best": 0.245,
+    "null_max_mean": 0.12,
+    "p": 0.035,
+    "reject": true,
+    "observed_best_positive": true,
+    "accept": true
+  }
+}

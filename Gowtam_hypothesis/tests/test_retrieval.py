@@ -1,5 +1,5 @@
 from researcher import retrieval
-from researcher.retrieval import arxiv, semantic_scholar, SourceClip
+from researcher.retrieval import arxiv, searxng, semantic_scholar, SourceClip
 
 
 def test_dedup_by_title_and_url(monkeypatch):
@@ -21,6 +21,7 @@ def test_dedup_by_title_and_url(monkeypatch):
                                                    abstract="d",
                                                    url="https://s2.org/9"),
                         ])
+    monkeypatch.setattr(searxng, "search", lambda q, limit=10: [])
 
     clips = retrieval.retrieve("momentum", per_backend=4)
     # "Momentum in futures" appears as arxiv(1), arxiv(2 dup title), s2(dup) -> 1
@@ -39,6 +40,7 @@ def test_backend_failure_degrades_not_crashes(monkeypatch):
                         lambda q, limit=10: [
                             semantic_scholar.Paper(title="Only source", abstract="",
                                                    url="https://s2.org/1")])
+    monkeypatch.setattr(searxng, "search", lambda q, limit=10: [])
     clips = retrieval.retrieve("x", per_backend=4)
     assert len(clips) == 1
     assert clips[0].backend == "semantic_scholar"

@@ -1,0 +1,57 @@
+{
+  "digest": "5133e1aafc29c95b1de4ae69bf2900e82f2f1055d8ac082fbd8012f22d1676d2",
+  "record": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.03,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "9d8c43a7565055cd2819baabf6fde89c54a32d5c8f9978058ebd2c332057c420",
+        "path": "runs/research/build-a-profitable-intraday-scalping-str-20261015-054831/hypotheses/vwap-meanreversion-intraday.md"
+      },
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_repair_attempts": 2,
+      "max_tokens": 16384,
+      "model": "claude-haiku-4-5",
+      "model_served_at_registration": "claude-haiku-4-5",
+      "null_source": "round_turn_mc",
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 240.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: XAUUSD spot gold quotes, 1290 sessions on the pre-registered train split.\n\nFill model: quotes-unfavorable -- a fill requires a price move strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.03 per unit per side. Research mode: short budget, no warmup. Results are indicative only. Promote to xauusd-train for a full pre-registered campaign.\n\nAction cap: 32 per session. History window: 256 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "budget": 10,
+    "campaign_id": "vwap-meanreversion-intraday-20261015-055006",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "xauusd",
+    "hypothesis_digest": "9d8c43a7565055cd2819baabf6fde89c54a32d5c8f9978058ebd2c332057c420",
+    "hypothesis_path": "runs/research/build-a-profitable-intraday-scalping-str-20261015-054831/hypotheses/vwap-meanreversion-intraday.md",
+    "note": "MVP campaign, governed by docs/design/pre-registration.md. Real xauusd train split. The model proposes one strategy at a time and edits the champion; the null is the sign-flip over round turns (section 3b), NOT the conditional null, so the measured FWER of 0.060 does not describe this campaign.",
+    "profile": "xauusd-research",
+    "q": 0.05,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-10-15T05:50:07+00:00"
+  }
+}

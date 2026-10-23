@@ -1,0 +1,12 @@
+use_default_settings: true
+server:
+  secret_key: "local-dev-searxng-not-a-secret"
+  limiter: false
+  image_proxy: false
+search:
+  formats:
+    - html
+    - json
+engines:
+  - name: duckduckgo
+    disabled: true

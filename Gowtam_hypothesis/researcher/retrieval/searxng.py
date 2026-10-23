@@ -64,8 +64,15 @@ class SearxngResult:
     content_hash: str = ""
 
 
+from .cache import get_cache, set_cache
+
+
 def search(query: str, *, limit: int = 6, academic: bool = False) -> list[SearxngResult]:
     """Search SearXNG; raises ``SearxngError`` when unconfigured or unreachable."""
+    cached = get_cache("searxng", f"{query}:{limit}:{academic}")
+    if cached is not None:
+        return [SearxngResult(**item) for item in cached]
+
     base = os.environ.get("SEARXNG_BASE_URL", "").rstrip("/")
     if not base:
         raise SearxngError("SEARXNG_BASE_URL not set; SearXNG backend disabled")
@@ -103,4 +110,9 @@ def search(query: str, *, limit: int = 6, academic: bool = False) -> list[Searxn
         out.append(SearxngResult(title=title, url=url, content=content, content_hash=chash))
         if len(out) >= limit:
             break
+
+    set_cache("searxng", f"{query}:{limit}:{academic}", [
+        {"title": r.title, "url": r.url, "content": r.content, "content_hash": r.content_hash}
+        for r in out
+    ])
     return out

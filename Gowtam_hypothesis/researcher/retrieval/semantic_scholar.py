@@ -36,34 +36,43 @@ def _from_item(item: dict) -> Paper:
     )
 
 
-def search(query: str, *, limit: int = 10, max_retries: int = 1) -> list[Paper]:
-    """Search with a *fast* retry. A rate-limited backend must not stall the run.
+import os
+from .cache import get_cache, set_cache
+from .throttle import throttle
 
-    The unauthenticated tier rate-limits aggressively (HTTP 429); a long
-    exponential backoff adds seconds of dead time the loop cannot afford, and
-    `retrieve`'s query relaxation already provides coverage resilience. So this
-    backs off once, briefly, then raises -- `retrieve` swallows it and carries on
-    with arXiv alone.
-    """
+
+def _headers() -> dict[str, str]:
+    key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "").strip()
+    return {"x-api-key": key} if key else {}
+
+
+def search(query: str, *, limit: int = 10, max_retries: int = 2) -> list[Paper]:
+    """Search Semantic Scholar with rate limiting, caching, and 429 backoff."""
+    cached = get_cache("semantic_scholar", f"{query}:{limit}")
+    if cached is not None:
+        return [Paper(**item) for item in cached]
+
     last_err: Exception | None = None
     for attempt in range(max_retries + 1):
+        throttle("semantic_scholar", min_interval_seconds=1.5)
         try:
             resp = requests.get(
                 ENDPOINT,
                 params={"query": query, "limit": limit, "fields": FIELDS},
+                headers=_headers(),
                 timeout=60,
             )
         except requests.RequestException as exc:
             last_err = exc
             if attempt < max_retries:
-                time.sleep(1)
+                time.sleep(2 * (attempt + 1))
                 continue
             raise SemanticScholarError(f"request failed: {exc}") from None
 
         if resp.status_code == 429:
             last_err = SemanticScholarError("rate limited (429)")
             if attempt < max_retries:
-                time.sleep(1)
+                time.sleep(3 * (attempt + 1))
                 continue
             raise SemanticScholarError("rate limited (429)")
         if resp.status_code != 200:
@@ -73,6 +82,11 @@ def search(query: str, *, limit: int = 10, max_retries: int = 1) -> list[Paper]:
             payload = resp.json()
         except ValueError as exc:
             raise SemanticScholarError(f"unparseable JSON: {exc}") from None
-        return [_from_item(it) for it in payload.get("data", []) if it]
+        papers = [_from_item(it) for it in payload.get("data", []) if it]
+        set_cache("semantic_scholar", f"{query}:{limit}", [
+            {"title": p.title, "abstract": p.abstract, "url": p.url, "year": p.year}
+            for p in papers
+        ])
+        return papers
 
     raise SemanticScholarError(f"no answer: {last_err}")

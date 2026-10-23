@@ -1,0 +1,170 @@
+{
+  "campaign_id": "microstructure-momentum-volume-acceleration-20261015-062935",
+  "record_digest": "48660c1794ef7f74d48d34e77227dc5f2764fba6c6521552db129755201d3aa5",
+  "record_tampered": false,
+  "budget": 10,
+  "q": 0.05,
+  "n_trials": 10,
+  "harness_failures": 0,
+  "unaccounted": 0,
+  "outcomes": {
+    "completed": 10
+  },
+  "per_trial_accepts_at_0.001": 0,
+  "diagnostics_only": {
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "correction": {
+      "n": 10,
+      "q": 0.05,
+      "bh_discoveries": 0,
+      "holm_discoveries": 0,
+      "uncorrected_discoveries": 0,
+      "best_far": 1.0,
+      "best_label": "None:5fd5527c",
+      "decisions": [
+        {
+          "index": 0,
+          "label": "None:5fd5527c",
+          "far": 1.0,
+          "rank": 1,
+          "bh_critical": 0.005000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.005,
+          "holm_accepted": false
+        },
+        {
+          "index": 1,
+          "label": "None:5cb68f42",
+          "far": 1.0,
+          "rank": 2,
+          "bh_critical": 0.010000000000000002,
+          "bh_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "holm_accepted": false
+        },
+        {
+          "index": 2,
+          "label": "None:1bfbdc00",
+          "far": 1.0,
+          "rank": 3,
+          "bh_critical": 0.015,
+          "bh_accepted": false,
+          "holm_critical": 0.00625,
+          "holm_accepted": false
+        },
+        {
+          "index": 3,
+          "label": "None:164aa456",
+          "far": 1.0,
+          "rank": 4,
+          "bh_critical": 0.020000000000000004,
+          "bh_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "holm_accepted": false
+        },
+        {
+          "index": 4,
+          "label": "None:092fb719",
+          "far": 1.0,
+          "rank": 5,
+          "bh_critical": 0.025,
+          "bh_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "holm_accepted": false
+        },
+        {
+          "index": 5,
+          "label": "None:6291bea2",
+          "far": 1.0,
+          "rank": 6,
+          "bh_critical": 0.03,
+          "bh_accepted": false,
+          "holm_critical": 0.01,
+          "holm_accepted": false
+        },
+        {
+          "index": 6,
+          "label": "None:49aa56dd",
+          "far": 1.0,
+          "rank": 7,
+          "bh_critical": 0.034999999999999996,
+          "bh_accepted": false,
+          "holm_critical": 0.0125,
+          "holm_accepted": false
+        },
+        {
+          "index": 7,
+          "label": "None:a4a0f873",
+          "far": 1.0,
+          "rank": 8,
+          "bh_critical": 0.04000000000000001,
+          "bh_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "holm_accepted": false
+        },
+        {
+          "index": 8,
+          "label": "None:8b70917a",
+          "far": 1.0,
+          "rank": 9,
+          "bh_critical": 0.045000000000000005,
+          "bh_accepted": false,
+          "holm_critical": 0.025,
+          "holm_accepted": false
+        },
+        {
+          "index": 9,
+          "label": "None:8cbb055d",
+          "far": 1.0,
+          "rank": 10,
+          "bh_critical": 0.05,
+          "bh_accepted": false,
+          "holm_critical": 0.05,
+          "holm_accepted": false
+        }
+      ],
+      "expected_max_note": ""
+    }
+  },
+  "wall_clock_s": 0.0,
+  "gate": {
+    "n_trials": 10,
+    "b": 10000,
+    "observed_best": 0.018490302627185703,
+    "p": 0.7236276372362763,
+    "p_floor": 9.999000099990002e-05,
+    "at_floor": false,
+    "reject": false,
+    "q": 0.05,
+    "null_max_mean": 0.041188436915838886,
+    "null_max_quantiles": {
+      "0.5": 0.03497938943406677,
+      "0.2": 0.06617206768652646,
+      "0.1": 0.08717851349564344,
+      "0.05": 0.10932007963853754,
+      "0.01": 0.16093129400346423
+    },
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "is_the_gate": true,
+    "observed_best_positive": true,
+    "accept": false,
+    "floor_note": "accept = reject AND observed_best > 0. The second term is not a formality: under a sign-flip null a losing high-turnover candidate can clear the first one decisively."
+  },
+  "uncorrected": {
+    "best_score": 0.018490302627185703,
+    "best_far": 1.0,
+    "n_at_or_below_q": 0,
+    "reading": "what a report with no correction would say: the best of 10 candidates scored +0.0185 at a nominal false-acceptance rate of 1"
+  },
+  "deflation": {
+    "best_score": 0.018490302627185703,
+    "expected_max_under_null": null,
+    "margin": null,
+    "clears_selection_bar": null,
+    "n_trials": 10,
+    "n_sessions": 1290,
+    "note": "no tabulated null for dataset 'xauusd'"
+  },
+  "null_source": "round_turn_mc",
+  "error_control_note": "The FWER of 0.060, CI [0.041, 0.088], is the CONDITIONAL null with max_of_n at R = 150 (Task 38). It does not describe this campaign, whose null is the sign-flip over round turns. See docs/design/pre-registration.md sections 3a and 3b."
+}

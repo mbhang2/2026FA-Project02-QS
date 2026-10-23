@@ -187,6 +187,28 @@ profiles:
     notional_base: 1.0
     record_fill_spread: false
 
+  # Research mode: fast campaigns for the researcher loop.
+  # Deliberately short wall-clock budget and fewer warmup sessions.
+  # This is the split the loop hammers; holdout is never touched here.
+  xauusd-research:
+    dataset: xauusd
+    split: train
+    fill_model: quotes-unfavorable
+    seed: 1
+    warmup_sessions: 0        # no warmup — saves time per run
+    wall_clock_budget_s: 1800 # 30 min per trial ceiling
+    notional_base: 1.0
+    commission_per_contract: 0.03
+    record_fill_spread: false
+    instrument: "XAUUSD spot gold quotes"
+    fact_sessions: 1290
+    action_cap: 32            # half the standard cap → fewer trials per session
+    history_window: 256       # smaller window → faster context construction
+    n_trials: 10              # default research trial budget
+    cost_note: >-
+      Research mode: short budget, no warmup. Results are indicative only.
+      Promote to xauusd-train for a full pre-registered campaign.
+
 # Dataset definitions the profiles name.
 datasets:
   synthetic:

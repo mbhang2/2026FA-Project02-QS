@@ -80,7 +80,7 @@ def _same_model(requested: str, served: str) -> bool:
 
 def call(model: str, messages: list[dict], *, temperature: float = 0.7,
          max_tokens: int = 4096, base_url: str = DEFAULT_BASE_URL,
-         timeout: float = 240.0) -> Completion:
+         timeout: float = 240.0, check_substitution: bool = True) -> Completion:
     """One completion. One. Raises on failure; the caller records and moves on."""
     key = api_key()
     if not key:
@@ -120,13 +120,14 @@ def call(model: str, messages: list[dict], *, temperature: float = 0.7,
         ) from None
 
     served = str(payload.get("model") or "")
-    if served and not _same_model(model, served):
-        raise ModelSubstituted(f"asked for {model!r}, endpoint answered {served!r}")
-    if not served:
-        # An endpoint that will not say what it served cannot be checked, and
-        # "cannot be checked" is not "fine" -- same call as MVP llm.py Task 37.
-        raise ModelSubstituted(
-            f"endpoint answered for {model!r} without naming a model")
+    if check_substitution:
+        if served and not _same_model(model, served):
+            raise ModelSubstituted(f"asked for {model!r}, endpoint answered {served!r}")
+        if not served:
+            # An endpoint that will not say what it served cannot be checked, and
+            # "cannot be checked" is not "fine" -- same call as MVP llm.py Task 37.
+            raise ModelSubstituted(
+                f"endpoint answered for {model!r} without naming a model")
 
     return Completion(text=text, model_served=served,
                       prompt_tokens=int(usage.get("prompt_tokens") or 0),

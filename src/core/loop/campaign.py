@@ -259,8 +259,13 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
             fars.append(1.0)
             continue
         tup = _score_tuple(score)
-        charge = nullmod.far_for_score(tup, dataset=dataset)
-        fars.append(charge["far"])
+        try:
+            charge = nullmod.far_for_score(tup, dataset=dataset)
+            fars.append(charge["far"])
+        except FileNotFoundError:
+            # Datasets without a pre-tabulated empirical null (e.g. xauusd
+            # evaluated via candidate-specific sign-flip MC) default to conservative 1.0.
+            fars.append(1.0)
         scores.append(score["primary"])
         n_sessions.append(score["n_sessions"])
 
@@ -356,9 +361,20 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
                 f"false-acceptance rate of {min(fars):.4g}"
             ),
         }
-        out["deflation"] = deflation_view(
-            best, len(trials), max(set(n_sessions), key=n_sessions.count),
-            dataset=dataset)
+        try:
+            out["deflation"] = deflation_view(
+                best, len(trials), max(set(n_sessions), key=n_sessions.count),
+                dataset=dataset)
+        except FileNotFoundError:
+            out["deflation"] = {
+                "best_score": float(best),
+                "expected_max_under_null": None,
+                "margin": None,
+                "clears_selection_bar": None,
+                "n_trials": int(len(trials)),
+                "n_sessions": int(max(set(n_sessions), key=n_sessions.count)),
+                "note": f"no tabulated null for dataset '{dataset}'",
+            }
     return out
 
 

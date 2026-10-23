@@ -1,0 +1,29 @@
+{
+  "_comment": "Beta-distribution priors from the Luna calibration run (906 sources, 100 questions). Edit only via bwis_probe/promote_priors.py.",
+  "_source": "tmp_bwis_100/bwis_starting_weights.json",
+  "global_floor": {"alpha": 5.234, "beta": 4.766},
+  "by_class": {
+    "institutional":  {"alpha": 6.833, "beta": 3.167},
+    "academic":       {"alpha": 5.806, "beta": 4.194},
+    "other web":      {"alpha": 4.932, "beta": 5.068},
+    "practitioner":   {"alpha": 4.833, "beta": 5.167}
+  },
+  "by_theme": {
+    "Execution and portfolio construction":  {"alpha": 6.485, "beta": 3.515},
+    "Machine learning and signals":          {"alpha": 5.984, "beta": 4.016},
+    "Microstructure and order flow":         {"alpha": 5.654, "beta": 4.346},
+    "Momentum and trend":                    {"alpha": 5.371, "beta": 4.629},
+    "Cross-asset and relative value":        {"alpha": 5.358, "beta": 4.642},
+    "Volatility and risk":                   {"alpha": 5.131, "beta": 4.869},
+    "Macro and event-driven":                {"alpha": 5.048, "beta": 4.952},
+    "Mean reversion":                        {"alpha": 4.838, "beta": 5.162},
+    "Seasonality and calendar":              {"alpha": 4.641, "beta": 5.359},
+    "Structural and auction dynamics":       {"alpha": 3.646, "beta": 6.354}
+  },
+  "by_backend": {
+    "searxng":          {"alpha": 5.492, "beta": 4.508},
+    "arxiv":            {"alpha": 5.395, "beta": 4.605},
+    "semantic_scholar": {"alpha": 4.735, "beta": 5.265},
+    "unknown":          {"alpha": 5.000, "beta": 5.000}
+  }
+}

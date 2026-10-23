@@ -12,7 +12,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .schemas import HypothesisRecord, DataRequires
+from .schemas import (
+    DataRequires,
+    HypothesisRecord,
+    MAX_GRID_SIZE,
+    MAX_PARAMS,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +33,8 @@ class DatasetCaps:
     intervals: frozenset[str] = frozenset({"5m"})
     has_ticks: bool = False
     has_spreads: bool = False
+    max_params: int = MAX_PARAMS
+    max_grid_size: int = MAX_GRID_SIZE
 
 
 class Infeasible(ValueError):
@@ -48,6 +55,15 @@ def violations(rec: HypothesisRecord, caps: DatasetCaps) -> list[str]:
         out.append("needs ticks, harness serves bars only")
     if dr.needs_spreads and not caps.has_spreads:
         out.append("needs spreads, harness does not serve them")
+    if hasattr(rec, "specification") and rec.specification:
+        spec = rec.specification
+        if len(spec.parameters) > caps.max_params:
+            out.append(
+                f"parameters count {len(spec.parameters)} exceeds limit of {caps.max_params}")
+        grid = spec.get_total_grid_size()
+        if grid > caps.max_grid_size:
+            out.append(
+                f"grid size {grid:,} exceeds search budget limit of {caps.max_grid_size:,}")
     return out
 
 

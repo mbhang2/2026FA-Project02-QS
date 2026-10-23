@@ -66,14 +66,31 @@ def parse_atom(raw: bytes | str) -> list[ArxivEntry]:
     return out
 
 
-def _get(params: dict[str, str | int]) -> bytes:
-    try:
-        resp = requests.get(ENDPOINT, params=params, headers=_HEADERS, timeout=60)
-    except requests.RequestException as exc:
-        raise ArxivError(f"request failed: {exc}") from None
-    if resp.status_code != 200:
-        raise ArxivError(f"HTTP {resp.status_code}: {resp.text[:200]}")
-    return resp.content
+from .cache import get_cache, set_cache
+from .throttle import throttle
+
+
+def _get(params: dict[str, str | int], max_retries: int = 2) -> bytes:
+    for attempt in range(max_retries + 1):
+        throttle("arxiv", min_interval_seconds=3.0)
+        try:
+            resp = requests.get(ENDPOINT, params=params, headers=_HEADERS, timeout=60)
+        except requests.RequestException as exc:
+            if attempt < max_retries:
+                import time
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise ArxivError(f"request failed: {exc}") from None
+        if resp.status_code == 429:
+            if attempt < max_retries:
+                import time
+                time.sleep(4 * (attempt + 1))
+                continue
+            raise ArxivError(f"HTTP 429: rate limited by arXiv")
+        if resp.status_code != 200:
+            raise ArxivError(f"HTTP {resp.status_code}: {resp.text[:200]}")
+        return resp.content
+    raise ArxivError("failed after retries")
 
 
 def search(query: str, *, max_results: int = 10) -> list[ArxivEntry]:
@@ -84,10 +101,20 @@ def search(query: str, *, max_results: int = 10) -> list[ArxivEntry]:
     and a client-side filter on `primary_category` drops every entry that is not
     genuinely quantitative finance -- deterministic, not arXiv's fuzzy AND.
     """
+    cached = get_cache("arxiv", f"{query}:{max_results}")
+    if cached is not None:
+        return [ArxivEntry(**item) for item in cached]
+
     raw = _get({"search_query": f"all:{query} AND cat:q-fin.*", "start": 0,
                 "max_results": max_results})
     entries = parse_atom(raw)
-    return [e for e in entries if e.primary_category.startswith(_CATEGORY_PREFIX)]
+    res = [e for e in entries if e.primary_category.startswith(_CATEGORY_PREFIX)]
+    set_cache("arxiv", f"{query}:{max_results}", [
+        {"entry_id": e.entry_id, "title": e.title, "summary": e.summary,
+         "url": e.url, "published": e.published, "primary_category": e.primary_category}
+        for e in res
+    ])
+    return res
 
 
 def search_by_id(arxiv_id: str) -> ArxivEntry:

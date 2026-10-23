@@ -55,13 +55,23 @@ from concurrent.futures import ProcessPoolExecutor
 REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
+# **Rebound by `--model`, and `task37` is the default rather than the only
+# value.** Task 37 is a specific experiment -- the Task 36 proposer, on planted
+# data -- and its record is written. Running the same APPARATUS on a different
+# proposer is a different experiment and must not land in Task 37's directory
+# or borrow its campaign ids, so the tag, the output root and the scratch root
+# move together with the model. Defaults reproduce Task 37 exactly.
+RUN_TAG = "task37"
 OUT = REPO / "runs" / "campaigns" / "task37"
 WORK = REPO / "runs" / "tmp-task37"
 
 # ---- the pre-registration ------------------------------------------------- #
 BUDGET = 100
 Q = 0.05
-MODEL = "claude-haiku-4-5"
+# The proposer Task 36 ran, which is what Task 37 exists to match. `MODEL` is
+# what this invocation will actually use; the two differ only under `--model`.
+TASK36_MODEL = "claude-haiku-4-5"
+MODEL = TASK36_MODEL
 TEMPERATURE = 0.7
 MAX_TOKENS = 16_384
 MAX_REPAIR_ATTEMPTS = 2
@@ -172,8 +182,15 @@ def stage_register() -> None:
             "spread over the block. Ticks are a median 30s apart, so a block "
             "is one 5m bar.")
         cfg["agent_told_a_signal_exists"] = False
+        # **Whether this is Task 37 or only shares its apparatus.** Task 37's
+        # claim rests on the proposer being Task 36's, so a different one
+        # cannot be compared to Task 36's no-signal arms to separate search
+        # from self-flattery -- only to the OTHER arms of its own run and to
+        # Task 37's numbers at the same planted strength.
+        cfg["is_task36_proposer"] = (MODEL == TASK36_MODEL)
+        cfg["task36_baseline_comparable"] = (MODEL == TASK36_MODEL)
         record = CampaignRecord(
-            campaign_id=f"task37-{arm}",
+            campaign_id=f"{RUN_TAG}-{arm}",
             profile=profile, budget=BUDGET, q=Q,
             agent=f"src.core.loop.llm.LLMAgent[{arm}]",
             dataset=f"synthetic-{arm}", split="train",
@@ -477,7 +494,32 @@ def main() -> int:
     ap.add_argument("--stage", required=True,
                     choices=("register", "run", "nulls", "report"))
     ap.add_argument("--arm", default=None, choices=tuple(ARMS))
+    ap.add_argument("--model", default=MODEL,
+                    help="the proposer. Defaults to Task 36's, which is what "
+                         "makes a run Task 37. Any other value writes to its "
+                         "own campaign directory and is a different experiment.")
+    ap.add_argument("--max-tokens", type=int, default=MAX_TOKENS,
+                    help="output budget. Task 37's 16,384 is right for "
+                         "claude-haiku-4-5 and far too small for a reasoning "
+                         "model: deepseek-v4-pro was measured emitting 88,799 "
+                         "completion tokens on one call, 76,337 of them "
+                         "reasoning. Size it from measurement, not from habit.")
     a = ap.parse_args()
+
+    if a.model != MODEL or a.max_tokens != MAX_TOKENS:
+        import re as _re
+        g = globals()
+        g["MODEL"] = a.model
+        g["MAX_TOKENS"] = a.max_tokens
+        if a.model != TASK36_MODEL:
+            tag = "positive-control-" + _re.sub(r"[^a-z0-9.]+", "-", a.model.lower())
+            g["RUN_TAG"] = tag
+            g["OUT"] = REPO / "runs" / "campaigns" / tag
+            g["WORK"] = REPO / "runs" / f"tmp-{tag}"
+            print(f"proposer {a.model} is not Task 36's ({TASK36_MODEL}).\n"
+                  f"  This is the same apparatus, not Task 37: writing to "
+                  f"{g['OUT'].relative_to(REPO)}\n"
+                  f"  max_tokens {a.max_tokens:,}", flush=True)
     {"register": stage_register,
      "run": lambda: stage_run(a.arm),
      "nulls": lambda: stage_nulls(a.arm),

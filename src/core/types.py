@@ -107,12 +107,22 @@ class DataCapabilities:
     has_trades: bool = True
     has_quotes: bool = False
     has_book: bool = False
+    # **Options are a cross-section, not another scalar channel.** `ticks()`
+    # yields `Tick`, which carries one price and no instrument, so a surface
+    # cannot travel down it: an arbitrage is a statement about several quotes at
+    # one instant, and a feed delivering them one at a time would make the task
+    # reassembly rather than detection. A dataset setting this flag therefore
+    # promises a second accessor, and a strategy or fill model that needs the
+    # surface says so here and is refused at wiring time rather than mid-run --
+    # the same contract the other three have.
+    has_options: bool = False
 
     def satisfies(self, required: "DataCapabilities") -> bool:
         return (
             (self.has_trades or not required.has_trades)
             and (self.has_quotes or not required.has_quotes)
             and (self.has_book or not required.has_book)
+            and (self.has_options or not required.has_options)
         )
 
     def as_dict(self) -> dict[str, bool]:
@@ -120,6 +130,7 @@ class DataCapabilities:
             "has_trades": self.has_trades,
             "has_quotes": self.has_quotes,
             "has_book": self.has_book,
+            "has_options": self.has_options,
         }
 
 

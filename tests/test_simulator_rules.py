@@ -279,7 +279,14 @@ def test_the_run_record_pins_what_the_trial_actually_ran_on():
     ):
         assert field in got, f"the ledger row is missing {field}"
     assert rec.dataset_digest == d.digest()
-    assert rec.capabilities == {"has_trades": True, "has_quotes": False, "has_book": False}
+    # `has_options` joined the set on 2026-10-24. The equality is kept rather
+    # than loosened to a subset: this assertion exists so that a capability
+    # appearing or disappearing from the RECORD is a test failure, and rows
+    # written before that date carry three keys while rows after carry four --
+    # which is the record saying truthfully what the harness could offer at the
+    # time, not a schema drift to paper over.
+    assert rec.capabilities == {"has_trades": True, "has_quotes": False,
+                                "has_book": False, "has_options": False}
     assert rec.outcome == "completed" and rec.error is None
 
 

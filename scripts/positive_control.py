@@ -114,6 +114,14 @@ ARMS = {
     "s050": ("campaign-s050", 0.50,
              "clearly above the bar: the reference scores +2.8810, 3.6x the "
              "+0.8011 bar. Oracle ceiling +38.2458."),
+    "s000": ("campaign", 0.00,
+             "no planted signal at all -- the false-accept check, on the same "
+             "`synthetic` dataset and `campaign` profile Task 36's arms ran on. "
+             "Without it, a proposer that scores higher on EVERYTHING is "
+             "indistinguishable from one that searches better, and the planted "
+             "arms cannot say which they measured. The haiku equivalent is "
+             "Task 36's `history` arm (show_history=True, as here): best "
+             "+0.4222, rho +0.2834, gate p 0.6859, not accepted."),
 }
 
 RUN_FACTS_TEMPLATE = """- dataset: a **simulated** instrument, not NQ. Prices are generated tick by
@@ -143,7 +151,7 @@ def agent_for(arm: str):
     )
 
 
-def stage_register() -> None:
+def stage_register(only: str | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import template_digest
 
@@ -158,11 +166,31 @@ def stage_register() -> None:
             "template or abandon the comparison explicitly -- do not proceed."
         )
     OUT.mkdir(parents=True, exist_ok=True)
-    for arm, (profile, strength, why) in ARMS.items():
+    wanted = ARMS if only is None else {only: ARMS[only]}
+    for arm, (profile, strength, why) in wanted.items():
         path = OUT / arm / "campaign.json"
         if path.exists():
             sys.exit(f"{path} already exists. A pre-registration is written "
                      "once.")
+        # **A planted arm may not be registered once another arm has results,
+        # and a zero arm may.** The asymmetry is the whole point. Choosing a
+        # signal STRENGTH after seeing what another strength scored is picking
+        # the experiment to suit the answer. A zero arm has no strength to
+        # choose -- the parameter is 0.00 or it is not a control -- and it can
+        # only ever weaken the claim the planted arms made, never strengthen
+        # it: if noise is accepted too, their acceptance meant less than it
+        # looked. A check that can only cost you something is safe to add late.
+        if strength > 0:
+            ran = [a for a in ARMS if a != arm
+                   and (OUT / a / "ledger.jsonl").exists()]
+            if ran:
+                sys.exit(
+                    f"refusing to register {arm} (strength {strength}) now: "
+                    f"{', '.join(ran)} already has trials on disk.\n"
+                    f"Registering a planted strength after seeing another "
+                    f"strength's results is choosing the experiment to suit "
+                    f"the answer. Register the planted arms together, before "
+                    f"any of them runs.")
         agent = agent_for(arm)
         if agent.hypothesis is not None:
             sys.exit(
@@ -520,7 +548,7 @@ def main() -> int:
                   f"  This is the same apparatus, not Task 37: writing to "
                   f"{g['OUT'].relative_to(REPO)}\n"
                   f"  max_tokens {a.max_tokens:,}", flush=True)
-    {"register": stage_register,
+    {"register": lambda: stage_register(a.arm),
      "run": lambda: stage_run(a.arm),
      "nulls": lambda: stage_nulls(a.arm),
      "report": stage_report}[a.stage]()

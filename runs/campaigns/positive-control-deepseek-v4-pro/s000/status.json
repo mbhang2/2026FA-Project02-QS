@@ -1,0 +1,18 @@
+{
+  "schema": "campaign-status/1",
+  "campaign_id": "positive-control-deepseek-v4-pro-s000",
+  "status": "complete",
+  "recorded_at": "2026-10-23",
+  "recorded_by": "Michael, 2026-10-23",
+  "planted_strength": 0.0,
+  "summary": "Complete. The false-accept check passed: no false accept. It also inverted the trend statistic -- rho is HIGHEST where there is no signal (+0.8019) and lowest where the signal is strongest (+0.6177), so rho measures grinding against noise, not research ability.",
+  "why": [
+    "The false-accept check for deepseek-v4-pro. s030 and s050 were both ACCEPTED at p 9.999e-05, and without a zero-signal arm a proposer that scores higher on EVERYTHING is indistinguishable from one that searches better.",
+    "Registered AFTER both planted arms ran, and that is deliberate rather than sloppy. A zero arm has no strength to choose, and it can only weaken what the planted arms claimed, never strengthen it -- if noise is accepted too, their acceptance meant less than it looked. positive_control.py now refuses the reverse: a planted arm cannot be registered once another arm has trials on disk.",
+    "Compare to Task 36's `history` arm, which is the haiku equivalent at show_history=True: best +0.4222, rho +0.2834, gate p 0.6859, not accepted. Same `synthetic` dataset (signal_strength 0.0) and `campaign` profile."
+  ],
+  "expected": "REJECT. An acceptance here would be a false positive and the most important result of the week -- it would mean a stronger proposer can clear this gate on data with no edge.",
+  "pre_registration_untouched": true,
+  "completed_at": "2026-10-23",
+  "result": "REJECTED as expected. best +0.0780 vs null max q05 +0.8057, gate p = 1 (the maximum). reproduction 97/97 exact, 0 harness failures, 26 repairs against 2 on each planted arm."
+}

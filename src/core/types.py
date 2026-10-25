@@ -525,6 +525,10 @@ class Submit:
     bracket: BracketSpec | None = None
     reduce_only: bool = False
     tag: str = ""
+    # Appended last, like every other asset field: `Submit` is built with
+    # keywords today, but the rule that cost stage 1 an afternoon is cheaper to
+    # keep than to re-learn.
+    asset: str = DEFAULT_ASSET
 
 
 @dataclass(frozen=True, slots=True)

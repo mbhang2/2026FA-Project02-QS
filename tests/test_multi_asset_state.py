@@ -167,3 +167,102 @@ def test_a_single_asset_run_opens_exactly_one_book():
     eng.run()
     assert eng.assets_traded() == (DEFAULT_ASSET,)
     assert eng.blotter.assets() in ((), (DEFAULT_ASSET,))
+
+
+# --------------------------------------------------------------------------- #
+# stage 3: the asset reaches a strategy
+# --------------------------------------------------------------------------- #
+def test_an_order_carries_its_asset_and_defaults_to_the_only_one():
+    from src.core.types import Submit
+    assert Submit(side=Side.BUY, size=1).asset == DEFAULT_ASSET
+    import dataclasses
+    assert [f.name for f in dataclasses.fields(Submit)][-1] == "asset", (
+        "appended last, like every other asset field")
+
+
+def test_the_order_allowlist_still_equals_the_signature():
+    """A second copy of `_order`'s keyword-only parameters lives in the remote
+    protocol, and the two drifted in both directions at once on 2026-10-14,
+    costing 16 trials. Adding `asset` was the same drift starting again; the
+    test that pins them is what stopped it."""
+    import inspect
+    from src.core.engine.context import BaseContext
+    from src.core.engine.remote.protocol import ACTIONS
+    kw = {n for n, p in inspect.signature(BaseContext._order).parameters.items()
+          if p.kind is inspect.Parameter.KEYWORD_ONLY}
+    assert "asset" in kw and "asset" in ACTIONS["buy"] and "asset" in ACTIONS["sell"]
+    assert ACTIONS["buy"] - {"size"} <= kw, ACTIONS["buy"] - {"size"} - kw
+
+
+def test_an_order_must_name_a_real_asset():
+    """There is no "whichever book is open"."""
+    from src.core.engine.context import ContextError
+    import inspect
+    src = inspect.getsource(BaseContextOrderGuard := __import__(
+        "src.core.engine.context", fromlist=["x"]).BaseContext._order)
+    assert "asset must be a non-empty name" in src
+    assert ContextError is not None
+
+
+class _TwoBooks:
+    """Trades the default asset and reads a second book that was never opened."""
+
+    def setup(self, ctx):
+        ctx.subscribe("5m")
+        self.seen = None
+        self.err = None
+        self.traded = False
+
+    def on_bars(self, ctx):
+        try:
+            if not self.traded:
+                ctx.buy(1)
+                self.traded = True
+            self.seen = (ctx.position, ctx.position_in(DEFAULT_ASSET),
+                         ctx.position_in("SPX_C_7850"), ctx.assets_held())
+        except Exception as exc:                                 # noqa: BLE001
+            self.err = self.err or f"{type(exc).__name__}: {exc}"
+
+    def on_fill(self, ctx): pass
+    def on_lifecycle(self, ctx): pass
+
+
+def test_the_per_asset_readers_agree_with_the_old_ones_in_process():
+    from src.core.types import Split
+    d = SyntheticDataset(SyntheticSpec(n_sessions=60, uniform=True))
+    st = _TwoBooks()
+    rec = Engine.for_test(d, st, split=Split.TRAIN, fill_model="unfavorable",
+                          seed=1).run()
+    assert rec.outcome == "completed" and st.err is None, st.err
+    pos, pos_default, pos_unopened, held = st.seen
+    assert pos == pos_default, "ctx.position must be the default asset's book"
+    assert pos_unopened == 0, "an unopened book is flat, not an error"
+    assert held == (DEFAULT_ASSET,), held
+
+
+def test_the_per_asset_readers_cross_the_process_boundary(tmp_path):
+    """A scored strategy runs in a child, so the books have to travel. They are
+    pushed -- three numbers an asset -- rather than pulled."""
+    from src.core.engine.remote import RemoteStrategy
+    from src.core.types import Split
+
+    path = tmp_path / "strategy.py"
+    path.write_text(
+        "class Strategy:\n"
+        "    def setup(self, ctx):\n"
+        "        ctx.subscribe('5m'); self.n = 0\n"
+        "    def on_bars(self, ctx):\n"
+        "        if self.n == 0:\n"
+        "            ctx.buy(1)\n"
+        "        self.n += 1\n"
+        "        assert ctx.position_in('primary') == ctx.position\n"
+        "        assert ctx.position_in('never_opened') == 0\n"
+        "        assert 'primary' in ctx.assets_held()\n"
+        "    def on_fill(self, ctx): pass\n"
+        "    def on_lifecycle(self, ctx): pass\n")
+    d = SyntheticDataset(SyntheticSpec(n_sessions=60, uniform=True))
+    with RemoteStrategy(path, "Strategy", sandbox=False) as remote:
+        rec = Engine.for_test(d, remote, split=Split.TRAIN,
+                              fill_model="unfavorable", seed=1).run()
+    assert rec.outcome == "completed", f"{rec.outcome}: {rec.error}"
+    assert rec.fills > 0, "the child never traded; the assertions proved nothing"

@@ -623,6 +623,16 @@ class RemoteStrategy:
         message["closed"] = [encode(b) for b in ctx.closed]
         message["fills"] = [encode(f) for f in ctx.fills]
         message["working_orders"] = [encode(o) for o in ctx.working_orders]
+        # **Pushed, not pulled.** Three numbers per open asset, and a
+        # single-asset run has one entry -- far cheaper than the round trip
+        # `ctx.options()` needs for 882 rows. The asset list comes from the
+        # engine rather than from the child, so a book the strategy forgot it
+        # opened is still reported.
+        message["books"] = {
+            a: [ctx.position_in(a), ctx.average_entry_price_in(a),
+                ctx.realized_pnl_in(a)]
+            for a in ctx.assets_held()
+        }
         if kind == "on_fill":
             message["fill"] = encode(ctx.fill)
         elif kind == "on_lifecycle":

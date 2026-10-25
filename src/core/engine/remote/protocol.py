@@ -77,11 +77,16 @@ ACTIONS = {
     # In both cases the agent did exactly what it was told and the protocol
     # refused it. `test_remote.py` now asserts this set equals the signature,
     # so the next drift fails a test instead of a trial.
+    # `asset` joined 2026-10-25 with the multi-asset work, and the test that
+    # pins this set to the signature is what caught its absence -- which is
+    # the drift above happening again and being stopped this time.
     "buy": {"size", "type", "limit", "stop", "target", "tif", "stop_offset",
-            "target_offset", "tag", "reduce_only", "expire_ts", "trigger"},
+            "target_offset", "tag", "reduce_only", "expire_ts", "trigger",
+            "asset"},
     "sell": {"size", "type", "limit", "stop", "target", "tif", "stop_offset",
-             "target_offset", "tag", "reduce_only", "expire_ts", "trigger"},
-    "close": {"tag"},
+             "target_offset", "tag", "reduce_only", "expire_ts", "trigger",
+             "asset"},
+    "close": {"tag", "asset"},
     "cancel": {"order_id"},
     "cancel_all": set(),
     "modify": {"order_id", "limit", "trigger", "size"},

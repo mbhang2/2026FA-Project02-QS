@@ -37,6 +37,7 @@ from dataclasses import dataclass
 from typing import Any, Sequence
 
 from ..types import (
+    DEFAULT_ASSET,
     NS_PER_SECOND,
     Action,
     Bar,
@@ -137,6 +138,10 @@ class EnginePort:
     resolve_sub: Any
     history: Any
     tick_history: Any
+    position_in: Any = None
+    average_entry_price_in: Any = None
+    realized_pnl_in: Any = None
+    assets_held: Any = None
     # None when the dataset has no options channel, so `ctx.options()` can say
     # so by name instead of raising an AttributeError from inside the engine.
     options_snapshot: Any = None
@@ -293,6 +298,34 @@ class BaseContext:
     def last_price(self) -> float:
         self._check()
         return self._port.last_price()
+
+    def position_in(self, asset: str) -> int:
+        """The position in one asset. `ctx.position` is this for the default.
+
+        A companion rather than an argument on the property: `ctx.position` is
+        read by 65 call sites and by every one of the 3,447 committed
+        strategies, and a property cannot take one anyway. The pattern is the
+        same for the three below.
+        """
+        self._check()
+        return self._port.position_in(asset)
+
+    def average_entry_price_in(self, asset: str) -> float:
+        self._check()
+        return self._port.average_entry_price_in(asset)
+
+    def realized_pnl_in(self, asset: str) -> float:
+        self._check()
+        return self._port.realized_pnl_in(asset)
+
+    def assets_held(self) -> tuple[str, ...]:
+        """Every asset with an open book, default first.
+
+        A strategy holding several legs needs to be able to ask what it is
+        carrying without remembering what it opened.
+        """
+        self._check()
+        return self._port.assets_held()
 
     @property
     def working_orders(self) -> tuple[OrderView, ...]:
@@ -465,7 +498,13 @@ class BaseContext:
 
     # ---- writes ------------------------------------------------------------ #
     def buy(self, size: int = 1, **kw) -> int | None:
-        """Submit a buy. Returns the order id, or None if the action cap dropped it."""
+        """Submit a buy. Returns the order id, or None if the action cap dropped it.
+
+        `asset=` names what to trade and defaults to the one instrument a
+        single-asset run has, so every strategy written before assets existed
+        means exactly what it meant. `ctx.buy(1)` and
+        `ctx.buy(1, asset="SPX_C_7850_DEC26")` are different books.
+        """
         return self._order(Side.BUY, size, **kw)
 
     def sell(self, size: int = 1, **kw) -> int | None:
@@ -504,8 +543,13 @@ class BaseContext:
         expire_ts: Ts | None = None,
         reduce_only: bool = False,
         tag: str = "",
+        asset: str = DEFAULT_ASSET,
     ) -> int | None:
         self._check()
+        if not isinstance(asset, str) or not asset:
+            raise ContextError(
+                f"asset must be a non-empty name, got {asset!r}. An order has "
+                "to say what it is for: there is no 'whichever book is open'.")
         otype = OrderType(type) if isinstance(type, str) else type
         tif_ = TimeInForce(tif) if isinstance(tif, str) else tif
 
@@ -577,6 +621,7 @@ class BaseContext:
                 bracket=bracket,
                 reduce_only=reduce_only,
                 tag=tag,
+                asset=asset,
             )
         )
 

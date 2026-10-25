@@ -751,6 +751,7 @@ class Engine:
         of any attribute path from a strategy.
         """
         state, book, resolver = self._state, self._book, self._resolver
+        states = self._states
         history, ticks = self.history, self.tick_history
         return EnginePort(
             position=lambda: state.position,
@@ -764,6 +765,14 @@ class Engine:
             resolve_sub=resolver.resolve,
             history=history.__getitem__,
             tick_history=lambda: ticks,
+            # Bound to the books dict, not to the engine -- the same rule every
+            # entry above follows. A caller walking `__closure__` finds a map of
+            # small state records.
+            position_in=lambda a: (states[a].position if a in states else 0),
+            average_entry_price_in=lambda a: (states[a].avg_price if a in states else 0.0),
+            realized_pnl_in=lambda a: (states[a].realized_pnl if a in states else 0.0),
+            assets_held=lambda: (DEFAULT_ASSET, *sorted(
+                a for a in states if a != DEFAULT_ASSET)),
             options_snapshot=self._options_snapshot_fn(),
         )
 

@@ -150,9 +150,25 @@ Reads and writes shared by the three run-time callbacks.
 
 ### Calls
 
+#### `ctx.assets_held() -> 'tuple[str, ...]'`
+
+Every asset with an open book, default first.
+
+A strategy holding several legs needs to be able to ask what it is
+carrying without remembering what it opened.
+
+#### `ctx.average_entry_price_in(asset: 'str') -> 'float'`
+
+_(no docstring)_
+
 #### `ctx.buy(size: 'int' = 1, **kw) -> 'int | None'`
 
 Submit a buy. Returns the order id, or None if the action cap dropped it.
+
+`asset=` names what to trade and defaults to the one instrument a
+single-asset run has, so every strategy written before assets existed
+means exactly what it meant. `ctx.buy(1)` and
+`ctx.buy(1, asset="SPX_C_7850_DEC26")` are different books.
 
 #### `ctx.cancel(order_id: 'int') -> 'None'`
 
@@ -218,6 +234,19 @@ computed from what the engine has already seen.
 Raises `ContextError` when the dataset has no options channel, naming
 the capability, rather than returning an empty tuple that would read as
 "no quotes right now".
+
+#### `ctx.position_in(asset: 'str') -> 'int'`
+
+The position in one asset. `ctx.position` is this for the default.
+
+A companion rather than an argument on the property: `ctx.position` is
+read by 65 call sites and by every one of the 3,447 committed
+strategies, and a property cannot take one anyway. The pattern is the
+same for the three below.
+
+#### `ctx.realized_pnl_in(asset: 'str') -> 'float'`
+
+_(no docstring)_
 
 #### `ctx.sell(size: 'int' = 1, **kw) -> 'int | None'`
 

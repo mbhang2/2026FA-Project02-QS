@@ -356,6 +356,26 @@ class RemoteContext:
     def working_orders(self):
         return tuple(_decode_order(r) for r in self._m["working_orders"])
 
+    def position_in(self, asset):
+        return self._book(asset)[0]
+
+    def average_entry_price_in(self, asset):
+        return self._book(asset)[1]
+
+    def realized_pnl_in(self, asset):
+        return self._book(asset)[2]
+
+    def assets_held(self):
+        return tuple(self._m.get("books", {}))
+
+    def _book(self, asset):
+        """An asset with no book is flat, not an error.
+
+        A strategy may ask about a leg before it has opened one -- that is how
+        it decides whether to -- so the answer is zeros rather than a KeyError.
+        """
+        return self._m.get("books", {}).get(asset, (0, 0.0, 0.0))
+
     def options(self):
         """The options cross-section, fetched on request.
 

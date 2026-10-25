@@ -287,7 +287,10 @@ Delivered on a fill. Present-instant state only, never a partial bar.
 
 ### Reads
 
+- **`ctx.average_entry_price`**
 - **`ctx.fill`**
+- **`ctx.position`**
+- **`ctx.realized_pnl`**
 
 ## `LifecycleContext`
 

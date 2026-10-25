@@ -24,6 +24,7 @@ from src.core.data.options import (                              # noqa: E402
 )
 from src.core.data.options_spx import (                          # noqa: E402
     ETA, KAPPA, MATURITIES, RHO, SPOT, SPXHestonSurface, SPXSpec, THETA, V0,
+    sessions_to_expiry,
 )
 
 
@@ -119,7 +120,10 @@ def test_parity_is_exact_with_discounting(surface):
 
 def test_quotes_round_away_from_the_mid(surface):
     for q in surface.quotes_at(0, 0):
-        i = q.expiry_session
+        # `expiry_session` is the expiry as a session count, not a position in
+        # the maturity list -- `maturity_index` is the way back, and exercising
+        # it here is the point rather than an inconvenience.
+        i = surface.maturity_index(q.expiry_session)
         mid = float((surface.call_prices(i, [q.strike]) if q.is_call
                      else surface.put_prices(i, [q.strike]))[0])
         h = surface.half_spread(mid, i)
@@ -172,8 +176,10 @@ def test_a_parity_plant_above_its_threshold_is_found_inside_its_bound(strength):
     assert row["findable"], row
     assert row["intrinsic_to_clear"] == pytest.approx(0.0, abs=1e-9), (
         "only parity has a zero intrinsic term, because only parity is an identity")
-    found = s._parity_for([q for q in s.quotes_at(0, 0) if q.expiry_session == 0],
-                          MATURITIES[0])
+    front = sessions_to_expiry(MATURITIES[0])
+    found = s._parity_for(
+        [q for q in s.quotes_at(0, 0) if q.expiry_session == front],
+        MATURITIES[0])
     assert len(found) == 1, found
     assert found[0]["edge"] <= row["net_per_unit_upper"] + 1e-9
     assert row["net_per_unit_upper"] - found[0]["edge"] <= 2*0.10 + 1e-9, (

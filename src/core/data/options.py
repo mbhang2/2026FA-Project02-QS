@@ -808,3 +808,85 @@ class SyntheticOptionsDataset:
         -- is the underlying's, so the lock and the calendar keep working rather
         than being quietly absent on an options run."""
         return getattr(self._under, name)
+
+
+# ---- options as engine assets ---------------------------------------------- #
+# The engine trades *assets*, which are strings. An option therefore needs a
+# name, and the name has to carry enough to find the quote it refers to: an
+# order on `SPX-7849-C-7850` must resolve against exactly one row of the
+# snapshot the feed hands back, with the engine holding no surface knowledge of
+# its own.
+#
+# **Keyed on `expiry_session`, not on the expiry's position in the listed set.**
+# The first version of this named the expiry by index -- `SPX-0-C-7850` for the
+# front month -- which read better and could not be matched: the quote carries
+# `expiry_session`, an absolute session index, so the engine would have needed
+# the surface's ordered expiry list to turn 0 into a session, and that list is
+# exactly the dataset knowledge the engine must not have. Naming the contract by
+# the session it expires on makes the match a field comparison. It is also the
+# only one of the two that is stable: an index shifts under every front-month
+# roll, so a position opened on `-0-` would silently become a position in a
+# different contract, which is the sort of bug that shows up as P&L.
+
+def option_asset(underlying: str, expiry_session: int, strike: float,
+                 is_call: bool) -> str:
+    """The name of one option, as an asset.
+
+    `option_asset("SPX", 7849, 7850.0, True)` -> `"SPX-7849-C-7850"`.
+
+    `underlying` is required rather than defaulted. A default would be one of
+    the two surfaces in this package, and a strategy that forgot the argument
+    would place a real order against the wrong instrument name and get a silent
+    no-fill instead of a TypeError.
+
+    Strikes print without a decimal point when they are whole, which they are on
+    every ladder here, so a name round-trips unchanged rather than acquiring a
+    `.0`. Hyphens are the separator, so an underlying containing one would make
+    the name ambiguous and is refused.
+    """
+    if not underlying or "-" in underlying:
+        raise ValueError(
+            f"underlying {underlying!r} must be non-empty and hyphen-free: the "
+            "hyphen separates the fields of an option's name"
+        )
+    k = int(strike) if float(strike).is_integer() else strike
+    return f"{underlying}-{int(expiry_session)}-{'C' if is_call else 'P'}-{k}"
+
+
+def option_asset_of(underlying: str, q: OptionQuote) -> str:
+    """The name of the option `q` quotes.
+
+    The form a strategy actually wants: it is holding a quote off
+    `ctx.options()` and wants to trade *that*, so the name comes from the
+    quote's own fields instead of being reassembled by hand from three values
+    that have to agree with it.
+    """
+    return option_asset(underlying, q.expiry_session, q.strike, q.is_call)
+
+
+def parse_option_asset(name: str) -> tuple[int, float, bool] | None:
+    """`(expiry_session, strike, is_call)`, or None if this is not an option.
+
+    None rather than an exception: the engine asks this of every asset it is
+    handed, and the default asset is not an option. A raise would make the
+    common case the exceptional one, and `_resolve` would have to spend a
+    try/except per working order per tick to find out something a return value
+    says for free.
+
+    Deliberately **prefix-agnostic** -- any hyphen-free leading token is
+    accepted. The engine has one options feed, so the prefix is a label for
+    whoever reads the blotter rather than a routing key, and hard-coding `SPX`
+    here would put one dataset's name in the one module that must not know
+    which dataset it is serving.
+    """
+    parts = name.split("-")
+    if len(parts) != 4 or not parts[0] or parts[2] not in ("C", "P"):
+        return None
+    try:
+        return int(parts[1]), float(parts[3]), parts[2] == "C"
+    except ValueError:
+        return None
+
+
+def is_option_asset(name: str) -> bool:
+    return parse_option_asset(name) is not None

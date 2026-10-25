@@ -23,7 +23,7 @@ from src.core.data.options import (                              # noqa: E402
 )
 from src.core.data.options_spx import (                          # noqa: E402
     MATURITIES, SESSION_YEARS, THETA, V0, SPXHestonDataset, SPXHestonPath,
-    SPXMovingSurface, SPXSpec,
+    SPXMovingSurface, SPXSpec, expiry_sessions, short_maturities,
 )
 from src.core.data.synthetic import SyntheticSpec                # noqa: E402
 from src.core.engine import Engine                               # noqa: E402
@@ -32,8 +32,11 @@ from src.core.types import Split                                 # noqa: E402
 FAST = dict(cos_terms=256, grid_points=601)
 
 
-def _surface(plants=()):
-    return SPXMovingSurface(SPXSpec(plants=plants, **FAST))
+def _surface(plants=(), maturities=None):
+    """Short-dated by default, like the dataset: the calibrated expiries are
+    46 sessions out and nothing in a 40-session run would ever settle."""
+    return SPXMovingSurface(SPXSpec(plants=plants, **FAST),
+                            maturities=maturities or short_maturities())
 
 
 def _parity(surface, quotes, spot, elapsed):
@@ -41,7 +44,8 @@ def _parity(surface, quotes, spot, elapsed):
     for i in range(len(surface.maturities)):
         fwd, disc, _tau = surface.forward_discount(i, elapsed, spot)
         by: dict = {}
-        for q in (x for x in quotes if x.expiry_session == i):
+        expiries = expiry_sessions(surface.maturities)
+        for q in (x for x in quotes if x.expiry_session == expiries[i]):
             by.setdefault(q.strike, {})[q.is_call] = q
         for K, pair in by.items():
             c, p = pair.get(True), pair.get(False)
@@ -121,8 +125,21 @@ def test_the_density_stays_a_valid_measure_as_the_state_moves():
 # --------------------------------------------------------------------------- #
 # the plants
 # --------------------------------------------------------------------------- #
-@pytest.mark.parametrize("strength,expect", [(0.5, False), (8.0, True), (25.0, True)])
-def test_a_plant_is_found_exactly_when_it_clears_the_spread(strength, expect):
+@pytest.mark.parametrize("factor,expect", [(0.3, False), (8.0, True), (25.0, True)])
+def test_a_plant_is_found_exactly_when_it_clears_the_spread(factor, expect):
+    """Strengths are MULTIPLES OF THE SURFACE'S OWN THRESHOLD, not points.
+
+    They were absolute -- 0.5, 8.0, 25.0 -- which encoded the spread of a
+    46-session expiry without saying so. On the short ladder the front expiry
+    is five sessions out, its premiums are a fraction of that, and its spread
+    is 0.71 rather than several points: the 0.5 "under the spread" case cleared
+    it on 2 of 7 looks and the test failed, correctly. A threshold-relative
+    strength says what the test is actually about, and survives the next change
+    to the ladder.
+    """
+    probe = _surface(plants=(Plant("parity", 0, 0, 1.0),))
+    thr = probe.threshold(probe.spec.plants[0])["threshold"]
+    strength = factor*thr
     s = _surface(plants=(Plant("parity", 0, 0, strength),))
     p = SPXHestonPath(n_sessions=5, seed=1)
     hits, looks, edges = 0, 0, []
@@ -146,14 +163,30 @@ def test_a_plant_is_found_exactly_when_it_clears_the_spread(strength, expect):
 # --------------------------------------------------------------------------- #
 # the dataset and the feed
 # --------------------------------------------------------------------------- #
-def test_a_run_may_not_outlive_the_front_expiry():
-    """The calibration lists three expiries and has no mechanism for rolling
-    into new ones. 60 sessions -- the parent's usual default -- reaches past the
-    0.183-year front expiry, which is how the 40-session default was found."""
-    with pytest.raises(ValueError, match="expiry"):
-        SPXHestonDataset(spec=SyntheticSpec(n_sessions=60))
+def test_a_run_must_reach_an_expiry_or_nothing_can_ever_settle():
+    """This test asserted the OPPOSITE rule until settlement existed.
+
+    It required the run to END BEFORE the front expiry, on the reasoning that
+    there is no mechanism for rolling into new contracts. The reasoning is
+    sound and the conclusion was backwards: an expiry that passes simply stops
+    being listed, whereas a run where nothing expires can never PAY a
+    locked-in edge, because a permanent mispricing bought and sold back is two
+    spreads and no profit. Reaching an expiry is the requirement.
+    """
+    calibrated = _surface(maturities=MATURITIES)
+    with pytest.raises(ValueError, match="none of this surface's expiries"):
+        SPXHestonDataset(surface=calibrated)
+
+    # ...and the opt-out says so by name, for a detection-only run.
+    d = SPXHestonDataset(surface=calibrated, allow_no_settlement=True)
+    assert d.settling_expiries == ()
+
+    # The default settles, repeatedly, inside the window.
     d = SPXHestonDataset()
-    assert d.spec.n_sessions*SESSION_YEARS < min(m.T for m in MATURITIES)
+    assert d.settling_expiries == expiry_sessions(d.surface.maturities)
+    assert all(0 < e < d.spec.n_sessions for e in d.settling_expiries)
+    assert len(d.settling_expiries) >= 2, (
+        "one expiry would give a strategy a single settlement to aim at")
 
 
 def test_the_dataset_declares_options_and_its_digest_covers_the_surface():
@@ -214,6 +247,7 @@ class _BoxSpotter:
         ctx.subscribe("30m")
         self.reads = self.hits = 0
         self.best = 0.0
+        self.seen: list[tuple[int, bool]] = []
         self.err = None
 
     def on_bars(self, ctx):
@@ -235,6 +269,7 @@ class _BoxSpotter:
             if worst > 1e-9:
                 self.hits += 1
             self.best = max(self.best, worst)
+            self.seen.append((ctx.session, worst > 1e-9))
         except Exception as exc:                                 # noqa: BLE001
             self.err = self.err or f"{type(exc).__name__}: {exc}"
 
@@ -250,11 +285,29 @@ def _run(plants):
     return rec, st
 
 
-def test_a_strategy_finds_the_plant_through_the_engine():
-    rec, st = _run((Plant("parity", 0, 0, 25.0),))
+def test_a_strategy_finds_the_plant_until_the_contract_expires():
+    """Found at every bar the contract is listed, and at none after.
+
+    This asserted `hits == reads` flat, which was true only while no expiry
+    ever passed. It does now: the plant is on the 35-session expiry, so the
+    last five sessions of a forty-session run have no such contract to be
+    wrong about, and a detector still reporting one would be reporting an
+    arbitrage in an instrument that does not exist.
+    """
+    last = len(short_maturities()) - 1
+    expires = expiry_sessions(short_maturities())[last]
+    rec, st = _run((Plant("parity", last, 0, 25.0),))
     assert rec.outcome == "completed" and st.err is None, st.err
     assert st.reads > 100, f"only {st.reads} surface reads"
-    assert st.hits == st.reads, f"found at {st.hits} of {st.reads} bars"
+
+    before = [hit for sess, hit in st.seen if sess < expires]
+    after = [hit for sess, hit in st.seen if sess >= expires]
+    assert before and all(before), (
+        f"the plant was missed at {before.count(False)} of {len(before)} bars "
+        f"while its contract was still listed")
+    assert not any(after), (
+        f"{sum(after)} of {len(after)} bars after session {expires} reported "
+        f"an arbitrage in a contract that had expired")
     assert st.best > 15.0, f"best edge {st.best} is far under the 25.0 planted"
 
 

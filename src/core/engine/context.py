@@ -513,9 +513,24 @@ class BaseContext:
     def close(self, **kw) -> int | None:
         """Flatten the current position with a market order."""
         self._check()
-        pos = self._port.position()
+        # **The book being closed, not the default one.** `close` took `**kw`
+        # and so accepted `asset=` from the day assets existed, while sizing
+        # itself off `position()` -- the primary book. A strategy long 3 futures
+        # and short 2 calls that called `ctx.close(asset="SPX-7849-C-7850")`
+        # would have sent a 3-lot SELL against a 2-lot short: a reduce-only
+        # order that opens, clamped at fill time to something nobody asked for.
+        asset = kw.get("asset", DEFAULT_ASSET)
+        pos = self._port.position_in(asset)
         if pos == 0:
-            raise ContextError("close() with no position open")
+            # The default message is unchanged to the byte: it is asserted in
+            # `tests/test_examples.py` and tabled in `docs/agent/strategy-api.md`,
+            # which is fingerprinted into every proposal prompt. Only a named
+            # asset gets the suffix, and nothing written before assets existed
+            # can produce one.
+            raise ContextError(
+                "close() with no position open" if asset == DEFAULT_ASSET
+                else f"close() with no position open in {asset}"
+            )
         side = Side.SELL if pos > 0 else Side.BUY
         # **The caller's tag wins.** This read `tag="close", **kw`, so a
         # strategy that passed a tag -- which `docs/agent/strategy-api.md`
@@ -785,6 +800,32 @@ class FillContext(BaseContext):
     def fill(self) -> FillEvent:
         self._check()
         return self._fill
+
+    # **In a fill callback, the book in question is the one that filled.**
+    # `ctx.fill.position` is the position in `ctx.fill.asset`, so leaving these
+    # three pointed at the default book would have put two numbers called
+    # "position" in one callback, disagreeing whenever the fill was an option
+    # leg -- the first probe of the option path reported `fill.position == 1`
+    # and `ctx.position == 0` for the same fill.
+    #
+    # For a single-asset run `fill.asset` is the default asset and all three
+    # resolve exactly as before, which is why no committed strategy changes
+    # behaviour. A strategy that wants another book while handling a fill asks
+    # for it by name with `position_in`, as it would in any other callback.
+    @property
+    def position(self) -> int:
+        self._check()
+        return self._port.position_in(self._fill.asset)
+
+    @property
+    def average_entry_price(self) -> float:
+        self._check()
+        return self._port.average_entry_price_in(self._fill.asset)
+
+    @property
+    def realized_pnl(self) -> float:
+        self._check()
+        return self._port.realized_pnl_in(self._fill.asset)
 
 
 class LifecycleContext(BaseContext):

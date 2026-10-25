@@ -43,6 +43,7 @@ from .context import (
     canonical_sub_id,
 )
 from ..data.dataset import Dataset
+from ..data.options import parse_option_asset
 from .fills import FillModel, check_capabilities, get_fill_model
 from .reconstruct import FillLogFull, log_digest, reconstruct
 from ..runlog import RunNotAccounted, RunTicket
@@ -92,6 +93,11 @@ MAX_FILL_LOG = 5_000_000
 # its budget several times over before anyone looks.
 BUDGET_CHECK_EVERY_TICKS = 4096
 BUDGET_CHECK_EVERY_CALLBACKS = 32
+
+# Distinguishes "not looked up yet" from "looked up, and this dataset has
+# no options". A plain None would collapse the two and re-probe the
+# dataset on every tick of every non-options run.
+_UNSET = object()
 
 
 @dataclass(slots=True)
@@ -551,6 +557,15 @@ class Engine:
         # security property documented on `_RunState` and not worth disturbing
         # for tidiness.
         self._states: dict[str, _RunState] = {DEFAULT_ASSET: self._state}
+        # The surface as of one instant, rebuilt at most once per tick.
+        # `_UNSET` rather than None because None is a real answer here:
+        # it means this dataset has no options at all.
+        self._opt_snap: Any = _UNSET
+        self._opt_cache_key: tuple[int, int] | None = None
+        self._opt_cache: tuple = ()
+        # Contracts that have reached expiry. An order on one is refused
+        # rather than left to rest against a quote that will never come.
+        self._settled: set[str] = set()
         self._book = _OrderBook()
         self._resolver = _SubResolver()
         self.orders = self._book.all
@@ -1168,6 +1183,15 @@ class Engine:
                     actionable,
                 )
 
+        # **Settled before the TIF sweep below, not after.** Settlement
+        # dispatches a fill callback, and a strategy is entitled to place an
+        # order from one. Settling after the sweep would let a DAY order placed
+        # in response to a settlement fill survive into the next session, which
+        # is the one thing a DAY order must never do. Ahead of it, anything the
+        # callback queues is subject to the same rules as an order placed on the
+        # session's last tick.
+        self._settle_expiries(session, close_ts, seq, actionable=actionable)
+
         # DAY cancels; GTD cancels if it expires at or before the close; GTC and
         # unexpired GTD survive, brackets included, and so does the position. A
         # strategy that wants to be flat overnight has to say so -- and the
@@ -1184,6 +1208,110 @@ class Engine:
         self._drain_lifecycle(
             Tick(close_ts, self.last_price, 0, session, seq), actionable
         )
+
+    def _settle_expiries(self, session: int, close_ts: Ts, seq: int, *,
+                         actionable: bool) -> None:
+        """Options reaching expiry at this close are settled into cash.
+
+        **Settlement is a FILL, not a cash adjustment, and that is forced.**
+        The score is reconstructed from the fill log by a pure function -- that
+        is the whole design of `reconstruct`, and the reason `_RunState` is not
+        allowed to be the source of any number that matters. A settlement
+        booked anywhere other than the fill log would therefore be invisible to
+        the score, which on a conversion is not a rounding difference: the
+        entire edge of a long-call / short-put / short-future package appears at
+        settlement and nowhere else. Routing it through `_apply_fill` also means
+        the realised number comes from the same arithmetic as every other
+        close, rather than from a second implementation that has to agree.
+
+        **Why this matters for the arbitrage challenge.** A mispriced package
+        bought and held cannot be monetised by selling it back: the quotes it
+        was bought at are the quotes it would be sold at, and the plant is
+        permanent, so the round trip pays two spreads and returns the edge to
+        the surface. A conversion is a synthetic bond -- its edge is the
+        difference between what the package cost and what it is worth at
+        expiry, and it is realised by *holding to expiry*. Without this method
+        an arbitrage in the data would be visible, executable, and permanently
+        unprofitable, and the loop would correctly report that a detector which
+        found it made no money. Which is why the calibrated expiries are no use
+        here: the nearest is 0.183y, about 46 sessions, and a campaign session
+        is 40. `options_spx.short_maturities()` exists for exactly this reason.
+
+        **Settled at intrinsic against the underlying's closing price.** There
+        is no terminal quote to settle against -- a quote is a bid and an offer
+        and settlement is neither -- and intrinsic is what the contract is
+        worth once there is no time left, which is the one price the surface
+        and arbitrage theory agree on without a model.
+
+        `expiry <= session` rather than `==`: if a contract's expiry session is
+        never itself a scored session, an equality test would leave the
+        position open for the rest of the run and the edge unrealised. Settling
+        at the first close at or past expiry cannot settle early, because the
+        check runs at a close.
+        """
+        if self._opt_snap is _UNSET:
+            self._opt_snap = self._options_snapshot_fn()
+        if self._opt_snap is None:
+            return      # no options in this dataset; nothing can expire
+
+        settle_price = self.last_price
+        tick = Tick(close_ts, settle_price, 0, session, seq)
+        for asset in list(self._states):
+            parsed = parse_option_asset(asset)
+            if parsed is None:
+                continue        # the underlying does not expire
+            expiry, strike, is_call = parsed
+            if expiry > session or asset in self._settled:
+                continue
+            self._settled.add(asset)
+
+            # The contract is gone, so anything working on it is gone with it.
+            # A GTC order resting on an expired call would otherwise sit in the
+            # book for the rest of the run, counted as working, matching
+            # nothing.
+            for order in list(self._working.values()):
+                if order.asset == asset:
+                    self._cancel(order, LifecycleKind.CONTRACT_EXPIRED,
+                                 close_ts, seq)
+
+            pos = self._states[asset].position
+            intrinsic = (max(settle_price - strike, 0.0) if is_call
+                         else max(strike - settle_price, 0.0))
+            self._emit(
+                LifecycleKind.CONTRACT_EXPIRED, close_ts, seq, None,
+                f"{asset} expired with the underlying at {settle_price:.2f}: "
+                f"settled {pos:+d} at intrinsic {intrinsic:.2f}",
+            )
+            if pos == 0:
+                continue        # expired flat: the event above, and no fill
+
+            closer = self._new_order(
+                Submit(
+                    side=Side.SELL if pos > 0 else Side.BUY,
+                    size=abs(pos),
+                    order_type=OrderType.MARKET,
+                    tif=TimeInForce.IOC,
+                    reduce_only=True,
+                    # The tag is how a settlement is told from a trade in the
+                    # blotter. `liquidity` cannot carry it: a settlement is
+                    # neither maker nor taker, and `_apply_fill` derives that
+                    # field from the order type, which says "market" here
+                    # because a settlement is not optional.
+                    tag="settlement",
+                    asset=asset,
+                ),
+                tick,
+            )
+            # Straight to `_apply_fill`: there is no resolution to do. The price
+            # is not a quote to be crossed, it is what the contract is worth,
+            # and the size is the whole position by definition. Going through
+            # `_resolve` would re-derive both from a surface that no longer
+            # lists this contract.
+            event = self._apply_fill(closer, Fill(price=intrinsic,
+                                                  size=abs(pos)), tick)
+            if event is not None:
+                self._fills_since_callback.append(event)
+                self._dispatch("fill", event, tick, actionable)
 
     # ---- order handling ----------------------------------------------------- #
     def _resolve(self, tick: Tick) -> list[FillEvent]:
@@ -1204,7 +1332,17 @@ class Engine:
             if order.status is OrderStatus.PENDING:
                 order.status = OrderStatus.WORKING
 
-            fill = self.model.resolve(order, tick)
+            # **Where an option diverges from the underlying.** The asset's
+            # own name says which it is, so there is no second field to keep in
+            # step and no way for a strategy to place an option order that
+            # resolves against a futures print.
+            opt = parse_option_asset(order.asset)
+            if opt is not None:
+                fill = self._resolve_option(order, tick, opt)
+                if order.order_id not in self._working:
+                    continue    # refused outright; already cancelled and emitted
+            else:
+                fill = self.model.resolve(order, tick)
 
             if fill is None:
                 if order.tif in (TimeInForce.IOC, TimeInForce.FOK):
@@ -1222,7 +1360,130 @@ class Engine:
                 self._cancel(order, LifecycleKind.CANCEL_CONFIRMED, tick.ts, tick.seq)
         return out
 
+    # ---- options ------------------------------------------------------------ #
+    def _option_quotes(self, tick: Tick) -> tuple:
+        """The surface as of this tick, built at most once per tick.
+
+        `_resolve` asks this once per working option order, and a strategy with
+        a four-leg package working would otherwise rebuild the whole surface
+        four times for one instant. The feed memoises as well, but a miss
+        prices every strike on every listed expiry, so the saving is real.
+        """
+        if self._opt_snap is _UNSET:
+            self._opt_snap = self._options_snapshot_fn()
+        if self._opt_snap is None:
+            return ()
+        key = (tick.ts, tick.seq)
+        if self._opt_cache_key != key:
+            self._opt_cache_key = key
+            self._opt_cache = tuple(self._opt_snap(tick.ts, tick.session))
+        return self._opt_cache
+
+    def _resolve_option(self, order: Order, tick: Tick,
+                        parsed: tuple[int, float, bool]) -> Fill | None:
+        """An option order against the quoted touch, capped by the quoted size.
+
+        **Not a `FillModel`.** That protocol is `resolve(order, tick)`, and a
+        tick is a print in the underlying: it carries a price, a size and a
+        side for the *future*, and nothing whatsoever about what a call struck
+        5% out is quoted at. Routing option orders through it would have meant
+        filling them at the underlying's price, which is not a modelling
+        simplification but a different instrument. The fill model stays the
+        underlying's; options resolve here.
+
+        **Marketable only, and immediate.** A market order takes the offer or
+        hits the bid. A limit order fills only when the touch is already at or
+        through its price, and otherwise rests until it is. Nothing rests
+        *inside* the spread, because nothing in this dataset models a queue --
+        a quote here is a price and a size, so the only fill that can be
+        defended is one that crosses it. An order that could sit at the bid and
+        be filled by someone else's seller would be a claim about arrival rates
+        that no part of this surface makes.
+
+        **Two assumptions worth naming, because the arbitrage challenge rests
+        on them.** Quoted size is availability at that instant and does not
+        deplete: an order that lifts all 10 of a 10-lot offer sees a 10-lot
+        offer again on the next tick. And taking the touch moves nothing. Both
+        are generous to the strategy -- a real four-leg package pays queue risk
+        on the legs it works and impact on the legs it crosses. That is the
+        right direction for the generosity to run: the gate's job is to catch
+        an edge that survives *despite* it, and an edge that exists only
+        because of it is what the committee's robustness seat is for. Neither
+        assumption can manufacture a violation that is not in the surface,
+        which is the property that matters for the detector.
+        """
+        expiry, strike, is_call = parsed
+        if order.asset in self._settled or expiry < tick.session:
+            # The contract no longer exists. Refused rather than left to rest:
+            # `_option_quotes` will never list it again, so a resting order here
+            # is an order that cannot fill and cannot be explained.
+            self._cancel(order, LifecycleKind.CONTRACT_EXPIRED, tick.ts, tick.seq)
+            self._emit(
+                LifecycleKind.CONTRACT_EXPIRED, tick.ts, tick.seq, order.order_id,
+                f"{order.asset} expired at session {expiry}; it is now "
+                f"session {tick.session}",
+            )
+            return None
+        if order.order_type in (OrderType.STOP, OrderType.STOP_LIMIT):
+            # Refused outright rather than left to rest forever. A stop needs a
+            # trade print to trigger on; the surface publishes a touch and no
+            # trades, so there is no event this order could ever fire on, and a
+            # silently immortal order is the failure mode this repo keeps
+            # finding (`reduce_only` accepted and unchecked, GTD expiry checked
+            # only at the session boundary).
+            self._cancel(order, LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq)
+            self._emit(
+                LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, order.order_id,
+                f"{order.order_type} is not supported on {order.asset}: a stop "
+                "triggers on a trade print and an option surface quotes a "
+                "touch, never a trade",
+            )
+            return None
+
+        q = None
+        for cand in self._option_quotes(tick):
+            # Strike compared with a tolerance, not with `==`. The name carries
+            # the strike as text and `float("7850")` is exact, so equality does
+            # hold on every ladder here -- but a half-point ladder would make
+            # that a latent bug, and the comparison costs nothing.
+            if (cand.expiry_session == expiry
+                    and cand.is_call is is_call
+                    and abs(cand.strike - strike) < 1e-9):
+                q = cand
+                break
+        if q is None:
+            # Not listed at this instant. Rests rather than rejects: a surface
+            # that lists by moneyness drops strikes as the underlying moves, so
+            # an order on a strike that is briefly off the ladder is a wait,
+            # not a mistake.
+            return None
+
+        price, available = (
+            (q.ask, q.ask_size) if order.side is Side.BUY else (q.bid, q.bid_size)
+        )
+        if available <= 0 or price <= 0.0:
+            # A quote with no size behind it cannot be hit, and a zero bid is
+            # not a price you can sell at. Both rest. This is the same rule the
+            # arbitrage checkers already enforce when they refuse to report an
+            # edge whose exit side is empty: an arbitrage you cannot take is
+            # not one, and a fill you could not have got is worse.
+            return None
+        if order.order_type is OrderType.LIMIT and order.limit_price is not None:
+            if order.side is Side.BUY and price > order.limit_price:
+                return None
+            if order.side is Side.SELL and price < order.limit_price:
+                return None
+        return Fill(price=price, size=min(order.remaining, available))
+
     def _apply_fill(self, order: Order, fill: Fill, tick: Tick) -> FillEvent:
+        # **Which book.** Every position, average price and realised number
+        # below belongs to the asset this order was placed on, not to the run.
+        # For a single-asset run `_states[DEFAULT_ASSET] is self._state`, so
+        # this is the same object the properties reach and the digests do not
+        # move; for an options order it is a book of its own, opened here on
+        # first fill.
+        st = self._state_for(order.asset)
+
         # Revalidated here, not only at submit. `reduce_only` was checked when
         # the order was queued and never again, so two `ctx.close()` calls
         # against a long went +1 -> 0 -> -1 with both orders marked reduce-only:
@@ -1230,16 +1491,16 @@ class Engine:
         # opening order by the time it filled. Clamp to what is left, cancel the
         # remainder, and emit the clamp so it is visible rather than silent.
         if order.reduce_only:
-            room = abs(self.position) if (
-                self.position != 0
-                and (self.position > 0) != (order.side is Side.BUY)
+            room = abs(st.position) if (
+                st.position != 0
+                and (st.position > 0) != (order.side is Side.BUY)
             ) else 0
             if room <= 0:
                 self._cancel(order, LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq)
                 self._emit(
                     LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, order.order_id,
                     f"reduce_only {order.side} would open against a position of "
-                    f"{self.position} by the time it filled",
+                    f"{st.position} by the time it filled",
                 )
                 return None
             if fill.size > room:
@@ -1252,31 +1513,31 @@ class Engine:
 
         signed = fill.size * order.side.sign
         realized = 0.0
-        if self.position != 0 and (self.position > 0) != (signed > 0):
-            closing = min(abs(signed), abs(self.position))
-            realized = (fill.price - self._avg_price) * closing * (
-                1 if self.position > 0 else -1
+        if st.position != 0 and (st.position > 0) != (signed > 0):
+            closing = min(abs(signed), abs(st.position))
+            realized = (fill.price - st.avg_price) * closing * (
+                1 if st.position > 0 else -1
             )
-            remaining_after = self.position + signed
-            if (self.position > 0) == (remaining_after > 0) or remaining_after == 0:
+            remaining_after = st.position + signed
+            if (st.position > 0) == (remaining_after > 0) or remaining_after == 0:
                 pass  # average price unchanged while reducing or flattening
             else:
-                self._avg_price = fill.price  # flipped through zero
-            self.position = remaining_after
+                st.avg_price = fill.price  # flipped through zero
+            st.position = remaining_after
         else:
-            total = abs(self.position) + fill.size
-            self._avg_price = (
-                (self._avg_price * abs(self.position) + fill.price * fill.size) / total
+            total = abs(st.position) + fill.size
+            st.avg_price = (
+                (st.avg_price * abs(st.position) + fill.price * fill.size) / total
                 if total
                 else fill.price
             )
-            self.position += signed
+            st.position += signed
 
         commission = self.commission * fill.size
         # Accumulated here rather than summed from the blotter on demand, so the
         # context can read it without the blotter being reachable -- a mutable
         # list of rows is a place a strategy could write its own result.
-        self._state.realized_pnl += realized - commission
+        st.realized_pnl += realized - commission
         order.filled_size += fill.size
         if order.remaining == 0:
             order.status = OrderStatus.FILLED
@@ -1306,6 +1567,7 @@ class Engine:
                     else "taker"
                 ),
                 tag=self._order_tags.get(order.order_id, ""),
+                asset=order.asset,
             )
         )
         self.blotter.add(
@@ -1316,10 +1578,11 @@ class Engine:
                 side=order.side,
                 price=fill.price,
                 size=fill.size,
-                position_after=self.position,
+                position_after=st.position,
                 commission=commission,
                 realized_pnl=realized,
                 tag=self._order_tags.get(order.order_id, ""),
+                asset=order.asset,
             )
         )
 
@@ -1343,9 +1606,10 @@ class Engine:
             side=order.side,
             price=fill.price,
             size=fill.size,
-            position=self.position,
+            position=st.position,
             last_trade_price=tick.price,
             working_order_ids=self._working_ids(),
+            asset=order.asset,
         )
 
     def _arm_bracket(self, parent: Order, fill: Fill, tick: Tick) -> None:
@@ -1393,6 +1657,7 @@ class Engine:
                     stop_price=stop_px,
                     reduce_only=True,
                     tag=f"bracket-stop:{parent.order_id}",
+                    asset=parent.asset,
                 ),
                 tick,
                 oco_group=group,
@@ -1417,6 +1682,7 @@ class Engine:
                     limit_price=tgt_px,
                     reduce_only=True,
                     tag=f"bracket-target:{parent.order_id}",
+                    asset=parent.asset,
                 ),
                 tick,
                 oco_group=group,
@@ -1459,6 +1725,7 @@ class Engine:
             reduce_only=s.reduce_only,
             eligible_from_seq=tick.seq + 1,  # T+1, strictly after
             submitted_ts=tick.ts,
+            asset=s.asset,
         )
         self.orders[oid] = order
         self._working[oid] = order
@@ -1476,7 +1743,10 @@ class Engine:
         is worse than an absent one, because the strategy believes it took
         effect.
         """
-        pos = self.position
+        # The order's OWN book. `self.position` here would clamp an option
+        # order against the underlying's position -- a short SPX future would
+        # have made a reduce-only call purchase look like a legitimate close.
+        pos = self._state_for(s.asset).position
         if pos == 0:
             self._emit(
                 LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, oid,
@@ -1503,7 +1773,8 @@ class Engine:
     def _cancel(self, order: Order, kind: LifecycleKind, ts: Ts, seq: int) -> None:
         order.status = (
             OrderStatus.EXPIRED
-            if kind in (LifecycleKind.DAY_EXPIRED, LifecycleKind.GTD_EXPIRED)
+            if kind in (LifecycleKind.DAY_EXPIRED, LifecycleKind.GTD_EXPIRED,
+                        LifecycleKind.CONTRACT_EXPIRED)
             else OrderStatus.CANCELLED
         )
         self._working.pop(order.order_id, None)

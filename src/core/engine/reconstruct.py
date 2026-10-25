@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from ..types import Blotter, BlotterRow, FillRecord, Side
+from ..types import DEFAULT_ASSET, Blotter, BlotterRow, FillRecord, Side
 
 
 class FillLogFull(RuntimeError):
@@ -43,16 +43,32 @@ def reconstruct(
     Ordered by `seq`, because the log is the record of what happened and the
     order it happened in is part of that. Sorting here rather than trusting
     append order costs nothing and removes a way for the two to differ.
+
+    **One book per asset.** This kept a single `position` and `avg_price` for
+    every fill in the log, which was exactly right while a run could only hold
+    one instrument and silently wrong the moment it could hold two: a long
+    call's +1 would "close" against a long put's -1 and book a realised number
+    from the difference between two unrelated premiums. This function is what
+    the SCORER reads -- `Engine.reconstructed()` is the blotter the gate is
+    computed from, precisely so that no accumulated state can be trusted -- so
+    a multi-asset run would have been scored on fiction. Found by asserting
+    that the reconstruction agrees with the accumulator on a four-leg box.
+
+    `final_position` and `final_price` stay the DEFAULT asset's, because that
+    is what they have always meant and what every consumer of them assumes; a
+    run's per-asset finals are available from the rows. For a single-asset run
+    every number here is unchanged to the bit.
     """
     blotter = Blotter()
-    position = 0
-    avg_price = 0.0
-    last_price = 0.0
+    books: dict[str, list] = {}          # asset -> [position, avg_price]
+    last_price: dict[str, float] = {}
 
     for fill in sorted(fills, key=lambda f: (f.seq, f.order_id)):
+        book = books.setdefault(fill.asset, [0, 0.0])
+        position, avg_price = book
         signed = fill.size * fill.side.sign
         realized = 0.0
-        last_price = fill.price
+        last_price[fill.asset] = fill.price
 
         if position != 0 and (position > 0) != (signed > 0):
             closing = min(abs(signed), abs(position))
@@ -71,6 +87,7 @@ def reconstruct(
             )
             position += signed
 
+        book[0], book[1] = position, avg_price
         blotter.add(
             BlotterRow(
                 seq=fill.seq,
@@ -83,11 +100,12 @@ def reconstruct(
                 commission=commission_per_contract * fill.size,
                 realized_pnl=realized,
                 tag=fill.tag,
+                asset=fill.asset,
             )
         )
 
-    blotter.final_position = position
-    blotter.final_price = last_price
+    blotter.final_position = books.get(DEFAULT_ASSET, [0, 0.0])[0]
+    blotter.final_price = last_price.get(DEFAULT_ASSET, 0.0)
     return blotter
 
 

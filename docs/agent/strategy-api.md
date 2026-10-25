@@ -258,6 +258,7 @@ element of `ctx.fills` — has exactly these fields:
 | `position` | your signed position *after* this fill |
 | `last_trade_price` | the market's last trade price |
 | `working_order_ids` | ids of every order that can still do something |
+| `asset` | what filled. `"primary"` unless you traded something else |
 
 **There is no `tag` on a fill.** `tag` lives on the *order*, so `fill.tag` raises
 `AttributeError` and the trial is gone — measured on 2026-10-15, 2 of the first 4

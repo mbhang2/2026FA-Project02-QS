@@ -66,6 +66,8 @@ from .synthetic import SyntheticDataset, SyntheticSpec
 from ..types import DataCapabilities, Side, Tick
 from .options import (                        # noqa: F401  (re-exported)
     OptionQuote, Plant, butterfly_violations, vertical_violations,
+    parse_option_asset, is_option_asset,
+    option_asset as _option_asset, option_asset_of as _option_asset_of,
 )
 
 
@@ -177,8 +179,25 @@ class SPXHestonSurface:
                     "error budget. Use parity or butterfly, both of which live "
                     "inside a single maturity and are untouched by carry.")
         self.name = (f"spx-heston:plants={len(self.spec.plants)}:"
-                     f"{self.spec.digest()[:8]}")
+                     f"exp={'/'.join(str(e) for e in expiry_sessions(maturities))}:"
+                     f"{self.digest()[:8]}")
         self._dens: dict[int, tuple] = {}
+
+    def digest(self) -> str:
+        """The spec AND the maturities this surface actually lists.
+
+        `SPXSpec.digest` hashes the module-level calibration, which is right
+        for the conventions and wrong for identity: it is the same object no
+        matter which expiries a surface was built with, so a short-dated
+        surface and the calibrated one hashed IDENTICALLY. Two datasets that
+        cannot be told apart in the run record is the one failure a digest
+        exists to prevent, and here it would have been two datasets whose
+        options expire 46 and 1,056 sessions apart.
+        """
+        mats = "|".join(f"{m.label}:{m.forward:.4f}:{m.discount:.6f}"
+                        for m in self.maturities)
+        return hashlib.sha256(
+            f"{self.spec.digest()}|{mats}".encode()).hexdigest()[:16]
 
     # ---- the model -------------------------------------------------------- #
     @staticmethod
@@ -337,12 +356,12 @@ class SPXHestonSurface:
     def quotes_at(self, ts: int, session: int) -> list[OptionQuote]:
         """The whole surface: every strike, every maturity, both sides.
 
-        `expiry_session` carries the maturity INDEX rather than a session
-        count: these are real listed expiries from a calibration, and the three
-        of them are 0.18, 1.18 and 4.19 years out. Pretending they are session
-        offsets would invent a trading calendar the calibration never had.
+        `expiry_session` carries the expiry as a count of sessions from the
+        valuation date -- see `sessions_to_expiry`, which explains why this is
+        not the maturity index it used to be. Use `maturity_index` to go back.
         """
         sites = self._sites()
+        exp = expiry_sessions(self.maturities)
         out: list[OptionQuote] = []
         for i, m in enumerate(self.maturities):
             ks = self.strikes(i)
@@ -354,10 +373,25 @@ class SPXHestonSurface:
                     bn, an = self.sizes(mid, strike, m.forward, m.T)
                     if bid <= 0.0:
                         bn = 0   # a 0.00 bid is nobody bidding
-                    out.append(OptionQuote(ts=ts, session=session, expiry_session=i,
+                    out.append(OptionQuote(ts=ts, session=session,
+                                           expiry_session=exp[i],
                                            strike=float(strike), is_call=is_call,
                                            bid=bid, ask=ask, bid_size=bn, ask_size=an))
         return out
+
+    def maturity_index(self, expiry_session: int) -> int:
+        """The index into `maturities` of the expiry `expiry_session` names.
+
+        The inverse of what `quotes_at` writes. Callers that need the maturity
+        itself -- to re-price a quote, or to read its forward -- need this,
+        because the quote no longer carries a position in the list.
+        """
+        for i, e in enumerate(expiry_sessions(self.maturities)):
+            if e == expiry_session:
+                return i
+        raise KeyError(
+            f"no listed maturity expires at session {expiry_session}; "
+            f"this surface lists {expiry_sessions(self.maturities)}")
 
     # ---- the oracle ------------------------------------------------------- #
     def threshold(self, plant: Plant) -> dict:
@@ -499,6 +533,34 @@ QUOTES_PER_SESSION = 390
 SESSION_YEARS = 1.0/252.0
 
 
+def sessions_to_expiry(m: Maturity) -> int:
+    """`m`'s expiry as a count of sessions from the valuation date.
+
+    **This is what `OptionQuote.expiry_session` has to carry, and for a while
+    this surface carried the maturity's INDEX instead.** The field is the only
+    thing that identifies a contract through time, and an index is not stable:
+    the front month is index 0 today and index 0 again after it expires, so a
+    position in `SPX-0-C-7850` would have rolled into a different instrument
+    without a single order being placed. It also made settlement impossible to
+    express -- the engine settles an option when the closing session reaches
+    its expiry, and comparing a session against an index of 0, 1 or 2 would
+    have settled all three expiries in the first three sessions of every run.
+
+    The Gaussian surface in `options.py` always emitted `session + expiry`, an
+    absolute session, which is the convention the type's own docstring states.
+    One field with two meanings across two surfaces is the class of defect this
+    repo keeps finding, so the surfaces now agree.
+
+    `max(1, ...)` because an expiry rounding to zero sessions is one that has
+    already passed, and nothing can be traded on it.
+    """
+    return max(1, round(m.T/SESSION_YEARS))
+
+
+def expiry_sessions(maturities: tuple[Maturity, ...]) -> tuple[int, ...]:
+    return tuple(sessions_to_expiry(m) for m in maturities)
+
+
 class SPXHestonPath:
     """One simulated (S, v) path under the calibrated parameters.
 
@@ -609,8 +671,15 @@ class SPXMovingSurface(SPXHestonSurface):
 
     def quotes_for_state(self, ts: int, session: int, spot: float, var: float,
                          elapsed: float) -> list[OptionQuote]:
-        """The whole surface at one instant of the path."""
+        """The whole surface at one instant of the path.
+
+        An expiry that has passed is not listed at all -- `tau <= 0` is not a
+        wide quote, it is a contract that no longer exists. That is also what
+        lets a run continue past an expiry: the surface simply gets shorter,
+        and the engine settles the position at the close of the expiry session.
+        """
         out: list[OptionQuote] = []
+        exp = expiry_sessions(self.maturities)
         for i, m in enumerate(self.maturities):
             tau = m.T - elapsed
             if tau <= 1e-6:
@@ -638,7 +707,8 @@ class SPXMovingSurface(SPXHestonSurface):
                     bn, an = self.sizes(mid, strike, fwd, tau)
                     if bid <= 0.0:
                         bn = 0   # a 0.00 bid is nobody bidding
-                    out.append(OptionQuote(ts=ts, session=session, expiry_session=i,
+                    out.append(OptionQuote(ts=ts, session=session,
+                                           expiry_session=exp[i],
                                            strike=float(strike), is_call=is_call,
                                            bid=bid, ask=ask, bid_size=bn, ask_size=an))
         return out
@@ -678,7 +748,7 @@ class SPXHestonDataset(SyntheticDataset):
     """
 
     def __init__(self, spec=None, surface: SPXMovingSurface | None = None,
-                 path_seed: int = 0):
+                 path_seed: int = 0, allow_no_settlement: bool = False):
         from dataclasses import replace
         # 40 sessions is 0.1587 years against the front expiry's 0.1830, so
         # the run ends with roughly six sessions still to run on the nearest
@@ -689,18 +759,42 @@ class SPXHestonDataset(SyntheticDataset):
         base = spec or SyntheticSpec(n_sessions=40)
         base = replace(base, uniform=True, ticks_per_session=QUOTES_PER_SESSION)
         super().__init__(base)
+        # **Short-dated by default, and that is a correctness choice.** On
+        # the calibrated expiries nothing in a forty-session run ever reaches
+        # settlement, so an arbitrage in the surface is visible, executable and
+        # permanently unprofitable -- the gate would reject a detector that was
+        # working perfectly. `short_maturities()` prices the same calibrated
+        # parameters at expiries that fall inside the window. Pass `surface=`
+        # with `maturities=MATURITIES` to get the calibration's own expiries,
+        # which is the right choice for validating the fit and the wrong one
+        # for running a campaign.
         self.surface = surface or SPXMovingSurface(
-            SPXSpec(cos_terms=256, grid_points=601))
+            SPXSpec(cos_terms=256, grid_points=601),
+            maturities=short_maturities())
         self.path = SPXHestonPath(n_sessions=base.n_sessions, seed=path_seed,
                                   quotes_per_session=QUOTES_PER_SESSION)
-        horizon = base.n_sessions*SESSION_YEARS
-        shortest = min(m.T for m in self.surface.maturities)
-        if horizon >= shortest:
+        # **This guard used to say the opposite, and was wrong.** It refused
+        # any run that REACHED the front expiry, on the reasoning that there is
+        # no mechanism for rolling into new contracts. True, and harmless: an
+        # expiry that passes simply stops being listed (`quotes_for_state`),
+        # and the engine settles the position at that session's close. What is
+        # not harmless is a run where nothing expires, because settlement is
+        # the only way a locked-in edge is ever paid -- so the condition is
+        # inverted. Reaching an expiry is the requirement, not the hazard.
+        exp = expiry_sessions(self.surface.maturities)
+        self.settling_expiries = tuple(e for e in exp if e < base.n_sessions)
+        if not self.settling_expiries and not allow_no_settlement:
             raise ValueError(
-                f"{base.n_sessions} sessions is {horizon:.4f} years, which "
-                f"reaches the {shortest:.4f}-year expiry. The calibration has "
-                f"three listed expiries and no mechanism for rolling into new "
-                f"ones, so a run must end before the front one does.")
+                f"none of this surface's expiries falls inside a "
+                f"{base.n_sessions}-session run: they are at sessions "
+                f"{exp}. Nothing would ever settle, so a package bought at a "
+                f"mispricing could only be closed at the same quotes it was "
+                f"opened at -- the edge would be visible, executable and "
+                f"permanently unprofitable, and the gate would read a working "
+                f"detector as a failure. Use `short_maturities()`, which "
+                f"prices the same calibrated parameters at expiries inside the "
+                f"window, or pass allow_no_settlement=True if the run is for "
+                f"detection only and no position is meant to be held.")
         self.name = f"spx-heston:{self.surface.name}:path={path_seed}"
         self._ts_index: dict[int, int] = {}
         self._ts_sorted: list[int] | None = None
@@ -749,7 +843,7 @@ class SPXHestonDataset(SyntheticDataset):
         """Covers the path AND the surface: otherwise a run with a plant would
         be indistinguishable in the record from a clean one."""
         return hashlib.sha256(
-            f"{super().digest()}|{self.surface.spec.digest()}|"
+            f"{super().digest()}|{self.surface.digest()}|"
             f"{self.path.seed}".encode()).hexdigest()[:16]
 
 
@@ -806,3 +900,72 @@ class _SPXFeed:
             self._cache.clear()
         self._cache[idx] = out
         return out
+
+
+# --------------------------------------------------------------------------- #
+# Option assets, and expiries that fall inside a run.
+# --------------------------------------------------------------------------- #
+# **A permanent mispricing cannot be monetised by closing**, and that decides
+# the shape of everything below. Buy the cheap call and sell it back at the same
+# quote and you have paid the spread twice for nothing. A conversion is a
+# synthetic bond: its locked-in edge appears at SETTLEMENT, not on a round trip.
+#
+# The calibrated expiries are 0.183, 1.18 and 4.19 years out, and a run of forty
+# sessions is 0.159 -- so none of them ever expires and no profit could ever be
+# realised. Filling options without reaching an expiry would produce an
+# arbitrage that is visible, executable and permanently unprofitable, which
+# would read as the loop failing rather than as the harness being unable to pay.
+#
+# So the surface also lists SHORT-dated expiries, generated from the same
+# calibrated parameters. That is sound rather than convenient: Heston's
+# parameters are maturity-independent by construction -- that is what makes it
+# a stochastic-volatility model rather than a curve fit -- so the model prices
+# any maturity. `r` and `q` come from the nearest calibrated point.
+#
+# Measured on the four listed below, 2,456 quotes:
+#
+#     sessions   T        ATM iv    95/105 skew    |phi(-i) - 1|
+#      5         0.0198   14.25%      +7.63            0.0
+#     10         0.0397   14.00%      +7.51            0.0
+#     21         0.0833   13.68%      +7.18            0.0
+#     35         0.1389   13.57%      +6.67            0.0
+#
+# ATM vol rises towards sqrt(v0) = 14.53% as maturity shortens, which is what
+# the model says must happen; the skew flattens with maturity, likewise. The
+# martingale condition phi(-i) = 1 holds exactly at every one. Parity (with
+# discounting -- see `_parity_for`), vertical and butterfly all report ZERO
+# violations. Calendar is not checked, and `violations()` explains why.
+#
+# **Four rather than three, and 35 rather than 46.** The run is forty sessions,
+# so a ladder ending at 21 leaves nineteen sessions with no listed option at
+# all -- half the run spent on a surface that has gone empty. Ending at 35
+# keeps options quoted for seven-eighths of it while still settling inside the
+# window, which is the whole point of the exercise.
+# --------------------------------------------------------------------------- #
+SHORT_SESSIONS = (5, 10, 21, 35)
+
+
+def short_maturities(sessions: tuple[int, ...] = SHORT_SESSIONS,
+                     anchor: Maturity | None = None) -> tuple[Maturity, ...]:
+    """Expiries `sessions` sessions out, from the calibrated parameters."""
+    a = anchor or MATURITIES[0]
+    out = []
+    for n in sessions:
+        T = n/252.0
+        out.append(Maturity(f"+{n}s", SPOT*math.exp((a.r - a.q)*T),
+                            math.exp(-a.r*T), a.r, a.q))
+    return tuple(out)
+
+
+SPX_UNDERLYING = "SPX"
+
+
+def option_asset(expiry_session: int, strike: float, is_call: bool) -> str:
+    """This surface's options, named for the engine. See
+    `options.option_asset` -- this binds the underlying, nothing more."""
+    return _option_asset(SPX_UNDERLYING, expiry_session, strike, is_call)
+
+
+def option_asset_of(q) -> str:
+    """The name of the option `q` quotes, on this surface."""
+    return _option_asset_of(SPX_UNDERLYING, q)

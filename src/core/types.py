@@ -84,6 +84,11 @@ class LifecycleKind(enum.StrEnum):
     OCO_CANCELLED = "oco_cancelled"
     SESSION_OPEN = "session_open"
     SESSION_CLOSE = "session_close"
+    # An option reached its expiry: the position was settled into cash and any
+    # working order on it died with the contract. Its own kind rather than
+    # `gtd_expired`, which would claim the ORDER expired -- a GTC order on an
+    # expiring call is still perfectly alive, it is the instrument that ended.
+    CONTRACT_EXPIRED = "contract_expired"
 
 
 # --------------------------------------------------------------------------- #
@@ -335,6 +340,16 @@ class FillEvent:
     position: int
     last_trade_price: float
     working_order_ids: tuple[int, ...]
+    # **Appended last.** Which asset filled -- without it `on_fill` cannot tell
+    # a leg of a package from the underlying, and `position` below would be a
+    # number with no stated book. The remote protocol encodes this type by
+    # `dataclasses.fields()` order and decodes by zipping the same order, so
+    # appending is wire-compatible and inserting would shift every value by one.
+    #
+    # `position` is the position in THIS asset, which is why the fill context
+    # resolves `ctx.position` against it: two things called "position" in one
+    # callback must not disagree.
+    asset: str = DEFAULT_ASSET
 
 
 @dataclass(frozen=True, slots=True)
@@ -403,6 +418,16 @@ class Order:
     filled_size: int = 0
     submitted_ts: Ts = 0
     stop_armed: bool = False   # stop-limit: becomes a limit once the stop trades
+    # **Appended last**, defaulting to the one book a single-asset run has.
+    # `Order` is mutable and built with keywords, so position would not bite
+    # here the way it did on `Tick` -- but the rule is the rule, and the cost of
+    # keeping it is one comment.
+    #
+    # This is what routes a fill: `_resolve` asks `parse_option_asset` of this
+    # value to decide whether the order resolves against the tick or against an
+    # option's quoted touch, and `_apply_fill` asks `_state_for` of it to decide
+    # which book the position lands in.
+    asset: str = DEFAULT_ASSET
 
     @property
     def remaining(self) -> int:

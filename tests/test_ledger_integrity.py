@@ -55,10 +55,76 @@ def test_every_committed_row_names_a_commit_that_is_still_in_history():
 
 
 def test_the_committed_ledger_has_no_unverifiable_rows():
+    """Every row names a commit that is in history and whose fingerprint matches.
+
+    **The `UNREPRODUCIBLE` assertion that used to sit here was dead, and is
+    gone.** `run_check` does not pass `--replay`, so `reproduces` stays None,
+    every row verdicts as `checkable`, and the string could never appear --
+    measured on 2026-10-25: zero occurrences without the flag, whatever the
+    ledger contains. It read as a reproduction guard and guarded nothing, which
+    is the same shape as the `setdefault` endpoint bug and the boundary sweep
+    that "walked only public names and so never saw it".
+
+    Reproduction is checked by the two tests below instead, and what it means
+    is narrower than the dead assertion implied -- see them for why.
+    """
     r = run_check(str(LEDGER))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "UNVERIFIABLE" not in r.stdout
-    assert "UNREPRODUCIBLE" not in r.stdout
+
+
+def test_the_unreproducible_verdict_exists_and_needs_a_replay_to_reach():
+    """The guard can fire. Proving that is the point.
+
+    A check that cannot report a failure is worse than no check, because it
+    reports clean. This pins both halves: `verdict` DOES return UNREPRODUCIBLE
+    when a replay disagrees, and it CANNOT without one.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "ledger_check_mod", REPO_ROOT / "scripts" / "ledger_check.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    base = {"git_sha": "0" * 40, "sha_in_history": True,
+            "code_fingerprint_matches": True,
+            "environment_drifted": False, "notes": []}
+    assert mod.verdict({**base, "reproduces": False}) == "UNREPRODUCIBLE"
+    assert mod.verdict({**base, "reproduces": True}) == "reproduces"
+    # without --replay the field is never set away from None, which is exactly
+    # why the old assertion could not fire
+    assert mod.verdict({**base, "reproduces": None}) == "checkable"
+
+
+def test_rows_recorded_at_head_reproduce():
+    """**Reproduction here is contemporaneous, not cross-version.**
+
+    A replay runs CURRENT code against a row recorded under the code of its own
+    commit, so a row from an older sha may legitimately differ once the engine
+    changes -- 4 of the 9 replayable rows in `runs/ledger.jsonl` do, the oldest
+    from 2026-09-20 and the newest from 2026-10-20, none of them at HEAD. That
+    is not rot: the checker has an `unpinned` verdict for exactly it, and a
+    campaign verifies its own reproduction at its own sha (Task 37 reported
+    97/97 exact that way).
+
+    What must hold is the narrower thing: a row written under the code that is
+    checked out now has to reproduce now. This skips when there are none rather
+    than passing silently, so it becomes live the moment a run is recorded at
+    HEAD -- which is also what makes it a usable acceptance signal for a
+    refactor.
+    """
+    import json
+    import subprocess
+
+    head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
+                          text=True, cwd=REPO_ROOT).stdout.strip()
+    rows = [json.loads(line) for line in LEDGER.read_text().splitlines() if line.strip()]
+    at_head = [i for i, r in enumerate(rows) if r.get("git_sha") == head]
+    if not at_head:
+        pytest.skip(f"no row in {LEDGER.name} was recorded at HEAD ({head[:12]})")
+    r = run_check(str(LEDGER), "--replay")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "UNREPRODUCIBLE" not in r.stdout, r.stdout
 
 
 def test_n_is_a_filter_that_supersession_narrows_and_deletion_never_does(tmp_path):

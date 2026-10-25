@@ -1,0 +1,90 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Everything the strategy reads (quotes, sizes, strikes, expiry_session, ctx.session, held assets, working orders) is current-state data available at the decision bar; there is no self-carried state derived from later data, no reference to scoring/split/seed/calendar, and no use of session range or session close mid-session.",
+      "error": null
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The gate is the authoritative corrected test and it REJECTED (p=0.099 > q=0.05, well above the 1e-4 floor); the metric is not degenerate (sortino over 105 sessions with 39 downside sessions and 151 trades), and the sharp divergence of the uncorrected/BH/Holm (49 discoveries) and deflation (clears_selection_bar) views is explicitly explained as a miscalibrated per-trial FAR column and a moments-only margin rather than a rate \u2014 but I could not see per-session returns to rule out that the high skew (2.96) and kurtosis (7.95) hide concentration in a few sessions, could not interpret the unlabeled 'significance: 58.86' field that sits oddly beside the gate's p=0.099, and cannot see how many prior campaigns preceded this one.",
+      "error": null
+    },
+    {
+      "axis": "economics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The evidence does not include a clean-surface baseline comparison for this strategy, so I could not independently confirm that the 151 trades reflect planted violations rather than a self-inflicted spread artifact (the strategy's commission-adjusted touched-size accounting looks correct, which is the main protection against that failure mode); the validation split was also not run, which is off my axis but is visible in the record.",
+      "error": null
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "breadth_by_hour_utc is narrow: only 6 of 21 hours are positive (28.6%) while 15 hours are negative, and the minority of positive hours carries the entire result \u2014 the four dominant hours (01, 07, 13, 19) contribute ~4429 gross versus a net total of ~4414, meaning the majority of trading hours collectively subtract profit.",
+        "The four dominant profitable hours (01, 07, 13, 19) are spaced exactly 6 hours apart, with secondary earners at 10 and 16 (also 6 hours apart), a suspiciously regular pattern with no stated rationale given for why these specific hours would persist \u2014 this matches the 'fitted to sample' veto criterion alongside the narrow hourly breadth."
+      ],
+      "confidence_note": "Cannot see the strategy's rules or any rationale linking the 4 dominant hours to persistent market regimes; the seasonality_caveat notes per-cell counts are tiny (151 trades over 21 hours \u2248 7 avg), so I cannot distinguish genuine narrowing from noise, but by the letter of the 'few periods carry the result' criterion the hourly distribution is a veto.",
+      "error": null
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 3906,
+      "completion_tokens": 502,
+      "reasoning_tokens": 411,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 7558,
+      "completion_tokens": 8729,
+      "reasoning_tokens": 8502,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 2179,
+      "completion_tokens": 9588,
+      "reasoning_tokens": 9310,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 6335,
+      "completion_tokens": 9057,
+      "reasoning_tokens": 8947,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "proposer_model": "deepseek-v4-pro",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  }
+}

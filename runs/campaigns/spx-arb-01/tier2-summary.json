@@ -1,0 +1,1154 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 36,
+    "diagnostics": {
+      "avg_holding_period_ns": 464256754966887.44,
+      "best_session_share": 0.12542994253702144,
+      "by_hour_utc": {
+        "00": -46.0,
+        "01": 1045.1999999999994,
+        "02": -23.6,
+        "03": -12.0,
+        "05": -14.0,
+        "06": -33.2,
+        "07": 716.2999999999993,
+        "08": -23.6,
+        "09": -24.0,
+        "10": 204.0,
+        "11": -24.0,
+        "12": -32.800000000000004,
+        "13": 1422.699999999999,
+        "14": -46.8,
+        "16": 198.0,
+        "17": -22.8,
+        "18": -45.60000000000001,
+        "19": 1245.0999999999995,
+        "20": -33.6,
+        "22": -11.600000000000001,
+        "23": -23.200000000000003
+      },
+      "by_month": {
+        "2023-11": 795.8999999999996,
+        "2023-12": 625.4000000000019,
+        "2024-01": 2028.6999999999998,
+        "2024-02": 964.5
+      },
+      "by_weekday": {
+        "Fri": -12.0,
+        "Mon": 964.8999999999985,
+        "Sat": 402.0,
+        "Sun": 1770.0,
+        "Thu": -96.4,
+        "Tue": 1143.1999999999998,
+        "Wed": 242.79999999999995
+      },
+      "commission": 869.6,
+      "fill_model_spread": null,
+      "gross_pnl": 5284.099999999998,
+      "max_drawdown": -49.355384615384764,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 273.0922,
+        "exposure_share": 0.5143,
+        "return_dispersion": 0.4881,
+        "trades_per_session": 0.0331
+      },
+      "profit_concentration_top5pct": 0.5391839845117706,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "sessions_with_exposure": 54,
+      "trade_count": 151,
+      "turnover_contracts_per_session": 82.81904761904762,
+      "win_rate": 0.5629139072847682
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 39,
+      "kurtosis": 7.948340652123605,
+      "metric": "sortino_per_session",
+      "min_exposed_fraction": 0.7,
+      "n_sessions": 105,
+      "net_pnl": 4414.499999999997,
+      "primary": 5.744467166042527,
+      "primary_uncharged": 6.038152693341925,
+      "reject_reason": "",
+      "rejected": false,
+      "sessions_exposed": 105,
+      "sharpe": 0.3118076980233345,
+      "significance": 58.86327222710923,
+      "skew": 2.9566709882361364,
+      "sortino": 5.744467166042527,
+      "trade_count": 151
+    },
+    "source": "\"\"\"Trial #36: keep #33's candidate universe, inventory limits and unit-first\nranking, but double the box package size cap from 20 to 40.\n\n#33 reached +5.6185 by ranking the existing package candidates by per-contract\npost-commission edge first, with #31's inventory limits: box cap 20, max_assets\n12, one package per session.\n\n#32 tried larger capacity (box cap 40, max_assets 16) while keeping the old\n`(total_profit, unit_profit, -duration)` ranking and dropped to +1.1936.  That\nis not evidence against larger size per se; under total-first ranking, the\nadditional capacity was used to take larger but lower-quality packages.  #33\nfixed the ranking, but left the box cap at 20.\n\nThis iteration does the clean experiment: keep #33 exactly and change only\n`max_box_package_size` from 20 to 40.  `max_assets` stays 12, so the number of\ndistinct packages that can be carried is unchanged.  The only effect is that,\nwhen the chosen highest-unit-edge box has quoted touch size above 20, the\nstrategy sizes into more of it instead of leaving the additional depth unused.\n\nA long box has a deterministic terminal payoff of K2 - K1.  Its unit edge after\nthe four legs' entry and settlement commissions is computed from the touched\nbid/ask sizes, so taking more contracts when the touch supports it is the same\nper-contract trade scaled up, not a marginal lower-quality trade.\n\"\"\"\nfrom __future__ import annotations\n\nimport math\nfrom typing import Any, Dict, List, Optional, Tuple\n\n\nclass Strategy:\n    def __init__(\n        self,\n        *,\n        interval: str = \"5m\",\n        min_edge: float = 0.5,\n        max_wing_step: int = 6,\n        max_box_step: int = 200,\n        max_expiries: int = 10,\n        max_wing_package_size: int = 5,\n        max_box_package_size: int = 40,\n        min_box_unit_edge: float = 0.05,\n        max_assets: int = 12,\n        max_packages_per_session: int = 1,\n        max_orders_per_session: int = 12,\n    ):\n        self.interval = interval\n        self.min_edge = min_edge\n        self.max_wing_step = max_wing_step\n        self.max_box_step = max_box_step\n        self.max_expiries = max_expiries\n        self.max_wing_package_size = max_wing_package_size\n        self.max_box_package_size = max_box_package_size\n        self.min_box_unit_edge = min_box_unit_edge\n        self.max_assets = max_assets\n        self.max_packages_per_session = max_packages_per_session\n        self.max_orders_per_session = max_orders_per_session\n\n        self._tag = \"box-arb-unit-ranked-largecap-v1\"\n        self._vert_comm_per_unit = 0.4   # 2 legs * (entry + settlement) * 0.1\n        self._bfly_comm_per_unit = 0.8   # 4 contracts * 2 fills * 0.1\n        self._box_comm_per_unit = 0.8    # 4 legs * 2 fills * 0.1\n\n        self._session: Optional[int] = None\n        self._entries_this_session = 0\n\n    def setup(self, ctx) -> None:\n        ctx.subscribe(self.interval)\n\n    def _asset_name(self, q) -> str:\n        s = q.strike\n        if abs(s - round(s)) < 1e-9:\n            s_text = str(int(round(s)))\n        else:\n            s_text = f\"{s:.10g}\"\n        side = \"C\" if q.is_call else \"P\"\n        return f\"SPX-{int(q.expiry_session)}-{side}-{s_text}\"\n\n    def on_bars(self, ctx) -> None:\n        if self.interval not in ctx.bars:\n            return\n        if not ctx.actionable:\n            return\n\n        if self._session != ctx.session:\n            self._session = ctx.session\n            self._entries_this_session = 0\n\n        if self._entries_this_session >= self.max_packages_per_session:\n            return\n        if ctx.working_order_ids:\n            return\n\n        held_assets = set(ctx.assets_held())\n        if len(held_assets) >= self.max_assets:\n            return\n\n        quotes = ctx.options()\n        if not quotes:\n            return\n\n        active_expiries = sorted(\n            {int(q.expiry_session) for q in quotes if int(q.expiry_session) > ctx.session}\n        )\n        if not active_expiries:\n            return\n\n        allowed_expiries = active_expiries[: self.max_expiries]\n        allowed_set = set(allowed_expiries)\n\n        call_lists: Dict[int, List[Any]] = {}\n        put_lists: Dict[int, List[Any]] = {}\n        call_by_exp_strike: Dict[int, Dict[int, Any]] = {}\n        put_by_exp_strike: Dict[int, Dict[int, Any]] = {}\n\n        for q in quotes:\n            exp = int(q.expiry_session)\n            if exp <= ctx.session or exp not in allowed_set:\n                continue\n            if q.bid <= 0.0 or q.ask <= 0.0:\n                continue\n\n            if q.is_call:\n                call_lists.setdefault(exp, []).append(q)\n                call_by_exp_strike.setdefault(exp, {})[q.strike] = q\n            else:\n                put_lists.setdefault(exp, []).append(q)\n                put_by_exp_strike.setdefault(exp, {})[q.strike] = q\n\n        best_key: Optional[Tuple[float, float, int]] = None\n        best_legs: Optional[Tuple[Tuple[str, str, int], ...]] = None\n\n        def consider(\n            unit_profit: float,\n            units: int,\n            exp: int,\n            base_legs: Tuple[Tuple[str, str, int], ...],\n        ) -> None:\n            nonlocal best_key, best_legs\n            if unit_profit <= 0.0 or units < 1:\n                return\n\n            total_profit = unit_profit * units\n            if total_profit <= self.min_edge:\n                return\n\n            new_assets = {asset for _, asset, _ in base_legs}\n            if any(asset in held_assets for asset in new_assets):\n                return\n            if len(held_assets) + len(new_assets) > self.max_assets:\n                return\n\n            duration = max(1, exp - ctx.session)\n            # #33's key, deliberately restored after #34/#35 showed other\n            # variants degrade.  Per-contract post-commission edge is primary.\n            key = (unit_profit, total_profit, -duration)\n            if best_key is None or key > best_key:\n                best_key = key\n                best_legs = tuple(\n                    (side, asset, int(size * units))\n                    for side, asset, size in base_legs\n                )\n\n        # ----- Carry-free vertical spreads and equal-spaced long butterflies -----\n        for bucket_set in (call_lists, put_lists):\n            for exp in allowed_expiries:\n                arr = bucket_set.get(exp)\n                if not arr:\n                    continue\n\n                arr.sort(key=lambda x: x.strike)\n                n = len(arr)\n                if n < 2:\n                    continue\n\n                max_step = min(self.max_wing_step, n - 1)\n\n                for step in range(1, max_step + 1):\n                    for i in range(0, n - step):\n                        j = i + step\n                        low = arr[i]\n                        high = arr[j]\n                        width = high.strike - low.strike\n                        if width <= 0.0:\n                            continue\n\n                        if low.is_call:\n                            long_buy, long_sell = low, high\n                            short_sell, short_buy = low, high\n                        else:\n                            long_buy, long_sell = high, low\n                            short_sell, short_buy = high, low\n\n                        # Long vertical: negative cost locks a non-negative\n                        # terminal payoff.\n                        avail_lv = int(min(long_buy.ask_size, long_sell.bid_size))\n                        units_lv = min(avail_lv, self.max_wing_package_size)\n                        if units_lv >= 1:\n                            cost = long_buy.ask - long_sell.bid\n                            unit_profit = -cost - self._vert_comm_per_unit\n                            lv_assets = (\n                                self._asset_name(long_buy),\n                                self._asset_name(long_sell),\n                            )\n                            lv_base = (\n                                (\"buy\", lv_assets[0], 1),\n                                (\"sell\", lv_assets[1], 1),\n                            )\n                            consider(unit_profit, units_lv, exp, lv_base)\n\n                        # Short vertical: receive more than the maximum future\n                        # loss of the spread.\n                        avail_sv = int(min(short_sell.bid_size, short_buy.ask_size))\n                        units_sv = min(avail_sv, self.max_wing_package_size)\n                        if units_sv >= 1:\n                            credit = short_sell.bid - short_buy.ask\n                            unit_profit = credit - width - self._vert_comm_per_unit\n                            sv_assets = (\n                                self._asset_name(short_sell),\n                                self._asset_name(short_buy),\n                            )\n                            sv_base = (\n                                (\"sell\", sv_assets[0], 1),\n                                (\"buy\", sv_assets[1], 1),\n                            )\n                            consider(unit_profit, units_sv, exp, sv_base)\n\n                    # Equal-spaced long butterfly: buy the wings, sell the body.\n                    # A negative cost locks a non-negative terminal payoff.\n                    for j in range(step, n - step):\n                        q1 = arr[j - step]\n                        q2 = arr[j]\n                        q3 = arr[j + step]\n                        d1 = q2.strike - q1.strike\n                        d2 = q3.strike - q2.strike\n                        if d1 <= 0.0 or d2 <= 0.0:\n                            continue\n                        if not math.isclose(d1, d2, rel_tol=1e-6, abs_tol=1e-9):\n                            continue\n\n                        avail_bf = int(min(q1.ask_size, q3.ask_size, q2.bid_size // 2))\n                        units_bf = min(avail_bf, self.max_wing_package_size)\n                        if units_bf < 1:\n                            continue\n\n                        credit = 2.0 * q2.bid - q1.ask - q3.ask\n                        unit_profit = credit - self._bfly_comm_per_unit\n                        bf_assets = (\n                            self._asset_name(q1),\n                            self._asset_name(q2),\n                            self._asset_name(q3),\n                        )\n                        bf_base = (\n                            (\"buy\", bf_assets[0], 1),\n                            (\"sell\", bf_assets[1], 2),\n                            (\"buy\", bf_assets[2], 1),\n                        )\n                        consider(unit_profit, units_bf, exp, bf_base)\n\n        # ----- Box spreads: terminal-payoff long boxes and extreme short boxes -----\n        for exp in allowed_expiries:\n            c_dict = call_by_exp_strike.get(exp)\n            p_dict = put_by_exp_strike.get(exp)\n            if not c_dict or not p_dict:\n                continue\n\n            strikes = sorted(set(c_dict.keys()) & set(p_dict.keys()))\n            if len(strikes) < 2:\n                continue\n\n            max_step = min(self.max_box_step, len(strikes) - 1)\n\n            for step in range(1, max_step + 1):\n                for i in range(0, len(strikes) - step):\n                    k1 = strikes[i]\n                    k2 = strikes[i + step]\n                    width = k2 - k1\n                    if width <= 0.0:\n                        continue\n\n                    c1 = c_dict[k1]\n                    c2 = c_dict[k2]\n                    p1 = p_dict[k1]\n                    p2 = p_dict[k2]\n\n                    # Long box: terminal payoff is exactly width.\n                    avail_lb = int(\n                        min(c1.ask_size, p1.bid_size, c2.bid_size, p2.ask_size)\n                    )\n                    units_lb = min(avail_lb, self.max_box_package_size)\n                    if units_lb >= 1:\n                        debit = c1.ask - p1.bid - c2.bid + p2.ask\n                        unit_profit = width - debit - self._box_comm_per_unit\n                        if unit_profit < self.min_box_unit_edge:\n                            continue\n                        lb_assets = (\n                            self._asset_name(c1),\n                            self._asset_name(p1),\n                            self._asset_name(c2),\n                            self._asset_name(p2),\n                        )\n                        lb_base = (\n                            (\"buy\", lb_assets[0], 1),\n                            (\"sell\", lb_assets[1], 1),\n                            (\"sell\", lb_assets[2], 1),\n                            (\"buy\", lb_assets[3], 1),\n                        )\n                        consider(unit_profit, units_lb, exp, lb_base)\n\n                    # Short box: credit above width fully pays the maximum\n                    # future loss.\n                    avail_sb = int(\n                        min(c1.bid_size, p1.ask_size, c2.ask_size, p2.bid_size)\n                    )\n                    units_sb = min(avail_sb, self.max_box_package_size)\n                    if units_sb >= 1:\n                        credit = c1.bid - p1.ask - c2.ask + p2.bid\n                        unit_profit = credit - width - self._box_comm_per_unit\n                        if unit_profit < self.min_box_unit_edge:\n                            continue\n                        sb_assets = (\n                            self._asset_name(c1),\n                            self._asset_name(p1),\n                            self._asset_name(c2),\n                            self._asset_name(p2),\n                        )\n                        sb_base = (\n                            (\"sell\", sb_assets[0], 1),\n                            (\"buy\", sb_assets[1], 1),\n                            (\"buy\", sb_assets[2], 1),\n                            (\"sell\", sb_assets[3], 1),\n                        )\n                        consider(unit_profit, units_sb, exp, sb_base)\n\n        if best_legs is None:\n            return\n        if len(best_legs) > self.max_orders_per_session:\n            return\n\n        for side, asset, size in best_legs:\n            if side == \"buy\":\n                oid = ctx.buy(size=size, asset=asset, tag=self._tag)\n            else:\n                oid = ctx.sell(size=size, asset=asset, tag=self._tag)\n            if oid is None:\n                return\n\n        self._entries_this_session += 1\n\n    def on_fill(self, ctx) -> None:\n        pass\n\n    def on_lifecycle(self, ctx) -> None:\n        pass\n",
+    "source_sha256": "4f2c0614afb268d5befc7f8a180fae4b2926467eb75ccec34986f40eed2896fa",
+    "strategy_digest": "4f2c0614afb268d5"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.1,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+        "path": "config/hypotheses/options-no-arbitrage-violation.md"
+      },
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 64000,
+      "model": "deepseek-v4-pro",
+      "model_served_at_registration": "deepseek-v4-pro",
+      "null_source": "round_turn_mc",
+      "probe_before_trial": false,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: a simulated SPX index path with a QUOTED OPTIONS SURFACE over it. The index itself is tradeable as the default instrument and the options are tradeable by name -- see section 5a of the API document, which is the part of it you will need and the part no previous campaign here has used, 105 scored sessions on the pre-registered train split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side, charged on every fill INCLUDING settlement at expiry. A four-legged options package therefore pays it eight times, about 0.80 points all in. P&L is in index points throughout, with no contract multiplier, so the legs of one package and the index itself are directly comparable.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "spx-arb-01",
+    "budget": 50,
+    "campaign_id": "spx-arb-01",
+    "dataset": "spx-options-planted",
+    "profile": "spx-options-train",
+    "q": 0.05,
+    "record_digest": "6b41064be2da9f825284f5d40cd8eab9a4f9d98c26147e129c77f4da1260ce18",
+    "record_digest_now": "6b41064be2da9f825284f5d40cd8eab9a4f9d98c26147e129c77f4da1260ce18",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-10-25T19:34:07+00:00"
+  },
+  "deflation_view": {
+    "best_score": 5.744467166042527,
+    "clears_selection_bar": true,
+    "expected_max_under_null": 0.25892192529185654,
+    "margin": 5.48554524075067,
+    "n_sessions": 105,
+    "n_trials": 50,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.0005,
+      "best_label": "None:1070425f",
+      "bh_discoveries": 49,
+      "decisions": [
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.001,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.001,
+          "index": 13,
+          "label": "None:1070425f",
+          "rank": 1
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.002,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0010204081632653062,
+          "index": 21,
+          "label": "None:8fb72044",
+          "rank": 2
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.003,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0010416666666666667,
+          "index": 23,
+          "label": "None:5d285763",
+          "rank": 3
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.004,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0010638297872340426,
+          "index": 24,
+          "label": "None:c23e5b74",
+          "rank": 4
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.005000000000000001,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0010869565217391304,
+          "index": 25,
+          "label": "None:d025d5fe",
+          "rank": 5
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.006,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0011111111111111111,
+          "index": 26,
+          "label": "None:89b609b0",
+          "rank": 6
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.007000000000000001,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0011363636363636365,
+          "index": 27,
+          "label": "None:53532244",
+          "rank": 7
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.008,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0011627906976744186,
+          "index": 28,
+          "label": "None:fe987b3a",
+          "rank": 8
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.009,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0011904761904761906,
+          "index": 29,
+          "label": "None:6be41957",
+          "rank": 9
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.010000000000000002,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0012195121951219512,
+          "index": 30,
+          "label": "None:ef306796",
+          "rank": 10
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.011000000000000001,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.00125,
+          "index": 31,
+          "label": "None:dff6d738",
+          "rank": 11
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.012,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.001282051282051282,
+          "index": 32,
+          "label": "None:584199be",
+          "rank": 12
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.013000000000000001,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0013157894736842105,
+          "index": 33,
+          "label": "None:89594f8d",
+          "rank": 13
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.014000000000000002,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0013513513513513514,
+          "index": 34,
+          "label": "None:546440d4",
+          "rank": 14
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.015,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.001388888888888889,
+          "index": 35,
+          "label": "None:b968707c",
+          "rank": 15
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.016,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0014285714285714286,
+          "index": 36,
+          "label": "None:4f2c0614",
+          "rank": 16
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.017,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0014705882352941176,
+          "index": 37,
+          "label": "None:22bbd756",
+          "rank": 17
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.018,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0015151515151515152,
+          "index": 38,
+          "label": "None:79056b28",
+          "rank": 18
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.019000000000000003,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0015625,
+          "index": 39,
+          "label": "None:978a610f",
+          "rank": 19
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.020000000000000004,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0016129032258064516,
+          "index": 40,
+          "label": "None:4aa58bb1",
+          "rank": 20
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.021,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0016666666666666668,
+          "index": 41,
+          "label": "None:c344446a",
+          "rank": 21
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.022000000000000002,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.001724137931034483,
+          "index": 42,
+          "label": "None:3b371c8c",
+          "rank": 22
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.023000000000000003,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0017857142857142859,
+          "index": 43,
+          "label": "None:d08e80d2",
+          "rank": 23
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.024,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.001851851851851852,
+          "index": 44,
+          "label": "None:5504cd99",
+          "rank": 24
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.025,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0019230769230769232,
+          "index": 45,
+          "label": "None:dd976f16",
+          "rank": 25
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.026000000000000002,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.002,
+          "index": 46,
+          "label": "None:48982e1e",
+          "rank": 26
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.027000000000000003,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.0020833333333333333,
+          "index": 47,
+          "label": "None:616c33f7",
+          "rank": 27
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.028000000000000004,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.002173913043478261,
+          "index": 48,
+          "label": "None:afe9f9d7",
+          "rank": 28
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.028999999999999998,
+          "far": 0.0005,
+          "holm_accepted": true,
+          "holm_critical": 0.002272727272727273,
+          "index": 49,
+          "label": "None:8cdb6768",
+          "rank": 29
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.03,
+          "far": 0.0005091029914408886,
+          "holm_accepted": true,
+          "holm_critical": 0.002380952380952381,
+          "index": 12,
+          "label": "None:5a4d846d",
+          "rank": 30
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.031,
+          "far": 0.0005091029914408886,
+          "holm_accepted": true,
+          "holm_critical": 0.0025,
+          "index": 15,
+          "label": "None:ab792867",
+          "rank": 31
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.032,
+          "far": 0.0005091029914408967,
+          "holm_accepted": true,
+          "holm_critical": 0.002631578947368421,
+          "index": 18,
+          "label": "None:0af726b9",
+          "rank": 32
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.033,
+          "far": 0.0005126691291091998,
+          "holm_accepted": true,
+          "holm_critical": 0.002777777777777778,
+          "index": 6,
+          "label": "None:f82096c1",
+          "rank": 33
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.034,
+          "far": 0.0005126691291091998,
+          "holm_accepted": true,
+          "holm_critical": 0.0029411764705882353,
+          "index": 7,
+          "label": "None:3c70cf99",
+          "rank": 34
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.034999999999999996,
+          "far": 0.0005126691291091998,
+          "holm_accepted": true,
+          "holm_critical": 0.003125,
+          "index": 10,
+          "label": "None:dec65fc5",
+          "rank": 35
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.036,
+          "far": 0.0005126691291092062,
+          "holm_accepted": true,
+          "holm_critical": 0.0033333333333333335,
+          "index": 11,
+          "label": "None:1ff5b02a",
+          "rank": 36
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.037,
+          "far": 0.0005331167518438141,
+          "holm_accepted": true,
+          "holm_critical": 0.0035714285714285718,
+          "index": 1,
+          "label": "None:6ef6d758",
+          "rank": 37
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.038000000000000006,
+          "far": 0.0005331167518438141,
+          "holm_accepted": true,
+          "holm_critical": 0.0038461538461538464,
+          "index": 3,
+          "label": "None:57944695",
+          "rank": 38
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.03900000000000001,
+          "far": 0.0005331167518438141,
+          "holm_accepted": true,
+          "holm_critical": 0.004166666666666667,
+          "index": 4,
+          "label": "None:60ce1e67",
+          "rank": 39
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.04000000000000001,
+          "far": 0.0005434893787286775,
+          "holm_accepted": true,
+          "holm_critical": 0.004545454545454546,
+          "index": 19,
+          "label": "None:72f4c767",
+          "rank": 40
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.041,
+          "far": 0.0007514535156435912,
+          "holm_accepted": true,
+          "holm_critical": 0.005,
+          "index": 2,
+          "label": "None:0baa5156",
+          "rank": 41
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.042,
+          "far": 0.0007514535156435912,
+          "holm_accepted": true,
+          "holm_critical": 0.005555555555555556,
+          "index": 8,
+          "label": "None:8828f59f",
+          "rank": 42
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.043000000000000003,
+          "far": 0.0007514535156435912,
+          "holm_accepted": true,
+          "holm_critical": 0.00625,
+          "index": 9,
+          "label": "None:c438cd37",
+          "rank": 43
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.044000000000000004,
+          "far": 0.0007514535156435912,
+          "holm_accepted": true,
+          "holm_critical": 0.0071428571428571435,
+          "index": 17,
+          "label": "None:f8bb29e2",
+          "rank": 44
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.045000000000000005,
+          "far": 0.0007514535156435952,
+          "holm_accepted": true,
+          "holm_critical": 0.008333333333333333,
+          "index": 14,
+          "label": "None:993e3fe8",
+          "rank": 45
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.046000000000000006,
+          "far": 0.0018818831880035262,
+          "holm_accepted": true,
+          "holm_critical": 0.01,
+          "index": 5,
+          "label": "None:d32a0eaf",
+          "rank": 46
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.047,
+          "far": 0.0023715465773096363,
+          "holm_accepted": true,
+          "holm_critical": 0.0125,
+          "index": 20,
+          "label": "None:355aa204",
+          "rank": 47
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.048,
+          "far": 0.003028276423157234,
+          "holm_accepted": true,
+          "holm_critical": 0.016666666666666666,
+          "index": 16,
+          "label": "None:3ce8b6b4",
+          "rank": 48
+        },
+        {
+          "bh_accepted": true,
+          "bh_critical": 0.049,
+          "far": 0.004911227892906767,
+          "holm_accepted": true,
+          "holm_critical": 0.025,
+          "index": 22,
+          "label": "None:46c5a23f",
+          "rank": 49
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 0,
+          "label": "None:2906a4e8",
+          "rank": 50
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 49,
+      "n": 50,
+      "q": 0.05,
+      "uncorrected_discoveries": 49
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "d0dc25163178669c7f456f0b68833fe78ef520399dc01206c0483bf16cdd2447",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 50,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 8.308423656822846,
+    "null_max_mean": 9.881702986678997,
+    "null_max_quantiles": {
+      "0.01": 22.59068588255012,
+      "0.05": 8.308423656822846,
+      "0.1": 5.72445156777579,
+      "0.2": 4.019513331063632,
+      "0.5": 2.33061582774322
+    },
+    "observed_best": 5.744467166042527,
+    "p": 0.09929007099290071,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/spx-arb-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "d74f5dc35eb178a7736c3f19f6b5f612e01a9be5977ae7e68d3da611c91bb4cf",
+        "outcome": "completed",
+        "score": -0.12368503458930298,
+        "strategy_digest": "2906a4e85d03f173"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "98054ee0ca38b10912f4686db3bc5f7d89339bdd39faa23a498f0920ef247ac8",
+        "outcome": "completed",
+        "score": 1.2933954052727945,
+        "strategy_digest": "6ef6d758a5d23687"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "1d364fbb82c5bdb8a3d69baf202074a576fb5dbc185b70d8ea086e2c142b1f06",
+        "outcome": "completed",
+        "score": 0.8238927081823642,
+        "strategy_digest": "0baa51565283e683"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "98054ee0ca38b10912f4686db3bc5f7d89339bdd39faa23a498f0920ef247ac8",
+        "outcome": "completed",
+        "score": 1.2933954052727945,
+        "strategy_digest": "5794469576f71c93"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "98054ee0ca38b10912f4686db3bc5f7d89339bdd39faa23a498f0920ef247ac8",
+        "outcome": "completed",
+        "score": 1.2933954052727945,
+        "strategy_digest": "60ce1e67ce7b2427"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "aa39d74a6bdb8f8cf71095a8a38a0236c876a7e7296508c9e15b0988238ea35e",
+        "outcome": "completed",
+        "score": 0.6356328661530802,
+        "strategy_digest": "d32a0eaf3515c814"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "7783cc23bb8236fe037a69f5d3f46828a12b5bfe5bfa175376bb7c5a2f3ebf4a",
+        "outcome": "completed",
+        "score": 1.3282227687149597,
+        "strategy_digest": "f82096c1efd43df1"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "7783cc23bb8236fe037a69f5d3f46828a12b5bfe5bfa175376bb7c5a2f3ebf4a",
+        "outcome": "completed",
+        "score": 1.3282227687149597,
+        "strategy_digest": "3c70cf9924736a5e"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "1d364fbb82c5bdb8a3d69baf202074a576fb5dbc185b70d8ea086e2c142b1f06",
+        "outcome": "completed",
+        "score": 0.8238927081823642,
+        "strategy_digest": "8828f59f59c6f6ea"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "1d364fbb82c5bdb8a3d69baf202074a576fb5dbc185b70d8ea086e2c142b1f06",
+        "outcome": "completed",
+        "score": 0.8238927081823642,
+        "strategy_digest": "c438cd37e88fef77"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "7783cc23bb8236fe037a69f5d3f46828a12b5bfe5bfa175376bb7c5a2f3ebf4a",
+        "outcome": "completed",
+        "score": 1.3282227687149597,
+        "strategy_digest": "dec65fc566eace4c"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "c2480de9c6d3f1c4295addcd91f225c03421e4b2b676cbae908a2554a8451daa",
+        "outcome": "completed",
+        "score": 1.328222768714947,
+        "strategy_digest": "1ff5b02ab996188d"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "a80129c58dfb57083c7d9b6c53d4d2d6df75d5151cf85cf313703f2e0676d627",
+        "outcome": "completed",
+        "score": 1.3392801526371678,
+        "strategy_digest": "5a4d846db2973927"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "8dcae584bc05aca6ec8476eba591020434909441228c0c12667f73c251dc432c",
+        "outcome": "completed",
+        "score": 1.2249392609045577,
+        "strategy_digest": "1070425f6b656485"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "bd8c6661cc0b2635416b06e8c25c42eba53b0d9f431170f399c2489a20eb7d71",
+        "outcome": "completed",
+        "score": 0.823892708182362,
+        "strategy_digest": "993e3fe825da6692"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "16c9f3b0b561984ec9725fd7f47f71d73cab8f46d739c946eb236faff316cfe7",
+        "outcome": "completed",
+        "score": 1.3392801526371678,
+        "strategy_digest": "ab7928673616366e"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "63a04eaa2ce5a2a3c937bd43dc6cdcd88e4a531a9696c877a9669b047a100c1a",
+        "outcome": "completed",
+        "score": 0.45133326078205865,
+        "strategy_digest": "3ce8b6b43b6997b4"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "b5d17206d6c390dbe73470fd58b371119d513dd8af3409200b6a2378d1cafdbc",
+        "outcome": "completed",
+        "score": 0.8238927081823642,
+        "strategy_digest": "f8bb29e2396b3563"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "16ef423bb5a9c013bf528fa245ecf433fce364e230cb334044ff765eb3bd654e",
+        "outcome": "completed",
+        "score": 1.3392801526371525,
+        "strategy_digest": "0af726b95627955d"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": "98ead452fa340ca9fb5d7458f48fd1631289ac79a458769861947ac5823d9c06",
+        "outcome": "completed",
+        "score": 1.2826686168462533,
+        "strategy_digest": "72f4c7676a0e0951"
+      },
+      {
+        "campaign_index": 20,
+        "fill_log_digest": "1070c2df95a85c4379627e4b05f0f2f5c1e872cbaaf3b1608cfd18ca97f345c6",
+        "outcome": "completed",
+        "score": 0.4875605084737752,
+        "strategy_digest": "355aa204c8bec140"
+      },
+      {
+        "campaign_index": 21,
+        "fill_log_digest": "5f04e721a36669761a5a018e9f40fe0a7dae836db8e3a024dcd0c04aa26edd48",
+        "outcome": "completed",
+        "score": 2.298271094033332,
+        "strategy_digest": "8fb7204482282154"
+      },
+      {
+        "campaign_index": 22,
+        "fill_log_digest": "0b1214e92145892fdd25d9b867484161e60b7607171f02a5043537f2f96ab635",
+        "outcome": "completed",
+        "score": 0.7097379229187377,
+        "strategy_digest": "46c5a23f2eb6a3e1"
+      },
+      {
+        "campaign_index": 23,
+        "fill_log_digest": "a663899f372bf9006c9173990a9add7a236c07d1200b3ee3362b1a70fec8d13d",
+        "outcome": "completed",
+        "score": 5.154664647402827,
+        "strategy_digest": "5d285763ee8543fe"
+      },
+      {
+        "campaign_index": 24,
+        "fill_log_digest": "f1ffff919eb6b3e4f58f8ff85ee95a7ba82ee15a902a10cd942633786700e703",
+        "outcome": "completed",
+        "score": 2.5281227586286286,
+        "strategy_digest": "c23e5b7442d24948"
+      },
+      {
+        "campaign_index": 25,
+        "fill_log_digest": "e5b69219836221b9a9fc8b294faa73cfbc2530d4c55f428c212e7820ec02be58",
+        "outcome": "completed",
+        "score": 1.1967746025086363,
+        "strategy_digest": "d025d5fe0458ceea"
+      },
+      {
+        "campaign_index": 26,
+        "fill_log_digest": "e28a2f9f370655e1189be77b521f79b426e22efe106600bd4904789844de83f4",
+        "outcome": "completed",
+        "score": 5.450755287665557,
+        "strategy_digest": "89b609b0fda5cfd2"
+      },
+      {
+        "campaign_index": 27,
+        "fill_log_digest": "a9cd33201eeb84a49bf7fee88992ba708188a2180e92643cc5616105ef34acf7",
+        "outcome": "completed",
+        "score": 5.450755287665557,
+        "strategy_digest": "535322441b13e2f9"
+      },
+      {
+        "campaign_index": 28,
+        "fill_log_digest": "eae75c8c0831dca40ba09307aa086153774c8dbafea831808bcb679033ad82cb",
+        "outcome": "completed",
+        "score": 1.8345795422403712,
+        "strategy_digest": "fe987b3a4051bfd5"
+      },
+      {
+        "campaign_index": 29,
+        "fill_log_digest": "5467f6d3fb78c220c0a552ca44833f24ca4156c7979b0a92db97050ac0632910",
+        "outcome": "completed",
+        "score": 5.450755287665557,
+        "strategy_digest": "6be4195716021078"
+      },
+      {
+        "campaign_index": 30,
+        "fill_log_digest": "3376e427ee48bea6133569f53729ab78db75a260129f1ea43893fccaebca3d0a",
+        "outcome": "completed",
+        "score": 5.154664647402827,
+        "strategy_digest": "ef306796406841f4"
+      },
+      {
+        "campaign_index": 31,
+        "fill_log_digest": "b6d5c2f89b20792869eba98976d9d18dc0cedb40c3ad7003ee23d9e8259cf1e7",
+        "outcome": "completed",
+        "score": 5.454493037811653,
+        "strategy_digest": "dff6d738e14e71e3"
+      },
+      {
+        "campaign_index": 32,
+        "fill_log_digest": "5b92cfccf5b1e2909c4d2e1c66be055aaa789b3a1a872a8e26e56e221cd32a6e",
+        "outcome": "completed",
+        "score": 1.1935703381946725,
+        "strategy_digest": "584199be4817f66c"
+      },
+      {
+        "campaign_index": 33,
+        "fill_log_digest": "8c95688bf2b7754ca24593b59cfff496a34b01fb26aa5ca5fca66399f15a0f75",
+        "outcome": "completed",
+        "score": 5.618505282733459,
+        "strategy_digest": "89594f8d4e2c5bd5"
+      },
+      {
+        "campaign_index": 34,
+        "fill_log_digest": "ca1b83544bdf06d81d0e7204d5015b3e9d7d60559c0a21e137cd32105961e2a7",
+        "outcome": "completed",
+        "score": 1.2564760181596781,
+        "strategy_digest": "546440d4fa5f6c7a"
+      },
+      {
+        "campaign_index": 35,
+        "fill_log_digest": "5f9b6dc08bdf3ffcd3aa7e962ba0d8528167ad705a6fb6151a352ebb8c031375",
+        "outcome": "completed",
+        "score": 1.2564760181596781,
+        "strategy_digest": "b968707ce4fe28fa"
+      },
+      {
+        "campaign_index": 36,
+        "fill_log_digest": "ecede742407c672b58841057d269b3c83a50420f74371c06fd810b1fac9b9b1c",
+        "outcome": "completed",
+        "score": 5.744467166042527,
+        "strategy_digest": "4f2c0614afb268d5"
+      },
+      {
+        "campaign_index": 37,
+        "fill_log_digest": "f237e9250030d2189739f5d698a6e6fbd2fea2175cf8c43051736944cba72f5f",
+        "outcome": "completed",
+        "score": 5.744467166042527,
+        "strategy_digest": "22bbd756c7a86e6d"
+      },
+      {
+        "campaign_index": 38,
+        "fill_log_digest": "ca263b9e2a890c5974261c50a2b3186db49492dfc7f5d2205ac67116740a28eb",
+        "outcome": "completed",
+        "score": 1.294990377674587,
+        "strategy_digest": "79056b28833ca076"
+      },
+      {
+        "campaign_index": 39,
+        "fill_log_digest": "78386e85c31866e57aa5ee2ad0554e9b0054dfdb8f20e09e915d6ea3280b37a7",
+        "outcome": "completed",
+        "score": 3.580502512804563,
+        "strategy_digest": "978a610f2adc2716"
+      },
+      {
+        "campaign_index": 40,
+        "fill_log_digest": "0415852ce0cba1c420afd230f2dc222e2a1d5d3414478eaa776682ffcf183b1d",
+        "outcome": "completed",
+        "score": 5.682424223098303,
+        "strategy_digest": "4aa58bb145c0bbcb"
+      },
+      {
+        "campaign_index": 41,
+        "fill_log_digest": "4a897939e84bb9cf5d9cc73bc4d98a6a3c9dbc97351805e2202d307e0d44d2d0",
+        "outcome": "completed",
+        "score": 5.566051114520794,
+        "strategy_digest": "c344446a0e2d3cf2"
+      },
+      {
+        "campaign_index": 42,
+        "fill_log_digest": "711bd168879c3c1f6688e83f6f92e607178cf23b96d2e52eb55b78c7a07b98f2",
+        "outcome": "completed",
+        "score": 5.744467166042527,
+        "strategy_digest": "3b371c8cd07d0767"
+      },
+      {
+        "campaign_index": 43,
+        "fill_log_digest": "714007ba7166fcda02de6440a3ac86e2f0bcbdc28abc7fd16d426842e114092a",
+        "outcome": "completed",
+        "score": 3.9863898665185977,
+        "strategy_digest": "d08e80d204e31a18"
+      },
+      {
+        "campaign_index": 44,
+        "fill_log_digest": "6facc2ea022adff9aba8ee79e20a63fe187f11f8d58b962c2f106fb8ed548a71",
+        "outcome": "completed",
+        "score": 5.740545488544306,
+        "strategy_digest": "5504cd991be7dc8c"
+      },
+      {
+        "campaign_index": 45,
+        "fill_log_digest": "8bc945416974d7a2e4773ad1f41c1a9b5683f009f1324559175307162dddf7fa",
+        "outcome": "completed",
+        "score": 5.682424223098303,
+        "strategy_digest": "dd976f167cb7c6c6"
+      },
+      {
+        "campaign_index": 46,
+        "fill_log_digest": "78386e85c31866e57aa5ee2ad0554e9b0054dfdb8f20e09e915d6ea3280b37a7",
+        "outcome": "completed",
+        "score": 3.580502512804563,
+        "strategy_digest": "48982e1eb5b6d629"
+      },
+      {
+        "campaign_index": 47,
+        "fill_log_digest": "4b3a357a5ea2723aed84ca964c585a4703ab3695243f11649793a6f3f6509a90",
+        "outcome": "completed",
+        "score": 1.294990377674587,
+        "strategy_digest": "616c33f76f2926af"
+      },
+      {
+        "campaign_index": 48,
+        "fill_log_digest": "f369e931803254c0002c366c1c147d6c80772a637f99beccc28c22911c833767",
+        "outcome": "completed",
+        "score": 5.744467166042527,
+        "strategy_digest": "afe9f9d700b3c87f"
+      },
+      {
+        "campaign_index": 49,
+        "fill_log_digest": "5ef76b199bcfb87b87fa48103cd8116071b601a27689b36a535e4fa408142a6a",
+        "outcome": "completed",
+        "score": 3.580502512804563,
+        "strategy_digest": "8cdb6768d595a49e"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 50
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 50,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 3488.5705633092007,
+    "mean": 0.2887005984052418,
+    "min": -0.29933800074394246,
+    "n_draws": 500000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 16.79592453501284
+  },
+  "provenance": {
+    "artifact_fingerprint": "8a4ea5bbae9860d44d35cf32bf89cfb62f6cfb02d3e791a4bc0a2f803c7adbfb",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/auction-market-features.md": "c306848e27d52157a9e1ea478905aa4ad6e585b56b84bc892962aeeb02d826e9",
+      "config/hypotheses/flow-continuation-5m.md": "13516e4d73d2286805b68d526fe8590581c3ed64c418e44f2557a319ba7a4fea",
+      "config/hypotheses/flow-continuation.md": "2fd992b524213040d9b59c1ae1cde0b54404fc5ca779d9dc68d774c72dca0528",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-move-continuation-vs-giveback.md": "dd898b0ac0548576dafc2f61169a5334e834d48f7bc83d2cfcaf2c8901cfe876",
+      "config/hypotheses/nq-opening-reversal.md": "37fcea5a90f37b7b05faaab7e15e74990878bbaba226b41171965908b2a40b91",
+      "config/hypotheses/ohlcv-momentum-friction-ceiling.md": "ff9d1893266f2f7eeb05f0f27a2751e9e95a4ea58f8c38f236aa9fc9e7c867a6",
+      "config/hypotheses/opening-range-break-continuation-failure.md": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+      "config/hypotheses/opening-range-break-continuation-or-fade.md": "4e48d6e16fba78098a993549b2528853e8c4c909908d501cf1d6ad3309988440",
+      "config/hypotheses/opening-range-break-hold-or-return.md": "660f66e68d536c243d47ecab73a73fdd6b5a529d97301a2d2f5cabd01488db0e",
+      "config/hypotheses/opening-range-break-resolution.md": "4c41b63249ae6113d53a032cde5c13651d107b7bf77450043f82d58e33488bfe",
+      "config/hypotheses/opening-range-breakout-30m.md": "021eb8f94018416e4294293831f5c8d4370ac0bd6cb1c39b42f3b57771ea6128",
+      "config/hypotheses/opening-range-departure-fates-by-clock.md": "1c0bbe82227d0c4b25c9bcf2c111ae8c3ebad943bf7bd84ee3c587ac44d17b02",
+      "config/hypotheses/opening-range-direction-agnostic.md": "48775a6bedc23838d451279d05dc15c2660300bb598e5cf508f3c677fa22d7e4",
+      "config/hypotheses/opening-range-exit-hold-or-return.md": "8b3d0872c848b58892611d7621245f32f739050b89bd645530888785268b8237",
+      "config/hypotheses/options-no-arbitrage-violation.md": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+      "config/hypotheses/options-surface-shape-and-the-index.md": "268c3ca73b695ff20a591b736b68f6562a21dbaa88b08cd1193ae4e281c9298a",
+      "config/hypotheses/orderflow-absorption-at-carried-levels.md": "97ad8b1db1a60f852bae58c5428270f528327a300832d74131d3fe97c52794d2",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md": "4a97e2e35a2111d81a49331782789191c9765efdb5df34c7aefedeb7234cf557",
+      "config/hypotheses/outsized-move-continuation-refined.md": "25d9b544894e7d214729ba058d1783e6b0d3d16608e560346538076341626c77",
+      "config/hypotheses/outsized-move-continuation-vs-giveback.md": "00074ec0231d64452b65b1515e9669d711425a1220e6039b3e61abd1638766a6",
+      "config/hypotheses/session-move-continuation-robustness.md": "087be6eedd20f472989bdadf3944e054b3a0daa42cafb589170455bc6ecb44b3",
+      "config/prompts/family-review.md": "012935b192b8ca9ff3ed3a3c9635dfdab4df9f8f95dc1db1791f35bc8532fb82",
+      "config/prompts/hypothesis-refine.md": "c16601e03abf5b62933cbe86d816d88b9215897de58efdd4295ddd02e9b037be",
+      "config/prompts/hypothesis-review.md": "6d6e194e5f5b473d37e32d168d5404589c426115b54e714c9713a56b9ea81353",
+      "config/prompts/paper-distil.md": "0dcafaf00f0a1d990fd26880d532f3eac423a36b1488d1ebd7b28a8747fb4504",
+      "config/prompts/paper-rank.md": "b8acfdf9c01f9c3ec7c6e0c8da4ca1ff54f401c5e7bf60c41b6b366993c15784",
+      "config/prompts/paper-screen.md": "dc10f5d4cc98dd8aa463c81b79f1c710b648e70e2d9095c4245c100d02b9160a",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/prompts/strategy-review.md": "e71f9f8813ba4d9bea3f8830c31cb3818472302357615834c47d3e6d5ec7f518",
+      "config/run.yaml": "14dde493aeb0702269d7d10a93d1615c43debe1a347851328f3c6637c9912798",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "docs/agent/data.md": "2056ce92b8fe155f052805e43599bcb75f3648124820a68be985a8d931bfb589",
+      "docs/agent/strategy-api.md": "ae0fd371a647426b78fbf0d9123ffdb46a1077837577e01beb2c81d89b0f8544",
+      "src/strategies/current.py": "2906a4e85d03f17303a897461be1dfecab87ff1e2768f7bef215dec7571aecb5"
+    },
+    "code_fingerprint": "6b389bc046eb30d906638538b17db7f6282c9062793c379d5de57f03db1f4799",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "1780999a09c5f53172887db2f7008c9235d2f685bf7f64ee487d213c8eef9361",
+    "git_sha": "90b33396cf5a13c771e3010fab8328078b30a53a",
+    "isolation": {
+      "address_space": {
+        "active": false,
+        "mechanism": "unavailable: RLIMIT_AS/DATA/RSS cannot be set"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "scored campaigns should run on Linux; see docs/design/architecture.md",
+      "filesystem": {
+        "active": true,
+        "mechanism": "sandbox-exec profile (deprecated)"
+      },
+      "level": "best-effort",
+      "network": {
+        "active": true,
+        "mechanism": "denied by the same profile"
+      },
+      "platform": "Darwin",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.11.5",
+    "scoring_fingerprint": "1df82a1795a7424df364f4d1cf16a20111eec270309c35f3f82af6d634c5dc3b"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-10-25T22:56:34+00:00"
+}

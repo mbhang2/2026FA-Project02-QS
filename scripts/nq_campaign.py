@@ -143,20 +143,83 @@ def run_facts(profile: dict, n_sessions: int) -> str:
             f"{n_sessions} an unfitted campaign gets is roughly "
             f"{(n_sessions / scored) ** 0.5:.2f}x the sampling error. That is "
             f"arithmetic about the window, not a comment on your proposal.\n\n")
+    what, cost = _dataset_facts(profile)
     return (
         fitted_block
-        + f"Dataset: real NQ futures trades, {scored} scored sessions on the "
+        + f"Dataset: {what}, {scored} scored sessions on the "
         f"pre-registered {profile['split']} split.\n\n"
         f"Fill model: {profile['fill_model']} -- a fill requires a trade "
         "strictly through your limit, so you pay the spread on every entry and "
         "exit.\n\n"
-        f"Commission: {profile['commission_per_contract']} index points per "
-        "contract per side. NQ is $20 a point, so a round trip costs about "
-        "$4.00 a contract. At high turnover this dominates: the baseline "
-        "strategy on this split traded 103,355 times and paid more in "
-        "commission than it made gross.\n\n"
+        + cost +
         f"Action cap: {profile.get('action_cap', 64)} per session. "
         f"History window: {profile.get('history_window', 512)} bars.\n")
+
+
+def _dataset_facts(profile: dict) -> tuple[str, str]:
+    """What the agent is trading, and what it pays. **Per dataset.**
+
+    This was one hard-coded sentence -- "real NQ futures trades" -- plus a
+    paragraph about NQ being $20 a point. True of every campaign until one was
+    not. An options campaign would have told the proposer, in the prompt it
+    writes from, that it was trading NQ futures: not a stale comment but an
+    actively false instruction, and the kind that produces a plausible strategy
+    for the wrong instrument rather than an error anybody sees.
+    """
+    # Tolerant of a profile with no dataset, which is not a real profile but
+    # is what a unit test constructs when it is exercising the fit-window
+    # arithmetic above and nothing else. An unknown dataset gets the wording
+    # that was here before any of this was per-dataset.
+    name = profile.get("dataset")
+    spec = cfg()["datasets"].get(name, {}) if name else {}
+    kind = spec.get("kind")
+    per = profile["commission_per_contract"]
+    if kind == "spx-options":
+        return (
+            "a simulated SPX index path with a QUOTED OPTIONS SURFACE over it. "
+            "The index itself is tradeable as the default instrument and the "
+            "options are tradeable by name -- see section 5a of the API "
+            "document, which is the part of it you will need and the part no "
+            "previous campaign here has used",
+            f"Commission: {per} index points per contract per side, charged on "
+            "every fill INCLUDING settlement at expiry. A four-legged options "
+            f"package therefore pays it eight times, about {8 * per:.2f} points "
+            "all in. P&L is in index points throughout, with no contract "
+            "multiplier, so the legs of one package and the index itself are "
+            "directly comparable.\n\n",
+        )
+    return (
+        "real NQ futures trades",
+        f"Commission: {per} index points per contract per side. NQ is $20 a "
+        "point, so a round trip costs about $4.00 a contract. At high turnover "
+        "this dominates: the baseline strategy on this split traded 103,355 "
+        "times and paid more in commission than it made gross.\n\n",
+    )
+
+
+def scored_session_count(profile: dict) -> int:
+    """How many sessions this profile's split actually scores.
+
+    `384` was passed in literally, which is the NQ train split's length. The
+    SPX options train split is 105, so the proposer would have been told it had
+    nearly four times the data it has -- and the number is load-bearing: it is
+    what an agent reasons about when it decides whether a setup appearing once
+    a week is measurable.
+
+    The NQ figure stays a constant rather than being measured, because building
+    that dataset needs bucket credentials and registration must not require
+    them. Everything else is built and asked.
+    """
+    import run as _run
+
+    c = cfg()
+    spec = c["datasets"][profile["dataset"]]
+    if spec.get("kind") == "nq":
+        return 384
+    from src.core.types import Split
+
+    ds = _run.build_dataset(c, profile["dataset"], profile.get("seed", 1))
+    return len(ds.scored_sessions(Split(profile["split"])))
 
 
 def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
@@ -172,10 +235,11 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
         # optional on the record, and a campaign that registered without a
         # question runs without one rather than borrowing another campaign's.
         hypothesis=H.load(hypothesis) if hypothesis is not None else None,
-        # 384 is the train split's length, not a constant: `run_facts`
+        # The split's own length, measured where it can be. `run_facts`
         # subtracts the profile's fit window from it, so a fitted campaign's
         # agent is told the scored count rather than the split count.
-        champion=champion, run_facts=run_facts(profile, 384))
+        champion=champion,
+        run_facts=run_facts(profile, scored_session_count(profile)))
 
 
 # --------------------------------------------------------------------------- #

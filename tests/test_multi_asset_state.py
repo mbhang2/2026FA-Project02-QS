@@ -257,7 +257,13 @@ def test_the_per_asset_readers_cross_the_process_boundary(tmp_path):
         "        self.n += 1\n"
         "        assert ctx.position_in('primary') == ctx.position\n"
         "        assert ctx.position_in('never_opened') == 0\n"
-        "        assert 'primary' in ctx.assets_held()\n"
+        # HELD tracks the position, not the existence of a book: flat before
+        # the T+1 fill, held after it. This asserted `'primary' in
+        # assets_held()` unconditionally, which passed only because the old
+        # implementation returned the default asset whether or not anything
+        # was carried.
+        "        held = ctx.assets_held()\n"
+        "        assert ('primary' in held) == (ctx.position != 0), held\n"
         "    def on_fill(self, ctx): pass\n"
         "    def on_lifecycle(self, ctx): pass\n")
     d = SyntheticDataset(SyntheticSpec(n_sessions=60, uniform=True))
@@ -361,3 +367,59 @@ def test_pnl_aggregates_across_the_book_which_is_the_decision_recorded():
     assert b.realized_pnl == pytest.approx(25.0), (
         "the package made 25; no leg did, which is why aggregate is the "
         "right question to ask of a hedged book")
+
+
+def test_assets_held_is_empty_when_flat_and_names_only_what_is_carried():
+    """**The defect that silently disabled the first real options proposal.**
+
+    `assets_held()` returned every asset with a book, and the default asset
+    always has one, so a completely flat strategy got `("primary",)` -- a
+    TRUTHY value. The proposal guarded its scan with
+
+        if ctx.working_order_ids or ctx.position or ctx.assets_held():
+            return
+
+    which is the obvious way to write "do nothing while I am carrying
+    something". The guard fired on all 20,475 of its bars. The run completed,
+    reported no error, placed no orders and scored zero, on both the planted
+    and the clean surface. Nothing raised and nothing looked wrong; it would
+    have read as a proposer that could not find an arbitrage.
+    """
+    class S:
+        def setup(self, ctx):
+            ctx.subscribe("5m")
+            self.n = 0
+            self.flat_at_start = None
+            self.while_long = None
+            self.after_close = None
+
+        def on_bars(self, ctx):
+            self.n += 1
+            if self.n == 1:
+                self.flat_at_start = ctx.assets_held()
+            if self.n == 3:
+                ctx.buy(2)
+            if self.n == 6:
+                self.while_long = ctx.assets_held()
+                ctx.close()
+            if self.n == 10:
+                self.after_close = ctx.assets_held()
+
+        def on_fill(self, ctx): pass
+        def on_lifecycle(self, ctx): pass
+
+    from src.core.types import Split
+
+    st = S()
+    d = SyntheticDataset(SyntheticSpec(n_sessions=60, uniform=True))
+    rec = Engine.for_test(d, st, split=Split.TRAIN,
+                          fill_model="unfavorable", seed=3).run()
+    assert rec.outcome == "completed", f"{rec.outcome}: {rec.error}"
+
+    assert st.flat_at_start == (), (
+        f"flat, but assets_held() said {st.flat_at_start}. A book that exists "
+        "and holds nothing is not an asset being held.")
+    assert not st.flat_at_start, "and it has to be FALSEY, which is the point"
+    assert st.while_long == ("primary",), st.while_long
+    assert st.after_close == (), (
+        f"flat again after closing, but assets_held() said {st.after_close}")

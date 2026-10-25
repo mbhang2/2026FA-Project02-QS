@@ -532,6 +532,25 @@ class SPXHestonSurface:
 QUOTES_PER_SESSION = 390
 SESSION_YEARS = 1.0/252.0
 
+# **How many priced snapshots the feed keeps. It was 4,096, and that is what
+# killed the machine.**
+#
+# Measured 2026-10-25 on this surface: one snapshot is 2,452 quotes at about
+# 344 bytes each, so 0.8 MB -- and 4,096 of them is **3.45 GB in one process**,
+# or 13.8 GB at the W=4 this project runs, on a 17 GB machine that already
+# swaps. A background check run was killed by the OS for low memory, which is
+# how the number was found.
+#
+# The cap was inherited from the Gaussian surface, where a snapshot is a few
+# dozen quotes and 4,096 of them is nothing. Here it was not only ruinous, it
+# was POINTLESS: the same measurement found **0 hits in 4,095 reads**. A
+# callback fires once per bar, each bar resolves to a different path instant,
+# and so every read is a miss by construction -- the cache only ever filled up
+# and cleared. The reuse that genuinely exists is within a single instant (a
+# strategy reading the surface twice in one callback), which needs a handful of
+# entries and not four thousand.
+SNAPSHOT_CACHE = 16
+
 
 def sessions_to_expiry(m: Maturity) -> int:
     """`m`'s expiry as a count of sessions from the valuation date.
@@ -1019,7 +1038,7 @@ class _SPXFeed:
         self.misses += 1
         spot, var, elapsed = self._ds.path.state(idx)
         out = self._ds.surface.quotes_for_state(ts, session, spot, var, elapsed)
-        if len(self._cache) > 4096:
+        if len(self._cache) > SNAPSHOT_CACHE:
             self._cache.clear()
         self._cache[idx] = out
         return out

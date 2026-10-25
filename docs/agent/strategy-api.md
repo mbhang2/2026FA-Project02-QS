@@ -455,7 +455,7 @@ call is two positions, not a net of one.
 | `ctx.position_in(asset)` | position in one named asset |
 | `ctx.average_entry_price_in(asset)` | its average entry price |
 | `ctx.realized_pnl_in(asset)` | its realised P&L |
-| `ctx.assets_held()` | every asset with an open book, default first |
+| `ctx.assets_held()` | every asset you have a position in, default first. **Empty when you are flat**, so `if ctx.assets_held():` is a safe way to ask "am I carrying anything" |
 
 There is no `ctx.position(asset)` — `ctx.position` is a property and a property
 takes no argument. That is why the four above are separate names.
@@ -478,6 +478,15 @@ the capability in advance.
 
 Each quote carries `ts`, `session`, `expiry_session`, `strike`, `is_call`,
 `bid`, `ask`, `bid_size`, `ask_size`, and a `mid` property.
+
+**It is priced on demand, and it is not small.** A snapshot can be a couple of
+thousand quotes across every strike and expiry, computed when you ask for it.
+Asking once per bar on a `"1m"` subscription is tens of thousands of pricings
+over a run, and a scan that then compares every strike against every other
+strike is that number again, squared, per bar. Both are legal and both can
+spend your whole wall-clock budget without trading once. Subscribe at an
+interval that matches how fast the thing you are looking for can appear, and
+prefer one pass over the strikes to a nested pair where you can.
 
 **`expiry_session` is the session index the contract expires on**, not a
 position in a list and not a date. It is how a contract keeps its identity

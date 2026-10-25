@@ -1,0 +1,96 @@
+# Session 08 -- THE OPTIONS-ARBITRAGE CHALLENGE, AS A CONTROLLED PAIR.
+#
+#   .venv/bin/python scripts/research_session.py \
+#       --plan config/sessions/session-08-spx-options.yaml --dry-run
+#   .venv/bin/python scripts/research_session.py \
+#       --plan config/sessions/session-08-spx-options.yaml
+#
+# Brian's challenge, from the 2026-10-22 meeting: a simulated options dataset
+# with an arbitrage hidden in it, and the question of whether the proposer can
+# find it and build a detector that is fast and effective.
+#
+# **This is the first campaign on anything but NQ**, and the first that needs
+# the engine to trade an instrument other than the one the ticks are in. Stages
+# 1-7 of the multi-asset work landed for it: orders carry an asset, every book
+# is separate, an option fills against its quoted touch capped by the quoted
+# size, and a position is settled in cash at intrinsic when the contract
+# expires. Settlement is the part that matters -- a permanent mispricing bought
+# and sold back returns the spread twice and nothing else, so a locked-in edge
+# is paid at expiry or never.
+#
+# TWO ARMS, AND THE SECOND IS THE POINT.
+#
+#   spx-arb-01    the surface carries one parity violation of 8.0 index points
+#                 standing on the second listed expiry
+#   spx-clean-01  the same question asked of a surface with no plant, where the
+#                 honest answer is that there is nothing to find
+#
+# An acceptance on the planted arm means nothing on its own: a detector loose
+# enough to find an arbitrage anywhere will find one there. It means something
+# only if the same loop REJECTS the clean arm. This is the planted-signal ladder
+# applied to a different question, and it is why the clean arm is not optional.
+#
+# THE QUESTION IS KNOWN TO BE ANSWERABLE, and that was established before it was
+# asked. `scripts/options_control.py` is the harness's own box-spread detector,
+# measured 2026-10-25 over 105 train sessions:
+#
+#     surface   trades   net       sortino   significance   verdict
+#     planted    5,538   +12,665   +0.3170   +3.25          accepted
+#     clean          0        0.00  -inf     -inf           rejected
+#
+# Zero trades on an arbitrage-free surface is the number that matters. The
+# control is deliberately NOT in `tests/examples/` and is not cited by
+# `docs/agent/strategy-api.md`: section 9 of that file is pasted verbatim into
+# every proposal prompt, and a campaign whose answer sits inside its own
+# question measures copying rather than discovery.
+#
+# N = 50 PER ARM, WHICH IS A PILOT AND IS LESS THAN SECTION 2 ASKS FOR. §2 wants
+# campaigns "at least N = 400". 50 is chosen because no model has ever written
+# against this API: if proposals crash on the options calls, 50 trials says so
+# in an evening and 400 wastes a night. Each arm's correction is self-contained
+# at its own N, so the pilot is a valid experiment and not a truncated one --
+# it is simply less powerful, and a result from it should be read that way.
+# Raise `n` here and re-run for the full-power version.
+#
+# **NO MEASURED FWER APPLIES TO THIS CONFIGURATION.** Task 57's 400-campaign
+# figure and Task 59's power curve were measured on the NQ MVP configuration.
+# They are not transferable to a different dataset, and the campaign record
+# written by this plan says so in its own note rather than borrowing them.
+#
+# --no-probe IS NOT A CONVENIENCE. Amendment 7's pre-trial probe runs each
+# proposal under a synthetic profile that has no options channel, so
+# `ctx.options()` would raise on every single proposal and the probe would
+# report a crash that belongs to the harness. A probe that is wrong every time
+# is worse than no probe: it informs the agent, and it would be informing it of
+# a fault in its own code that does not exist.
+#
+# WIDTH 4. Michael's machine, measured: W=4 is 41.6 trials/h against W=1's 12.2,
+# and W=8 is not reliably faster while paging hard. Unchanged for this session.
+#
+# The exposure floor is untouched at 0.70 -- Michael's standing call. The
+# control clears it comfortably, because a package carried to expiry spans
+# sessions rather than closing the same afternoon.
+#
+# The holdout is NOT armed. §8 is still at zero looks and nothing here changes
+# that; note also that the holdout window of this dataset does contain
+# settlements (the four-session expiry grid puts one at session 36), so the
+# option of spending the look later is intact rather than foreclosed.
+
+session: session-08-spx-options
+
+campaigns:
+  - name: spx-arb-01
+    hypothesis: config/hypotheses/options-no-arbitrage-violation.md
+    profile: spx-options-train
+    n: 50
+    model: deepseek-v4-pro
+    generation_width: 4
+    probe: false
+
+  - name: spx-clean-01
+    hypothesis: config/hypotheses/options-no-arbitrage-violation.md
+    profile: spx-clean-train
+    n: 50
+    model: deepseek-v4-pro
+    generation_width: 4
+    probe: false

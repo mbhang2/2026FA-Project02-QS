@@ -152,10 +152,14 @@ Reads and writes shared by the three run-time callbacks.
 
 #### `ctx.assets_held() -> 'tuple[str, ...]'`
 
-Every asset with an open book, default first.
+Every asset you have a POSITION in, default first. Empty when flat.
 
 A strategy holding several legs needs to be able to ask what it is
-carrying without remembering what it opened.
+carrying without remembering what it opened -- so "held" is a non-zero
+position, and a book that exists and is flat is not one. It read "every
+asset with an open book" and returned the default asset unconditionally,
+which made `if ctx.assets_held(): return` -- the obvious way to write
+"do nothing while carrying something" -- always true.
 
 #### `ctx.average_entry_price_in(asset: 'str') -> 'float'`
 

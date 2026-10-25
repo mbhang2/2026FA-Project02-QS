@@ -786,8 +786,21 @@ class Engine:
             position_in=lambda a: (states[a].position if a in states else 0),
             average_entry_price_in=lambda a: (states[a].avg_price if a in states else 0.0),
             realized_pnl_in=lambda a: (states[a].realized_pnl if a in states else 0.0),
-            assets_held=lambda: (DEFAULT_ASSET, *sorted(
-                a for a in states if a != DEFAULT_ASSET)),
+            # **HELD means a non-zero position, not "has a book".** This
+            # returned every asset in `states`, and `states` always contains
+            # the default asset -- so a completely flat strategy got
+            # `("primary",)`, which is TRUTHY. The first real proposal written
+            # against this API guarded its scan with
+            # `if ctx.working_order_ids or ctx.position or ctx.assets_held():
+            # return`, which is the obvious reading of "what am I carrying",
+            # and the guard fired on all 20,475 of its bars. The run completed,
+            # reported no error, placed no orders and scored zero. A whole
+            # campaign of that would have looked like a proposer that could not
+            # find an arbitrage.
+            assets_held=lambda: tuple(
+                a for a in (DEFAULT_ASSET,
+                            *sorted(x for x in states if x != DEFAULT_ASSET))
+                if states[a].position != 0),
             options_snapshot=self._options_snapshot_fn(),
         )
 

@@ -120,6 +120,11 @@ campaigns:
     n: 20                      # optional, defaults to the config
     model: claude-haiku-4-5    # optional
     min_exposed: 0.70          # optional
+    probe: false               # optional; Amendment 7. Omitted means the
+                               # config default. Set false where the probe's
+                               # synthetic profile cannot execute the kind of
+                               # proposal this campaign asks for -- an options
+                               # campaign is the case that exists.
     generation_width: 4        # optional; Amendment 12. Omit or 1 for the
                                # chain. Above 1, trials of a generation share
                                # one history and run at the same time.
@@ -347,7 +352,8 @@ def _main() -> int:
                     # campaign as a chain -- the 19-hour path the amendment was
                     # signed to avoid. A flag the driver can pass and the plan
                     # cannot set is a flag that silently does nothing.
-                    "generation_width": fam.get("generation_width")}
+                    "generation_width": fam.get("generation_width"),
+                    "probe": fam.get("probe")}
                    for k in range(iterations)]
     if not entries:
         sys.exit("the plan names no campaigns")
@@ -579,6 +585,20 @@ def _main() -> int:
                                   ("--generation-width", "generation_width")):
                     if c.get(key) is not None:
                         extra += [flag, str(c[key])]
+                # **Amendment 7, and it is a BOOLEAN, so it does not fit the
+                # loop above.** A plan could not set it at all: the probe's
+                # default lives in `config/run.yaml` (`probe_before_trial:
+                # true`) and a session had no way to say otherwise. That was
+                # invisible while every campaign ran on NQ, because the probe's
+                # synthetic profile could execute an NQ proposal. It cannot
+                # execute an options one -- `ctx.options()` raises on a dataset
+                # with no options channel -- so the probe would have reported a
+                # crash on EVERY proposal of an options campaign and told the
+                # agent its own code was at fault. The same shape as the
+                # `generation_width` note above: a flag the driver can pass and
+                # the plan cannot set is a flag that silently does nothing.
+                if c.get("probe") is not None:
+                    extra += ["--probe" if c["probe"] else "--no-probe"]
                 code, _ = campaign_stage(name, "register", extra)
                 if code:
                     log["campaigns"][name] = "register failed"

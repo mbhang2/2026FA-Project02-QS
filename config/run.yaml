@@ -343,7 +343,14 @@ profiles:
   # evaluation with the number withheld.
   spx-agent-check:
     dataset: spx-options-clean
-    split: validation
+    # **Train, not validation.** The synthetic `agent` profile this was copied
+    # from uses validation because its dataset has no signal and the split is
+    # therefore meaningless there. Here it would not be: a check on the
+    # validation split of a surface in the same family as the campaign's is a
+    # validation look, and section 4 allows a campaign to depend on prior TRAIN
+    # results and never on validation ones. The clean surface's train split
+    # answers "does this code run" without touching anything reserved.
+    split: train
     fill_model: unfavorable
     seed: 1
     warmup_sessions: 1

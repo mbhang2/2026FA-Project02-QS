@@ -92,30 +92,98 @@ class OptionQuote:
         return 0.5 * (self.bid + self.ask)
 
 
+@dataclass(frozen=True, slots=True)
+class Plant:
+    """One planted violation. Several may coexist on one surface.
+
+    `kind` names the condition broken, because which one it is decides what a
+    proposer must implement to find it: parity needs an identity, butterfly
+    needs convexity across a strike ladder, calendar needs monotonicity across
+    an expiry ladder. A surface carrying one of each asks whether the loop
+    finds the easy one and stops.
+    """
+
+    kind: str                   # "parity" | "butterfly" | "calendar"
+    expiry_index: int
+    strike_offset: int          # strikes from the money, signed
+    strength: float
+
+    KINDS = ("parity", "butterfly", "calendar")
+
+
 @dataclass(frozen=True)
 class SyntheticOptionsSpec:
-    # ---- the surface ------------------------------------------------------ #
-    n_strikes: int = 41                   # odd, so one strike sits at the money
-    strike_spacing: float = 1.0
-    expiries_in_sessions: tuple[int, ...] = (1, 2, 5, 10, 21)
+    """Shaped on QQQ: a ~$500 underlying, a mixed strike ladder, a weekly-ish
+    expiry ladder, and quotes on the OPRA increment grid."""
+
+    # ---- the underlying --------------------------------------------------- #
+    symbol: str = "QQQ"
+    start_price: float = 500.0
+    # QQQ moves ~1% a session; 5.0 on 500 is about that, in price units.
+    vol_per_session: float = 5.0
+    underlying_tick: float = 0.01
+
+    # ---- the strike ladder ------------------------------------------------ #
+    # Real QQQ lists $1 strikes near the money and $5 out in the wings. A
+    # uniform grid hides the thing that makes wing arbitrage checks awkward:
+    # a butterfly needs three EQUALLY spaced strikes, and they stop being
+    # equally spaced exactly where the spacing changes.
+    near_spacing: float = 1.0
+    wing_spacing: float = 5.0
+    near_halfwidth: float = 20.0          # +/- this far from the money at $1
+    wing_halfwidth: float = 75.0          # out to this far at $5
+
+    # ---- the expiry ladder ------------------------------------------------ #
+    # Sessions, not dates: `Tick.session` is already an index and a feed that
+    # spoke in dates would be the one place two id spaces met. Roughly 1d, 2d,
+    # end of week, next week, two weeks, a month, two months, a quarter.
+    expiries_in_sessions: tuple[int, ...] = (1, 2, 5, 10, 21, 42, 63)
+
     # ---- resolution ------------------------------------------------------- #
     quotes_per_session: int = 390         # one a minute over 6.5h
     quote_spacing_ns: int = 60 * NS_PER_SECOND
-    # ---- the underlying --------------------------------------------------- #
-    start_price: float = 100.0
-    vol_per_session: float = 1.0          # sd of the underlying over one session
-    tick_size: float = 0.25
-    # ---- the quote --------------------------------------------------------- #
-    half_spread: float = 0.05             # per side, in price units
-    # ---- the plant --------------------------------------------------------- #
-    arb_strength: float = 0.0             # 0 = nothing to find
-    arb_expiry_index: int = 2             # which expiry carries the violation
-    arb_strike_offset: int = 0            # strikes away from the money
+
+    # ---- the quote -------------------------------------------------------- #
+    # **Spreads are not constant, and that is the realism that matters.** A
+    # constant half-spread makes every wing option as tradeable as the
+    # at-the-money one, which is the single most flattering thing a synthetic
+    # options feed can do: in practice the wings are where apparent arbitrage
+    # lives and where the spread eats it. Modelled as a floor plus a fraction
+    # of premium plus a widening in the far expiries.
+    min_half_spread: float = 0.01
+    half_spread_frac: float = 0.02        # of premium
+    far_expiry_widening: float = 0.0015   # per session of maturity, in price
+    # OPRA: a penny increment under $3.00 premium and a nickel at or above it.
+    penny_below: float = 3.00
+    penny_increment: float = 0.01
+    nickel_increment: float = 0.05
+
+    # ---- the plants -------------------------------------------------------- #
+    plants: tuple[Plant, ...] = ()
+    # Shorthand for one parity plant, kept because most campaigns want exactly
+    # that and `plants=(Plant("parity", 2, 0, 0.3),)` is a lot of punctuation.
+    arb_strength: float = 0.0
+    arb_expiry_index: int = 2
+    arb_strike_offset: int = 0
+
     # ---- bookkeeping ------------------------------------------------------- #
     seed: int = 0
     n_sessions: int = 120
     session_gap_ns: int = 17 * 3600 * NS_PER_SECOND
-    density_grid_halfwidth: int = 240     # grid points either side, in ticks
+    density_step: float = 0.25
+    density_halfwidth: float = 260.0      # price units either side of the forward
+
+    def all_plants(self) -> tuple[Plant, ...]:
+        if self.plants:
+            if self.arb_strength:
+                raise ValueError(
+                    "set plants= or arb_strength=, not both: two ways of saying "
+                    "what was planted is one way of disagreeing with yourself")
+            return self.plants
+        if self.arb_strength:
+            return (Plant("parity", self.arb_expiry_index,
+                          self.arb_strike_offset, self.arb_strength),)
+        return ()
 
     def digest(self) -> str:
         parts = [f"{k}={getattr(self, k)!r}" for k in sorted(self.__dataclass_fields__)]
@@ -128,169 +196,253 @@ class SyntheticOptionsSurface:
     Rates are zero, deliberately. A non-zero rate adds a discount factor to
     every leg and changes nothing about which conditions hold, while giving
     parity a term whose sign a reader has to track. The point of this dataset is
-    that parity is exact; r=0 keeps it legible.
+    that parity is exact; r = 0 keeps it legible.
     """
 
     def __init__(self, spec: SyntheticOptionsSpec | None = None) -> None:
         self.spec = spec or SyntheticOptionsSpec()
         s = self.spec
-        if s.n_strikes % 2 == 0:
-            raise ValueError("n_strikes must be odd so one strike is at the money")
         if not s.expiries_in_sessions or min(s.expiries_in_sessions) < 1:
             raise ValueError("expiries are counted in whole sessions, at least 1")
         if sorted(s.expiries_in_sessions) != list(s.expiries_in_sessions):
             raise ValueError("expiries must be given in increasing order")
-        if s.arb_expiry_index not in range(len(s.expiries_in_sessions)):
-            raise ValueError("arb_expiry_index is not one of the expiries")
-        self.name = (f"synthetic-options:arb={s.arb_strength:g}:seed={s.seed}")
-        self._densities: dict[int, np.ndarray] = {}
-        self._offsets = (
-            np.arange(-s.density_grid_halfwidth, s.density_grid_halfwidth + 1)
-            * s.tick_size
-        )
+        if s.wing_halfwidth < s.near_halfwidth:
+            raise ValueError("the wings must reach at least as far as the near strikes")
+        for pl in s.all_plants():
+            if pl.kind not in Plant.KINDS:
+                raise ValueError(f"unknown plant kind {pl.kind!r}; one of {Plant.KINDS}")
+            if pl.expiry_index not in range(len(s.expiries_in_sessions)):
+                raise ValueError(f"plant expiry_index {pl.expiry_index} is not an expiry")
+            if pl.kind == "calendar" and pl.expiry_index >= len(s.expiries_in_sessions) - 1:
+                raise ValueError("a calendar plant needs a further expiry to break against")
+        self.name = f"synthetic-options:{s.symbol}:plants={len(s.all_plants())}:seed={s.seed}"
+        self._densities: dict[int, tuple] = {}
 
     # ---- the density ------------------------------------------------------ #
-    def _kernel(self) -> np.ndarray:
-        """One session of diffusion, on the tick grid, as a normalised kernel."""
-        s = self.spec
-        sd_ticks = s.vol_per_session / s.tick_size
-        half = max(1, int(np.ceil(4.0 * sd_ticks)))
-        x = np.arange(-half, half + 1, dtype=float)
-        k = np.exp(-0.5 * (x / sd_ticks) ** 2)
-        return k / k.sum()
+    def density(self, sessions_ahead: int) -> tuple:
+        """`(offsets, probabilities)` for the terminal price, relative to the
+        forward, `sessions_ahead` sessions out.
 
-    def density(self, sessions_ahead: int) -> np.ndarray:
-        """The terminal density `sessions_ahead` sessions out, on `self._offsets`.
-
-        Built by convolving ONE kernel repeatedly, which is what makes the
-        expiries mutually consistent: the 10-session density is the 5-session
-        density diffused further, so variance increases monotonically and no
-        calendar arbitrage can appear between them.
+        **A single Gaussian per expiry, not one kernel convolved n times.**
+        Gaussians are infinitely divisible, so N(0, T s^2) IS N(0, T1 s^2)
+        convolved with N(0, (T-T1) s^2): building each expiry directly is both
+        exactly consistent across the ladder and far cheaper than 63 passes of
+        `np.convolve`, which also accumulates tail truncation. Calendar
+        monotonicity still follows from one process, which is the property that
+        matters -- it is just reached by arithmetic instead of by iteration.
         """
         if sessions_ahead in self._densities:
             return self._densities[sessions_ahead]
-        d = np.zeros_like(self._offsets)
-        d[len(d) // 2] = 1.0                       # a point mass at the forward
-        k = self._kernel()
-        for _ in range(sessions_ahead):
-            d = np.convolve(d, k, mode="same")
+        s = self.spec
+        sd = s.vol_per_session * (sessions_ahead ** 0.5)
+        n = int(s.density_halfwidth / s.density_step)
+        offsets = np.arange(-n, n + 1) * s.density_step
+        d = np.exp(-0.5 * (offsets / sd) ** 2)
         total = d.sum()
         if total <= 0:
-            raise ValueError("density collapsed; widen density_grid_halfwidth")
-        d = d / total                              # renormalise the clipped tails
-        self._densities[sessions_ahead] = d
-        return d
+            raise ValueError("density collapsed; widen density_halfwidth")
+        out = (offsets, d / total)
+        self._densities[sessions_ahead] = out
+        return out
 
     # ---- pricing ---------------------------------------------------------- #
     def price(self, forward: float, strike: float, sessions_ahead: int,
               is_call: bool) -> float:
         """Discounted expectation of the payoff. r = 0, so no discount factor."""
-        d = self.density(sessions_ahead)
-        terminal = forward + self._offsets
+        offsets, prob = self.density(sessions_ahead)
+        terminal = forward + offsets
         payoff = (np.maximum(terminal - strike, 0.0) if is_call
                   else np.maximum(strike - terminal, 0.0))
-        return float(np.dot(d, payoff))
+        return float(np.dot(prob, payoff))
 
+    # ---- the ladder ------------------------------------------------------- #
     def strikes(self, forward: float) -> list[float]:
-        """Strikes centred on the money, on a fixed grid so the ladder does not
-        move under the strategy's feet mid-session."""
-        s = self.spec
-        atm = round(forward / s.strike_spacing) * s.strike_spacing
-        half = s.n_strikes // 2
-        return [atm + (i - half) * s.strike_spacing for i in range(s.n_strikes)]
+        """$1 near the money, $5 in the wings, centred on the money.
 
-    # ---- the plant -------------------------------------------------------- #
-    def _planted_pair(self, forward: float) -> tuple[int, float]:
+        The spacing change is deliberate and is where a butterfly check has to
+        be careful: three strikes are only a butterfly when they are EQUALLY
+        spaced, and at the boundary they are not.
+        """
         s = self.spec
-        expiry = s.expiries_in_sessions[s.arb_expiry_index]
+        atm = round(forward / s.near_spacing) * s.near_spacing
+        out = {atm + k * s.near_spacing
+               for k in range(-int(s.near_halfwidth / s.near_spacing),
+                              int(s.near_halfwidth / s.near_spacing) + 1)}
+        step = s.wing_spacing
+        lo = atm - s.wing_halfwidth
+        hi = atm + s.wing_halfwidth
+        k = round(lo / step) * step
+        while k <= hi:
+            if abs(k - atm) > s.near_halfwidth:
+                out.add(k)
+            k += step
+        return sorted(round(x, 6) for x in out)
+
+    # ---- the quote -------------------------------------------------------- #
+    def increment(self, mid: float) -> float:
+        """OPRA: a penny under $3.00 of premium, a nickel at or above."""
+        s = self.spec
+        return s.penny_increment if mid < s.penny_below else s.nickel_increment
+
+    def half_spread(self, mid: float, sessions_ahead: int) -> float:
+        """A floor, plus a fraction of premium, plus a widening with maturity."""
+        s = self.spec
+        return (s.min_half_spread
+                + s.half_spread_frac * mid
+                + s.far_expiry_widening * sessions_ahead)
+
+    def _quote(self, mid: float, sessions_ahead: int) -> tuple[float, float]:
+        """**Both sides are rounded AWAY from the mid, and that is a correctness
+        property rather than a convention.**
+
+        Quotes live on a discrete grid, so they have to be rounded. Rounding to
+        nearest would move a bid up or an ask down by up to half an increment,
+        and either of those manufactures an edge that nothing planted -- on a
+        nickel grid, up to 0.05 per leg, which is larger than some plants. Bids
+        round down and asks round up, so quantisation can only ever make an
+        arbitrage harder to find. The cost is that a planted edge is reduced by
+        up to one increment per leg, which is why `oracle()` reports a bound
+        rather than an equality.
+        """
+        h = self.half_spread(mid, sessions_ahead)
+        inc = self.increment(mid)
+        bid = max(0.0, np.floor((mid - h) / inc) * inc)
+        ask = np.ceil((mid + h) / inc) * inc
+        return round(float(bid), 6), round(float(ask), 6)
+
+    # ---- the plants -------------------------------------------------------- #
+    def _plant_sites(self, forward: float) -> dict:
+        """(expiry_sessions, strike, is_call) -> signed shift, per plant kind.
+
+        parity    the call is cheapened, so C - P falls below F - K.
+        butterfly the middle call is dearer, so the fly costs less than zero.
+        calendar  the near call is dearer, so its bid can exceed the far ask.
+        """
+        s = self.spec
         ks = self.strikes(forward)
-        strike = ks[len(ks) // 2 + s.arb_strike_offset]
-        return expiry, strike
+        atm_i = min(range(len(ks)), key=lambda i: abs(ks[i] - forward))
+        sites: dict = {}
+        for pl in s.all_plants():
+            expiry = s.expiries_in_sessions[pl.expiry_index]
+            i = min(max(atm_i + pl.strike_offset, 0), len(ks) - 1)
+            if pl.kind == "parity":
+                sites[(expiry, ks[i], True)] = -pl.strength
+            elif pl.kind == "butterfly":
+                sites[(expiry, ks[i], True)] = +pl.strength
+            elif pl.kind == "calendar":
+                sites[(expiry, ks[i], True)] = +pl.strength
+        return sites
 
-    def oracle(self) -> dict:
-        """What the planted arbitrage is worth per unit, on the OPTION legs.
+    def threshold(self, plant: Plant, forward: float) -> dict:
+        """The strength at which `plant`'s NAMED condition first fires.
 
-        **Two legs, not four.** The parity package is: buy the call at its ask,
-        sell the put at its bid. That is `2 * half_spread` of crossing, and the
-        plant makes the package cheaper than `forward - strike` by
-        `arb_strength`, so the edge is `arb_strength - 2 * half_spread`. An
-        earlier version charged four half-spreads on the theory that a
-        conversion has four sides; it has three -- call, put and underlying --
-        and it disagreed with what `parity_violations` actually reports by
-        exactly `2 * half_spread`. The checker was right.
+        **Spreads are not the whole cost, and assuming they were made the first
+        oracle wrong in a way the checker caught.** A calendar plant has to
+        clear the calendar premium -- a further expiry is genuinely worth more
+        than a nearer one at the same strike -- before any spread is paid, and
+        a butterfly plant has to clear the convexity slack already in the
+        ladder. Only parity has no intrinsic term, because parity is an
+        identity: `C - P - (F - K)` is exactly zero before the plant, so the
+        spread is all there is.
 
-        **The underlying leg is deliberately not priced here.** Closing the
-        conversion needs the futures leg, and what that costs is the engine's
-        fill model and commission, not a property of this surface. Quoting it
-        here would be this file asserting something it does not own. So
-        `net_per_unit` is an upper bound on what is capturable: a loop cannot
-        beat it, and the gap between it and a realised result is execution.
-
-        Nothing above is fitted, which is the point of a planted arbitrage -- it
-        is a number, not an estimate.
+        A calendar plant of 0.45 at a 2-vs-5 session pair reported `findable`
+        and produced no calendar violation at all, because the premium between
+        those expiries is several times that.
         """
         s = self.spec
-        gross = s.arb_strength
-        option_legs = 2.0 * s.half_spread
-        net = gross - option_legs
-        return {
-            "planted": gross,
-            "option_leg_cost_per_unit": option_legs,
-            "net_per_unit": net,
-            "findable": net > 0.0,
-            "underlying_leg": ("not priced here; the futures side is the engine's "
-                               "fill model and commission"),
-            "visible_routes": self._visible_routes(),
-            "note": ("net_per_unit is an UPPER BOUND on the capturable edge, on "
-                     "the option legs alone. findable is false when the plant is "
-                     "smaller than the spread it must clear, which is a "
-                     "deliberately available configuration: a violation that "
-                     "exists and cannot be monetised is the case that says "
-                     "whether the loop reports edges it cannot capture."),
-        }
+        ks = self.strikes(forward)
+        atm_i = min(range(len(ks)), key=lambda i: abs(ks[i] - forward))
+        i = min(max(atm_i + plant.strike_offset, 0), len(ks) - 1)
+        strike = ks[i]
+        expiry = s.expiries_in_sessions[plant.expiry_index]
+        h = lambda k, e, c: self.half_spread(self.price(forward, k, e, c), e)  # noqa: E731
 
-    def _visible_routes(self) -> list[str]:
-        """Which no-arbitrage conditions the plant breaks at this strength.
+        if plant.kind == "parity":
+            intrinsic = 0.0
+            spread = h(strike, expiry, True) + h(strike, expiry, False)
+            legs = 2
+        elif plant.kind == "butterfly":
+            lo, hi = ks[max(i - 1, 0)], ks[min(i + 1, len(ks) - 1)]
+            span = hi - lo
+            w = (hi - strike) / span if span > 0 else 0.5
+            # how convex the ladder already is, in the same units as the plant
+            intrinsic = (w * self.price(forward, lo, expiry, True)
+                         + (1 - w) * self.price(forward, hi, expiry, True)
+                         - self.price(forward, strike, expiry, True))
+            spread = (w * h(lo, expiry, True) + (1 - w) * h(hi, expiry, True)
+                      + h(strike, expiry, True))
+            legs = 3
+        else:
+            far = s.expiries_in_sessions[plant.expiry_index + 1]
+            intrinsic = (self.price(forward, strike, far, True)
+                         - self.price(forward, strike, expiry, True))
+            spread = h(strike, expiry, True) + h(strike, far, True)
+            legs = 2
+        return {"kind": plant.kind, "expiry_session": expiry, "strike": strike,
+                "intrinsic_to_clear": intrinsic, "spread_to_clear": spread,
+                "threshold": intrinsic + spread, "legs": legs}
 
-        Measured rather than reasoned: the thresholds are read off the default
-        surface and are in the module docstring. Reported so a campaign's record
-        says how many ways there were to find the thing it was asked to find.
+    def oracle(self, forward: float | None = None) -> dict:
+        """Per plant: what it must clear, and what it is worth if it does.
+
+        `net_per_unit_upper` is an UPPER BOUND, for two reasons that are both
+        real: quantisation moves each leg away from the mid by up to one
+        increment, and the futures leg of a conversion is the engine's fill
+        model, not this surface's to price.
+
+        **A plant does not stay inside its own condition.** Shifting one option
+        far enough makes its strike ladder non-convex and its expiry ladder
+        non-monotone, so a single plant can show up in parity, vertical and
+        butterfly at once -- `routes_seen` reports what is actually there by
+        running the checks, which is the only honest way to say it. The
+        analytic half of this method describes the plant that was asked for;
+        the measured half describes the surface that resulted.
         """
-        g = self.spec.arb_strength
-        h = self.spec.half_spread
-        routes = []
-        if g > 2.0 * h:
-            routes.append("parity")
-        if g >= 0.40:
-            routes.append("butterfly")
-        if g >= 0.50:
-            routes.append("calendar")
-        if g >= 0.75:
-            routes.append("vertical")
-        return routes
+        fwd = self.spec.start_price if forward is None else forward
+        rows = []
+        for pl in self.spec.all_plants():
+            t = self.threshold(pl, fwd)
+            net = pl.strength - t["threshold"]
+            rows.append({**t, "planted": pl.strength,
+                         "net_per_unit_upper": net, "findable": net > 0.0})
+        quotes = self.quotes_at(0, 0, fwd)
+        routes = {name: fn(quotes, fwd) if name == "parity" else fn(quotes)
+                  for name, fn in ALL_CHECKS.items()}
+        return {
+            "forward": fwd,
+            "plants": rows,
+            "routes_seen": {k: len(v) for k, v in routes.items()},
+            "best_edge_by_route": {k: (max(r["edge"] for r in v) if v else 0.0)
+                                   for k, v in routes.items()},
+            "note": ("net_per_unit_upper is an upper bound on the capturable edge, "
+                     "on the OPTION legs only: quantisation takes up to one "
+                     "increment per leg, and a conversion's futures leg belongs to "
+                     "the engine's fill model. threshold = intrinsic_to_clear + "
+                     "spread_to_clear, and only parity has a zero intrinsic term "
+                     "because only parity is an identity. routes_seen is measured "
+                     "from the quotes, not predicted, because a plant leaks into "
+                     "neighbouring conditions."),
+        }
 
     # ---- quotes ----------------------------------------------------------- #
     def quotes_at(self, ts: int, session: int, forward: float) -> list[OptionQuote]:
         """The whole surface at one instant: every strike, every expiry, both
         sides. The cross-section is the point -- an arbitrage is a statement
-        about several quotes at once, so a feed that delivered them one at a
-        time would make the task about reassembly rather than detection."""
+        about several quotes at once, so a feed delivering them one at a time
+        would make the task reassembly rather than detection."""
         s = self.spec
+        sites = self._plant_sites(forward)
         out: list[OptionQuote] = []
-        arb_expiry, arb_strike = self._planted_pair(forward)
         for expiry in s.expiries_in_sessions:
             for strike in self.strikes(forward):
                 for is_call in (True, False):
                     mid = self.price(forward, strike, expiry, is_call)
-                    if (s.arb_strength and is_call
-                            and expiry == arb_expiry and strike == arb_strike):
-                        mid -= s.arb_strength      # the only perturbation
-                    bid = max(0.0, mid - s.half_spread)
-                    ask = mid + s.half_spread
+                    mid += sites.get((expiry, strike, is_call), 0.0)
+                    mid = max(mid, 0.0)
+                    bid, ask = self._quote(mid, expiry)
                     out.append(OptionQuote(
                         ts=ts, session=session, expiry_session=session + expiry,
-                        strike=float(strike), is_call=is_call,
-                        bid=round(bid, 6), ask=round(ask, 6)))
+                        strike=float(strike), is_call=is_call, bid=bid, ask=ask))
         return out
 
 
@@ -367,7 +519,24 @@ def vertical_violations(quotes: list[OptionQuote], tol: float = 1e-9) -> list[di
 
 
 def butterfly_violations(quotes: list[OptionQuote], tol: float = 1e-9) -> list[dict]:
-    """A butterfly cannot be bought for less than nothing: convexity in K."""
+    """Convexity in K, for triples that are NOT necessarily equally spaced.
+
+    **The equal-spacing version is wrong on a real strike ladder.** QQQ lists
+    $1 strikes near the money and $5 in the wings, so consecutive triples
+    straddling the boundary -- (475, 480, 481), (519, 520, 525) -- are not
+    butterflies at all, and `a.ask - 2*b.bid + c.ask` reported six violations
+    on a surface that is arbitrage-free by construction. Convexity still
+    applies there; it just is not a 1-2-1.
+
+    For K1 < K2 < K3, convexity requires
+
+        C(K2) <= w * C(K1) + (1 - w) * C(K3),   w = (K3 - K2) / (K3 - K1)
+
+    so the package is: buy `w` of K1, buy `1 - w` of K3, sell one K2. At equal
+    spacing w = 1/2 and this is the familiar 1-2-1 halved. The edge is reported
+    per unit of the K2 leg; the fractional weights scale to whole contracts --
+    (475, 480, 481) has w = 1/6, which is 1 x K1 and 5 x K3 against 6 x K2.
+    """
     out = []
     groups: dict[tuple[int, bool], list[OptionQuote]] = {}
     for q in quotes:
@@ -375,11 +544,15 @@ def butterfly_violations(quotes: list[OptionQuote], tol: float = 1e-9) -> list[d
     for (expiry, is_call), qs in sorted(groups.items()):
         qs = sorted(qs, key=lambda q: q.strike)
         for a, b, c in zip(qs, qs[1:], qs[2:]):
-            cost = a.ask - 2.0 * b.bid + c.ask
+            span = c.strike - a.strike
+            if span <= 0:
+                continue
+            w = (c.strike - b.strike) / span
+            cost = w * a.ask + (1.0 - w) * c.ask - b.bid
             if cost < -tol:
                 out.append({"expiry_session": expiry, "is_call": is_call,
                             "strikes": (a.strike, b.strike, c.strike),
-                            "edge": -cost})
+                            "weight_low": round(w, 6), "edge": -cost})
     return out
 
 

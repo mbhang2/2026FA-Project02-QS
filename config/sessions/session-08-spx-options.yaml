@@ -64,8 +64,43 @@
 # is worse than no probe: it informs the agent, and it would be informing it of
 # a fault in its own code that does not exist.
 #
-# WIDTH 4. Michael's machine, measured: W=4 is 41.6 trials/h against W=1's 12.2,
-# and W=8 is not reliably faster while paging hard. Unchanged for this session.
+# WIDTH 1, AND THE CHANGE IS RECORDED RATHER THAN QUIET. This plan registered
+# W=4 first -- the measured throughput choice for this machine -- and the OS
+# killed the session for low memory 22 minutes in, during generation 1. The
+# campaign's own footprint was never the problem: `capacity.py --measure` put a
+# trial at 0.07 GiB. The MACHINE was the problem, and it said so before the
+# run: 3.2 GiB available, swap 7.5 of 9.0 GiB used, disk 98% full, with
+# CoreServices, Chrome and the editor already resident. `capacity.py`'s memory
+# model green-lit W=37 because it compares per-trial RSS against available
+# memory and labels itself ADVISORY; the signal that mattered was its warning
+# that "a machine already paging this hard has other processes that will want
+# it back". That warning was read and passed over. It should not have been.
+#
+# Nothing was spent: the three trials that completed went to worker ledgers
+# under `.scratch/`, which `runlog.ledger_paths()` cannot see, so global_n
+# stayed at 3,572 and both registrations were removed at 0 trials. Two of the
+# three had scored well -- primary +0.576 and +0.451 -- which is the reason to
+# run this again rather than to doubt it.
+#
+# **W=1 is not W=4 with less parallelism, it is a different search.** At W>1 a
+# generation's proposals are made blind to each other; at W=1 every proposal
+# sees all prior history. That is the chain every session before 2026-10-04
+# ran. Registered as W=1 here deliberately, not lowered at run time -- the
+# driver refuses to do that for exactly this reason.
+#
+# COST: roughly 15 minutes a trial serially (proposal 7-17 min, engine 3-8
+# min), so ~12 h for 50. It will likely span more than one sitting; `--resume`
+# continues at the first unfinished campaign.
+
+# ONE ARM TONIGHT, AND THE MISSING HALF IS A REAL COST. `spx-clean-01` -- the
+# negative control -- is deferred to keep the memory footprint to a single
+# process. An acceptance on the planted arm alone is NOT the result this
+# session was designed to produce: a detector loose enough to find an arbitrage
+# anywhere finds one in a planted surface too, and only the clean arm
+# distinguishes those. Run it before any claim is made from this one. The
+# harness-side control is the partial stand-in in the meantime:
+# `scripts/options_control.py` takes ZERO trades on the clean surface across
+# 105 sessions, and so did the one model proposal tested against it.
 #
 # The exposure floor is untouched at 0.70 -- Michael's standing call. The
 # control clears it comfortably, because a package carried to expiry spans
@@ -84,13 +119,16 @@ campaigns:
     profile: spx-options-train
     n: 50
     model: deepseek-v4-pro
-    generation_width: 4
+    generation_width: 1
     probe: false
 
-  - name: spx-clean-01
-    hypothesis: config/hypotheses/options-no-arbitrage-violation.md
-    profile: spx-clean-train
-    n: 50
-    model: deepseek-v4-pro
-    generation_width: 4
-    probe: false
+  # Deferred, not dropped. Restore this entry and re-run with --resume once
+  # there is memory headroom for it; it registers fresh and costs nothing to
+  # have waited.
+  # - name: spx-clean-01
+  #   hypothesis: config/hypotheses/options-no-arbitrage-violation.md
+  #   profile: spx-clean-train
+  #   n: 50
+  #   model: deepseek-v4-pro
+  #   generation_width: 1
+  #   probe: false

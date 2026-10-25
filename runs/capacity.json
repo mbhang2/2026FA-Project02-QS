@@ -56,6 +56,22 @@
         "purpose": "check",
         "python": "3.11.5",
         "wall_s": 1.3002877924591303
+      },
+      "spx-clean-train": {
+        "measured_at": "2026-10-25T17:27:18+00:00",
+        "peak_rss_bytes": 77299712,
+        "profile": "spx-clean-train",
+        "purpose": "check",
+        "python": "3.11.5",
+        "wall_s": 3.077292624861002
+      },
+      "spx-options-train": {
+        "measured_at": "2026-10-25T17:27:14+00:00",
+        "peak_rss_bytes": 75972608,
+        "profile": "spx-options-train",
+        "purpose": "check",
+        "python": "3.11.5",
+        "wall_s": 3.08041724935174
       }
     }
   }

@@ -1,0 +1,18 @@
+{
+  "schema": "research-session/1",
+  "session": "session-08-spx-options",
+  "plan": "config/sessions/session-08-spx-options.yaml",
+  "declared_family": [],
+  "started": "2026-10-25T17:25:52+00:00",
+  "campaigns": {
+    "spx-arb-01": "run failed",
+    "spx-clean-01": "run failed"
+  },
+  "validation": "NOT RUN -- --train-only. This session is a measurement about the machinery, not a search for a candidate, and validation is one look per campaign.",
+  "l2": null,
+  "run_failed_after": "spx-clean-01",
+  "stopped_by_cue": false,
+  "family_note": "every campaign in the plan, written before the session ran.",
+  "train_only": true,
+  "finished": "2026-10-25T17:26:35+00:00"
+}

@@ -62,6 +62,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from .synthetic import SyntheticDataset, SyntheticSpec
+from ..types import DataCapabilities, Side, Tick
 from .options import (                        # noqa: F401  (re-exported)
     OptionQuote, Plant, butterfly_violations, vertical_violations,
 )
@@ -450,4 +452,330 @@ class SPXHestonSurface:
                 out.append({"maturity": m.label, "strike": strike, "edge": edge,
                             "side": "long_via_options" if cheap >= dear else
                                     "short_via_options"})
+        return out
+
+
+# --------------------------------------------------------------------------- #
+# A moving surface: the Heston path, and options priced from the state at each
+# instant.
+# --------------------------------------------------------------------------- #
+# A static snapshot has one arbitrage to find, once, which does not test "fast
+# and effective" detection at all. What does is a surface that moves: remaining
+# maturity shrinks, variance wanders, and the plant's edge breathes with the
+# spread around it.
+#
+# **Priced from (S_t, v_t, tau), not from S_t alone.** The Gaussian surface
+# could be a function of the forward because its variance was a constant. Under
+# Heston the density depends on the CURRENT variance as well, so the feed is
+# driven by the path state at an instant rather than by a price -- and v_t is
+# not something a strategy can read, which is correct: implied vol is
+# observable, the instantaneous variance of the process is not.
+# --------------------------------------------------------------------------- #
+QUOTES_PER_SESSION = 390
+SESSION_YEARS = 1.0/252.0
+
+
+class SPXHestonPath:
+    """One simulated (S, v) path under the calibrated parameters.
+
+    Full-truncation Euler on the variance, exact-in-expectation on log-spot.
+    Full truncation rather than reflection because Feller is violated here --
+    the variance process reaches zero, and reflecting at zero biases variance
+    upward while truncation is the scheme with the better-documented bias on
+    exactly this kind of calibration.
+
+    **Simulated once for the whole dataset and cached, not seeded per session.**
+    `SyntheticDataset` seeds per session so a split served alone matches a split
+    served with the others, which works because its sessions are independent.
+    A Heston path is not: v_t carries across the boundary, and per-session
+    seeding would reset it. One seed, one path, sliced by session, is both
+    deterministic and continuous.
+    """
+
+    def __init__(self, n_sessions: int, seed: int = 0,
+                 quotes_per_session: int = QUOTES_PER_SESSION,
+                 drift_r: float = 0.0439, drift_q: float = 0.0100):
+        self.n_sessions = n_sessions
+        self.quotes_per_session = quotes_per_session
+        self.seed = seed
+        self.dt = SESSION_YEARS/quotes_per_session
+        n = n_sessions*quotes_per_session
+        # 0x5058 is "PX": a fixed stream id so this path cannot collide with
+        # another generator that happens to share the seed.
+        rng = np.random.default_rng([seed, 0x5058])
+        z1 = rng.standard_normal(n)
+        z2 = RHO*z1 + math.sqrt(max(1.0 - RHO*RHO, 0.0))*rng.standard_normal(n)
+        S = np.empty(n + 1)
+        v = np.empty(n + 1)
+        S[0], v[0] = SPOT, V0
+        sdt = math.sqrt(self.dt)
+        mu = drift_r - drift_q
+        for i in range(n):
+            vp = max(v[i], 0.0)
+            S[i+1] = S[i]*math.exp((mu - 0.5*vp)*self.dt + math.sqrt(vp)*sdt*z1[i])
+            v[i+1] = v[i] + KAPPA*(THETA - vp)*self.dt + ETA*math.sqrt(vp)*sdt*z2[i]
+        self.spot = S
+        self.var = np.clip(v, 0.0, None)
+
+    def elapsed_years(self, index: int) -> float:
+        return index*self.dt
+
+    def state(self, index: int) -> tuple[float, float, float]:
+        i = min(max(index, 0), len(self.spot) - 1)
+        return float(self.spot[i]), float(self.var[i]), self.elapsed_years(i)
+
+
+class SPXMovingSurface(SPXHestonSurface):
+    """`SPXHestonSurface`, re-priced from an arbitrary (S, v, elapsed) state.
+
+    The parent prices the calibration snapshot: v = v0, tau = T, F and D as
+    given. This one re-derives all four from the state, which is what makes the
+    surface move.
+    """
+
+    def density_for(self, tau: float, v: float) -> tuple:
+        """`(terminal_prices_over_forward, probabilities)` for maturity `tau`
+        at current variance `v`.
+
+        Returned relative to the forward -- the caller multiplies -- so the same
+        density serves any spot at the same (tau, v). That is what makes
+        caching on a quantised state worth anything.
+        """
+        s = self.spec
+        total = THETA*tau + (v - THETA)*(1.0 - math.exp(-KAPPA*tau))/KAPPA
+        sd = math.sqrt(max(total, 1e-12))
+        a, b = -s.cos_width*sd, s.cos_width*sd
+        k = np.arange(s.cos_terms)
+        uk = k*np.pi/(b - a)
+        coef = np.real(self._cf_v(uk, tau, v)*np.exp(-1j*uk*a))
+        coef[0] *= 0.5
+        y = np.linspace(a, b, s.grid_points)
+        f = np.clip((2.0/(b - a))*(np.cos(uk[None, :]*(y[:, None] - a)) @ coef), 0.0, None)
+        dy = y[1] - y[0]
+        mass = f.sum()*dy
+        if mass <= 0:
+            raise ValueError("the COS density collapsed; widen cos_width")
+        return np.exp(y), f*dy/mass
+
+    @staticmethod
+    def _cf_v(u, T: float, v: float):
+        """The parent's characteristic function with v0 replaced by `v`."""
+        u = np.asarray(u, dtype=complex)
+        xi = KAPPA - 1j*RHO*ETA*u
+        d = np.sqrt(xi**2 + (ETA**2)*(u**2 + 1j*u))
+        g = (xi - d)/(xi + d)
+        e = np.exp(-d*T)
+        C = (KAPPA*THETA/ETA**2)*((xi - d)*T - 2.0*np.log((1.0 - g*e)/(1.0 - g)))
+        D = ((xi - d)/ETA**2)*((1.0 - e)/(1.0 - g*e))
+        return np.exp(C + D*v)
+
+    def strikes_for(self, forward: float) -> list[float]:
+        s = self.spec
+        atm = round(forward/s.near_spacing)*s.near_spacing
+        near = s.near_halfwidth_frac*forward
+        wide = s.wide_halfwidth_frac*forward
+        out = {atm + j*s.near_spacing
+               for j in range(-int(near/s.near_spacing), int(near/s.near_spacing) + 1)}
+        kk = round((atm - wide)/s.wide_spacing)*s.wide_spacing
+        while kk <= atm + wide:
+            if abs(kk - atm) > near:
+                out.add(kk)
+            kk += s.wide_spacing
+        return sorted(round(x, 6) for x in out if x > 0)
+
+    def quotes_for_state(self, ts: int, session: int, spot: float, var: float,
+                         elapsed: float) -> list[OptionQuote]:
+        """The whole surface at one instant of the path."""
+        out: list[OptionQuote] = []
+        for i, m in enumerate(self.maturities):
+            tau = m.T - elapsed
+            if tau <= 1e-6:
+                continue                     # the expiry has passed
+            fwd = spot*math.exp((m.r - m.q)*tau)
+            disc = math.exp(-m.r*tau)
+            rel, prob = self.density_for(tau, var)
+            terminal = fwd*rel
+            ks = self.strikes_for(fwd)
+            k = np.asarray(ks, dtype=float)
+            calls = disc*(np.maximum(terminal[None, :] - k[:, None], 0.0) @ prob)
+            puts = calls - disc*(fwd - k)
+            atm = min(range(len(ks)), key=lambda j: abs(ks[j] - fwd))
+            shift: dict[tuple[float, bool], float] = {}
+            for pl in self.spec.plants:
+                if pl.expiry_index != i:
+                    continue
+                j = min(max(atm + pl.strike_offset, 0), len(ks) - 1)
+                shift[(ks[j], True)] = (-pl.strength if pl.kind == "parity"
+                                        else pl.strength)
+            for j, strike in enumerate(ks):
+                for is_call, mid in ((True, float(calls[j])), (False, float(puts[j]))):
+                    mid = max(mid + shift.get((strike, is_call), 0.0), 0.0)
+                    bid, ask = self._quote_at(mid, tau)
+                    out.append(OptionQuote(ts=ts, session=session, expiry_session=i,
+                                           strike=float(strike), is_call=is_call,
+                                           bid=bid, ask=ask))
+        return out
+
+    def _quote_at(self, mid: float, tau: float) -> tuple[float, float]:
+        s = self.spec
+        h = s.min_half_spread + s.half_spread_frac*mid + s.far_expiry_widening*tau
+        inc = s.dime_increment if mid >= s.dime_above else s.nickel_increment
+        bid = max(0.0, math.floor((mid - h)/inc)*inc)
+        ask = math.ceil((mid + h)/inc)*inc
+        return round(bid, 4), round(ask, 4)
+
+    def forward_discount(self, i: int, elapsed: float, spot: float) -> tuple:
+        m = self.maturities[i]
+        tau = m.T - elapsed
+        return spot*math.exp((m.r - m.q)*tau), math.exp(-m.r*tau), tau
+
+
+class SPXHestonDataset(SyntheticDataset):
+    """The Heston path as the underlying, the SPX surface as the options channel.
+
+    **Subclassed rather than written fresh, for the third time and the same
+    reason.** `SyntheticDataset` carries the calendar, the train/validation/
+    holdout split, the embargo, session irregularity, early closes,
+    `scored_sessions`, `warmup_sessions` and the holdout lock -- every one with
+    a defect history behind it. Only the price path is replaced, so the
+    underlying a strategy sees and the forward the options are priced from are
+    the SAME path. That identity is the point: an options feed driven by one
+    series while the strategy trades another is a dataset that cannot be
+    arbitraged correctly even in principle.
+
+    `uniform=True` is forced. The parent's irregular sessions are there to stop
+    a strategy learning a session length, and they are right for that -- but the
+    options state here is indexed by position in a uniform minute grid, and
+    ragged sessions would put the surface and the path on different clocks.
+    Stated rather than silently assumed.
+    """
+
+    def __init__(self, spec=None, surface: SPXMovingSurface | None = None,
+                 path_seed: int = 0):
+        from dataclasses import replace
+        # 40 sessions is 0.1587 years against the front expiry's 0.1830, so
+        # the run ends with roughly six sessions still to run on the nearest
+        # option. The guard below rejects anything longer; 60 -- the parent's
+        # usual default -- reaches past it, which is how this number was found.
+        # The floor is about 20: below that the 60/20 split plus a 2-session
+        # embargo does not fit, which the parent refuses on its own.
+        base = spec or SyntheticSpec(n_sessions=40)
+        base = replace(base, uniform=True, ticks_per_session=QUOTES_PER_SESSION)
+        super().__init__(base)
+        self.surface = surface or SPXMovingSurface(
+            SPXSpec(cos_terms=256, grid_points=601))
+        self.path = SPXHestonPath(n_sessions=base.n_sessions, seed=path_seed,
+                                  quotes_per_session=QUOTES_PER_SESSION)
+        horizon = base.n_sessions*SESSION_YEARS
+        shortest = min(m.T for m in self.surface.maturities)
+        if horizon >= shortest:
+            raise ValueError(
+                f"{base.n_sessions} sessions is {horizon:.4f} years, which "
+                f"reaches the {shortest:.4f}-year expiry. The calibration has "
+                f"three listed expiries and no mechanism for rolling into new "
+                f"ones, so a run must end before the front one does.")
+        self.name = f"spx-heston:{self.surface.name}:path={path_seed}"
+        self._ts_index: dict[int, int] = {}
+        self._ts_sorted: list[int] | None = None
+        self._feed = _SPXFeed(self)
+
+    # ---- the underlying is the path --------------------------------------- #
+    def _session_ticks(self, session: int) -> list[Tick]:
+        hit = self._cache.get(session)
+        if hit is not None:
+            return hit
+        start, _ = self.session_bounds(session)
+        spacing = self.spec.tick_spacing_ns
+        n = self._lengths[session]
+        base = session*QUOTES_PER_SESSION
+        out = []
+        for j in range(n):
+            idx = base + j
+            ts = start + j*spacing
+            self._ts_index[ts] = idx
+            px = float(self.path.spot[min(idx, len(self.path.spot) - 1)])
+            out.append(Tick(ts, round(px, 2), 1, session,
+                            side=Side.BUY if j % 2 == 0 else Side.SELL))
+        self._cache[session] = out
+        return out
+
+    def _sorted_ts(self) -> list[int]:
+        """The instants produced so far, sorted, for the feed to bisect.
+
+        Rebuilt when the index grows rather than on every call: a strategy
+        reading the surface each bar would otherwise sort ten thousand
+        timestamps per read.
+        """
+        if self._ts_sorted is None or len(self._ts_sorted) != len(self._ts_index):
+            self._ts_sorted = sorted(self._ts_index)
+        return self._ts_sorted
+
+    # ---- the options channel ---------------------------------------------- #
+    def capabilities(self) -> DataCapabilities:
+        return DataCapabilities(has_trades=True, has_quotes=False,
+                                has_book=False, has_options=True)
+
+    def options(self) -> "_SPXFeed":
+        return self._feed
+
+    def digest(self) -> str:
+        """Covers the path AND the surface: otherwise a run with a plant would
+        be indistinguishable in the record from a clean one."""
+        return hashlib.sha256(
+            f"{super().digest()}|{self.surface.spec.digest()}|"
+            f"{self.path.seed}".encode()).hexdigest()[:16]
+
+
+class _SPXFeed:
+    """Serves the moving surface, indexed by the instant the engine is at.
+
+    **Keyed on the timestamp, not on the price.** The Gaussian feed could key on
+    the forward because its density had a constant variance, so the price was
+    the whole state. Under Heston the density also depends on `v_t`, which is
+    NOT observable to a strategy -- correctly, since implied vol is observable
+    and the instantaneous variance of the process is not. So the feed resolves
+    the engine's timestamp to a position on the path and reads the state there.
+
+    No look-ahead is possible: the state at a timestamp is the path up to that
+    timestamp, and a timestamp the walk has not reached is refused rather than
+    extrapolated.
+    """
+
+    __slots__ = ("_ds", "_cache", "hits", "misses")
+
+    def __init__(self, dataset: SPXHestonDataset):
+        self._ds = dataset
+        self._cache: dict[int, list[OptionQuote]] = {}
+        self.hits = self.misses = 0
+
+    def snapshot(self, ts: int, session: int, forward: float) -> list[OptionQuote]:
+        """The state as of `ts`: the latest path instant AT OR BEFORE it.
+
+        **Not an exact timestamp match, and the first version was.** A callback
+        fires at a BAR CLOSE, which is not one of the tick timestamps the path
+        produced, so exact matching refused every single read -- 144 of 144 on
+        the first engine run. Resolving backwards is also the correct
+        semantics rather than merely the working one: "as of this instant" means
+        the most recent state the walk has reached, which is exactly what makes
+        look-ahead impossible. A timestamp before the first tick is refused,
+        because there is no state yet rather than a nearest one.
+        """
+        import bisect
+        times = self._ds._sorted_ts()
+        pos = bisect.bisect_right(times, ts) - 1
+        if pos < 0:
+            raise KeyError(
+                f"no path state at or before ts {ts}: the walk has not produced "
+                f"an instant yet. There is no nearest state to fall back to.")
+        idx = self._ds._ts_index[times[pos]]
+        hit = self._cache.get(idx)
+        if hit is not None:
+            self.hits += 1
+            return hit
+        self.misses += 1
+        spot, var, elapsed = self._ds.path.state(idx)
+        out = self._ds.surface.quotes_for_state(ts, session, spot, var, elapsed)
+        if len(self._cache) > 4096:
+            self._cache.clear()
+        self._cache[idx] = out
         return out

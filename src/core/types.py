@@ -86,6 +86,29 @@ class LifecycleKind(enum.StrEnum):
     SESSION_CLOSE = "session_close"
 
 
+# --------------------------------------------------------------------------- #
+# Asset identity.
+# --------------------------------------------------------------------------- #
+# **Added as a dimension, not as a replacement, and that is the whole design.**
+# The engine traded exactly one instrument, so a strategy wanting a call, a put
+# and a hedge -- which is what capturing a pricing inconsistency between options
+# needs -- had no way to say so. Every record below therefore carries an asset.
+#
+# It defaults, and the default is load-bearing rather than a convenience. A
+# single-asset run must keep producing BYTE-IDENTICAL digests, because
+# `BlotterRow.as_row` is pinned by eight golden cases and by every ledger row
+# since Task 3, and 3,447 committed strategies are re-executed by
+# `ledger_check --replay` to check they still reproduce. So the row builders
+# below append the asset ONLY when it is not the default: one asset in, the same
+# tuple out, and a multi-asset run is visibly a different thing.
+#
+# A plain string rather than a class: it crosses the remote pipe as JSON, goes
+# into digests, and keys dictionaries. A richer type would have to be encoded,
+# decoded and hashed on every one of those paths to buy nothing a name does not
+# already give.
+DEFAULT_ASSET = "primary"
+
+
 @dataclass(frozen=True, slots=True)
 class Tick:
     ts: Ts
@@ -97,6 +120,15 @@ class Tick:
     # rather than assume -- the alternative is silently treating "unknown" as
     # "buy" in every order-flow feature ever written against it.
     side: "Side | None" = None
+    # **Last, because `Tick` is built POSITIONALLY.** Inserted before `side` it
+    # silently became the aggressor: `engine.py` builds
+    # `Tick(ts, price, size, session, seq, src.side)` with six positional
+    # arguments, so the side landed in `asset` and every order-flow feature saw
+    # an unknown aggressor. Four tests caught it -- signed volume, the tick
+    # imbalance example twice, and the interface test -- which is the same
+    # append-at-the-end rule `OptionQuote` already carries for the wire format,
+    # broken here an hour after writing it down.
+    asset: str = DEFAULT_ASSET
 
 
 @dataclass(frozen=True, slots=True)
@@ -411,14 +443,20 @@ class FillRecord:
     price: float
     liquidity: str          # "taker" -- crossed the book; "maker" -- rested
     tag: str = ""
+    asset: str = DEFAULT_ASSET
 
     def as_row(self) -> tuple:
         """Stable tuple for the log digest. Rounded like `BlotterRow.as_row`, so
-        a byte comparison means the same thing in both places."""
-        return (
+        a byte comparison means the same thing in both places.
+
+        The asset is appended only when it is not the default, so a single-asset
+        log hashes to exactly what it hashed to before assets existed.
+        """
+        row = (
             self.seq, self.ts, self.session, self.order_id, str(self.side),
             self.size, round(self.price, 10), self.liquidity, self.tag,
         )
+        return row if self.asset == DEFAULT_ASSET else row + (self.asset,)
 
 
 @dataclass(frozen=True, slots=True)
@@ -520,6 +558,7 @@ class BlotterRow:
     commission: float
     realized_pnl: float
     tag: str = ""
+    asset: str = DEFAULT_ASSET
 
     def as_row(self) -> tuple:
         """Stable tuple used for the determinism digest.
@@ -547,7 +586,17 @@ class BlotterRow:
             round(self.commission, 10),
             round(self.realized_pnl, 10),
             self.tag,
-        )
+        ) + self._asset_suffix()
+
+    def _asset_suffix(self) -> tuple:
+        """`()` for the default asset, `(asset,)` otherwise.
+
+        This is what keeps a single-asset run byte-identical to every digest
+        committed since Task 3. Appending unconditionally would move eight
+        golden cases and every ledger row at once, for no gain to anyone running
+        one instrument.
+        """
+        return () if self.asset == DEFAULT_ASSET else (self.asset,)
 
     def exact_row(self) -> tuple:
         """The same row with nothing rounded. Floats as their exact hex form."""
@@ -562,7 +611,7 @@ class BlotterRow:
             _exact(self.commission),
             _exact(self.realized_pnl),
             self.tag,
-        )
+        ) + self._asset_suffix()
 
 
 def _exact(value: float) -> str:

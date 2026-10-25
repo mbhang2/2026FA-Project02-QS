@@ -475,3 +475,48 @@ def test_the_history_check_is_memoised_too():
         ledger_check.subprocess.run = real
         ledger_check._HIST_CACHE.clear()
     assert len(calls) == 1, f"20 lookups ran {len(calls)} merge-base calls"
+
+
+def test_a_stored_fill_log_reads_back_at_nine_fields_and_at_ten(tmp_path):
+    """**The bug that broke the first options campaign's gate, after it ran.**
+
+    `FillRecord` gained `asset` in the multi-asset work, appended last, so a
+    stored row went from nine values to ten. `load_fill_log` unpacked exactly
+    nine and raised `ValueError: too many values to unpack` -- not during the
+    50 trials, which were fine, but at the `nulls` stage that reads their fills
+    back to build the sign-flip null. The trials were valid and unreadable.
+
+    Both widths have to work, and not out of politeness to old data: a row is
+    replayed against the code of ITS commit, so a reader that only understands
+    today's width cannot verify anything written before today. This function is
+    the single parse point for `nulls`, `l2_gate`, `replay` and `holdout` --
+    the last of which spends the one look that §8 allows, and would have failed
+    the same way at the worst possible moment.
+    """
+    import gzip
+    import importlib.util
+    import json
+
+    from src.core.types import DEFAULT_ASSET
+
+    spec = importlib.util.spec_from_file_location(
+        "_replay_mod", REPO_ROOT / "scripts" / "replay.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    nine = [11, 1700000330000000000, 0, 1, "buy", 2, 69.0, "taker", "t"]
+    ten = nine + ["SPX-8-C-7820"]
+
+    for label, row, want_asset in (("nine", nine, DEFAULT_ASSET),
+                                   ("ten", ten, "SPX-8-C-7820")):
+        path = tmp_path / f"{label}.jsonl.gz"
+        with gzip.open(path, "wt") as fh:
+            fh.write(json.dumps(row) + "\n")
+        fills = mod.load_fill_log({"fill_log_source": str(path)})
+        assert fills is not None and len(fills) == 1, label
+        got = fills[0]
+        assert got.seq == 11 and got.size == 2 and got.price == 69.0, label
+        assert got.tag == "t" and got.liquidity == "taker", label
+        assert got.asset == want_asset, (
+            f"{label}-field row read back with asset {got.asset!r}, "
+            f"expected {want_asset!r}")

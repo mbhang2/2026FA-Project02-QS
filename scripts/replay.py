@@ -34,7 +34,7 @@ from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E40
 from src.core.engine import Engine  # noqa: E402
 from src.core.engine.reconstruct import log_digest, reconstruct  # noqa: E402
 from src.core.runlog import LedgerRun  # noqa: E402
-from src.core.types import FillRecord, Side, Split  # noqa: E402
+from src.core.types import DEFAULT_ASSET, FillRecord, Side, Split  # noqa: E402
 
 
 def load_fill_log(row: dict) -> list[FillRecord] | None:
@@ -55,10 +55,29 @@ def load_fill_log(row: dict) -> list[FillRecord] | None:
     fills = []
     with gzip.open(path, "rt") as fh:
         for line in fh:
-            seq, ts, session, oid, side, size, price, liquidity, tag = json.loads(line)
+            # **Nine fields OR ten, and both are real.** `FillRecord` gained
+            # `asset` in the multi-asset work, appended last, so every log
+            # written since then has ten values and every log written before
+            # has nine. This line unpacked exactly nine and raised
+            # `ValueError: too many values to unpack` on the first options
+            # campaign's `nulls` stage -- after all 50 trials had run. The
+            # trials were fine; nothing could read their fills back.
+            #
+            # Reading both is not politeness to old data, it is the whole
+            # reproduction story: a row is replayed against the code of ITS
+            # commit, so a reader that only understands today's width cannot
+            # verify anything written before today. This function is the single
+            # parse point for `nulls`, `l2_gate`, `holdout` and `replay` --
+            # including the one-look-ever holdout, which would have failed the
+            # same way at the most expensive possible moment.
+            row_fields = json.loads(line)
+            (seq, ts, session, oid, side, size,
+             price, liquidity, tag) = row_fields[:9]
+            asset = row_fields[9] if len(row_fields) > 9 else DEFAULT_ASSET
             fills.append(FillRecord(
                 seq=seq, ts=ts, session=session, order_id=oid, side=Side(side),
                 size=size, price=price, liquidity=liquidity, tag=tag,
+                asset=asset,
             ))
     return fills
 

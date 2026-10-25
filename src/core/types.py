@@ -654,6 +654,32 @@ class Blotter:
     def commission(self) -> float:
         return math.fsum(r.commission for r in self.rows)
 
+    # ---- per-asset views --------------------------------------------------- #
+    # **Views over the one row list, never a second store.** Each row already
+    # names its asset, so a per-asset figure is a filter -- which means the
+    # aggregate properties above stay the sum over everything, the digest stays
+    # the hash of every row in order, and nothing a single-asset run produces
+    # moves. Keeping a parallel per-asset blotter would be two places for the
+    # same number to live, and `FillRecord`'s docstring is three paragraphs on
+    # why that is how a score stops being trustworthy.
+    #
+    # `fsum` here for the same reason as above: CPython 3.12 compensates and
+    # 3.11 does not, so `sum` gives a different answer per interpreter.
+    def rows_for(self, asset: str) -> list["BlotterRow"]:
+        return [r for r in self.rows if r.asset == asset]
+
+    def realized_pnl_of(self, asset: str) -> float:
+        return math.fsum(r.realized_pnl for r in self.rows if r.asset == asset)
+
+    def commission_of(self, asset: str) -> float:
+        return math.fsum(r.commission for r in self.rows if r.asset == asset)
+
+    def assets(self) -> tuple[str, ...]:
+        """Every asset that actually traded, default first then sorted."""
+        seen = {r.asset for r in self.rows}
+        rest = sorted(a for a in seen if a != DEFAULT_ASSET)
+        return ((DEFAULT_ASSET, *rest) if DEFAULT_ASSET in seen else tuple(rest))
+
     def digest(self) -> str:
         """Agreement to ten decimal places. See `BlotterRow.as_row`.
 

@@ -47,6 +47,7 @@ from .fills import FillModel, check_capabilities, get_fill_model
 from .reconstruct import FillLogFull, log_digest, reconstruct
 from ..runlog import RunNotAccounted, RunTicket
 from ..types import (
+    DEFAULT_ASSET,
     Action,
     Bar,
     BarEvent,
@@ -536,6 +537,20 @@ class Engine:
         # this, and the reachability walk asserts it.
         self._fill_log: list[FillRecord] = []
         self._state = _RunState()
+        # **One record per asset, and the default asset's record IS
+        # `self._state`.** Aliased rather than copied, so every existing path --
+        # `self._state.position = value`, the port closure, the four setters
+        # below -- keeps mutating exactly the object it always did. A second
+        # store kept in sync would be two sources of truth for the same number,
+        # which is the shape of bug this engine spends most of its design
+        # avoiding.
+        #
+        # Session bounds live here too and are run-wide rather than per-asset,
+        # so `_state_for` copies them forward when a book is opened. Splitting
+        # the record would change what the port closes over, which is a
+        # security property documented on `_RunState` and not worth disturbing
+        # for tidiness.
+        self._states: dict[str, _RunState] = {DEFAULT_ASSET: self._state}
         self._book = _OrderBook()
         self._resolver = _SubResolver()
         self.orders = self._book.all
@@ -674,6 +689,28 @@ class Engine:
     # `position`, `last_price` and `_avg_price` live on `_RunState` so the
     # context's port can close over that record rather than over the engine.
     # Properties keep every existing call site working.
+    def _state_for(self, asset: str) -> _RunState:
+        """The book for `asset`, opened on first use.
+
+        A new book starts flat and inherits the current session bounds, so an
+        asset first traded mid-run is not born with a session that never
+        started.
+        """
+        book = self._states.get(asset)
+        if book is None:
+            book = _RunState(session_start=self._state.session_start,
+                             session_end=self._state.session_end)
+            self._states[asset] = book
+        return book
+
+    def position_of(self, asset: str) -> int:
+        return self._states[asset].position if asset in self._states else 0
+
+    def assets_traded(self) -> tuple[str, ...]:
+        """Every asset with a book, default first. For the run record."""
+        rest = sorted(a for a in self._states if a != DEFAULT_ASSET)
+        return (DEFAULT_ASSET, *rest)
+
     @property
     def position(self) -> int:
         return self._state.position
@@ -1091,7 +1128,8 @@ class Engine:
     # ---- sessions ---------------------------------------------------------- #
     def _open_session(self, session: int, tick: Tick) -> None:
         start, end = self.dataset.session_bounds(session)
-        self._state.session_start, self._state.session_end = start, end
+        for _book in self._states.values():
+            _book.session_start, _book.session_end = start, end
         for builder in self.builders.values():
             builder.start_session(session, start)
         self._emit(LifecycleKind.SESSION_OPEN, tick.ts, tick.seq)

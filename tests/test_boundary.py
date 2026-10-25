@@ -152,7 +152,25 @@ class _Probe:
                 and p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
             ]
             if not required:
-                self.seen.append((cls, name, member()))
+                try:
+                    self.seen.append((cls, name, member()))
+                except ctxmod.ContextError as exc:
+                    # **A documented refusal is recorded, not skipped.** This
+                    # sweep exists to catch mutable engine state crossing the
+                    # boundary, and a method that refuses hands back nothing at
+                    # all. `ctx.options()` refuses on a dataset whose
+                    # capabilities report has_options=False, which is the whole
+                    # point of declaring a capability -- and adding it to
+                    # `skipped` would break
+                    # `test_the_probe_skipped_only_the_action_methods`, which is
+                    # right to insist that an uncalled reader is a deliberate
+                    # exclusion rather than a gap.
+                    #
+                    # The TYPE NAME is stored and not the exception: an
+                    # exception carries `__traceback__`, whose frames reach the
+                    # engine, so recording the object itself would walk a path
+                    # into exactly what this file is here to keep out.
+                    self.seen.append((cls, name, f"refused: {type(exc).__name__}"))
             elif len(required) == 1:
                 # every single-argument reader on a context takes a subscription
                 self.seen.append((cls, name, member(INTERVAL)))

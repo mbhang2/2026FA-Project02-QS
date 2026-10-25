@@ -248,12 +248,44 @@ class SyntheticOptionsSurface:
     # ---- pricing ---------------------------------------------------------- #
     def price(self, forward: float, strike: float, sessions_ahead: int,
               is_call: bool) -> float:
-        """Discounted expectation of the payoff. r = 0, so no discount factor."""
+        """Discounted expectation of the payoff. r = 0, so no discount factor.
+
+        The scalar reference. `call_prices` is the vectorised path the feed
+        uses, and `test_the_fast_path_agrees_with_the_reference` holds them
+        together.
+        """
         offsets, prob = self.density(sessions_ahead)
         terminal = forward + offsets
         payoff = (np.maximum(terminal - strike, 0.0) if is_call
                   else np.maximum(strike - terminal, 0.0))
         return float(np.dot(prob, payoff))
+
+    def call_prices(self, forward: float, strikes, sessions_ahead: int) -> np.ndarray:
+        """Every call on the ladder at once, as one matrix product.
+
+        A snapshot is 882 quotes against a 2,081-point grid, and pricing them
+        one at a time is ~1.8M scalar operations per minute of the walk -- which
+        at 390 minutes a session is not serveable. Batching the payoff into a
+        (strikes x grid) matrix makes it one `@`, which numpy does in about a
+        millisecond.
+        """
+        offsets, prob = self.density(sessions_ahead)
+        terminal = forward + offsets
+        payoff = np.maximum(terminal[None, :] - np.asarray(strikes, dtype=float)[:, None], 0.0)
+        return payoff @ prob
+
+    def put_prices(self, forward: float, strikes, sessions_ahead: int) -> np.ndarray:
+        """**Derived from the calls by parity, not priced independently.**
+
+        P = C - (F - K). Doing it this way halves the work and, more
+        importantly, makes parity exact *as an identity of the implementation*
+        rather than as a property of two separate sums that happen to agree.
+        There is then no arithmetic path by which the puts could drift from the
+        calls -- a reassurance worth more here than the speed, because parity is
+        the condition the cleanest plant breaks.
+        """
+        k = np.asarray(strikes, dtype=float)
+        return self.call_prices(forward, k, sessions_ahead) - forward + k
 
     # ---- the ladder ------------------------------------------------------- #
     def strikes(self, forward: float) -> list[float]:
@@ -432,11 +464,13 @@ class SyntheticOptionsSurface:
         would make the task reassembly rather than detection."""
         s = self.spec
         sites = self._plant_sites(forward)
+        ks = self.strikes(forward)
         out: list[OptionQuote] = []
         for expiry in s.expiries_in_sessions:
-            for strike in self.strikes(forward):
-                for is_call in (True, False):
-                    mid = self.price(forward, strike, expiry, is_call)
+            calls = self.call_prices(forward, ks, expiry)
+            puts = self.put_prices(forward, ks, expiry)
+            for i, strike in enumerate(ks):
+                for is_call, mid in ((True, float(calls[i])), (False, float(puts[i]))):
                     mid += sites.get((expiry, strike, is_call), 0.0)
                     mid = max(mid, 0.0)
                     bid, ask = self._quote(mid, expiry)
@@ -579,3 +613,122 @@ ALL_CHECKS = {
     "butterfly": butterfly_violations,
     "calendar": calendar_violations,
 }
+
+
+class OptionsFeed:
+    """Serves the surface as of an instant, and cannot look ahead.
+
+    **The forward is the engine's `last_price`, which is why this is safe.** An
+    options feed could have been a second stream of quote events with its own
+    timestamps, and then the engine would have had to decide which of them a
+    strategy may see at instant t -- a look-ahead question with a wrong answer
+    available. Here the surface is a deterministic function of the underlying
+    price, so the snapshot at t is computed from the last trade at or before t
+    and there is no future quote to leak: the only input is a number the
+    strategy could already read through `ctx.last_price`.
+
+    That also makes the feed free of the walk. Two runs at the same seed see
+    identical surfaces because they see identical prices, with no separate
+    stream to keep in step.
+
+    Snapshots are cached on the forward quantised to the underlying tick, since
+    a strategy reading the surface every minute of a session asks for the same
+    few hundred distinct prices many times over.
+    """
+
+    __slots__ = ("surface", "_cache", "_cap", "hits", "misses")
+
+    def __init__(self, surface: SyntheticOptionsSurface, cache_size: int = 512):
+        self.surface = surface
+        self._cache: dict[tuple[int, int], list[OptionQuote]] = {}
+        self._cap = cache_size
+        self.hits = self.misses = 0
+
+    def snapshot(self, ts: int, session: int, forward: float) -> list[OptionQuote]:
+        tick = self.surface.spec.underlying_tick
+        key = (session, int(round(forward / tick)))
+        hit = self._cache.get(key)
+        if hit is not None:
+            self.hits += 1
+            # the quotes are identical; only the instant they are read at moves
+            return [OptionQuote(ts=ts, session=q.session,
+                                expiry_session=q.expiry_session, strike=q.strike,
+                                is_call=q.is_call, bid=q.bid, ask=q.ask)
+                    for q in hit]
+        self.misses += 1
+        quoted = round(round(forward / tick) * tick, 6)
+        out = self.surface.quotes_at(ts, session, quoted)
+        if len(self._cache) >= self._cap:
+            self._cache.clear()        # cheaper than an LRU and bounded either way
+        self._cache[key] = out
+        return out
+
+    def capabilities_note(self) -> str:
+        return (f"{len(self.surface.strikes(self.surface.spec.start_price))} strikes x "
+                f"{len(self.surface.spec.expiries_in_sessions)} expiries x 2 sides")
+
+
+class SyntheticOptionsDataset:
+    """The underlying from `SyntheticDataset`, the surface from this module.
+
+    **Composed rather than reimplemented.** The tick generator already carries
+    the calendar, the splits, the embargo, session irregularity and the
+    holdout lock, and every one of those has a defect history behind it -- a
+    second copy for options would reacquire them. So this delegates everything
+    about the walk and adds exactly one thing: `options()`.
+    """
+
+    def __init__(self, underlying, surface: SyntheticOptionsSurface | None = None):
+        from src.core.types import DataCapabilities
+        self._under = underlying
+        self._surface = surface or SyntheticOptionsSurface()
+        self._feed = OptionsFeed(self._surface)
+        self.name = f"{underlying.name}+{self._surface.name}"
+        base = underlying.capabilities()
+        self._caps = DataCapabilities(has_trades=base.has_trades,
+                                      has_quotes=base.has_quotes,
+                                      has_book=base.has_book,
+                                      has_options=True)
+
+    # ---- the options channel ---------------------------------------------- #
+    def options(self) -> OptionsFeed:
+        return self._feed
+
+    # ---- everything else is the underlying's ------------------------------ #
+    def capabilities(self):
+        return self._caps
+
+    def calendar(self):
+        return self._under.calendar()
+
+    def ticks(self, split, *, warmup: int = 0):
+        # `split` is required, matching the Dataset protocol. Defaulting it to
+        # None here implied None was a valid split; NQDataset tolerates that and
+        # SyntheticDataset raises KeyError deep inside `calendar.bounds`, so the
+        # wrapper was offering a signature neither underlying honours.
+        return self._under.ticks(split, warmup=warmup)
+
+    def session_bounds(self, session: int):
+        return self._under.session_bounds(session)
+
+    # `sessions()` is deliberately NOT delegated explicitly: NQDataset has it
+    # and SyntheticDataset does not, so naming it here would promise a method
+    # that may not exist. `__getattr__` forwards it when the underlying has one
+    # and raises the underlying's own AttributeError when it does not, which is
+    # the honest answer.
+
+    def digest(self) -> str:
+        """Both halves, because a surface change is a different dataset.
+
+        The underlying's digest alone would make a run on a surface with three
+        plants indistinguishable in the record from a run on a clean one.
+        """
+        return hashlib.sha256(
+            f"{self._under.digest()}|{self._surface.spec.digest()}".encode()
+        ).hexdigest()[:16]
+
+    def __getattr__(self, name):
+        """Anything else -- `unlock_holdout`, `scored_sessions`, `early_close_dates`
+        -- is the underlying's, so the lock and the calendar keep working rather
+        than being quietly absent on an options run."""
+        return getattr(self._under, name)

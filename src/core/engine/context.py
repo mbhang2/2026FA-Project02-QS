@@ -22,6 +22,15 @@ split identity, the seed, or any data beyond the current instant.
 
 from __future__ import annotations
 
+# Imported for the annotation only. `scripts/gen_remote_surface.py` reads
+# `ctx.options()`'s return annotation as TEXT to pick an encoder, so the name
+# has to appear -- but the engine importing a dataset module at runtime would
+# invert the layering for the sake of a type name.
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.core.data.options import OptionQuote
+
 import datetime as dt
 import re
 from dataclasses import dataclass
@@ -128,6 +137,9 @@ class EnginePort:
     resolve_sub: Any
     history: Any
     tick_history: Any
+    # None when the dataset has no options channel, so `ctx.options()` can say
+    # so by name instead of raising an AttributeError from inside the engine.
+    options_snapshot: Any = None
 
 
 class IntentQueue:
@@ -363,6 +375,38 @@ class BaseContext:
         """
         self._check()
         return self._port.tick_history()
+
+    def options(self) -> "tuple[OptionQuote, ...]":
+        """The options surface as of this instant, as a tuple of quotes.
+
+        **Why the whole cross-section and not a stream.** An arbitrage is a
+        statement about several quotes at once -- parity needs a call and a put,
+        a butterfly needs three strikes, a calendar needs two expiries -- so a
+        feed that delivered them one at a time would make the task reassembly
+        rather than detection. `ctx.history(...)` is the right shape for a
+        scalar series and the wrong shape for a surface.
+
+        **There is no look-ahead to refuse here, and that is a property of the
+        construction rather than a check.** The surface is a deterministic
+        function of the underlying price, and the price it is built from is the
+        last trade at or before this instant -- the same number `ctx.last_price`
+        returns. There is no future quote in the dataset to leak, so unlike
+        `history()` this method needs no `LookaheadError`: a strategy cannot
+        ask for a surface the engine has not reached, because the surface is
+        computed from what the engine has already seen.
+
+        Raises `ContextError` when the dataset has no options channel, naming
+        the capability, rather than returning an empty tuple that would read as
+        "no quotes right now".
+        """
+        self._check()
+        if self._port.options_snapshot is None:
+            raise ContextError(
+                "this dataset has no options channel: its capabilities report "
+                "has_options=False. A strategy that needs the surface should "
+                "run on a dataset that provides one -- the mismatch is meant to "
+                "be caught at wiring time, not worked around here.")
+        return self._port.options_snapshot(self._ts, self._session)
 
     def sub_id(self, sub: str | Subscription) -> str:
         """The canonical id of a subscription you declared.

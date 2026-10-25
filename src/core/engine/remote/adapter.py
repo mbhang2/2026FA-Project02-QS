@@ -274,6 +274,13 @@ class RemoteStrategy:
     _sub_ids: dict = field(default_factory=dict, init=False, repr=False)
     _next_id: int = field(default=1, init=False, repr=False)
     _setup_ctx: object = field(default=None, init=False, repr=False)
+    # **The context of the callback in flight.** Pulls were setup-only, which
+    # was right while every pull was a warmup read: `ticks()` and
+    # `train_bars()` are history a strategy fetches once before trading. The
+    # options surface is a RUN-TIME cross-section -- 882 rows that would
+    # otherwise ride on every callback whether or not the strategy looks -- so
+    # it is a pull served against the live context instead.
+    _live_ctx: object = field(default=None, init=False, repr=False)
     _setup_bytes: int = field(default=0, init=False, repr=False)
     _mechanism: str = field(default="", init=False, repr=False)
     _capabilities: tuple = field(default=(), init=False, repr=False)
@@ -557,6 +564,22 @@ class RemoteStrategy:
         import json
 
         what, args = request.get("what"), request.get("args", {})
+        if what == "options":
+            # Served from the callback in flight, not from setup: the surface is
+            # what it is AT this instant. Refused by name when the dataset has
+            # no options channel, which is `ctx.options()`'s own ContextError
+            # travelling across the pipe rather than being swallowed into an
+            # empty list that would read as "no quotes right now".
+            live = self._live_ctx
+            if live is None:
+                return {"ok": False, "rows": [],
+                        "error": "options is only available during a callback"}
+            try:
+                rows = [encode(q) for q in live.options()]
+            except Exception as exc:                          # noqa: BLE001
+                return {"ok": False, "rows": [],
+                        "error": f"{type(exc).__name__}: {exc}"}
+            return {"ok": True, "rows": rows}
         ctx = self._setup_ctx
         if ctx is None:
             return {"ok": False, "rows": [],
@@ -591,6 +614,7 @@ class RemoteStrategy:
         return block
 
     def _snapshot(self, ctx, kind: str) -> dict:
+        self._live_ctx = ctx          # so an options pull can be served from it
         message = {"kind": kind, "id_block": self._id_block(),
                    "scalars": {}, "windows": {}}
         for name in _surface.BASECONTEXT_SCALARS:

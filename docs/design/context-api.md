@@ -195,6 +195,30 @@ newest readable element is the bar that just closed.
 
 _(no docstring)_
 
+#### `ctx.options() -> "'tuple[OptionQuote, ...]'"`
+
+The options surface as of this instant, as a tuple of quotes.
+
+**Why the whole cross-section and not a stream.** An arbitrage is a
+statement about several quotes at once -- parity needs a call and a put,
+a butterfly needs three strikes, a calendar needs two expiries -- so a
+feed that delivered them one at a time would make the task reassembly
+rather than detection. `ctx.history(...)` is the right shape for a
+scalar series and the wrong shape for a surface.
+
+**There is no look-ahead to refuse here, and that is a property of the
+construction rather than a check.** The surface is a deterministic
+function of the underlying price, and the price it is built from is the
+last trade at or before this instant -- the same number `ctx.last_price`
+returns. There is no future quote in the dataset to leak, so unlike
+`history()` this method needs no `LookaheadError`: a strategy cannot
+ask for a surface the engine has not reached, because the surface is
+computed from what the engine has already seen.
+
+Raises `ContextError` when the dataset has no options channel, naming
+the capability, rather than returning an empty tuple that would read as
+"no quotes right now".
+
 #### `ctx.sell(size: 'int' = 1, **kw) -> 'int | None'`
 
 _(no docstring)_

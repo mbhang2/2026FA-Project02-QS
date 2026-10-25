@@ -205,6 +205,13 @@ class _SealedDataset:
         "capabilities", "calendar", "ticks", "session_bounds", "digest",
         "warmup_sessions", "scored_sessions", "early_close_dates", "load",
         "sessions", "periods", "spec", "contract_for",
+        # Added 2026-10-24 with the options channel. An allowlist is the point
+        # of this proxy, so a new channel has to be named here deliberately --
+        # which is why the first options run failed with a bare
+        # `AttributeError: options` rather than quietly working. What it returns
+        # is a feed that turns a forward into quotes and holds nothing else, so
+        # forwarding it does not widen what the engine can reach.
+        "options",
     )
 
     def __init__(self, dataset) -> None:
@@ -720,7 +727,30 @@ class Engine:
             resolve_sub=resolver.resolve,
             history=history.__getitem__,
             tick_history=lambda: ticks,
+            options_snapshot=self._options_snapshot_fn(),
         )
+
+    def _options_snapshot_fn(self):
+        """A callable that answers with the surface, or None if there is none.
+
+        Closes over the FEED and over `state`, never over the engine -- the same
+        rule every other port entry follows. The feed only knows how to turn a
+        forward into quotes, so nothing reachable from here can advance the
+        walk, read the split or touch the holdout lock.
+        """
+        caps = self.dataset.capabilities()
+        if not getattr(caps, "has_options", False):
+            return None
+        feed = self.dataset.options()
+        state = self._state
+        # **The instant comes from the callback, the forward from the state.**
+        # `_RunState` carries no `ts` or `session` -- those are per-callback and
+        # live on the context -- so the first version closed over `state.ts` and
+        # died with `AttributeError: '_RunState' object has no attribute 'ts'`
+        # inside the strategy's own try block, where it read as a strategy bug.
+        # Passing them in keeps each value sourced from the thing that owns it.
+        return lambda ts, session: tuple(
+            feed.snapshot(ts, session, state.last_price))
 
     # ---- run --------------------------------------------------------------- #
     def run(self) -> RunRecord:

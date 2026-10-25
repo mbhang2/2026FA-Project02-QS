@@ -154,6 +154,19 @@ _decode_tick = _typed_decoder(TickEvent)
 _decode_raw_tick = _typed_decoder(Tick)
 
 
+def _decode_option_quote(row):
+    """Imported lazily: the child must not pay for numpy to decode a quote.
+
+    `src.core.data.options` imports numpy for the pricing, and the child side
+    only ever needs the dataclass. A module-level import would load the whole
+    pricing stack into every strategy process, options or not.
+    """
+    from src.core.data.options import OptionQuote
+    global _decode_option_quote
+    _decode_option_quote = _typed_decoder(OptionQuote)
+    return _decode_option_quote(row)
+
+
 class Window:
     """The pushed tail of a history, plus the true total length.
 
@@ -305,7 +318,12 @@ class RemoteContext:
     fails the build.
     """
 
-    def __init__(self, message, actions, state):
+    def __init__(self, message, actions, state, pull=None):
+        # `pull` is optional and defaults to None: every other reader on this
+        # class answers from the pushed message, and `ctx.options()` is the
+        # first that needs a round trip. A RemoteContext built without one
+        # refuses by name rather than failing with AttributeError.
+        self._pull = pull
         self._m = message
         self._actions = actions
         self._state = state          # rolling windows and the subscription map
@@ -337,6 +355,21 @@ class RemoteContext:
     @property
     def working_orders(self):
         return tuple(_decode_order(r) for r in self._m["working_orders"])
+
+    def options(self):
+        """The options cross-section, fetched on request.
+
+        **A pull and not a pushed collection, on purpose.** 882 rows is what
+        the QQQ surface costs, and pushing it on every callback would charge
+        every strategy for a channel most of them never read. The cost of the
+        choice is one round trip per call, which is why a strategy should read
+        the surface per bar rather than per tick.
+        """
+        if self._pull is None:
+            raise RemoteError(
+                "ctx.options() needs a pull channel and this context was built "
+                "without one")
+        return tuple(_decode_option_quote(r) for r in self._pull("options", {}))
 
     @property
     def bars(self):
@@ -647,7 +680,7 @@ def main() -> None:
 
         actions: list[dict] = []
         ctx = (SetupContext(message, actions, pull) if kind == "setup"
-               else RemoteContext(message, actions, state))
+               else RemoteContext(message, actions, state, pull))
         try:
             getattr(strategy, kind)(ctx)
         except Exception as exc:                              # noqa: BLE001

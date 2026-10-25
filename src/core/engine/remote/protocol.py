@@ -169,6 +169,7 @@ fill_row = encode
 lifecycle_row = encode
 order_row = encode
 subscription_row = encode
+option_quote_row = encode
 
 
 def datetime_row(d) -> str:

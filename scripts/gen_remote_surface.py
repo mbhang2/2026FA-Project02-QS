@@ -67,6 +67,11 @@ ENCODERS = {
     "dt.datetime": "datetime_row",
     "_ClosedBars": "closed_bars_row",
     "Tick": "raw_tick_row",
+    # The options cross-section. `OptionQuote` is a frozen dataclass, so the
+    # generic `encode` carries it unchanged -- 882 rows a call on the QQQ
+    # surface, which is the cost of the surface being a cross-section rather
+    # than a stream and is why a strategy should read it per bar, not per tick.
+    "OptionQuote": "option_quote_row",
 }
 
 

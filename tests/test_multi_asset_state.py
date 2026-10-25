@@ -266,3 +266,98 @@ def test_the_per_asset_readers_cross_the_process_boundary(tmp_path):
                               fill_model="unfavorable", seed=1).run()
     assert rec.outcome == "completed", f"{rec.outcome}: {rec.error}"
     assert rec.fills > 0, "the child never traded; the assertions proved nothing"
+
+
+# --------------------------------------------------------------------------- #
+# stage 5: scoring aggregates across the book
+# --------------------------------------------------------------------------- #
+# **Michael's decision, 2026-10-25: aggregate P&L across the book.** Correct for
+# a hedged package, whose legs only mean anything together -- a conversion's
+# call leg alone reads as a losing directional bet. P&L already aggregated,
+# since `realized_pnl` sums every row. What did NOT was everything derived from
+# `position_after`, which is a PER-ASSET number that a single pass over
+# interleaved rows reads as one track.
+# --------------------------------------------------------------------------- #
+def _r(seq, ts, asset, pos, pnl=0.0):
+    return BlotterRow(seq=seq, ts=ts, order_id=seq, side=Side.BUY, price=1.0,
+                      size=1, position_after=pos, commission=0.0,
+                      realized_pnl=pnl, asset=asset)
+
+
+def test_the_book_is_exposed_while_any_leg_is_held():
+    """The bug this prevents: one leg returning to flat closing the interval
+    while the others are still on. A conversion would read as flat whenever any
+    single leg zeroed, and the exposure floor would reject a package that never
+    stopped being on."""
+    from src.core.scoring.metrics import _held_intervals
+    rows = [
+        _r(0, 100, "CALL", 1),      # call on
+        _r(1, 150, "PUT", -1),      # put on
+        _r(2, 200, "CALL", 0),      # call off -- the put is still held
+        _r(3, 300, "PUT", 0),       # now flat
+    ]
+    assert _held_intervals(rows, 999) == [(100, 300)], _held_intervals(rows, 999)
+
+
+def test_overlapping_legs_are_one_exposed_interval_not_two():
+    """`session_exposure` measures whether the book was on, not how many ways."""
+    from src.core.scoring.metrics import _held_intervals
+    rows = [_r(0, 100, "A", 1), _r(1, 110, "B", 1),
+            _r(2, 200, "A", 0), _r(3, 210, "B", 0)]
+    assert _held_intervals(rows, 999) == [(100, 210)]
+
+
+def test_a_single_asset_blotter_is_unchanged_by_the_generalisation():
+    """The property that keeps every committed score where it was."""
+    from src.core.scoring.metrics import _held_intervals, _holding_periods
+    rows = [_r(0, 100, DEFAULT_ASSET, 1), _r(1, 200, DEFAULT_ASSET, 0),
+            _r(2, 300, DEFAULT_ASSET, -2), _r(3, 400, DEFAULT_ASSET, 0)]
+    assert _held_intervals(rows, 999) == [(100, 200), (300, 400)]
+    assert _holding_periods(rows) == [100, 100]
+
+
+def test_an_open_leg_is_carried_to_the_end_of_the_data():
+    """Dropping it would hand the strategy free exposure for every session
+    after it stopped closing -- true per leg, not just for the one book."""
+    from src.core.scoring.metrics import _held_intervals
+    rows = [_r(0, 100, "A", 1), _r(1, 150, "B", 1), _r(2, 200, "A", 0)]
+    assert _held_intervals(rows, 900) == [(100, 900)]
+
+
+def test_holding_periods_are_per_leg():
+    """One book returning to flat does not end another's hold. Two legs carried
+    an hour are two one-hour holds, not one."""
+    from src.core.scoring.metrics import _holding_periods
+    rows = [_r(0, 100, "A", 1), _r(1, 100, "B", 1),
+            _r(2, 200, "A", 0), _r(3, 200, "B", 0)]
+    assert sorted(_holding_periods(rows)) == [100, 100]
+
+
+def test_the_scale_is_the_gross_across_the_book():
+    """**The understatement this fixes.** `max(abs(position_after))` answered
+    "the biggest position any one book ever held", which for a hedged package
+    of three one-lot legs is 1 -- understating the scale threefold and
+    inflating every per-unit figure derived from it."""
+    from src.core.types import Blotter
+    from src.core.scoring.metrics import position_scale
+    b = Blotter()
+    for r in [_r(0, 100, "CALL", 1), _r(1, 110, "PUT", -1), _r(2, 120, "HEDGE", -1)]:
+        b.add(r)
+    assert position_scale(b) == pytest.approx(3.0)
+
+    one = Blotter()
+    for r in [_r(0, 100, DEFAULT_ASSET, 2), _r(1, 200, DEFAULT_ASSET, 0)]:
+        one.add(r)
+    assert position_scale(one) == pytest.approx(2.0), (
+        "a single-asset blotter must score exactly as it did")
+
+
+def test_pnl_aggregates_across_the_book_which_is_the_decision_recorded():
+    from src.core.types import Blotter
+    b = Blotter()
+    b.add(_r(0, 100, "CALL", 1, pnl=-30.0))
+    b.add(_r(1, 110, "PUT", -1, pnl=-20.0))
+    b.add(_r(2, 120, "HEDGE", -1, pnl=+75.0))
+    assert b.realized_pnl == pytest.approx(25.0), (
+        "the package made 25; no leg did, which is why aggregate is the "
+        "right question to ask of a hedged book")

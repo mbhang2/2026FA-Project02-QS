@@ -125,16 +125,45 @@ def _held_intervals(rows: Sequence[BlotterRow], end_ts: Ts) -> list[tuple[Ts, Ts
     flat. Dropping it would hand the strategy free exposure for every session
     after it stopped closing, so an open position is carried to `end_ts`.
     """
-    out: list[tuple[Ts, Ts]] = []
-    opened: Ts | None = None
+    # **Per asset, then unioned.** `position_after` is a per-asset number, so a
+    # single pass over interleaved rows closes the interval the moment ANY book
+    # returns to flat while the others are still held -- a conversion would read
+    # as flat whenever one leg zeroed, and the exposure floor would reject a
+    # package that never stopped being on. The book is exposed when any asset
+    # is. With one asset this reduces to exactly the old loop, which is the
+    # property that keeps every committed score unmoved.
+    spans: list[tuple[Ts, Ts]] = []
+    by_asset: dict[str, list[BlotterRow]] = defaultdict(list)
     for row in rows:
-        if opened is None and row.position_after != 0:
-            opened = row.ts
-        elif opened is not None and row.position_after == 0:
-            out.append((opened, row.ts))
-            opened = None
-    if opened is not None:
-        out.append((opened, max(opened, end_ts)))
+        by_asset[row.asset].append(row)
+    for asset_rows in by_asset.values():
+        opened: Ts | None = None
+        for row in asset_rows:
+            if opened is None and row.position_after != 0:
+                opened = row.ts
+            elif opened is not None and row.position_after == 0:
+                spans.append((opened, row.ts))
+                opened = None
+        if opened is not None:
+            spans.append((opened, max(opened, end_ts)))
+    return _merge_spans(spans)
+
+
+def _merge_spans(spans: list[tuple[Ts, Ts]]) -> list[tuple[Ts, Ts]]:
+    """Overlapping intervals collapsed, so exposure is never double-counted.
+
+    Two legs of one package held at the same time are one exposed interval,
+    not two: `session_exposure` measures whether the book was on, not how many
+    ways it was on.
+    """
+    if not spans:
+        return []
+    out: list[tuple[Ts, Ts]] = []
+    for start, stop in sorted(spans):
+        if out and start <= out[-1][1]:
+            out[-1] = (out[-1][0], max(out[-1][1], stop))
+        else:
+            out.append((start, stop))
     return out
 
 
@@ -215,7 +244,19 @@ def position_scale(blotter: Blotter) -> float:
     charged the same amount, the return vector has no dispersion, and
     `score_returns` rejects it at any scale.
     """
-    peak = max((abs(r.position_after) for r in blotter.rows), default=0)
+    # **The gross across the book at each instant, not the largest single
+    # leg.** `position_after` is per asset, so the old max answered "the
+    # biggest position any one book ever held" -- which for a hedged package of
+    # three one-lot legs is 1, understating the scale by three and inflating
+    # every per-unit figure derived from it. Walking the joint position gives
+    # the same answer as before when there is one asset.
+    live: dict[str, int] = {}
+    peak = 0
+    for r in blotter.rows:
+        live[r.asset] = r.position_after
+        gross = sum(abs(v) for v in live.values())
+        if gross > peak:
+            peak = gross
     return float(peak) if peak > 0 else 1.0
 
 
@@ -475,13 +516,23 @@ class Diagnostics:
 
 def _holding_periods(rows: Sequence[BlotterRow]) -> list[int]:
     """Time from a position leaving flat to returning to flat."""
-    out, opened = [], None
+    # Per asset, for the same reason as `_held_intervals`: one book returning
+    # to flat does not end another book's holding period. Durations are
+    # reported per leg rather than unioned -- the question here is how long a
+    # position was carried, and a two-leg package carried an hour is two
+    # one-hour holds rather than one.
+    out: list[int] = []
+    by_asset: dict[str, list[BlotterRow]] = defaultdict(list)
     for row in rows:
-        if opened is None and row.position_after != 0:
-            opened = row.ts
-        elif opened is not None and row.position_after == 0:
-            out.append(row.ts - opened)
-            opened = None
+        by_asset[row.asset].append(row)
+    for asset_rows in by_asset.values():
+        opened = None
+        for row in asset_rows:
+            if opened is None and row.position_after != 0:
+                opened = row.ts
+            elif opened is not None and row.position_after == 0:
+                out.append(row.ts - opened)
+                opened = None
     return out
 
 

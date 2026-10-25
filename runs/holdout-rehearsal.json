@@ -1,7 +1,7 @@
 {
   "schema": "holdout-result/1",
   "rehearsal": true,
-  "claimed": "2026-10-25T06:52:42+00:00",
+  "claimed": "2026-10-25T07:37:22+00:00",
   "campaign": "nq-flowcont-5m",
   "digest": "57fd4c8fc7447f90",
   "profile": "holdout",
@@ -9,7 +9,7 @@
   "reason": null,
   "status": "COMPLETE",
   "confirmed": false,
-  "taken": "2026-10-25T06:52:43+00:00",
+  "taken": "2026-10-25T07:37:23+00:00",
   "l2_verdict": "FAIL",
   "l2_family": [
     "nq-s07-01",

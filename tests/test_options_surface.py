@@ -241,9 +241,12 @@ def test_the_butterfly_check_handles_unequal_spacing():
     import inspect
     flat = " ".join(inspect.getsource(butterfly_violations).split())
     assert "weight_low" in flat and "c.strike - b.strike" in flat
-    def q(k, bid, ask):
+    def q(k, bid, ask, size=10):
+        # A size is now required to make a quote hittable: the default is zero,
+        # because a quote nobody stated a size for is one you cannot trade.
         return OptionQuote(ts=0, session=0, expiry_session=5, strike=k,
-                           is_call=True, bid=bid, ask=ask)
+                           is_call=True, bid=bid, ask=ask,
+                           bid_size=size, ask_size=size)
     # equally spaced, genuinely non-convex
     assert butterfly_violations([q(99.0, 1.0, 1.0), q(100.0, 2.0, 2.0),
                                  q(101.0, 1.0, 1.0)])
@@ -253,15 +256,66 @@ def test_the_butterfly_check_handles_unequal_spacing():
 
 
 def test_a_hand_built_violation_is_caught_by_each_check():
-    def q(expiry, strike, is_call, bid, ask):
+    def q(expiry, strike, is_call, bid, ask, size=10):
         return OptionQuote(ts=0, session=0, expiry_session=expiry, strike=strike,
-                           is_call=is_call, bid=bid, ask=ask)
+                           is_call=is_call, bid=bid, ask=ask,
+                           bid_size=size, ask_size=size)
     assert vertical_violations([q(5, 100.0, True, 1.0, 1.1),
                                 q(5, 101.0, True, 1.4, 1.5)])
     assert calendar_violations([q(5, 100.0, True, 3.0, 3.1),
                                 q(10, 100.0, True, 1.0, 1.1)])
     assert parity_violations([q(5, 100.0, True, 0.0, 0.0),
                               q(5, 100.0, False, 0.0, 0.0)], 101.0)
+
+
+def test_an_edge_with_no_size_behind_it_is_not_reported():
+    """**An arbitrage you cannot take is not one.** A detector that ignores
+    size reports edges nobody can capture, which is the failure a gate should
+    catch rather than reward -- so a quote with zero size on a side the package
+    must hit makes that package unreportable.
+    """
+    def q(is_call, bid, ask, bs, asz):
+        return OptionQuote(ts=0, session=0, expiry_session=5, strike=100.0,
+                           is_call=is_call, bid=bid, ask=ask,
+                           bid_size=bs, ask_size=asz)
+    # parity is broken by 1.00, and the call's ask has size: takeable
+    takeable = [q(True, 0.0, 0.0, 5, 5), q(False, 0.0, 0.0, 5, 5)]
+    found = parity_violations(takeable, 101.0)
+    assert found and found[0]["size"] == 5
+
+    # the same prices with no size on the call's ask: nothing to report
+    dead = [q(True, 0.0, 0.0, 5, 0), q(False, 0.0, 0.0, 5, 5)]
+    assert not parity_violations(dead, 101.0)
+
+
+def test_the_plant_is_unreportable_where_there_is_no_size_to_take_it():
+    """The same plant at the money and in a dead wing. The edge is in the
+    prices both times; only one of them can be traded."""
+    atm = SyntheticOptionsSurface(SyntheticOptionsSpec(
+        plants=(Plant("parity", 2, 0, 0.60),)))
+    wing = SyntheticOptionsSurface(SyntheticOptionsSpec(
+        plants=(Plant("parity", 2, 18, 0.60),)))
+    assert parity_violations(atm.quotes_at(0, 0, 100.0), 100.0)
+    assert not parity_violations(wing.quotes_at(0, 0, 100.0), 100.0)
+
+
+def test_a_zero_bid_never_carries_size():
+    """A 0.00 bid is nobody bidding, not a thin bid. The first version keyed
+    the size off the MID, which left "0.00 x1" quotes in the wings."""
+    s = SyntheticOptionsSurface(SyntheticOptionsSpec())
+    zero = [q for q in s.quotes_at(0, 0, 100.0) if q.bid <= 0.0]
+    assert zero, "no zero-bid quotes at all; the test proves nothing"
+    assert all(q.bid_size == 0 for q in zero)
+
+
+def test_size_thins_from_the_money_into_the_wings():
+    s = SyntheticOptionsSurface(SyntheticOptionsSpec())
+    calls = [q for q in s.quotes_at(0, 0, 100.0)
+             if q.is_call and q.expiry_session == 5]
+    atm = max(calls, key=lambda q: q.ask_size)
+    assert abs(atm.strike - 100.0) <= 1.0, "the thickest size is not at the money"
+    far = [q for q in calls if abs(q.strike - 100.0) > 15]
+    assert far and max(q.ask_size for q in far) < atm.ask_size
 
 
 # --------------------------------------------------------------------------- #

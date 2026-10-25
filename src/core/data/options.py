@@ -62,7 +62,8 @@ up to ask only whether it can find something.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+import math
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 
@@ -86,6 +87,20 @@ class OptionQuote:
     is_call: bool
     bid: float
     ask: float
+    # **Appended, and defaulting to zero, which means "cannot be traded".**
+    # Zero is the honest default rather than a convenient one: a quote whose
+    # size nobody stated is a quote you cannot hit, and the checks below refuse
+    # to report an arbitrage that needs a side with no size behind it. An
+    # arbitrage you cannot take is not one, and a detector that ignores size
+    # reports edges nobody can capture -- which is precisely the failure a gate
+    # should catch rather than reward.
+    #
+    # Appended at the END of the field list on purpose: the remote protocol
+    # encodes a quote by `dataclasses.fields()` order and decodes by zipping
+    # the same order, so adding here is wire-compatible and inserting in the
+    # middle would silently shift every value by one.
+    bid_size: int = 0
+    ask_size: int = 0
 
     @property
     def mid(self) -> float:
@@ -157,6 +172,11 @@ class SyntheticOptionsSpec:
     penny_below: float = 3.00
     penny_increment: float = 0.01
     nickel_increment: float = 0.05
+
+    # ---- quoted size ------------------------------------------------------- #
+    size_at_the_money: int = 50
+    size_decay_moneyness: float = 0.06     # sd of the log-moneyness decay
+    size_maturity_decay: float = 0.04      # per session of maturity
 
     # ---- the plants -------------------------------------------------------- #
     plants: tuple[Plant, ...] = ()
@@ -315,6 +335,24 @@ class SyntheticOptionsSurface:
         """OPRA: a penny under $3.00 of premium, a nickel at or above."""
         s = self.spec
         return s.penny_increment if mid < s.penny_below else s.nickel_increment
+
+    def sizes(self, mid: float, strike: float, forward: float,
+              sessions_ahead: int) -> tuple[int, int]:
+        """Quoted size, largest at the money and thinning into the wings.
+
+        A Gaussian in log-moneyness, floored at one contract, with no bid at
+        all where the premium rounds to zero -- a 0.00 bid is not a thin bid,
+        it is nobody bidding. Shape rather than a fit: the point is that size
+        VARIES, so a detector has to ask whether an edge is takeable.
+        """
+        s = self.spec
+        if forward <= 0 or strike <= 0:
+            return 0, 0
+        m = math.log(strike/forward)
+        decay = math.exp(-(m/s.size_decay_moneyness)**2)
+        far = 1.0/(1.0 + s.size_maturity_decay*sessions_ahead)
+        n = max(1, int(round(s.size_at_the_money*decay*far)))
+        return n, n
 
     def half_spread(self, mid: float, sessions_ahead: int) -> float:
         """A floor, plus a fraction of premium, plus a widening with maturity."""
@@ -481,9 +519,17 @@ class SyntheticOptionsSurface:
                     mid += sites.get((expiry, strike, is_call), 0.0)
                     mid = max(mid, 0.0)
                     bid, ask = self._quote(mid, expiry)
+                    bn, an = self.sizes(mid, strike, forward, expiry)
+                    # **The bid's size is keyed off the BID, not the mid.** A
+                    # quote can round to a 0.00 bid while its mid is well above
+                    # zero, and the first version left size behind that bid --
+                    # "0.00 x1", a price nobody is making with depth behind it.
+                    if bid <= 0.0:
+                        bn = 0
                     out.append(OptionQuote(
                         ts=ts, session=session, expiry_session=session + expiry,
-                        strike=float(strike), is_call=is_call, bid=bid, ask=ask))
+                        strike=float(strike), is_call=is_call, bid=bid, ask=ask,
+                        bid_size=bn, ask_size=an))
         return out
 
 
@@ -510,17 +556,29 @@ def parity_violations(quotes: list[OptionQuote], forward: float,
         c, p = pair.get(True), pair.get(False)
         if c is None or p is None:
             continue
-        synthetic_long = c.ask - p.bid          # cost to be long via options
         fair = forward - strike
-        # long the package cheaper than fair, or short it dearer than fair
-        cheap = fair - synthetic_long
-        synthetic_short = c.bid - p.ask
-        dear = synthetic_short - fair
+        # **Each direction is only an edge if the sides it hits have size.**
+        # Long via options buys the call at its ask and sells the put at its
+        # bid, so it is limited by `min(c.ask_size, p.bid_size)`; a zero there
+        # means the package cannot be put on at all. Reporting it anyway is the
+        # failure this is here to prevent -- an arbitrage you cannot take is
+        # not one, and a detector that ignores size reports edges nobody can
+        # capture.
+        cheap = fair - (c.ask - p.bid)
+        cheap_size = min(c.ask_size, p.bid_size)
+        dear = (c.bid - p.ask) - fair
+        dear_size = min(c.bid_size, p.ask_size)
+        if cheap_size < 1:
+            cheap = -math.inf
+        if dear_size < 1:
+            dear = -math.inf
         edge = max(cheap, dear)
         if edge > tol:
+            long_side = cheap >= dear
             out.append({"expiry_session": expiry, "strike": strike,
                         "edge": edge,
-                        "side": "long_via_options" if cheap >= dear else "short_via_options"})
+                        "size": cheap_size if long_side else dear_size,
+                        "side": "long_via_options" if long_side else "short_via_options"})
     return out
 
 
@@ -545,16 +603,18 @@ def vertical_violations(quotes: list[OptionQuote], tol: float = 1e-9) -> list[di
             # long the nearer strike for calls and the further one for puts.
             long_leg, short_leg = (lo, hi) if is_call else (hi, lo)
             cost_buy = long_leg.ask - short_leg.bid
+            buy_size = min(long_leg.ask_size, short_leg.bid_size)
             proceeds_sell = long_leg.bid - short_leg.ask
-            if cost_buy < -tol:
+            sell_size = min(long_leg.bid_size, short_leg.ask_size)
+            if cost_buy < -tol and buy_size >= 1:
                 out.append({"expiry_session": expiry, "is_call": is_call,
                             "lo": lo.strike, "hi": hi.strike,
-                            "edge": -cost_buy,
+                            "edge": -cost_buy, "size": buy_size,
                             "why": "paid to own a non-negative payoff"})
-            if proceeds_sell - width > tol:
+            if proceeds_sell - width > tol and sell_size >= 1:
                 out.append({"expiry_session": expiry, "is_call": is_call,
                             "lo": lo.strike, "hi": hi.strike,
-                            "edge": proceeds_sell - width,
+                            "edge": proceeds_sell - width, "size": sell_size,
                             "why": "received more than the maximum liability"})
     return out
 
@@ -590,10 +650,14 @@ def butterfly_violations(quotes: list[OptionQuote], tol: float = 1e-9) -> list[d
                 continue
             w = (c.strike - b.strike) / span
             cost = w * a.ask + (1.0 - w) * c.ask - b.bid
-            if cost < -tol:
+            # the wings are bought and the body sold, so those are the sides
+            # whose size binds
+            size = min(a.ask_size, c.ask_size, b.bid_size)
+            if cost < -tol and size >= 1:
                 out.append({"expiry_session": expiry, "is_call": is_call,
                             "strikes": (a.strike, b.strike, c.strike),
-                            "weight_low": round(w, 6), "edge": -cost})
+                            "weight_low": round(w, 6), "edge": -cost,
+                            "size": size})
     return out
 
 
@@ -607,10 +671,11 @@ def calendar_violations(quotes: list[OptionQuote], tol: float = 1e-9) -> list[di
         qs = sorted(qs, key=lambda q: q.expiry_session)
         for near, far in zip(qs, qs[1:]):
             edge = near.bid - far.ask         # sell the near, buy the far
-            if edge > tol:
+            size = min(near.bid_size, far.ask_size)
+            if edge > tol and size >= 1:
                 out.append({"strike": strike, "is_call": is_call,
                             "near": near.expiry_session, "far": far.expiry_session,
-                            "edge": edge})
+                            "edge": edge, "size": size})
     return out
 
 
@@ -657,11 +722,15 @@ class OptionsFeed:
         hit = self._cache.get(key)
         if hit is not None:
             self.hits += 1
-            # the quotes are identical; only the instant they are read at moves
-            return [OptionQuote(ts=ts, session=q.session,
-                                expiry_session=q.expiry_session, strike=q.strike,
-                                is_call=q.is_call, bid=q.bid, ask=q.ask)
-                    for q in hit]
+            # **`replace`, not a hand-listed constructor call.** The quotes are
+            # identical and only the instant they are read at moves -- but the
+            # first version enumerated the fields, so when `bid_size` and
+            # `ask_size` were added every CACHED read silently returned size
+            # zero and the size-aware checks refused to report anything. The
+            # plant went from being found in 2,808 of 2,808 bars to 149, which
+            # is exactly the number of cache MISSES. Copying by field is a
+            # standing invitation to that bug; `replace` cannot drop one.
+            return [replace(q, ts=ts) for q in hit]
         self.misses += 1
         quoted = round(round(forward / tick) * tick, 6)
         out = self.surface.quotes_at(ts, session, quoted)

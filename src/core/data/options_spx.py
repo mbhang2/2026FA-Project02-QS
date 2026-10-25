@@ -129,6 +129,14 @@ class SPXSpec:
     cos_width: float = 12.0                # sds of integrated variance
     grid_points: int = 2001
 
+    # ---- quoted size ------------------------------------------------------- #
+    # Smaller than the QQQ model in contracts, because an SPX contract is worth
+    # a hundred times the index. Shape rather than a fit: what matters is that
+    # size varies, so a detector has to ask whether an edge is takeable.
+    size_at_the_money: int = 30
+    size_decay_moneyness: float = 0.05
+    size_maturity_decay: float = 0.30      # per year of maturity
+
     plants: tuple[Plant, ...] = ()
 
     def digest(self) -> str:
@@ -279,6 +287,19 @@ class SPXHestonSurface:
         return sorted(round(x, 6) for x in out if x > 0)
 
     # ---- the quote -------------------------------------------------------- #
+
+    def sizes(self, mid: float, strike: float, forward: float,
+              tau: float) -> tuple[int, int]:
+        """Quoted size, thickest at the money and thinning with the wings and
+        with maturity. No bid where the premium rounds to nothing: a 0.00 bid is
+        nobody bidding, not a thin bid."""
+        s = self.spec
+        if forward <= 0 or strike <= 0:
+            return 0, 0
+        decay = math.exp(-(math.log(strike/forward)/s.size_decay_moneyness)**2)
+        n = max(1, int(round(s.size_at_the_money*decay/(1.0 + s.size_maturity_decay*tau))))
+        return n, n
+
     def increment(self, mid: float) -> float:
         s = self.spec
         return s.dime_increment if mid >= s.dime_above else s.nickel_increment
@@ -323,16 +344,19 @@ class SPXHestonSurface:
         """
         sites = self._sites()
         out: list[OptionQuote] = []
-        for i, _m in enumerate(self.maturities):
+        for i, m in enumerate(self.maturities):
             ks = self.strikes(i)
             calls, puts = self.call_prices(i, ks), self.put_prices(i, ks)
             for j, strike in enumerate(ks):
                 for is_call, mid in ((True, float(calls[j])), (False, float(puts[j]))):
                     mid = max(mid + sites.get((i, strike, is_call), 0.0), 0.0)
                     bid, ask = self._quote(mid, i)
+                    bn, an = self.sizes(mid, strike, m.forward, m.T)
+                    if bid <= 0.0:
+                        bn = 0   # a 0.00 bid is nobody bidding
                     out.append(OptionQuote(ts=ts, session=session, expiry_session=i,
                                            strike=float(strike), is_call=is_call,
-                                           bid=bid, ask=ask))
+                                           bid=bid, ask=ask, bid_size=bn, ask_size=an))
         return out
 
     # ---- the oracle ------------------------------------------------------- #
@@ -611,9 +635,12 @@ class SPXMovingSurface(SPXHestonSurface):
                 for is_call, mid in ((True, float(calls[j])), (False, float(puts[j]))):
                     mid = max(mid + shift.get((strike, is_call), 0.0), 0.0)
                     bid, ask = self._quote_at(mid, tau)
+                    bn, an = self.sizes(mid, strike, fwd, tau)
+                    if bid <= 0.0:
+                        bn = 0   # a 0.00 bid is nobody bidding
                     out.append(OptionQuote(ts=ts, session=session, expiry_session=i,
                                            strike=float(strike), is_call=is_call,
-                                           bid=bid, ask=ask))
+                                           bid=bid, ask=ask, bid_size=bn, ask_size=an))
         return out
 
     def _quote_at(self, mid: float, tau: float) -> tuple[float, float]:

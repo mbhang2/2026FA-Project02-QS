@@ -389,9 +389,17 @@ class SyntheticOptionsSurface:
         expiry = s.expiries_in_sessions[plant.expiry_index]
         h = lambda k, e, c: self.half_spread(self.price(forward, k, e, c), e)  # noqa: E731
 
+        # The mid this plant will actually be quoted from: half_spread is
+        # proportional to premium, so the plant narrows its own leg's spread.
+        # Latent here and caught on the SPX surface, where the effect clears
+        # quantisation -- the bound was exceeded by 0.20 at a strength of 60.
+        c_clean = self.price(forward, strike, expiry, True)
+        c_q = max(c_clean - plant.strength, 0.0) if plant.kind == "parity" \
+            else c_clean + plant.strength
+        hq = self.half_spread(c_q, expiry)
         if plant.kind == "parity":
             intrinsic = 0.0
-            spread = h(strike, expiry, True) + h(strike, expiry, False)
+            spread = hq + h(strike, expiry, False)
             legs = 2
         elif plant.kind == "butterfly":
             lo, hi = ks[max(i - 1, 0)], ks[min(i + 1, len(ks) - 1)]
@@ -401,14 +409,13 @@ class SyntheticOptionsSurface:
             intrinsic = (w * self.price(forward, lo, expiry, True)
                          + (1 - w) * self.price(forward, hi, expiry, True)
                          - self.price(forward, strike, expiry, True))
-            spread = (w * h(lo, expiry, True) + (1 - w) * h(hi, expiry, True)
-                      + h(strike, expiry, True))
+            spread = (w * h(lo, expiry, True) + (1 - w) * h(hi, expiry, True) + hq)
             legs = 3
         else:
             far = s.expiries_in_sessions[plant.expiry_index + 1]
             intrinsic = (self.price(forward, strike, far, True)
                          - self.price(forward, strike, expiry, True))
-            spread = h(strike, expiry, True) + h(strike, far, True)
+            spread = hq + h(strike, far, True)
             legs = 2
         return {"kind": plant.kind, "expiry_session": expiry, "strike": strike,
                 "intrinsic_to_clear": intrinsic, "spread_to_clear": spread,

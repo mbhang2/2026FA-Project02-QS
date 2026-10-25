@@ -353,14 +353,51 @@ def render() -> str:
         "eligible on the **next** event, never against the tick that closed the "
         "bar (T+1). A context is valid only inside its own callback.",
         "",
+        "## The options surface, where there is one",
+        "",
+        "Some datasets carry a second channel: a quoted options surface over the "
+        "same underlying, read with `ctx.options()`. It returns the WHOLE "
+        "cross-section as of this instant — every strike, every listed expiry, "
+        "both sides — because an arbitrage is a statement about several quotes "
+        "at once and a feed delivering them one at a time would make the task "
+        "reassembly rather than detection.",
+        "",
+        "On a dataset without one, `ctx.options()` raises `ContextError` naming "
+        "the missing capability. It never returns an empty tuple, which would "
+        "read as \"no quotes right now\".",
+        "",
+        "Each quote carries:",
+        "",
+        "| Field | Meaning |",
+        "|---|---|",
+        "| `ts` | the instant this quote is as of, nanoseconds UTC |",
+        "| `session` | session index of that instant |",
+        "| `expiry_session` | the session index the contract EXPIRES on — not a "
+        "date, and not a position in a list |",
+        "| `strike` | the strike, in index points |",
+        "| `is_call` | `True` for a call, `False` for a put |",
+        "| `bid` / `ask` | the two-sided quote. A `0.00` bid is nobody bidding |",
+        "| `bid_size` / `ask_size` | how many contracts are behind each side. "
+        "**Zero means that side cannot be hit at all** |",
+        "| `mid` | a property, `(bid + ask) / 2` |",
+        "",
+        "The surface is a deterministic function of the underlying price at or "
+        "before this instant — the same number `ctx.last_price` returns — so "
+        "there is no future quote in the dataset to leak.",
+        "",
+        "How these fill, how a contract is named, and what happens at expiry are "
+        "in `strategy-api.md` §5a.",
+        "",
         "## What is not available",
         "",
-        "The price source is **trades only**. There is no book and no quote feed, "
-        "which rules out a family of features that would otherwise look "
-        "available:",
+        "The UNDERLYING price source is **trades only**. There is no book and no "
+        "quote feed for it, which rules out a family of features that would "
+        "otherwise look available:",
         "",
-        "- **No bid/ask, no BBO, no quotes** — so no spread, no mid, no "
-        "microprice, no quoted-depth imbalance.",
+        "- **No bid/ask, no BBO, no quotes on the underlying** — so no spread, "
+        "no mid, no microprice, no quoted-depth imbalance for the instrument "
+        "`ctx.buy(1)` trades. The options surface above is a separate channel "
+        "and is quoted; this bullet is not about it.",
         "- **No order book** — so no queue position, no depth, no book pressure, "
         "no cancel/replace flow.",
         "- **No vendor bars.** Bars are built here from trades, so session "

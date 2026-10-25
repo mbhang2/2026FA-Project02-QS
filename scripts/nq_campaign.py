@@ -184,6 +184,48 @@ VALIDATION_PROFILE = "nq-validation"
 VALIDATION_PROFILE_FITTED = "nq-validation-fitted"
 
 
+def validation_profile_for(train_profile: str, fitted: bool) -> str:
+    """The validation profile that matches the campaign's OWN train profile.
+
+    **This was the two constants above, read unconditionally.** Harmless while
+    every campaign was NQ and actively wrong as soon as one is not: a campaign
+    registered on `spx-options-train` would have had its winner validated on
+    `nq-validation` -- a different instrument, a different split of a different
+    dataset -- and the comparison recorded as though the two numbers were about
+    the same thing. Nothing would have raised; section 5 would simply have
+    reported a replication failure that was really a configuration error.
+
+    The rule is the naming convention the profiles already follow: `<base>-train`
+    validates on `<base>-validation`, with `-fitted` carried through. The result
+    is then CHECKED rather than trusted -- it must exist, it must actually be a
+    validation split, and it must cost the same as train, because the protocol
+    compares the two numbers directly and a cheaper split looks like a better
+    strategy. That last one is the Task 61 bug, which reached a live run.
+    """
+    c = cfg()
+    base = (train_profile[:-len("-train")] if train_profile.endswith("-train")
+            else train_profile)
+    want = f"{base}-validation" + ("-fitted" if fitted else "")
+    if want not in c["profiles"]:
+        sys.exit(
+            f"no validation profile {want!r} for a campaign registered on "
+            f"{train_profile!r}. A campaign is validated on the split that "
+            f"matches its own training profile, so the pair has to exist in "
+            f"config/run.yaml. Have: {sorted(c['profiles'])}")
+    v, t = c["profiles"][want], c["profiles"][train_profile]
+    if v.get("split") != "validation":
+        sys.exit(f"profile {want!r} is not a validation split ({v.get('split')!r})")
+    for key in ("dataset", "fill_model", "commission_per_contract"):
+        if v.get(key) != t.get(key):
+            sys.exit(
+                f"{want!r} and {train_profile!r} disagree on {key}: "
+                f"{v.get(key)!r} against {t.get(key)!r}. The protocol compares a "
+                f"campaign's train and validation scores directly, and two runs "
+                f"costed or fed differently are not comparable -- the cheaper "
+                f"one simply looks better.")
+    return want
+
+
 def _winner(rows: list[dict]) -> dict | None:
     """The campaign's gate winner: the highest primary score among completed runs.
 
@@ -268,7 +310,7 @@ def stage_validate(name: str) -> None:
             "parameters it fitted, and refitting on the validation split is the "
             "one thing this stage exists to prevent.")
 
-    profile = VALIDATION_PROFILE_FITTED if weights_src else VALIDATION_PROFILE
+    profile = validation_profile_for(record.profile, bool(weights_src))
     live_weights = ROOT / "runs" / "current.weights"
 
     strategy_path = ROOT / "src" / "strategies" / "current.py"
@@ -366,6 +408,40 @@ def _refuse_if_floor_drifted(name: str) -> None:
             f"campaign.min_exposed_fraction back to {registered!r} to continue "
             f"this campaign, or register a new one for the floor you want.")
 
+
+
+def _campaign_note(profile: dict) -> str:
+    """The record's prose. The statistical provenance is NOT portable.
+
+    The note used to be one hard-coded paragraph claiming Task 57's measured
+    FWER -- 0 acceptances in 400 campaigns, below about 0.010 at 95% -- and
+    Task 59's power curve. Both are real numbers and both were measured on the
+    NQ MVP configuration: that dataset, that null, that N. Carrying them onto a
+    campaign with a different dataset would be asserting a false-positive rate
+    nobody measured, in the field a reader goes to precisely to find out how
+    much the result is worth. A campaign on anything else says so and says what
+    is missing.
+    """
+    common = ("Governed by docs/design/pre-registration.md. The model proposes "
+              "one strategy at a time and edits the champion; the null is the "
+              "sign-flip over round turns (section 3b), NOT the conditional "
+              "null.")
+    if profile.get("dataset") == "nq":
+        return (f"MVP campaign. {common} Real NQ train split. The conditional "
+                "null's FWER of 0.060 therefore does not describe this "
+                "campaign; the figure that does is Task 57's, measured on this "
+                "exact configuration at this exact N: 0 acceptances in 400 "
+                "campaigns, FWER below about 0.010 at 95%. It is conservative, "
+                "and Task 59 prices that -- 80% power at a signal strength of "
+                "0.287 against 0.242 for the conditional null.")
+    return (f"{common} Dataset {profile['dataset']!r}, {profile['split']} "
+            "split. **No measured FWER applies to this configuration.** Task "
+            "57's 400-campaign figure and Task 59's power curve were measured "
+            "on the NQ MVP configuration and are not transferable to a "
+            "different dataset or a different null; quoting them here would be "
+            "asserting a false-positive rate nobody has measured. Read an "
+            "acceptance from this campaign as uncalibrated until its own null "
+            "is tabulated.")
 
 def stage_register(name: str, hypothesis: pathlib.Path,
                    profile_name: str = PROFILE,
@@ -511,20 +587,17 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         # widened its generations halfway through would be two search procedures
         # reported as one.
         generation_width=generation_width,
-        agent="src.core.loop.llm.LLMAgent", dataset="nq-trades", split="train",
+        # **From the profile, not hard-coded.** These two read `"nq-trades"`
+        # and `"train"` literally, which was true of every campaign until one
+        # was not: an SPX options campaign would have recorded that it ran on
+        # NQ trades. The record is the thing a reader trusts about what a
+        # result is a result OF, so it says what the profile actually names.
+        agent="src.core.loop.llm.LLMAgent",
+        dataset=profile["dataset"], split=profile["split"],
         hypothesis_path=str(hypothesis.relative_to(ROOT)),
         hypothesis_digest=agent_cfg["hypothesis"]["digest"],
         agent_config=agent_cfg,
-        note=("MVP campaign, governed by docs/design/pre-registration.md. Real "
-              "NQ train split. The model proposes one strategy at a time and "
-              "edits the champion; the null is the sign-flip over round turns "
-              "(section 3b), NOT the conditional null. The conditional null's "
-              "FWER of 0.060 therefore does not describe this campaign; the "
-              "figure that does is Task 57's, measured on this exact "
-              "configuration at this exact N: 0 acceptances in 400 campaigns, "
-              "FWER below about 0.010 at 95%. It is conservative, and Task 59 "
-              "prices that -- 80% power at a signal strength of 0.287 against "
-              "0.242 for the conditional null."),
+        note=_campaign_note(profile),
         written_at=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"))
     # **Seeding is optional, and both branches are the design.** With --seed,
     # trial 0's agent starts from a human-written strategy and edits it. Without,

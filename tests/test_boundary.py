@@ -705,7 +705,13 @@ def test_the_shipped_profiles_satisfy_it():
     for name, profile in cfg["profiles"].items():
         warmup = profile.get("warmup_sessions", 0)
         spec = cfg["datasets"][profile["dataset"]]
-        if spec["kind"] == "synthetic":
+        # **Datasets that carry their own calendar, against datasets that read
+        # one from the manifest.** The branch used to test for `"synthetic"`
+        # exactly, so `spx-options` -- a `SyntheticDataset` subclass with an
+        # in-code calendar and no `symbol` -- fell into the manifest branch and
+        # died on `KeyError: 'symbol'`. The real distinction is where the
+        # calendar comes from, not what the dataset is called.
+        if spec["kind"] in ("synthetic", "spx-options"):
             dataset = run.build_dataset(cfg, profile["dataset"], profile["seed"])
             run.check_warmup_against_embargo(name, warmup, dataset)
             embargo = dataset.calendar().embargo_sessions

@@ -152,6 +152,33 @@ def rebuild_dataset(row: dict, cfg: dict):
                 "The row names data this repository can no longer build."
             )
         dataset = SyntheticDataset(SyntheticSpec(**spec))
+    elif family == "spx-heston":
+        # Same rule as the synthetic branch and for the same reason: the ROW
+        # names the data, and the committed config is searched for an entry
+        # that rebuilds to that name. Matching on the profile's current
+        # dataset would replay a planted surface against a clean one, which
+        # produces a digest mismatch that reads as non-determinism.
+        #
+        # The name carries the plant count, the expiry grid, the surface
+        # digest and the path seed, so an entry that reproduces it reproduces
+        # the bytes. `build_dataset` is reused rather than reimplemented --
+        # two constructions of one dataset is exactly how this function's
+        # docstring says the last bug happened.
+        import run as _run
+
+        dataset = None
+        for cname, candidate in cfg["datasets"].items():
+            if candidate.get("kind") != "spx-options":
+                continue
+            trial = _run.build_dataset(cfg, cname, row["seed"])
+            if trial.name == name:
+                dataset = trial
+                break
+        if dataset is None:
+            raise SystemExit(
+                f"no committed dataset in config/run.yaml reconstructs {name!r}. "
+                "The row names a surface this repository can no longer build."
+            )
     elif family == "nq-trades":
         import boto3
 

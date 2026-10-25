@@ -225,6 +225,44 @@ def build_dataset(cfg: dict, name: str, seed: int):
             region_name="auto",
         )
         return NQDataset(client, os.environ["R2_BUCKET"], NQSpec(**spec))
+    if kind == "spx-options":
+        # **Imported here, not at module scope.** The Heston pricer pulls in the
+        # COS machinery and prices a whole surface on construction; a synthetic
+        # or NQ run must not pay for that, and `run.py` is imported by every
+        # script in the repo.
+        from src.core.data.options_spx import (
+            Plant, SPXHestonDataset, SPXRollingSurface, SPXSpec,
+        )
+        from src.core.data.synthetic import SyntheticSpec as _SSpec
+
+        # The seed is the PATH seed here. There is no tick noise to generate:
+        # the underlying is one simulated Heston path and the surface is priced
+        # from it, so "the bytes this trial ran on" are chosen by which path was
+        # walked. Same contract as the synthetic branch, different mechanism.
+        plants = tuple(
+            Plant(kind=pl["kind"], expiry_index=int(pl["expiry_index"]),
+                  strike_offset=int(pl.get("strike_offset", 0)),
+                  strength=float(pl["strength"]))
+            for pl in spec.pop("plants", []) or ()
+        )
+        n_sessions = int(spec.pop("n_sessions", 40))
+        # **The expiry ladder is written down, not defaulted.** Which expiries
+        # a surface lists decides whether anything can ever settle, and a
+        # locked-in edge is paid at settlement or never -- so it belongs in the
+        # pre-registered config next to the plants rather than in a library
+        # default that could move underneath a registered campaign. A grid of
+        # four sessions is what puts a settlement inside train, validation AND
+        # holdout on a forty-session run; see `SPXRollingSurface`.
+        surface = SPXRollingSurface(
+            SPXSpec(plants=plants,
+                    cos_terms=int(spec.pop("cos_terms", 256)),
+                    grid_points=int(spec.pop("grid_points", 601))),
+            grid_sessions=int(spec.pop("expiry_every_sessions", 4)),
+            n_listed=int(spec.pop("expiries_listed", 4)))
+        if spec:
+            sys.exit(f"unknown spx-options keys for dataset {name!r}: {sorted(spec)}")
+        return SPXHestonDataset(spec=_SSpec(n_sessions=n_sessions),
+                                surface=surface, path_seed=seed)
     sys.exit(f"no adapter for dataset kind {kind!r} yet")
 
 

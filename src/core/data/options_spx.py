@@ -679,13 +679,9 @@ class SPXMovingSurface(SPXHestonSurface):
         and the engine settles the position at the close of the expiry session.
         """
         out: list[OptionQuote] = []
-        exp = expiry_sessions(self.maturities)
-        for i, m in enumerate(self.maturities):
-            tau = m.T - elapsed
-            if tau <= 1e-6:
-                continue                     # the expiry has passed
-            fwd = spot*math.exp((m.r - m.q)*tau)
-            disc = math.exp(-m.r*tau)
+        for pidx, e, tau, r, q in self._listed(elapsed):
+            fwd = spot*math.exp((r - q)*tau)
+            disc = math.exp(-r*tau)
             rel, prob = self.density_for(tau, var)
             terminal = fwd*rel
             ks = self.strikes_for(fwd)
@@ -695,7 +691,7 @@ class SPXMovingSurface(SPXHestonSurface):
             atm = min(range(len(ks)), key=lambda j: abs(ks[j] - fwd))
             shift: dict[tuple[float, bool], float] = {}
             for pl in self.spec.plants:
-                if pl.expiry_index != i:
+                if pl.expiry_index != pidx:
                     continue
                 j = min(max(atm + pl.strike_offset, 0), len(ks) - 1)
                 shift[(ks[j], True)] = (-pl.strength if pl.kind == "parity"
@@ -708,10 +704,43 @@ class SPXMovingSurface(SPXHestonSurface):
                     if bid <= 0.0:
                         bn = 0   # a 0.00 bid is nobody bidding
                     out.append(OptionQuote(ts=ts, session=session,
-                                           expiry_session=exp[i],
+                                           expiry_session=e,
                                            strike=float(strike), is_call=is_call,
                                            bid=bid, ask=ask, bid_size=bn, ask_size=an))
         return out
+
+    def _listed(self, elapsed: float):
+        """Every contract quoted right now: `(plant_index, expiry_session, tau,
+        r, q)`, one tuple per listed expiry.
+
+        Factored out so the rolling surface below can change WHICH contracts
+        exist without touching how any of them is priced or quoted -- the
+        pricing is the part with a bug history, and it should have exactly one
+        implementation.
+
+        `plant_index` is what `Plant.expiry_index` selects, and it is an index
+        into `self.maturities` here: a plant on the calibration's third expiry
+        stays on that contract for as long as the contract exists, and vanishes
+        with it. The rolling surface means something different by it, and says
+        so.
+        """
+        out = []
+        for i, (e, m) in enumerate(zip(expiry_sessions(self.maturities),
+                                       self.maturities)):
+            tau = m.T - elapsed
+            if tau > 1e-6:                   # an expiry that has passed is gone
+                out.append((i, e, tau, m.r, m.q))
+        return out
+
+    def settles_within(self, n_sessions: int) -> tuple[int, ...]:
+        """Expiries that fall inside a run of `n_sessions`, in session order.
+
+        The dataset asks this to refuse a configuration where nothing can ever
+        settle. It is a method rather than a comprehension over `maturities`
+        because the rolling surface's expiries are not a list it holds.
+        """
+        return tuple(e for e in expiry_sessions(self.maturities)
+                     if e < n_sessions)
 
     def _quote_at(self, mid: float, tau: float) -> tuple[float, float]:
         s = self.spec
@@ -782,7 +811,7 @@ class SPXHestonDataset(SyntheticDataset):
         # the only way a locked-in edge is ever paid -- so the condition is
         # inverted. Reaching an expiry is the requirement, not the hazard.
         exp = expiry_sessions(self.surface.maturities)
-        self.settling_expiries = tuple(e for e in exp if e < base.n_sessions)
+        self.settling_expiries = self.surface.settles_within(base.n_sessions)
         if not self.settling_expiries and not allow_no_settlement:
             raise ValueError(
                 f"none of this surface's expiries falls inside a "
@@ -795,7 +824,15 @@ class SPXHestonDataset(SyntheticDataset):
                 f"prices the same calibrated parameters at expiries inside the "
                 f"window, or pass allow_no_settlement=True if the run is for "
                 f"detection only and no position is meant to be held.")
-        self.name = f"spx-heston:{self.surface.name}:path={path_seed}"
+        # **`n_sessions` is in the name, because the name is what a replay
+        # matches on.** It was not, so a 40-session surface and a 175-session
+        # one built from the same spec were the same NAME and different
+        # DIGESTS: `scripts/replay.py` found a config entry whose name matched,
+        # rebuilt the wrong dataset, and refused on the digest -- reporting
+        # "the data has changed" for what was really two datasets sharing an
+        # identity. A name that does not distinguish is worse than no name.
+        self.name = (f"spx-heston:{self.surface.name}:"
+                     f"n={base.n_sessions}:path={path_seed}")
         self._ts_index: dict[int, int] = {}
         self._ts_sorted: list[int] | None = None
         self._feed = _SPXFeed(self)
@@ -845,6 +882,92 @@ class SPXHestonDataset(SyntheticDataset):
         return hashlib.sha256(
             f"{super().digest()}|{self.surface.digest()}|"
             f"{self.path.seed}".encode()).hexdigest()[:16]
+
+
+class SPXRollingSurface(SPXMovingSurface):
+    """The same Heston pricing, on expiries that ROLL instead of running out.
+
+    **Why this exists.** The calibration lists three real expiries, so a
+    surface built on it has three contracts and then none. A forty-session run
+    splits 0-23 train / 26-33 validation / 36-39 holdout, and a fixed ladder
+    cannot put a settlement inside every window -- the short ladder
+    (5/10/21/35) settles three times in train and NOT ONCE in validation. An
+    edge that is only paid at settlement would then score on train and score
+    zero on validation, and the gate would reject a detector that worked
+    perfectly. That is a property of the data, not of the strategy, and it
+    would have been invisible: the validation run completes, reports nothing,
+    and looks like an honest failure to replicate.
+
+    So expiries sit on a fixed grid of sessions and the surface lists the next
+    few unexpired ones, which is what a listed options market actually does.
+    Every window of the run then contains settlements, and the same question
+    can be asked of each.
+
+    This is the convention the Gaussian surface in `options.py` already used --
+    its `expiries_in_sessions` are TENORS and it writes `session + expiry` --
+    so the two surfaces now agree about this as well.
+
+    **`Plant.expiry_index` means something different here, deliberately.** On
+    the fixed surface it selects a contract and the plant dies with it. Here it
+    selects a POSITION IN THE LADDER -- 0 is whichever contract is nearest
+    expiry at the moment of the quote -- so the mispricing is a standing
+    property of the front month rather than an event that happens once. A
+    campaign needs the former: a plant that expires a third of the way through
+    train leaves most of the run with nothing to find.
+
+    A contract is quoted while it has more than one session to run and settles
+    at the close of its expiry session, so there is a one-session window in
+    which a position is held but not quoted. That is expiration day, and it is
+    immaterial to a package held to settlement.
+    """
+
+    def __init__(self, spec: SPXSpec | None = None, *,
+                 grid_sessions: int = 5, n_listed: int = 4,
+                 anchor: Maturity | None = None):
+        if grid_sessions < 1:
+            raise ValueError("expiries must be at least one session apart")
+        if n_listed < 1:
+            raise ValueError("a surface with no listed expiry quotes nothing")
+        # **Set before `super().__init__`, because the parent builds `name`
+        # from `self.digest()` and this subclass's digest reads them.** The
+        # other order raises AttributeError out of the base constructor, which
+        # reads as a bug in the base class.
+        self.grid_sessions = grid_sessions
+        self.n_listed = n_listed
+        # The ladder as it stands at session zero. Passed to the parent so that
+        # plant validation, `r`/`q` and the digest all have something concrete
+        # to work from; `_listed` recomputes it at every instant.
+        super().__init__(spec, maturities=short_maturities(
+            tuple(grid_sessions*(i + 1) for i in range(n_listed)), anchor))
+        self.name = (f"spx-heston-rolling:plants={len(self.spec.plants)}:"
+                     f"every={grid_sessions}x{n_listed}:{self.digest()[:8]}")
+
+    def _listed(self, elapsed: float):
+        """The next `n_listed` expiries strictly ahead of now.
+
+        `e > now` rather than `e >= now`: a contract with zero time left has no
+        density to price under, and `tau = 0` would divide the COS expansion by
+        a zero standard deviation. It is also the truthful statement -- at the
+        moment it expires it is not a contract, it is a settlement.
+        """
+        now = elapsed/SESSION_YEARS
+        a = self.maturities[0]
+        first = math.floor(now/self.grid_sessions) + 1
+        return [
+            (i, (first + i)*self.grid_sessions,
+             ((first + i)*self.grid_sessions - now)*SESSION_YEARS, a.r, a.q)
+            for i in range(self.n_listed)
+        ]
+
+    def settles_within(self, n_sessions: int) -> tuple[int, ...]:
+        """Every grid expiry inside the run -- which is most of them."""
+        g = self.grid_sessions
+        return tuple(range(g, n_sessions, g))
+
+    def digest(self) -> str:
+        return hashlib.sha256(
+            f"rolling|{self.grid_sessions}|{self.n_listed}|"
+            f"{super().digest()}".encode()).hexdigest()[:16]
 
 
 class _SPXFeed:

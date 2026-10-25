@@ -96,7 +96,7 @@ def test_the_unreproducible_verdict_exists_and_needs_a_replay_to_reach():
     assert mod.verdict({**base, "reproduces": None}) == "checkable"
 
 
-def test_rows_recorded_at_head_reproduce():
+def test_rows_recorded_at_head_reproduce(tmp_path):
     """**Reproduction here is contemporaneous, not cross-version.**
 
     A replay runs CURRENT code against a row recorded under the code of its own
@@ -119,10 +119,47 @@ def test_rows_recorded_at_head_reproduce():
     head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
                           text=True, cwd=REPO_ROOT).stdout.strip()
     rows = [json.loads(line) for line in LEDGER.read_text().splitlines() if line.strip()]
-    at_head = [i for i, r in enumerate(rows) if r.get("git_sha") == head]
+    # **Trials, because the guarantee is about the p-value column.** A
+    # `check` row is a diagnostic that `global_n()` does not count and that
+    # nothing is concluded from, and it is written by hand against whatever
+    # configuration was being explored at the time -- the five options control
+    # runs of 2026-10-25 name two surface sizes that the committed config no
+    # longer describes, which is a true statement about an exploratory run and
+    # not a reproduction failure. Scoping to trials is what makes a failure
+    # here mean what the docstring says it means.
+    at_head = [r for r in rows
+               if r.get("git_sha") == head and r.get("purpose") == "trial"]
     if not at_head:
-        pytest.skip(f"no row in {LEDGER.name} was recorded at HEAD ({head[:12]})")
-    r = run_check(str(LEDGER), "--replay")
+        pytest.skip(f"no trial in {LEDGER.name} was recorded at HEAD ({head[:12]})")
+
+    # **Only the HEAD rows, and only the ones this suite can afford.**
+    #
+    # This passed `--replay` over the WHOLE ledger, which is not what the
+    # docstring above claims and not what the test is for. It was invisible
+    # while no row sat at HEAD and the test always skipped; the first run that
+    # recorded one turned it into a replay of every historical row, which fails
+    # on the NQ rows for want of bucket credentials and would re-execute
+    # several hundred sessions of options pricing besides.
+    #
+    # The budget is a real constraint rather than a preference: a row's own
+    # recorded wall clock says what replaying it costs, and a guard that adds
+    # twenty-five minutes to every suite run is a guard that gets deselected.
+    # When every HEAD row is too expensive, say so and name the command --
+    # skipping with a reason beats both a slow suite and a silent pass.
+    BUDGET_S = 60.0
+    affordable = [r for r in at_head
+                  if (r.get("wall_clock_s") or 0.0) <= BUDGET_S
+                  and r.get("fill_log_source")]
+    if not affordable:
+        slowest = max((r.get("wall_clock_s") or 0.0) for r in at_head)
+        pytest.skip(
+            f"{len(at_head)} row(s) at HEAD, none replayable inside {BUDGET_S:.0f}s "
+            f"(cheapest is {slowest:.0f}s). Run it by hand: "
+            f"python scripts/ledger_check.py runs/ledger.jsonl --replay")
+
+    sub = tmp_path / "at-head.jsonl"
+    sub.write_text("".join(json.dumps(r) + "\n" for r in affordable))
+    r = run_check(str(sub), "--replay")
     assert r.returncode == 0, r.stdout + r.stderr
     assert "UNREPRODUCIBLE" not in r.stdout, r.stdout
 

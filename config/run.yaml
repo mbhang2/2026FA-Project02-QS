@@ -277,6 +277,80 @@ profiles:
     commission_per_contract: 0.10
     record_fill_spread: false
 
+  # ---- the SPX options surface ------------------------------------------- #
+  # Brian's challenge: a surface with an arbitrage hidden in it, and the
+  # question of whether the proposer can find and monetise it. The two
+  # profiles below are a matched pair -- same costs, same fill model, same
+  # warmup -- because the protocol runs a campaign's winner on validation and
+  # compares the two numbers, and anything that differs between them shows up
+  # as a result. See the note on `nq-validation`: that key was once absent and
+  # validation silently charged a tenth of train.
+  #
+  # `commission_per_contract` is in INDEX POINTS, as everywhere else here. A
+  # four-legged box pays it eight times -- four to open, four at settlement --
+  # so 0.10 is 0.80 against a planted edge of a few points. Deliberately the
+  # expensive side of realistic: an edge that only survives at a cheaper rate
+  # is one the robustness seat should be vetoing anyway.
+  spx-options-train:
+    dataset: spx-options-planted
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 3600
+    notional_base: 1.0
+    commission_per_contract: 0.10
+    record_fill_spread: false
+
+  spx-options-validation:
+    dataset: spx-options-planted
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 3600
+    notional_base: 1.0
+    commission_per_contract: 0.10
+    record_fill_spread: false
+
+  # The negative control. Identical in every respect except that the surface
+  # carries no plant, so the honest answer is "nothing here". A detector that
+  # scores on this one is finding its own spread.
+  spx-clean-train:
+    dataset: spx-options-clean
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 3600
+    notional_base: 1.0
+    commission_per_contract: 0.10
+    record_fill_spread: false
+
+  spx-clean-validation:
+    dataset: spx-options-clean
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 3600
+    notional_base: 1.0
+    commission_per_contract: 0.10
+    record_fill_spread: false
+
+  # What the agent may run itself to find out whether its code executes. Small
+  # and on the clean surface: a check that walked the planted one would be an
+  # evaluation with the number withheld.
+  spx-agent-check:
+    dataset: spx-options-clean
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 300
+    notional_base: 1.0
+    commission_per_contract: 0.10
+
 # Dataset definitions the profiles name.
 datasets:
   synthetic:
@@ -322,6 +396,53 @@ datasets:
     ticks_per_session: 390
     vol_per_tick: 0.15
     signal_strength: 0.50
+
+
+  # ---- SPX options, from Michael's Heston calibration --------------------- #
+  # The underlying is one simulated Heston path under the calibrated
+  # parameters (kappa 2.092, theta 0.0542, eta 0.981, rho -0.667, v0 0.0211,
+  # SPX 7799.26 at 2026-10-12 13:56:47 CT) and the options are priced off THAT
+  # path, so the forward a strategy sees and the series it trades are the same
+  # series. `path_seed` is the run's seed, as for the synthetic generator.
+  #
+  # **`expiry_every_sessions: 4` is load-bearing and pre-registered here.** A
+  # locked-in arbitrage is paid at settlement or never, so every split has to
+  # contain one: on a 40-session run (train 0-23, validation 26-33, holdout
+  # 36-39) a four-session grid settles at 4/8/12/16/20, then 28/32, then 36.
+  # A five-session grid leaves validation with a single settlement and the
+  # holdout with none, which would have scored a working detector at zero on
+  # the split that decides.
+  spx-options-clean:
+    kind: spx-options
+    # **175, for the same reason `synthetic` is.** The scorer's floor is 30
+    # scored sessions and it applies to the validation run as well as to train.
+    # A 40-session dataset splits 24/8/4 and every single run is rejected
+    # before a metric is computed -- which is how this number was found.
+    # 175 splits 105/35/31.
+    n_sessions: 175
+    expiry_every_sessions: 4
+    expiries_listed: 4
+    cos_terms: 256
+    grid_points: 601
+
+  # The same surface with one parity violation standing on the second listed
+  # expiry. `expiry_index` is a POSITION IN THE LADDER on a rolling surface, so
+  # the mispricing is a property of that tenor rather than an event that
+  # happens once and expires. 8.0 index points is comfortably above the
+  # threshold the spread imposes -- `SPXHestonSurface.oracle()` reports what
+  # that threshold is, and the gap is what a detector can actually capture.
+  spx-options-planted:
+    kind: spx-options
+    n_sessions: 175
+    expiry_every_sessions: 4
+    expiries_listed: 4
+    cos_terms: 256
+    grid_points: 601
+    plants:
+      - kind: parity
+        expiry_index: 1
+        strike_offset: 0
+        strength: 8.0
 
   # Real data. `commission_per_contract` is deliberately absent: the engine's
   # default is scaled for the synthetic generator's price units and a real NQ

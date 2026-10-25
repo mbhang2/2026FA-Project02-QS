@@ -188,6 +188,7 @@ def on_bars(self, ctx):
 | `ctx.closed` | the same bars as a tuple; `ctx.closed_ids()` for their canonical ids |
 | `ctx.sub_id(sub)` | the canonical id of a subscription you declared |
 | `ctx.ticks()` | every trade event so far — **only populated if you subscribed to ticks** |
+| `ctx.options()` | the whole options surface at this instant, on a dataset that has one — see §5a |
 
 `ctx.history(...)` returns a `HistoryView`. It supports `len()`, iteration,
 indexing (`view[0]`, `view[-1]`), slicing, and `view.last(k)` for the `k` most
@@ -428,6 +429,131 @@ id.
 
 ---
 
+## 5a. More than one instrument
+
+Everything above describes **one** instrument. That instrument is still the
+default, it is still what `ctx.buy(1)` trades, and if your strategy never
+mentions an asset then nothing in this section changes anything for you.
+
+Some datasets carry more. On those, an order says what it is for:
+
+```python
+ctx.buy(1)                              # the underlying, as always
+ctx.buy(1, asset="SPX-120-C-7850")      # a call on the same run
+```
+
+`asset=` works on `buy()`, `sell()` and `close()`. Each asset keeps its **own
+book** — its own position, its own average entry price, its own realised P&L —
+and the run's P&L is the sum across them. Being long the underlying and short a
+call is two positions, not a net of one.
+
+### Reading each book
+
+| Read | What it is |
+|---|---|
+| `ctx.position` | position in the **default** instrument, exactly as before |
+| `ctx.position_in(asset)` | position in one named asset |
+| `ctx.average_entry_price_in(asset)` | its average entry price |
+| `ctx.realized_pnl_in(asset)` | its realised P&L |
+| `ctx.assets_held()` | every asset with an open book, default first |
+
+There is no `ctx.position(asset)` — `ctx.position` is a property and a property
+takes no argument. That is why the four above are separate names.
+
+**Inside `on_fill`, `ctx.position` means the asset that just filled**, because
+`ctx.fill.position` does and two numbers with the same name must not disagree.
+`ctx.fill.asset` says which one it was. For a single-asset run these are the
+same thing they have always been.
+
+### Options
+
+On a dataset with an options channel, `ctx.options()` returns the **whole
+cross-section as of this instant** — every strike, every listed expiry, both
+sides — as a tuple of quotes. An arbitrage is a statement about several quotes
+at once, so you get them together rather than one at a time.
+
+On a dataset without one it raises `ContextError`. Call it and handle that, or
+call it once in `on_bars` and remember the answer; nothing on `ctx` announces
+the capability in advance.
+
+Each quote carries `ts`, `session`, `expiry_session`, `strike`, `is_call`,
+`bid`, `ask`, `bid_size`, `ask_size`, and a `mid` property.
+
+**`expiry_session` is the session index the contract expires on**, not a
+position in a list and not a date. It is how a contract keeps its identity
+while the ladder rolls underneath it.
+
+To trade one, name it:
+
+```python
+from src.core.data.options import option_asset_of, parse_option_asset
+
+for q in ctx.options():
+    if q.is_call and q.ask_size > 0:
+        ctx.buy(1, asset=option_asset_of("SPX", q))     # "SPX-120-C-7850"
+        break
+```
+
+`option_asset_of(underlying, quote)` is the name of the option that quote is
+for. `parse_option_asset(name)` goes back, returning
+`(expiry_session, strike, is_call)` or `None` if the name is not an option.
+
+### How an option order fills
+
+Not like the underlying. There is no fill model and no trade print; there is a
+quoted touch and a quoted size.
+
+- A **market** order fills at the offer if you are buying, the bid if you are
+  selling, **for at most the quoted size** on that side. Ask for more and you
+  get the size that was there; the rest behaves as its time-in-force says.
+- A **limit** order fills only when the touch is already at or through your
+  price. Nothing rests *inside* the spread — no part of this dataset models a
+  queue, so there is no arrival rate that would fill you there.
+- A quote with **no size** on the side you need cannot be hit, and a zero bid is
+  not a price. Both simply do not fill. Check `bid_size` / `ask_size` before
+  you count on an edge: an arbitrage you cannot take is not one.
+- **Stops are refused** on an option, with a reason in the lifecycle event. A
+  stop triggers on a trade print and this surface publishes a touch.
+
+Two things are more generous than reality, and you should not build an edge out
+of either: quoted size does not deplete, so the same offer is there again on the
+next tick, and taking the touch moves nothing.
+
+### Expiry
+
+An option is **settled in cash at its intrinsic value** at the close of its
+expiry session — `max(S − K, 0)` for a call, `max(K − S, 0)` for a put, against
+the underlying's price at that close. You do not have to do anything, and you
+cannot prevent it.
+
+Settlement arrives as an ordinary fill: it reaches `on_fill`, it lands in the
+blotter tagged `settlement`, and it flattens that asset's book. Any order still
+resting on the contract is cancelled with it, and an order placed on a contract
+that has already expired is refused.
+
+**This is the only place a locked-in edge is ever paid.** A mispricing you buy
+and sell back returns you the spread twice and nothing else, because the quotes
+you bought at are the quotes you are selling at. If your reasoning is that
+something is worth more than it costs, the way to collect is to hold it to
+expiry.
+
+A contract stops being quoted when it has less than a session left and settles
+at the close of that session, so there is one session in which you hold it and
+cannot see it. That is expiration day.
+
+### What is still true
+
+P&L is in the same units as the prices you see — index points, no contract
+multiplier — for options exactly as for the underlying, so legs of one package
+are directly comparable. Commission is charged per contract on every fill,
+settlement included: a four-legged package pays it eight times.
+
+Every timing rule in §6 applies unchanged. An option order is eligible from the
+next tick like any other, and the action cap counts its legs individually — a
+four-leg package is four of your 64.
+
+---
+
 ## 6. The timing rules
 
 Four rules. Everything else in the engine follows from them.
@@ -491,8 +617,12 @@ still counts.
 
 You will reach for these. They do not exist.
 
-- **No bid, no ask, no BBO, no quotes.** The price source is trades only. That
-  rules out spread, mid, microprice and quoted-depth imbalance.
+- **No bid, no ask, no BBO, no quotes — on the UNDERLYING.** Its price source
+  is trades only, which rules out spread, mid, microprice and quoted-depth
+  imbalance for the instrument you trade with `ctx.buy(1)`. This says nothing
+  about `ctx.options()`, which is a quoted surface and does carry two-sided
+  prices with sizes; see §5a. A dataset without an options channel raises from
+  that call rather than returning an empty surface.
 - **No order book.** No queue position, no depth, no book pressure, no
   cancel/replace flow.
 - **No vendor bars.** Bars are built from trades by the engine, so the session
@@ -849,6 +979,9 @@ no-op is a trial that looks like a result.
 | `stop_offset is a positive distance from the fill price, got -1` | a negative offset |
 | `a GTD order needs expire_ts=<nanoseconds>` | `tif="GTD"` with no expiry |
 | `close() with no position open` | `ctx.close()` while flat |
+| `close() with no position open in SPX-120-C-7850` | the same, for a named asset (§5a) |
+| `asset must be a non-empty name, got ''` | `asset=` given something that is not a name |
+| `the dataset has no options channel` | `ctx.options()` on a dataset without one |
 | `no order 42` | an id that was never issued |
 | `cannot cancel order 42: it is already filled` | acting on an order that is done |
 | `cannot modify order 42: it is cancelled` | same, for modify |
@@ -867,6 +1000,12 @@ order was well-formed when you wrote it and only became impossible later:
 | `cancel for an order that is not working` | the order had already filled or expired when the queue was applied |
 | `modify for an order that is not working` | same, for modify |
 | `cannot resize to 1: 1 already filled` | a modify shrinking below what is already filled |
+| `stop is not supported on SPX-120-C-7850: a stop triggers on a trade print and an option surface quotes a touch, never a trade` | a stop or stop-limit on an option (§5a) |
+| `SPX-120-C-7850 expired at session 120; it is now session 124` | an order on a contract that has already settled |
+
+An expiry also announces itself, as a `contract_expired` lifecycle event:
+`SPX-120-C-7850 expired with the underlying at 7812.50: settled +1 at intrinsic
+0.00`. That event is informational — the settlement itself reaches `on_fill`.
 
 ### The budget
 

@@ -174,8 +174,17 @@ def test_every_vocabulary_entry_is_earned_by_text_in_the_corpus():
     matching things nobody has seen. Each entry has to be readable off an
     objection that actually exists."""
     mod = _mod()
-    objections = [(o.get("objection") or "").lower()
-                  for o in mod.distinct(mod.collect())]
+    # **`collect()`, not `distinct(collect())`.** `distinct` is the DISPLAY
+    # list: it drops near-duplicates, spreads round-robin across campaigns and
+    # caps at MAX_QUESTIONS. So whether a given objection survives it depends
+    # on how many campaigns exist, which has nothing to do with whether a
+    # vocabulary entry is earned. Registering a seventh campaign evicted
+    # nq-s03-03's "Friday and Tuesday carry nearly all the profit" from the top
+    # twelve and failed this test, while the objection sat in the record
+    # unchanged -- three raw objections still match that entry. The docstring
+    # above says the entry has to be readable off an objection that ACTUALLY
+    # EXISTS, and that is the raw corpus.
+    objections = [(o.get("objection") or "").lower() for o in mod.collect()]
     assert objections, "no standing objections; this test proves nothing"
     unearned = []
     for concept, needles, term in mod.TERM_VOCABULARY:

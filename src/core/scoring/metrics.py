@@ -486,6 +486,12 @@ class Diagnostics:
     by_month: dict[str, float] = field(default_factory=dict)
     by_weekday: dict[str, float] = field(default_factory=dict)
     by_hour_utc: dict[str, float] = field(default_factory=dict)
+    # The same P&L attributed to the hour the position was OPENED rather than
+    # the hour it was closed out. See `compute_diagnostics` for why: a
+    # hold-to-expiry strategy realises everything on an involuntary settlement
+    # row, so `by_hour_utc` describes the expiry calendar and this one
+    # describes the strategy.
+    by_hour_utc_entry: dict[str, float] = field(default_factory=dict)
     fill_model_spread: float | None = None
     # How far this candidate's trading profile sits from the reference strategy's.
     #
@@ -507,7 +513,18 @@ class Diagnostics:
     )
     seasonality_caveat: str = (
         "descriptive, not inferential: at a few hundred sessions the per-cell "
-        "counts in these breakdowns are tiny"
+        "counts in these breakdowns are tiny. **Read `by_hour_utc` against "
+        "`by_hour_utc_entry` before calling anything concentrated.** The first "
+        "buckets P&L at the instant it was REALISED, which for any position "
+        "held across time is the close -- and for an option the close is a "
+        "cash settlement at an expiry the strategy neither chose nor can "
+        "prevent. The second buckets the same P&L at the hour the position was "
+        "OPENED. Where they disagree, the first is describing the expiry "
+        "calendar and the second is describing the strategy. Note also that an "
+        "hour-of-day is only a market clock if the dataset has one: on the "
+        "synthetic calendar a session is a few hours long and its start drifts "
+        "across the day, so hour-of-day there is arithmetic on the session "
+        "index and carries no regime information at all"
     )
 
     def as_dict(self) -> dict:
@@ -562,12 +579,41 @@ def diagnostics(
     by_month: dict[str, float] = defaultdict(float)
     by_weekday: dict[str, float] = defaultdict(float)
     by_hour: dict[str, float] = defaultdict(float)
+    # **The same P&L, attributed to the hour the position was OPENED.**
+    #
+    # `by_hour_utc` buckets a row's net at the row's own timestamp, and P&L on
+    # anything held across time is realised on the CLOSING row. For an option
+    # the close is a cash settlement at an expiry the strategy does not choose
+    # and cannot prevent, so every point of a hold-to-expiry edge lands in
+    # whichever hours the expiry calendar happens to fall in. spx-arb-01 was
+    # vetoed by the robustness seat for "few periods carry the result" on
+    # exactly that: 95% of its settlement fills sat in four hours, while its
+    # own entries were spread across seventeen.
+    #
+    # This table answers the question the seat is actually asking -- in which
+    # hours did the DECISIONS that earned this live -- and it needs no
+    # provenance flag to do it, which matters: the obvious alternative is to
+    # key off `tag == "settlement"`, and a tag is strategy-settable free text
+    # with no validation, so a candidate could hide real concentration by
+    # labelling its entries as settlements.
+    entry_hour: dict[str, str] = {}
+    held: dict[str, int] = {}
+    by_hour_entry: dict[str, float] = defaultdict(float)
     for row in rows:
         when = dt.datetime.fromtimestamp(row.ts / 1e9, dt.timezone.utc)
         net = row.realized_pnl - row.commission
         by_month[when.strftime("%Y-%m")] += net
         by_weekday[when.strftime("%a")] += net
         by_hour[f"{when.hour:02d}"] += net
+
+        this_hour = f"{when.hour:02d}"
+        asset = row.asset
+        if held.get(asset, 0) == 0 and row.position_after != 0:
+            entry_hour[asset] = this_hour       # flat -> open: this is the entry
+        by_hour_entry[entry_hour.get(asset, this_hour)] += net
+        held[asset] = row.position_after
+        if row.position_after == 0:
+            entry_hour.pop(asset, None)
 
     return Diagnostics(
         n_sessions=len(calendar),
@@ -586,6 +632,7 @@ def diagnostics(
         by_month=dict(sorted(by_month.items())),
         by_weekday=dict(sorted(by_weekday.items())),
         by_hour_utc=dict(sorted(by_hour.items())),
+        by_hour_utc_entry=dict(sorted(by_hour_entry.items())),
         fill_model_spread=fill_model_spread,
         null_reference_divergence=null_reference_divergence(
             n_sessions=len(calendar),

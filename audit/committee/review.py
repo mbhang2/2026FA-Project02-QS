@@ -295,6 +295,10 @@ def _slice(axis: str, summary: dict, source: str | None,
             "breadth_by_hour_utc": _breadth(diag.get("by_hour_utc")),
             "by_month": diag.get("by_month"),
             "by_hour_utc": diag.get("by_hour_utc"),
+            # Both tables, because one of them describes the expiry calendar
+            # and the other describes the strategy -- see `seasonality_caveat`.
+            "by_hour_utc_entry": diag.get("by_hour_utc_entry"),
+            "breadth_by_hour_utc_entry": _breadth(diag.get("by_hour_utc_entry")),
             "by_weekday": diag.get("by_weekday"),
             "best_session_share": diag.get("best_session_share"),
             "profit_concentration_top5pct": diag.get("profit_concentration_top5pct"),

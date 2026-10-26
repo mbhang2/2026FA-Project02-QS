@@ -122,13 +122,33 @@ campaigns:
     generation_width: 1
     probe: false
 
-  # Deferred, not dropped. Restore this entry and re-run with --resume once
-  # there is memory headroom for it; it registers fresh and costs nothing to
-  # have waited.
-  # - name: spx-clean-01
-  #   hypothesis: config/hypotheses/options-no-arbitrage-violation.md
-  #   profile: spx-clean-train
-  #   n: 50
-  #   model: deepseek-v4-pro
-  #   generation_width: 1
-  #   probe: false
+  # **THE NEGATIVE CONTROL, now running -- on a CORRECTED dataset.**
+  #
+  # Michael's question was whether the "4 dominant hours" the robustness seat
+  # vetoed spx-arb-01 on were just regular trading hours. They were not: the
+  # dataset had no trading clock at all. A session was 390 ticks at 30 seconds
+  # -- 3.25 hours -- with a 17-hour gap, a 20.25-hour cycle, so every session
+  # opened 3h45m earlier than the last and rolled right around the day.
+  # Hour-of-day was arithmetic on the session index. The real cause of the four
+  # hours was the SETTLEMENT clock, now separated out by
+  # `by_hour_utc_entry`.
+  #
+  # The clock is fixed regardless: 390 one-minute bars is 6.5 hours, a 17.5-hour
+  # gap makes the cycle exactly a day, and the open is anchored to 09:30 New
+  # York. Verified arbitrage-free on the new clock -- 31,320 quotes, zero parity,
+  # vertical and butterfly violations -- with 43 settling expiries in 175
+  # sessions and quotes only in hours 14-20 UTC.
+  #
+  # **So this arm is NOT a matched pair with spx-arb-01**, whose 50 looks were
+  # spent on the drifting clock (digest c605ac99 -> a0b0cd74). It answers the
+  # economics seat's objection -- "the evidence does not include a clean-surface
+  # baseline comparison" -- and it establishes whether a detector finds
+  # arbitrage where there is none. Pairing it properly needs the planted arm
+  # re-run on this dataset, which is another 50 looks and a separate decision.
+  - name: spx-clean-01
+    hypothesis: config/hypotheses/options-no-arbitrage-violation.md
+    profile: spx-clean-train
+    n: 50
+    model: deepseek-v4-pro
+    generation_width: 1
+    probe: false

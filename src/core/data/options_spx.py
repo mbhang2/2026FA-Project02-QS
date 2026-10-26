@@ -62,7 +62,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .synthetic import SyntheticDataset, SyntheticSpec
+from .synthetic import SESSION_ORIGIN_NS, SyntheticDataset, SyntheticSpec
 from ..types import DataCapabilities, Side, Tick
 from .options import (                        # noqa: F401  (re-exported)
     OptionQuote, Plant, butterfly_violations, vertical_violations,
@@ -532,6 +532,17 @@ class SPXHestonSurface:
 QUOTES_PER_SESSION = 390
 SESSION_YEARS = 1.0/252.0
 
+# One minute a bar, 390 of them: 09:30 to 16:00, a regular session exactly.
+SESSION_TICK_SPACING_NS = 60 * 1_000_000_000
+# 24h - 6.5h. Makes the session cycle exactly one day, so the open is the same
+# clock time every session instead of drifting backwards through it.
+SESSION_GAP_NS = (24*3600 - QUOTES_PER_SESSION*60) * 1_000_000_000
+# 2023-11-14 14:30 UTC = 09:30 America/New_York. A FIXED offset with no DST:
+# the synthetic calendar has no notion of it, and a clock that jumped twice a
+# year would put the same session in two different hour buckets -- which is the
+# defect this whole change is about, reintroduced by the back door.
+RTH_ORIGIN_NS = 1_699_972_200 * 1_000_000_000
+
 # **How many priced snapshots the feed keeps. It was 4,096, and that is what
 # killed the machine.**
 #
@@ -805,7 +816,31 @@ class SPXHestonDataset(SyntheticDataset):
         # The floor is about 20: below that the 60/20 split plus a 2-session
         # embargo does not fit, which the parent refuses on its own.
         base = spec or SyntheticSpec(n_sessions=40)
-        base = replace(base, uniform=True, ticks_per_session=QUOTES_PER_SESSION)
+        # **A REAL TRADING CLOCK, and the reason is that hour-of-day was
+        # meaningless without one.**
+        #
+        # Inherited from the synthetic generator, a session was 390 ticks at 30
+        # seconds -- 3.25 hours -- followed by a 17-hour gap. That is a 20.25
+        # hour cycle, so every session started 3h45m earlier than the last:
+        # 22:13, 18:28, 14:43, and round the clock. "Hour of day" was then
+        # arithmetic on the session index with no market content whatsoever,
+        # and the robustness seat's per-hour concentration test was reading
+        # that arithmetic. spx-arb-01 was vetoed on it.
+        #
+        # 390 bars of 60 seconds is 6.5 hours, which is exactly a regular
+        # session, and a 17.5-hour gap makes the cycle exactly 24 hours so the
+        # open does not drift. `_schedule` below anchors it to 09:30 New York.
+        #
+        # Set HERE rather than on `SyntheticSpec`: `SyntheticDataset.digest`
+        # hashes every spec field, so a new field with a default would move the
+        # digest of every synthetic dataset in the project and the golden set
+        # with it. This class already rewrites its own spec, so these two
+        # values change this dataset's digest and nothing else's -- which is
+        # the intended consequence. A run on the drifting clock and a run on
+        # this one are different experiments and their digests say so.
+        base = replace(base, uniform=True, ticks_per_session=QUOTES_PER_SESSION,
+                       tick_spacing_ns=SESSION_TICK_SPACING_NS,
+                       session_gap_ns=SESSION_GAP_NS)
         super().__init__(base)
         # **Short-dated by default, and that is a correctness choice.** On
         # the calibrated expiries nothing in a forty-session run ever reaches
@@ -855,6 +890,25 @@ class SPXHestonDataset(SyntheticDataset):
         self._ts_index: dict[int, int] = {}
         self._ts_sorted: list[int] | None = None
         self._feed = _SPXFeed(self)
+
+    def _schedule(self) -> None:
+        """The parent's schedule, shifted to open at 09:30 New York.
+
+        The parent starts session 0 at `SESSION_ORIGIN_NS`, which is 22:13 UTC
+        -- fine for a generator whose clock means nothing, useless for a
+        surface whose per-hour behaviour an auditor is asked to judge. The
+        cycle is already exactly 24 hours by the spec above, so a single
+        constant shift shifts every session together and the open is 09:30 for
+        all of them.
+
+        Shifting here rather than parameterising the parent's origin, for the
+        same reason the spacing is set in `__init__`: a new `SyntheticSpec`
+        field would be hashed into every synthetic dataset's digest.
+        """
+        super()._schedule()
+        shift = RTH_ORIGIN_NS - SESSION_ORIGIN_NS
+        self._starts = [t + shift for t in self._starts]
+        self._ends = [t + shift for t in self._ends]
 
     # ---- the underlying is the path --------------------------------------- #
     def _session_ticks(self, session: int) -> list[Tick]:

@@ -25,6 +25,21 @@ fraction of each campaign's trials are exact duplicates of an earlier one, which
 is what the record actually looks like (20 trials, 8 distinct blotters in
 nq-s04-02; 100 and 46 in nq-s06-02).
 
+## Measured 2026-10-26, q = 0.05, b = 1,000
+
+    cell                            independent      dedup     aligned
+    N=20, 35% dup, 16,000 camp.          0.0326     0.0486      0.0482
+    N=50, 14% dup,  8,000 camp.          0.0409     0.0500      0.0481
+    N=20, 60% dup,  8,000 camp.          0.0203     0.0491      0.0494
+    N=400, 40% dup, 2,000 camp.          0.0280     0.0475      0.0490
+
+The current rule is conservative in EVERY cell, and the more a campaign
+duplicates the more conservative it gets -- 0.0203 at nq-s04-02's shape, which
+is 40% of the error budget it is allowed to spend. Both variants sit on nominal
+throughout, and neither upper CI bound reaches 0.06. `aligned` and
+`aligned+dedup` accepted identical counts in every cell, which is alignment
+subsuming deduplication, measured rather than argued.
+
 `aligned` requires the observed and the nulls to share a coupling. They do: the
 observed is the identity assignment -- flip nothing -- applied to every trial,
 and null column j is one shared assignment applied to every trial. That is

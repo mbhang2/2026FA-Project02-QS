@@ -123,6 +123,32 @@ class CampaignRecord:
     # decided at trial time, because it changes how the budget is spent. None
     # for records that predate it; `digest()` drops None.
     probe_before_trial: bool | None = None
+    # **Which multiplicity rule the gate uses, frozen before trial 0.**
+    #
+    # None == "independent", the rule every campaign before this used: each
+    # trial's null resampled on its own, so the maximum assumes the trials are
+    # independent. They are not -- an agent that sees history writes correlated
+    # candidates -- and `MAX_OF_N_NOTE` has always said so. Measured FWER
+    # 0.0326, CI [0.0299, 0.0354]: CONSERVATIVE, which costs power and never
+    # buys a false accept.
+    #
+    #   "dedup"   trials sharing a blotter digest are ONE look. Identical
+    #             blotter, identical test; counting it twice is arithmetic,
+    #             not caution. Measured FWER 0.0486, CI [0.0452, 0.0519].
+    #   "aligned" Westfall-Young: one randomisation per replicate, shared
+    #             across trials, maximum taken down the column. Measured FWER
+    #             0.0482, CI [0.0449, 0.0515], and EXACT by exchangeability
+    #             rather than merely calibrated. Subsumes "dedup".
+    #
+    # All three measured by `scripts/correction_fwer.py` over 16,000 no-signal
+    # campaigns, the same way Task 57 established the current rule.
+    #
+    # On the record because it decides the p-value: a rule chosen after seeing
+    # a result is the failure this file exists to prevent. And because
+    # "aligned" is only READABLE off nulls that were GENERATED with a shared
+    # seed, which only the registering run can arrange -- `stage_nulls` seeds
+    # per trial otherwise, precisely so they are independent.
+    correction_rule: str | None = None
 
     def digest(self) -> str:
         payload = json.dumps({k: v for k, v in asdict(self).items() if v is not None},
@@ -407,7 +433,23 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
         }
     if null_samples:
         observed_best = max(scores) if scores else float("-inf")
-        gate = max_of_n(null_samples, observed_best, q=q)
+        # The rule comes from the REGISTERED record, never from an argument.
+        rule = (result.record.correction_rule or "independent")
+        kw: dict = {}
+        if rule == "dedup":
+            # One look per distinct blotter. A row with no digest cannot be
+            # matched to another, so it keeps its own identity rather than
+            # being collapsed into a bucket of unknowns.
+            kw["identities"] = [r.get("blotter_digest") or f"row-{i}"
+                                for i, r in enumerate(result.rows)]
+        elif rule == "aligned":
+            kw["aligned"] = True
+        elif rule != "independent":
+            raise ValueError(
+                f"unknown correction_rule {rule!r} in the registered record; "
+                "expected 'independent', 'dedup' or 'aligned'")
+        gate = max_of_n(null_samples, observed_best, q=q, **kw)
+        gate["correction_rule"] = rule
         gate["is_the_gate"] = True
         # **The floor, and it is load-bearing rather than decorative.** `reject`
         # means "reject the null": the best of N beat what N nulls would produce.

@@ -158,8 +158,25 @@ def test_no_probe_reaches_the_record():
     """`True if a.probe else None` collapsed False into None, so `--no-probe`
     silently took the config default. The same bug the flag's own help text
     describes being fixed once already, reintroduced at the call site."""
-    assert "a.probe, a.generation_width)" in SRC
+    # Asserted on the SIGNATURE rather than on a source substring. The old
+    # form pinned the literal text `a.probe, a.generation_width)`, which broke
+    # the moment a later argument was appended to the call -- a true statement
+    # about the code failing a test about a different property.
+    import importlib.util
+    import inspect
+
+    spec = importlib.util.spec_from_file_location(
+        "_nqc_probe", REPO_ROOT / "scripts" / "nq_campaign.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    params = list(inspect.signature(mod.stage_register).parameters)
+    assert "probe" in params, "stage_register no longer takes the probe flag"
+    assert params.index("probe") < params.index("generation_width")
+    # `a.probe` must be forwarded as itself. The bug this test exists for was
+    # `True if a.probe else None`, which turned an explicit --no-probe into the
+    # config default.
     assert "True if a.probe else None" not in SRC
+    assert "a.probe," in SRC, "the probe flag no longer reaches stage_register"
 
 
 def test_a_plan_can_actually_set_the_generation_width():

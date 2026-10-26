@@ -209,6 +209,14 @@ def deflation_view(
 # campaign produced any false discovery. That is the question the project asks --
 # did the loop fool itself -- and it is the honest one to answer when the answer
 # to "which candidate" is going to be "the best one".
+ALIGNED_NOTE = (
+    "the maximum is taken across trials WITHIN a replicate, so the dependence "
+    "between candidates is carried by the nulls themselves rather than assumed "
+    "away. Valid only on nulls generated with one randomisation per replicate "
+    "shared across trials; on independently-seeded nulls this claims a "
+    "dependence structure the numbers do not have"
+)
+
 MAX_OF_N_NOTE = (
     "Trials are positively correlated once an agent sees history, which narrows "
     "the true distribution of the maximum. Drawing each trial's null "
@@ -225,6 +233,8 @@ def max_of_n(
     seed: int = 17,
     q: float = 0.05,
     smooth: bool = False,
+    identities: Sequence | None = None,
+    aligned: bool = False,
 ) -> dict:
     """The null distribution of the best-of-N, simulated from per-trial nulls.
 
@@ -253,13 +263,102 @@ def max_of_n(
     A trial whose null is empty contributes nothing: it cannot be the campaign's
     best under the null, and giving it a placeholder would put a number nobody
     measured into the maximum.
+
+    ---
+
+    **`identities`: one key per trial, and trials sharing a key are ONE look.**
+
+    Two trials with the same blotter digest traded identically; they are the
+    same test reached by different source text, and charging the correction
+    twice for it is an arithmetic error rather than conservatism. Measured
+    across the 31 campaigns in the record, deduplication is endemic -- 20
+    trials producing 8 distinct blotters in `nq-s04-02`, 100 producing 46 in
+    `nq-s06-02` -- and it flips NO campaign's verdict, because a duplicate adds
+    almost nothing to a maximum it is already in. That is the argument for it:
+    it corrects an obvious miscount and demonstrably buys nobody an acceptance.
+
+    Defaulted to None, so an existing result does not move.
+
+    **`aligned`: take the maximum ACROSS trials within a replicate.**
+
+    The default path resamples each trial's null independently, which assumes
+    the trials are independent. They are not -- an agent that sees history
+    writes correlated candidates -- and the note below has always said so. The
+    cost is power, never a false accept: independence widens the simulated
+    maximum and raises the bar.
+
+    `aligned=True` is the Westfall-Young remedy: column `j` of every trial's
+    sample is treated as the SAME randomisation, and the maximum is taken down
+    the column. It is only valid if the nulls were generated that way -- one
+    randomisation per replicate, shared across trials -- which means a common
+    seed at generation time. `scripts/nq_campaign.py` seeds per trial
+    (`70_000 + i`) precisely so they are independent, so stored nulls from
+    before this flag CANNOT be read with it. Passing it on independently-seeded
+    samples would claim a dependence structure the numbers do not carry.
+
+    **Adoption requires re-measuring FWER.** Task 57 established the current
+    rule at 0 acceptances in 400 no-signal campaigns. A correction that is
+    sharper has to clear the same bar before it is believed, and `aligned` is
+    sharper by construction.
     """
     import numpy as np
 
-    usable = [np.asarray(s, dtype=float) for s in null_samples if len(s)]
+    kept = list(range(len(null_samples)))
+    collapsed = 0
+    if identities is not None:
+        if len(identities) != len(null_samples):
+            raise ValueError(
+                f"identities has {len(identities)} entries for "
+                f"{len(null_samples)} trials; a look cannot be deduplicated "
+                "against a key that does not belong to it")
+        seen: dict = {}
+        kept = []
+        for i, key in enumerate(identities):
+            if key in seen:
+                collapsed += 1
+                continue
+            seen[key] = i
+            kept.append(i)
+
+    usable = [np.asarray(null_samples[i], dtype=float)
+              for i in kept if len(null_samples[i])]
     if not usable:
         return {"n_trials": 0, "b": b, "p": 1.0, "p_floor": 1.0 / (b + 1),
                 "reject": False, "note": "no per-trial nulls were supplied"}
+
+    if aligned:
+        # One randomisation per replicate, shared across trials: the maximum is
+        # taken DOWN the column, not across independent resamples. No RNG is
+        # involved, so this path is deterministic in the stored nulls.
+        width = min(s.size for s in usable)
+        if width < 2:
+            raise ValueError(
+                "aligned=True needs at least two replicates per trial; the "
+                "stored nulls are too short to take a column-wise maximum")
+        maxima = np.full(width, -np.inf)
+        for sample in usable:
+            np.maximum(maxima, sample[:width], out=maxima)
+        b = width
+        exceed = int((maxima >= observed_best).sum())
+        p = (1 + exceed) / (b + 1)
+        quantiles = {str(a): float(np.quantile(maxima, 1 - a))
+                     for a in (0.5, 0.2, 0.1, 0.05, 0.01)}
+        support_max = float(max(float(s.max()) for s in usable))
+        return {
+            "n_trials": len(usable), "n_collapsed": collapsed, "b": b,
+            "observed_best": float(observed_best), "p": p,
+            "p_floor": 1.0 / (b + 1),
+            "at_floor": p <= 1.0 / (b + 1) + 1e-12,
+            "exceedances": exceed, "p_is_bound": exceed == 0,
+            "null_support_max": support_max,
+            "beyond_null_support": float(observed_best) > support_max,
+            "margin_over_support": float(observed_best) - support_max,
+            "reject": p <= q, "q": q,
+            "null_max_mean": float(maxima.mean()),
+            "null_max_quantiles": quantiles,
+            "rule": "aligned",
+            "note": ALIGNED_NOTE,
+        }
 
     rng = np.random.default_rng(seed)
     maxima = np.full(b, -np.inf)
@@ -298,6 +397,8 @@ def max_of_n(
     support_max = float(max(float(s.max()) for s in usable))
     out = {
         "n_trials": len(usable),
+        "n_collapsed": collapsed,
+        "rule": "independent",
         "b": b,
         "observed_best": float(observed_best),
         "p": p,

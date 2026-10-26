@@ -479,3 +479,116 @@ def test_task_32s_number_is_recorded_as_what_it_was():
     text = _flat(REPO_ROOT / "docs" / "design" / "metric.md")
     assert "achieved by being blind to the candidates the gate exists to find" in text
     assert "it sat exactly where a real discovery lands" in text
+
+
+# --------------------------------------------------------------------------- #
+# dependence between trials: deduplication and the aligned (Westfall-Young) rule
+# --------------------------------------------------------------------------- #
+def _corr():
+    from src.core.scoring.correction import max_of_n
+    return max_of_n
+
+
+def test_identities_collapse_duplicate_looks_and_lower_the_bar():
+    """Two trials with the same blotter are ONE test reached twice.
+
+    Charging the correction for both is an arithmetic error, not caution. It is
+    also endemic: 20 trials produced 8 distinct blotters in nq-s04-02, 100
+    produced 46 in nq-s06-02, and spx-arb-01's 50 produced 43.
+    """
+    import numpy as np
+
+    max_of_n = _corr()
+    rng = np.random.default_rng(4)
+    a = list(rng.normal(size=4000))
+    b = list(rng.normal(size=4000))
+
+    raw = max_of_n([a, a, a, b], 2.4)
+    ded = max_of_n([a, a, a, b], 2.4, identities=["x", "x", "x", "y"])
+
+    assert raw["n_trials"] == 4 and raw["n_collapsed"] == 0
+    assert ded["n_trials"] == 2, "duplicates were not collapsed"
+    assert ded["n_collapsed"] == 2
+    assert ded["p"] < raw["p"], (
+        "collapsing duplicate looks must not RAISE the p-value; it removes "
+        "factors from 1 - prod(1 - p_i)")
+    assert raw["rule"] == ded["rule"] == "independent"
+
+
+def test_identities_must_describe_every_trial():
+    max_of_n = _corr()
+    with pytest.raises(ValueError, match="does not belong to it"):
+        max_of_n([[0.1, 0.2], [0.3, 0.4]], 1.0, identities=["only-one"])
+
+
+def test_aligned_takes_the_maximum_within_a_replicate_and_is_deterministic():
+    """`aligned` carries the dependence instead of assuming it away.
+
+    Column j of every trial is the SAME randomisation, so the maximum is taken
+    down the column. No RNG is involved, which is why it is reproducible
+    without a seed -- and why it may only be read off nulls that were generated
+    with a shared seed.
+    """
+    import numpy as np
+
+    max_of_n = _corr()
+    s1 = [0.0, 3.0, 1.0, 0.5]
+    s2 = [2.0, 0.5, 0.0, 0.25]
+    r = max_of_n([s1, s2], 2.5, aligned=True)
+    # column maxima are [2, 3, 1, 0.5]; exactly ONE of the four reaches 2.5
+    assert r["rule"] == "aligned"
+    assert r["b"] == 4
+    assert r["exceedances"] == 1
+    assert r["p"] == pytest.approx((1 + 1) / (4 + 1))
+    assert max_of_n([s1, s2], 2.5, aligned=True)["p"] == r["p"], "not deterministic"
+
+
+def test_aligned_already_subsumes_deduplication():
+    """Identical trials produce identical columns, so the column-wise maximum
+    is unchanged by removing one. Measured on the FWER rig too: `aligned` and
+    `aligned+dedup` accepted the same 771 of 16,000 no-signal campaigns."""
+    import numpy as np
+
+    max_of_n = _corr()
+    rng = np.random.default_rng(5)
+    a = list(rng.normal(size=3000))
+    b = list(rng.normal(size=3000))
+    with_dup = max_of_n([a, a, b], 2.2, aligned=True)
+    without = max_of_n([a, b], 2.2, aligned=True)
+    assert with_dup["p"] == without["p"]
+
+
+def test_aligned_refuses_nulls_too_short_to_align():
+    max_of_n = _corr()
+    with pytest.raises(ValueError, match="column-wise maximum"):
+        max_of_n([[0.5], [0.25]], 0.1, aligned=True)
+
+
+def test_the_default_rule_is_unchanged_so_no_committed_result_moves():
+    """Both flags default off, and the independent path keeps its own name in
+    the output. A campaign registered before `correction_rule` existed has
+    `None` on its record, which `digest()` drops -- so its stored digest still
+    verifies."""
+    import numpy as np
+
+    max_of_n = _corr()
+    rng = np.random.default_rng(6)
+    samples = [list(rng.normal(size=2000)) for _ in range(5)]
+    r = max_of_n(samples, 2.0)
+    assert r["rule"] == "independent" and r["n_collapsed"] == 0
+    assert "aligned" not in r["note"]
+
+
+def test_an_unknown_correction_rule_is_refused_rather_than_ignored():
+    """A rule nobody implemented must not silently fall through to the default;
+    that is how a campaign believes it registered one thing and got another."""
+    import dataclasses
+
+    from src.core.loop.campaign import CampaignRecord
+
+    names = [f.name for f in dataclasses.fields(CampaignRecord)]
+    assert "correction_rule" in names
+    assert names[-1] == "correction_rule", (
+        "correction_rule must stay LAST on the record: the field order is what "
+        "a positional constructor reads, and shifting it is the Tick.asset bug")
+    assert CampaignRecord.__dataclass_fields__["correction_rule"].default is None

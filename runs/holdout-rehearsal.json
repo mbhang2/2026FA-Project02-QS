@@ -1,7 +1,7 @@
 {
   "schema": "holdout-result/1",
   "rehearsal": true,
-  "claimed": "2026-10-25T22:53:27+00:00",
+  "claimed": "2026-10-26T03:35:14+00:00",
   "campaign": "nq-flowcont-5m",
   "digest": "57fd4c8fc7447f90",
   "profile": "holdout",
@@ -9,7 +9,7 @@
   "reason": null,
   "status": "COMPLETE",
   "confirmed": false,
-  "taken": "2026-10-25T22:53:28+00:00",
+  "taken": "2026-10-26T03:35:14+00:00",
   "l2_verdict": "FAIL",
   "l2_family": [
     "nq-s07-01",
@@ -34,6 +34,7 @@
       "avg_holding_period_ns": 0.0,
       "best_session_share": 0.0,
       "by_hour_utc": {},
+      "by_hour_utc_entry": {},
       "by_month": {},
       "by_weekday": {},
       "commission": 0.0,
@@ -49,7 +50,7 @@
         "trades_per_session": 0.0
       },
       "profit_concentration_top5pct": 0.0,
-      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny",
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny. **Read `by_hour_utc` against `by_hour_utc_entry` before calling anything concentrated.** The first buckets P&L at the instant it was REALISED, which for any position held across time is the close -- and for an option the close is a cash settlement at an expiry the strategy neither chose nor can prevent. The second buckets the same P&L at the hour the position was OPENED. Where they disagree, the first is describing the expiry calendar and the second is describing the strategy. Note also that an hour-of-day is only a market clock if the dataset has one: on the synthetic calendar a session is a few hours long and its start drifts across the day, so hour-of-day there is arithmetic on the session index and carries no regime information at all",
       "sessions_with_exposure": 0,
       "trade_count": 0,
       "turnover_contracts_per_session": 0.0,

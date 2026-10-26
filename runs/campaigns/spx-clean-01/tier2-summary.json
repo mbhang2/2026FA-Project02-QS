@@ -1,0 +1,1138 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 6,
+    "diagnostics": {
+      "avg_holding_period_ns": 550822666666666.7,
+      "best_session_share": 0.10333116218479577,
+      "by_hour_utc": {
+        "14": 1.7000000000025506,
+        "15": -4.460000000000218,
+        "17": -0.4,
+        "21": -11.799999999999983
+      },
+      "by_month": {
+        "2023-11": -0.7999999999999914,
+        "2023-12": -0.5899999999979166,
+        "2024-01": -9.669999999999694,
+        "2024-02": -3.9000000000000146
+      },
+      "by_weekday": {
+        "Fri": -10.989999999998673,
+        "Mon": 2.799999999999999,
+        "Sat": 3.300000000000006,
+        "Sun": 0.19999999999998863,
+        "Thu": 3.1999999999999997,
+        "Tue": -2.660000000000218,
+        "Wed": -10.809999999998716
+      },
+      "commission": 9.4,
+      "fill_model_spread": null,
+      "gross_pnl": -5.55999999999765,
+      "max_drawdown": -30.111999999997632,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 324.0133,
+        "exposure_share": 0.2857,
+        "return_dispersion": 0.0047,
+        "trades_per_session": 0.0099
+      },
+      "profit_concentration_top5pct": 0.4311900995626686,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny. **Read `by_hour_utc` against `by_hour_utc_entry` before calling anything concentrated.** The first buckets P&L at the instant it was REALISED, which for any position held across time is the close -- and for an option the close is a cash settlement at an expiry the strategy neither chose nor can prevent. The second buckets the same P&L at the hour the position was OPENED. Where they disagree, the first is describing the expiry calendar and the second is describing the strategy. Note also that an hour-of-day is only a market clock if the dataset has one: on the synthetic calendar a session is a few hours long and its start drifts across the day, so hour-of-day there is arithmetic on the session index and carries no regime information at all",
+      "sessions_with_exposure": 30,
+      "trade_count": 45,
+      "turnover_contracts_per_session": 0.8952380952380953,
+      "win_rate": 0.6444444444444445
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 23,
+      "kurtosis": 15.64246149215148,
+      "metric": "sortino_per_session",
+      "min_exposed_fraction": 0.7,
+      "n_sessions": 105,
+      "net_pnl": -14.95999999999765,
+      "primary": -0.22654719320229963,
+      "primary_uncharged": -0.12874978661468778,
+      "reject_reason": "",
+      "rejected": false,
+      "sessions_exposed": 100,
+      "sharpe": -0.22133952940664825,
+      "significance": -2.321417934910301,
+      "skew": -3.460059591111176,
+      "sortino": -0.22654719320229963,
+      "trade_count": 45
+    },
+    "source": "\"\"\"Hybrid fixed-payoff box floor + index fallback.\n\nThe prior box scanners only acted when a spread cleared a positive edge and\notherwise fell back to the underlying, which was the main source of losses.\nThis version scans the quoted surface *before* the index fallback and is\nwilling to use a box spread that is merely \"least bad\" when it is flat: a\nbox has a fixed, fully collateralised payoff, and its per-session cost after\nfees can be substantially lower than the cost of repeatedly crossing the\nunderlying spread.  Positive box/vertical edges still take priority.\n\nThe key change is that the options scanner now has a chance to run on the\nfirst bars of a session, before `entry_bar` forces an index trade.  Previous\nversions often fell back to the index before the first scheduled scan.\n\"\"\"\n\nfrom __future__ import annotations\n\n\nclass Strategy:\n    def __init__(\n        self,\n        *,\n        interval: str = \"5m\",\n        scan_every: int = 1,\n        max_packages_per_session: int = 1,\n        size: int = 1,\n        commission: float = 0.1,\n        min_edge: float = 0.0,\n        min_width: float = 5.0,\n        max_width: float = 8000.0,\n        max_horizon_sessions=None,\n        min_time_left_ns: int = int(5 * 60 * 1_000_000_000),\n        floor_min_score: float = -0.30,\n        floor_min_net: float = -2.0,\n        min_floor_horizon: int = 2,\n        entry_bar: int = 3,\n        force_bar: int = 8,\n        daily_bias_min: float = 0.0,\n        fallback_stop: float = 2.0,\n        fallback_target: float = 2.0,\n        fallback_skip_every: int = 4,\n        fallback_skip_rem: int = 0,\n    ):\n        self.interval = interval\n        self.scan_every = max(1, scan_every)\n        self.max_packages_per_session = max(1, max_packages_per_session)\n        self.size = size\n        self.commission = commission\n        self.min_edge = min_edge\n        self.min_width = min_width\n        self.max_width = max_width\n        self.max_horizon_sessions = max_horizon_sessions\n        self.min_time_left_ns = min_time_left_ns\n        self.floor_min_score = floor_min_score\n        self.floor_min_net = floor_min_net\n        self.min_floor_horizon = min_floor_horizon\n        self.entry_bar = max(1, entry_bar)\n        self.force_bar = max(entry_bar, force_bar)\n        self.daily_bias_min = daily_bias_min\n        self.fallback_stop = fallback_stop\n        self.fallback_target = fallback_target\n        self.fallback_skip_every = max(1, fallback_skip_every)\n        self.fallback_skip_rem = fallback_skip_rem % self.fallback_skip_every\n\n        # Four entry legs plus four settlement fills, per contract per fill.\n        self.box_fee = 8.0 * self.commission * self.size\n        self.vertical_fee = 4.0 * self.commission * self.size\n\n        self.underlying = \"SPX\"\n        self._session = None\n        self._bars_since_session = 0\n        self._fallback_done_this_session = False\n        self._packages_this_session = 0\n\n    def setup(self, ctx) -> None:\n        ctx.subscribe(self.interval)\n        # Daily bars let the index fallback lean on the previous session bias.\n        ctx.subscribe(\"1d\")\n        if \":\" in ctx.dataset_name:\n            suffix = ctx.dataset_name.split(\":\")[-1]\n            if suffix:\n                self.underlying = suffix\n\n    def on_bars(self, ctx) -> None:\n        if self.interval not in ctx.bars:\n            return\n\n        if ctx.session != self._session:\n            self._session = ctx.session\n            self._bars_since_session = 0\n            self._fallback_done_this_session = False\n            self._packages_this_session = 0\n        self._bars_since_session += 1\n\n        if not ctx.actionable:\n            return\n\n        # Let multi-leg option market orders finish before doing anything else.\n        if ctx.working_order_ids:\n            return\n\n        # Already carrying an option package or an index position.  A box held\n        # to expiry satisfies the exposure floor across many sessions, so do\n        # not pile more risk on top of it.\n        if ctx.assets_held():\n            return\n\n        # Try the options surface before the index fallback has a chance to\n        # force an underlying trade.  Scanning on the first flat bar matters:\n        # previous versions often reached `entry_bar` before their first scan.\n        if (\n            self._packages_this_session < self.max_packages_per_session\n            and (self._bars_since_session == 1 or self._bars_since_session % self.scan_every == 0)\n            and ctx.session_end - ctx.ts >= self.min_time_left_ns\n        ):\n            quotes = ctx.options()\n            if quotes:\n                by_expiry = self._build_map(ctx, quotes)\n                if by_expiry:\n                    trade = self._scan_edges(ctx, by_expiry)\n                    if trade is not None:\n                        self._place_trade(ctx, trade)\n                        self._packages_this_session += 1\n                        return\n\n                    floor = self._scan_floor_box(ctx, by_expiry)\n                    if floor is not None and floor[\"score\"] >= self.floor_min_score:\n                        self._place_trade(ctx, floor)\n                        self._packages_this_session += 1\n                        return\n\n        # No acceptable options position.  Use the same index fallback as the\n        # best previous trial, which at least met the exposure floor.\n        self._maybe_index_fallback(ctx)\n\n    # --- Quote organisation --------------------------------------------------\n    def _build_map(self, ctx, quotes):\n        by_expiry = {}\n        for q in quotes:\n            horizon = q.expiry_session - ctx.session\n            if horizon <= 0:\n                continue\n            if (\n                self.max_horizon_sessions is not None\n                and horizon > self.max_horizon_sessions\n            ):\n                continue\n            if q.bid <= 0.0 or q.ask <= 0.0:\n                continue\n            if q.bid_size < self.size or q.ask_size < self.size:\n                continue\n\n            strike_map = by_expiry.setdefault(q.expiry_session, {})\n            side = \"call\" if q.is_call else \"put\"\n            strike_map.setdefault(q.strike, {})[side] = q\n        return by_expiry\n\n    # --- Edge scanner --------------------------------------------------------\n    def _scan_edges(self, ctx, by_expiry):\n        best = None\n        best_net = -1e18\n\n        for expiry, strike_map in by_expiry.items():\n            strikes = sorted(\n                k for k, legs in strike_map.items()\n                if \"call\" in legs and \"put\" in legs\n            )\n            if len(strikes) < 2:\n                continue\n\n            for i, k1 in enumerate(strikes):\n                c1 = strike_map[k1][\"call\"]\n                p1 = strike_map[k1][\"put\"]\n\n                for j in range(i + 1, len(strikes)):\n                    k2 = strikes[j]\n                    width = k2 - k1\n                    if width < self.min_width or width > self.max_width:\n                        continue\n\n                    c2 = strike_map[k2][\"call\"]\n                    p2 = strike_map[k2][\"put\"]\n\n                    # Long box: buy C1, sell P1, sell C2, buy P2.\n                    # At expiry it pays K2-K1 with certainty.\n                    if (\n                        c1.ask_size >= self.size\n                        and p1.bid_size >= self.size\n                        and c2.bid_size >= self.size\n                        and p2.ask_size >= self.size\n                    ):\n                        cost = c1.ask - p1.bid - c2.bid + p2.ask\n                        net = width - cost - self.box_fee\n                        if net > best_net:\n                            best_net = net\n                            best = {\n                                \"kind\": \"box-long\",\n                                \"expiry\": expiry,\n                                \"k1\": k1,\n                                \"k2\": k2,\n                                \"legs\": [\n                                    (c1, \"buy\", self.size),\n                                    (p1, \"sell\", self.size),\n                                    (c2, \"sell\", self.size),\n                                    (p2, \"buy\", self.size),\n                                ],\n                            }\n\n                    # Short box: sell C1, buy P1, buy C2, sell P2.\n                    if (\n                        c1.bid_size >= self.size\n                        and p1.ask_size >= self.size\n                        and c2.ask_size >= self.size\n                        and p2.bid_size >= self.size\n                    ):\n                        credit = c1.bid - p1.ask - c2.ask + p2.bid\n                        net = credit - width - self.box_fee\n                        if net > best_net:\n                            best_net = net\n                            best = {\n                                \"kind\": \"box-short\",\n                                \"expiry\": expiry,\n                                \"k1\": k1,\n                                \"k2\": k2,\n                                \"legs\": [\n                                    (c1, \"sell\", self.size),\n                                    (p1, \"buy\", self.size),\n                                    (c2, \"buy\", self.size),\n                                    (p2, \"sell\", self.size),\n                                ],\n                            }\n\n                    # Long call vertical: buy K1 call, sell K2 call.\n                    if c1.ask_size >= self.size and c2.bid_size >= self.size:\n                        cost = c1.ask - c2.bid\n                        net = -cost - self.vertical_fee\n                        if net > best_net:\n                            best_net = net\n                            best = {\n                                \"kind\": \"call-vertical-long\",\n                                \"expiry\": expiry,\n                                \"k1\": k1,\n                                \"k2\": k2,\n                                \"legs\": [\n                                    (c1, \"buy\", self.size),\n                                    (c2, \"sell\", self.size),\n                                ],\n                            }\n\n                    # Short call vertical: sell K1 call, buy K2 call.\n                    if c1.bid_size >= self.size and c2.ask_size >= self.size:\n                        credit = c1.bid - c2.ask\n                        net = credit - width - self.vertical_fee\n                        if net > best_net:\n                            best_net = net\n                            best = {\n                                \"kind\": \"call-vertical-short\",\n                                \"expiry\": expiry,\n                                \"k1\": k1,\n                                \"k2\": k2,\n                                \"legs\": [\n                                    (c1, \"sell\", self.size),\n                                    (c2, \"buy\", self.size),\n                                ],\n                            }\n\n                    # Long put vertical: buy K2 put, sell K1 put.\n                    if p2.ask_size >= self.size and p1.bid_size >= self.size:\n                        cost = p2.ask - p1.bid\n                        net = -cost - self.vertical_fee\n                        if net > best_net:\n                            best_net = net\n                            best = {\n                                \"kind\": \"put-vertical-long\",\n                                \"expiry\": expiry,\n                                \"k1\": k1,\n                                \"k2\": k2,\n                                \"legs\": [\n                                    (p2, \"buy\", self.size),\n                                    (p1, \"sell\", self.size),\n                                ],\n                            }\n\n                    # Short put vertical: sell K2 put, buy K1 put.\n                    if p2.bid_size >= self.size and p1.ask_size >= self.size:\n                        credit = p2.bid - p1.ask\n                        net = credit - width - self.vertical_fee\n                        if net > best_net:\n                            best_net = net\n                            best = {\n                                \"kind\": \"put-vertical-short\",\n                                \"expiry\": expiry,\n                                \"k1\": k1,\n                                \"k2\": k2,\n                                \"legs\": [\n                                    (p2, \"sell\", self.size),\n                                    (p1, \"buy\", self.size),\n                                ],\n                            }\n\n        if best is not None and best_net > self.min_edge:\n            return best\n        return None\n\n    # --- Least-bad box for the exposure floor --------------------------------\n    def _scan_floor_box(self, ctx, by_expiry):\n        best = None\n        best_score = -1e18\n\n        for expiry, strike_map in by_expiry.items():\n            horizon = expiry - ctx.session\n            if horizon < self.min_floor_horizon:\n                continue\n\n            strikes = sorted(\n                k for k, legs in strike_map.items()\n                if \"call\" in legs and \"put\" in legs\n            )\n            if len(strikes) < 2:\n                continue\n\n            for i, k1 in enumerate(strikes):\n                c1 = strike_map[k1][\"call\"]\n                p1 = strike_map[k1][\"put\"]\n\n                for j in range(i + 1, len(strikes)):\n                    k2 = strikes[j]\n                    width = k2 - k1\n                    if width < self.min_width or width > self.max_width:\n                        continue\n\n                    c2 = strike_map[k2][\"call\"]\n                    p2 = strike_map[k2][\"put\"]\n\n                    if (\n                        c1.ask_size >= self.size\n                        and p1.bid_size >= self.size\n                        and c2.bid_size >= self.size\n                        and p2.ask_size >= self.size\n                    ):\n                        cost = c1.ask - p1.bid - c2.bid + p2.ask\n                        net = width - cost - self.box_fee\n                        if net >= self.floor_min_net:\n                            score = net / float(horizon)\n                            if score > best_score:\n                                best_score = score\n                                best = {\n                                    \"kind\": \"box-long\",\n                                    \"expiry\": expiry,\n                                    \"k1\": k1,\n                                    \"k2\": k2,\n                                    \"net\": net,\n                                    \"score\": score,\n                                    \"legs\": [\n                                        (c1, \"buy\", self.size),\n                                        (p1, \"sell\", self.size),\n                                        (c2, \"sell\", self.size),\n                                        (p2, \"buy\", self.size),\n                                    ],\n                                }\n\n                    if (\n                        c1.bid_size >= self.size\n                        and p1.ask_size >= self.size\n                        and c2.ask_size >= self.size\n                        and p2.bid_size >= self.size\n                    ):\n                        credit = c1.bid - p1.ask - c2.ask + p2.bid\n                        net = credit - width - self.box_fee\n                        if net >= self.floor_min_net:\n                            score = net / float(horizon)\n                            if score > best_score:\n                                best_score = score\n                                best = {\n                                    \"kind\": \"box-short\",\n                                    \"expiry\": expiry,\n                                    \"k1\": k1,\n                                    \"k2\": k2,\n                                    \"net\": net,\n                                    \"score\": score,\n                                    \"legs\": [\n                                        (c1, \"sell\", self.size),\n                                        (p1, \"buy\", self.size),\n                                        (c2, \"buy\", self.size),\n                                        (p2, \"sell\", self.size),\n                                    ],\n                                }\n\n        return best\n\n    # --- Index fallback ------------------------------------------------------\n    def _maybe_index_fallback(self, ctx) -> None:\n        if ctx.assets_held():\n            return\n        if self._fallback_done_this_session:\n            return\n        if ctx.session % self.fallback_skip_every == self.fallback_skip_rem:\n            return\n        if self._bars_since_session < self.entry_bar:\n            return\n\n        hist = ctx.history(self.interval)\n        if not len(hist):\n            return\n        last = hist[-1]\n\n        daily = ctx.history(\"1d\")\n        daily_bias = 0.0\n        if len(daily) >= 1:\n            prev_daily = daily[-1]\n            daily_bias = prev_daily.close - prev_daily.open\n\n        bar_bias = last.close - last.open\n\n        # Before the force bar, defer if a meaningful daily bias disagrees.\n        if self._bars_since_session < self.force_bar:\n            if (\n                daily_bias != 0.0\n                and bar_bias != 0.0\n                and abs(daily_bias) > self.daily_bias_min\n                and daily_bias * bar_bias < 0\n            ):\n                return\n\n        if bar_bias != 0.0:\n            direction = 1 if bar_bias > 0 else -1\n        elif daily_bias != 0.0:\n            direction = 1 if daily_bias > 0 else -1\n        else:\n            direction = 1\n\n        place = ctx.buy if direction > 0 else ctx.sell\n        oid = place(\n            size=self.size,\n            stop_offset=self.fallback_stop,\n            target_offset=self.fallback_target,\n            tag=\"index-fallback\",\n        )\n        if oid is not None:\n            self._fallback_done_this_session = True\n\n    # --- Order placement -----------------------------------------------------\n    def _fmt_strike(self, strike) -> str:\n        f = float(strike)\n        if f.is_integer():\n            return str(int(f))\n        s = f\"{f:.2f}\".rstrip(\"0\").rstrip(\".\")\n        return s or \"0\"\n\n    def _asset_name(self, quote) -> str:\n        return (\n            f\"{self.underlying}-{int(quote.expiry_session)}-\"\n            f\"{'C' if quote.is_call else 'P'}-{self._fmt_strike(quote.strike)}\"\n        )\n\n    def _place_trade(self, ctx, trade) -> None:\n        parts = [trade[\"kind\"], str(trade.get(\"expiry\", \"\"))]\n        for key in (\"k1\", \"k2\"):\n            if key in trade:\n                parts.append(self._fmt_strike(trade[key]))\n        tag = \"-\".join(parts)\n\n        for quote, side, qty in trade[\"legs\"]:\n            asset = self._asset_name(quote)\n            if side == \"buy\":\n                ctx.buy(size=qty, asset=asset, tag=tag)\n            else:\n                ctx.sell(size=qty, asset=asset, tag=tag)\n\n    def on_fill(self, ctx) -> None:\n        pass\n\n    def on_lifecycle(self, ctx) -> None:\n        pass\n",
+    "source_sha256": "80f488e335ba0d4efc74483c9e7f304ad908197e0350a8b266beede4a1475267",
+    "strategy_digest": "80f488e335ba0d4e"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.1,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+        "path": "config/hypotheses/options-no-arbitrage-violation.md"
+      },
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 64000,
+      "model": "deepseek-v4-pro",
+      "model_served_at_registration": "deepseek-v4-pro",
+      "null_source": "round_turn_mc",
+      "probe_before_trial": false,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: a simulated SPX index path with a QUOTED OPTIONS SURFACE over it. The index itself is tradeable as the default instrument and the options are tradeable by name -- see section 5a of the API document, which is the part of it you will need and the part no previous campaign here has used, 105 scored sessions on the pre-registered train split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side, charged on every fill INCLUDING settlement at expiry. A four-legged options package therefore pays it eight times, about 0.80 points all in. P&L is in index points throughout, with no contract multiplier, so the legs of one package and the index itself are directly comparable.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "spx-clean-01",
+    "budget": 50,
+    "campaign_id": "spx-clean-01",
+    "dataset": "spx-options-clean",
+    "profile": "spx-clean-train",
+    "q": 0.05,
+    "record_digest": "d2334956ca2cc265a100c67156104e4400aceccee82be4df01b5c77784d9b068",
+    "record_digest_now": "d2334956ca2cc265a100c67156104e4400aceccee82be4df01b5c77784d9b068",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-10-26T04:18:45+00:00"
+  },
+  "deflation_view": {
+    "best_score": -0.22654719320229963,
+    "clears_selection_bar": false,
+    "expected_max_under_null": 0.25892192529185654,
+    "margin": -0.4854691184941562,
+    "n_sessions": 105,
+    "n_trials": 50,
+    "note": "a margin, not a p-value: the tabulated null keeps moments rather than draws, so the distribution of the maximum is not available and any rate quoted here would be an approximation dressed as a measurement"
+  },
+  "diagnostics_only": {
+    "correction": {
+      "best_far": 0.5,
+      "best_label": "None:a0e1fb87",
+      "bh_discoveries": 0,
+      "decisions": [
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.001,
+          "index": 1,
+          "label": "None:a0e1fb87",
+          "rank": 1
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.002,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010204081632653062,
+          "index": 2,
+          "label": "None:496adea4",
+          "rank": 2
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.003,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010416666666666667,
+          "index": 3,
+          "label": "None:7df991d9",
+          "rank": 3
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.004,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010638297872340426,
+          "index": 4,
+          "label": "None:670fe337",
+          "rank": 4
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.005000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0010869565217391304,
+          "index": 5,
+          "label": "None:024b6ae7",
+          "rank": 5
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.006,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011111111111111111,
+          "index": 6,
+          "label": "None:80f488e3",
+          "rank": 6
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.007000000000000001,
+          "far": 0.5,
+          "holm_accepted": false,
+          "holm_critical": 0.0011363636363636365,
+          "index": 7,
+          "label": "None:4ce19003",
+          "rank": 7
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.008,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0011627906976744186,
+          "index": 0,
+          "label": "None:aa54e320",
+          "rank": 8
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.009,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0011904761904761906,
+          "index": 8,
+          "label": "None:f4a9fa61",
+          "rank": 9
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.010000000000000002,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0012195121951219512,
+          "index": 9,
+          "label": "None:f4a9fa61",
+          "rank": 10
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.011000000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00125,
+          "index": 10,
+          "label": "None:f4a9fa61",
+          "rank": 11
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.012,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001282051282051282,
+          "index": 11,
+          "label": "None:f4a9fa61",
+          "rank": 12
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.013000000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0013157894736842105,
+          "index": 12,
+          "label": "None:f4a9fa61",
+          "rank": 13
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.014000000000000002,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0013513513513513514,
+          "index": 13,
+          "label": "None:f4a9fa61",
+          "rank": 14
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.015,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001388888888888889,
+          "index": 14,
+          "label": "None:f4a9fa61",
+          "rank": 15
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.016,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0014285714285714286,
+          "index": 15,
+          "label": "None:f4a9fa61",
+          "rank": 16
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.017,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0014705882352941176,
+          "index": 16,
+          "label": "None:f4a9fa61",
+          "rank": 17
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.018,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0015151515151515152,
+          "index": 17,
+          "label": "None:f4a9fa61",
+          "rank": 18
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.019000000000000003,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0015625,
+          "index": 18,
+          "label": "None:f4a9fa61",
+          "rank": 19
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.020000000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0016129032258064516,
+          "index": 19,
+          "label": "None:f4a9fa61",
+          "rank": 20
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.021,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0016666666666666668,
+          "index": 20,
+          "label": "None:f4a9fa61",
+          "rank": 21
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.022000000000000002,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001724137931034483,
+          "index": 21,
+          "label": "None:f4a9fa61",
+          "rank": 22
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.023000000000000003,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0017857142857142859,
+          "index": 22,
+          "label": "None:f4a9fa61",
+          "rank": 23
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.024,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.001851851851851852,
+          "index": 23,
+          "label": "None:f4a9fa61",
+          "rank": 24
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.025,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0019230769230769232,
+          "index": 24,
+          "label": "None:f4a9fa61",
+          "rank": 25
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.026000000000000002,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002,
+          "index": 25,
+          "label": "None:f4a9fa61",
+          "rank": 26
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.027000000000000003,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0020833333333333333,
+          "index": 26,
+          "label": "None:f4a9fa61",
+          "rank": 27
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028000000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002173913043478261,
+          "index": 27,
+          "label": "None:f4a9fa61",
+          "rank": 28
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.028999999999999998,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002272727272727273,
+          "index": 28,
+          "label": "None:f4a9fa61",
+          "rank": 29
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002380952380952381,
+          "index": 29,
+          "label": "None:f4a9fa61",
+          "rank": 30
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.031,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0025,
+          "index": 30,
+          "label": "None:f4a9fa61",
+          "rank": 31
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.032,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002631578947368421,
+          "index": 31,
+          "label": "None:f4a9fa61",
+          "rank": 32
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.033,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.002777777777777778,
+          "index": 32,
+          "label": "None:f4a9fa61",
+          "rank": 33
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0029411764705882353,
+          "index": 33,
+          "label": "None:f4a9fa61",
+          "rank": 34
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.034999999999999996,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.003125,
+          "index": 34,
+          "label": "None:f4a9fa61",
+          "rank": 35
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.036,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0033333333333333335,
+          "index": 35,
+          "label": "None:f4a9fa61",
+          "rank": 36
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.037,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0035714285714285718,
+          "index": 36,
+          "label": "None:f4a9fa61",
+          "rank": 37
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.038000000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0038461538461538464,
+          "index": 37,
+          "label": "None:f4a9fa61",
+          "rank": 38
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.03900000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.004166666666666667,
+          "index": 38,
+          "label": "None:f4a9fa61",
+          "rank": 39
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.04000000000000001,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.004545454545454546,
+          "index": 39,
+          "label": "None:f4a9fa61",
+          "rank": 40
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.041,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.005,
+          "index": 40,
+          "label": "None:f4a9fa61",
+          "rank": 41
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.042,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.005555555555555556,
+          "index": 41,
+          "label": "None:f4a9fa61",
+          "rank": 42
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.043000000000000003,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.00625,
+          "index": 42,
+          "label": "None:f4a9fa61",
+          "rank": 43
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.044000000000000004,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0071428571428571435,
+          "index": 43,
+          "label": "None:f4a9fa61",
+          "rank": 44
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.045000000000000005,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.008333333333333333,
+          "index": 44,
+          "label": "None:f4a9fa61",
+          "rank": 45
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.046000000000000006,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.01,
+          "index": 45,
+          "label": "None:f4a9fa61",
+          "rank": 46
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.047,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.0125,
+          "index": 46,
+          "label": "None:f4a9fa61",
+          "rank": 47
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.048,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.016666666666666666,
+          "index": 47,
+          "label": "None:f4a9fa61",
+          "rank": 48
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.049,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.025,
+          "index": 48,
+          "label": "None:f4a9fa61",
+          "rank": 49
+        },
+        {
+          "bh_accepted": false,
+          "bh_critical": 0.05,
+          "far": 1.0,
+          "holm_accepted": false,
+          "holm_critical": 0.05,
+          "index": 49,
+          "label": "None:f4a9fa61",
+          "rank": 50
+        }
+      ],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 50,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "34d502da8f8c1daae8dd526fdbe1146d433ff87090ab6ce182e989668f3f626f",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 7,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 1.9159036399730198,
+    "null_max_mean": 0.754284179343171,
+    "null_max_quantiles": {
+      "0.01": 8.137365519308245,
+      "0.05": 1.9159036399730198,
+      "0.1": 1.0711425934425758,
+      "0.2": 0.5903007819148094,
+      "0.5": 0.1550049158811342
+    },
+    "observed_best": -0.22654719320229963,
+    "p": 1.0,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/spx-clean-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "aa54e32069d8aa1a"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "9377a2fd33f3efd79b8f3f978e9cdd582afe5b1597a432a206d60bd9ba65ec5f",
+        "outcome": "completed",
+        "score": -0.3716016153680788,
+        "strategy_digest": "a0e1fb877df3b713"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "aecc505a8ef9d4924244380815138230a5ca9ff75476ae14d3d2ddb46556314a",
+        "outcome": "completed",
+        "score": -0.32589275952716185,
+        "strategy_digest": "496adea42af47418"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "871363088260e0804797643490c6457116e15c2f62cf842ee404d91314b818ba",
+        "outcome": "completed",
+        "score": -0.3437348585970461,
+        "strategy_digest": "7df991d950310fdc"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "8d8f305dc7a8c59c253b2edfe20acab97abee762a97b28c5b9790916666b46fd",
+        "outcome": "completed",
+        "score": -0.2940383670897929,
+        "strategy_digest": "670fe3370acdf25f"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "220e90f8a3701dec1c50b237c161edfcf929ac333d9a827a00e10ca55a002945",
+        "outcome": "completed",
+        "score": -0.32085856106282257,
+        "strategy_digest": "024b6ae72361c291"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "18c44b4808dbd361ff84221710c7b93e2395e8666fc12030ccacec643a0deade",
+        "outcome": "completed",
+        "score": -0.22654719320229963,
+        "strategy_digest": "80f488e335ba0d4e"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "8ced72db67e0dba913da5e481d0ab28dc527b765c1d94e56fb0f15ee91d31eb0",
+        "outcome": "completed",
+        "score": -0.31718864700098653,
+        "strategy_digest": "4ce1900356c7737f"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 20,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 21,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 22,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 23,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 24,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 25,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 26,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 27,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 28,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 29,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 30,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 31,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 32,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 33,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 34,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 35,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 36,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 37,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 38,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 39,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 40,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 41,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 42,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 43,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 44,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 45,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 46,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 47,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 48,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      },
+      {
+        "campaign_index": 49,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "f4a9fa61a9f50233"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 8,
+      "crashed": 42
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 50,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 2452.00058321696,
+    "mean": 0.027390974370823305,
+    "min": -0.5135605952679003,
+    "n_draws": 70000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 10.712952594694523
+  },
+  "provenance": {
+    "artifact_fingerprint": "cf3255f464dac8ce3a123d65a5c9cea09809b0b7a14c63201b58b64c0b371fef",
+    "artifacts": {
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/hypotheses/auction-market-features.md": "c306848e27d52157a9e1ea478905aa4ad6e585b56b84bc892962aeeb02d826e9",
+      "config/hypotheses/flow-continuation-5m.md": "13516e4d73d2286805b68d526fe8590581c3ed64c418e44f2557a319ba7a4fea",
+      "config/hypotheses/flow-continuation.md": "2fd992b524213040d9b59c1ae1cde0b54404fc5ca779d9dc68d774c72dca0528",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-move-continuation-vs-giveback.md": "dd898b0ac0548576dafc2f61169a5334e834d48f7bc83d2cfcaf2c8901cfe876",
+      "config/hypotheses/nq-opening-reversal.md": "37fcea5a90f37b7b05faaab7e15e74990878bbaba226b41171965908b2a40b91",
+      "config/hypotheses/ohlcv-momentum-friction-ceiling.md": "ff9d1893266f2f7eeb05f0f27a2751e9e95a4ea58f8c38f236aa9fc9e7c867a6",
+      "config/hypotheses/opening-range-break-continuation-failure.md": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+      "config/hypotheses/opening-range-break-continuation-or-fade.md": "4e48d6e16fba78098a993549b2528853e8c4c909908d501cf1d6ad3309988440",
+      "config/hypotheses/opening-range-break-hold-or-return.md": "660f66e68d536c243d47ecab73a73fdd6b5a529d97301a2d2f5cabd01488db0e",
+      "config/hypotheses/opening-range-break-resolution.md": "4c41b63249ae6113d53a032cde5c13651d107b7bf77450043f82d58e33488bfe",
+      "config/hypotheses/opening-range-breakout-30m.md": "021eb8f94018416e4294293831f5c8d4370ac0bd6cb1c39b42f3b57771ea6128",
+      "config/hypotheses/opening-range-departure-fates-by-clock.md": "1c0bbe82227d0c4b25c9bcf2c111ae8c3ebad943bf7bd84ee3c587ac44d17b02",
+      "config/hypotheses/opening-range-direction-agnostic.md": "48775a6bedc23838d451279d05dc15c2660300bb598e5cf508f3c677fa22d7e4",
+      "config/hypotheses/opening-range-exit-hold-or-return.md": "8b3d0872c848b58892611d7621245f32f739050b89bd645530888785268b8237",
+      "config/hypotheses/options-no-arbitrage-violation.md": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+      "config/hypotheses/options-surface-shape-and-the-index.md": "268c3ca73b695ff20a591b736b68f6562a21dbaa88b08cd1193ae4e281c9298a",
+      "config/hypotheses/orderflow-absorption-at-carried-levels.md": "97ad8b1db1a60f852bae58c5428270f528327a300832d74131d3fe97c52794d2",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md": "4a97e2e35a2111d81a49331782789191c9765efdb5df34c7aefedeb7234cf557",
+      "config/hypotheses/outsized-move-continuation-refined.md": "25d9b544894e7d214729ba058d1783e6b0d3d16608e560346538076341626c77",
+      "config/hypotheses/outsized-move-continuation-vs-giveback.md": "00074ec0231d64452b65b1515e9669d711425a1220e6039b3e61abd1638766a6",
+      "config/hypotheses/session-move-continuation-robustness.md": "087be6eedd20f472989bdadf3944e054b3a0daa42cafb589170455bc6ecb44b3",
+      "config/prompts/family-review.md": "012935b192b8ca9ff3ed3a3c9635dfdab4df9f8f95dc1db1791f35bc8532fb82",
+      "config/prompts/hypothesis-refine.md": "c16601e03abf5b62933cbe86d816d88b9215897de58efdd4295ddd02e9b037be",
+      "config/prompts/hypothesis-review.md": "6d6e194e5f5b473d37e32d168d5404589c426115b54e714c9713a56b9ea81353",
+      "config/prompts/paper-distil.md": "0dcafaf00f0a1d990fd26880d532f3eac423a36b1488d1ebd7b28a8747fb4504",
+      "config/prompts/paper-rank.md": "b8acfdf9c01f9c3ec7c6e0c8da4ca1ff54f401c5e7bf60c41b6b366993c15784",
+      "config/prompts/paper-screen.md": "dc10f5d4cc98dd8aa463c81b79f1c710b648e70e2d9095c4245c100d02b9160a",
+      "config/prompts/strategy-agent.md": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "config/prompts/strategy-review.md": "e71f9f8813ba4d9bea3f8830c31cb3818472302357615834c47d3e6d5ec7f518",
+      "config/run.yaml": "14dde493aeb0702269d7d10a93d1615c43debe1a347851328f3c6637c9912798",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "docs/agent/data.md": "2056ce92b8fe155f052805e43599bcb75f3648124820a68be985a8d931bfb589",
+      "docs/agent/strategy-api.md": "ae0fd371a647426b78fbf0d9123ffdb46a1077837577e01beb2c81d89b0f8544",
+      "src/strategies/current.py": "aa54e32069d8aa1a5fea78c5b29fcb9a1f511aa1eff4553fbfd78a297cd937a5"
+    },
+    "code_fingerprint": "adb326cf0a466191f7adf1b788d6ceb006917d90a76dbd7934a0c57628f3d28e",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "1780999a09c5f53172887db2f7008c9235d2f685bf7f64ee487d213c8eef9361",
+    "git_sha": "54b7813e01a44c3992e9b2e104caaaae138eec82",
+    "isolation": {
+      "address_space": {
+        "active": false,
+        "mechanism": "unavailable: RLIMIT_AS/DATA/RSS cannot be set"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "scored campaigns should run on Linux; see docs/design/architecture.md",
+      "filesystem": {
+        "active": true,
+        "mechanism": "sandbox-exec profile (deprecated)"
+      },
+      "level": "best-effort",
+      "network": {
+        "active": true,
+        "mechanism": "denied by the same profile"
+      },
+      "platform": "Darwin",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.11.5",
+    "scoring_fingerprint": "16f3d15b5f1e6ee592588557cb94d037234c6a74b7ec42a078bd4b428dc5c2ce"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/1",
+  "written_at": "2026-10-26T05:08:42+00:00"
+}

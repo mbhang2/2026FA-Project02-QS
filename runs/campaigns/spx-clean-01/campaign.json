@@ -1,0 +1,66 @@
+{
+  "digest": "d2334956ca2cc265a100c67156104e4400aceccee82be4df01b5c77784d9b068",
+  "record": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.1,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://llm-proxy.invalid/v1",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+        "path": "config/hypotheses/options-no-arbitrage-violation.md"
+      },
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 64000,
+      "model": "deepseek-v4-pro",
+      "model_served_at_registration": "deepseek-v4-pro",
+      "null_source": "round_turn_mc",
+      "probe_before_trial": false,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "35d79b52fc7b0e6dbc5e49b33fab82c2e0caad54bc17725cd199ee987be42e3e",
+      "proposal_wall_clock_s": 600.0,
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: a simulated SPX index path with a QUOTED OPTIONS SURFACE over it. The index itself is tradeable as the default instrument and the options are tradeable by name -- see section 5a of the API document, which is the part of it you will need and the part no previous campaign here has used, 105 scored sessions on the pre-registered train split.\n\nFill model: unfavorable -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nCommission: 0.1 index points per contract per side, charged on every fill INCLUDING settlement at expiry. A four-legged options package therefore pays it eight times, about 0.80 points all in. P&L is in index points throughout, with no contract multiplier, so the legs of one package and the index itself are directly comparable.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "agent_crash_fraction": 0.0,
+    "agent_seed": 0,
+    "allow_fitted_proposals": false,
+    "budget": 50,
+    "campaign_id": "spx-clean-01",
+    "corrections": [
+      "benjamini_hochberg",
+      "holm",
+      "expected_max"
+    ],
+    "dataset": "spx-options-clean",
+    "generation_width": 1,
+    "hypothesis_digest": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+    "hypothesis_path": "config/hypotheses/options-no-arbitrage-violation.md",
+    "min_exposed_fraction": 0.7,
+    "note": "Governed by docs/design/pre-registration.md. The model proposes one strategy at a time and edits the champion; the null is the sign-flip over round turns (section 3b), NOT the conditional null. Dataset 'spx-options-clean', train split. **No measured FWER applies to this configuration.** Task 57's 400-campaign figure and Task 59's power curve were measured on the NQ MVP configuration and are not transferable to a different dataset or a different null; quoting them here would be asserting a false-positive rate nobody has measured. Read an acceptance from this campaign as uncalibrated until its own null is tabulated.",
+    "probe_before_trial": false,
+    "profile": "spx-clean-train",
+    "q": 0.05,
+    "seed_digest": null,
+    "seed_path": null,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-10-26T04:18:45+00:00"
+  }
+}

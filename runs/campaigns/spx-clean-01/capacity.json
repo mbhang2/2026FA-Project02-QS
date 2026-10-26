@@ -1,0 +1,88 @@
+{
+  "binding": "cores",
+  "constraints": [
+    {
+      "advisory": true,
+      "detail": "0.09 GiB per-trial RSS x W vs 3.53 GiB available (vm_stat free+inactive+purgeable), 85% headroom -- ADVISORY: RSS is per-process and does not add",
+      "fits": 33,
+      "name": "memory (model)"
+    },
+    {
+      "detail": "8 performance cores of 10 (2 efficiency, which a generation waits on)",
+      "fits": 8,
+      "name": "cores"
+    },
+    {
+      "detail": "8.0 GiB free (98% used), ~8 MiB budgeted per worker tree",
+      "fits": 1021,
+      "name": "disk"
+    },
+    {
+      "detail": "soft limit 1048576, ~64 descriptors budgeted per worker",
+      "fits": 16384,
+      "name": "open files"
+    }
+  ],
+  "cores": {
+    "brand": "Apple M1 Pro",
+    "cgroup_quota": null,
+    "efficiency": 2,
+    "performance": 8,
+    "schedulable": 8,
+    "total": 10,
+    "usable": 10,
+    "usable_basis": "os.cpu_count()"
+  },
+  "disk": {
+    "free": 8565059584,
+    "total": 494384795648,
+    "used_pct": 98.26753175676173
+  },
+  "footprint": {
+    "measured_at": "2026-10-26T04:18:43+00:00",
+    "peak_rss_bytes": 95404032,
+    "profile": "spx-clean-train",
+    "purpose": "check",
+    "python": "3.11.5",
+    "wall_s": 5.6111434157937765
+  },
+  "headroom": 0.85,
+  "history": {
+    "completed": 1824,
+    "width": 4
+  },
+  "ignored": null,
+  "limits": {
+    "RLIMIT_AS": {
+      "hard": 9223372036854775807,
+      "soft": 9223372036854775807,
+      "unlimited": true
+    },
+    "RLIMIT_NOFILE": {
+      "hard": 9223372036854775807,
+      "soft": 1048576,
+      "unlimited": false
+    },
+    "RLIMIT_NPROC": {
+      "hard": 4000,
+      "soft": 2666,
+      "unlimited": false
+    }
+  },
+  "machine": "bfda0b2f6483a041",
+  "max_width": 8,
+  "max_width_basis": "measured capacity",
+  "memory": {
+    "available": 3792470016,
+    "available_basis": "vm_stat free+inactive+purgeable",
+    "cgroup_limit": null,
+    "swap_total": 9663676416,
+    "swap_used": 7901345218,
+    "total": 17179869184
+  },
+  "profile": "spx-clean-train",
+  "reason": "cores allows 8 concurrent trial(s) (8 performance cores of 10 (2 efficiency, which a generation waits on))",
+  "verdict": "OK",
+  "warning": "swap is 82% used (7.4 of 9.0 GiB) before the run starts. The memory figure above is physical headroom and does not count swap, but a machine already paging this hard has other processes that will want it back.",
+  "width": 1
+}

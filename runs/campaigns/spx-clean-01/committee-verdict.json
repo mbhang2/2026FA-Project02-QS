@@ -1,0 +1,6 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "ERROR",
+  "error": "LLMUnavailable: HTTP 422: {\"error\":{\"message\":\"Budget has been exceeded! Key=michael bhang (sk-...ItKQ) Current cost: 400.0834349735907, Max budget: 400.0\",\"type\":\"budget_exceeded\",\"param\":null,\"code\":\"422\"}}",
+  "note": "The committee did not run. This is NOT a pass: the MVP rule reads 'no veto' as approval, and no verdict is not no veto."
+}

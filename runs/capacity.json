@@ -58,12 +58,12 @@
         "wall_s": 1.3002877924591303
       },
       "spx-clean-train": {
-        "measured_at": "2026-10-25T17:27:18+00:00",
-        "peak_rss_bytes": 77299712,
+        "measured_at": "2026-10-26T04:18:43+00:00",
+        "peak_rss_bytes": 95404032,
         "profile": "spx-clean-train",
         "purpose": "check",
         "python": "3.11.5",
-        "wall_s": 3.077292624861002
+        "wall_s": 5.6111434157937765
       },
       "spx-options-train": {
         "measured_at": "2026-10-25T17:27:14+00:00",

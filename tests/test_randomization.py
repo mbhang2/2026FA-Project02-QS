@@ -760,3 +760,65 @@ def test_the_calibrated_regime_still_passes_at_matched_activity():
     table = m.TraderTable(draws=[0.1] * 20_000, share_above_zero=0.4,
                           round_turns_per_session=7.0)
     m.check_supported(table, 50, 7.0)
+
+
+# ------------------------------------------------- multiplicity vs. reuse
+#
+# The question these pin down: if the per-trial null is computed ONCE and
+# shared, does the family p still have to grow with N? Yes. Reusing a table
+# saves compute, not error rate -- and `aligned` over shared draws is the one
+# construction that makes p flat in N, which is why it is refused.
+
+
+def test_aligned_over_identical_draws_collapses_to_a_single_trial():
+    """**Why `aligned` + a shared table is refused at registration.**
+
+    A column-wise maximum over N identical arrays IS that array, so the
+    max-of-N bar equals the max-of-1 bar and the correction is gone. Measured
+    on spx-arb-01: 0.0026 under `independent`, 0.0003 under `aligned`.
+    """
+    import numpy as np
+
+    rng = np.random.default_rng(3)
+    draws = list(rng.normal(size=4000))
+    obs = float(np.quantile(draws, 0.995))
+    one = max_of_n([draws], obs, b=4000, aligned=True)["p"]
+    for n in (5, 20, 50):
+        many = max_of_n([draws] * n, obs, b=4000, aligned=True)["p"]
+        assert many == one, (
+            f"aligned over {n} identical nulls gave {many}, not the "
+            f"single-trial {one}: the collapse is the whole objection")
+
+
+def test_sharing_a_table_does_not_remove_the_cost_of_trying_more_things():
+    """The user's question, as an assertion: a shared marginal still has to
+    pay for multiplicity under the calibrated rule. 50 lottery tickets against
+    one fixed prize table still win more often than one ticket."""
+    import numpy as np
+
+    rng = np.random.default_rng(5)
+    draws = list(rng.normal(size=4000))
+    obs = float(np.quantile(draws, 0.99))
+    ps = [max_of_n([draws] * n, obs, b=4000, seed=11)["p"]
+          for n in (1, 5, 20, 50)]
+    assert ps == sorted(ps), f"p must not fall as N grows: {ps}"
+    assert ps[-1] > ps[0] * 2, (
+        f"p barely moved from N=1 to N=50 ({ps[0]:.4f} -> {ps[-1]:.4f}); a "
+        f"shared table is not perfect dependence")
+
+
+def test_trials_in_different_buckets_are_ranked_against_different_nulls():
+    """The spx-arb-01 bug: one table at the winner's activity left 24 of 50
+    trials outside its own tolerance, ranked against a null built for a
+    different trading frequency."""
+    m = _rt()
+    acts = [0.371, 1.438, 15.419]
+    idx = [m.bucket_index(a) for a in acts]
+    assert len(set(idx)) == 3, f"these three must not share a bucket: {idx}"
+    table = m.TraderTable(draws=[0.1] * 20_000, share_above_zero=0.4,
+                          round_turns_per_session=1.438)
+    # the winner's own table licenses the winner and refuses the other two
+    m.check_supported(table, 50, 1.438)
+    for a in (0.371, 15.419):
+        with pytest.raises(ValueError):
+            m.check_supported(table, 50, a)

@@ -610,6 +610,12 @@ def stage_register(name: str, hypothesis: pathlib.Path,
     # over N trials collapses to a single draw -- which models N distinct
     # strategies as one strategy and is anti-conservative. A shared marginal is
     # not perfect dependence.
+    #
+    # Measured on spx-arb-01 (scripts/null_power.py): with bucket tables the
+    # family p is 0.0026 under `independent` and 0.0003 under `aligned`, and
+    # the `aligned` value is DEAD FLAT in N -- 0.0001 at N=1 and 0.0001 at
+    # N=50. A p-value that does not move when you quadruple the number of
+    # things you tried is not a correction.
     if correction_rule == "aligned" and cc["null_source"] == "random_trader":
         sys.exit(
             "correction_rule 'aligned' cannot be used with null_source "
@@ -1083,12 +1089,23 @@ def stage_nulls(name: str) -> None:
     samples, t0 = [], time.monotonic()
     rule = _rec.correction_rule or "independent"
     source = (_rec.agent_config or {}).get("null_source") or "round_turn_mc"
-    shared: list[float] | None = None
+    # trial index -> the draws that trial is ranked against, when the source is
+    # a table rather than the candidate's own round turns.
+    tabled: dict[int, list[float]] | None = None
     if source == "random_trader":
-        # **One table for the whole campaign.** Built from the same dataset and
-        # split the trials ran on, so the yardstick is made of the data they
-        # traded; `check_supported` refuses a campaign this table cannot
-        # license rather than quietly producing a number.
+        # **ONE TABLE PER ACTIVITY BUCKET, NOT ONE PER CAMPAIGN.**
+        #
+        # This built a single table at the winner's activity and licensed only
+        # the winner. Measured on spx-arb-01, whose 50 trials run 0.371 to
+        # 15.419 round turns a session: 24 of the 50 sat outside that table's
+        # tolerance and were silently ranked against a null built for a
+        # different trading frequency. Activity is per TRIAL, so the table has
+        # to be too.
+        #
+        # The cost is bounded -- spx-arb-01 needs 11 tables for 50 trials, so
+        # "compute once per dataset" becomes "once per bucket per dataset",
+        # still far cheaper than the 50 per-candidate nulls round_turn_mc
+        # builds.
         from src.core.scoring.randomization import random_trader as rtr
 
         by_sess: dict[int, list[float]] = {}
@@ -1096,33 +1113,61 @@ def stage_nulls(name: str) -> None:
             by_sess.setdefault(tick.session, []).append(tick.price)
         days = [v for _, v in sorted(by_sess.items())]
         iters = max(10_000, rtr.MIN_DRAWS_PER_TRIAL * len(rows))
-        # **The table is built at the CAMPAIGN'S OWN activity, not at a
-        # default.** One table for every candidate is what measured FWER 0.673
-        # for a 0.03-round-turn-a-session candidate; its own bucket measures
-        # 0.082. Activity is read off the winner, because that is the candidate
-        # the gate is about.
-        _best = max((r for r in rows if (r.get("score") or {}).get("primary")
-                     is not None),
-                    key=lambda r: r["score"]["primary"], default=None)
-        _act = 0.0
-        if _best is not None:
-            _act = (_best["score"].get("trade_count") or 0) / max(
-                len(calendar), 1)
-        spec = rtr.spec_for_activity(_act, iterations=iters,
-                                     commission_per_contract=commission)
-        print(f"  random_trader: winner trades {_act:.3f} round turns/session "
-              f"-> bucket {rtr.bucket_index(_act)}, table at "
-              f"{rtr.bucket_activity(rtr.bucket_index(_act)):.3f}, "
-              f"{iters:,} iterations ...", flush=True)
-        table = rtr.build_table(days, spec, dataset=dataset.name,
+
+        def _activity(r: dict) -> float:
+            sc = r.get("score") or {}
+            return (sc.get("trade_count") or 0) / max(len(calendar), 1)
+
+        live = [i for i, r in enumerate(rows)
+                if (r.get("score") or {}).get("primary") is not None
+                and not (r.get("score") or {}).get("rejected")]
+        acts = {i: _activity(rows[i]) for i in live}
+
+        # **Every trial is checked BEFORE any table is built.** Failing on
+        # trial 1 of 50 after an hour of table building tells you nothing
+        # about the campaign; this names the whole problem at once.
+        too_quiet = sorted((a, i) for i, a in acts.items()
+                           if a < rtr.MIN_SUPPORTED_ACTIVITY)
+        if too_quiet:
+            raise SystemExit(
+                f"{name}: {len(too_quiet)} of {len(acts)} scored trials trade "
+                f"below {rtr.MIN_SUPPORTED_ACTIVITY} round turns a session, "
+                f"where this null is not calibrated -- a MATCHED bucket still "
+                f"measures FWER 0.082 against q = 0.05 because Sortino on a "
+                f"near-empty return series is too discrete to test. Quietest "
+                f"is trial {too_quiet[0][1]} at {too_quiet[0][0]:.3f}. "
+                f"Re-register this campaign with null_source: round_turn_mc, "
+                f"which conditions on each candidate's own round turns and so "
+                f"has no activity floor.")
+
+        want = sorted({rtr.bucket_index(a) for a in acts.values()})
+        print(f"  random_trader: {len(acts)} scored trials span "
+              f"{min(acts.values(), default=0.0):.3f}..."
+              f"{max(acts.values(), default=0.0):.3f} round turns/session "
+              f"-> {len(want)} bucket(s), {iters:,} iterations each",
+              flush=True)
+        tables: dict[int, object] = {}
+        for b_i in want:
+            tgt = rtr.bucket_activity(b_i)
+            spec = rtr.spec_for_activity(tgt, iterations=iters,
+                                         commission_per_contract=commission)
+            t = rtr.build_table(days, spec, dataset=dataset.name,
                                 dataset_digest=dataset.digest(), split="train",
                                 generator="price_path")
-        rtr.check_supported(table, len(rows), _act)
-        print(f"    {len(table.draws):,} draws, "
-              f"{table.round_turns_per_session:.1f} round turns/session, "
-              f"{table.share_above_zero:.1%} positive", flush=True)
-        shared = table.draws
-        rtr.write_table(d / "random-trader-null.json", table)
+            n_in = sum(1 for a in acts.values() if rtr.bucket_index(a) == b_i)
+            print(f"    bucket {b_i:>3}  target {tgt:7.3f}  built "
+                  f"{t.round_turns_per_session:7.3f}  {n_in:>3} trial(s)  "
+                  f"{len(t.draws):,} draws  {t.share_above_zero:.1%} positive",
+                  flush=True)
+            tables[b_i] = t
+            rtr.write_table(d / f"random-trader-null-b{b_i}.json", t)
+        # Each trial against its OWN bucket, and the guard re-run per trial so
+        # a tolerance violation is impossible rather than merely unlikely.
+        tabled = {}
+        for i, a in acts.items():
+            t = tables[rtr.bucket_index(a)]
+            rtr.check_supported(t, len(rows), a)
+            tabled[i] = t.draws
     if rule == "aligned":
         print(f"  correction_rule 'aligned': one shared randomisation per "
               f"replicate (seed {COMMON_NULL_SEED}), so the nulls can be read "
@@ -1147,20 +1192,36 @@ def stage_nulls(name: str) -> None:
         #
         # Read off the REGISTERED rule, not a flag, because the generation and
         # the correction have to agree and only the registration can bind them.
-        if shared is not None:
-            # Every trial is ranked against the SAME draws. Note this makes
-            # `correction_rule: aligned` wrong -- identical columns would model
-            # N distinct strategies as one -- so the registration refuses the
-            # combination below.
-            samples.append(shared)
+        if tabled is not None:
+            # This trial's own activity bucket. Trials sharing a bucket share
+            # draws, which makes `correction_rule: aligned` wrong -- a
+            # column-wise maximum over identical arrays IS that array, so the
+            # max-of-N bar collapses to max-of-1 and N stops mattering at all.
+            # Measured on spx-arb-01: 0.0026 under `independent` against
+            # 0.0003 under `aligned`, and dead flat in N. Registration refuses
+            # the combination.
+            samples.append(tabled.get(i, []))
             continue
         seed = COMMON_NULL_SEED if rule == "aligned" else 70_000 + i
         samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed))
         print(f"  {i + 1}/{len(rows)}  {len(samples[-1])} draws  "
               f"{time.monotonic() - t0:.0f}s", flush=True)
-    (d / "nulls.json").write_text(json.dumps(
-        {"source": "round_turn_mc", "b": B_NULL, "samples": samples,
-         "spec": "docs/design/pre-registration.md section 3b"}))
+    # **The recorded source is the one that RAN.** This was hardcoded to
+    # "round_turn_mc", so a random_trader campaign wrote an artifact claiming
+    # a null it had not used -- found by the stage_nulls smoke test, not by a
+    # reader, which is the only reason it is not already in a committed
+    # result. `tables` names the bucket files so the artifact says what each
+    # trial was actually ranked against.
+    payload = {"source": source, "b": B_NULL, "samples": samples,
+               "spec": "docs/design/pre-registration.md section 3b"}
+    if tabled is not None:
+        payload["b"] = max((len(v) for v in tabled.values()), default=0)
+        payload["tables"] = sorted(
+            q.name for q in d.glob("random-trader-null-b*.json"))
+        payload["spec"] = ("random_trader, one table per activity bucket; "
+                           "see src/core/scoring/randomization/"
+                           "random_trader.py")
+    (d / "nulls.json").write_text(json.dumps(payload))
     print(f"{name}: nulls in {time.monotonic() - t0:.0f}s")
 
 

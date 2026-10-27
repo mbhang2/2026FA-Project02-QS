@@ -663,6 +663,85 @@ REFERENCE_PROFILE = {
 }
 
 
+def buy_and_hold(dataset, split, *, commission_per_contract: float = 0.0,
+                 notional_base: float = 1.0) -> dict:
+    """One contract, bought at the split's first price, held to its last.
+
+    **Committee evidence, deliberately NOT a gate and NOT shown to the
+    proposer.**
+
+    Not a gate, because the bar's height is set by the sample's realised drift
+    rather than by anything about the strategy. Measured on real NQ in rolling
+    100-session windows of the same data, buy-and-hold's Sortino runs from
+    -0.0705 to +0.3309 and changes sign: trivial in a flat or falling stretch,
+    a genuine hurdle in sessions 200-300. A pass/fail rule on that asks a
+    different question of every campaign.
+
+    Not shown to the proposer, for two reasons. It is targetable -- an agent
+    told the benchmark can simply take the exposure rather than beat it, and
+    "went long in a rising market" is the result this is meant to expose. And
+    `docs/agent/*.md` is in ARTIFACT_GLOBS, so putting it in the prompt would
+    open a new experimental regime to add a number the agent must not use.
+
+    What it IS for: the economics seat currently cannot see the opportunity
+    cost of a campaign. "+9,937 points while holding one contract would have
+    made +5,257 with a 5,073-point drawdown" is exactly the judgement a seat
+    exists to make, and judgement is the right instrument for a benchmark this
+    sample-dependent.
+
+    Reads through `dataset.ticks(split)`, so the holdout lock applies. A
+    benchmark that bypassed it to look at holdout prices would be a look,
+    whatever it was computed for.
+    """
+    import datetime as dt
+
+    last_of: dict[int, float] = {}
+    first_price: float | None = None
+    for tick in dataset.ticks(split):
+        if first_price is None:
+            first_price = float(tick.price)
+        last_of[tick.session] = float(tick.price)
+    if first_price is None or not last_of:
+        return {"available": False,
+                "note": "the split served no ticks, so there is nothing to hold"}
+
+    closes = [last_of[s] for s in sorted(last_of)]
+    prev = first_price
+    returns: list[float] = []
+    for c in closes:
+        returns.append((c - prev) / notional_base)
+        prev = c
+    # One round turn for the whole hold: in at the start, out at the end.
+    cost = 2.0 * commission_per_contract
+    if returns:
+        returns[-1] -= cost / notional_base
+
+    equity, peak, max_dd = 0.0, 0.0, 0.0
+    for r in returns:
+        equity += r
+        peak = max(peak, equity)
+        max_dd = max(max_dd, peak - equity)
+    # The gate's own statistic, so the comparison is like with like. Imported
+    # here because `scorer` imports this module.
+    from .scorer import score_returns
+
+    scored = score_returns(returns)
+    return {
+        "available": True,
+        "n_sessions": len(returns),
+        "pnl": math.fsum(returns),
+        "primary": scored.primary,
+        "entry_price": first_price,
+        "exit_price": closes[-1],
+        "max_drawdown": max_dd,
+        "note": ("one contract held across the whole split, costed once. "
+                 "EVIDENCE, not a gate: measured on NQ, this benchmark's "
+                 "Sortino ranges -0.0705 to +0.3309 across rolling windows of "
+                 "the same data and changes sign, so its difficulty is the "
+                 "sample's drift and not the strategy's merit"),
+    }
+
+
 def null_reference_divergence(
     *,
     n_sessions: int,

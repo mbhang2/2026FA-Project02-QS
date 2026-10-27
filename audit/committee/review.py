@@ -293,6 +293,11 @@ def _slice(axis: str, summary: dict, source: str | None,
             "breadth_by_month": _breadth(diag.get("by_month")),
             "breadth_by_weekday": _breadth(diag.get("by_weekday")),
             "breadth_by_hour_utc": _breadth(diag.get("by_hour_utc")),
+            # The campaign's opportunity cost. EVIDENCE for the economics
+            # seat's judgement, not a bar anything has to clear -- the
+            # benchmark's own difficulty is the sample's drift. The proposer is
+            # never shown it.
+            "buy_and_hold": summary.get("buy_and_hold"),
             "by_month": diag.get("by_month"),
             "by_hour_utc": diag.get("by_hour_utc"),
             # Both tables, because one of them describes the expiry calendar

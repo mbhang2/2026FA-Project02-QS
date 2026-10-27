@@ -1209,7 +1209,10 @@ def stage_report(name: str) -> None:
     samples = json.loads((d / "nulls.json").read_text())["samples"]
 
     result = CampaignResult(record=record, record_digest=digest, rows=rows)
-    summary = summarise(result, dataset="nq-trades", null_samples=samples, q=record.q)
+    # From the record, not the literal `"nq-trades"` that was here: the
+    # same hard-coding that put NQ into an SPX campaign's provenance.
+    summary = summarise(result, dataset=record.dataset,
+                        null_samples=samples, q=record.q)
 
     # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
     # same route every other campaign's do rather than through this script.
@@ -1277,6 +1280,40 @@ def stage_report(name: str) -> None:
               f"  validation {tier2['validation']['validation']['primary']:+.4f}")
     else:
         print("  validation: not run (--stage validate)")
+
+    # **Buy-and-hold, for the COMMITTEE only.** Michael's call, 2026-10-26:
+    # the economics seat has no way to see a campaign's opportunity cost, and
+    # "+9,937 while one contract would have made +5,257 with a 5,073-point
+    # drawdown" is exactly the judgement a seat exists to make. Attached here
+    # rather than in the proposal prompt, deliberately -- an agent told the
+    # benchmark can take the exposure instead of beating it, and
+    # `docs/agent/*.md` is in ARTIFACT_GLOBS so adding it there would open a
+    # new regime. NOT a gate: measured on NQ this benchmark's own Sortino runs
+    # -0.0705 to +0.3309 across rolling windows of the same data and changes
+    # sign, so a pass/fail rule on it would ask a different question of every
+    # campaign.
+    try:
+        import run as runner                  # stage_report does not import it
+        from src.core.scoring import metrics as _m
+        from src.core.types import Split as _Split
+
+        _prof = cfg()["profiles"][record.profile]
+        _ds = runner.build_dataset(cfg(), _prof["dataset"], _prof["seed"])
+        tier2["buy_and_hold"] = _m.buy_and_hold(
+            _ds, _Split(_prof["split"]),
+            commission_per_contract=_prof.get("commission_per_contract", 0.0),
+            notional_base=_prof.get("notional_base", 1.0))
+        bh = tier2["buy_and_hold"]
+        if bh.get("available"):
+            print(f"  buy-and-hold over {bh['n_sessions']} sessions: "
+                  f"{bh['pnl']:+,.2f} pts, primary {bh['primary']:+.4f}, "
+                  f"max drawdown {bh['max_drawdown']:,.2f}")
+    except Exception as _e:                                       # noqa: BLE001
+        # Evidence, not a gate: a benchmark that cannot be built must not stop
+        # a report. It is recorded as unavailable so a reader knows it is
+        # missing rather than zero.
+        tier2["buy_and_hold"] = {"available": False, "error": f"{type(_e).__name__}: {_e}"}
+        print(f"  buy-and-hold unavailable: {type(_e).__name__}: {_e}")
 
     best_source = (tier2.get("best_candidate") or {}).get("source")
     print("  committee ...", flush=True)

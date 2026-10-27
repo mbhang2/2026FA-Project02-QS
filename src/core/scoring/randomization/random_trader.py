@@ -81,7 +81,8 @@ class TraderSpec:
     # **How few trades a session may have.** 1 pair is the construction as
     # specified -- every session trades, nothing is left open at the close. But
     # it FLOORS activity at one round turn a session, and real candidates go
-    # far below that: spx-arb-01's winner traded 0.03. A null cannot match an
+    # far below that: nq-orderflow-absorption-02's 388 scored trials have a
+    # MEDIAN of 0.138 round turns a session. A null cannot match an
     # activity it cannot reach, so the low buckets set this to 0 and let
     # Poisson leave sessions empty, which is what a rarely-trading candidate's
     # own return vector looks like.
@@ -249,8 +250,11 @@ MIN_SUPPORTED_ACTIVITY = 1.0
 # **Why buckets, and the argument that survives the measurement noise.**
 #
 # One fixed table cannot be a null for every candidate, because activity spans
-# two orders of magnitude: spx-arb-01's winner traded 0.03 round turns a
-# session against a default table's 7. That is not a tolerance question, it is
+# orders of magnitude WITHIN a single campaign, never mind across campaigns:
+# spx-arb-01's 50 trials run 0.371 to 15.419 round turns a session (41x),
+# and nq-orderflow-absorption-02's 388 run 0.000 to 267.047 (median 0.138).
+# A default table's 7 is matched to almost none of them. That is not a
+# tolerance question, it is
 # a reachability one -- and the construction as specified (min 2 timestamps a
 # session) cannot even GENERATE activity below 1 round turn a session, which is
 # why `min_pairs` exists.

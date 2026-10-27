@@ -568,9 +568,11 @@ campaign:
   #
   #                   **NOT THE DEFAULT, and ACTIVITY is why.** A shared table
   #                   is only a valid null for a candidate whose activity
-  #                   matches the table's, and real candidates vary by orders
-  #                   of magnitude: spx-arb-01's winner traded 0.03 round turns
-  #                   a session against the table's 7. Measured on NQ train
+  #                   matches the table's, and activity varies by orders of
+  #                   magnitude WITHIN one campaign: spx-arb-01's 50 trials
+  #                   run 0.371 to 15.419 round turns a session, and
+  #                   nq-orderflow-absorption-02's 388 run 0.000 to 267.047
+  #                   with a median of 0.138. Measured on NQ train
   #                   (384 sessions, N = 50, fresh candidates every rep across
   #                   several table realisations):
   #

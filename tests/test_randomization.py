@@ -693,3 +693,70 @@ def test_the_table_ranks_a_real_edge_above_a_trivial_one():
     assert trivial > 0.1, f"a 0.001 score scored p={trivial}; no discrimination"
     assert real < trivial / 10
     assert m.p_value(t, max(t.draws) + 1.0)["beyond_null_support"] is True
+
+
+# ---------------------------------------------------------------- buckets
+#
+# The bucket layer exists because of one measured fact: a candidate trading
+# 0.03 round turns a session, scored against a table built at 7 round turns a
+# session, has FWER 0.673 -- two no-edge candidates in three declared
+# discoveries. In its own bucket the same candidate measures 0.082. These tests
+# pin the structure that makes that possible; they do not re-measure it.
+
+
+def test_buckets_are_geometric_because_ratio_is_what_degrades_the_null():
+    """0.03 vs 0.04 must be as far apart as 3 vs 4. Linear bins would put the
+    entire low-activity range, where the damage is, into one bucket."""
+    m = _rt()
+    low = m.bucket_index(0.04) - m.bucket_index(0.03)
+    high = m.bucket_index(4.0) - m.bucket_index(3.0)
+    assert low == high, f"ratio 1.33 spans {low} buckets low, {high} high"
+
+
+def test_a_bucket_spans_exactly_the_factor_and_contains_its_own_centre():
+    m = _rt()
+    for probe in (0.03, 0.5, 7.0, 41.0):
+        i = m.bucket_index(probe)
+        centre = m.bucket_activity(i)
+        assert m.bucket_index(centre) == i, f"{probe}: centre escapes its bucket"
+        ratio = max(probe, centre) / min(probe, centre)
+        assert ratio <= m.BUCKET_FACTOR, f"{probe}: {ratio:.3f}x from its centre"
+
+
+def test_the_guard_tolerance_admits_a_whole_bucket_and_no_more():
+    """Anything inside a bucket must pass check_supported against that
+    bucket's table, or the two layers disagree and a valid campaign is
+    refused."""
+    m = _rt()
+    assert m.ACTIVITY_TOLERANCE >= m.BUCKET_FACTOR - 1.0
+
+
+def test_low_activity_is_reachable_only_because_min_pairs_can_be_zero():
+    """A spec that forces one round turn a session cannot GENERATE 0.03 round
+    turns a session, so without min_pairs=0 the low buckets are unreachable
+    and a 0.03 candidate has no matched null to be scored against at all."""
+    m = _rt()
+    spec = m.spec_for_activity(0.03, iterations=10, commission_per_contract=0.1)
+    assert spec.min_pairs == 0
+    assert spec.mean_timestamps < 1.0
+    active = m.spec_for_activity(7.0, iterations=10, commission_per_contract=0.1)
+    assert active.min_pairs == 1, "an active bucket should still floor at one"
+
+
+def test_a_candidate_below_the_calibrated_activity_is_refused_not_warned():
+    """0.082 at a MATCHED bucket is still above q = 0.05. The cause is
+    Sortino's discreteness on a near-empty return series, which bucketing
+    cannot fix, so the regime is refused rather than silently reported."""
+    m = _rt()
+    table = m.TraderTable(draws=[0.1] * 20_000, share_above_zero=0.4,
+                          round_turns_per_session=0.033)
+    with pytest.raises(ValueError, match="below the"):
+        m.check_supported(table, 50, 0.03)
+    assert m.MIN_SUPPORTED_ACTIVITY >= 1.0
+
+
+def test_the_calibrated_regime_still_passes_at_matched_activity():
+    m = _rt()
+    table = m.TraderTable(draws=[0.1] * 20_000, share_above_zero=0.4,
+                          round_turns_per_session=7.0)
+    m.check_supported(table, 50, 7.0)

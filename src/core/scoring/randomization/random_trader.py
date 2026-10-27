@@ -78,6 +78,14 @@ class TraderSpec:
     """Everything that decides the table. Hashed into its identity."""
 
     mean_timestamps: float = DEFAULT_MEAN_TIMESTAMPS
+    # **How few trades a session may have.** 1 pair is the construction as
+    # specified -- every session trades, nothing is left open at the close. But
+    # it FLOORS activity at one round turn a session, and real candidates go
+    # far below that: spx-arb-01's winner traded 0.03. A null cannot match an
+    # activity it cannot reach, so the low buckets set this to 0 and let
+    # Poisson leave sessions empty, which is what a rarely-trading candidate's
+    # own return vector looks like.
+    min_pairs: int = 1
     size: int = 1
     commission_per_contract: float = 0.10
     iterations: int = 4000
@@ -110,16 +118,22 @@ class TraderTable:
         return {k: getattr(self, k) for k in self.__dataclass_fields__}
 
 
-def _even_count(rng, mean: float) -> int:
-    """Even, in [MIN_TIMESTAMPS, MAX_TIMESTAMPS], left-heavy.
+def _even_count(rng, mean: float, min_pairs: int = 1) -> int:
+    """Even, left-heavy, at most MAX_TIMESTAMPS.
 
     Poisson on the number of PAIRS, so the count is even by construction rather
     than by rounding -- an odd count would leave a position open at the session
     close and the series would carry overnight risk the construction does not
     intend.
+
+    `min_pairs=1` is the construction as specified and guarantees every session
+    trades. `min_pairs=0` lets sessions come out empty, which the low-activity
+    buckets need: a candidate trading 0.03 round turns a session has a mostly
+    zero return vector, and a null that trades every session is not matched to
+    it on the thing that matters.
     """
     pairs = int(rng.poisson(mean / 2.0))
-    pairs = min(max(pairs, MIN_TIMESTAMPS // 2), MAX_TIMESTAMPS // 2)
+    pairs = min(max(pairs, min_pairs), MAX_TIMESTAMPS // 2)
     return 2 * pairs
 
 
@@ -141,7 +155,10 @@ def price_path_draws(days: Sequence, spec: TraderSpec) -> tuple[list[float], flo
             if px.size < 2:
                 per[s] = 0.0
                 continue
-            n = _even_count(rng, spec.mean_timestamps)
+            n = _even_count(rng, spec.mean_timestamps, spec.min_pairs)
+            if n == 0:
+                per[s] = 0.0        # an untraded session is a real zero
+                continue
             # Uniform ACROSS THE SESSION as a fraction, then mapped to a tick --
             # so the construction does not depend on how many ticks a session
             # happens to have.
@@ -204,14 +221,101 @@ def build_table(days: Sequence, spec: TraderSpec, *, dataset: str = "",
 # control its error rate is not a correction.
 MIN_DRAWS_PER_TRIAL = 120
 MAX_SUPPORTED_TRIALS = 50
+# **Below this, a MATCHED bucket still over-rejects, so it is refused.**
+#
+# Measured on NQ train, candidate at 0.03 round turns a session, fresh
+# candidates every rep across three table realisations, N = 50:
+#
+#     one shared table at 7 rt/session    FWER 0.673   <- the unbucketed case
+#     its own bucket, matched             FWER 0.082
+#
+# Bucketing is the difference between 0.673 and 0.082, which is the whole
+# argument for it. But 0.082 is still above q = 0.05, and the cause is not the
+# null: at 0.03 round turns a session roughly one session in thirty trades, so
+# Sortino is computed on a near-empty return series and is severely discrete.
+# A discrete statistic over-rejects against any null. It is the same pathology
+# as the -0.775 correlation between downside-session count and per-trial null
+# tail weight.
+#
+# At 7 round turns a session a matched table measures 0.042 [0.027, 0.060], so
+# the method is calibrated in the active regime. Where the boundary sits
+# between 0.03 and 7 is NOT measured, so the floor is set at 1.0 -- the point
+# below which the construction needs `min_pairs = 0` and sessions start coming
+# out empty. That is a conservative guess at a boundary, flagged as such.
+MIN_SUPPORTED_ACTIVITY = 1.0
 
 
-# How far a candidate's activity may sit from the table's. Measured on NQ: at
-# 0.7x the table's activity, FWER is 0.135 with a CI entirely above q. The
-# tolerance is therefore tight, and it is a guess constrained by one
-# measurement rather than a measured boundary -- the bucketed design the config
-# describes is what would replace it.
-ACTIVITY_TOLERANCE = 0.15
+# ---- activity buckets ----------------------------------------------------- #
+# **Why buckets, and the argument that survives the measurement noise.**
+#
+# One fixed table cannot be a null for every candidate, because activity spans
+# two orders of magnitude: spx-arb-01's winner traded 0.03 round turns a
+# session against a default table's 7. That is not a tolerance question, it is
+# a reachability one -- and the construction as specified (min 2 timestamps a
+# session) cannot even GENERATE activity below 1 round turn a session, which is
+# why `min_pairs` exists.
+#
+# The FWER cost of mismatch is real but modest, and smaller than I first
+# reported. Measured on NQ train with fresh candidates every rep across four
+# table realisations, N = 50:
+#
+#     exact match     mean 0.042   range [0.027, 0.060]
+#     0.7x activity   mean 0.055   range [0.047, 0.080]
+#
+# An earlier single-table cell read 0.135 at 0.7x and a pooled-candidate sweep
+# read 0.100 at exact match; both were measurement artefacts -- one table taken
+# as the answer, and correlated reps given a binomial interval. The numbers
+# above are the ones to trust, and they say a 0.7x mismatch costs about 0.013
+# of FWER. So the bucket factor is chosen for reachability first and tolerance
+# second.
+BUCKET_FACTOR = 1.3
+BUCKET_MIN = 0.01          # round turns per session
+BUCKET_MAX = 60.0
+
+
+def bucket_index(turns_per_session: float) -> int:
+    """Which geometric bucket an activity level falls in.
+
+    Geometric, not linear: the distance that matters between 0.03 and 0.04 is
+    the same as between 3 and 4, because what degrades the null is the RATIO.
+    """
+    import math
+
+    x = min(max(float(turns_per_session), BUCKET_MIN), BUCKET_MAX)
+    return int(math.floor(math.log(x / BUCKET_MIN) / math.log(BUCKET_FACTOR)))
+
+
+def bucket_activity(index: int) -> float:
+    """The representative activity of a bucket: its geometric centre."""
+    import math
+
+    lo = BUCKET_MIN * (BUCKET_FACTOR ** index)
+    return lo * math.sqrt(BUCKET_FACTOR)
+
+
+def spec_for_activity(turns_per_session: float, *, iterations: int,
+                      commission_per_contract: float, size: int = 1,
+                      seed: int = 17) -> TraderSpec:
+    """A spec whose random trader trades at `turns_per_session`.
+
+    One round turn is two timestamps, so the mean count is twice the target.
+    `min_pairs` drops to 0 below one round turn a session -- a table that
+    trades every session cannot match a candidate that trades one session in
+    thirty, and clamping to 1 pair would silently floor the whole low end.
+    """
+    target = bucket_activity(bucket_index(turns_per_session))
+    return TraderSpec(mean_timestamps=2.0 * target,
+                      min_pairs=1 if target >= 1.0 else 0,
+                      size=size, commission_per_contract=commission_per_contract,
+                      iterations=iterations, seed=seed)
+
+
+# How far a candidate's activity may sit from the table's. A 0.7x mismatch
+# costs about 0.013 of FWER (0.055 against 0.042 matched), so the tolerance is
+# NOT what the tight bucket factor is for -- reachability is. Within a bucket
+# the worst case is the full factor, so the guard allows it and nothing wider. A candidate outside its own bucket means the wrong table was
+# loaded, which is a bug rather than a tolerance to absorb.
+ACTIVITY_TOLERANCE = BUCKET_FACTOR - 1.0
 
 
 def check_supported(table: TraderTable, n_trials: int,
@@ -232,6 +336,17 @@ def check_supported(table: TraderTable, n_trials: int,
             f"null_source: round_turn_mc for a campaign this size, or measure "
             f"the cell first with scripts/correction_fwer.py.")
     if candidate_turns_per_session is not None:
+        if candidate_turns_per_session < MIN_SUPPORTED_ACTIVITY:
+            raise ValueError(
+                f"the candidate trades {candidate_turns_per_session:.3f} round "
+                f"turns a session, below the {MIN_SUPPORTED_ACTIVITY} this null "
+                f"is calibrated for. Measured at 0.03 with a MATCHED bucket, "
+                f"FWER is 0.082 against q = 0.05 -- not because the null is "
+                f"wrong but because Sortino on a series where one session in "
+                f"thirty trades is too discrete to test. (Unbucketed it is "
+                f"0.673, which is why buckets exist.) Register null_source: "
+                f"round_turn_mc, which conditions on the candidate's own "
+                f"trades and does not care how few there are.")
         ref = table.round_turns_per_session
         if ref > 0:
             ratio = candidate_turns_per_session / ref
@@ -240,13 +355,16 @@ def check_supported(table: TraderTable, n_trials: int,
                     f"the candidate trades {candidate_turns_per_session:.3f} "
                     f"round turns a session against this table's {ref:.3f} "
                     f"({ratio:.2f}x). A shared table is only a valid null at "
-                    f"matched activity: measured on NQ at 0.7x, FWER is 0.135 "
-                    f"against q = 0.05 with the CI entirely above it, because "
-                    f"activity changes the per-session variance structure and "
-                    f"not just the cost drag. Build a table at this activity, "
-                    f"or register null_source: round_turn_mc, which is exact "
-                    f"for any candidate because it uses the candidate's own "
-                    f"trades.")
+                    f"matched activity, because activity changes the "
+                    f"per-session variance structure and not just the cost "
+                    f"drag. Within a bucket that costs little (0.055 at 0.7x "
+                    f"against 0.042 matched); across two orders of magnitude "
+                    f"it is ruinous (0.673 for a 0.03-round-turn candidate "
+                    f"against a 7-round-turn table). A candidate this far out "
+                    f"means the wrong bucket was loaded. Build a table at this "
+                    f"activity with spec_for_activity(), or register "
+                    f"null_source: round_turn_mc, which is exact for any "
+                    f"candidate because it uses the candidate's own trades.")
     need = MIN_DRAWS_PER_TRIAL * n_trials
     if len(table.draws) < need:
         raise ValueError(

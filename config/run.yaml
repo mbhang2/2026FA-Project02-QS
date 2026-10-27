@@ -566,41 +566,50 @@ campaign:
   #                   trials with unstable Sortino denominators cannot inflate
   #                   a maximum when every trial has the same null.
   #
-  #                   **NOT THE DEFAULT, and the NQ measurement is why.** It
-  #                   was defaulted on 2026-10-26 on the strength of the SPX
-  #                   cells and reverted the same day when the NQ cells were
-  #                   run. A shared table is only a valid null for a candidate
-  #                   whose ACTIVITY matches the table's, and the error is
-  #                   large and two-sided:
+  #                   **NOT THE DEFAULT, and ACTIVITY is why.** A shared table
+  #                   is only a valid null for a candidate whose activity
+  #                   matches the table's, and real candidates vary by orders
+  #                   of magnitude: spx-arb-01's winner traded 0.03 round turns
+  #                   a session against the table's 7. Measured on NQ train
+  #                   (384 sessions, N = 50, fresh candidates every rep across
+  #                   several table realisations):
   #
-  #                     cell (NQ train, 384 sessions)      FWER     95% CI
-  #                     N=20, candidate matches            0.025  [0.003,0.047]
-  #                     N=50, candidate matches            0.060  [0.027,0.093]
-  #                     N=50, candidate 0.7x activity      0.135  [0.088,0.182]
-  #                     N=50, candidate 2x activity        0.040  [0.013,0.067]
+  #                     cell                               FWER     95% CI
+  #                     matched activity                   0.042  [0.027,0.060]
+  #                     0.7x activity                      0.055  [0.047,0.080]
+  #                     0.03 rt/session vs a 7 rt table    0.673  <- 1 table
+  #                     0.03 rt/session, its OWN bucket    0.082
   #
-  #                   0.135 against q = 0.05, CI entirely above it. The cause
-  #                   is not commission -- on NQ a 367-point session range
-  #                   dwarfs 0.2 points of cost -- it is that activity changes
-  #                   the per-session VARIANCE structure: fewer round turns
-  #                   means heavier-tailed session returns, a wider score
-  #                   distribution, and a max-of-50 that clears the table's bar
-  #                   far too often. Real candidates vary by orders of
-  #                   magnitude (spx-arb-01's winner traded 0.03 round turns a
-  #                   session against the table's 7), so mismatch is the normal
-  #                   case and not a tail risk.
+  #                   Two separate findings, and they were tangled together for
+  #                   a day. Modest mismatch costs about 0.013 of FWER and is
+  #                   survivable. Mismatch of two orders of magnitude is
+  #                   catastrophic -- 0.673 means two of three no-edge
+  #                   candidates are declared discoveries -- because activity
+  #                   changes the per-session VARIANCE structure: fewer round
+  #                   turns means heavier-tailed session returns and a
+  #                   max-of-50 that clears the table's bar far too often. A
+  #                   single table cannot span that range, which is what
+  #                   BUCKET_FACTOR and spec_for_activity() are for.
   #
-  #                   Opt-in, and `check_supported` refuses a campaign whose
-  #                   candidate activity is outside the table's tolerance.
-  #                   Also calibrated only to N <= 50: at N = 400 the SPX cells
-  #                   read 0.067-0.092 at every table size from 6,000 to
-  #                   60,000 draws.
+  #                   Bucketing (BUILT, 2026-10-26) takes that 0.673 to 0.082
+  #                   and `stage_nulls` now builds the table at the winner's
+  #                   own activity rather than at a default. But 0.082 is still
+  #                   above q, and the cause is the statistic, not the null: at
+  #                   0.03 round turns a session roughly one session in thirty
+  #                   trades, and Sortino on a near-empty return series is too
+  #                   discrete to test against anything. So `check_supported`
+  #                   refuses a candidate below MIN_SUPPORTED_ACTIVITY = 1.0
+  #                   round turn a session -- a conservative guess at a
+  #                   boundary that sits somewhere between 0.03 and 7, not a
+  #                   measured one. Still calibrated only to N <= 50: at
+  #                   N = 400 the SPX cells read 0.067-0.092 at every table
+  #                   size from 6,000 to 60,000 draws.
   #
-  #                   The fix, unbuilt: a FAMILY of tables indexed by activity,
-  #                   the candidate matched to its bucket. That keeps "compute
-  #                   once per bucket" and removes the mismatch -- and needs
-  #                   its own FWER table, with tight tolerances, because 0.7x
-  #                   is already too coarse.
+  #                   An earlier version of this note asserted 0.135 at 0.7x
+  #                   with a CI entirely above q, and that is retracted: it was
+  #                   one table realisation read as the answer. A companion
+  #                   0.100 at exact match was a pooled-candidate sweep whose
+  #                   correlated reps invalidated the binomial interval.
   #   none            no null is built.
   null_source: round_turn_mc
 

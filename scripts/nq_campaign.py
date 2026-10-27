@@ -1096,13 +1096,28 @@ def stage_nulls(name: str) -> None:
             by_sess.setdefault(tick.session, []).append(tick.price)
         days = [v for _, v in sorted(by_sess.items())]
         iters = max(10_000, rtr.MIN_DRAWS_PER_TRIAL * len(rows))
-        print(f"  random_trader: building one shared table over {len(days)} "
-              f"sessions, {iters:,} iterations ...", flush=True)
-        table = rtr.build_table(days, rtr.TraderSpec(
-            iterations=iters,
-            commission_per_contract=commission), dataset=dataset.name,
-            dataset_digest=dataset.digest(), split="train")
-        rtr.check_supported(table, len(rows))
+        # **The table is built at the CAMPAIGN'S OWN activity, not at a
+        # default.** One table for every candidate is what measured FWER 0.673
+        # for a 0.03-round-turn-a-session candidate; its own bucket measures
+        # 0.082. Activity is read off the winner, because that is the candidate
+        # the gate is about.
+        _best = max((r for r in rows if (r.get("score") or {}).get("primary")
+                     is not None),
+                    key=lambda r: r["score"]["primary"], default=None)
+        _act = 0.0
+        if _best is not None:
+            _act = (_best["score"].get("trade_count") or 0) / max(
+                len(calendar), 1)
+        spec = rtr.spec_for_activity(_act, iterations=iters,
+                                     commission_per_contract=commission)
+        print(f"  random_trader: winner trades {_act:.3f} round turns/session "
+              f"-> bucket {rtr.bucket_index(_act)}, table at "
+              f"{rtr.bucket_activity(rtr.bucket_index(_act)):.3f}, "
+              f"{iters:,} iterations ...", flush=True)
+        table = rtr.build_table(days, spec, dataset=dataset.name,
+                                dataset_digest=dataset.digest(), split="train",
+                                generator="price_path")
+        rtr.check_supported(table, len(rows), _act)
         print(f"    {len(table.draws):,} draws, "
               f"{table.round_turns_per_session:.1f} round turns/session, "
               f"{table.share_above_zero:.1%} positive", flush=True)

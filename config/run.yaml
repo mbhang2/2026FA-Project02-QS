@@ -566,15 +566,43 @@ campaign:
   #                   trials with unstable Sortino denominators cannot inflate
   #                   a maximum when every trial has the same null.
   #
-  #                   **Calibrated to N <= 50 and REFUSED above it.** Measured
-  #                   FWER 0.057 at N=20, 0.043 at N=50, and 0.067-0.092 at
-  #                   N=400 at every table size from 6,000 to 60,000 draws --
-  #                   so the large-N regime is not licensed and
-  #                   `check_supported` raises rather than warns. A campaign at
-  #                   section 2's N = 400 must register round_turn_mc until
-  #                   that cell is measured clean.
+  #                   **NOT THE DEFAULT, and the NQ measurement is why.** It
+  #                   was defaulted on 2026-10-26 on the strength of the SPX
+  #                   cells and reverted the same day when the NQ cells were
+  #                   run. A shared table is only a valid null for a candidate
+  #                   whose ACTIVITY matches the table's, and the error is
+  #                   large and two-sided:
+  #
+  #                     cell (NQ train, 384 sessions)      FWER     95% CI
+  #                     N=20, candidate matches            0.025  [0.003,0.047]
+  #                     N=50, candidate matches            0.060  [0.027,0.093]
+  #                     N=50, candidate 0.7x activity      0.135  [0.088,0.182]
+  #                     N=50, candidate 2x activity        0.040  [0.013,0.067]
+  #
+  #                   0.135 against q = 0.05, CI entirely above it. The cause
+  #                   is not commission -- on NQ a 367-point session range
+  #                   dwarfs 0.2 points of cost -- it is that activity changes
+  #                   the per-session VARIANCE structure: fewer round turns
+  #                   means heavier-tailed session returns, a wider score
+  #                   distribution, and a max-of-50 that clears the table's bar
+  #                   far too often. Real candidates vary by orders of
+  #                   magnitude (spx-arb-01's winner traded 0.03 round turns a
+  #                   session against the table's 7), so mismatch is the normal
+  #                   case and not a tail risk.
+  #
+  #                   Opt-in, and `check_supported` refuses a campaign whose
+  #                   candidate activity is outside the table's tolerance.
+  #                   Also calibrated only to N <= 50: at N = 400 the SPX cells
+  #                   read 0.067-0.092 at every table size from 6,000 to
+  #                   60,000 draws.
+  #
+  #                   The fix, unbuilt: a FAMILY of tables indexed by activity,
+  #                   the candidate matched to its bucket. That keeps "compute
+  #                   once per bucket" and removes the mismatch -- and needs
+  #                   its own FWER table, with tight tolerances, because 0.7x
+  #                   is already too coarse.
   #   none            no null is built.
-  null_source: random_trader
+  null_source: round_turn_mc
 
   # correction: how N candidates become one decision
   #   max_of_n        distribution of the best-of-N. Needs a per-candidate source.

@@ -206,7 +206,16 @@ MIN_DRAWS_PER_TRIAL = 120
 MAX_SUPPORTED_TRIALS = 50
 
 
-def check_supported(table: TraderTable, n_trials: int) -> None:
+# How far a candidate's activity may sit from the table's. Measured on NQ: at
+# 0.7x the table's activity, FWER is 0.135 with a CI entirely above q. The
+# tolerance is therefore tight, and it is a guess constrained by one
+# measurement rather than a measured boundary -- the bucketed design the config
+# describes is what would replace it.
+ACTIVITY_TOLERANCE = 0.15
+
+
+def check_supported(table: TraderTable, n_trials: int,
+                    candidate_turns_per_session: float | None = None) -> None:
     """Refuse a campaign this table cannot license. Raises, never warns."""
     if table.degenerate:
         raise ValueError(
@@ -222,6 +231,22 @@ def check_supported(table: TraderTable, n_trials: int) -> None:
             f"60,000 draws, so the large-N regime is not licensed. Register "
             f"null_source: round_turn_mc for a campaign this size, or measure "
             f"the cell first with scripts/correction_fwer.py.")
+    if candidate_turns_per_session is not None:
+        ref = table.round_turns_per_session
+        if ref > 0:
+            ratio = candidate_turns_per_session / ref
+            if abs(ratio - 1.0) > ACTIVITY_TOLERANCE:
+                raise ValueError(
+                    f"the candidate trades {candidate_turns_per_session:.3f} "
+                    f"round turns a session against this table's {ref:.3f} "
+                    f"({ratio:.2f}x). A shared table is only a valid null at "
+                    f"matched activity: measured on NQ at 0.7x, FWER is 0.135 "
+                    f"against q = 0.05 with the CI entirely above it, because "
+                    f"activity changes the per-session variance structure and "
+                    f"not just the cost drag. Build a table at this activity, "
+                    f"or register null_source: round_turn_mc, which is exact "
+                    f"for any candidate because it uses the candidate's own "
+                    f"trades.")
     need = MIN_DRAWS_PER_TRIAL * n_trials
     if len(table.draws) < need:
         raise ValueError(

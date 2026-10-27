@@ -549,8 +549,32 @@ campaign:
   #                   round turns" is not one method and the ambiguity would be a
   #                   free parameter.
   #   tabulated       the committed empirical null table. Free, NOT per-candidate.
+  #   random_trader   ONE distribution per dataset and split: what does trading
+  #                   this data at random earn? Per session, an even number of
+  #                   timestamps (min 2, max 102, mean ~14), uniformly placed;
+  #                   the odd picks open long or short at 50/50 and the even
+  #                   picks close. Michael's construction, 2026-10-26.
+  #
+  #                   **Why it is the default.** `round_turn_mc` holds the
+  #                   candidate's trade SELECTION fixed and flips only the
+  #                   signs, so it asks "was the direction skill?" -- and is
+  #                   structurally blind to selection skill, which is the whole
+  #                   of an arbitrage edge. spx-arb-01's winner sat at p =
+  #                   0.0004 against its own sign-flip null and beyond the
+  #                   entire support of this one. A shared table also removes
+  #                   the heterogeneity that set that campaign's bar: the
+  #                   trials with unstable Sortino denominators cannot inflate
+  #                   a maximum when every trial has the same null.
+  #
+  #                   **Calibrated to N <= 50 and REFUSED above it.** Measured
+  #                   FWER 0.057 at N=20, 0.043 at N=50, and 0.067-0.092 at
+  #                   N=400 at every table size from 6,000 to 60,000 draws --
+  #                   so the large-N regime is not licensed and
+  #                   `check_supported` raises rather than warns. A campaign at
+  #                   section 2's N = 400 must register round_turn_mc until
+  #                   that cell is measured clean.
   #   none            no null is built.
-  null_source: round_turn_mc
+  null_source: random_trader
 
   # correction: how N candidates become one decision
   #   max_of_n        distribution of the best-of-N. Needs a per-candidate source.

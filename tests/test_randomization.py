@@ -592,3 +592,104 @@ def test_an_unknown_correction_rule_is_refused_rather_than_ignored():
         "correction_rule must stay LAST on the record: the field order is what "
         "a positional constructor reads, and shifting it is the Tick.asset bug")
     assert CampaignRecord.__dataclass_fields__["correction_rule"].default is None
+
+
+# --------------------------------------------------------------------------- #
+# the random-trader null: one yardstick per dataset
+# --------------------------------------------------------------------------- #
+def _rt():
+    from src.core.scoring.randomization import random_trader as m
+    return m
+
+
+def test_the_count_is_even_so_every_position_closes_in_its_session():
+    """An odd count would leave a position open at the close and the series
+    would carry overnight risk the construction does not intend."""
+    import numpy as np
+
+    m = _rt()
+    rng = np.random.default_rng(0)
+    counts = [m._even_count(rng, 14.0) for _ in range(2000)]
+    assert all(c % 2 == 0 for c in counts), "an odd count leaves a leg open"
+    assert min(counts) >= m.MIN_TIMESTAMPS
+    assert max(counts) <= m.MAX_TIMESTAMPS
+    assert 8 < sum(counts) / len(counts) < 20, "mean count drifted from ~14"
+
+
+def test_a_driftless_path_gives_a_null_that_straddles_zero():
+    """**The property that was got wrong twice before the spec was followed.**
+
+    At about one round turn a session, commission dominates the gross move,
+    every draw comes out negative, and the table degenerates into a cost floor:
+    a candidate at 0.001 and one at 5.74 both score the resolution floor
+    because there is nothing positive to rank them against. The specified
+    activity level -- an even count averaging ~14 timestamps, so ~7 round turns
+    -- puts the gross move in charge instead.
+    """
+    import numpy as np
+
+    m = _rt()
+    rng = np.random.default_rng(1)
+    days = [100 + np.cumsum(rng.normal(0, 0.3, size=200)) for _ in range(60)]
+
+    busy = m.build_table(days, m.TraderSpec(iterations=300, seed=3,
+                                            commission_per_contract=0.02))
+    assert not busy.degenerate, busy.note
+    assert busy.share_above_zero > 0.1, (
+        f"only {busy.share_above_zero:.1%} of draws positive; the table cannot "
+        "rank anything above zero")
+    assert min(busy.draws) < 0 < max(busy.draws), "the null does not straddle zero"
+    assert 4 < busy.round_turns_per_session < 11
+
+
+def test_a_table_with_no_positive_draws_is_flagged_degenerate_and_refused():
+    """A null with nothing above zero is broken, not strict."""
+    import numpy as np
+
+    m = _rt()
+    rng = np.random.default_rng(2)
+    days = [100 + np.cumsum(rng.normal(0, 0.01, size=200)) for _ in range(40)]
+    # tiny moves, heavy commission: cost swamps everything
+    starved = m.build_table(days, m.TraderSpec(iterations=200, seed=4,
+                                               commission_per_contract=5.0))
+    assert starved.degenerate and "DEGENERATE" in starved.note
+    with pytest.raises(ValueError, match="degenerate"):
+        m.check_supported(starved, 10)
+
+
+def test_the_large_N_regime_is_refused_because_it_was_not_calibrated():
+    """Measured FWER at N=400 is 0.067-0.092 against q=0.05 at every table size
+    from 6,000 to 60,000 draws. An uncalibrated regime is refused, not noted."""
+    m = _rt()
+    ok = m.TraderTable(draws=[0.0] * 20_000, share_above_zero=0.4,
+                       round_turns_per_session=7.0)
+    m.check_supported(ok, m.MAX_SUPPORTED_TRIALS)          # the boundary holds
+    with pytest.raises(ValueError, match="calibrated to N"):
+        m.check_supported(ok, m.MAX_SUPPORTED_TRIALS + 1)
+
+
+def test_a_table_too_small_for_the_campaign_is_refused():
+    """A bootstrap maximum cannot exceed the table's own largest draw, so a
+    small table biases the bar low exactly where N makes it matter."""
+    m = _rt()
+    thin = m.TraderTable(draws=[0.0] * 500, share_above_zero=0.4,
+                         round_turns_per_session=7.0)
+    with pytest.raises(ValueError, match="at least"):
+        m.check_supported(thin, 50)
+
+
+def test_the_table_ranks_a_real_edge_above_a_trivial_one():
+    """The discrimination the degenerate version loses: a barely-positive score
+    must not get the same p as a large one."""
+    import numpy as np
+
+    m = _rt()
+    rng = np.random.default_rng(5)
+    days = [100 + np.cumsum(rng.normal(0, 0.3, size=200)) for _ in range(60)]
+    t = m.build_table(days, m.TraderSpec(iterations=600, seed=6,
+                                         commission_per_contract=0.02))
+    trivial = m.p_value(t, 0.001)["p"]
+    real = m.p_value(t, max(t.draws) + 1.0)["p"]
+    assert trivial > 0.1, f"a 0.001 score scored p={trivial}; no discrimination"
+    assert real < trivial / 10
+    assert m.p_value(t, max(t.draws) + 1.0)["beyond_null_support"] is True

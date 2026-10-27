@@ -111,7 +111,8 @@ def cfg() -> dict:
 def campaign_cfg() -> dict:
     c = cfg()["campaign"]
     if c["correction"] in ("max_of_n", "step_down_max") and \
-            c["null_source"] not in ("conditional", "round_turn_mc"):
+            c["null_source"] not in ("conditional", "round_turn_mc",
+                                     "random_trader"):
         sys.exit(
             f"incoherent configuration: correction={c['correction']!r} needs "
             f"per-candidate null samples, but null_source={c['null_source']!r} "
@@ -602,6 +603,22 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         # the config at run time.
         cc = {**cc, "probe_before_trial": bool(probe)}
     agent_cfg = agent_for(None, hypothesis, profile_name, model).config()
+    # **`aligned` and a shared table are incompatible, and the combination is
+    # refused here rather than discovered in a p-value.** `aligned` reads
+    # column j of every trial as the SAME randomisation and takes the maximum
+    # down it. With one shared table every column IS identical, so the maximum
+    # over N trials collapses to a single draw -- which models N distinct
+    # strategies as one strategy and is anti-conservative. A shared marginal is
+    # not perfect dependence.
+    if correction_rule == "aligned" and cc["null_source"] == "random_trader":
+        sys.exit(
+            "correction_rule 'aligned' cannot be used with null_source "
+            "'random_trader': the table is shared, so every replicate column "
+            "is identical and the maximum over N trials collapses to one draw. "
+            "That treats N different strategies as one and under-states the "
+            "bar. Use correction_rule 'independent' (or 'dedup') with a shared "
+            "table, or 'aligned' with the per-candidate null_source "
+            "'round_turn_mc'.")
     agent_cfg["null_source"] = cc["null_source"]
     agent_cfg["correction"] = cc["correction"]
     agent_cfg["b_null"] = B_NULL
@@ -1065,6 +1082,32 @@ def stage_nulls(name: str) -> None:
 
     samples, t0 = [], time.monotonic()
     rule = _rec.correction_rule or "independent"
+    source = (_rec.agent_config or {}).get("null_source") or "round_turn_mc"
+    shared: list[float] | None = None
+    if source == "random_trader":
+        # **One table for the whole campaign.** Built from the same dataset and
+        # split the trials ran on, so the yardstick is made of the data they
+        # traded; `check_supported` refuses a campaign this table cannot
+        # license rather than quietly producing a number.
+        from src.core.scoring.randomization import random_trader as rtr
+
+        by_sess: dict[int, list[float]] = {}
+        for tick in dataset.ticks(Split.TRAIN):
+            by_sess.setdefault(tick.session, []).append(tick.price)
+        days = [v for _, v in sorted(by_sess.items())]
+        iters = max(10_000, rtr.MIN_DRAWS_PER_TRIAL * len(rows))
+        print(f"  random_trader: building one shared table over {len(days)} "
+              f"sessions, {iters:,} iterations ...", flush=True)
+        table = rtr.build_table(days, rtr.TraderSpec(
+            iterations=iters,
+            commission_per_contract=commission), dataset=dataset.name,
+            dataset_digest=dataset.digest(), split="train")
+        rtr.check_supported(table, len(rows))
+        print(f"    {len(table.draws):,} draws, "
+              f"{table.round_turns_per_session:.1f} round turns/session, "
+              f"{table.share_above_zero:.1%} positive", flush=True)
+        shared = table.draws
+        rtr.write_table(d / "random-trader-null.json", table)
     if rule == "aligned":
         print(f"  correction_rule 'aligned': one shared randomisation per "
               f"replicate (seed {COMMON_NULL_SEED}), so the nulls can be read "
@@ -1089,6 +1132,13 @@ def stage_nulls(name: str) -> None:
         #
         # Read off the REGISTERED rule, not a flag, because the generation and
         # the correction have to agree and only the registration can bind them.
+        if shared is not None:
+            # Every trial is ranked against the SAME draws. Note this makes
+            # `correction_rule: aligned` wrong -- identical columns would model
+            # N distinct strategies as one -- so the registration refuses the
+            # combination below.
+            samples.append(shared)
+            continue
         seed = COMMON_NULL_SEED if rule == "aligned" else 70_000 + i
         samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed))
         print(f"  {i + 1}/{len(rows)}  {len(samples[-1])} draws  "

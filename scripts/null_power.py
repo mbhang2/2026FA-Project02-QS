@@ -37,8 +37,20 @@ the rule, and the rule was wrong.
    fully ON: 0.0993 REJECT -> 0.0026 ACCEPT. The winner was individually
    significant under both nulls (p1 = 0.0004 sign-flip, 0.0001 bucketed), so
    the whole difference is the max-of-N bar. Under sign-flip that bar is set
-   by trials with unstable Sortino denominators -- the -0.775 correlation --
-   and a shared marginal removes that channel.
+   by whichever trial drew the most permissive null, and a shared marginal
+   removes that channel.
+
+   **Do NOT read this as "unstable Sortino denominators", which is how it was
+   first written.** On spx-arb-01, corr(downside_sessions, that trial's null
+   q95) is -0.872, so the story fits here. Measured across all 22 campaigns
+   with stored nulls it does NOT generalise: the median is -0.308, the range
+   is [-0.960, +0.942], and SIX campaigns carry the opposite sign. Proximity
+   to MIN_DOWNSIDE_SESSIONS explains little (only 3 of 22 campaigns have any
+   trial below 10 downside sessions, and nq-orderflow-02 shows -0.862 with a
+   minimum of 288), and within-campaign spread explains little more. What is
+   established is that per-trial null q95 varies within a campaign and
+   max_of_n is sensitive to that variation. WHY it varies is unexplained, and
+   it is a question about the combination rule rather than about the metric.
 
 2. `aligned` over shared tables is NOT a dependence correction, it is the
    absence of one. Its column is flat in N: 0.0001 at N=1 and at N=50.

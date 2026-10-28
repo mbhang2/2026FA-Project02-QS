@@ -55,12 +55,20 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-SCHEMA = "tier2-campaign-summary/1"
+# **The summary is DIGESTED, so its field set is versioned rather than edited.**
+# `tests/test_tier_contract.py::test_the_summary_rebuilds_to_the_same_digest`
+# rebuilds a committed summary and compares digests; appending a diagnostic to
+# the published set changes that digest and breaks the audit chain for every
+# summary already written. Adding a schema version instead keeps old summaries
+# verifying under the field set they were written with, and `build` rebuilds
+# under whatever schema the stored summary declares.
+SCHEMA = "tier2-campaign-summary/2"
 
 # Diagnostics the summary carries per candidate. Named explicitly: a `dict(**d)`
 # would ship whatever the engine happened to record, and tier 3 would silently
 # start depending on a field nobody meant to publish.
-DIAGNOSTIC_FIELDS = (
+# Frozen. Every tier2-summary/1 on disk was digested over exactly this set.
+V1_DIAGNOSTIC_FIELDS = (
     "max_drawdown",
     "profit_concentration_top5pct",
     "best_session_share",
@@ -78,7 +86,37 @@ DIAGNOSTIC_FIELDS = (
     "by_weekday",
     "by_month",
     "by_hour_utc",
+    # **`by_hour_utc_entry` was computed and then withheld.** The
+    # `seasonality_caveat` string the committee already receives instructs the
+    # reader to "read `by_hour_utc` against `by_hour_utc_entry` before calling
+    # anything concentrated" -- against a field this allowlist did not carry.
+    # spx-arb-01's robustness VETO was a by_hour_utc concentration objection
+    # raised without the field that exists to contextualise it.
 )
+
+# tier2-summary/2 adds three fields and removes none.
+V2_DIAGNOSTIC_FIELDS = V1_DIAGNOSTIC_FIELDS + (
+    # **`by_hour_utc_entry` was computed and then withheld.** The
+    # `seasonality_caveat` string the committee already receives instructs the
+    # reader to "read `by_hour_utc` against `by_hour_utc_entry` before calling
+    # anything concentrated" -- against a field this allowlist did not carry.
+    # spx-arb-01's robustness VETO was a by_hour_utc concentration objection
+    # raised without the field that exists to contextualise it.
+    "by_hour_utc_entry",
+    # The drop-k fragility probe. Published because five of the twelve
+    # unresolved deferrals are the robustness seat objecting to concentration
+    # with no bar to discharge the objection against.
+    "sessions_to_zero",
+    "primary_after_drop",
+)
+
+SCHEMA_DIAGNOSTICS = {
+    "tier2-campaign-summary/1": V1_DIAGNOSTIC_FIELDS,
+    "tier2-campaign-summary/2": V2_DIAGNOSTIC_FIELDS,
+}
+
+# What a fresh build publishes.
+DIAGNOSTIC_FIELDS = SCHEMA_DIAGNOSTICS[SCHEMA]
 
 PROVENANCE_FIELDS = (
     "code_fingerprint",
@@ -136,8 +174,25 @@ def _null_moments(arm_dir: Path) -> dict:
     }
 
 
-def build(arm_dir: Path) -> dict:
+def build(arm_dir: Path, *, schema: str | None = None) -> dict:
+    """Rebuild a summary. With no `schema`, use the one the stored summary
+    declares so a rebuild-and-compare verifies rather than fails; absent a
+    stored summary, write the current one."""
     from src.core.loop.campaign import TRIAL_OUTCOMES, CampaignRecord
+
+    if schema is None:
+        stored_path = arm_dir / "tier2-summary.json"
+        schema = SCHEMA
+        if stored_path.exists():
+            try:
+                schema = json.loads(stored_path.read_text()).get("schema") or SCHEMA
+            except (OSError, json.JSONDecodeError):
+                schema = SCHEMA
+    if schema not in SCHEMA_DIAGNOSTICS:
+        raise ValueError(
+            f"unknown summary schema {schema!r}; known: "
+            f"{sorted(SCHEMA_DIAGNOSTICS)}")
+    diagnostic_fields = SCHEMA_DIAGNOSTICS[schema]
 
     record, record_digest = CampaignRecord.read(arm_dir / "campaign.json")
     blob = json.loads((arm_dir / "result.json").read_text())
@@ -177,7 +232,7 @@ def build(arm_dir: Path) -> dict:
     provenance["code_fingerprint_unique_across_trials"] = len(drift) == 1
 
     summary = {
-        "schema": SCHEMA,
+        "schema": schema,
         "campaign": {
             "campaign_id": record.campaign_id,
             "arm": arm_dir.name,
@@ -262,7 +317,7 @@ def build(arm_dir: Path) -> dict:
             "source": source,
             "source_sha256": hashlib.sha256(source.encode()).hexdigest() if source else None,
             "diagnostics": {k: (best_row.get("diagnostics") or {}).get(k)
-                            for k in DIAGNOSTIC_FIELDS},
+                            for k in diagnostic_fields},
             "note": ("the best-scoring candidate. `accepted` is the gate's "
                      "verdict on it, and is false whenever the campaign "
                      "accepted nothing -- which is most campaigns."),

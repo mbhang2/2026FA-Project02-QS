@@ -219,6 +219,62 @@ def score_returns(
     )
 
 
+DROP_PROBES = (1, 2, 3, 5, 10)
+
+
+def drop_best_fragility(
+    returns: Sequence[float], *, max_k: int = 25,
+    min_sessions: int = MIN_SESSIONS,
+) -> tuple[int, dict[str, float | None]]:
+    """Remove the k best sessions, rescore, and report when the result dies.
+
+    Returns `(sessions_to_zero, primary_after_drop)`.
+
+    `sessions_to_zero` is the smallest k >= 1 for which `primary` is <= 0 once
+    the k highest-returning sessions are dropped:
+
+      *  0  the result is already <= 0 or rejected with nothing dropped, so
+            there is nothing to probe
+      * -1  it survived every probe up to `max_k`, or the series is too short
+            to drop anything without crossing the session floor
+
+    In `primary_after_drop`, a value of `None` means the rescored series was
+    REJECTED rather than merely weak -- usually its downside sessions fell
+    below the pre-registered floor once the best sessions were gone.
+
+    **Why <= 0 and not the accept threshold.** The gate's real decision is a
+    max-of-N p-value against a null, and recomputing that per probe would mean
+    rebuilding a null per probe. Zero is gate-independent, needs no
+    calibration, and means the same thing for every metric and session count.
+    A seat wanting a stricter bar reads `primary_after_drop` directly.
+
+    Dropping shortens the series, so a probe that would take it under the
+    pre-registered session floor is not run -- otherwise the floor's own
+    rejection would read as fragility.
+
+    This is what `profit_concentration_top5pct` gestures at, in a form that
+    has a bar: a share invites an argument, an integer invites a decision. See
+    `Diagnostics.sessions_to_zero` for the provenance.
+    """
+    base = score_returns(returns)
+    if base.rejected or base.primary <= 0.0:
+        return 0, {}
+
+    ordered = sorted(returns, reverse=True)
+    n = len(ordered)
+    curve: dict[str, float | None] = {}
+    hit = -1
+    for k in range(1, min(max_k, n) + 1):
+        if n - k < min_sessions:
+            break
+        s = score_returns(ordered[k:])
+        if k in DROP_PROBES:
+            curve[str(k)] = None if s.rejected else float(s.primary)
+        if hit == -1 and (s.rejected or s.primary <= 0.0):
+            hit = k
+    return hit, curve
+
+
 def score_diagnostics(
     blotter: Blotter,
     period: Sequence[SessionSpan],
@@ -230,6 +286,8 @@ def score_diagnostics(
     """Recorded per run, never terms in the objective. See `metrics.Diagnostics`."""
     returns = metrics.session_returns(blotter, period, notional_base=notional_base,
                                       idle_charge=idle_charge)
-    return metrics.diagnostics(
+    d = metrics.diagnostics(
         blotter, period, returns, fill_model_spread=fill_model_spread
     )
+    hit, curve = drop_best_fragility(returns)
+    return replace(d, sessions_to_zero=hit, primary_after_drop=curve)

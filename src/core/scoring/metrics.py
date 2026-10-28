@@ -527,6 +527,48 @@ class Diagnostics:
         "index and carries no regime information at all"
     )
 
+    # **How few of the best sessions have to go before the result dies.**
+    #
+    # From the Hindsight-Selection Trap (Elangovan, Zenodo 2026-08-02), which
+    # documents a signal clearing every mechanical gate -- positive dev and
+    # holdout return, 0 of 5 negative walk-forward folds -- while drawing
+    # 85-97% of its profit from three trades of several hundred, in both
+    # periods independently. It calls that the signature of idiosyncratic luck
+    # rather than a repeatable effect.
+    #
+    # The robustness seat has raised that objection in five of the twelve
+    # unresolved deferrals (nq-s03-01/02/03, spx-arb-01) and it stays
+    # unresolved every time, because `profit_concentration_top5pct` and
+    # `best_session_share` report a SHARE and a share has no bar. An integer
+    # does: "this result dies if you remove 2 sessions of 384" is a statement
+    # a seat can accept or reject.
+    #
+    # **MEASURED ON A KNOWN-REAL EDGE, AND IT LOOKS FRAGILE.** spx-arb-01's
+    # winner scored 5.7445, the highest this project has produced, on an
+    # arbitrage proved real by construction -- about 7.19 points executable
+    # net of spread, with the engine separately shown to realise a planted box
+    # spread exactly. Its fragility: primary falls to 1.537 on the removal of
+    # ONE session of 105, and reaches zero at k = 9.
+    #
+    # So concentration and authenticity are INDEPENDENT. A real edge that
+    # arrives in bursts -- here parity violations at expiries -- produces
+    # concentrated evidence, and a gate thresholding this number would have
+    # rejected it for being real in the wrong shape. That is why this is a
+    # diagnostic and why it must never become a term in the objective: it
+    # measures the BREADTH OF THE EVIDENCE, not whether the effect exists.
+    #
+    # **It is a jackknife probe, not a counterfactual.** Removing a session is
+    # not the same as the strategy not having traded it -- the remaining
+    # sessions are unchanged, and a strategy that sized off a running P&L
+    # would really have behaved differently. It answers "how concentrated is
+    # the evidence", not "what would have happened".
+    #
+    # Appended last, and the field is absent from no digest: `Blotter.digest`
+    # covers blotter rows, not diagnostics, and the tier-2 summary carries an
+    # explicit allowlist. Nothing committed moves.
+    sessions_to_zero: int = -1
+    primary_after_drop: dict[str, float] = field(default_factory=dict)
+
     def as_dict(self) -> dict:
         return {k: getattr(self, k) for k in self.__dataclass_fields__}
 

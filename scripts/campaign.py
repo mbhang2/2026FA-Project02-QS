@@ -39,8 +39,27 @@ CAMPAIGNS = REPO_ROOT / "runs" / "campaigns"
 
 
 def render(summary: dict) -> str:
+    """**This read `summary["correction"]` and crashed for forty days.**
+
+    Task 32 demoted BH and Holm over the tabulated FAR column to diagnostics
+    and moved them under `diagnostics_only`, and put the real decision under
+    `gate`. This function was written when `correction` was top level and the
+    FAR column WAS the gate, and it was never updated -- it has no test, and
+    `runs/campaigns/task5*-stub` show the last run was 2026-09-19. It was
+    found by running three stub campaigns to check the merged branch, which is
+    the only reason it surfaced at all.
+
+    The shape it reads now:
+
+      summary["gate"]                          the accept decision, or
+                                               is_the_gate=False when no
+                                               per-candidate nulls were built
+      summary["diagnostics_only"]["correction"]   BH/Holm, diagnostics
+      summary["uncorrected"]                   what no correction would say
+    """
     L = []
-    c = summary["correction"]
+    diag = summary.get("diagnostics_only") or {}
+    c = diag.get("correction") or {}
     L.append(f"campaign      {summary['campaign_id']}   record "
              f"{summary['record_digest'][:16]}"
              + ("   TAMPERED" if summary["record_tampered"] else ""))
@@ -60,17 +79,37 @@ def render(summary: dict) -> str:
         L.append(f"  candidates at far <= q         {u['n_at_or_below_q']}")
         L.append(f"  {u['reading']}")
     L.append("")
-    L.append("CORRECTED")
-    L.append(f"  Benjamini-Hochberg (FDR, q={summary['q']})   "
-             f"{c['bh_discoveries']} discoveries")
-    L.append(f"  Holm (FWER, q={summary['q']})                {c['holm_discoveries']} discoveries")
+    # The gate first, because it is the decision. BH/Holm come after it and
+    # are labelled as diagnostics, so a reader cannot mistake one for the
+    # other the way this script's old output invited.
+    g = summary.get("gate") or {}
+    L.append("THE GATE")
+    if not g.get("is_the_gate", False):
+        L.append("  no accept decision: " + str(g.get("note", "")))
+        if "resolution" in g:
+            L.append(f"  resolution floor at this N          {g['resolution']}")
+    else:
+        L.append(f"  p                                  {g.get('p')}")
+        L.append(f"  reject                             {g.get('reject')}")
+        L.append(f"  observed best > 0                  "
+                 f"{g.get('observed_best_positive')}")
+        L.append(f"  ACCEPT                             {g.get('accept')}")
+    L.append("")
+    L.append(f"DIAGNOSTICS ONLY -- not the gate. {diag.get('note', '')}")
+    if c:
+        L.append(f"  Benjamini-Hochberg (FDR, q={summary['q']})   "
+                 f"{c.get('bh_discoveries')} discoveries")
+        L.append(f"  Holm (FWER, q={summary['q']})                "
+                 f"{c.get('holm_discoveries')} discoveries")
+        L.append(f"  uncorrected                           "
+                 f"{c.get('uncorrected_discoveries')} discoveries")
     if "deflation" in summary:
         d = summary["deflation"]
         L.append(f"  expected max of N under the null    {d['expected_max_under_null']:+.4f}")
         L.append(f"  best score minus that bar           {d['margin']:+.4f}"
                  f"   clears: {d['clears_selection_bar']}")
     L.append("")
-    if c["decisions"]:
+    if c.get("decisions"):
         L.append("  top of the ordering:")
         L.append(f"    {'rank':>4} {'far':>10} {'BH crit':>10} {'BH':>4} "
                  f"{'Holm crit':>10} {'Holm':>5}  label")

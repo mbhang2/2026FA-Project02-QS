@@ -1,0 +1,38 @@
+{
+  "baseline": 0.2594,
+  "by_source": {
+    "arxiv": {
+      "alpha": 36.5,
+      "beta": 248.5,
+      "concentration": 285.0,
+      "mean": 0.1281,
+      "n_observed": 284
+    },
+    "crossref": {
+      "alpha": 25.5,
+      "beta": 70.5,
+      "concentration": 96.0,
+      "mean": 0.2656,
+      "n_observed": 95
+    },
+    "openalex": {
+      "alpha": 77.5,
+      "beta": 76.5,
+      "concentration": 154.0,
+      "mean": 0.5032,
+      "n_observed": 153
+    }
+  },
+  "calibrated_from": "data/papers/registry.json",
+  "digest": "75a7b8998216abe9",
+  "global": {
+    "alpha": 138.5,
+    "beta": 394.5,
+    "concentration": 533.0,
+    "mean": 0.2598,
+    "n_observed": 532
+  },
+  "n_papers": 532,
+  "schema": "bwis-priors/2",
+  "target": "feasibility in {direct, adaptable}"
+}

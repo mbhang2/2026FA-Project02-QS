@@ -46,6 +46,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import random
 import re
 import threading
 import time
@@ -54,6 +55,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Sequence
 
 from .hypothesis import Hypothesis, block as hypothesis_block
+from .knowledge import block as knowledge_block
 
 if TYPE_CHECKING:  # pragma: no cover -- a type, never an import at run time
     from .probe import ProbeResult
@@ -238,6 +240,30 @@ class Call:
                 "error": self.error}
 
 
+BASELINE_PATH = REPO_ROOT / "src" / "strategies" / "current.py"
+
+
+@dataclass(frozen=True, slots=True)
+class ParentPick:
+    """Which file the proposer was handed, and how it was chosen.
+
+    `text` is the file's contents; `digest` identifies it without carrying it.
+    Equality is by value so a resume can be checked against the original draw.
+    """
+
+    mode: str                 # "exploit" -- the champion; "explore" -- a trial
+    kind: str                 # "champion" | "trial"
+    text: str
+    digest: str
+    trial: int | None = None
+
+
+def _digest_source(text: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(text.encode()).hexdigest()[:16]
+
+
 @dataclass
 class LLMAgent:
     """`propose(history) -> str`. The same one method the stub implements.
@@ -288,6 +314,20 @@ class LLMAgent:
     # a record that says `false` cannot be probing and an agent built without
     # a ledger to write to cannot either. See `src/core/loop/probe.py` for what
     # crosses back and why it is not the check Task 23 rejected.
+    # **Daksh's knowledge snapshot, frozen at register.** A compiled view of
+    # what the project has closed, carried into the prompt so the proposer does
+    # not re-explore a settled family. A compiled, linted view is passed IN;
+    # this module never opens the register itself, which is what keeps the
+    # prompt reproducible from the campaign directory alone. None reproduces
+    # every pre-knowledge prompt byte for byte.
+    knowledge: "Any | None" = None
+    # **Which file the proposer is asked to edit.** 0.0 is champion-only, which
+    # is every campaign before this field, so the default moves nothing. Above
+    # 0, that fraction of draws edits a prior trial's source instead -- the mix
+    # lives in the sampler rather than in the prompt, so the agent is never
+    # told it is exploring.
+    explore_epsilon: float = 0.0
+    parent_rng_seed: int = 0
     probe_before_trial: bool = False
     probe: "Callable[[str], ProbeResult] | None" = None
     max_probe_repairs: int = 2
@@ -300,6 +340,9 @@ class LLMAgent:
     # "identical to the current strategy" costs one probe per champion rather
     # than one per trial.
     _reference_probe: dict = field(default_factory=dict, init=False, repr=False)
+    # Drawn once per proposal and reused by every repair of it, so a repair
+    # cannot quietly hand the model a different file to fix.
+    _parent: "ParentPick | None" = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.base_url = self.base_url or os.environ.get("LITELLM_BASE_URL", "")
@@ -309,6 +352,12 @@ class LLMAgent:
             raise LLMError("LITELLM_API_KEY is not set")
         self._template = self.template_path.read_text()
         self._docs = {k: v.read_text() for k, v in DOC_PATHS.items()}
+        if not 0.0 <= float(self.explore_epsilon) <= 1.0:
+            raise ValueError(
+                f"explore_epsilon must be in [0, 1]; got "
+                f"{self.explore_epsilon!r}. It is a probability, and a campaign "
+                f"pre-registers it, so a value outside the range is a "
+                f"registration error rather than something to clamp.")
 
     # -- the pre-registration, as data ------------------------------------- #
     def config(self) -> dict:
@@ -335,6 +384,15 @@ class LLMAgent:
                     "digest": self.hypothesis.digest,
                 }),
             "champion_carry_forward": self.champion is not None,
+            # By digest, like the hypothesis, and for the same reason: the text
+            # lives in the campaign directory and copying it here would make
+            # the record the second place it lives.
+            "knowledge": (None if self.knowledge is None else
+                          {"digest": self.knowledge.digest}),
+            # The draw, not a prompt ratio -- so a resume redraws identically
+            # and a reader can tell a champion-only campaign from a mixed one.
+            "explore_epsilon": self.explore_epsilon,
+            "parent_rng_seed": self.parent_rng_seed,
             "show_history": self.show_history,
             "history_full_sources": self.history_full_sources,
             "shows_the_gate": False,
@@ -368,11 +426,24 @@ class LLMAgent:
                                      if c.model_served}),
             "reasoning_tokens": sum(c.reasoning_tokens for c in calls),
             "truncated": any(c.finish_reason == "length" for c in calls),
+            # **The parent by digest, never by text.** The ledger already
+            # stores every source once under `sources/`; putting the text here
+            # too would double every campaign directory and give a reader two
+            # copies that can disagree.
+            "parent": (None if self._parent is None else {
+                "mode": self._parent.mode,
+                "kind": self._parent.kind,
+                "trial": self._parent.trial,
+                "digest": self._parent.digest,
+            }),
         }
 
     # -- the one method the loop calls -------------------------------------- #
     def propose(self, history: Sequence[dict]) -> str:
         self._n += 1
+        # One draw per proposal. Cleared here rather than at the end so a
+        # proposal that raised still leaves its parent readable in drain_log.
+        self._parent = None
         deadline = time.monotonic() + self.proposal_wall_clock_s
         shown = history if self.show_history else ()
         try:
@@ -568,17 +639,74 @@ class LLMAgent:
             scratch.unlink(missing_ok=True)
         return (not errors), "; ".join(errors[:6])
 
-    def _prompt(self, history: Sequence[dict], *, repair: str) -> str:
+    def _pick_parent(self, history: Sequence[dict]) -> ParentPick:
+        """Draw the file to edit: the champion, or one prior trial's source.
+
+        **The mix lives here, not in the prompt.** The agent is never told
+        which arm it got, because "you are exploring" is an instruction and
+        would change what it writes for reasons unrelated to the data.
+
+        Three rules, each with a reason:
+
+        * `show_history=False` never draws. That arm is shown nothing about its
+          own past, and a prior trial's source in `{current}` is exactly that.
+        * The pool is prior sources that differ from BOTH the champion and the
+          committed baseline. A "different" file that is byte-identical to what
+          the agent would have been handed anyway is not exploration, and
+          counting it would make epsilon a lie.
+        * An empty pool falls back to the champion rather than raising. Early
+          in a campaign every source IS the baseline, and a campaign that
+          refused to propose until it had variety would never start.
+        """
+        champ = ""
         if self.champion is not None and self.champion.is_file():
-            current = self.champion.read_text()
-        else:
-            current = (REPO_ROOT / "src" / "strategies" / "current.py").read_text()
+            champ = self.champion.read_text()
+        exploit = ParentPick(mode="exploit", kind="champion", text=champ,
+                             digest=_digest_source(champ))
+        if not self.show_history or self.explore_epsilon <= 0.0:
+            return exploit
+
+        baseline = BASELINE_PATH.read_text() if BASELINE_PATH.is_file() else ""
+        pool: list[tuple[int, str]] = []
+        for i, row in enumerate(history):
+            src = row.get("strategy_source")
+            if not src:
+                continue
+            path = Path(src)
+            if not path.is_file():
+                continue
+            text = path.read_text()
+            if text == champ or text == baseline:
+                continue
+            pool.append((i, text))
+        if not pool:
+            return exploit
+
+        # Seeded on the campaign's pin and the history length, so a resume at
+        # trial k redraws trial k's parent and not the next one in a stream.
+        rng = random.Random(f"{self.parent_rng_seed}:{len(history)}:{self._n}")
+        if rng.random() >= self.explore_epsilon:
+            return exploit
+        trial, text = pool[rng.randrange(len(pool))]
+        return ParentPick(mode="explore", kind="trial", text=text,
+                          digest=_digest_source(text), trial=trial)
+
+    def _prompt(self, history: Sequence[dict], *, repair: str) -> str:
+        # **Drawn once, then reused.** A repair is a second call about the SAME
+        # proposal, so re-drawing here would hand the model a different file to
+        # fix than the one it broke.
+        if self._parent is None:
+            self._parent = self._pick_parent(history)
+        current = self._parent.text
+        if not current:
+            current = BASELINE_PATH.read_text()
         return self._template.format(
             api=self._docs["api"],
             context_api=self._docs["context_api"],
             data=self._docs["data"],
             run=self.run_facts or "(not supplied)",
             hypothesis=hypothesis_block(self.hypothesis),
+            knowledge=knowledge_block(self.knowledge),
             current=current,
             history=self._history_block(history),
             repair=repair,

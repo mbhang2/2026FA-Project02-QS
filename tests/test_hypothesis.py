@@ -27,6 +27,7 @@ from pathlib import Path
 import pytest
 
 from src.core.loop import hypothesis as H
+from src.core.loop import knowledge as K
 from src.core.loop import llm
 from src.core.loop.campaign import CampaignRecord, CampaignTampered
 from src.core.scoring.integrity import artifact_digests
@@ -155,7 +156,8 @@ def test_no_hypothesis_reproduces_the_task45_messages_byte_for_byte():
     before = _messages(TASK45_TEMPLATE.read_text().format(**SLOTS))
     after = _messages(
         (REPO_ROOT / "config" / "prompts" / "strategy-agent.md")
-        .read_text().format(**SLOTS, hypothesis=H.block(None)))
+        .read_text().format(**SLOTS, hypothesis=H.block(None),
+                            knowledge=K.block(None)))
     assert before == after, (
         "adding the {hypothesis} slot moved what the model receives. "
         "scripts/positive_control.py accepts the new template digest ONLY "

@@ -588,10 +588,26 @@ def test_an_unknown_correction_rule_is_refused_rather_than_ignored():
 
     names = [f.name for f in dataclasses.fields(CampaignRecord)]
     assert "correction_rule" in names
-    assert names[-1] == "correction_rule", (
-        "correction_rule must stay LAST on the record: the field order is what "
-        "a positional constructor reads, and shifting it is the Tick.asset bug")
+    # **This used to assert `correction_rule` is the LAST field, and that was
+    # pinning the wrong invariant.** The reason to append rather than insert is
+    # positional construction -- the `Tick.asset` bug -- and `CampaignRecord`
+    # is built with keywords at every call site, checked below. Merging
+    # Daksh's `knowledge_path`/`knowledge_digest` put two fields after it and
+    # nothing broke, because nothing reads this record by position.
+    #
+    # What actually has to hold is the two properties underneath: every
+    # optional field defaults to None, and `digest()` drops None -- together
+    # those are what let a field be added without moving the digest of any
+    # record written before it. Verified against all 47 committed records.
+    for f in dataclasses.fields(CampaignRecord):
+        if f.name in {"campaign_id", "profile", "budget", "q"}:
+            continue
+        assert f.default is not dataclasses.MISSING or \
+            f.default_factory is not dataclasses.MISSING, (
+                f"{f.name} has no default, so a record written before it was "
+                f"added can no longer be read back")
     assert CampaignRecord.__dataclass_fields__["correction_rule"].default is None
+    assert CampaignRecord.__dataclass_fields__["knowledge_digest"].default is None
 
 
 # --------------------------------------------------------------------------- #
@@ -822,3 +838,26 @@ def test_trials_in_different_buckets_are_ranked_against_different_nulls():
     for a in (0.371, 15.419):
         with pytest.raises(ValueError):
             m.check_supported(table, 50, a)
+
+
+def test_nothing_constructs_a_campaign_record_positionally():
+    """The invariant the field-order guard was really reaching for. If this
+    holds, appending a field is safe and insertion order is free; if it ever
+    stops holding, restore the field-order assertion as well."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    offenders = []
+    for py in list(root.glob("scripts/*.py")) + list((root / "src").rglob("*.py")) \
+            + [root / "run.py"]:
+        for m in re.finditer(r"CampaignRecord\(\s*([^)]{0,48})", py.read_text()):
+            head = m.group(1).strip()
+            if not head:
+                continue
+            # a keyword call's first token is `name=` or `**mapping`
+            if re.match(r"^\*\*", head) or re.match(r"^\w+\s*=", head):
+                continue
+            offenders.append(f"{py.relative_to(root)}: CampaignRecord({head[:30]}")
+    assert not offenders, "positional CampaignRecord construction:\n  " + \
+        "\n  ".join(offenders)

@@ -149,6 +149,18 @@ class CampaignRecord:
     # seed, which only the registering run can arrange -- `stage_nulls` seeds
     # per trial otherwise, precisely so they are independent.
     correction_rule: str | None = None
+    # **The knowledge snapshot, by path and digest.** The compiled view the
+    # proposer was shown, frozen at register like the hypothesis. `digest()`
+    # drops None, so a record written before this field hashes exactly as it
+    # did -- and a record that HAS one carries it into the hash, which is what
+    # makes editing the snapshot after registration a tamper rather than a
+    # silent change of what the agent was told.
+    #
+    # Appended last. Daksh's two kdemo campaigns were registered with these
+    # fields by an implementation that never reached his commit; the tests and
+    # the committed campaign.json files were the specification.
+    knowledge_path: str | None = None
+    knowledge_digest: str | None = None
 
     def digest(self) -> str:
         payload = json.dumps({k: v for k, v in asdict(self).items() if v is not None},

@@ -1,0 +1,17 @@
+{
+  "schema": "campaign-status/1",
+  "campaign_id": "nq-daksh-kdemo-01",
+  "status": "abandoned",
+  "summary": "Registered as a knowledge-snapshot demo, never run, re-registered as nq-daksh-kdemo-02.",
+  "written_at": "2026-10-29",
+  "written_by": "Michael, during the Daksh/mm-rl-design merge",
+  "why": [
+    "The directory holds campaign.json and knowledge.md only: no ledger, no state.json, no fills.",
+    "nq-daksh-kdemo-02 is a byte-identical registration -- same profile nq-train, same hypothesis config/hypotheses/intraday-continuation.md, same knowledge_digest 5bba1dd92401a784 -- and it DID run, with one ledger row.",
+    "So this reads as a first attempt immediately re-registered. It cost nothing and counts nothing: global_n reads purpose == 'trial' rows and there are none here.",
+    "Written by the merge rather than by its author, because an empty pre-registration with no status reads as pending -- the most flattering of the three things it could be. Daksh should correct this file if the history was different."
+  ],
+  "pre_registration_untouched": true,
+  "ledger_rows": 0,
+  "counts_toward_global_n": false
+}

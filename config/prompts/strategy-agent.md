@@ -7,7 +7,8 @@
      them, and it should be as loud.
 
      Placeholders, all required: {api}, {context_api}, {data}, {run},
-     {hypothesis}, {current}, {history}, {repair}. A missing one is a KeyError
+     {hypothesis}, {knowledge}, {current}, {history}, {repair}. A missing one
+     is a KeyError
      at assembly, before any API call, which is where a template mistake should
      surface.
 
@@ -70,7 +71,7 @@ the NQ adapter, which is not necessarily what you are running on. These are the
 facts of *this* run, and they win where the two differ:
 
 {run}
-{hypothesis}
+{hypothesis}{knowledge}
 ---
 
 ### The current strategy

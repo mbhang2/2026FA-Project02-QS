@@ -587,6 +587,25 @@ def load(path: str, class_name: str):
     package = rel[:-3].replace("/", ".").rsplit(".", 1)[0] if rel.endswith(".py") else ""
     name = f"{package}._remote_strategy" if package else "remote_strategy"
 
+    # **`harness_alpha` is installed BEFORE the strategy module executes**, so
+    # a strategy may `import harness_alpha` at its own top level the way it
+    # imports `src.core.types`. `harness_replay` is installed at `fit` instead
+    # because only a fitted strategy can use it; an AST strategy needs the
+    # bridge in `setup`.
+    #
+    # By file path under a bare name, for the reason `harness_replay` gives:
+    # importing `src.core.engine.remote.alpha_env` as a package would execute
+    # `src/core/engine/__init__.py` and put the engine in this process. The
+    # bridge itself imports only `src.primitives`, which is not under
+    # `src.core` and pulls nothing from it.
+    if "harness_alpha" not in sys.modules:
+        try:
+            sys.modules["harness_alpha"] = _load_sibling("alpha_env")
+        except Exception:                                     # noqa: BLE001
+            # pandas missing in the child is not a reason to fail every
+            # strategy; only the ones that actually import the bridge.
+            pass
+
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     if package:

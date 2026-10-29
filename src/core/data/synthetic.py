@@ -26,7 +26,7 @@ from typing import Iterator
 import numpy as np
 
 from .dataset import Calendar, HoldoutLock, SplitBounds, sessions_for
-from ..types import NS_PER_SECOND, DataCapabilities, Side, Split, Tick, Ts
+from ..types import NS_PER_SECOND, DataCapabilities, Quote, Side, Split, Tick, Ts
 
 SESSION_ORIGIN_NS = 1_700_000_000 * NS_PER_SECOND  # arbitrary, fixed, UTC
 
@@ -89,13 +89,20 @@ class SyntheticSpec:
     # band, and an i.i.d. generator has none at all.
     vol_cluster_rho: float = 0.55
     vol_cluster_sd: float = 0.35
+    # A top of book beside each trade. Off by default, and absent from the
+    # digest when off, so a spec that does not ask for quotes hashes exactly as
+    # it did before the field existed.
+    quotes: bool = False
 
     @property
     def irregular(self) -> bool:
         return not self.uniform
 
     def as_dict(self) -> dict:
-        return {k: getattr(self, k) for k in self.__dataclass_fields__}
+        out = {k: getattr(self, k) for k in self.__dataclass_fields__ if k != "quotes"}
+        if self.quotes:
+            out["quotes"] = True
+        return out
 
 
 class SyntheticDataset:
@@ -113,7 +120,9 @@ class SyntheticDataset:
 
     # ---- Dataset protocol ------------------------------------------------- #
     def capabilities(self) -> DataCapabilities:
-        return DataCapabilities(has_trades=True, has_quotes=False, has_book=False)
+        return DataCapabilities(
+            has_trades=True, has_quotes=self.spec.quotes, has_book=False
+        )
 
     def calendar(self) -> Calendar:
         return self._calendar
@@ -153,6 +162,34 @@ class SyntheticDataset:
     def warmup_sessions(self, split: Split, warmup: int) -> set[int]:
         warm, _ = sessions_for(self._calendar, split, warmup)
         return set(warm)
+
+    def quotes(self, split: Split, *, warmup: int = 0) -> Iterator[Quote]:
+        """One top of book at each trade's timestamp, one tick either side.
+
+        The trade itself prints at the mid, inside the spread, so a queue model
+        does not fill on it unless a later trade goes through. That is a
+        generator choice, not a claim about how a book works; a test that needs
+        a trade at the touch builds its own quotes.
+        """
+        if not self.spec.quotes:
+            return iter(())
+        self._lock.check(split)
+        warm, live = sessions_for(self._calendar, split, warmup)
+        half = self.spec.tick_size
+
+        def _gen() -> Iterator[Quote]:
+            for session in list(warm) + list(live):
+                for i, tick in enumerate(self._session_ticks(session)):
+                    yield Quote(
+                        ts=tick.ts,
+                        bid_price=tick.price - half,
+                        bid_size=1 + (i % 5),
+                        ask_price=tick.price + half,
+                        ask_size=1 + ((i + 2) % 5),
+                        session=session,
+                    )
+
+        return _gen()
 
     # ---- schedule ---------------------------------------------------------- #
     def _schedule(self) -> None:

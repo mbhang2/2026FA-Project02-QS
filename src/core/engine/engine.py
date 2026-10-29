@@ -38,6 +38,7 @@ from .context import (
     FillContext,
     IntentQueue,
     LifecycleContext,
+    QuoteContext,
     SetupContext,
     TickContext,
     canonical_sub_id,
@@ -64,6 +65,9 @@ from ..types import (
     OrderStatus,
     OrderType,
     OrderView,
+    Quote,
+    QuoteEvent,
+    QuoteStrategy,
     Side,
     Split,
     Strategy,
@@ -202,7 +206,7 @@ class _SealedDataset:
     __slots__ = ("_inner", "name", "holdout_unlock_reason")
 
     _FORWARD = (
-        "capabilities", "calendar", "ticks", "session_bounds", "digest",
+        "capabilities", "calendar", "ticks", "quotes", "session_bounds", "digest",
         "warmup_sessions", "scored_sessions", "early_close_dates", "load",
         "sessions", "periods", "spec", "contract_for",
     )
@@ -308,6 +312,7 @@ def _callbacks_of(proto) -> tuple[str, ...]:
 
 REQUIRED_CALLBACKS = _callbacks_of(Strategy)
 TICK_CALLBACKS = _callbacks_of(TickStrategy)
+QUOTE_CALLBACKS = _callbacks_of(QuoteStrategy)
 
 # `fit()` takes nothing -- it reads what the strategy accumulated during the fit
 # window -- while the weight methods take a path. So they cannot go through
@@ -323,7 +328,8 @@ FIT_ARITY: dict[str, int] = {"fit": 0, "save_weights": 0, "load_weights": 1}
 _MISSING = object()
 
 
-def validate_strategy(strategy: Any, *, needs_ticks: bool = False) -> None:
+def validate_strategy(strategy: Any, *, needs_ticks: bool = False,
+                      needs_quotes: bool = False) -> None:
     """Check the loaded strategy against `types.Strategy` before the walk starts.
 
     One error listing everything wrong, raised at wiring time. Previously
@@ -340,6 +346,8 @@ def validate_strategy(strategy: Any, *, needs_ticks: bool = False) -> None:
     wanted = list(REQUIRED_CALLBACKS)
     if needs_ticks:
         wanted += [n for n in TICK_CALLBACKS if n not in wanted]
+    if needs_quotes:
+        wanted += [n for n in QUOTE_CALLBACKS if n not in wanted]
 
     problems: list[str] = []
     for name in wanted:
@@ -521,6 +529,10 @@ class Engine:
         self._callbacks = 0
         self._next_budget_seq = BUDGET_CHECK_EVERY_TICKS
         self._session_seq0 = 0
+        # The quote walk is a separate loop. Trades-only runs never enter it,
+        # which is what keeps their blotters on the path the golden digests
+        # were computed from. See `docs/design/market-making.md`.
+        self._quoted_walk = False
 
         self.blotter = Blotter()
         # The score's source of truth. On the engine and nowhere else: not on
@@ -802,12 +814,36 @@ class Engine:
         subs.sort(key=lambda s: (s.interval_ns is not None, s.interval_ns or 0, s.sub_id))
         self.subs = subs
         bar_subs = [s for s in subs if s.is_bars]
-        self._tick_subscribed = any(not s.is_bars for s in subs)
+        self._tick_subscribed = any(s.kind == "tick" for s in subs)
+        self._quote_subscribed = any(s.kind == "quote" for s in subs)
         if self._tick_subscribed:
             # "the strategy subscribed to ticks but has no on_tick(ctx) callback"
             # was the only legible callback error; it is now one case of the
             # general check rather than a special one.
             validate_strategy(self.strategy, needs_ticks=True)
+        if self._quote_subscribed:
+            if not self.dataset.capabilities().has_quotes:
+                raise ValueError(
+                    "setup() subscribed to quotes, but this dataset has no quote "
+                    "feed. The NQ adapter is trades only; a quote subscription "
+                    "belongs on a dataset that declares has_quotes. See "
+                    "docs/design/market-making.md."
+                )
+            validate_strategy(self.strategy, needs_quotes=True)
+        self._quoted_walk = (
+            self.model.requires.has_quotes or self._quote_subscribed
+        )
+        self._quotes_for: dict[int, list[Quote]] = {}
+        if self._quoted_walk:
+            if not hasattr(self.dataset, "quotes"):
+                raise ValueError(
+                    f"fill model {self.model.name!r} needs quotes, and this "
+                    "dataset does not provide them"
+                )
+            for quote in self.dataset.quotes(
+                self.split, warmup=self.warmup_sessions
+            ):
+                self._quotes_for.setdefault(quote.session, []).append(quote)
         self._resolver.ids = frozenset(s.sub_id for s in subs)
         self.builders = {s.sub_id: BarBuilder(s) for s in bar_subs}
         self.history = BarHistory([s.sub_id for s in bar_subs])
@@ -834,6 +870,9 @@ class Engine:
                                              batch[0].side))
 
             self._session_seq0 = seq + 1
+            if self._quoted_walk:
+                seq = self._walk_quoted(batch, session, actionable, seq)
+                continue
             price = np.fromiter((t.price for t in batch), dtype=float, count=len(batch))
             tsarr = np.fromiter((t.ts for t in batch), dtype=np.int64, count=len(batch))
             sizes = np.fromiter((t.size for t in batch), dtype=np.int64, count=len(batch))
@@ -887,11 +926,81 @@ class Engine:
                 i = nxt
 
         if session is not None:
-            self._close_session(session, self.n_ticks,
+            # Trades-only, `n_ticks` is the next sequence: ticks and sequence
+            # move together, skipped spans included. The quote walk steps
+            # quotes as well, so it records the next sequence itself.
+            close_at = self._close_seq if self._quoted_walk else self.n_ticks
+            self._close_session(session, close_at,
                                 actionable=self._is_actionable(session))
 
         self.blotter.final_position = self.position
         self.blotter.final_price = self.last_price
+
+    def _walk_quoted(self, batch, session: int, actionable: bool, seq: int) -> int:
+        """Trades and quotes in timestamp order. No span skipping.
+
+        At an equal timestamp the quote is first: it is the book the trade
+        prints against. Span skipping stays on the trades-only path, because a
+        resting order at the touch can fill without the trade price reaching
+        its limit, and the price search that skipping uses cannot see that.
+        """
+        quotes = self._quotes_for.get(session, [])
+        qi = ti = 0
+        n = len(batch)
+        while qi < len(quotes) or ti < n:
+            take_quote = ti >= n or (
+                qi < len(quotes) and quotes[qi].ts <= batch[ti].ts
+            )
+            seq += 1
+            if self._deadline and seq >= self._next_budget_seq:
+                self._next_budget_seq = seq + BUDGET_CHECK_EVERY_TICKS
+                self._check_budget()
+            if take_quote:
+                self._on_quote(quotes[qi], seq, actionable)
+                qi += 1
+            else:
+                src = batch[ti]
+                ti += 1
+                tick = Tick(src.ts, src.price, src.size, session, seq, src.side)
+                self.n_ticks += 1
+                self.n_stepped += 1
+                self._step(tick, actionable)
+        self._close_seq = seq + 1
+        return seq
+
+    def _on_quote(self, quote: Quote, seq: int, actionable: bool) -> None:
+        """Update the book, then tell a subscribed strategy. No fill here.
+
+        Fills happen on trades. A quote only moves the queue: a cancel, under
+        the model that credits one, or a join once an order is eligible.
+        """
+        eligible = [
+            order for order in self._working.values()
+            if seq >= order.eligible_from_seq
+        ]
+        for order in eligible:
+            if order.status is OrderStatus.PENDING:
+                order.status = OrderStatus.WORKING
+        observe = getattr(self.model, "observe", None)
+        if observe is not None:
+            observe(quote, eligible)
+        sync = getattr(self.model, "sync", None)
+        if sync is not None:
+            for order in eligible:
+                sync(order)
+        if not self._quote_subscribed:
+            return
+        event = QuoteEvent(
+            ts=quote.ts, seq=seq, bid_price=quote.bid_price,
+            bid_size=quote.bid_size, ask_price=quote.ask_price,
+            ask_size=quote.ask_size, session=quote.session,
+        )
+        price = self.last_price if self.last_price else quote.bid_price
+        self._dispatch(
+            "quote", event,
+            Tick(quote.ts, price, 0, quote.session, seq, None),
+            actionable,
+        )
 
     def _next_event(self, i: int, n: int, tsarr, price) -> int:
         """The next index at which anything can happen. Never later than the truth.
@@ -1111,6 +1220,12 @@ class Engine:
     # ---- order handling ----------------------------------------------------- #
     def _resolve(self, tick: Tick) -> list[FillEvent]:
         out: list[FillEvent] = []
+        if self._quoted_walk:
+            # Once per tick, not once per order. The queue model uses it to
+            # tell a later size drop from the trade it just saw.
+            note = getattr(self.model, "note_trade", None)
+            if note is not None:
+                note(tick)
         for order in list(self._working.values()):
             if tick.seq < order.eligible_from_seq:
                 continue  # the T+1 rule
@@ -1467,6 +1582,9 @@ class Engine:
         elif kind == "tick":
             ctx = TickContext(port, queue, tick=event, **common)
             handler = self.strategy.on_tick
+        elif kind == "quote":
+            ctx = QuoteContext(port, queue, quote=event, **common)
+            handler = self.strategy.on_quote
         elif kind == "fill":
             ctx = FillContext(port, queue, fill=event, **common)
             handler = self.strategy.on_fill

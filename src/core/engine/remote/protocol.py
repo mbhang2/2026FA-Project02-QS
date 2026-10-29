@@ -146,6 +146,7 @@ def decode(cls, row: list):
 bar_row = encode
 raw_tick_row = encode
 tick_row = encode
+quote_row = encode
 fill_row = encode
 lifecycle_row = encode
 order_row = encode

@@ -24,7 +24,7 @@ You are given one split per run and cannot ask for another. The holdout requires
 
 ## Subscriptions
 
-Declare them in `setup(ctx)`, once, before the walk starts. You cannot subscribe later: what data a strategy consumed is part of what it is, and it is recorded. Kinds: `time`, `tick`.
+Declare them in `setup(ctx)`, once, before the walk starts. You cannot subscribe later: what data a strategy consumed is part of what it is, and it is recorded. Kinds: `time`, `tick`, `quote`.
 
 ```python
 def setup(self, ctx):
@@ -36,6 +36,7 @@ def setup(self, ctx):
 
 - **Time bars** — any interval (`"250ms"`, `"30s"`, `"5m"`, `"1h"`, or nanoseconds as an int). Anchored to the session open, never to the wall clock, so the first bar of a session starts at its first tick. Empty intervals are skipped unless `emit_empty=True`.
 - **Tick events** — `ctx.subscribe("tick")` delivers every trade to `on_tick(ctx)` as `ctx.tick`. This is what volume bars, dollar bars, tick imbalance and every order-flow feature are built from. It is expensive: hundreds of thousands of callbacks per session, and the wall-clock budget makes that an honest cost rather than a hidden one.
+- **Quote events** — `ctx.subscribe("quote")` delivers each top of book to `on_quote(ctx)` as `ctx.quote`. This adapter has no quotes, and the engine refuses the subscription before the walk. The kind exists for a dataset that declares `has_quotes`; see `docs/design/market-making.md`.
 
 Subscribing to the same interval twice returns the same subscription. When several bars close at the same instant you get **one** `on_bars` callback carrying all of them, in `ctx.closed` — never one callback per timeframe, because then the order between them would be a hidden variable that changes results and is recorded nowhere.
 
@@ -122,7 +123,7 @@ The API is built so lookahead is hard to express rather than merely discouraged,
 
 The price source is **trades only**. There is no book and no quote feed, which rules out a family of features that would otherwise look available:
 
-- **No bid/ask, no BBO, no quotes** — so no spread, no mid, no microprice, no quoted-depth imbalance.
+- **No bid/ask, no BBO, no quotes on this adapter** — so no spread, no mid, no microprice, no quoted-depth imbalance. `ctx.subscribe("quote")` is refused here.
 - **No order book** — so no queue position, no depth, no book pressure, no cancel/replace flow.
 - **No vendor bars.** Bars are built here from trades, so session boundaries and anchoring live in reviewable code rather than in a vendor's convention.
 

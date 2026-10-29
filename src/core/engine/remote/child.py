@@ -80,8 +80,8 @@ from enum import Enum  # noqa: E402
 # brings in value types and constants -- no engine, no dataset, no scorer. The
 # walk asserts the module list stays exactly this short.
 from src.core.types import (  # noqa: E402
-    Bar, FillEvent, LifecycleEvent, OrderView, Side, Subscription, Tick,
-    TickEvent,
+    Bar, FillEvent, LifecycleEvent, OrderView, QuoteEvent, Side, Subscription,
+    Tick, TickEvent,
 )
 
 # The fitted protocol, spelled here rather than imported. This process must not
@@ -152,6 +152,7 @@ _decode_lifecycle = _typed_decoder(LifecycleEvent)
 _decode_order = _typed_decoder(OrderView)
 _decode_tick = _typed_decoder(TickEvent)
 _decode_raw_tick = _typed_decoder(Tick)
+_decode_quote = _typed_decoder(QuoteEvent)
 
 
 class Window:
@@ -324,6 +325,10 @@ class RemoteContext:
     @property
     def tick(self):
         return _decode_tick(self._m["tick"])
+
+    @property
+    def quote(self):
+        return _decode_quote(self._m["quote"])
 
     # -- reads derived from what was pushed -------------------------------- #
     def closed_ids(self):
@@ -590,6 +595,13 @@ def main() -> None:
             # no ctx and it may not trade, which is why `FIT_ARITY` maps it to 0
             # and why it is not in the `_snapshot` path with the others. Training
             # happens here, in the sandboxed child, under this process's rlimits.
+            #
+            # The replay environment, by file path, under a name that is not a
+            # `src.*` package. Importing it as `src.core.engine.remote.replay_env`
+            # would execute `src/core/engine/__init__.py` and put the engine in
+            # this process. A strategy trains by `import harness_replay`.
+            if "harness_replay" not in sys.modules:
+                sys.modules["harness_replay"] = _load_sibling("replay_env")
             try:
                 strategy.fit()
                 send(write_fd, {"reply": "done", "ok": True, "actions": []})

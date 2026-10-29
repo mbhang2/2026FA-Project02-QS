@@ -75,6 +75,9 @@ expensive -- hundreds of thousands of callbacks a session -- and the
 wall-clock budget is what makes that an honest cost rather than a hidden
 one.
 
+`ctx.subscribe("quote")` for every top-of-book update. Refused by the
+engine on a dataset that has no quotes, which the NQ adapter does not.
+
 #### `ctx.subscriptions() -> 'tuple[Subscription, ...]'`
 
 _(no docstring)_
@@ -243,6 +246,20 @@ Delivered on a fill. Present-instant state only, never a partial bar.
 ### Reads
 
 - **`ctx.event`**
+
+## `QuoteContext`
+
+*`on_quote(ctx)` — a top-of-book update, when subscribed*
+
+Delivered for every top-of-book update, when the strategy subscribed.
+
+Quotes are not trades. Nothing here is a fill, and a bar is not closed by
+one. The dataset that has no quotes refuses the subscription before the
+walk, so this context is never built there.
+
+### Reads
+
+- **`ctx.quote`** — The top of book at this instant.
 
 ---
 

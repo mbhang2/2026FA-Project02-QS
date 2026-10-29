@@ -519,7 +519,7 @@ class RemoteStrategy:
             raise StrategyRaised(reply.get("error", "the strategy raised"),
                                  reply.get("traceback", ""))
         if message.get("kind") in {"setup", "on_bars", "on_fill",
-                                   "on_lifecycle", "on_tick"}:
+                                   "on_lifecycle", "on_tick", "on_quote"}:
             self.completed_callbacks += 1
         try:
             return validate_actions(reply.get("actions", []))
@@ -605,6 +605,8 @@ class RemoteStrategy:
             message["event"] = encode(ctx.event)
         elif kind == "on_tick":
             message["tick"] = encode(ctx.tick)
+        elif kind == "on_quote":
+            message["quote"] = encode(ctx.quote)
 
         if self._sub_ids:
             message["sub_ids"] = self._sub_ids
@@ -692,6 +694,9 @@ class RemoteStrategy:
 
     def on_tick(self, ctx) -> None:
         self._apply(ctx, self._exchange(self._snapshot(ctx, "on_tick")))
+
+    def on_quote(self, ctx) -> None:
+        self._apply(ctx, self._exchange(self._snapshot(ctx, "on_quote")))
 
 
 @dataclass

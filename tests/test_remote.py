@@ -80,6 +80,7 @@ def test_the_surface_covers_every_public_context_member():
 @pytest.mark.parametrize("name", sorted(
     set(_surface.SURFACE["BaseContext"]) | set(_surface.SURFACE["FillContext"])
     | set(_surface.SURFACE["LifecycleContext"]) | set(_surface.SURFACE["TickContext"])
+    | set(_surface.SURFACE["QuoteContext"])
 ))
 def test_the_child_implements_every_run_time_member(name):
     """The failure the spike hit, as a test. `sub_id` reads like a scalar and is

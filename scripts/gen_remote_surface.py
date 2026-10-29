@@ -43,7 +43,7 @@ from src.core.engine import context as ctxmod  # noqa: E402
 OUT = REPO_ROOT / "src" / "core" / "engine" / "remote" / "_surface.py"
 
 CLASSES = ("SetupContext", "BaseContext", "BarContext", "FillContext",
-           "LifecycleContext", "TickContext")
+           "LifecycleContext", "TickContext", "QuoteContext")
 
 # Annotations that need no encoder: they are JSON already.
 PRIMITIVES = {"int", "float", "bool", "str", "Ts", "None"}
@@ -67,6 +67,7 @@ ENCODERS = {
     "dt.datetime": "datetime_row",
     "_ClosedBars": "closed_bars_row",
     "Tick": "raw_tick_row",
+    "QuoteEvent": "quote_row",
 }
 
 

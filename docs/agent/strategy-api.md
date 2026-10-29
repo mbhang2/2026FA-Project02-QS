@@ -405,8 +405,11 @@ still counts.
 
 You will reach for these. They do not exist.
 
-- **No bid, no ask, no BBO, no quotes.** The price source is trades only. That
-  rules out spread, mid, microprice and quoted-depth imbalance.
+- **No bid, no ask, no BBO, no quotes on the NQ adapter.** The price source is
+  trades only, and `ctx.subscribe("quote")` is refused before the walk. That
+  rules out spread, mid, microprice and quoted-depth imbalance. A dataset that
+  declares quotes delivers them to `on_quote(ctx)`; the queue fill models are
+  named in `docs/design/market-making.md`. A scored NQ campaign does not use them.
 - **No order book.** No queue position, no depth, no book pressure, no
   cancel/replace flow.
 - **No vendor bars.** Bars are built from trades by the engine, so the session

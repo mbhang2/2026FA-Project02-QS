@@ -334,6 +334,8 @@ exposed as a first-class output and is a natural committee input later.
 Quote-based branches slot in when `tbbo` arrives: a `Dataset` declares
 `DataCapabilities(has_trades, has_quotes, has_book)` and a fill model declares what it
 requires. Requiring a capability the dataset lacks raises at wiring time, not mid-run.
+The proposed quote-based model, and the data it needs, is in
+`docs/design/market-making.md` (design only).
 
 **Record the fill model and the data capabilities in every run's output.** If fills
 silently vary with available data, two ledger rows are not measuring the same thing.

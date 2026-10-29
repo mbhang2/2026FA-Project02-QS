@@ -397,6 +397,7 @@ shaping is the only additive class that provably preserves the optimal policy, a
 any other shaping term an agent invents can change which policy wins.
 
 That is a design problem worth its own document, after fitted strategies work.
+That document is `docs/design/rl-strategies.md` (2026-10-23, design only).
 
 ---
 

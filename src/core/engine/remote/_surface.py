@@ -42,6 +42,11 @@ TICKCONTEXT_COLLECTIONS = (('tick', 'tick_row'),)
 TICKCONTEXT_PULLS = ()
 TICKCONTEXT_ACTIONS = ()
 
+QUOTECONTEXT_SCALARS = ()
+QUOTECONTEXT_COLLECTIONS = (('quote', 'quote_row'),)
+QUOTECONTEXT_PULLS = ()
+QUOTECONTEXT_ACTIONS = ()
+
 SURFACE = {
     'SetupContext': ('dataset_name', 'subscribe', 'subscriptions', 'ticks', 'train_bars'),
     'BaseContext': ('actionable', 'assets_held', 'average_entry_price', 'average_entry_price_in', 'bars', 'buy', 'cancel', 'cancel_all', 'close', 'closed', 'closed_ids', 'equity', 'fills', 'find_orders', 'history', 'last_price', 'modify', 'now', 'options', 'position', 'position_in', 'realized_pnl', 'realized_pnl_in', 'sell', 'session', 'session_end', 'session_start', 'sub_id', 'ticks', 'ts', 'unrealized_pnl', 'working_order_ids', 'working_orders'),
@@ -49,6 +54,7 @@ SURFACE = {
     'FillContext': ('average_entry_price', 'fill', 'position', 'realized_pnl'),
     'LifecycleContext': ('event',),
     'TickContext': ('tick',),
+    'QuoteContext': ('quote',),
 }
 
-ENCODERS = {'Bar': 'bar_row', 'TickEvent': 'tick_row', 'FillEvent': 'fill_row', 'LifecycleEvent': 'lifecycle_row', 'OrderView': 'order_row', 'Subscription': 'subscription_row', 'datetime': 'datetime_row', 'dt.datetime': 'datetime_row', '_ClosedBars': 'closed_bars_row', 'Tick': 'raw_tick_row', 'OptionQuote': 'option_quote_row'}
+ENCODERS = {'Bar': 'bar_row', 'TickEvent': 'tick_row', 'FillEvent': 'fill_row', 'LifecycleEvent': 'lifecycle_row', 'OrderView': 'order_row', 'Subscription': 'subscription_row', 'datetime': 'datetime_row', 'dt.datetime': 'datetime_row', '_ClosedBars': 'closed_bars_row', 'Tick': 'raw_tick_row', 'OptionQuote': 'option_quote_row', 'QuoteEvent': 'quote_row'}

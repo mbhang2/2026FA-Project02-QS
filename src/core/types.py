@@ -137,6 +137,23 @@ class Tick:
 
 
 @dataclass(frozen=True, slots=True)
+class Quote:
+    """Top of book at one instant. Present only when the dataset declares quotes.
+
+    Sizes are displayed size at that price. This is not a depth level and not a
+    queue position: a strategy learns its place in the queue from fills, and the
+    fill model is what decides it. See `docs/design/market-making.md`.
+    """
+
+    ts: Ts
+    bid_price: float
+    bid_size: int
+    ask_price: float
+    ask_size: int
+    session: int
+
+
+@dataclass(frozen=True, slots=True)
 class DataCapabilities:
     """What a dataset can support. A fill model declares what it requires, and
     the mismatch is caught at wiring time rather than mid-run."""
@@ -171,7 +188,7 @@ class DataCapabilities:
         }
 
 
-SUBSCRIPTION_KINDS = ("time", "tick")
+SUBSCRIPTION_KINDS = ("time", "tick", "quote")
 
 
 @dataclass(frozen=True, slots=True)
@@ -318,6 +335,23 @@ class TickEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class QuoteEvent:
+    """One top-of-book update, as `on_quote(ctx)` delivers it.
+
+    The same split as `Tick` versus `TickEvent`: the dataset yields `Quote`, the
+    strategy sees `QuoteEvent`, and the sequence number is the engine's.
+    """
+
+    ts: Ts
+    seq: int
+    bid_price: float
+    bid_size: int
+    ask_price: float
+    ask_size: int
+    session: int
+
+
+@dataclass(frozen=True, slots=True)
 class Fill:
     price: float
     size: int
@@ -428,6 +462,17 @@ class Order:
     # option's quoted touch, and `_apply_fill` asks `_state_for` of it to decide
     # which book the position lands in.
     asset: str = DEFAULT_ASSET
+    # Contracts displayed ahead of a resting limit, once a quote-based fill
+    # model has joined it to a price. `None` means it is not at the touch.
+    # Trade-based models never read it. See `docs/design/market-making.md`.
+    #
+    # **Per order, not per asset, and that is a real limitation after the
+    # multi-asset merge.** The queue models key their state by `order_id` and
+    # hold ONE top of book, so two assets quoted at once would share it. No
+    # quote dataset exists for a second asset yet, and options resolve through
+    # `_resolve_option` rather than a queue model, so the paths do not meet
+    # today. `docs/design/market-making.md` carries the warning.
+    queue_ahead: float | None = None
 
     @property
     def remaining(self) -> int:
@@ -861,6 +906,15 @@ class TickStrategy(Strategy, Protocol):
     """A strategy that declared `ctx.subscribe("tick")`, and so must handle them."""
 
     def on_tick(self, ctx: Any) -> None: ...
+
+
+class QuoteStrategy(Strategy, Protocol):
+    """A strategy that declared `ctx.subscribe("quote")`, and so must handle them.
+
+    Refused at wiring on a dataset that has no quotes. The NQ adapter is one.
+    """
+
+    def on_quote(self, ctx: Any) -> None: ...
 
 
 class FittedStrategy(Strategy, Protocol):

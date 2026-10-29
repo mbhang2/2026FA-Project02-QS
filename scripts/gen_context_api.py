@@ -29,6 +29,7 @@ CLASSES = [
     (ctxmod.BarContext, "`on_bars(ctx)` — one or more subscribed bars closed"),
     (ctxmod.FillContext, "`on_fill(ctx)` — an order filled"),
     (ctxmod.LifecycleContext, "`on_lifecycle(ctx)` — accept, reject, expiry, session"),
+    (ctxmod.QuoteContext, "`on_quote(ctx)` — a top-of-book update, when subscribed"),
 ]
 
 

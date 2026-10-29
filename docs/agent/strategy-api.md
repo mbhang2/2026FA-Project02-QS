@@ -626,12 +626,16 @@ still counts.
 
 You will reach for these. They do not exist.
 
-- **No bid, no ask, no BBO, no quotes — on the UNDERLYING.** Its price source
-  is trades only, which rules out spread, mid, microprice and quoted-depth
-  imbalance for the instrument you trade with `ctx.buy(1)`. This says nothing
-  about `ctx.options()`, which is a quoted surface and does carry two-sided
-  prices with sizes; see §5a. A dataset without an options channel raises from
-  that call rather than returning an empty surface.
+- **No bid, no ask, no BBO, no quotes on the NQ adapter — and that is about
+  the UNDERLYING.** Its price source is trades only, and `ctx.subscribe("quote")`
+  is refused before the walk, which rules out spread, mid, microprice and
+  quoted-depth imbalance for the instrument you trade with `ctx.buy(1)`.
+  - This says nothing about `ctx.options()`, which IS a quoted surface and does
+    carry two-sided prices with sizes; see §5a. A dataset without an options
+    channel raises from that call rather than returning an empty surface.
+  - A dataset that declares quotes delivers them to `on_quote(ctx)`, and the
+    queue fill models are named in `docs/design/market-making.md`. **No NQ
+    dataset declares quotes, so a scored NQ campaign does not use them.**
 - **No order book.** No queue position, no depth, no book pressure, no
   cancel/replace flow.
 - **No vendor bars.** Bars are built from trades by the engine, so the session

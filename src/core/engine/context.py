@@ -53,6 +53,7 @@ from ..types import (
     Side,
     Submit,
     Subscription,
+    QuoteEvent,
     Tick,
     TickEvent,
     TimeInForce,
@@ -755,9 +756,32 @@ def canonical_sub_id(sub: str | Subscription) -> str:
     s = str(sub).strip()
     if s.lower() in ("tick", "ticks"):
         return "tick"
+    if s.lower() in ("quote", "quotes"):
+        return "quote"
     if ":" in s:
         return s
     return f"time:{parse_interval(s)}"
+
+
+class QuoteContext(BaseContext):
+    """Delivered for every top-of-book update, when the strategy subscribed.
+
+    Quotes are not trades. Nothing here is a fill, and a bar is not closed by
+    one. The dataset that has no quotes refuses the subscription before the
+    walk, so this context is never built there.
+    """
+
+    __slots__ = ("_quote",)
+
+    def __init__(self, port, queue, *, quote: QuoteEvent, **kw):
+        super().__init__(port, queue, **kw)
+        self._quote = quote
+
+    @property
+    def quote(self) -> QuoteEvent:
+        """The top of book at this instant."""
+        self._check()
+        return self._quote
 
 
 class TickContext(BaseContext):
@@ -911,10 +935,16 @@ class SetupContext:
         expensive -- hundreds of thousands of callbacks a session -- and the
         wall-clock budget is what makes that an honest cost rather than a hidden
         one.
+
+        `ctx.subscribe("quote")` for every top-of-book update. Refused by the
+        engine on a dataset that has no quotes, which the NQ adapter does not.
         """
         self._check()
-        if isinstance(interval, str) and interval.strip().lower() in ("tick", "ticks"):
+        spelling = interval.strip().lower() if isinstance(interval, str) else ""
+        if spelling in ("tick", "ticks"):
             sub = Subscription(kind="tick", emit_empty=emit_empty)
+        elif spelling in ("quote", "quotes"):
+            sub = Subscription(kind="quote", emit_empty=emit_empty)
         else:
             sub = Subscription(interval_ns=parse_interval(interval), emit_empty=emit_empty)
         for existing in self._subs:

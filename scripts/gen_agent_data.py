@@ -242,6 +242,11 @@ def render() -> str:
         "tick imbalance and every order-flow feature are built from. It is "
         "expensive: hundreds of thousands of callbacks per session, and the "
         "wall-clock budget makes that an honest cost rather than a hidden one.",
+        "- **Quote events** — `ctx.subscribe(\"quote\")` delivers each top of "
+        "book to `on_quote(ctx)` as `ctx.quote`. This adapter has no quotes, "
+        "and the engine refuses the subscription before the walk. The kind "
+        "exists for a dataset that declares `has_quotes`; see "
+        "`docs/design/market-making.md`.",
         "",
         "Subscribing to the same interval twice returns the same subscription. "
         "When several bars close at the same instant you get **one** `on_bars` "
@@ -396,8 +401,9 @@ def render() -> str:
         "",
         "- **No bid/ask, no BBO, no quotes on the underlying** — so no spread, "
         "no mid, no microprice, no quoted-depth imbalance for the instrument "
-        "`ctx.buy(1)` trades. The options surface above is a separate channel "
-        "and is quoted; this bullet is not about it.",
+        "`ctx.buy(1)` trades, and `ctx.subscribe(\"quote\")` is refused on this "
+        "adapter. The options surface above is a separate channel and is "
+        "quoted; this bullet is not about it.",
         "- **No order book** — so no queue position, no depth, no book pressure, "
         "no cancel/replace flow.",
         "- **No vendor bars.** Bars are built here from trades, so session "

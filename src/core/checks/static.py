@@ -45,7 +45,7 @@ from pathlib import Path
 # against that Protocol by a test rather than restated by hand here -- a list
 # that drifts from the Protocol is a check that passes the wrong file.
 REQUIRED_CALLBACKS = ("setup", "on_bars", "on_fill", "on_lifecycle")
-OPTIONAL_CALLBACKS = ("on_tick",)
+OPTIONAL_CALLBACKS = ("on_tick", "on_quote")
 
 # What `run.load_strategy()` looks for, in its order.
 STRATEGY_NAMES = ("STRATEGY", "Strategy", "MomentumStrategy")
@@ -269,5 +269,10 @@ def static_check(path: Path, source: str | None = None) -> StaticReport:
         report.add(
             "E051",
             "subscribes to ticks but does not define on_tick(self, ctx)",
+        )
+    if any(s in ("quote", "quotes") for s in report.subscribes) and "on_quote" not in methods:
+        report.add(
+            "E052",
+            "subscribes to quotes but does not define on_quote(self, ctx)",
         )
     return report

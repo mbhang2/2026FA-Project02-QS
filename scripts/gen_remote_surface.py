@@ -43,7 +43,7 @@ from src.core.engine import context as ctxmod  # noqa: E402
 OUT = REPO_ROOT / "src" / "core" / "engine" / "remote" / "_surface.py"
 
 CLASSES = ("SetupContext", "BaseContext", "BarContext", "FillContext",
-           "LifecycleContext", "TickContext")
+           "LifecycleContext", "TickContext", "QuoteContext")
 
 # Annotations that need no encoder: they are JSON already.
 PRIMITIVES = {"int", "float", "bool", "str", "Ts", "None"}
@@ -72,6 +72,9 @@ ENCODERS = {
     # surface, which is the cost of the surface being a cross-section rather
     # than a stream and is why a strategy should read it per bar, not per tick.
     "OptionQuote": "option_quote_row",
+    # Top of book, as `on_quote(ctx)` delivers it. A stream, unlike the options
+    # cross-section above: one row per update.
+    "QuoteEvent": "quote_row",
 }
 
 

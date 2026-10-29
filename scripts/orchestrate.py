@@ -249,7 +249,13 @@ def main() -> int:
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
         a.out.write_text(json.dumps(body, indent=2, default=str) + "\n")
-        print(f"\nwrote {a.out.relative_to(ROOT)}")
+        # `relative_to` raises when --out points outside the repo, which a
+        # harness writing to a scratch directory legitimately does.
+        try:
+            shown = a.out.relative_to(ROOT)
+        except ValueError:
+            shown = a.out
+        print(f"\nwrote {shown}")
     return 0
 
 

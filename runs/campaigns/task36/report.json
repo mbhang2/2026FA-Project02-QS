@@ -2,7 +2,7 @@
   "arms": {
     "history": {
       "campaign_id": "task36-history",
-      "record_digest": "beeb0a2a58b3e1844d0f39b4f2f1c268d0460a71839d4b90cb4c314d77a115ed",
+      "record_digest": "6f919c174d5a75713c62fe8da7877ddda3721722b995a02288a6ece3efc5dfff",
       "record_tampered": false,
       "budget": 100,
       "q": 0.05,
@@ -1394,12 +1394,12 @@
         "t2_failure_rate_first_half": 0.02,
         "t2_failure_rate_second_half": 0.0
       },
-      "record_digest_now": "beeb0a2a58b3e1844d0f39b4f2f1c268d0460a71839d4b90cb4c314d77a115ed",
-      "record_digest_at_write": "beeb0a2a58b3e1844d0f39b4f2f1c268d0460a71839d4b90cb4c314d77a115ed"
+      "record_digest_now": "6f919c174d5a75713c62fe8da7877ddda3721722b995a02288a6ece3efc5dfff",
+      "record_digest_at_write": "6f919c174d5a75713c62fe8da7877ddda3721722b995a02288a6ece3efc5dfff"
     },
     "control": {
       "campaign_id": "task36-control",
-      "record_digest": "3b279f349e69f50d08afb6fbcb32e09ea9366fb7e8b10c7d63571a1f893df3a0",
+      "record_digest": "72eb556e39c65a056a3ba1e1bb9daf206ba116287fb63db5122c6841a58872b9",
       "record_tampered": false,
       "budget": 100,
       "q": 0.05,
@@ -2791,8 +2791,8 @@
         "t2_failure_rate_first_half": 0.02,
         "t2_failure_rate_second_half": 0.0
       },
-      "record_digest_now": "3b279f349e69f50d08afb6fbcb32e09ea9366fb7e8b10c7d63571a1f893df3a0",
-      "record_digest_at_write": "3b279f349e69f50d08afb6fbcb32e09ea9366fb7e8b10c7d63571a1f893df3a0"
+      "record_digest_now": "72eb556e39c65a056a3ba1e1bb9daf206ba116287fb63db5122c6841a58872b9",
+      "record_digest_at_write": "72eb556e39c65a056a3ba1e1bb9daf206ba116287fb63db5122c6841a58872b9"
     }
   },
   "written_at": "2026-09-15T05:24:13+00:00",

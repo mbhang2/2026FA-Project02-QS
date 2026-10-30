@@ -153,9 +153,42 @@ _HIST_CACHE: dict[str, bool] = {}
 _FP_CACHE: dict[str, str | None] = {}
 
 
+# **Commit ids from before the public release.** The repository was published
+# from a history rewritten to remove licensed market data, generated output and
+# a private endpoint (`docs/PUBLIC_RELEASE.md`). That gives every commit a new
+# id, while the ledgers -- correctly -- still name the commits the trials ran
+# at. `docs/release/commit-map.tsv` is git-filter-repo's own old -> new map,
+# published so those ids still resolve. Rows are never edited; the id is
+# translated at the moment it is looked up.
+COMMIT_MAP = REPO_ROOT / "docs" / "release" / "commit-map.tsv"
+_COMMIT_MAP: dict[str, str] | None = None
+
+
+def resolve_sha(sha: str) -> str:
+    """The commit `sha` names in this repository, translating a pre-release id."""
+    global _COMMIT_MAP
+    if not sha:
+        return sha
+    if _COMMIT_MAP is None:
+        _COMMIT_MAP = {}
+        if COMMIT_MAP.exists():
+            for line in COMMIT_MAP.read_text().splitlines():
+                old, _, new = line.partition("\t")
+                if old and new:
+                    _COMMIT_MAP[old] = new
+    if sha in _COMMIT_MAP:
+        return _COMMIT_MAP[sha]
+    if len(sha) < 40:
+        hits = [new for old, new in _COMMIT_MAP.items() if old.startswith(sha)]
+        if len(hits) == 1:
+            return hits[0]
+    return sha
+
+
 def sha_is_in_history(sha: str) -> bool:
     if not sha:
         return False
+    sha = resolve_sha(sha)
     if sha not in _HIST_CACHE:
         _HIST_CACHE[sha] = subprocess.run(
             ["git", "merge-base", "--is-ancestor", sha, "HEAD"],
@@ -171,6 +204,7 @@ def code_fingerprint_at(sha: str) -> str | None:
     this runs against a working tree someone is using, and a check that moves
     HEAD to answer a question is a check that can lose work.
     """
+    sha = resolve_sha(sha)
     if sha in _FP_CACHE:
         return _FP_CACHE[sha]
     _FP_CACHE[sha] = result = _code_fingerprint_at_uncached(sha)

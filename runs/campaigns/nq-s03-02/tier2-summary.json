@@ -144,8 +144,8 @@
     "dataset": "nq-trades",
     "profile": "nq-train",
     "q": 0.05,
-    "record_digest": "998f0a502c2e2b5f0ac58b8e3833dc7f2be52c2925b077383c207ce795c469ce",
-    "record_digest_now": "998f0a502c2e2b5f0ac58b8e3833dc7f2be52c2925b077383c207ce795c469ce",
+    "record_digest": "61c52989d7c33646b8737122263ea261a54f960ee3819a7f858864795accc012",
+    "record_digest_now": "61c52989d7c33646b8737122263ea261a54f960ee3819a7f858864795accc012",
     "record_tampered": false,
     "split": "train",
     "stopping_rule": "fixed budget; no early stop on any observed result",
@@ -375,7 +375,7 @@
     },
     "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
   },
-  "digest": "143891bf2e21a7ca14847f2f6f054539967ea501f4d0f901565b1ed426193312",
+  "digest": "d145c6b0c6b17774bda2e20abf258bb8e6eec4de13a5a800c42c7a76cccd8c09",
   "gate": {
     "accepted_any": false,
     "at_floor": false,

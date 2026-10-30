@@ -42,7 +42,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-SCOPE_FILES = ("CLAUDE.md", "README.md", "AGENTS.md")
+SCOPE_FILES = ("README.md",)
 SCOPE_DIRS = ("docs/design", "docs/agent", "docs/setup", "docs/datasets",
               "docs/plans")
 
@@ -83,6 +83,20 @@ ABSENT_BY_DESIGN: dict[str, str] = {
         "designed, not built. The manual-deposit path for SSRN, which has no "
         "public API and whose terms do not permit scraping "
         "(`docs/design/paper-retrieval.md` stage 0).",
+    "data/cache/":
+        "a local cache, git-ignored and rebuilt from R2 by `scripts/warm_cache.py`. "
+        "It holds session arrays derived from licensed Databento data, so it "
+        "is never committed and is absent from every clone by design.",
+    "secrets/r2.env":
+        "credentials a teammate writes by following `docs/setup/R2_ACCESS.md`; "
+        "`secrets/*` is git-ignored with only `.gitkeep` excepted. Cited so the "
+        "setup can be followed, absent so it cannot be leaked.",
+    "secrets/rclone.conf":
+        "same as `secrets/r2.env`: a local credential file, never committed.",
+    "runs/fills/":
+        "per-trial fill logs. They were stored in Git LFS and are not carried "
+        "into the public repository; each campaign's `ledger.jsonl` keeps the "
+        "fill-log digest, so the record of what was scored survives.",
     "config/calendar.yaml":
         "the name the v4 plan used, quoted in `docs/datasets/nq-es-qqq.md` as "
         "history. The file is `config/calendars/nq-trades.yaml` and always was "
@@ -126,6 +140,11 @@ def _citations(text: str) -> set[str]:
         # `config/hypotheses/<name>.md`, `docs/reviews/taskNN/`,
         # `candidates/{id}/train.py`: a shape, not a path.
         if _PLACEHOLDER.search(token):
+            continue
+        # Task briefs were working files for the team's coding agents and are
+        # not part of the public repository; standing docs still cite them as
+        # history, the same way `docs/reviews/**` does.
+        if token.startswith("docs/tasks/"):
             continue
         found.add(token)
     return found
@@ -214,9 +233,11 @@ def test_the_step_7_claim_agrees_across_documents():
     """CLAUDE.md said the committee tier did not exist while loop.md said it did
     and named `audit/`. They disagreed for eight days and shipped that way into
     PR #1."""
-    claude = (REPO_ROOT / "CLAUDE.md").read_text()
     loop = (REPO_ROOT / "docs" / "design" / "loop.md").read_text()
-    assert "does not exist" not in claude.split("committee tier")[1][:200], (
-        "CLAUDE.md says the committee tier does not exist; loop.md says it is "
-        "`audit/` and has been since Task 42")
+    claude_md = REPO_ROOT / "CLAUDE.md"   # local-only; absent from the public repo
+    if claude_md.exists():
+        claude = claude_md.read_text()
+        assert "does not exist" not in claude.split("committee tier")[1][:200], (
+            "CLAUDE.md says the committee tier does not exist; loop.md says it "
+            "is `audit/` and has been since Task 42")
     assert "step 7" in loop

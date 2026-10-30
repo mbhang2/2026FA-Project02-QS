@@ -396,8 +396,8 @@ def test_the_narrow_archive_hashes_exactly_what_the_whole_tree_did():
 
     def whole_tree(sha):
         import tempfile
-        archive = subprocess.run(["git", "archive", sha], cwd=REPO_ROOT,
-                                 capture_output=True)
+        archive = subprocess.run(["git", "archive", ledger_check.resolve_sha(sha)],
+                                 cwd=REPO_ROOT, capture_output=True)
         assert archive.returncode == 0, sha
         with tempfile.TemporaryDirectory() as tmp:
             assert subprocess.run(["tar", "-x", "-C", tmp], input=archive.stdout,

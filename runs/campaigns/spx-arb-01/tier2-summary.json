@@ -128,8 +128,8 @@
     "dataset": "spx-options-planted",
     "profile": "spx-options-train",
     "q": 0.05,
-    "record_digest": "6b41064be2da9f825284f5d40cd8eab9a4f9d98c26147e129c77f4da1260ce18",
-    "record_digest_now": "6b41064be2da9f825284f5d40cd8eab9a4f9d98c26147e129c77f4da1260ce18",
+    "record_digest": "c280af92f0ea566d2f42767f68d809b3bc11b12b13382711af928b2d888a01ce",
+    "record_digest_now": "c280af92f0ea566d2f42767f68d809b3bc11b12b13382711af928b2d888a01ce",
     "record_tampered": false,
     "split": "train",
     "stopping_rule": "fixed budget; no early stop on any observed result",
@@ -659,7 +659,7 @@
     },
     "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
   },
-  "digest": "d0dc25163178669c7f456f0b68833fe78ef520399dc01206c0483bf16cdd2447",
+  "digest": "becfa1b9d14ae84abf4944470f884021e55ad58230ac3ee93e882c39a8743f8e",
   "gate": {
     "accepted_any": false,
     "at_floor": false,

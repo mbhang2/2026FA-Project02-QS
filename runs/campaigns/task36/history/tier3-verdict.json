@@ -40,6 +40,6 @@
   ],
   "schema": "tier3-audit-verdict/1",
   "tier2_gate_verdict": "REJECT",
-  "tier2_summary_digest": "2276bd7af8cdda593bf6d5a0019ec7eb7a34970a184085a21dfa6d28e0cf29b7",
+  "tier2_summary_digest": "42728b5a951865c448111ce4784363ef67755f72208177cadc3d73bf3577a2b0",
   "verdict": "CANNOT_TELL"
 }

@@ -115,8 +115,8 @@
     "dataset": "synthetic",
     "profile": "campaign",
     "q": 0.05,
-    "record_digest": "beeb0a2a58b3e1844d0f39b4f2f1c268d0460a71839d4b90cb4c314d77a115ed",
-    "record_digest_now": "beeb0a2a58b3e1844d0f39b4f2f1c268d0460a71839d4b90cb4c314d77a115ed",
+    "record_digest": "6f919c174d5a75713c62fe8da7877ddda3721722b995a02288a6ece3efc5dfff",
+    "record_digest_now": "6f919c174d5a75713c62fe8da7877ddda3721722b995a02288a6ece3efc5dfff",
     "record_tampered": false,
     "split": "train",
     "stopping_rule": "fixed budget of 100; no early stop on any observed result, no extension if the last trial looks promising",
@@ -1146,7 +1146,7 @@
     },
     "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
   },
-  "digest": "2276bd7af8cdda593bf6d5a0019ec7eb7a34970a184085a21dfa6d28e0cf29b7",
+  "digest": "42728b5a951865c448111ce4784363ef67755f72208177cadc3d73bf3577a2b0",
   "gate": {
     "accepted_any": false,
     "at_floor": false,

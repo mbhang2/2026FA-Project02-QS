@@ -146,3 +146,21 @@ runs/current.weights
 # which is the honest arrangement: we hold what we were allowed to download,
 # and we redistribute none of it.
 data/papers/text/
+
+# Guards for the public repo: market data and bulky run output were purged from
+# history before publishing, so keep them from coming back.
+*.npz
+*.npy
+*.dbn
+*.zst
+*.parquet
+*.pkl
+**/market_data/raw/*
+!**/market_data/raw/placeholder.csv
+runs/campaigns/**/fills/
+docs/reviews/*/_sources/
+# Local coding-agent instruction and task files stay out of the public repo.
+/CLAUDE.md
+/AGENTS.md
+docs/tasks/
+.claude/

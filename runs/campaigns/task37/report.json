@@ -2,7 +2,7 @@
   "arms": {
     "s030": {
       "campaign_id": "task37-s030",
-      "record_digest": "76575c8ada39b03363d9b58d83dabba417aaab8ec91555211bc969cde42f0089",
+      "record_digest": "3e01b17be708e90a6d8bb6497de7872eb9df7843bb1fc4ad4c166626fa88bc70",
       "record_tampered": false,
       "budget": 100,
       "q": 0.05,
@@ -1396,7 +1396,7 @@
         "repair_attempts": 1,
         "blocked_proposals": 0
       },
-      "record_digest_now": "76575c8ada39b03363d9b58d83dabba417aaab8ec91555211bc969cde42f0089",
+      "record_digest_now": "3e01b17be708e90a6d8bb6497de7872eb9df7843bb1fc4ad4c166626fa88bc70",
       "best_candidate": {
         "index": 63,
         "score": 1.5421373099515634,
@@ -1405,7 +1405,7 @@
     },
     "s050": {
       "campaign_id": "task37-s050",
-      "record_digest": "045ae77bbaa1e7a9d45de36eb96d59201ea343e0fdbd4e88e2b584e667f025a1",
+      "record_digest": "ee5f3db485a4ba1a8ce285f5eda7587c6e8d52e3283da03d2b93d805ded410d4",
       "record_tampered": false,
       "budget": 100,
       "q": 0.05,
@@ -2806,7 +2806,7 @@
         "repair_attempts": 1,
         "blocked_proposals": 0
       },
-      "record_digest_now": "045ae77bbaa1e7a9d45de36eb96d59201ea343e0fdbd4e88e2b584e667f025a1",
+      "record_digest_now": "ee5f3db485a4ba1a8ce285f5eda7587c6e8d52e3283da03d2b93d805ded410d4",
       "best_candidate": {
         "index": 79,
         "score": 10.225507090905834,

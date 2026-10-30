@@ -1,5 +1,5 @@
 {
-  "digest": "83b9630c2ff9ecd86b925984848a50c8f24aa981a97a8eaae6cc2ea1750852bf",
+  "digest": "3ca027f8a248e59067a34f358195582c76103b2cfc4256e5080bb5c429d17ec7",
   "record": {
     "agent": "src.core.loop.llm.LLMAgent",
     "agent_config": {

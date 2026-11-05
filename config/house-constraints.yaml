@@ -1,0 +1,30 @@
+# House constraints: the operating limits this desk usually fixes, added to a
+# hypothesis ONLY when `scripts/write_hypothesis.py --house` asks for them.
+#
+# The writer is told not to invent limits (config/prompts/question-distil.md);
+# these are the researcher's, inserted word for word into the file's
+# "What is NOT yours to choose" section and into its constraints file. Edit them
+# here -- the sentence (`says`) is what the strategy agent reads, and the check
+# is what holds it to that sentence. Same schema as a constraints file
+# (src/core/loop/fidelity.py).
+#
+# 16:00 CT is the end of the CME session; regular trading hours close at 15:15.
+schema: constraints/1
+clock: America/Chicago
+constraints:
+  - id: house-entry-window
+    says: "Entries are placed after 08:30 CT and before 16:00 CT."
+    check: entry_window
+    start: "08:30"
+    end: "16:00"
+  - id: house-flat-by
+    says: "Every position is flat by 16:00 CT."
+    check: flat_by
+    time: "16:00"
+  - id: house-no-overnight
+    says: "Every position is closed in the session it opened."
+    check: no_overnight
+  - id: house-one-contract
+    says: "At most 1 contract is held at a time."
+    check: max_position
+    value: 1

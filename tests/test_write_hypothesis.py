@@ -99,12 +99,13 @@ def test_emitted_constraints_are_checked_against_the_markdown(wh):
     md = _md()
     good = {"constraints": [{"id": "one-session", "says":
                              "Positions are opened and closed within one session.",
-                             "check": "no_overnight"}],
-            "judged": [{"id": "fades", "says": "The strategy trades against the move."}]}
+                             "check": "no_overnight", "from": "question"}],
+            "judged": [{"id": "fades", "says": "The strategy trades against the move.",
+                        "from": "question"}]}
     y = wh.constraints_yaml("cvd-divergence", good)
     assert wh.constraint_findings(y, md) == []
     bad = {"constraints": [{"id": "x", "says": "Never hold overnight.",
-                            "check": "no_overnight"}]}
+                            "check": "no_overnight", "from": "question"}]}
     assert wh.constraint_findings(wh.constraints_yaml("s", bad), md)
     assert wh.constraint_findings(wh.constraints_yaml("s", {}), md) == []
 
@@ -128,7 +129,7 @@ def test_the_writer_repairs_then_returns_a_clean_file(wh):
     leaky = _md("The result must be statistically significant.")
     client = _Client(_reply(leaky), _reply(_md(), constraints=[
         {"id": "one-session", "says": "Positions are opened and closed within one session.",
-         "check": "no_overnight"}]))
+         "check": "no_overnight", "from": "question"}]))
     got = wh.write(client, "I want a trend reversal strategy that looks into CVD", "", [])
     assert got["slug"] == "cvd-divergence-reversal"
     assert "no_overnight" in got["constraints_yaml"]
@@ -146,7 +147,8 @@ def test_the_writer_refuses_a_file_that_never_passes(wh):
 
 
 def test_bad_constraints_are_dropped_not_the_question(wh):
-    bad = [{"id": "x", "says": "Not in the file.", "check": "no_overnight"}]
+    bad = [{"id": "x", "says": "Not in the file.", "check": "no_overnight",
+            "from": "question"}]
     client = _Client(*[_reply(_md(), constraints=bad)] * 10)
     got = wh.write(client, "q", "", [])
     assert got["markdown"].startswith("# ") and got["constraints_yaml"] == ""
@@ -191,3 +193,75 @@ def test_sections_are_matched_by_meaning_not_spelling(wh, heading):
         "## What is yours to choose", "## What is yours to decide").replace(
         "## What is NOT yours to choose", "## What is NOT yours")
     assert wh.assess(md)["findings"] == []
+
+
+# --------------------------------------------------------------------------- #
+# the writer fixes only what the researcher fixed
+# --------------------------------------------------------------------------- #
+def test_a_limit_the_researcher_did_not_ask_for_is_dropped(wh):
+    client = _Client(_reply(_md(), constraints=[
+        {"id": "one-session", "says": "Positions are opened and closed within one session.",
+         "check": "no_overnight", "from": "inferred"}],
+        judged=[{"id": "fades", "says": "The strategy trades against the move.",
+                 "from": "question"}]))
+    got = wh.write(client, "q", "", [])
+    assert got["dropped"] == ["one-session"]
+    assert "no_overnight" not in got["constraints_yaml"]
+    assert "fades" in got["constraints_yaml"]
+
+
+def test_a_constraint_with_no_origin_is_not_the_researchers(wh):
+    kept, dropped = wh.split_by_origin([{"id": "a", "from": "draft"}, {"id": "b"},
+                                        {"id": "c", "from": "house"}])
+    assert [k["id"] for k in kept] == ["a"] and "from" not in kept[0]
+    assert [d["id"] for d in dropped] == ["b", "c"], "house comes from the file, never the model"
+
+
+def test_the_house_file_is_valid_and_its_sentences_are_inserted_verbatim(wh):
+    house = wh.load_house()
+    md = wh.add_house(_md(), house)
+    for h in house:
+        assert h["says"] in md
+    # inside the NOT-yours section, before the next heading
+    section = md.split("## What is NOT yours to choose", 1)[1].split("\n## ", 1)[0]
+    assert all(h["says"] in section for h in house)
+    assert wh.add_house(md, house) == md, "idempotent"
+    y = wh.constraints_yaml("cvd", {}, house)
+    assert wh.constraint_findings(y, md) == []
+
+
+def test_house_constraints_reach_the_written_file(wh):
+    client = _Client(_reply(_md()))
+    got = wh.write(client, "q", "", [], house=wh.load_house())
+    assert got["house"] and "house-one-contract" in got["constraints_yaml"]
+    assert "At most 1 contract is held at a time." in got["markdown"]
+
+
+def test_the_writer_is_told_not_to_set_limits():
+    p = (ROOT / "config" / "prompts" / "question-distil.md").read_text()
+    assert "Fix only what the researcher fixed" in p
+    assert '"from"' in p
+
+
+def test_one_bad_constraint_drops_itself_not_the_others_or_the_review(wh, monkeypatch):
+    seen = []
+    monkeypatch.setattr(wh.dp, "_review_seat", lambda md: (seen.append(md), ([], "NO_OBJECTION"))[1])
+    reply = _reply(_md(), constraints=[
+        {"id": "instrument-is-nq", "says": "The strategy trades against the move.",
+         "check": "code_uses", "any_of": ["NQ index"], "from": "question"},
+        {"id": "one-session", "says": "Positions are opened and closed within one session.",
+         "check": "no_overnight", "from": "question"}])
+    client = _Client(reply)
+    got = wh.write(client, "q", "", [])
+    assert len(client.asked) == 1, "a bad constraint is not a reason to rewrite"
+    assert seen, "the review seat still reads the question"
+    assert "one-session" in got["constraints_yaml"]
+    assert "instrument-is-nq" not in got["constraints_yaml"]
+
+
+def test_a_judged_requirement_filed_as_a_constraint_is_moved(wh):
+    out = {"constraints": [{"id": "div", "says": "The strategy trades against the move.",
+                            "check": "judged", "from": "question"}]}
+    fixed, why = wh.valid_items(out, _md())
+    assert why == [] and fixed["constraints"] == []
+    assert [j["id"] for j in fixed["judged"]] == ["div"]

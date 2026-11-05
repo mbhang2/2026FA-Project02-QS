@@ -20,7 +20,7 @@ papers are evidence the writer may cite.
 * `--draft` -- a file the researcher wrote. It is assessed first (`assess`): the
   lint, the length, the sections a campaign needs, the grounding of its numbers,
   and the hypothesis review seat. If nothing is found it is **refined enough**
-  and used as it is; only a constraints file is drafted beside it. Otherwise the
+  and used as it is. Otherwise the
   writer refines it, keeping its question, into a NEW file -- the draft is never
   overwritten, because a hypothesis's commit date is its pre-registration.
 * `--assess-only` -- the assessment, and nothing written.
@@ -32,6 +32,13 @@ hypothesis review seat, and the refusal to write while a campaign is running.
 Plus one it does not have: the constraints and judged requirements of
 `src/core/loop/fidelity.py`, each quoting the file verbatim and validated by
 `fidelity.load`, so the new question arrives with its own fidelity checks.
+
+**The writer fixes only what the researcher fixed.** The first live run added
+trading hours, a flat-by time and a one-lot limit nobody asked for, and each
+became a check that refuses strategies. Every constraint must now say it came
+`from` the question or the draft, and the rest are dropped and printed. A
+researcher's usual limits live in `config/house-constraints.yaml` and are added
+with `--house`, word for word, by this script rather than by the model.
 
 **It stops at the file (Amendment 8).** A human reads it and commits it, and the
 commit is the pre-registration. Nothing here registers a campaign. Nothing here
@@ -52,6 +59,10 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 PROMPT = ROOT / "config" / "prompts" / "question-distil.md"
+HOUSE = ROOT / "config" / "house-constraints.yaml"
+# Where a constraint may come from. "house" is not here: house constraints are
+# inserted by `add_house`, never accepted from the model.
+ORIGINS = ("question", "draft")
 HYPOTHESES = ROOT / "config" / "hypotheses"
 REGISTRY = ROOT / "data" / "papers" / "registry.json"
 # The paper distiller's model, for the same reason: a judgement task on the
@@ -219,12 +230,28 @@ def sources(question: str, draft: str, papers: list[dict]) -> list[str]:
 # --------------------------------------------------------------------------- #
 # constraints: the fidelity file the new question arrives with
 # --------------------------------------------------------------------------- #
-def constraints_yaml(slug: str, out: dict) -> str:
+def split_by_origin(items) -> tuple[list[dict], list[dict]]:
+    """(kept, dropped): kept are the ones the researcher fixed, `from` removed."""
+    kept, dropped = [], []
+    for c in items or []:
+        if not isinstance(c, dict):
+            continue
+        if c.get("from") in ORIGINS:
+            kept.append({k: v for k, v in c.items() if k != "from"})
+        else:
+            dropped.append(c)
+    return kept, dropped
+
+
+def constraints_yaml(slug: str, out: dict, house: list[dict] | None = None) -> str:
     import yaml
 
-    cons = [c for c in (out.get("constraints") or []) if isinstance(c, dict)]
+    cons, _ = split_by_origin(out.get("constraints"))
     judged = [{"id": j.get("id"), "says": j.get("says")}
-              for j in (out.get("judged") or []) if isinstance(j, dict)]
+              for j in split_by_origin(out.get("judged"))[0]]
+    have = {" ".join(str(c.get("says", "")).split()).lower() for c in cons}
+    cons += [h for h in (house or [])
+             if " ".join(h["says"].split()).lower() not in have]
     doc = {"schema": "constraints/1", "hypothesis": f"{slug}.md",
            "clock": "America/Chicago"}
     if cons:
@@ -232,6 +259,39 @@ def constraints_yaml(slug: str, out: dict) -> str:
     if judged:
         doc["judged"] = judged
     return yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=88)
+
+
+def valid_items(out: dict, md: str) -> tuple[dict, list[str]]:
+    """The reply with each constraint and judged requirement that `fidelity.load`
+    refuses on its own removed, and why.
+
+    **One at a time, and never a reason to rewrite the question.** The second
+    live run on the CVD question offered "The instrument is NQ" as a `code_uses`
+    with no identifiers. Checked as one file, that single bad item spent all
+    three repair rounds, dropped every good constraint with it, and kept the
+    review seat from ever reading the question. A constraint is an annotation on
+    a question; a bad one is dropped, the question stands.
+    """
+    keep_c, keep_j, why = [], [], []
+    # A requirement filed as `check: judged` is a judged requirement in the wrong
+    # list -- the third CVD run did exactly this with its divergence trigger. Moved,
+    # not dropped: its quote is still the question's.
+    out = dict(out)
+    misfiled = [c for c in out.get("constraints") or []
+                if isinstance(c, dict) and c.get("check") == "judged"]
+    out["constraints"] = [c for c in out.get("constraints") or [] if c not in misfiled]
+    out["judged"] = list(out.get("judged") or []) + [
+        {"id": c.get("id"), "says": c.get("says"), "from": c.get("from")} for c in misfiled]
+    for key, keep in (("constraints", keep_c), ("judged", keep_j)):
+        for item in split_by_origin(out.get(key))[0]:
+            one = {"constraints": [{**item, "from": "question"}]} if key == "constraints" \
+                else {"judged": [{**item, "from": "question"}]}
+            bad = constraint_findings(constraints_yaml("x", one), md)
+            if bad:
+                why.append(f"[{item.get('id')}] {bad[0].split(': ', 1)[-1][:140]}")
+            else:
+                keep.append({**item, "from": "question"})
+    return {**out, "constraints": keep_c, "judged": keep_j}, why
 
 
 def constraint_findings(text: str, md: str) -> list[str]:
@@ -248,6 +308,40 @@ def constraint_findings(text: str, md: str) -> list[str]:
         except F.ConstraintsRejected as exc:
             return [str(exc).replace(str(p), "constraints")]
     return []
+
+
+def load_house(path: pathlib.Path = HOUSE) -> list[dict]:
+    """The researcher's usual limits, validated with the same rules as any
+    constraints file (`says` excepted: it is grounded once inserted)."""
+    import yaml
+
+    doc = yaml.safe_load(path.read_text()) or {}
+    items = [dict(c) for c in doc.get("constraints") or []]
+    if not items:
+        raise ValueError(f"{path} lists no constraints")
+    return items
+
+
+def add_house(md: str, house: list[dict]) -> str:
+    """Insert each house sentence into "What is NOT yours to choose", verbatim.
+
+    Deterministic on purpose: the writer was told not to set limits, so the
+    researcher's limits are added here, by string, and cannot be paraphrased
+    into something the constraint's `says` no longer matches.
+    """
+    norm = " ".join(md.split()).lower()
+    missing = [h["says"] for h in house
+               if " ".join(h["says"].split()).lower() not in norm]
+    if not missing:
+        return md
+    block = "\n".join(missing) + "\n"
+    m = re.search(REQUIRED_SECTIONS["what is NOT yours to choose"], md, re.I | re.M)
+    if m is None:
+        return md.rstrip("\n") + "\n\n## What is NOT yours to choose\n\n" + block
+    nxt = re.search(r"^## ", md[m.end():], re.M)
+    at = m.end() + nxt.start() if nxt else len(md)
+    head, tail = md[:at].rstrip("\n"), md[at:]
+    return head + "\n\n" + block + ("\n" + tail if tail else "")
 
 
 # --------------------------------------------------------------------------- #
@@ -270,7 +364,8 @@ def _repair(found: list[str], cons: list[str]) -> str:
             "fails. Keep the researcher's question.\n\n" + items)
 
 
-def write(client, question: str, draft: str, papers: list[dict]) -> dict:
+def write(client, question: str, draft: str, papers: list[dict],
+          house: list[dict] | None = None) -> dict:
     """The distil loop, on a question: mechanical gates, then the review seat."""
     system = PROMPT.read_text()
     user = context(question, draft, papers)
@@ -284,8 +379,8 @@ def write(client, question: str, draft: str, papers: list[dict]) -> dict:
         found = mechanical_findings(md, *src)
         if not dp.SLUG.match(slug):
             found.append(f"slug {slug!r} is not 2-6 kebab-case words")
-        cons = constraint_findings(constraints_yaml(slug or "x", out), md)
-        if not found and not cons:
+        cons: list[str] = []          # see `valid_items`: never a reason to rewrite
+        if not found:
             if reviews < dp.MAX_REVIEW_REPAIRS:
                 rev, reviewer = dp._review_seat(md)
                 if rev:
@@ -313,7 +408,21 @@ def write(client, question: str, draft: str, papers: list[dict]) -> dict:
     if found:
         raise ValueError("the hypothesis did not pass its gates; not written:\n  "
                          + "\n  ".join(found[:16]))
-    ytext = constraints_yaml(slug, out)
+    _, dropped = split_by_origin(out.get("constraints"))
+    _, dropped_j = split_by_origin(out.get("judged"))
+    for c in dropped + dropped_j:
+        print(f"  not the researcher's, dropped: [{c.get('id')}] "
+              f"{str(c.get('says'))[:100]}", flush=True)
+    if house:
+        md = add_house(md, house)
+        found = mechanical_findings(md, *src, *(h["says"] for h in house))
+        if found:
+            raise ValueError("the house constraints made the file fail its "
+                             "gates:\n  " + "\n  ".join(found[:8]))
+    out, bad = valid_items(out, md)
+    for b in bad:
+        print(f"  constraint dropped: {b}", flush=True)
+    ytext = constraints_yaml(slug, out, house)
     cons = constraint_findings(ytext, md)
     if cons:
         # The question is good and its constraints are not: write the question,
@@ -327,6 +436,8 @@ def write(client, question: str, draft: str, papers: list[dict]) -> dict:
             "cannot_test": out.get("cannot_test"),
             "papers_used": [p for p in (out.get("papers_used") or [])
                             if isinstance(p, str) and p in md],
+            "dropped": [c.get("id") for c in dropped + dropped_j],
+            "house": bool(house),
             "review": reviewer, "words": len(md.split())}
 
 
@@ -353,6 +464,8 @@ def write_files(got: dict, *, question: str, draft_path: str | None,
         "papers_cited": got["papers_used"],
         "question_as_asked": got["question_as_asked"],
         "adapted_claim": got["adapted_claim"], "cannot_test": got["cannot_test"],
+        "constraints_dropped_as_not_the_researchers": got.get("dropped", []),
+        "house_constraints": got.get("house", False),
         "review": got["review"], "words": got["words"],
     }, indent=2, ensure_ascii=False) + "\n")
     written.append(origin)
@@ -371,6 +484,9 @@ def main() -> int:
                     help="write from the question alone")
     ap.add_argument("--refine", action="store_true",
                     help="refine the draft even if it is refined enough")
+    ap.add_argument("--house", action="store_true",
+                    help="add the usual limits in config/house-constraints.yaml, "
+                         "word for word")
     ap.add_argument("--model", default=MODEL)
     a = ap.parse_args()
     if not a.question and not a.draft:
@@ -404,7 +520,8 @@ def main() -> int:
     print(f"papers offered: {[p['id'] for p in papers] or 'none'}", flush=True)
     client, served = dp._client(a.model)
     print(f"writing on {a.model} (served {served}) ...", flush=True)
-    got = write(client, question, draft, papers)
+    got = write(client, question, draft, papers,
+                house=load_house() if a.house else None)
     files = write_files(got, question=question,
                         draft_path=str(a.draft) if a.draft else None,
                         papers=papers, model=a.model, served=served)

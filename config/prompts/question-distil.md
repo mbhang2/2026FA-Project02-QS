@@ -85,6 +85,26 @@ What a result would tell us either way.
 What this campaign deliberately sets aside.
 ```
 
+### Fix only what the researcher fixed
+
+"What is NOT yours to choose" holds **only** what the researcher's question
+states or plainly requires -- the signal it is about, the direction it predicts.
+Do **not** add operating limits of your own: trading hours, session windows, a
+flat-by time, holding overnight, position size, instruments. Those are the
+strategy's to choose unless the researcher said otherwise, and they belong under
+"What is yours to choose". A limit the researcher did not ask for narrows their
+question without their consent, and every one becomes a check that refuses
+strategies. If the researcher has standard limits, they are added for them
+separately, word for word -- do not anticipate them.
+
+Facts about the environment are not constraints: the instrument, the costs, the
+data. They are true of every strategy and nothing can violate them; state them in
+prose if you need to, and do not encode them.
+
+Every constraint and judged requirement must carry `"from"`: `"question"` when
+the researcher's words state or plainly require it, `"draft"` when their draft
+fixed it. Anything else is not a constraint; leave it out.
+
 ### Every quantity you write must already exist in what you were given
 
 A number is checked against the researcher's text, the attached papers and this
@@ -128,8 +148,8 @@ with a verbatim `says`. Leave both lists empty rather than invent one.
   "adapted_claim": "one sentence: what we are testing, on our data",
   "cannot_test": "what the researcher asked that we cannot test here, or null",
   "papers_used": ["ids you cited, or empty"],
-  "constraints": [{"id": "kebab-id", "says": "verbatim sentence", "check": "kind", "...": "params"}],
-  "judged": [{"id": "kebab-id", "says": "verbatim sentence"}]
+  "constraints": [{"id": "kebab-id", "says": "verbatim sentence", "from": "question", "check": "kind", "...": "params"}],
+  "judged": [{"id": "kebab-id", "says": "verbatim sentence", "from": "question"}]
 }
 ```
 

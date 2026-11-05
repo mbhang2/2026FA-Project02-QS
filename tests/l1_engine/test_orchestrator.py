@@ -21,6 +21,7 @@ def _spec() -> ExperimentSpec:
         val_end="2024-03-01",
         end="2024-04-29",
         calendar="placeholder",
+        data_source="placeholder.csv",
         strategy_module_path=BUY_HOLD,
         fee_bps=1.0,
         slippage_bps=1.0,

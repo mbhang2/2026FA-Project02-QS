@@ -612,8 +612,25 @@ campaign:
   #                   one table realisation read as the answer. A companion
   #                   0.100 at exact match was a pooled-candidate sweep whose
   #                   correlated reps invalidated the binomial interval.
+  #   txnsim          round turn trade Monte Carlo, blotter's txnsim
+  #                   (flat.to.flat, with replacement). Per candidate: random
+  #                   traders sharing ITS direction, size, duration and time in
+  #                   market, placed at random times on the trading clock and
+  #                   priced at the then-current trade. Holds overnight only if
+  #                   the candidate ever did. Single asset only. Tests timing
+  #                   skill, which round_turn_mc cannot see. FWER with
+  #                   max_of_n NOT MEASURED; refuses correction_rule: aligned.
+  #                   `txnsim_mode` below picks the construction.
   #   none            no null is built.
   null_source: round_turn_mc
+
+  # Only read when null_source is txnsim, and frozen at registration.
+  #   layered        the book's section 24.15: a first layer that keeps the
+  #                  long/short/flat ratios (blotter's tradesample), and each
+  #                  round turn's own adds, scale-outs and flips replayed at a
+  #                  random time. The default.
+  #   flat.to.flat   blotter's simpler tradeDef: opening size only, layers lost.
+  txnsim_mode: layered
 
   # correction: how N candidates become one decision
   #   max_of_n        distribution of the best-of-N. Needs a per-candidate source.

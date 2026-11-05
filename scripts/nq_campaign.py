@@ -103,6 +103,30 @@ PROPOSER_MAX_TOKENS = 64_000
 
 B_NULL = 10_000
 
+# What `stage_report` says about the error rate of the null that ran. A source
+# with no entry gets a note saying no rate has been measured for it.
+ERROR_CONTROL_NOTES = {
+    "round_turn_mc": (
+        "This campaign's null is the sign-flip over round turns, not the "
+        "conditional null, so Task 38's FWER of 0.060 CI [0.041, 0.088] does "
+        "NOT describe it. The figure that does is Task 57's, measured on this "
+        "configuration (round_turn_mc x max_of_n, q = 0.05, B = 10,000) at both "
+        "N = 10 and N = 50: 0 acceptances in 400 campaigns per arm, FWER below "
+        "about 0.010 at 95%, below 0.005 pooled over 800. It is conservative "
+        "rather than merely correct, and Task 59 prices the conservatism: 80% "
+        "power at a signal strength of 0.287 against 0.242 for the conditional "
+        "null. See docs/design/pre-registration.md sections 3a and 3b."),
+    "txnsim": (
+        "This campaign's null is round turn trade Monte Carlo (blotter's "
+        "txnsim, with replacement; the mode is in nulls.json): random traders "
+        "sharing each candidate's direction, size, duration, layering and "
+        "time in market, at random times. Its family-wise error rate with "
+        "max_of_n has NOT been measured, so this verdict is not calibrated. "
+        "Per-trial calibration on NQ found it counts volatility timing as "
+        "skill when costs are high. See "
+        "src/core/scoring/randomization/txnsim.py."),
+}
+
 
 def cfg() -> dict:
     return yaml.safe_load((ROOT / "config" / "run.yaml").read_text())
@@ -112,7 +136,7 @@ def campaign_cfg() -> dict:
     c = cfg()["campaign"]
     if c["correction"] in ("max_of_n", "step_down_max") and \
             c["null_source"] not in ("conditional", "round_turn_mc",
-                                     "random_trader"):
+                                     "random_trader", "txnsim"):
         sys.exit(
             f"incoherent configuration: correction={c['correction']!r} needs "
             f"per-candidate null samples, but null_source={c['null_source']!r} "
@@ -625,7 +649,28 @@ def stage_register(name: str, hypothesis: pathlib.Path,
             "bar. Use correction_rule 'independent' (or 'dedup') with a shared "
             "table, or 'aligned' with the per-candidate null_source "
             "'round_turn_mc'.")
+    # **`aligned` needs replicate j to be one randomisation for every trial,
+    # and txnsim cannot give it that.** A replicate consumes the generator in
+    # proportion to the candidate's own round turns, so under a shared seed two
+    # candidates with different styles draw unrelated streams, and a column-wise
+    # maximum over them is a maximum over nothing in particular.
+    if correction_rule == "aligned" and cc["null_source"] == "txnsim":
+        sys.exit(
+            "correction_rule 'aligned' cannot be used with null_source "
+            "'txnsim': replicate j is not the same randomisation for two "
+            "candidates that trade differently. Use correction_rule "
+            "'independent'.")
     agent_cfg["null_source"] = cc["null_source"]
+    if cc["null_source"] == "txnsim":
+        # Frozen at registration like the null itself: the two modes are
+        # different nulls, and switching after seeing a result is the free
+        # parameter a pre-registration exists to remove.
+        from src.core.scoring.randomization import txnsim as _tx
+
+        mode = cc.get("txnsim_mode", _tx.DEFAULT_MODE)
+        if mode not in _tx.MODES:
+            sys.exit(f"txnsim_mode must be one of {_tx.MODES}, not {mode!r}")
+        agent_cfg["txnsim_mode"] = mode
     agent_cfg["correction"] = cc["correction"]
     agent_cfg["b_null"] = B_NULL
     agent_cfg["model_served_at_registration"] = served["served"]
@@ -1168,6 +1213,27 @@ def stage_nulls(name: str) -> None:
             t = tables[rtr.bucket_index(a)]
             rtr.check_supported(t, len(rows), a)
             tabled[i] = t.draws
+    tape = None
+    if source == "txnsim":
+        # The then-current price of every scored session, in calendar order,
+        # so a replicate is priced off the same trades the candidate saw.
+        from src.core.scoring.randomization import txnsim as tx
+
+        by_sess: dict[int, tuple[list[int], list[float]]] = {}
+        for tick in dataset.ticks(Split.TRAIN):
+            t, p = by_sess.setdefault(tick.session, ([], []))
+            t.append(tick.ts)
+            p.append(tick.price)
+        missing = [c.session for c in calendar if c.session not in by_sess]
+        if missing:
+            raise SystemExit(
+                f"{name}: {len(missing)} scored session(s) have no trades to "
+                f"price a replicate at, first {missing[0]}")
+        tape = tx.PriceTape([by_sess[c.session][0] for c in calendar],
+                            [by_sess[c.session][1] for c in calendar])
+        tx_mode = (_rec.agent_config or {}).get("txnsim_mode", tx.DEFAULT_MODE)
+        print(f"  txnsim: mode {tx_mode}, with replacement, B = {B_NULL:,} per "
+              f"trial, priced on {len(calendar)} sessions", flush=True)
     if rule == "aligned":
         print(f"  correction_rule 'aligned': one shared randomisation per "
               f"replicate (seed {COMMON_NULL_SEED}), so the nulls can be read "
@@ -1203,7 +1269,12 @@ def stage_nulls(name: str) -> None:
             samples.append(tabled.get(i, []))
             continue
         seed = COMMON_NULL_SEED if rule == "aligned" else 70_000 + i
-        samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed))
+        if tape is not None:
+            samples.append(tx.null_sample(
+                blotter, calendar, tape, commission_per_contract=commission,
+                b=B_NULL, seed=seed, mode=tx_mode))
+        else:
+            samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed))
         print(f"  {i + 1}/{len(rows)}  {len(samples[-1])} draws  "
               f"{time.monotonic() - t0:.0f}s", flush=True)
     # **The recorded source is the one that RAN.** This was hardcoded to
@@ -1221,6 +1292,10 @@ def stage_nulls(name: str) -> None:
         payload["spec"] = ("random_trader, one table per activity bucket; "
                            "see src/core/scoring/randomization/"
                            "random_trader.py")
+    if tape is not None:
+        payload["spec"] = (f"txnsim, mode {tx_mode}, with replacement; "
+                           "see src/core/scoring/randomization/txnsim.py")
+        payload["txnsim_mode"] = tx_mode
     (d / "nulls.json").write_text(json.dumps(payload))
     print(f"{name}: nulls in {time.monotonic() - t0:.0f}s")
 
@@ -1282,7 +1357,8 @@ def stage_report(name: str) -> None:
     d = OUT / name
     record, digest = CampaignRecord.read(d / "campaign.json")
     rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines() if x.strip()]
-    samples = json.loads((d / "nulls.json").read_text())["samples"]
+    nulls = json.loads((d / "nulls.json").read_text())
+    samples = nulls["samples"]
 
     result = CampaignResult(record=record, record_digest=digest, rows=rows)
     # From the record, not the literal `"nq-trades"` that was here: the
@@ -1296,17 +1372,14 @@ def stage_report(name: str) -> None:
         {"rows": rows, "wall_clock_s": result.wall_clock_s,
          "record_digest": digest, "tampered": result.tampered},
         indent=2, default=str))
-    summary["null_source"] = "round_turn_mc"
-    summary["error_control_note"] = (
-        "This campaign's null is the sign-flip over round turns, not the "
-        "conditional null, so Task 38's FWER of 0.060 CI [0.041, 0.088] does "
-        "NOT describe it. The figure that does is Task 57's, measured on this "
-        "configuration (round_turn_mc x max_of_n, q = 0.05, B = 10,000) at both "
-        "N = 10 and N = 50: 0 acceptances in 400 campaigns per arm, FWER below "
-        "about 0.010 at 95%, below 0.005 pooled over 800. It is conservative "
-        "rather than merely correct, and Task 59 prices the conservatism: 80% "
-        "power at a signal strength of 0.287 against 0.242 for the conditional "
-        "null. See docs/design/pre-registration.md sections 3a and 3b.")
+    # From the null that RAN, which nulls.json records. This was the literal
+    # "round_turn_mc" with the sign-flip's note, whatever had been built.
+    summary["null_source"] = nulls.get("source") or "round_turn_mc"
+    summary["error_control_note"] = ERROR_CONTROL_NOTES.get(
+        summary["null_source"],
+        f"No error rate has been measured for null_source "
+        f"{summary['null_source']!r} with max_of_n, so this campaign's verdict "
+        "is not calibrated.")
     (d / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
 
     g = summary.get("gate", {})

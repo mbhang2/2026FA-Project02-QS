@@ -17,9 +17,17 @@ from __future__ import annotations
 import importlib.util
 import pathlib
 
+import pytest
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = (REPO_ROOT / "scripts" / "fetch_scholar.py").read_text()
 FLAT = " ".join(SRC.split())
+
+# Third-party full texts are local-only (.gitignore, docs/PUBLIC_RELEASE.md):
+# a clone has none until `scripts/fetch_fulltext.py` re-fetches them.
+needs_fulltext = pytest.mark.skipif(
+    not (REPO_ROOT / "data" / "papers" / "text").is_dir(),
+    reason="data/papers/text/ is local-only; run scripts/fetch_fulltext.py")
 
 
 def _mod():
@@ -149,6 +157,7 @@ def test_title_dedup_only_ever_guarded_the_ingest_path():
     assert "--dedup" in SRC
 
 
+@needs_fulltext
 def test_the_body_catches_what_a_title_cannot():
     """**The measured pair.** `openalex-W7110598479` ("Analysis of the Time
     Series Characteristics of Intraday Momentum on the Tokyo Stock Exchange")
@@ -218,6 +227,7 @@ def test_dedup_marks_and_never_deletes():
     assert "duplicate_of" in body
 
 
+@needs_fulltext
 def test_every_existing_mark_is_re_derivable_by_the_committed_rules():
     """The 43 rows marked before this pass existed were marked by hand. If the
     committed rules cannot reproduce them, the registry holds judgements nobody

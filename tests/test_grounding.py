@@ -36,8 +36,10 @@ PAPER = "2605.04004v3"
 
 # Third-party full texts are local-only (.gitignore, docs/PUBLIC_RELEASE.md):
 # a clone has none until `scripts/fetch_fulltext.py` re-fetches them.
+# The files, not the folder: a retrieval run creates the folder empty when no
+# body could be fetched, and an empty folder is the same absence.
 needs_fulltext = pytest.mark.skipif(
-    not (REPO_ROOT / "data" / "papers" / "text").is_dir(),
+    not any((REPO_ROOT / "data" / "papers" / "text").glob("*.txt")),
     reason="data/papers/text/ is local-only; run scripts/fetch_fulltext.py")
 
 

@@ -1,0 +1,33 @@
+schema: constraints/1
+hypothesis: opening-range-break-hold-or-return.md
+clock: America/Chicago
+constraints:
+  # Regular hours 08:30-15:15 CT (CME equity-index day session). The range
+  # length is the agent's, so entries are bounded only by regular hours.
+  - id: enter-in-regular-hours
+    says: "It must be the regular-hours open."
+    check: entry_window
+    start: "08:30"
+    end: "15:15"
+
+judged:
+  - id: conditions-on-opening-range
+    says: "It must condition on the opening range."
+  - id: not-multi-stage
+    says: "Not a multi-stage confirmation architecture"
+  - id: weekly-reopen-excluded
+    says: "The weekly Globex reopen is a different opening with different participants and is outside the question."
+  - id: leaving-vol-scaled
+    says: "should be measured against trailing realized volatility computed from prior days of this instrument, not against a fixed number of points"
+  - id: horizon-stated
+    says: "State the horizon in the rule."
+  - id: undecided-not-either-account
+    says: "It must not let an undecided departure speak for either account."
+  - id: not-several-condition-gate
+    says: "If the rule needs several conditions to agree before it acts, it is answering a question about those conditions."
+  - id: not-regime-model
+    says: "Not a model that switches between the two accounts by fitting which is which."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "It must act on the ordinary run of sessions" -- participation across sessions needs the fills
+# - "Report decided-one-way, decided-the-other, and undetermined as three counts." -- a report

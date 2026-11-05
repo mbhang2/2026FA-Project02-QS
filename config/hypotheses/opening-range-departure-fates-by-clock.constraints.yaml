@@ -1,0 +1,34 @@
+schema: constraints/1
+hypothesis: opening-range-departure-fates-by-clock.md
+clock: America/Chicago
+constraints:
+  # Regular hours 08:30-15:15 CT (CME equity-index day session). The range
+  # length is the agent's, so entries are bounded only by regular hours.
+  - id: enter-in-regular-hours
+    says: "It must be the regular-hours open."
+    check: entry_window
+    start: "08:30"
+    end: "15:15"
+
+judged:
+  - id: conditions-on-opening-range
+    says: "It must condition on the opening range."
+  - id: not-multi-stage
+    says: "Not a multi-stage confirmation architecture"
+  - id: weekly-reopen-excluded
+    says: "The weekly Globex reopen is a different opening with different participants."
+  - id: leaving-vol-scaled
+    says: "should be measured against trailing realized volatility computed from prior days of this instrument, not against a fixed number of points"
+  - id: horizon-stated
+    says: "State the horizon in the rule."
+  - id: undecided-not-either-account
+    says: "It must not let an undecided departure speak for either account."
+  - id: records-time-to-decision
+    says: "the rule must record how long after the regular-hours open each departure began and how long it took to be decided"
+  - id: not-regime-model
+    says: "Not a model that switches between the two accounts by fitting which is which."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "It must act on the ordinary run of sessions" -- participation across sessions needs the fills
+# - "It must not buy its answer by dropping a clock hour it traded and lost in." -- which hours lost is an outcome; the justification is prose
+# - "the three fates must be reported by time band of the session as well as in total" -- a report

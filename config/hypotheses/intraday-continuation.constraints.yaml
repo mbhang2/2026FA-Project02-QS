@@ -1,0 +1,16 @@
+schema: constraints/1
+hypothesis: intraday-continuation.md
+clock: America/Chicago
+constraints:
+  - id: within-one-session
+    says: "Within a single trading session, after price has made a move that is large relative to how that session has been moving so far, what happens over the rest of the session?"
+    check: no_overnight
+
+judged:
+  - id: large-relative-to-session
+    says: "has to be measured against something the session itself supplies"
+  - id: not-regime-model
+    says: "Not a regime model that switches between the two accounts."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "Not a fast-execution idea." -- survival of worse fills is an outcome, and no hold bound is stated

@@ -1,0 +1,45 @@
+schema: constraints/1
+hypothesis: auction-market-features.md
+clock: America/Chicago
+constraints:
+  # Any one of the listed AMT features satisfies this: the profile-based three
+  # (VPOC, Value Area, LVN) or cumulative volume delta. Tape velocity is left
+  # out because its identifiers (volume, tick_count) are too generic to mean it.
+  - id: uses-amt-features
+    says: "Do Auction Market Theory features, computed on NQ from the trades feed, predict the return over the next `H` bars?"
+    check: code_uses
+    any_of: [SessionProfile, vpoc, value_area, low_volume_nodes, distance_from_vpoc, value_area_position, delta, buy_volume, sell_volume]
+  - id: not-reinforcement-learning
+    says: "Not reinforcement learning."
+    check: code_avoids
+    none_of: [stable_baselines3, gym, gymnasium]
+  - id: not-deep-network
+    says: "Not a deep network."
+    check: code_avoids
+    none_of: [torch, tensorflow, keras, MLPClassifier, MLPRegressor]
+
+judged:
+  - id: is-fitted
+    says: "written for a **fitted** strategy"
+  - id: one-second-bars
+    says: "Settled 2026-09-23 by `docs/reviews/task67/`: one-second bars."
+  - id: volume-spread-over-bar-range
+    says: "each bar's volume is spread evenly across the price levels its own high-low range touched."
+  - id: forward-return-target
+    says: "**Forward return over a fixed horizon `H`**, not the session high or low and not a binary swing-point flag."
+  - id: nan-not-zero
+    says: "NaN must not become 0."
+  - id: asserts-usable-rows
+    says: "`fit()` asserts the count of usable rows is close to what the window and horizon imply"
+  - id: unknown-neither-side
+    says: "unknown-aggressor volume is in `bar.unknown_volume` and belongs in neither side."
+  - id: no-rl-policy
+    says: "Not reinforcement learning."
+  - id: no-deep-model
+    says: "Not a deep network."
+  - id: not-regime-model
+    says: "not a regime model"
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "Not book or quote features." -- the engine already refuses quotes on this adapter
+# - (no-rl-policy / no-deep-model repeat the code_avoids quotes so a hand-written network or policy, which imports nothing, is still caught)

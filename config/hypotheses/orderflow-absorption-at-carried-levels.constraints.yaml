@@ -1,0 +1,36 @@
+schema: constraints/1
+hypothesis: orderflow-absorption-at-carried-levels.md
+clock: America/Chicago
+constraints:
+  - id: level-from-volume-profile
+    says: "It must condition on a level built from traded volume."
+    check: code_uses
+    any_of: [SessionProfile, vpoc, value_area, low_volume_nodes, distance_from_vpoc, value_area_position]
+  - id: conditions-on-flow
+    says: "It must condition on flow, not only on price."
+    check: code_uses
+    any_of: [delta, buy_volume, sell_volume, Side, side]
+
+judged:
+  - id: flow-not-candle-shape
+    says: "A rule that reads only the bar's shape is a candlestick rule."
+  - id: holds-between-levels
+    says: "It must hold for a move between levels."
+  - id: entry-tagged
+    says: "Every entry fill must carry a tag saying whether it was taken on absorption alone or after a confirming bar"
+  - id: stop-at-absorption-extreme
+    says: "The stop sits just beyond the absorption bar's own extreme"
+  - id: structural-stop-constant-buffer
+    says: "The stop is structural and the buffer is constant."
+  - id: target-multiple-of-stop
+    says: "Express the target as a multiple of the stop distance, state the multiple, and report it."
+  - id: near-zero-flow-handled
+    says: "A bar whose signed flow is near nothing makes this quantity meaningless and must be handled explicitly rather than divided by."
+  - id: unknown-not-folded
+    says: "Flow with no attributed side exists and is not to be folded into either side."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "A rule that would behave the same with the levels deleted is answering a different question." -- a counterfactual about behaviour, not readable from code
+# - "Not a scalping rule, at any frequency, for any reason." -- frequency is a property of the fills; the code-readable part is holds-between-levels
+# - "It must report what waiting for initiation cost or earned" -- a report, needs outputs
+# - (The earlier list's "Carry those levels forward from the two prior sessions..." is dropped: the hypothesis lists which levels and sessions under "What is yours to choose".)

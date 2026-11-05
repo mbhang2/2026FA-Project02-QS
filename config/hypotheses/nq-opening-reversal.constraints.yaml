@@ -12,6 +12,11 @@ constraints:
     check: code_avoids
     none_of: [delta, buy_volume, sell_volume, unknown_volume, SessionProfile]
 
+  # Added 2026-11-05 with the probe checks (src/core/loop/perturb.py).
+  - id: reversal-against-rise
+    says: "It must be a reversal strategy, meaning it sells after a price rise."
+    check: trades_move
+    direction: against
 judged:
   - id: sells-after-a-rise
     says: "It must be a reversal strategy, meaning it sells after a price rise."

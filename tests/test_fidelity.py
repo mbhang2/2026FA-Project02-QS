@@ -33,6 +33,8 @@ HYP = """# Does aggressive flow continue?
 - One contract at a time.
 - Flat by 15:00 CT.
 - It never fits a model.
+- Entries follow the order flow.
+- Entries go against the recent price move.
 """
 
 
@@ -59,6 +61,9 @@ ALL = [
     {"id": "flat-3pm", "says": "Flat by 15:00 CT.", "check": "flat_by", "time": "15:00"},
     {"id": "no-fit", "says": "It never fits a model.", "check": "code_avoids",
      "none_of": ["fit", "sklearn"]},
+    {"id": "flow", "says": "Entries follow the order flow.", "check": "uses_flow"},
+    {"id": "fade", "says": "Entries go against the recent price move.",
+     "check": "trades_move", "direction": "against"},
 ]
 
 

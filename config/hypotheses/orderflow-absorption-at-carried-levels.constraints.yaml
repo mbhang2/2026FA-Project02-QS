@@ -11,6 +11,10 @@ constraints:
     check: code_uses
     any_of: [delta, buy_volume, sell_volume, Side, side]
 
+  # Added 2026-11-05 with the probe checks (src/core/loop/perturb.py).
+  - id: flow-drives-trades
+    says: "It must condition on flow, not only on price."
+    check: uses_flow
 judged:
   - id: flow-not-candle-shape
     says: "A rule that reads only the bar's shape is a candlestick rule."

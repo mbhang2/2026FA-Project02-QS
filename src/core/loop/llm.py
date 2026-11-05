@@ -350,6 +350,17 @@ class LLMAgent:
     # proposal is a trial and counts toward N.
     constraints: "Constraints | None" = None
     constraint_policy: str = "record"
+    # `(source) -> (violations, report)` from `perturb.check`, bound by the
+    # driver to the campaign's probe ledger and the worker's strategy file, like
+    # `probe`. Runs the proposal on synthetic data shaped like NQ: does its
+    # behaviour depend on order flow, and which way do its entries lean.
+    perturb: "Callable[[str], tuple[list, dict]] | None" = None
+    # The question-fidelity reviewer (`scripts/fidelity_judge.py`), bound by the
+    # driver: `(source) -> dict`. "shadow" records; "repair" also sends its
+    # grounded objections back for at most FIDELITY_MAX_REPAIRS rewrites. It
+    # never blocks -- a reviewer that blocks needs its error rate first.
+    judge: "Callable[[str], dict] | None" = None
+    judge_mode: str = "shadow"
     # Everything below is state, not configuration.
     calls: list[Call] = field(default_factory=list, init=False, repr=False)
     _pending: list[Call] = field(default_factory=list, init=False, repr=False)
@@ -365,6 +376,8 @@ class LLMAgent:
     # The code violations the last proposal still had when it went to trial,
     # for `drain_log` and from there `fidelity.jsonl`.
     _off_question: list = field(default_factory=list, init=False, repr=False)
+    _perturb_report: dict = field(default_factory=dict, init=False, repr=False)
+    _judgement: dict = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.base_url = self.base_url or os.environ.get("LITELLM_BASE_URL", "")
@@ -449,6 +462,9 @@ class LLMAgent:
             "probe_repairs": sum(1 for c in calls if c.kind == "probe_repair"),
             "fidelity_repairs": sum(1 for c in calls if c.kind == "fidelity_repair"),
             "off_question_code": list(self._off_question),
+            "fidelity_probe": dict(self._perturb_report),
+            "judge": dict(self._judgement),
+            "judge_repairs": sum(1 for c in calls if c.kind == "judge_repair"),
             "prompt_tokens": sum(c.prompt_tokens for c in calls),
             "completion_tokens": sum(c.completion_tokens for c in calls),
             "latency_s": round(sum(c.latency_s for c in calls), 2),
@@ -478,6 +494,8 @@ class LLMAgent:
         # proposal that raised still leaves its parent readable in drain_log.
         self._parent = None
         self._off_question = []
+        self._perturb_report = {}
+        self._judgement = {}
         deadline = time.monotonic() + self.proposal_wall_clock_s
         shown = history if self.show_history else ()
         try:
@@ -515,46 +533,101 @@ class LLMAgent:
     # -- what the question fixes (src/core/loop/fidelity.py) ----------------- #
     def _on_question(self, shown: Sequence[dict], source: str,
                      deadline: float) -> str:
-        """Check the code against the campaign's constraints; repair, then decide.
+        """Check the proposal against the campaign's constraints; repair, decide.
 
-        Safe to repair for the reason the static repair is: the check reads the
-        syntax tree and executes nothing, so its answer is not a function of
-        market data and a repair leaks no selection signal. Bounded, and the
-        repairs are not trials. A repair that breaks the static check is
-        discarded and the last statically-clean file stands.
+        Mechanical first -- the code's syntax tree, then its behaviour on
+        synthetic data (`perturb`) -- then the reviewer. Safe to repair on for
+        the reason the static repair is: none of it reads market data, so a
+        repair leaks no selection signal. Bounded, and the repairs are not
+        trials. A repair that breaks the static check is discarded and the last
+        statically-clean file stands.
         """
-        from .fidelity import code_violations, repair_text
-
-        if self.constraints is None or not self.constraints.code:
+        if self.constraints is None:
             return self._after_static(shown, source, deadline)
-        found = code_violations(source, self.constraints)
+        found = self._mechanical(source)
         repairs = 0
         while found and repairs < FIDELITY_MAX_REPAIRS \
                 and time.monotonic() <= deadline:
             repairs += 1
-            try:
-                candidate = self._one(
-                    self._prompt(shown, repair=repair_text(found, source)),
-                    "fidelity_repair")
-            except ModelSubstituted:
-                raise
-            except LLMError:
-                break
-            ok, message = self._static_ok(candidate)
-            if not ok:
-                self._pending.append(Call(
-                    kind="fidelity_repair", ok=False, latency_s=0.0,
-                    error=f"repair discarded, failed the static check: {message}"[:300]))
+            candidate = self._repair_with(shown, source, found, "fidelity_repair")
+            if candidate is None:
                 break
             source = candidate
-            found = code_violations(source, self.constraints)
+            found = self._mechanical(source)
         if found:
             self._off_question = [v.as_dict() for v in found]
             if self.constraint_policy == "enforce":
                 return self._blocked(
                     "off_question_unrepaired",
                     "; ".join(f"[{v.id}] {v.detail}" for v in found))
+        source = self._reviewed(shown, source, deadline)
         return self._after_static(shown, source, deadline)
+
+    def _mechanical(self, source: str) -> list:
+        from .fidelity import code_violations
+
+        found = code_violations(source, self.constraints)
+        if not found and self.perturb is not None and self.constraints.probe:
+            more, self._perturb_report = self.perturb(source)
+            found = list(more)
+        return found
+
+    def _repair_with(self, shown, source, found, kind: str) -> "str | None":
+        from .fidelity import repair_text
+
+        try:
+            candidate = self._one(
+                self._prompt(shown, repair=repair_text(found, source)), kind)
+        except ModelSubstituted:
+            raise
+        except LLMError:
+            return None
+        ok, message = self._static_ok(candidate)
+        if not ok:
+            self._pending.append(Call(
+                kind=kind, ok=False, latency_s=0.0,
+                error=f"repair discarded, failed the static check: {message}"[:300]))
+            return None
+        return candidate
+
+    def _reviewed(self, shown, source: str, deadline: float) -> str:
+        """The reviewer, after the mechanical checks. Never blocks.
+
+        Under "repair" a grounded VIOLATED goes back to the agent as a repair
+        request; a rewrite that now fails a mechanical check is discarded, so
+        the reviewer cannot trade a judged objection for a measured one.
+        """
+        from .fidelity import Violation
+
+        if self.judge is None or not self.constraints.judged:
+            return source
+
+        def ask(src: str) -> dict:
+            # A reviewer that fails is a reviewer that did not run -- recorded,
+            # and never a reason to lose the proposal it was asked about.
+            try:
+                return self.judge(src)
+            except ModelSubstituted:
+                raise
+            except Exception as exc:                             # noqa: BLE001
+                return {"ran": False, "reason": f"{type(exc).__name__}: {exc}"[:300]}
+
+        res = ask(source)
+        self._judgement = {"mode": self.judge_mode, **res}
+        repairs = 0
+        while self.judge_mode == "repair" and res.get("violated") \
+                and repairs < FIDELITY_MAX_REPAIRS and time.monotonic() <= deadline:
+            repairs += 1
+            found = [Violation(v["id"], "judged", v["says"],
+                               f"{v['why']} (the line: {v['evidence']})")
+                     for v in res.get("verdicts", []) if v["verdict"] == "VIOLATED"]
+            candidate = self._repair_with(shown, source, found, "judge_repair")
+            if candidate is None or self._mechanical(candidate):
+                break
+            source = candidate
+            res = ask(source)
+            self._judgement = {"mode": self.judge_mode, "repairs": repairs, **res}
+        return source
 
     # -- the synthetic probe (Amendment 7) ---------------------------------- #
     def _after_static(self, shown: Sequence[dict], source: str,

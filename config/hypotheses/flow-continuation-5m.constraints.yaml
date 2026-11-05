@@ -11,6 +11,10 @@ constraints:
     check: hold_seconds
     min: 300
 
+  # Added 2026-11-05 with the probe checks (src/core/loop/perturb.py).
+  - id: flow-drives-trades
+    says: "measure how much volume traded on the offer against how much traded on the bid. That difference is signed order flow"
+    check: uses_flow
 judged:
   - id: signal-over-5m
     says: "Signal measured over 5 minutes."

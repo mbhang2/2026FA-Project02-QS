@@ -136,3 +136,47 @@ would need.
   best over on-question trials with every null kept — conservative by
   construction; the argument is in the amendment.
 - `fidelity_judge: shadow` is the default and has no blocking mode.
+
+## 4. Logic, mechanically: perturbation on synthetic data
+
+The code check proves a strategy reads `delta`; it cannot prove it acts on it,
+or acts in the direction the question names. `src/core/loop/perturb.py` asks
+the behaviour instead, before the trial, on seeded noise shaped like NQ's
+regular-hours session:
+
+- `uses_flow` -- run twice, the second time with every aggressor side inverted
+  and every price unchanged. Byte-identical fills mean nothing depends on flow.
+- `trades_move` -- each entry's side against the price move before it, at 1, 5,
+  15, 30 and 60 minutes; 60% at the best lookback.
+
+The first attempt ran on `synthetic-check` and most cases were inconclusive:
+prices start at 100 with 0.15 of noise, and sessions drift around the clock
+(16:13, 12:33, 08:52), so NQ-point thresholds never fire and nothing anchored
+to the 08:30 open ever trades. On `synthetic-nq-shape` (near 18,000, 5 points
+per tick, sessions opening 08:30 CT):
+
+| case | `uses_flow` | `trades_move` | right? |
+|---|---|---|---|
+| flowcont-01 champion (follows flow) | trades changed | 66-73% with the move | yes |
+| the same, orders swapped (a fade) | trades changed | 66-72% against | yes |
+| s05b-01 champion ("sells after a price rise") | identical — price only | 70-90% against | yes |
+| s05b-01 planted to buy after the rise | identical | 70-90% with — **violation** | yes |
+| s07-01 champion (range breakout) | identical — price only | 67-92% with | yes |
+| s07-01 with the range removed | no trades — inconclusive | — | — |
+
+Every conclusive verdict is right. Six cases is a demonstration, not an error
+rate; the record each campaign now writes is what would measure one.
+
+The reviewer moves from shadow to **repair**: a VIOLATED that quotes a line goes
+back to the agent for at most two rewrites, which are not trials, and a rewrite
+that breaks a mechanical constraint is discarded. It still never blocks.
+
+## Credit
+
+The question-to-hypothesis writer (`scripts/write_hypothesis.py`) is the idea in
+Gowtam's `origin/Gowtam/HypInt` branch -- `Gowtam_hypothesis/researcher/`:
+decompose an ask, propose with sources, critique, render to
+`config/hypotheses/`. The 2026-10-29 rebuild (`441e571`) took his BWIS priors,
+trajectory whitelist and outer loop and did not port the generator. It is
+rebuilt here on this repo's gates rather than merged: his assumed five-minute
+bars and no order flow, which would have refused a CVD question outright.

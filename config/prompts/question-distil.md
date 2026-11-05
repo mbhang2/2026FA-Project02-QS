@@ -131,6 +131,13 @@ Encode only what the question fixes, never what it leaves open. Kinds:
 - `no_overnight` `{}` -- every position closes in the session it opened
 - `side` `{"only": "long" | "short"}`
 - `max_position` `{"value": n}`
+- `uses_flow` `{}` -- the strategy's trades must change when order flow
+  changes; checked by running it on synthetic data twice with the aggressor
+  sides inverted. Use it when the question says the signal is order flow,
+  delta or cumulative volume delta.
+- `trades_move` `{"direction": "against" | "with"}` -- entries go against
+  (reversal, fade) or with (continuation) the price move just before them.
+  Use it when the question fixes the direction relative to the move.
 
 A number in a constraint must also appear in your markdown. Requirements that
 need judgement rather than a check -- "trades against the move", "conditions on

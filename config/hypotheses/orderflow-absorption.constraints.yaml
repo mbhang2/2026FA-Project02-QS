@@ -7,6 +7,10 @@ constraints:
     check: code_uses
     any_of: [delta, buy_volume, sell_volume, Side, side]
 
+  # Added 2026-11-05 with the probe checks (src/core/loop/perturb.py).
+  - id: flow-drives-trades
+    says: "Work in **delta** — signed trade flow."
+    check: uses_flow
 judged:
   - id: absorption-on-1m-bar
     says: "Does absorption on the 1-minute bar mark a turn?"

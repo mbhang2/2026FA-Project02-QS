@@ -657,21 +657,21 @@ def stage_register(name: str, hypothesis: pathlib.Path,
     # else the run reads. Recorded as None when off or when the question lists
     # nothing for it to judge, so "declined" and "predates it" read the same.
     judge_mode = cc.get("fidelity_judge", "off")
-    if judge_mode not in ("off", "shadow"):
-        sys.exit(f"fidelity_judge {judge_mode!r} is not off or shadow; a "
-                 "reviewer that blocks needs its measured error rate and an "
+    if judge_mode not in ("off", "shadow", "repair"):
+        sys.exit(f"fidelity_judge {judge_mode!r} is not off, shadow or repair; "
+                 "a reviewer that blocks needs its measured error rate and an "
                  "amendment first")
     agent_cfg["fidelity_judge"] = None
-    if judge_mode == "shadow" and cons is not None and cons.judged:
+    if judge_mode != "off" and cons is not None and cons.judged:
         sys.path.insert(0, str(ROOT / "scripts"))
         import fidelity_judge
 
         agent_cfg["fidelity_judge"] = {
-            "mode": "shadow", "model": fidelity_judge.MODEL,
+            "mode": judge_mode, "model": fidelity_judge.MODEL,
             "prompt_digest": hashlib.sha256(
                 fidelity_judge.PROMPT.read_bytes()).hexdigest()}
-        print(f"  shadow reviewer: {len(cons.judged)} judged requirement(s) "
-              f"on {fidelity_judge.MODEL}")
+        print(f"  fidelity reviewer ({judge_mode}): {len(cons.judged)} judged "
+              f"requirement(s) on {fidelity_judge.MODEL}")
     # **`aligned` and a shared table are incompatible, and the combination is
     # refused here rather than discovered in a p-value.** `aligned` reads
     # column j of every trial as the SAME randomisation and takes the maximum
@@ -923,9 +923,27 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
             sys.exit(f"{fidelity_judge.PROMPT} has changed since {name} was "
                      "registered; the reviewer must read the prompt it registered.")
         judge = fidelity_judge.make_judge(reg_judge["model"])
-        print(f"  shadow reviewer: ON ({reg_judge['model']}); records only, "
-              "decides nothing", flush=True)
-    judgements: dict[int, dict] = {}
+        print(f"  fidelity reviewer: {reg_judge['mode']} ({reg_judge['model']}); "
+              "never blocks", flush=True)
+
+    def _arm_fidelity(a, root: pathlib.Path | None = None) -> None:
+        """The constraints' probe checks and the reviewer, on one agent.
+
+        Per agent and per worker, for the reason `_arm_probe` is: under
+        Amendment 12 an agent armed against the repository's strategy file
+        races the others.
+        """
+        if cons is None:
+            return
+        import functools
+        if cons.probe:
+            from src.core.loop.perturb import check as perturb_check
+            a.perturb = functools.partial(
+                perturb_check, cons=cons, ledger=d / "probe-ledger.jsonl",
+                strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")
+        if judge is not None:
+            a.judge = lambda src: judge(src, cons)
+            a.judge_mode = reg_judge["mode"]
     def _arm_probe(a, root: pathlib.Path | None = None) -> None:
         """Amendment 7 on one agent, from the record.
 
@@ -965,6 +983,7 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
             strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")
 
     _arm_probe(agent)
+    _arm_fidelity(agent)
     if record.probe_before_trial:
         print("  probe before trial: ON (Amendment 7); synthetic rows in "
               "probe-ledger.jsonl", flush=True)
@@ -988,6 +1007,7 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         # Re-armed on its own worker: `_arm_probe(agent)` above pointed it at
         # the repository, which is right at width 1 and a race above it.
         _arm_probe(agent, workers[0])
+        _arm_fidelity(agent, workers[0])
         agents = [agent]
         for slot in range(1, width):
             extra = agent_for(champion if champion.exists() else None,
@@ -995,6 +1015,7 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
                               constraints=cons, constraint_policy=policy)
             # Every agent, on its own worker. See `_arm_probe`.
             _arm_probe(extra, workers[slot])
+            _arm_fidelity(extra, workers[slot])
             agents.append(extra)
     else:
         agents = [agent]
@@ -1058,15 +1079,6 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
             a = agents[slot]
             a.champion = champ_now
             source = a.propose(shown)
-            if judge is not None and "agent_blocked:" not in source:
-                # Before the run and on its own thread: the reviewer never
-                # sees what the trial scored, and in a generation W of them
-                # wait on the model together rather than in turn.
-                try:
-                    judgements[i] = judge(source, cons)
-                except Exception as exc:                          # noqa: BLE001
-                    judgements[i] = {"ran": False,
-                                     "reason": f"{type(exc).__name__}: {exc}"}
             if width == 1:
                 return i, slot, source, run_trial(
                     source, profile=record.profile, ledger=ledger,
@@ -1149,8 +1161,9 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
                                 code=(row.get("agent_call") or {}).get(
                                     "off_question_code") or [])
             F.append_ledger(d, i, off, policy)
-            if i in judgements:
-                F.append_judgement(d, i, judgements.pop(i))
+            verdict = (row.get("agent_call") or {}).get("judge")
+            if verdict:
+                F.append_judgement(d, i, verdict)
             if off:
                 row["off_question"] = off
                 print(f"    off question: "

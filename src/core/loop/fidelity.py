@@ -90,7 +90,11 @@ DEFAULT_SHARE = 0.95
 CODE_KINDS = ("code_uses", "code_avoids")
 BEHAVIOUR_KINDS = ("hold_seconds", "entry_window", "flat_by", "no_overnight",
                    "side", "max_position")
-KINDS = CODE_KINDS + BEHAVIOUR_KINDS
+# Checked by running the proposal on synthetic data before the trial, and
+# perturbing it (`src/core/loop/perturb.py`): does its behaviour depend on order
+# flow, and do its entries go with or against the prior move.
+PROBE_KINDS = ("uses_flow", "trades_move")
+KINDS = CODE_KINDS + BEHAVIOUR_KINDS + PROBE_KINDS
 
 # The keys each kind takes, and which are required. A key the kind does not
 # know is refused rather than ignored: a typo in `min` would otherwise be a
@@ -104,6 +108,8 @@ _KEYS = {
     "no_overnight": (set(), {"share"}),
     "side": ({"only"}, set()),
     "max_position": ({"value"}, set()),
+    "uses_flow": (set(), set()),
+    "trades_move": ({"direction"}, {"share"}),
 }
 _COMMON = {"id", "says", "check"}
 
@@ -122,6 +128,10 @@ class Constraint:
     @property
     def is_code(self) -> bool:
         return self.check in CODE_KINDS
+
+    @property
+    def is_probe(self) -> bool:
+        return self.check in PROBE_KINDS
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,7 +170,11 @@ class Constraints:
 
     @property
     def behaviour(self) -> tuple[Constraint, ...]:
-        return tuple(c for c in self.items if not c.is_code)
+        return tuple(c for c in self.items if not c.is_code and not c.is_probe)
+
+    @property
+    def probe(self) -> tuple[Constraint, ...]:
+        return tuple(c for c in self.items if c.is_probe)
 
 
 # --------------------------------------------------------------------------- #
@@ -273,6 +287,9 @@ def _validate(kind: str, p: dict, where: str) -> None:
     elif kind == "side":
         if p["only"] not in ("long", "short"):
             raise ConstraintsRejected(f"{where}: side.only is long or short")
+    elif kind == "trades_move":
+        if p["direction"] not in ("against", "with"):
+            raise ConstraintsRejected(f"{where}: trades_move.direction is against or with")
     elif kind == "max_position":
         if not (isinstance(p["value"], int) and p["value"] > 0):
             raise ConstraintsRejected(f"{where}: max_position.value is a positive int")

@@ -7,6 +7,10 @@ constraints:
     check: code_uses
     any_of: [delta, buy_volume, sell_volume, Side, side]
 
+  # Added 2026-11-05 with the probe checks (src/core/loop/perturb.py).
+  - id: flow-drives-trades
+    says: "measure how much volume traded on the offer against how much traded on the bid. That difference is signed order flow"
+    check: uses_flow
 judged:
   - id: not-a-fade
     says: "A strategy that fades large flow is testing the opposite claim and is not an implementation of this one."

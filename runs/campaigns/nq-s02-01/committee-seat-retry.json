@@ -1,0 +1,94 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "Seats re-run after the campaign's committee, because they never produced a verdict in committee-verdict.json. Written BESIDE that file and never over it: the committed artefact records what the campaign's committee actually did, and a seat that failed then did fail then. This is a later, separate read; it cannot change the recorded verdict and does not.",
+  "can_approve": false,
+  "seats": {
+    "leakage": {
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Source uses only ctx.history/ctx.session/ctx.position with an ctx.actionable gate and no reference to scoring, dataset, split, or seed; I cannot verify from source alone that history[-1] is guaranteed to be a closed bar rather than a forming bar, but nothing in the code attempts to reach beyond the per-bar view.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    },
+    "statistics": {
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The metric is supported by 384 sessions / 243 downside / 466 trades on train and 86 / 54 / 106 on validation (not degenerate); p=0.0885 is far above the resolution floor (1e-4) and the gate's null_max_mean (0.147) is consistent with the deflation expected_max (0.134) given null_moments mean=-0.003, sd=0.075 over 20 trials; the apparent disagreement between the deflation 'clears_selection_bar: true' and the gate 'REJECT' is explicitly explained in the notes as a margin vs. a p-value from different null constructions, not an unexplained inconsistency. What I cannot see is what n_nulls=17 versus trials=20 means for the gate's null construction, whether the train-side skew=4.23 / kurtosis=36.3 concentrates the numerator in a few sessions (only validation concentration is shown, best_session_share=0.084, top5% share=0.31), and the interpretation scale for null_reference_divergence on validation (trades_per_session=0.0283).",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    },
+    "economics": {
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The fill model's spread field is null so I cannot confirm the entry/exit prices account for realistic slippage on NQ, but the per-trade edge is ~8.6 index points (~34 ticks) versus a 0.2-point round-trip commission, giving wide margin to absorb fill degradation; the docstring's developed hypothesis (continuation of outsized, high-volume, trend-aligned bars) is one arm of the pre-registered 'continue vs. give-back' question and is a legitimate narrowing, and the code implements it directly (range outlier vs. session median, volume filter, session-open trend filter, two-bar confirmation, then continuation entry). Trade count 466/384 sessions, ~3.1-hour average holding, commission 2.3% of gross, and out-of-sample score degradation of only 0.048 all argue the result is not an artifact of inactivity or cost absorption.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    },
+    "robustness": {
+      "verdict": "PASS",
+      "reasons": [
+        "Breadth is genuinely broad on train: 12/18 months positive (66.7%), 5/6 weekdays positive (83.3%), 15/24 hours positive (62.5%) \u2014 no minority of periods is holding up the total.",
+        "Best-session share is 7.9% on train and 8.4% on validation; removing the best session cannot flip the sign of the total, so there is no single-session dependence.",
+        "Validation breadth mirrors train breadth (4/5 months positive, 4/6 weekdays positive, ~14/23 hours positive), so the out-of-sample look does not reveal a collapse to a narrow regime.",
+        "The largest month (2025-04, ~1462) plus the next two together are ~71% of train PnL, and top-5% profit concentration is 44.3% on train / 31.0% on validation \u2014 this is context, not grounds for a veto under the measured correlation between concentration and validation, and the result remains positive if the best month is removed.",
+        "The rule fires 466 times over 281/384 exposed sessions in train and 106 times in validation, so this is not a rule that only fires a few times."
+      ],
+      "confidence_note": "I was not given the strategy's parameters or rule text, so I cannot rule out suspiciously specific parameter values or many small filters fitted to the sample.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    }
+  },
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  },
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 2275,
+      "completion_tokens": 351,
+      "reasoning_tokens": 259,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4486,
+      "completion_tokens": 2224,
+      "reasoning_tokens": 1887,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 5618,
+      "completion_tokens": 2993,
+      "reasoning_tokens": 2775,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 5850,
+      "completion_tokens": 5817,
+      "reasoning_tokens": 5519,
+      "finish_reason": "stop"
+    }
+  ]
+}

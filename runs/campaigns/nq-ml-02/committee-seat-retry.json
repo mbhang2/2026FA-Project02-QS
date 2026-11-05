@@ -1,0 +1,79 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "Seats re-run after the campaign's committee, because they never produced a verdict in committee-verdict.json. Written BESIDE that file and never over it: the committed artefact records what the campaign's committee actually did, and a seat that failed then did fail then. This is a later, separate read; it cannot change the recorded verdict and does not.",
+  "can_approve": false,
+  "seats": {
+    "leakage": {
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "Assuming the harness's `history[-1]` is the just-closed bar (as the structural guarantee implies), all features, labels, rolling windows, and session aggregates are computed from data that has already closed at the decision point; I cannot see the harness's `on_bars` invocation semantics or the SessionProfile implementation to independently confirm that bar.close is final rather than forming at the moment `on_bars` runs.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    },
+    "statistics": {
+      "verdict": "VETO",
+      "reasons": [
+        "The best score's numerator is carried by a handful of sessions: 92 of 100 train sessions are downside sessions while net_pnl is +299.75, i.e. essentially all profit comes from ~8 winning sessions, and the return shape is extreme (skew 6.85, kurtosis 51.9). The sortino_per_session denominator is broad (92 downside sessions), but the mean it divides is not a representative estimate \u2014 the ratio is describing those few extreme sessions, not 100 sessions of evidence.",
+        "The result does not replicate on the held-out validation split: train_primary 1.78 vs validation_primary -0.18 (change -1.97), with the same concentration signature (profit_concentration_top5pct 0.907, best_session_share 0.298, win_rate 0.229, net_pnl -159.9). The gate ACCEPT rests entirely on the train score; the only out-of-sample evidence in front of me contradicts it, so the accepted statistic is not an estimate of a repeatable effect.",
+        "The views disagree sharply and only partially explained: the gate ACCEPTS (p=0.0304 on the observed maximum), while the per-trial diagnostics yield 0 BH and 0 Holm discoveries with the best FAR 0.0169 vs Holm critical 0.0025 (7 uncorrected 'discoveries'). The note that the tabulated FAR is one strategy's null and was measured 10-17x optimistic for differently-trading candidates makes the per-trial rejection stronger, not weaker, so it does not reconcile the disagreement in the direction needed for the ACCEPT."
+      ],
+      "confidence_note": "I cannot see session-level PnL for the train run (only skew/kurtosis and the validation concentration stats), the construction of the empirical null maximum, or how many prior campaigns were run before this one.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    },
+    "economics": {
+      "verdict": "PASS",
+      "reasons": [
+        "Economics are coherent on the training result: 245 round trips over 100 sessions (2.45/session), gross 348.75 points, commission 49 points (14% of gross at 0.1 pt/side round-turn), net +299.75 points. Costs do not decide the outcome.",
+        "Original hypothesis (do AMT features predict H-bar forward return on NQ?) is economically plausible: NQ is liquid, the feature set is computable from the trades feed, and a 1-hour forward return on NQ is a tradeable target with real dispersion. Not an automatic non-starter.",
+        "Code implements the claimed training target: ridge regression on the five AMT features (VPOC distance, VA position, at-LVN flag, CVD divergence, tape velocity) plus momentum, fitted to H=20-step (\u22481 hour at 180s cadence) forward price change. Fits the hypothesis family; adding momentum as a 6th control is inside the spirit (still testing whether AMT features contribute alongside a momentum baseline).",
+        "Not a degenerate inactivity optimum: 245 trades and ~51s average holding show the strategy engages actively in the sessions where the signal fires; the TRADE_FRACTION=1% threshold is a confidence filter, not pure inactivity."
+      ],
+      "confidence_note": "Two economic concerns I cannot resolve from this evidence alone (not veto-grade on their axis): (1) the training label is a 1-hour forward return but the bracket resolves in ~50s on average \u2014 the strategy monetises very short-term directional moves rather than the 1-hour move the model was fitted to, which may dilute what is actually being tested; (2) only 14/100 train sessions and 22/86 validation sessions have exposure (with best-session share 0.30 and top-5%-of-trades profit concentration 0.91 on validation) \u2014 the P&L is highly concentrated in a handful of sessions and a handful of trades, and the validation result (-159.9 points net, 81/86 downside sessions, win rate 0.229) suggests the train economics may not generalise. Whether that constitutes 'artifact' is partly the generalization/robustness axis, not purely economics.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    }
+  },
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  },
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 5587,
+      "completion_tokens": 3453,
+      "reasoning_tokens": 3004,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 3007,
+      "completion_tokens": 5447,
+      "reasoning_tokens": 5332,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 7756,
+      "completion_tokens": 6747,
+      "reasoning_tokens": 6217,
+      "finish_reason": "stop"
+    }
+  ]
+}

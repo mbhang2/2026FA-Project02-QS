@@ -1,0 +1,104 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "Seats re-run after the campaign's committee, because they never produced a verdict in committee-verdict.json. Written BESIDE that file and never over it: the committed artefact records what the campaign's committee actually did, and a seat that failed then did fail then. This is a later, separate read; it cannot change the recorded verdict and does not.",
+  "can_approve": false,
+  "seats": {
+    "leakage": {
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "All decision inputs (ctx.options(), ctx.history(interval)[-1], ctx.history('1d')[-1], ctx.session/session_end/ts, ctx.assets_held) are read through the per-bar view at the acting bar with no state carried forward from later data and no access to scoring/split/seed internals (only ctx.dataset_name is used, and only to build the option asset symbol); however I cannot see the harness implementation to confirm that history('1d')[-1] is the prior session's closed bar rather than a forming daily bar, so the claimed 'previous session bias' semantics are unverified.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    },
+    "statistics": {
+      "verdict": "PASS",
+      "reasons": [
+        "Best score is negative (-0.2265) and falls below the deflation-view expected max under null (0.2589); margin is negative, and every view (uncorrected, BH, Holm, gate) reports zero discoveries and REJECT \u2014 the views agree and there is no positive claim to disbelieve.",
+        "Sortino denominator is not degenerate: 23 downside sessions out of 105 (100 exposed), and 45 trades \u2014 the ratio is not estimated from a handful of sessions.",
+        "Gate p-value is 1.0, not at the resolution floor (1e-4), so the 'cannot resolve' failure mode does not apply; the result is a clear rejection rather than a floor-censored near miss.",
+        "The 42/50 crash rate is acknowledged in the ledger and excluded from the correction as designed; I cannot see crash causes, but crashes cannot inflate a claim that is already negative and rejected."
+      ],
+      "confidence_note": "I cannot see per-session return distributions to verify independence or concentration within the 23 downside sessions, nor the number of prior campaigns that may have preceded this one.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    },
+    "economics": {
+      "verdict": "VETO",
+      "reasons": [
+        "Hypothesis drift: the registered question is whether an options-surface arbitrage violation survives the spread and can be captured. The winning strategy explicitly abandons that question \u2014 the docstring states it is 'willing to use a box spread that is merely \"least bad\" when it is flat' and the `_scan_floor_box` routine accepts boxes down to `floor_min_net = -2.0` index points of net *loss*. Trading a structure you know has negative edge is the opposite of detecting a mispricing; it is a cost-minimisation exercise that has nothing to do with the pre-registered proposition.",
+        "The dominant economic activity in the winner is not options arbitrage at all \u2014 `_maybe_index_fallback` places directional SPX trades off a bar-bias / daily-bias heuristic (momentum / trend-following on the underlying). That is a separate strategy from the one the hypothesis names, so the reported P&L is not evidence about the hypothesis.",
+        "Net P&L is negative (-14.96 index points, ~ -$299) and gross P&L is negative before commissions (-5.56 points). Commission of 9.4 points is larger in absolute value than the gross loss, i.e. costs do not merely decide the outcome \u2014 they convert an already-money-losing gross into a bigger net loss. Nothing here is capturing anything after the spread.",
+        "On the `spx-options-clean` split the correct answer per the pre-registration is 'report nothing and take nothing'. The strategy instead forces 45 trades across 105 sessions (only 30 with exposure), including negative-edge boxes chosen because they score better than nothing. This is exactly the failure mode the hypothesis warns about: 'a rule that finds an arbitrage on a surface that contains none has found its own spread, and that is the single most likely way to fail here'.",
+        "The 'floor' logic optimises `net / horizon` (score) subject to `net >= -2.0`. Maximising a per-session loss-per-session ratio is not a detection rule for anything; it is a search for the smallest way to bleed while satisfying an exposure floor. That is a degenerate optimum relative to the hypothesis being tested."
+      ],
+      "confidence_note": "I cannot see the sibling surfaces (the dirty / arb-embedded dataset), the harness fill model for multi-leg packages, or whether the reported Sortino of -0.226 is what the gate actually scored; a positive gate score with these P&L numbers would be a separate and additional problem. I also cannot see any prior-trial ledger, so I am taking the docstring's description of prior behaviour on trust.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    },
+    "robustness": {
+      "verdict": "VETO",
+      "reasons": [
+        "breadth_by_month is 0/4 positive (2023-11: -0.80, 2023-12: -0.59, 2024-01: -9.67, 2024-02: -3.90) \u2014 no month carries a positive result at all, so the outcome is not broad-based in time.",
+        "breadth_by_hour_utc is 1/4 positive (only hour 14 is positive at +1.70; hours 15, 17, 21 are all negative with 21 at -11.80), so the hourly distribution is concentrated in a single bucket while the other three lose.",
+        "breadth_by_weekday (4/7 positive) is the only breakdown not decisively narrow, but the two biggest single-cell losses are Wed (-10.81) and Fri (-10.99), meaning the weekday breadth is achieved by small positive cells offsetting large negative ones rather than a diffuse positive distribution.",
+        "sessions_with_exposure is only 30 out of 105 n_sessions and outcomes shows 42 crashed vs 8 completed out of 45 trades, so the per-cell counts behind every breakdown are single digits \u2014 the seasonality_caveat itself notes these counts are tiny and not inferential."
+      ],
+      "confidence_note": "by_hour_utc_entry is null so I could not distinguish realisation-clock from entry-clock concentration per the caveat; validation was not run so nothing is known about whether this distribution holds out of sample.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    }
+  },
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  },
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 2397,
+      "completion_tokens": 679,
+      "reasoning_tokens": 321,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 7044,
+      "completion_tokens": 1868,
+      "reasoning_tokens": 1596,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 7019,
+      "completion_tokens": 1905,
+      "reasoning_tokens": 1270,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4594,
+      "completion_tokens": 3656,
+      "reasoning_tokens": 3508,
+      "finish_reason": "stop"
+    }
+  ]
+}

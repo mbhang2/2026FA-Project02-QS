@@ -1,0 +1,5 @@
+[
+ {"name":"s07-02 champion (seat retry: VETO, conflates time-outs)","source":"runs/campaigns/nq-s07-02/champion.py","hypothesis":"config/hypotheses/opening-range-break-hold-or-return.md","expect":{"undecided-not-either-account":true}},
+ {"name":"s07-03 champion (seat retry: VETO)","source":"runs/campaigns/nq-s07-03/champion.py","hypothesis":"config/hypotheses/opening-range-departure-fates-by-clock.md","expect":{"undecided-not-either-account":true}},
+ {"name":"mvp-01 champion (seat: VETO for fading an undirected question)","source":"runs/campaigns/nq-mvp-01/champion.py","hypothesis":"config/hypotheses/intraday-continuation.md","expect":{"not-regime-model":false,"large-relative-to-session":false}}
+]

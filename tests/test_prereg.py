@@ -112,8 +112,11 @@ def test_the_real_documents_current_statuses():
     # amendment here that trades statistical power for wall clock.
     # 13 signed 2026-10-05: a session may be rehearsed on synthetic data, and a
     # rehearsal is not a look.
+    # 14 drafted 2026-11-05, NOT signed: `fidelity_policy: enforce` is refused
+    # at registration until it is. Flip this when a human signs it.
     expected = {1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
-                8: True, 9: True, 10: True, 11: True, 12: True, 13: True}
+                8: True, 9: True, 10: True, 11: True, 12: True, 13: True,
+                14: False}
     actual = {n: ok for n, ok, _ in mod.all_amendments()}
     assert actual == expected, actual
 

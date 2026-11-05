@@ -250,7 +250,7 @@ def test_the_run_stage_passes_the_flag_and_the_records_profile():
     assert "allow_fitted=record.allow_fitted_proposals" in source, (
         "run_trial is called without the gate, so a fitted proposal would run "
         "in a campaign that did not register one")
-    assert "record.profile, model)" in source, (
+    assert "record.profile, model" in source, (
         "the agent is built from PROFILE rather than from the record, so a "
         "fitted campaign's agent would be given the unfitted run facts")
 

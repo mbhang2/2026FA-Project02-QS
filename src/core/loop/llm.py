@@ -58,7 +58,10 @@ from .hypothesis import Hypothesis, block as hypothesis_block
 from .knowledge import block as knowledge_block
 
 if TYPE_CHECKING:  # pragma: no cover -- a type, never an import at run time
+    from .fidelity import Constraints
     from .probe import ProbeResult
+
+from .fidelity import MAX_REPAIRS as FIDELITY_MAX_REPAIRS
 
 from .._roots import repo_root
 
@@ -258,6 +261,14 @@ class ParentPick:
     trial: int | None = None
 
 
+def _repo_relative(path: str) -> str:
+    p = Path(path)
+    try:
+        return str(p.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(p)
+
+
 def _digest_source(text: str) -> str:
     import hashlib
 
@@ -331,6 +342,14 @@ class LLMAgent:
     probe_before_trial: bool = False
     probe: "Callable[[str], ProbeResult] | None" = None
     max_probe_repairs: int = 2
+    # **What the question fixes, checked on the code before the trial runs**
+    # (`src/core/loop/fidelity.py`). `None` is a campaign with no constraints
+    # file, which behaves exactly as every campaign before it did. The policy
+    # is the campaign's registered one: "record" repairs and proceeds, "enforce"
+    # blocks a proposal whose violation survives its repairs -- a blocked
+    # proposal is a trial and counts toward N.
+    constraints: "Constraints | None" = None
+    constraint_policy: str = "record"
     # Everything below is state, not configuration.
     calls: list[Call] = field(default_factory=list, init=False, repr=False)
     _pending: list[Call] = field(default_factory=list, init=False, repr=False)
@@ -343,6 +362,9 @@ class LLMAgent:
     # Drawn once per proposal and reused by every repair of it, so a repair
     # cannot quietly hand the model a different file to fix.
     _parent: "ParentPick | None" = field(default=None, init=False, repr=False)
+    # The code violations the last proposal still had when it went to trial,
+    # for `drain_log` and from there `fidelity.jsonl`.
+    _off_question: list = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.base_url = self.base_url or os.environ.get("LITELLM_BASE_URL", "")
@@ -402,6 +424,15 @@ class LLMAgent:
             # field and one that declined it read differently.
             "probe_before_trial": bool(self.probe_before_trial),
             "max_probe_repairs": self.max_probe_repairs,
+            # Recorded even when there are none, like the probe.
+            "constraints": (None if self.constraints is None else {
+                # Repo-relative, like the hypothesis: an absolute path would
+                # put this machine's home directory into a committed record.
+                "path": _repo_relative(self.constraints.path),
+                "digest": self.constraints.digest,
+                "policy": self.constraint_policy,
+                "max_repairs": FIDELITY_MAX_REPAIRS,
+            }),
             "request_timeout_s": self.request_timeout_s,
             "proposal_wall_clock_s": self.proposal_wall_clock_s,
         }
@@ -416,6 +447,8 @@ class LLMAgent:
             "repair_attempts": sum(1 for c in calls if c.kind == "repair"),
             "probe_runs": sum(1 for c in calls if c.kind == "probe"),
             "probe_repairs": sum(1 for c in calls if c.kind == "probe_repair"),
+            "fidelity_repairs": sum(1 for c in calls if c.kind == "fidelity_repair"),
+            "off_question_code": list(self._off_question),
             "prompt_tokens": sum(c.prompt_tokens for c in calls),
             "completion_tokens": sum(c.completion_tokens for c in calls),
             "latency_s": round(sum(c.latency_s for c in calls), 2),
@@ -444,6 +477,7 @@ class LLMAgent:
         # One draw per proposal. Cleared here rather than at the end so a
         # proposal that raised still leaves its parent readable in drain_log.
         self._parent = None
+        self._off_question = []
         deadline = time.monotonic() + self.proposal_wall_clock_s
         shown = history if self.show_history else ()
         try:
@@ -456,7 +490,7 @@ class LLMAgent:
         for attempt in range(self.max_repair_attempts + 1):
             ok, message = self._static_ok(source)
             if ok:
-                return self._after_static(shown, source, deadline)
+                return self._on_question(shown, source, deadline)
             if attempt == self.max_repair_attempts:
                 return self._blocked(
                     "static_check_unrepaired",
@@ -477,6 +511,50 @@ class LLMAgent:
             except LLMError as exc:
                 return self._blocked("repair_call_failed", str(exc))
         return self._blocked("unreachable", "")   # pragma: no cover
+
+    # -- what the question fixes (src/core/loop/fidelity.py) ----------------- #
+    def _on_question(self, shown: Sequence[dict], source: str,
+                     deadline: float) -> str:
+        """Check the code against the campaign's constraints; repair, then decide.
+
+        Safe to repair for the reason the static repair is: the check reads the
+        syntax tree and executes nothing, so its answer is not a function of
+        market data and a repair leaks no selection signal. Bounded, and the
+        repairs are not trials. A repair that breaks the static check is
+        discarded and the last statically-clean file stands.
+        """
+        from .fidelity import code_violations, repair_text
+
+        if self.constraints is None or not self.constraints.code:
+            return self._after_static(shown, source, deadline)
+        found = code_violations(source, self.constraints)
+        repairs = 0
+        while found and repairs < FIDELITY_MAX_REPAIRS \
+                and time.monotonic() <= deadline:
+            repairs += 1
+            try:
+                candidate = self._one(
+                    self._prompt(shown, repair=repair_text(found, source)),
+                    "fidelity_repair")
+            except ModelSubstituted:
+                raise
+            except LLMError:
+                break
+            ok, message = self._static_ok(candidate)
+            if not ok:
+                self._pending.append(Call(
+                    kind="fidelity_repair", ok=False, latency_s=0.0,
+                    error=f"repair discarded, failed the static check: {message}"[:300]))
+                break
+            source = candidate
+            found = code_violations(source, self.constraints)
+        if found:
+            self._off_question = [v.as_dict() for v in found]
+            if self.constraint_policy == "enforce":
+                return self._blocked(
+                    "off_question_unrepaired",
+                    "; ".join(f"[{v.id}] {v.detail}" for v in found))
+        return self._after_static(shown, source, deadline)
 
     # -- the synthetic probe (Amendment 7) ---------------------------------- #
     def _after_static(self, shown: Sequence[dict], source: str,
@@ -753,6 +831,15 @@ class LLMAgent:
                                 "-- your edit changed nothing the engine could see")
                 else:
                     first_seen[digest] = i
+            # **Tell the agent when a trial did not do what the question fixes**
+            # (`fidelity.py`): which constraint, and what its strategy did --
+            # hold times, entry times, a feature it never used. A description of
+            # behaviour, never a score; it already sees trade counts from the
+            # same run. Set by the driver on the in-memory row only.
+            off = row.get("off_question")
+            if off:
+                from .fidelity import history_note
+                bits.append(history_note(off))
             lines.append("  ".join(bits))
 
         scored = [(i, r) for i, r in enumerate(history)

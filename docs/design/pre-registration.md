@@ -2095,3 +2095,74 @@ proves nothing about the driver that runs at night. This is why it runs the real
 the output root changed, and why `scripts/rehearse.py` asserts afterwards that a
 gate ran, nulls were computed and the committee was asked. A green rehearsal
 that skipped a stage is worse than no rehearsal.
+
+## Amendment 14 — 2026-11-05 — a candidate must answer the question it was registered under
+
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-05 by Claude on request; in force when a human signs this line.**
+
+### Why it was asked for
+
+A campaign registers a question, and nothing checked that the trials answered
+it until one model read one champion at the end. Read across the 27 committees on
+record (2026-11-05), the economics seat found three champions that answered a
+different question from the one they were registered under:
+
+| campaign | what the champion did | what the question fixed |
+|---|---|---|
+| nq-flowcont-5m | median hold 21 s | "Position held at least 5 minutes." |
+| nq-orderflow-absorption-02 | never used a volume profile | "It must condition on a level built from traded volume." |
+| nq-s04-02 | 22% of round turns open after the close | "must not carry a position into hours it makes no claim about" |
+
+Each spent its whole budget on the wrong question and learned so at the end --
+and nine of the 27 economics seats never ran at all. Run over every historical
+trial, the mechanical checks of `src/core/loop/fidelity.py`, with constraints
+written blind to the results, catch all three, and also find drifts the seat
+passed or never read: the `nq-s06-*` champions made about half their entries
+outside regular hours under "Not the overnight or Globex session", and
+`nq-s01-continuation` carried 41% of its round turns across a session boundary
+under "Within a single trading session". `docs/reviews/question-fidelity/` has
+the table.
+
+### What it permits
+
+`fidelity_policy: enforce` at registration, for a hypothesis with a constraints
+file beside it. Under it:
+
+1. **A code violation the agent cannot repair in two attempts is a blocked
+   proposal.** A trial, counted in N, like every blocked proposal.
+2. **An off-question trial cannot become the champion.** The next proposals would
+   otherwise be edits of an answer to another question.
+3. **The gate's observed best is taken over on-question trials only.** Every
+   trial's null sample stays in `max_of_n`, and N is unchanged.
+
+### Why (3) cannot raise the false-acceptance rate
+
+`max_of_n` compares the observed best against the distribution of the best of N
+nulls. Excluding candidates changes only the observed side, and the maximum over
+a subset is at most the maximum over the set. So for any campaign,
+`P(accept | enforce) <= P(accept | no exclusion)`, and Task 57's bound holds
+unchanged. The exclusion is decided by the constraints file frozen at
+registration and by the trial's own code and fills -- never by its score -- so it
+is not a selection on outcome.
+
+### What it does NOT permit
+
+- **A constraint the question did not state.** `load()` refuses any `says` that is
+  not a verbatim quote of the hypothesis. Writing constraints after seeing results
+  is writing a new question; that is a new hypothesis file and a new campaign.
+- **The shadow reviewer deciding anything.** `scripts/fidelity_judge.py` reads the
+  requirements no mechanical check can express and records its verdicts in
+  `fidelity-judge.jsonl`. Nothing reads them. Letting it act needs its measured
+  error rate and its own amendment.
+- **Changing a running campaign.** The constraints file's digest is in the record;
+  a run refuses to start if it has changed.
+
+### The argument against
+
+**A constraint written too tightly blocks the legitimate answer.** The first
+default -- every round turn must comply -- failed `nq-s04-01` for one entry in 375.
+The default is now 95% of round turns, and a constraint that means every fill
+says `share: 1`. A wrongly-written constraint costs power, never error rate,
+which is the right direction for a mistake to fall; but a campaign whose every
+trial is off-question has spent its budget learning about its constraints file.
+`record` exists so that cost can be seen before it is paid.

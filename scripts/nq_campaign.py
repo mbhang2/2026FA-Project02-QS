@@ -227,14 +227,53 @@ def scored_session_count(profile: dict) -> int:
     return len(ds.scored_sessions(Split(profile["split"])))
 
 
+def constraints_for(hypothesis: pathlib.Path | None, policy: str | None):
+    """The question's constraints file, loaded and grounded, or None.
+
+    `policy` is the campaign's `fidelity_policy`: "off" or None loads nothing,
+    so a campaign that declines the check behaves exactly as one registered
+    before it existed. A hypothesis with no sidecar has nothing to check.
+    """
+    from src.core.loop import fidelity as F
+
+    if hypothesis is None or policy in (None, "off"):
+        return None
+    if policy not in F.POLICIES:
+        sys.exit(f"fidelity_policy {policy!r} is not one of off, "
+                 f"{', '.join(F.POLICIES)}")
+    if policy == "enforce":
+        # `record` changes nothing the correction reads -- a bounded repair that
+        # executes nothing, and a note in the agent's history. `enforce` changes
+        # which trial may become the champion and which scores the gate's
+        # observed best is taken over, and that is a change to a registered
+        # procedure, so it waits for its amendment like the probe did.
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import prereg
+
+        if not prereg.in_force(14):
+            sys.exit("fidelity_policy 'enforce' needs Amendment 14 IN FORCE "
+                     f"(docs/design/pre-registration.md); it is "
+                     f"{prereg.status(14)!r}. Sign it, or register with "
+                     "fidelity_policy: record.")
+    side = F.sidecar_for(hypothesis)
+    if not side.is_file():
+        return None
+    try:
+        return F.load(side, hypothesis.read_text())
+    except F.ConstraintsRejected as exc:
+        sys.exit(f"refusing {side.relative_to(ROOT)}: {exc}")
+
+
 def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
-              profile_name: str = PROFILE, model: str = MODEL):
+              profile_name: str = PROFILE, model: str = MODEL,
+              constraints=None, constraint_policy: str = "record"):
     from src.core.loop import hypothesis as H
     from src.core.loop.llm import LLMAgent
 
     c = cfg()
     profile = c["profiles"][profile_name]
     return LLMAgent(
+        constraints=constraints, constraint_policy=constraint_policy,
         model=model, temperature=0.7, max_tokens=PROPOSER_MAX_TOKENS, show_history=True,
         # None is a real state, not a missing argument: `hypothesis_path` is
         # optional on the record, and a campaign that registered without a
@@ -602,7 +641,37 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         # Amendment 7. A flag at registration, frozen below; never read from
         # the config at run time.
         cc = {**cc, "probe_before_trial": bool(probe)}
-    agent_cfg = agent_for(None, hypothesis, profile_name, model).config()
+    # **What the question fixes, frozen with it** (`src/core/loop/fidelity.py`).
+    # The constraints file's digest goes into agent_config, which the record
+    # digest covers, so editing it mid-campaign is the same alarm as editing
+    # the hypothesis.
+    fidelity_policy = cc.get("fidelity_policy", "off")
+    cons = constraints_for(hypothesis, fidelity_policy)
+    agent_cfg = agent_for(None, hypothesis, profile_name, model,
+                          constraints=cons,
+                          constraint_policy=fidelity_policy).config()
+    if cons is not None:
+        print(f"  constraints: {len(cons.items)} from "
+              f"{pathlib.Path(cons.path).name}  policy={fidelity_policy}")
+    # The shadow reviewer (scripts/fidelity_judge.py), frozen like everything
+    # else the run reads. Recorded as None when off or when the question lists
+    # nothing for it to judge, so "declined" and "predates it" read the same.
+    judge_mode = cc.get("fidelity_judge", "off")
+    if judge_mode not in ("off", "shadow"):
+        sys.exit(f"fidelity_judge {judge_mode!r} is not off or shadow; a "
+                 "reviewer that blocks needs its measured error rate and an "
+                 "amendment first")
+    agent_cfg["fidelity_judge"] = None
+    if judge_mode == "shadow" and cons is not None and cons.judged:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import fidelity_judge
+
+        agent_cfg["fidelity_judge"] = {
+            "mode": "shadow", "model": fidelity_judge.MODEL,
+            "prompt_digest": hashlib.sha256(
+                fidelity_judge.PROMPT.read_bytes()).hexdigest()}
+        print(f"  shadow reviewer: {len(cons.judged)} judged requirement(s) "
+              f"on {fidelity_judge.MODEL}")
     # **`aligned` and a shared table are incompatible, and the combination is
     # refused here rather than discovered in a p-value.** `aligned` reads
     # column j of every trial as the SAME randomisation and takes the maximum
@@ -818,8 +887,45 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
     # Model from the record too. Registering one model and running another
     # would make agent_config describe a campaign that never happened.
     model = (record.agent_config or {}).get("model", MODEL)
+    # The constraints the record froze, re-read and re-checked by digest for
+    # the reason the hypothesis is: the file is a path, and a path can change.
+    reg_cons = (record.agent_config or {}).get("constraints")
+    cons, policy = None, "record"
+    if reg_cons:
+        from src.core.loop import fidelity as F
+
+        policy = reg_cons["policy"]
+        cpath = pathlib.Path(reg_cons["path"])
+        cpath = cpath if cpath.is_absolute() else ROOT / cpath
+        cons = F.load(cpath, hyp_path.read_text()) if cpath.is_file() else None
+        if cons is None or cons.digest != reg_cons["digest"]:
+            sys.exit(
+                f"{cpath} has changed or gone since {name} was registered.\n"
+                f"  registered digest {reg_cons['digest']}\n"
+                f"  current digest    {cons.digest if cons else None}\n"
+                "A campaign checks the constraints it registered.")
+        print(f"  constraints: {len(cons.items)}  policy={policy}", flush=True)
+        # A resumed campaign's agent must see the earlier trials' notes too.
+        for i, note in F.read_ledger(d).items():
+            if i < len(rows) and note.get("violations"):
+                rows[i]["off_question"] = note["violations"]
     agent = agent_for(champion if champion.exists() else None, hyp_path,
-                      record.profile, model)
+                      record.profile, model, constraints=cons,
+                      constraint_policy=policy)
+    judge = None
+    reg_judge = (record.agent_config or {}).get("fidelity_judge")
+    if reg_judge and cons is not None:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import fidelity_judge
+
+        got = hashlib.sha256(fidelity_judge.PROMPT.read_bytes()).hexdigest()
+        if got != reg_judge["prompt_digest"]:
+            sys.exit(f"{fidelity_judge.PROMPT} has changed since {name} was "
+                     "registered; the reviewer must read the prompt it registered.")
+        judge = fidelity_judge.make_judge(reg_judge["model"])
+        print(f"  shadow reviewer: ON ({reg_judge['model']}); records only, "
+              "decides nothing", flush=True)
+    judgements: dict[int, dict] = {}
     def _arm_probe(a, root: pathlib.Path | None = None) -> None:
         """Amendment 7 on one agent, from the record.
 
@@ -885,7 +991,8 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         agents = [agent]
         for slot in range(1, width):
             extra = agent_for(champion if champion.exists() else None,
-                              hyp_path, record.profile, model)
+                              hyp_path, record.profile, model,
+                              constraints=cons, constraint_policy=policy)
             # Every agent, on its own worker. See `_arm_probe`.
             _arm_probe(extra, workers[slot])
             agents.append(extra)
@@ -951,6 +1058,15 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
             a = agents[slot]
             a.champion = champ_now
             source = a.propose(shown)
+            if judge is not None and "agent_blocked:" not in source:
+                # Before the run and on its own thread: the reviewer never
+                # sees what the trial scored, and in a generation W of them
+                # wait on the model together rather than in turn.
+                try:
+                    judgements[i] = judge(source, cons)
+                except Exception as exc:                          # noqa: BLE001
+                    judgements[i] = {"ran": False,
+                                     "reason": f"{type(exc).__name__}: {exc}"}
             if width == 1:
                 return i, slot, source, run_trial(
                     source, profile=record.profile, ledger=ledger,
@@ -1020,11 +1136,35 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
             with (d / "agent-calls.jsonl").open("a") as fh:
                 fh.write(json.dumps({"trial": i, **row["agent_call"]}) + "\n")
 
+          # **What the question fixes, on what the trial did.** Code violations
+          # the agent could not repair arrive in its drain log; behaviour is
+          # read off the trial's own fills. Written beside the ledger, never in
+          # it -- `run.py` owns the row -- and shown to the agent on the
+          # in-memory row.
+          off = None
+          if cons is not None:
+            from src.core.loop import fidelity as F
+
+            off = F.check_trial(row, cons, root=ROOT,
+                                code=(row.get("agent_call") or {}).get(
+                                    "off_question_code") or [])
+            F.append_ledger(d, i, off, policy)
+            if i in judgements:
+                F.append_judgement(d, i, judgements.pop(i))
+            if off:
+                row["off_question"] = off
+                print(f"    off question: "
+                      f"{', '.join(v['id'] for v in off)}", flush=True)
+
           # The champion advances only on a strict improvement. A tie keeps the
           # incumbent, so the base does not drift between equivalent files.
+          # Under `enforce` an off-question trial cannot become the base: the
+          # next proposals would be edits of an answer to another question.
           score = (row.get("score") or {}).get("primary")
           rejected = (row.get("score") or {}).get("rejected")
-          if score is not None and not rejected and (best is None or score > best):
+          eligible = not (off and policy == "enforce")
+          if eligible and score is not None and not rejected \
+                  and (best is None or score > best):
             best = score
             champion.write_text(source)
             state.write_text(json.dumps({"best": best, "trial": i}))
@@ -1276,6 +1416,106 @@ def _record_outcome(name: str) -> None:
         print(f"  feedback edge FAILED (report stands): {type(exc).__name__}: {exc}")
 
 
+def committee_evidence(d: pathlib.Path, record, tier2: dict) -> tuple[str | None, str | None]:
+    """What the committee reads besides the summary: the hypothesis text, the
+    validation evidence and buy-and-hold attached to `tier2` in place, and the
+    winning source.
+
+    One function so that a later re-run of a seat that failed
+    (`scripts/committee_retry.py`) hands the auditor exactly what the campaign's
+    own committee was handed, rather than a reconstruction of it.
+    """
+    if record.hypothesis_path:
+        hyp_text = (ROOT / record.hypothesis_path).read_text()
+    else:
+        hyp_text = None
+    # Section 5's out-of-sample evidence, if `--stage validate` has run. Absent is
+    # a state the slices state explicitly rather than omit -- see
+    # `_validation_evidence`: "not checked" and "checked and held up" are opposite
+    # readings and a silent gap gets read as the flattering one.
+    vfile = d / "validation.json"
+    if vfile.exists():
+        tier2["validation"] = json.loads(vfile.read_text())
+        print(f"  validation: train {tier2['validation']['train']['primary']:+.4f}"
+              f"  validation {tier2['validation']['validation']['primary']:+.4f}")
+    else:
+        print("  validation: not run (--stage validate)")
+
+    # **Buy-and-hold, for the COMMITTEE only.** Michael's call, 2026-10-26:
+    # the economics seat has no way to see a campaign's opportunity cost, and
+    # "+9,937 while one contract would have made +5,257 with a 5,073-point
+    # drawdown" is exactly the judgement a seat exists to make. Attached here
+    # rather than in the proposal prompt, deliberately -- an agent told the
+    # benchmark can take the exposure instead of beating it, and
+    # `docs/agent/*.md` is in ARTIFACT_GLOBS so adding it there would open a
+    # new regime. NOT a gate: measured on NQ this benchmark's own Sortino runs
+    # -0.0705 to +0.3309 across rolling windows of the same data and changes
+    # sign, so a pass/fail rule on it would ask a different question of every
+    # campaign.
+    try:
+        import run as runner                  # stage_report does not import it
+        from src.core.scoring import metrics as _m
+        from src.core.types import Split as _Split
+
+        _prof = cfg()["profiles"][record.profile]
+        _ds = runner.build_dataset(cfg(), _prof["dataset"], _prof["seed"])
+        tier2["buy_and_hold"] = _m.buy_and_hold(
+            _ds, _Split(_prof["split"]),
+            commission_per_contract=_prof.get("commission_per_contract", 0.0),
+            notional_base=_prof.get("notional_base", 1.0))
+        bh = tier2["buy_and_hold"]
+        if bh.get("available"):
+            print(f"  buy-and-hold over {bh['n_sessions']} sessions: "
+                  f"{bh['pnl']:+,.2f} pts, primary {bh['primary']:+.4f}, "
+                  f"max drawdown {bh['max_drawdown']:,.2f}")
+    except (Exception, SystemExit) as _e:                         # noqa: BLE001
+        # Evidence, not a gate: a benchmark that cannot be built must not stop
+        # a report. It is recorded as unavailable so a reader knows it is
+        # missing rather than zero. `SystemExit` too: the NQ adapter exits
+        # rather than raises when the bucket credentials are absent, which
+        # killed the report before the committee ever ran.
+        tier2["buy_and_hold"] = {"available": False, "error": f"{type(_e).__name__}: {_e}"}
+        print(f"  buy-and-hold unavailable: {type(_e).__name__}: {_e}")
+
+    best_source = (tier2.get("best_candidate") or {}).get("source")
+    if not best_source:
+        best_source = _source_from_ledger(d)
+    return hyp_text, best_source
+
+
+def _source_from_ledger(d: pathlib.Path) -> str | None:
+    """The best-scoring trial's stored source, when the summary carries none.
+
+    `nq-s04-03`'s summary has no `best_candidate.source`, so its economics seat
+    was asked whether code it could not see implemented the question, and said
+    CANNOT_TELL. The source was on disk all along under `sources/`, named by the
+    ledger row that scored best. Same selection as the champion: highest
+    unrejected primary, earliest trial on a tie.
+    """
+    led = d / "ledger.jsonl"
+    if not led.exists():
+        return None
+    best = None
+    for line in led.read_text().splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        sc = row.get("score") or {}
+        p = sc.get("primary")
+        if p is None or sc.get("rejected"):
+            continue
+        if best is None or p > best[0]:
+            best = (p, row.get("strategy_source"))
+    if best is None or not best[1]:
+        return None
+    for root in (ROOT, d):
+        f = root / best[1]
+        if f.is_file():
+            return f.read_text()
+    f = d / "sources" / pathlib.Path(best[1]).name
+    return f.read_text() if f.is_file() else None
+
+
 def stage_report(name: str) -> None:
     from src.core.loop.campaign import CampaignRecord, CampaignResult, summarise
 
@@ -1287,8 +1527,11 @@ def stage_report(name: str) -> None:
     result = CampaignResult(record=record, record_digest=digest, rows=rows)
     # From the record, not the literal `"nq-trades"` that was here: the
     # same hard-coding that put NQ into an SPX campaign's provenance.
+    from src.core.loop.fidelity import excluded_trials
+
     summary = summarise(result, dataset=record.dataset,
-                        null_samples=samples, q=record.q)
+                        null_samples=samples, q=record.q,
+                        exclude=excluded_trials(d, record.agent_config))
 
     # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
     # same route every other campaign's do rather than through this script.
@@ -1341,57 +1584,7 @@ def stage_report(name: str) -> None:
     # Folding an unreproducible judgement into a reproducible one would make the
     # combined artefact neither, and `ledger_check` could no longer tell a
     # changed verdict from a changed apparatus.
-    if record.hypothesis_path:
-        hyp_text = (ROOT / record.hypothesis_path).read_text()
-    else:
-        hyp_text = None
-    # Section 5's out-of-sample evidence, if `--stage validate` has run. Absent is
-    # a state the slices state explicitly rather than omit -- see
-    # `_validation_evidence`: "not checked" and "checked and held up" are opposite
-    # readings and a silent gap gets read as the flattering one.
-    vfile = d / "validation.json"
-    if vfile.exists():
-        tier2["validation"] = json.loads(vfile.read_text())
-        print(f"  validation: train {tier2['validation']['train']['primary']:+.4f}"
-              f"  validation {tier2['validation']['validation']['primary']:+.4f}")
-    else:
-        print("  validation: not run (--stage validate)")
-
-    # **Buy-and-hold, for the COMMITTEE only.** Michael's call, 2026-10-26:
-    # the economics seat has no way to see a campaign's opportunity cost, and
-    # "+9,937 while one contract would have made +5,257 with a 5,073-point
-    # drawdown" is exactly the judgement a seat exists to make. Attached here
-    # rather than in the proposal prompt, deliberately -- an agent told the
-    # benchmark can take the exposure instead of beating it, and
-    # `docs/agent/*.md` is in ARTIFACT_GLOBS so adding it there would open a
-    # new regime. NOT a gate: measured on NQ this benchmark's own Sortino runs
-    # -0.0705 to +0.3309 across rolling windows of the same data and changes
-    # sign, so a pass/fail rule on it would ask a different question of every
-    # campaign.
-    try:
-        import run as runner                  # stage_report does not import it
-        from src.core.scoring import metrics as _m
-        from src.core.types import Split as _Split
-
-        _prof = cfg()["profiles"][record.profile]
-        _ds = runner.build_dataset(cfg(), _prof["dataset"], _prof["seed"])
-        tier2["buy_and_hold"] = _m.buy_and_hold(
-            _ds, _Split(_prof["split"]),
-            commission_per_contract=_prof.get("commission_per_contract", 0.0),
-            notional_base=_prof.get("notional_base", 1.0))
-        bh = tier2["buy_and_hold"]
-        if bh.get("available"):
-            print(f"  buy-and-hold over {bh['n_sessions']} sessions: "
-                  f"{bh['pnl']:+,.2f} pts, primary {bh['primary']:+.4f}, "
-                  f"max drawdown {bh['max_drawdown']:,.2f}")
-    except Exception as _e:                                       # noqa: BLE001
-        # Evidence, not a gate: a benchmark that cannot be built must not stop
-        # a report. It is recorded as unavailable so a reader knows it is
-        # missing rather than zero.
-        tier2["buy_and_hold"] = {"available": False, "error": f"{type(_e).__name__}: {_e}"}
-        print(f"  buy-and-hold unavailable: {type(_e).__name__}: {_e}")
-
-    best_source = (tier2.get("best_candidate") or {}).get("source")
+    hyp_text, best_source = committee_evidence(d, record, tier2)
     print("  committee ...", flush=True)
     # **Retried on a fault that is the endpoint's.** On 2026-09-30 a single
     # `ReadTimeout` recorded this campaign's committee as ERROR, which is a
@@ -1447,6 +1640,11 @@ def stage_report(name: str) -> None:
              if cv.verdict == "VETO" else ""))
     for v in cv.auditors:
         print(f"    {v.axis:<12} {v.verdict}")
+    if cv.seats_failed:
+        print(f"    {len(cv.seats_failed)} seat(s) never ran: "
+              f"{', '.join(cv.seats_failed)}. This is NOT a pass. Re-run them "
+              f"beside the record with:\n      python scripts/committee_retry.py "
+              f"--campaign {name}", flush=True)
     _record_outcome(name)
 
 

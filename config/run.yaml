@@ -627,6 +627,32 @@ campaign:
 
   q: 0.05
 
+  # fidelity_policy: what happens when a candidate does not do what the
+  # campaign's question fixes. Read only when the hypothesis has a constraints
+  # file beside it (config/hypotheses/<slug>.constraints.yaml); see
+  # src/core/loop/fidelity.py. Frozen at registration with the file's digest.
+  #   off       no check; exactly the behaviour before it existed.
+  #   record    the code is checked before the trial and the agent gets up to
+  #             two repairs (they are not trials; nothing executes); the fills
+  #             are checked after it. Violations go to fidelity.jsonl and into
+  #             the agent's history. N, the champion and the gate are untouched.
+  #   enforce   as record, and: an unrepaired code violation is a blocked
+  #             proposal (a trial, counted); an off-question trial cannot become
+  #             the champion; the gate's observed best is taken over on-question
+  #             trials only, with every null still in max_of_n. Needs
+  #             Amendment 14 IN FORCE.
+  fidelity_policy: record
+
+  # fidelity_judge: a model reads each proposal (comments stripped) against the
+  # constraints file's `judged:` requirements -- the ones no mechanical check
+  # can express, like "not a fade". scripts/fidelity_judge.py.
+  #   off       not run.
+  #   shadow    run on every proposal before it is scored; verdicts go to
+  #             fidelity-judge.jsonl and NOTHING reads them -- not the agent,
+  #             the champion or the gate. One extra call per trial.
+  # There is no blocking mode. It needs a measured error rate and an amendment.
+  fidelity_judge: shadow
+
   # Pre-registration Amendment 3. Index points charged against a session in which
   # no position was held, pro-rated by the fraction of the session that WAS held.
   # A cost of capital: ~$20,000 of initial margin at ~4.5% over 252 days at $20 a

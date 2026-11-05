@@ -211,9 +211,16 @@ def build(arm_dir: Path, *, schema: str | None = None) -> dict:
         arm = json.loads((arm_dir / "summary.json").read_text())
 
     trials = [r for r in rows if r.get("outcome") in TRIAL_OUTCOMES]
+    # Off-question trials under a registered `enforce` are not candidates for
+    # the best -- the same set `summarise` keeps off the gate's observed side,
+    # so the candidate the committee reads is the one the gate tested.
+    from src.core.loop.fidelity import excluded_trials
+
+    off = excluded_trials(arm_dir, record.agent_config)
     scored = [(i, r) for i, r in enumerate(rows)
               if (r.get("score") or {}).get("primary") is not None
-              and not r["score"].get("rejected")]
+              and not r["score"].get("rejected")
+              and r.get("campaign_index", i) not in off]
     best_i, best_row = (max(scored, key=lambda p: p[1]["score"]["primary"])
                         if scored else (None, None))
 

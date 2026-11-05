@@ -55,6 +55,9 @@ class AuditorVerdict:
     reasons: tuple[str, ...] = ()
     confidence_note: str = ""
     error: str | None = None
+    # Calls it took to get this verdict, retries included. 1 is a first-time
+    # answer; a seat that needed five is one to read with that in mind.
+    attempts: int = 1
 
     def __post_init__(self) -> None:
         if self.verdict not in VERDICTS:
@@ -358,46 +361,84 @@ def _is_transient(exc: Exception) -> bool:
     return any(t in blob for t in _TRANSIENT)
 
 
+# **A reply the seat could not use is asked again, a bounded number of times.**
+# Of the 27 committees on record, 9 economics seats never ran, and only three of
+# those were the gateway's 502s that `SEAT_BACKOFF_S` already retries. The rest
+# were the model's own reply: `"reply was not JSON"` (nq-ml-02, nq-s03-02,
+# nq-s04-03) and `"empty reply: finish_reason='length'"` (nq-t72b-01..03). Those
+# went straight to CANNOT_TELL on the first attempt, so the seat that checks
+# whether the champion implements its question was skipped for one campaign in
+# three. Every call opts out of the gateway cache (`llm.NO_CACHE`), so asking
+# again is a fresh sample rather than the same bytes served twice.
+#
+# Safe for the same reason the transport retry is: the seat sees the same
+# evidence every time and can only veto, so a retry can cost power but cannot
+# manufacture a pass. The attempts are recorded on the verdict.
+UNUSABLE_RETRIES = 2
+UNUSABLE_BACKOFF_S = 10
+_UNUSABLE = ("reply was not JSON", "empty reply")
+
+
+def _is_unusable(exc: Exception) -> bool:
+    return any(t in str(exc) for t in _UNUSABLE)
+
+
 def _one(axis: str, client: Client, summary: dict, source: str | None,
          hypothesis: str | None) -> AuditorVerdict:
     import time
     last = None
-    for attempt in range(len(SEAT_BACKOFF_S) + 1):
+    transport = 0           # transient faults and substitutions, SEAT_BACKOFF_S
+    unusable = 0            # replies the seat could not use, UNUSABLE_RETRIES
+    attempts = 0
+    while True:
+        attempts += 1
         try:
             got = client.ask(_prompt(axis), _slice(axis, summary, source, hypothesis))
-            break
         except ModelSubstituted as exc:
             last = exc                      # retried, never accepted
         except LLMUnavailable as exc:
+            last = exc
+            if _is_unusable(exc) and unusable < UNUSABLE_RETRIES:
+                unusable += 1
+                time.sleep(UNUSABLE_BACKOFF_S)
+                continue
             if not _is_transient(exc):
                 return AuditorVerdict(
                     axis=axis, verdict="CANNOT_TELL",
-                    reasons=(f"the auditor did not run: {exc}",), error=str(exc))
-            last = exc
-        if attempt == len(SEAT_BACKOFF_S):
+                    reasons=(f"the auditor did not run after {attempts} "
+                             f"attempt(s): {exc}",), error=str(exc),
+                    attempts=attempts)
+        else:
+            verdict = str(got.get("verdict", "")).upper()
+            if verdict in VERDICTS:
+                break
+            if unusable < UNUSABLE_RETRIES:
+                unusable += 1
+                time.sleep(UNUSABLE_BACKOFF_S)
+                continue
+            return AuditorVerdict(
+                axis=axis, verdict="CANNOT_TELL",
+                reasons=(f"the auditor did not run: returned {verdict!r}, which "
+                         f"is not a verdict, on {attempts} attempt(s)",),
+                error="unparseable verdict", attempts=attempts)
+        if transport == len(SEAT_BACKOFF_S):
             # Exhausted. Still CANNOT_TELL -- no verdict is not no veto -- but the
             # reason now says how hard we tried, so a reader can tell a flaky
             # endpoint from a seat nobody asked.
             return AuditorVerdict(
                 axis=axis, verdict="CANNOT_TELL",
                 reasons=(f"the auditor did not run after "
-                         f"{len(SEAT_BACKOFF_S) + 1} attempts over "
+                         f"{attempts} attempts over "
                          f"{sum(SEAT_BACKOFF_S) // 60} minutes: {last}",),
-                error=str(last))
-        time.sleep(SEAT_BACKOFF_S[attempt])
-    else:                                   # pragma: no cover - loop always breaks
-        raise AssertionError("unreachable")
-    verdict = str(got.get("verdict", "")).upper()
-    if verdict not in VERDICTS:
-        return AuditorVerdict(
-            axis=axis, verdict="CANNOT_TELL",
-            reasons=(f"returned {verdict!r}, which is not a verdict",),
-            error="unparseable verdict")
+                error=str(last), attempts=attempts)
+        time.sleep(SEAT_BACKOFF_S[transport])
+        transport += 1
     reasons = tuple(str(r) for r in (got.get("reasons") or []))
     if verdict == "VETO" and not reasons:
         reasons = ("vetoed without stating a reason",)
     return AuditorVerdict(axis=axis, verdict=verdict, reasons=reasons,
-                          confidence_note=str(got.get("confidence_note", "")))
+                          confidence_note=str(got.get("confidence_note", "")),
+                          attempts=attempts)
 
 
 def review(summary: dict, *, source: str | None, model: str = AUDIT_MODEL,

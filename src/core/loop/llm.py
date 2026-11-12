@@ -155,6 +155,27 @@ def template_digest(path: Path = TEMPLATE_PATH) -> str:
 # always meant here.
 NO_CACHE = {"no-cache": True}
 
+
+def cached_prompt_tokens(usage: dict) -> int:
+    """Prompt tokens the provider served from its prefix cache, 0 if none.
+
+    **Not the response cache `NO_CACHE` opts out of.** That one replays a whole
+    reply for an identical request; this is the provider reusing an already
+    processed prompt prefix, which changes the bill and nothing else about the
+    reply. Nothing recorded it until 2026-11-11, so "0% cache usage" could not
+    be told apart from "never measured".
+
+    Three spellings, because LiteLLM passes provider fields through beside its
+    own: OpenAI-style `prompt_tokens_details.cached_tokens` (what LiteLLM
+    normalises to), DeepSeek's native `prompt_cache_hit_tokens`, Anthropic's
+    `cache_read_input_tokens`. The largest wins -- they describe one quantity,
+    and a provider that fills one leaves the others absent or zero.
+    """
+    details = usage.get("prompt_tokens_details") or {}
+    found = [details.get("cached_tokens"), usage.get("prompt_cache_hit_tokens"),
+             usage.get("cache_read_input_tokens")]
+    return max((int(v) for v in found if isinstance(v, (int, float))), default=0)
+
 # The smallest `max_tokens` a preflight may send. A reasoning model spends its
 # budget before emitting a visible token, and the gateway reports the empty
 # output as `ContentPolicyViolationError: Response output was blocked`, which
@@ -228,6 +249,9 @@ class Call:
     # had to be diagnosed by reproducing a call by hand.
     finish_reason: str = ""
     reasoning_tokens: int = 0
+    # Of `prompt_tokens`, how many the provider served from its prefix cache.
+    # See `cached_prompt_tokens`.
+    cached_tokens: int = 0
 
     def as_dict(self) -> dict:
         return {"kind": self.kind, "ok": self.ok,
@@ -237,6 +261,7 @@ class Call:
                 "model_served": self.model_served,
                 "finish_reason": self.finish_reason,
                 "reasoning_tokens": self.reasoning_tokens,
+                "cached_tokens": self.cached_tokens,
                 "error": self.error}
 
 
@@ -417,6 +442,7 @@ class LLMAgent:
             "probe_runs": sum(1 for c in calls if c.kind == "probe"),
             "probe_repairs": sum(1 for c in calls if c.kind == "probe_repair"),
             "prompt_tokens": sum(c.prompt_tokens for c in calls),
+            "cached_tokens": sum(c.cached_tokens for c in calls),
             "completion_tokens": sum(c.completion_tokens for c in calls),
             "latency_s": round(sum(c.latency_s for c in calls), 2),
             # A blocked *proposal*, not a failed last call: a probe that could
@@ -946,7 +972,8 @@ class LLMAgent:
                     completion_tokens=int(usage.get("completion_tokens") or 0),
                     model_served=served,
                     finish_reason=finish,
-                    reasoning_tokens=int(details.get("reasoning_tokens") or 0))
+                    reasoning_tokens=int(details.get("reasoning_tokens") or 0),
+                    cached_tokens=cached_prompt_tokens(usage))
         source = extract_source(text)
         if source is None:
             # Silence and noise are the same event. An empty reply, prose with
@@ -958,6 +985,7 @@ class LLMAgent:
                 completion_tokens=call.completion_tokens,
                 model_served=served, finish_reason=finish,
                 reasoning_tokens=call.reasoning_tokens,
+                cached_tokens=call.cached_tokens,
                 error=(f"no python block in the reply "
                        f"(finish_reason={finish}, "
                        f"reasoning_tokens={call.reasoning_tokens}, "

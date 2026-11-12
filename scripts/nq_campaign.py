@@ -72,7 +72,13 @@ OUT = _RUNS / "campaigns"
 #
 # deepseek-v4-pro is what the last nine campaigns actually used, named in their
 # plans rather than taken from here.
-MODEL = "deepseek-v4-pro"
+# **deepseek-v4.1-flash since 2026-11-12**, on Brian's advice: its latest
+# checkpoint is smarter, faster and cheaper than v4-pro. Unverified here: on
+# that date every request from our key to either DeepSeek model fell back to
+# gemini-3.1-pro-preview (`x-litellm-attempted-fallbacks: 1`), so neither could
+# be measured. A campaign records the model it registered with, so past
+# campaigns on deepseek-v4-pro keep saying so.
+MODEL = "deepseek-v4.1-flash"
 # **There is no default question.** `--stage register` takes `--hypothesis` or
 # `--question` and writes the choice into campaign.json; every later stage
 # reads it back from the record, so a campaign cannot be registered against one
@@ -580,7 +586,10 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
                    no_papers: bool = False,
                    writer_model: str | None = None,
                    reviewer_model: str | None = None,
-                   audit_model: str | None = None) -> None:
+                   audit_model: str | None = None,
+                   judge_model: str | None = None,
+                   picker_model: str | None = None,
+                   auditor_models: dict | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -656,7 +665,8 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
             got = wh.write_unattended(question, campaign=name,
                                       papers=not no_papers,
                                       model=writer_model,
-                                      reviewer_model=reviewer_model)
+                                      reviewer_model=reviewer_model,
+                                      picker_model=picker_model)
         except wh.Unattended as exc:
             sys.exit(f"{name}: NOT registered -- {exc}")
         hypothesis, hypothesis_origin = got["path"].resolve(), got["origin"]
@@ -699,11 +709,12 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
         import fidelity_judge
 
         agent_cfg["fidelity_judge"] = {
-            "mode": judge_mode, "model": fidelity_judge.MODEL,
+            # `--judge-model`; frozen here and read back by stage_run.
+            "mode": judge_mode, "model": judge_model or fidelity_judge.MODEL,
             "prompt_digest": hashlib.sha256(
                 fidelity_judge.PROMPT.read_bytes()).hexdigest()}
         print(f"  fidelity reviewer ({judge_mode}): {len(cons.judged)} judged "
-              f"requirement(s) on {fidelity_judge.MODEL}")
+              f"requirement(s) on {agent_cfg['fidelity_judge']['model']}")
     # **`aligned` and a shared table are incompatible, and the combination is
     # refused here rather than discovered in a p-value.** `aligned` reads
     # column j of every trial as the SAME randomisation and takes the maximum
@@ -749,6 +760,15 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
     # None is audit.committee.review.AUDIT_MODEL. A model picked after the
     # trials ran is a committee picked after seeing what it will judge.
     agent_cfg["audit_model"] = audit_model
+    # `--auditor-model AXIS=MODEL`: one auditor on its own model. Validated now,
+    # not at report time, so a typo refuses registration instead of a report.
+    if auditor_models:
+        from audit.committee.review import AXES
+        bad = sorted(set(auditor_models) - set(AXES))
+        if bad:
+            sys.exit(f"--auditor-model names no auditor {bad}; the auditors are "
+                     f"{', '.join(AXES)}")
+    agent_cfg["auditor_models"] = dict(auditor_models or {}) or None
     if hypothesis_origin:
         print(f"  question MACHINE-WRITTEN from a statement (Amendment "
               f"{hypothesis_origin.get('amendment')}); unread, so this campaign "
@@ -1665,9 +1685,12 @@ def stage_report(name: str) -> None:
             # verdicts to 2026-10-04 had a model auditing its own work.
             proposer = (record.agent_config or {}).get("model", MODEL)
             audit_model = (record.agent_config or {}).get("audit_model")
+            auditor_models = (record.agent_config or {}).get("auditor_models")
             cv = review(tier2, source=best_source, hypothesis=hyp_text,
                         proposer_model=proposer,
-                        **({"model": audit_model} if audit_model else {}))
+                        **({"model": audit_model} if audit_model else {}),
+                        **({"auditor_models": auditor_models}
+                           if auditor_models else {}))
             exc = None
             break
         except Exception as e:                                    # noqa: BLE001
@@ -1707,6 +1730,14 @@ def stage_report(name: str) -> None:
               f"beside the record with:\n      python scripts/committee_retry.py "
               f"--campaign {name}", flush=True)
     _record_outcome(name)
+
+
+def _axis_model(v: str) -> dict:
+    """`AXIS=MODEL` for --auditor-model."""
+    axis, sep, model = v.partition("=")
+    if not sep or not axis.strip() or not model.strip():
+        raise argparse.ArgumentTypeError(f"expected AXIS=MODEL, got {v!r}")
+    return {axis.strip(): model.strip()}
 
 
 def _width_arg(v: str):
@@ -1760,6 +1791,19 @@ def main() -> int:
                          "--stage report. Default: audit.committee.review."
                          "AUDIT_MODEL (mimo-v2.6-pro). Ideally not the "
                          "proposer's model.")
+    ap.add_argument("--auditor-model", action="append", default=None,
+                    type=_axis_model, metavar="AXIS=MODEL",
+                    help="one auditor on its own model, e.g. leakage=gemini-2.5-pro; "
+                         "repeatable. The rest use --audit-model. --stage "
+                         "register only, frozen into campaign.json")
+    ap.add_argument("--judge-model", default=None, metavar="MODEL",
+                    help="the fidelity judge's model (fidelity_judge in "
+                         "config/run.yaml). Default: fidelity_judge.MODEL "
+                         "(gemini-2.5-pro). --stage register only, frozen")
+    ap.add_argument("--picker-model", default=None, metavar="MODEL",
+                    help="with --question: the model that picks registry papers "
+                         "for the writer. Default: write_hypothesis.PICK_MODEL "
+                         "(gemini-2.5-pro)")
     ap.add_argument("--reviewer-model", default=None, metavar="MODEL",
                     help="with --question: the review seat's model, which must "
                          "return NO_OBJECTION for the campaign to register. "
@@ -1830,14 +1874,19 @@ def main() -> int:
                          f"which withholds a fit window from the score. Later "
                          f"stages read it from the record and ignore this flag.")
     a = ap.parse_args()
+    if a.auditor_model:
+        merged: dict = {}
+        for pair in a.auditor_model:
+            merged.update(pair)
+        a.auditor_model = merged
     if a.stage == "register":
         # **Exactly one question, and never a silent one.** `--hypothesis` used
         # to default to intraday-continuation.md, so a campaign registered with
         # neither flag ran on somebody else's question without saying so.
         if a.question is None and (a.writer_model or a.reviewer_model
-                                   or a.no_papers):
-            sys.exit("--writer-model, --reviewer-model and --no-papers only "
-                     "mean something with --question")
+                                   or a.no_papers or a.picker_model):
+            sys.exit("--writer-model, --reviewer-model, --picker-model and "
+                     "--no-papers only mean something with --question")
         if (a.hypothesis is None) == (a.question is None):
             sys.exit("register needs exactly one of --hypothesis FILE (a "
                      "committed question) or --question \"...\" (a statement, "
@@ -1871,15 +1920,19 @@ def main() -> int:
                        question=a.question, no_papers=a.no_papers,
                        writer_model=a.writer_model,
                        reviewer_model=a.reviewer_model,
-                       audit_model=a.audit_model)
+                       audit_model=a.audit_model,
+                       judge_model=a.judge_model,
+                       picker_model=a.picker_model,
+                       auditor_models=a.auditor_model)
     else:
         # Refused rather than ignored. Silently accepting it on a run stage is how
         # someone believes they changed the question and did not.
         if a.hypothesis is not None or a.question is not None or a.no_papers \
-                or a.writer_model or a.reviewer_model or a.audit_model:
-            sys.exit(f"--hypothesis, --question, --no-papers, --writer-model and "
-                     f"--reviewer-model apply to --stage register only; --stage "
-                     f"{a.stage} reads the question from campaign.json.")
+                or a.writer_model or a.reviewer_model or a.audit_model \
+                or a.judge_model or a.picker_model or a.auditor_model:
+            sys.exit(f"--hypothesis, --question, --no-papers and the --*-model "
+                     f"flags apply to --stage register only; --stage {a.stage} "
+                     f"reads them from campaign.json.")
         if a.profile != PROFILE:
             sys.exit(f"--profile applies to --stage register only; "
                      f"--stage {a.stage} reads it from campaign.json.")

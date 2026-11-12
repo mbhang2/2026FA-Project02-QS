@@ -239,8 +239,11 @@ def rank_one(client, paper: dict, row: dict, ctx: str) -> dict:
 
 
 def main() -> int:
+    global MODEL           # set from --model below
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--model", default=MODEL,
+                    help=f"the model that does this pass (default {MODEL})")
     ap.add_argument("--limit", type=int, default=50)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--dry-run", action="store_true")
@@ -255,6 +258,9 @@ def main() -> int:
                          "preserved as relevance_first_pass when it changes, so "
                          "nothing is overwritten silently.")
     a = ap.parse_args()
+    # Every use below reads the module-level MODEL, including what is
+    # recorded on each registry row, so one assignment reaches all of them.
+    MODEL = a.model
 
     if not REGISTRY.exists():
         sys.exit(f"no registry at {REGISTRY}; run fetch_papers.py and screen_papers.py")

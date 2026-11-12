@@ -514,6 +514,12 @@ def main() -> int:
     ap.add_argument("--reviewer-model", default=None, metavar="MODEL",
                     help="the model both review seats run on (hypothesis and "
                          "family). Default: review_hypothesis.MODEL")
+    ap.add_argument("--retrieval-model", default=None, metavar="MODEL",
+                    help="the model that diagnoses campaign k and vets papers. "
+                         "Default: the refiner's --model")
+    ap.add_argument("--paper-model", default=None, metavar="MODEL",
+                    help="with --fetch-new: the model that screens and ranks "
+                         "new papers. Default: their own (gemini-2.5-pro)")
     ap.add_argument("--no-retrieve", action="store_true",
                     help="skip the outcome diagnosis and choose papers by "
                          "overlap with the question, as before 2026-11-12")
@@ -582,16 +588,20 @@ def main() -> int:
     if not a.no_retrieve:
         sys.path.insert(0, str(ROOT / "scripts"))
         import outcome_retrieval as orr
-        from audit.committee.llm import LLMUnavailable
+        from audit.committee.llm import LLMUnavailable, ModelSubstituted
         import requests
         try:
-            found = orr.plan(Client(model=a.model, temperature=0.0,
+            retrieval_model = a.retrieval_model or a.model
+            if retrieval_model != a.model:
+                preflight(retrieval_model)
+            found = orr.plan(Client(model=retrieval_model, temperature=0.0,
                                     max_tokens=8_192),
                              parent, evidence_text(ev), parent_path=parent_path,
-                             fetch=a.fetch_new)
+                             fetch=a.fetch_new, paper_model=a.paper_model)
+            found["retrieval_model"] = retrieval_model
         # Retrieval is advice: a timeout here must not cost the refinement,
         # which the session would otherwise retry from scratch.
-        except (LLMUnavailable, ValueError,
+        except (LLMUnavailable, ModelSubstituted, ValueError,
                 requests.exceptions.RequestException) as exc:
             print(f"retrieval   did not run ({type(exc).__name__}); papers by "
                   f"overlap instead", flush=True)

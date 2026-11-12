@@ -580,7 +580,8 @@ def commit_files(files: list[pathlib.Path], message: str) -> str:
 
 def write_unattended(statement: str, *, campaign: str, model: str | None = None,
                      papers: bool = True, house: bool = False,
-                     reviewer_model: str | None = None) -> dict:
+                     reviewer_model: str | None = None,
+                     picker_model: str | None = None) -> dict:
     """A researcher's statement in; a hypothesis written, gated and committed.
 
     What `--stage register --question` runs. Everything `main()` does for
@@ -614,7 +615,8 @@ def write_unattended(statement: str, *, campaign: str, model: str | None = None,
     # trace from inside `register`. Same outcome -- nothing written -- but a
     # session reading the log could not tell a gateway fault from a bug.
     try:
-        offered = pick_papers(statement) if papers else []
+        offered = (pick_papers(statement, model=picker_model or PICK_MODEL)
+                   if papers else [])
         print(f"  papers offered: {[p['id'] for p in offered] or 'none'}",
               flush=True)
         client, served = dp._client(model)
@@ -661,6 +663,7 @@ def write_unattended(statement: str, *, campaign: str, model: str | None = None,
                        "cannot_test": got["cannot_test"],
                        "writer_model": model, "writer_served": served,
                        "reviewer_model": reviewer_model or "default",
+                       "picker_model": (picker_model or PICK_MODEL) if papers else None,
                        "review": got["review"], "commit": commit,
                        "read_by_a_human": False}}
 

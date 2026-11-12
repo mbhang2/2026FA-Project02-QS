@@ -441,10 +441,11 @@ def test_the_refinement_retries_like_every_other_stage():
     assert "_retrying(" in SRC
     # The refine call is built as `refine_argv` and then handed to `_retrying`,
     # so assert on the pairing rather than on their distance apart.
-    i = SRC.index("refine_argv = [PY")
-    block = SRC[i:i + 1200]
-    assert "_retrying(" in block and "refine_argv" in block
-    assert "retries=MAX_STAGE_RETRIES" in block
+    assert "refine_argv = [PY" in SRC
+    # The call itself, however many plan keys are added to the argv above it.
+    call = SRC[SRC.index("_retrying(refine_argv"):]
+    call = call[:call.index(")\n") + 1]
+    assert "retries=MAX_STAGE_RETRIES" in call
     assert "ReadTimeout" in SRC and "ConnectionError" in SRC
 
 

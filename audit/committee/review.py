@@ -80,6 +80,11 @@ class CommitteeVerdict:
     # "was this an independent check" is answerable from the artefact instead of
     # from reading the caller, which is how it went unnoticed for 17 campaigns.
     proposer_model: str = ""
+    # Per-auditor models, when not all four ran on `model`. Empty means all did.
+    auditor_models: dict = field(default_factory=dict)
+
+    def _models(self) -> set[str]:
+        return set(self.auditor_models.values()) or ({self.model} if self.model else set())
 
     @property
     def vetoed_by(self) -> tuple[str, ...]:
@@ -93,9 +98,11 @@ class CommitteeVerdict:
         does not say, and collapsing the two would let an unknown read as a
         pass the next time someone greps for it.
         """
-        if not self.model or not self.proposer_model:
+        if not self._models() or not self.proposer_model:
             return None
-        return self.model != self.proposer_model
+        # Every auditor, not only the default: one seat on the proposer's own
+        # model is one seat that did not check independently.
+        return self.proposer_model not in self._models()
 
     @property
     def seats_failed(self) -> tuple[str, ...]:
@@ -137,6 +144,7 @@ class CommitteeVerdict:
                 if self.seats_failed else ""),
             "usage": list(self.usage),
             "model": self.model,
+            "auditor_models": dict(self.auditor_models),
             "proposer_model": self.proposer_model,
             "independent": self.independent,
             "independence_note": (
@@ -443,7 +451,8 @@ def _one(axis: str, client: Client, summary: dict, source: str | None,
 
 def review(summary: dict, *, source: str | None, model: str = AUDIT_MODEL,
            hypothesis: str | None = None, proposer_model: str = "",
-           axes: tuple[str, ...] = AXES) -> CommitteeVerdict:
+           axes: tuple[str, ...] = AXES,
+           auditor_models: dict | None = None) -> CommitteeVerdict:
     """The four, in parallel, isolated. Returns a verdict that cannot approve.
 
     Preflight first: a committee that ran on a model its record does not name is
@@ -459,11 +468,22 @@ def review(summary: dict, *, source: str | None, model: str = AUDIT_MODEL,
     `proposer_model` so the artefact can say whether the check was independent
     instead of leaving it to be inferred from the caller.
     """
-    served = preflight(model)
-    client = Client(model=model)
+    # `auditor_models` (`--auditor-model AXIS=MODEL`): a seat may run on its
+    # own model; the rest run on `model`. Unknown axes are refused, so a typo
+    # cannot silently leave a seat on the default.
+    over = dict(auditor_models or {})
+    unknown = sorted(set(over) - set(axes))
+    if unknown:
+        raise ValueError(f"no auditor named {unknown}; the axes are {list(axes)}")
+    per_axis = {a: over.get(a, model) for a in axes}
+    served_by = {m: preflight(m) for m in sorted(set(per_axis.values()))}
+    clients = {m: Client(model=m) for m in served_by}
+    served = served_by[model] if model in served_by else "; ".join(
+        f"{a}={served_by[m]}" for a, m in per_axis.items())
     with ThreadPoolExecutor(max_workers=len(axes)) as pool:
         verdicts = tuple(pool.map(
-            lambda a: _one(a, client, summary, source, hypothesis), axes))
+            lambda a: _one(a, clients[per_axis[a]], summary, source, hypothesis),
+            axes))
 
     if any(v.verdict == "VETO" for v in verdicts):
         overall = "VETO"
@@ -472,6 +492,8 @@ def review(summary: dict, *, source: str | None, model: str = AUDIT_MODEL,
     else:
         overall = "PASS"
     return CommitteeVerdict(verdict=overall, auditors=verdicts, model=model,
-                            usage=tuple(client.calls),
+                            usage=tuple(c for cl in clients.values() for c in cl.calls),
+                            auditor_models=(per_axis if any(
+                                m != model for m in per_axis.values()) else {}),
                             model_served=served, prompt_digests=prompt_digests(),
                             proposer_model=proposer_model)

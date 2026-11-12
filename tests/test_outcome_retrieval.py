@@ -111,7 +111,7 @@ def test_the_commit_records_problem_query_and_paper():
 
 def test_fetching_new_papers_is_opt_in(monkeypatch):
     called = []
-    monkeypatch.setattr(orr, "fetch_new", lambda probs, path: called.append(probs) or 0)
+    monkeypatch.setattr(orr, "fetch_new", lambda probs, path, paper_model=None: called.append(probs) or 0)
     monkeypatch.setattr(orr, "corpus", lambda: DOCS)
     client = _Client({"problems": [{"what": "Profit sits in five sessions.",
                                     "evidence": "profit is concentrated in five sessions",

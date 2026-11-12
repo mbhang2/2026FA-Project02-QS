@@ -60,8 +60,9 @@ PY = sys.executable
 
 # Plan keys an argument may set, beside the proposer's `model`. Each is an
 # endpoint fact (which model answers today), never a protocol fact.
-MODEL_KEYS = ("writer_model", "reviewer_model", "refine_model",
-              "refine_reviewer_model", "audit_model")
+MODEL_KEYS = ("writer_model", "reviewer_model", "picker_model", "refine_model",
+              "refine_reviewer_model", "retrieval_model", "paper_model",
+              "audit_model", "judge_model")
 
 
 def _plan(path: pathlib.Path, *, campaigns: int, n: int, width: int,
@@ -187,7 +188,7 @@ def main() -> int:
     ap.add_argument("--width", type=int, default=2)
     ap.add_argument("--seed-hypothesis", type=lambda x: pathlib.Path(x).resolve(),
                     default=ROOT / "config" / "hypotheses" / "intraday-continuation.md")
-    ap.add_argument("--model", default="deepseek-v4-pro",
+    ap.add_argument("--model", default="deepseek-v4.1-flash",
                     help="the proposer to rehearse with. The MODEL is an "
                          "argument and the PROFILE is not, on purpose: which "
                          "model answers is an endpoint fact that changes hourly "

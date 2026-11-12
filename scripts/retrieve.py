@@ -140,6 +140,10 @@ def main() -> int:
                          "Writes a file and stops -- Amendment 8 makes the commit "
                          "the human act.")
     ap.add_argument("--model", default=None, help="model for the distil step")
+    ap.add_argument("--screen-model", default=None,
+                    help="model for stage 1 (screen_papers.py --model)")
+    ap.add_argument("--rank-model", default=None,
+                    help="model for stage 2 (rank_papers.py --model)")
     ap.add_argument("--limit", type=int, default=200)
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
@@ -176,13 +180,15 @@ def main() -> int:
         print("\n--- stage 0  fetch: skipped (no --term) " + "-" * 24)
 
     # ---- stage 1: screen (which now fetches bodies for survivors) ----------
-    if _stage([PY, "scripts/screen_papers.py", "--limit", str(a.limit)],
+    if _stage([PY, "scripts/screen_papers.py", "--limit", str(a.limit)]
+              + (["--model", a.screen_model] if a.screen_model else []),
               label="stage 1  screen (+ stage 0b bodies)"):
         print("\nscreen failed; ranking skipped")
         return 1
 
     # ---- stage 2: rank -----------------------------------------------------
-    argv = [PY, "scripts/rank_papers.py", "--limit", str(a.limit)]
+    argv = [PY, "scripts/rank_papers.py", "--limit", str(a.limit)] \
+        + (["--model", a.rank_model] if a.rank_model else [])
     if a.asking:
         argv += ["--asking", str(a.asking)]
     if _stage(argv, label="stage 2  rank"):

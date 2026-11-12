@@ -238,7 +238,8 @@ def shape(v: dict) -> dict:
             "abstract": (v.get("abstract") or "")[:1_500], "body": body}
 
 
-def fetch_new(problems: list[dict], parent_path: pathlib.Path) -> int:
+def fetch_new(problems: list[dict], parent_path: pathlib.Path,
+              paper_model: str | None = None) -> int:
     """`retrieve.py` with the diagnosed queries as terms: fetch, screen, rank.
 
     It ranks with `--asking` the current question, so a paper is judged against
@@ -248,16 +249,18 @@ def fetch_new(problems: list[dict], parent_path: pathlib.Path) -> int:
     for p in problems:
         argv += ["--term", p["query"]]
     argv += ["--asking", str(parent_path)]
+    if paper_model:                 # `--paper-model`: screening and ranking
+        argv += ["--screen-model", paper_model, "--rank-model", paper_model]
     return subprocess.run(argv, cwd=str(ROOT)).returncode
 
 
 def plan(client, parent: str, evidence_text: str, *, parent_path: pathlib.Path,
-         fetch: bool = False) -> dict:
+         fetch: bool = False, paper_model: str | None = None) -> dict:
     """Diagnose, optionally fetch, retrieve. What the refiner and the commit get."""
     problems = diagnose(client, parent, evidence_text)
     fetched = None
     if problems and fetch:
-        fetched = fetch_new(problems, parent_path)
+        fetched = fetch_new(problems, parent_path, paper_model)
     candidates = retrieve(problems, corpus()) if problems else []
     papers = vet(client, problems, candidates)
     return {"problems": problems, "papers": papers, "fetched": fetched,
@@ -293,10 +296,15 @@ def own_judgement(found: dict) -> list[str]:
 
 def commit_lines(found: dict) -> str:
     """What `git log` should say about why the question changed."""
+    if found and found.get("error"):
+        return (f"Retrieval: did not run ({found['error'][:160]}); papers chosen "
+                f"by overlap with the question.\n")
     if not found or not found.get("problems"):
         return ("Retrieval: no problem diagnosed from the evidence; papers chosen "
                 "by overlap with the question.\n")
-    out = ["Diagnosis (from train behaviour and auditors only):\n"]
+    out = [f"Diagnosis (from train behaviour and auditors only"
+           + (f", on {found['retrieval_model']}" if found.get("retrieval_model") else "")
+           + "):\n"]
     for p in found["problems"]:
         out.append(f"  - {p['what']}  [query: {p['query']}]\n")
     mine = own_judgement(found)
@@ -325,6 +333,8 @@ def main() -> int:
     ap.add_argument("--campaign", required=True)
     ap.add_argument("--model", default=None)
     ap.add_argument("--fetch-new", action="store_true")
+    ap.add_argument("--paper-model", default=None,
+                    help="with --fetch-new: the screening and ranking model")
     a = ap.parse_args()
     import importlib.util
     spec = importlib.util.spec_from_file_location(
@@ -344,7 +354,8 @@ def main() -> int:
     model = a.model or rh.MODEL
     preflight(model)
     found = plan(Client(model=model, temperature=0.0, max_tokens=8_192), parent,
-                 ev_text, parent_path=parent_path, fetch=a.fetch_new)
+                 ev_text, parent_path=parent_path, fetch=a.fetch_new,
+                 paper_model=a.paper_model)
     print(render(found) or "no problem diagnosed")
     print(commit_lines(found))
     return 0

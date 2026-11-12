@@ -382,6 +382,9 @@ def _main() -> int:
                     # cannot set is a flag that silently does nothing.
                     "generation_width": fam.get("generation_width"),
                     "audit_model": fam.get("audit_model"),
+                    "judge_model": fam.get("judge_model"),
+                    "picker_model": fam.get("picker_model"),
+                    "auditor_models": fam.get("auditor_models"),
                     "probe": fam.get("probe")}
                    for k in range(iterations)]
     if not entries:
@@ -575,6 +578,10 @@ def _main() -> int:
             refine_argv += ["--model", str(fam["refine_model"])]
         if fam.get("refine_reviewer_model"):
             refine_argv += ["--reviewer-model", str(fam["refine_reviewer_model"])]
+        if fam.get("retrieval_model"):
+            refine_argv += ["--retrieval-model", str(fam["retrieval_model"])]
+        if fam.get("paper_model"):
+            refine_argv += ["--paper-model", str(fam["paper_model"])]
         # Outcome-driven retrieval (`outcome_retrieval.py`) runs by default:
         # campaign k's problems choose the papers the refiner reads.
         # `fetch_new_papers: true` searches arXiv for them first;
@@ -650,7 +657,8 @@ def _main() -> int:
                     # Amendment 15: register writes the question first.
                     extra = ["--question", str(c["question"])]
                     for flag, key in (("--writer-model", "writer_model"),
-                                      ("--reviewer-model", "reviewer_model")):
+                                      ("--reviewer-model", "reviewer_model"),
+                                      ("--picker-model", "picker_model")):
                         if c.get(key):
                             extra += [flag, str(c[key])]
                 else:
@@ -665,9 +673,13 @@ def _main() -> int:
                                   # 2026-10-04 ran.
                                   ("--generation-width", "generation_width"),
                                   # the committee's model, frozen at register
-                                  ("--audit-model", "audit_model")):
+                                  ("--audit-model", "audit_model"),
+                                  ("--judge-model", "judge_model")):
                     if c.get(key) is not None:
                         extra += [flag, str(c[key])]
+                # `auditor_models: {leakage: gemini-2.5-pro}` -> one flag each.
+                for axis, m in sorted((c.get("auditor_models") or {}).items()):
+                    extra += ["--auditor-model", f"{axis}={m}"]
                 # **Amendment 7, and it is a BOOLEAN, so it does not fit the
                 # loop above.** A plan could not set it at all: the probe's
                 # default lives in `config/run.yaml` (`probe_before_trial:

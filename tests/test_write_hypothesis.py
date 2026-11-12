@@ -290,7 +290,7 @@ def test_only_a_seat_that_read_it_and_did_not_object_clears_it(wh, status, ok):
 def unattended(wh, tmp_path, monkeypatch):
     """The writer with every outside call faked, rehearsing into tmp_path."""
     monkeypatch.setenv("PRACTICUM_RUNS_ROOT", str(tmp_path))
-    monkeypatch.setattr(wh, "pick_papers", lambda q: [])
+    monkeypatch.setattr(wh, "pick_papers", lambda q, **k: [])
     monkeypatch.setattr(wh.dp, "campaign_in_flight", lambda: "")
     monkeypatch.setattr(wh.dp, "_review_seat", lambda md: ([], "NO_OBJECTION (m)"))
 

@@ -173,9 +173,17 @@ class Client:
         text = choice["message"].get("content") or ""
         usage = payload.get("usage") or {}
         reasoning_tokens = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
+        # Prefix-cache hits, under any of the three spellings LiteLLM passes
+        # through. Copied from `src.core.loop.llm.cached_prompt_tokens` rather
+        # than imported: this client imports nothing from `src`.
+        found = [(usage.get("prompt_tokens_details") or {}).get("cached_tokens"),
+                 usage.get("prompt_cache_hit_tokens"),
+                 usage.get("cache_read_input_tokens")]
         self.calls.append({
             "model_served": served,
             "prompt_tokens": usage.get("prompt_tokens"),
+            "cached_tokens": max((int(v) for v in found
+                                  if isinstance(v, (int, float))), default=0),
             "completion_tokens": usage.get("completion_tokens"),
             "reasoning_tokens": reasoning_tokens,
             "finish_reason": choice.get("finish_reason"),

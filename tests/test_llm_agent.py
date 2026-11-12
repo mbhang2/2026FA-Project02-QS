@@ -385,6 +385,33 @@ def test_a_reply_with_no_code_block_says_whether_it_was_truncated():
     assert log["reasoning_tokens"] == 12004
 
 
+def test_prefix_cache_hits_are_recorded_under_every_spelling():
+    """**"Cache usage is 0%" could not be checked until this was recorded.**
+
+    LiteLLM normalises to `prompt_tokens_details.cached_tokens` but passes the
+    provider's own field through, and DeepSeek and Anthropic each spell it
+    differently. A hit under any of them counts; a reply with none is 0, not
+    an error.
+    """
+    f = llm.cached_prompt_tokens
+    assert f({}) == 0
+    assert f({"prompt_tokens": 9000, "prompt_tokens_details": {"text_tokens": 9000}}) == 0
+    assert f({"prompt_tokens_details": {"cached_tokens": 8192}}) == 8192
+    assert f({"prompt_cache_hit_tokens": 7000, "prompt_cache_miss_tokens": 2000}) == 7000
+    assert f({"cache_read_input_tokens": 4096}) == 4096
+    assert f({"prompt_tokens_details": {"cached_tokens": None}}) == 0
+    assert f({"prompt_tokens_details": {"cached_tokens": 100},
+              "prompt_cache_hit_tokens": 300}) == 300
+
+    agent = _agent()
+    agent._pending.append(llm.Call("propose", True, 1.0, prompt_tokens=9000,
+                                   cached_tokens=8192))
+    agent._pending.append(llm.Call("probe_repair", True, 1.0, prompt_tokens=9500))
+    assert agent._pending[0].as_dict()["cached_tokens"] == 8192
+    log = agent.drain_log()
+    assert log["cached_tokens"] == 8192 and log["prompt_tokens"] == 18500
+
+
 def test_the_proposer_budget_clears_a_reasoning_models_appetite():
     """16,384 was not enough for a model that thinks for 12,000 tokens."""
     import re

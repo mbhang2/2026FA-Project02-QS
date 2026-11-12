@@ -265,3 +265,234 @@ def test_a_judged_requirement_filed_as_a_constraint_is_moved(wh):
     fixed, why = wh.valid_items(out, _md())
     assert why == [] and fixed["constraints"] == []
     assert [j["id"] for j in fixed["judged"]] == ["div"]
+
+
+# --------------------------------------------------------------------------- #
+# unattended: a statement in, a committed question out (Amendment 15)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("status,ok", [
+    ("NO_OBJECTION (mimo-v2.6-pro)", True),
+    ("CANNOT_TELL (mimo-v2.6-pro)", False),
+    ("OBJECT (mimo-v2.6-pro)", False),
+    ("DID-NOT-RUN (ReadTimeout) -- NOT reviewed", False),
+    ("NO_OBJECTION (m) -- unreadable verdict, NOT reviewed", False),
+    ("OBJECT (m) -- objected 2x, cap reached, taken WITHOUT the seat clearing it", False),
+    ("NOT-REACHED (the mechanical gates were never all clean)", False),
+    ("", False),
+])
+def test_only_a_seat_that_read_it_and_did_not_object_clears_it(wh, status, ok):
+    """With no human, the seat is the only reader; anything short of a reading
+    with no objection is a refusal."""
+    assert wh.seat_cleared(status) is ok
+
+
+@pytest.fixture()
+def unattended(wh, tmp_path, monkeypatch):
+    """The writer with every outside call faked, rehearsing into tmp_path."""
+    monkeypatch.setenv("PRACTICUM_RUNS_ROOT", str(tmp_path))
+    monkeypatch.setattr(wh, "pick_papers", lambda q: [])
+    monkeypatch.setattr(wh.dp, "campaign_in_flight", lambda: "")
+    monkeypatch.setattr(wh.dp, "_review_seat", lambda md: ([], "NO_OBJECTION (m)"))
+
+    def no_commit(*a, **k):
+        raise AssertionError("a rehearsal must not commit")
+
+    monkeypatch.setattr(wh, "commit_files", no_commit)
+
+    def use(*replies):
+        client = _Client(*replies)
+        monkeypatch.setattr(wh.dp, "_client", lambda model: (client, "served-m"))
+        return client
+    return use
+
+
+def test_a_statement_becomes_a_marked_question(wh, unattended, tmp_path):
+    unattended(_reply(_md()))
+    got = wh.write_unattended("  CVD divergence   reverses trends ", campaign="nq-x-01")
+    assert got["path"] == tmp_path / "hypotheses" / "cvd-divergence-reversal.md"
+    assert got["commit"] is None                        # a rehearsal
+    o = got["origin"]
+    assert o["machine_written"] and o["amendment"] == 15
+    assert o["read_by_a_human"] is False
+    assert o["statement"] == "CVD divergence reverses trends"
+    side = json.loads((tmp_path / "hypotheses" /
+                       "cvd-divergence-reversal.origin.json").read_text())
+    assert side["machine_written"] == {"amendment": 15, "campaign": "nq-x-01",
+                                       "read_by_a_human": False}
+
+
+def test_a_seat_that_could_not_tell_stops_it_before_anything_is_written(
+        wh, unattended, tmp_path, monkeypatch):
+    unattended(*[_reply(_md())] * 4)
+    monkeypatch.setattr(wh.dp, "_review_seat", lambda md: ([], "CANNOT_TELL (m)"))
+    with pytest.raises(wh.Unattended, match="did not clear it"):
+        wh.write_unattended("q", campaign="nq-x-01")
+    assert not (tmp_path / "hypotheses").exists()
+
+
+def test_nothing_is_written_while_a_campaign_runs(wh, unattended, monkeypatch):
+    unattended(_reply(_md()))
+    monkeypatch.setattr(wh.dp, "campaign_in_flight", lambda: "nq-s07-01")
+    with pytest.raises(wh.Unattended, match="nq-s07-01 is running"):
+        wh.write_unattended("q", campaign="nq-x-01")
+
+
+def test_a_stated_market_path_is_sent_back_to_the_writer(wh, unattended):
+    client = unattended(_reply(_md("NQ fell 4% in March after the FOMC.")),
+                        _reply(_md()))
+    wh.write_unattended("q", campaign="nq-x-01")
+    assert "realised outcome" in client.asked[1]
+
+
+def test_a_gate_failure_is_a_refusal_not_a_crash(wh, unattended):
+    unattended(*[_reply(_md("The result must be statistically significant."))] * 10)
+    with pytest.raises(wh.Unattended, match="did not pass its gates"):
+        wh.write_unattended("q", campaign="nq-x-01")
+
+
+def test_outside_a_rehearsal_it_commits_marked(wh, unattended, tmp_path, monkeypatch):
+    monkeypatch.delenv("PRACTICUM_RUNS_ROOT")
+    monkeypatch.setattr(wh, "HYPOTHESES", tmp_path / "config" / "hypotheses")
+    monkeypatch.setattr(wh, "ROOT", tmp_path)
+    seen = {}
+
+    def fake_commit(files, message):
+        seen["files"], seen["message"] = files, message
+        return "abc123def456"
+
+    monkeypatch.setattr(wh, "commit_files", fake_commit)
+    unattended(_reply(_md()))
+    got = wh.write_unattended("CVD divergence reverses trends", campaign="nq-x-01")
+    assert got["commit"] == "abc123def456" == got["origin"]["commit"]
+    assert [f.name for f in seen["files"]][0] == "cvd-divergence-reversal.md"
+    m = seen["message"]
+    assert "Machine-Written: nq-x-01" in m
+    assert "Statement, verbatim: CVD divergence reverses trends" in m
+    assert "may NOT support a claim" in m
+    assert "Hypothesis-Review: NO_OBJECTION" in m
+
+
+def test_a_commit_takes_only_its_own_files(wh, tmp_path, monkeypatch):
+    """Whatever else the researcher has staged stays staged, and out of a
+    pre-registration commit."""
+    import subprocess
+
+    def git(*a):
+        return subprocess.run(["git", *a], cwd=tmp_path, check=True,
+                              capture_output=True, text=True).stdout
+
+    git("init", "-q")
+    git("config", "user.email", "t@example.invalid")
+    git("config", "user.name", "t")
+    (tmp_path / "seed").write_text("x")
+    git("add", "seed")
+    git("commit", "-q", "-m", "seed")
+    (tmp_path / "theirs.txt").write_text("staged, not ours")
+    git("add", "theirs.txt")
+    ours = tmp_path / "q.md"
+    ours.write_text("# q\n")
+    monkeypatch.setattr(wh, "ROOT", tmp_path)
+    sha = wh.commit_files([ours], "hypothesis: q\n\nMachine-Written: c\n")
+    assert git("show", "--name-only", "--format=", sha).split() == ["q.md"]
+    assert git("diff", "--cached", "--name-only").split() == ["theirs.txt"]
+
+
+def test_a_researchers_own_draft_is_not_held_to_the_outcome_lint(wh):
+    """Their words, and a human has read them; the lint is for what the
+    writer produces."""
+    md = _md("Written 2026-09-21. NQ fell 4% in March, which prompted this.")
+    assert not [f for f in wh.mechanical_findings(md, md, draft=True)
+                if f.startswith("realised outcome")]
+    assert [f for f in wh.mechanical_findings(md, md)
+            if f.startswith("realised outcome")]
+
+
+def test_a_substituted_writer_is_a_refusal_not_a_traceback(wh, unattended, monkeypatch, tmp_path):
+    """Found live on 2026-11-11: the writer's model was being answered by
+    gemini, and the preflight's refusal escaped `register` as a stack trace."""
+    from audit.committee.llm import ModelSubstituted
+
+    def substituted(model):
+        raise ModelSubstituted(f"asked {model!r}, served 'gemini-3.1-pro-preview'")
+
+    monkeypatch.setattr(wh.dp, "_client", substituted)
+    with pytest.raises(wh.Unattended, match="writer's model could not be used"):
+        wh.write_unattended("q", campaign="nq-x-01")
+    assert not (tmp_path / "hypotheses").exists()
+
+
+def test_register_writes_the_question_only_after_everything_that_could_refuse():
+    """A committed Machine-Written question with no campaign on it is the
+    failure: every local refusal and the proposer's preflight come first."""
+    src = (ROOT / "scripts" / "nq_campaign.py").read_text()
+    body = src.split("def stage_register", 1)[1].split("\ndef ", 1)[0]
+    write_at = body.index("write_unattended(")
+    for before in ("already exists. A pre-registration",
+                   "declares_fit(seed_text)", "_static_ok(",
+                   "if min_exposed is not None:", ".preflight()"):
+        assert body.index(before) < write_at, before
+    assert body.index('agent_cfg["hypothesis_origin"] = hypothesis_origin') > write_at
+
+
+def test_the_writer_and_reviewer_models_are_the_ones_asked_for(wh, unattended, monkeypatch):
+    """`--writer-model` / `--reviewer-model`: each reaches its own call, and
+    the record says which ran."""
+    unattended(_reply(_md()))
+    asked = {}
+    real_client = wh.dp._client
+
+    def client(model):
+        asked["writer"] = model
+        return real_client(model)
+
+    def seat(md, model=None):
+        asked["reviewer"] = model
+        return [], f"NO_OBJECTION ({model})"
+
+    monkeypatch.setattr(wh.dp, "_client", client)
+    monkeypatch.setattr(wh.dp, "_review_seat", seat)
+    got = wh.write_unattended("q", campaign="nq-x-01", model="writer-m",
+                              reviewer_model="reviewer-m")
+    assert asked == {"writer": "writer-m", "reviewer": "reviewer-m"}
+    assert got["origin"]["writer_model"] == "writer-m"
+    assert got["origin"]["reviewer_model"] == "reviewer-m"
+    assert got["origin"]["review"] == "NO_OBJECTION (reviewer-m)"
+
+
+def test_without_the_flags_the_defaults_run(wh, unattended, monkeypatch):
+    unattended(_reply(_md()))
+    seen = {}
+    real_client = wh.dp._client
+    monkeypatch.setattr(wh.dp, "_client",
+                        lambda m: (seen.setdefault("writer", m), real_client(m))[1])
+    monkeypatch.setattr(wh.dp, "_review_seat",
+                        lambda md, **k: (seen.setdefault("seat_kw", k),
+                                         ([], "NO_OBJECTION (d)"))[1])
+    got = wh.write_unattended("q", campaign="nq-x-01")
+    assert seen == {"writer": wh.MODEL, "seat_kw": {}}
+    assert got["origin"]["reviewer_model"] == "default"
+
+
+def test_register_passes_both_models_through():
+    src = (ROOT / "scripts" / "nq_campaign.py").read_text()
+    for flag in ('"--writer-model"', '"--reviewer-model"',
+                 "model=writer_model", "reviewer_model=reviewer_model",
+                 "writer_model=a.writer_model", "reviewer_model=a.reviewer_model"):
+        assert flag in src, flag
+    sess = (ROOT / "scripts" / "research_session.py").read_text()
+    assert '("--writer-model", "writer_model")' in sess
+    assert '("--reviewer-model", "reviewer_model")' in sess
+
+
+def test_the_committee_model_is_frozen_at_registration_and_read_at_report():
+    """Chosen after the trials ran, it would be a committee chosen after seeing
+    what it will judge."""
+    src = (ROOT / "scripts" / "nq_campaign.py").read_text()
+    reg = src.split("def stage_register", 1)[1].split("\ndef ", 1)[0]
+    assert 'agent_cfg["audit_model"] = audit_model' in reg
+    rep = src.split("def stage_report", 1)[1].split("\ndef ", 1)[0] \
+        if "def stage_report" in src else src
+    assert '(record.agent_config or {}).get("audit_model")' in src
+    assert '"--audit-model"' in src and "audit_model=a.audit_model" in src
+    sess = (ROOT / "scripts" / "research_session.py").read_text()
+    assert '("--audit-model", "audit_model")' in sess

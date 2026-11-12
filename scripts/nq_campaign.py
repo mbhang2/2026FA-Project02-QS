@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """The MVP campaign: a model proposes, the harness scores, the gate decides.
 
-    python scripts/nq_campaign.py --stage register   # preflight, pre-register, hash
+    python scripts/nq_campaign.py --stage register --name X --hypothesis config/hypotheses/q.md
+    python scripts/nq_campaign.py --stage register --name X --question "CVD divergence reverses intraday trends"
+                                                     # preflight, pre-register, hash; the
+                                                     # second writes the question first
+                                                     # (Amendment 15)
     python scripts/nq_campaign.py --stage run        # N trials, resumable
     python scripts/nq_campaign.py --stage nulls      # sign-flip null per candidate
     python scripts/nq_campaign.py --stage report     # gate, summary, tier 3
@@ -69,10 +73,12 @@ OUT = _RUNS / "campaigns"
 # deepseek-v4-pro is what the last nine campaigns actually used, named in their
 # plans rather than taken from here.
 MODEL = "deepseek-v4-pro"
-# The default only applies to `--stage register`, which writes the choice into
-# campaign.json. Every later stage reads the path back out of the record, so a
-# campaign cannot be registered against one question and run against another.
-DEFAULT_HYPOTHESIS = ROOT / "config" / "hypotheses" / "intraday-continuation.md"
+# **There is no default question.** `--stage register` takes `--hypothesis` or
+# `--question` and writes the choice into campaign.json; every later stage
+# reads it back from the record, so a campaign cannot be registered against one
+# question and run against another. The default this replaced
+# (intraday-continuation.md) meant a campaign registered with neither flag ran
+# on that file without anybody having chosen it.
 # **The proposer's token budget has to cover the model's REASONING, not just
 # the file it writes.** nq-ml-05 lost 4 of its first 10 trials to "no python
 # block in the reply" at 16,384: gemini-3.1-pro-preview spends ~12,000 tokens
@@ -551,7 +557,7 @@ def _campaign_note(profile: dict) -> str:
             "acceptance from this campaign as uncalibrated until its own null "
             "is tabulated.")
 
-def stage_register(name: str, hypothesis: pathlib.Path,
+def stage_register(name: str, hypothesis: pathlib.Path | None,
                    profile_name: str = PROFILE,
                    seed: pathlib.Path | None = None,
                    n_trials: int | None = None,
@@ -564,7 +570,17 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                    # positional dispatch below put the PROFILE into the
                    # correction rule -- the same mistake `Tick.asset` made in
                    # the multi-asset work, caught the same way.
-                   correction_rule: str | None = None) -> None:
+                   correction_rule: str | None = None,
+                   # Amendment 15: a researcher's statement instead of a file.
+                   # `hypothesis` is then None and the question is written
+                   # HERE, after every local refusal and the proposer's
+                   # preflight, so nothing that would refuse the campaign can
+                   # do so after a Machine-Written question is committed.
+                   question: str | None = None,
+                   no_papers: bool = False,
+                   writer_model: str | None = None,
+                   reviewer_model: str | None = None,
+                   audit_model: str | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -628,6 +644,22 @@ def stage_register(name: str, hypothesis: pathlib.Path,
     served = LLMAgent(model=model, temperature=0.7,
                         max_tokens=PROPOSER_MAX_TOKENS).preflight()
     print(f"  asked {served['requested']!r}  served {served['served']!r}")
+
+    hypothesis_origin = None
+    if question is not None:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import write_hypothesis as wh
+
+        print(f"{name}: no hypothesis file; writing one from the statement "
+              f"(Amendment 15)", flush=True)
+        try:
+            got = wh.write_unattended(question, campaign=name,
+                                      papers=not no_papers,
+                                      model=writer_model,
+                                      reviewer_model=reviewer_model)
+        except wh.Unattended as exc:
+            sys.exit(f"{name}: NOT registered -- {exc}")
+        hypothesis, hypothesis_origin = got["path"].resolve(), got["origin"]
 
     cc = campaign_cfg()
     # N and the model are per-campaign decisions frozen here, like the q. The
@@ -707,6 +739,20 @@ def stage_register(name: str, hypothesis: pathlib.Path,
 
     agent_cfg["idle_charge"] = cc.get("idle_charge", IDLE_CHARGE)
     agent_cfg["probe_before_trial"] = bool(cc.get("probe_before_trial"))
+    # **Who wrote the question, in the record.** None for a file a human
+    # committed. Under Amendment 15 it names the statement, what the writer
+    # turned it into, and that nobody read it -- so a report, a committee or a
+    # holdout request can see that this campaign may spend trials and may not
+    # support a claim until a human has read its question.
+    agent_cfg["hypothesis_origin"] = hypothesis_origin
+    # **The committee's model, frozen here rather than chosen at report time.**
+    # None is audit.committee.review.AUDIT_MODEL. A model picked after the
+    # trials ran is a committee picked after seeing what it will judge.
+    agent_cfg["audit_model"] = audit_model
+    if hypothesis_origin:
+        print(f"  question MACHINE-WRITTEN from a statement (Amendment "
+              f"{hypothesis_origin.get('amendment')}); unread, so this campaign "
+              f"cannot support a claim until a human reads it", flush=True)
 
     d.mkdir(parents=True, exist_ok=True)
     # **`--generation-width auto`: the conditioning stage decides W here.**
@@ -1618,8 +1664,10 @@ def stage_report(name: str) -> None:
             # independence defect docs/setup/MODEL-ACCESS.md recorded: all 17
             # verdicts to 2026-10-04 had a model auditing its own work.
             proposer = (record.agent_config or {}).get("model", MODEL)
+            audit_model = (record.agent_config or {}).get("audit_model")
             cv = review(tier2, source=best_source, hypothesis=hyp_text,
-                        proposer_model=proposer)
+                        proposer_model=proposer,
+                        **({"model": audit_model} if audit_model else {}))
             exc = None
             break
         except Exception as e:                                    # noqa: BLE001
@@ -1686,11 +1734,38 @@ def main() -> int:
     ap.add_argument("--stage", required=True,
                     choices=("register", "run", "nulls", "validate", "report"))
     ap.add_argument("--name", required=True)
-    ap.add_argument("--hypothesis", type=pathlib.Path,
-                    default=DEFAULT_HYPOTHESIS,
-                    help="path to the hypothesis markdown; --stage register only, "
-                         "and it is written into campaign.json. Later stages read "
-                         "it from there and ignore this flag.")
+    ap.add_argument("--hypothesis", type=pathlib.Path, default=None,
+                    help="path to a committed hypothesis markdown; --stage "
+                         "register only, and it is written into campaign.json. "
+                         "Later stages read it from there. Give this or "
+                         "--question.")
+    ap.add_argument("--question", default=None, metavar="STATEMENT",
+                    help="a researcher's question or short statement to test, "
+                         "when there is no hypothesis file; --stage register "
+                         "only. scripts/write_hypothesis.py writes it into a "
+                         "hypothesis, gates it, and commits it marked "
+                         "Machine-Written before registering (Amendment 15). "
+                         "Nobody reads it first, so the campaign may spend "
+                         "trials and may not support a claim until a human has.")
+    ap.add_argument("--no-papers", action="store_true",
+                    help="with --question: write from the statement alone, "
+                         "without citing papers from the registry")
+    ap.add_argument("--writer-model", default=None, metavar="MODEL",
+                    help="with --question: the model that writes the "
+                         "hypothesis. Default: write_hypothesis.MODEL "
+                         "(mimo-v2.6-pro). Recorded in campaign.json.")
+    ap.add_argument("--audit-model", default=None, metavar="MODEL",
+                    help="the committee's model (all four auditors); --stage "
+                         "register only, frozen into campaign.json and read by "
+                         "--stage report. Default: audit.committee.review."
+                         "AUDIT_MODEL (mimo-v2.6-pro). Ideally not the "
+                         "proposer's model.")
+    ap.add_argument("--reviewer-model", default=None, metavar="MODEL",
+                    help="with --question: the review seat's model, which must "
+                         "return NO_OBJECTION for the campaign to register. "
+                         "Default: review_hypothesis.MODEL (mimo-v2.6-pro). "
+                         "Ideally not the writer's model: it is the question's "
+                         "only reader.")
     ap.add_argument("--n", type=int, default=None,
                     help="trials in this campaign; --stage register only, frozen "
                          "into campaign.json. Default is campaign.n_trials in "
@@ -1756,17 +1831,30 @@ def main() -> int:
                          f"stages read it from the record and ignore this flag.")
     a = ap.parse_args()
     if a.stage == "register":
-        hyp = a.hypothesis.resolve()
-        try:
-            hyp.relative_to(ROOT)
-        except ValueError:
-            sys.exit(f"{hyp} is outside the repository. A campaign's question has "
-                     "to be a committed file, or the record points at nothing a "
-                     "reader can check.")
+        # **Exactly one question, and never a silent one.** `--hypothesis` used
+        # to default to intraday-continuation.md, so a campaign registered with
+        # neither flag ran on somebody else's question without saying so.
+        if a.question is None and (a.writer_model or a.reviewer_model
+                                   or a.no_papers):
+            sys.exit("--writer-model, --reviewer-model and --no-papers only "
+                     "mean something with --question")
+        if (a.hypothesis is None) == (a.question is None):
+            sys.exit("register needs exactly one of --hypothesis FILE (a "
+                     "committed question) or --question \"...\" (a statement, "
+                     "written into a hypothesis now; Amendment 15)")
+        if a.hypothesis is not None:
+            hyp = a.hypothesis.resolve()
+            try:
+                hyp.relative_to(ROOT)
+            except ValueError:
+                sys.exit(f"{hyp} is outside the repository. A campaign's question "
+                         "has to be a committed file, or the record points at "
+                         "nothing a reader can check.")
         profiles = cfg()["profiles"]
         if a.profile not in profiles:
             sys.exit(f"unknown profile {a.profile!r}. config/run.yaml has: "
                      f"{', '.join(sorted(profiles))}")
+        hyp = None if a.hypothesis is None else a.hypothesis.resolve()
         seed = None
         if a.seed is not None:
             seed = a.seed.resolve()
@@ -1779,13 +1867,19 @@ def main() -> int:
                          "committed file or the record points at nothing.")
         stage_register(a.name, hyp, a.profile, seed, a.n, a.model, a.min_exposed,
                        a.probe, a.generation_width,
-                       correction_rule=a.correction_rule)
+                       correction_rule=a.correction_rule,
+                       question=a.question, no_papers=a.no_papers,
+                       writer_model=a.writer_model,
+                       reviewer_model=a.reviewer_model,
+                       audit_model=a.audit_model)
     else:
         # Refused rather than ignored. Silently accepting it on a run stage is how
         # someone believes they changed the question and did not.
-        if a.hypothesis.resolve() != DEFAULT_HYPOTHESIS.resolve():
-            sys.exit(f"--hypothesis applies to --stage register only; "
-                     f"--stage {a.stage} reads it from campaign.json.")
+        if a.hypothesis is not None or a.question is not None or a.no_papers \
+                or a.writer_model or a.reviewer_model or a.audit_model:
+            sys.exit(f"--hypothesis, --question, --no-papers, --writer-model and "
+                     f"--reviewer-model apply to --stage register only; --stage "
+                     f"{a.stage} reads the question from campaign.json.")
         if a.profile != PROFILE:
             sys.exit(f"--profile applies to --stage register only; "
                      f"--stage {a.stage} reads it from campaign.json.")

@@ -133,6 +133,14 @@ def mechanical_findings(md: str, *sources: str, draft: bool = False) -> list[str
         if not _has(md, pat):
             out.append(f"missing section: {name}")
     out += [f"gate vocabulary: {x}" for x in dp._lint_findings(md)]
+    if not draft:
+        # What the market did, stated as fact (`outcome_lint`, Gowtam's idea).
+        # The writer's output only: a researcher's own draft is theirs to word,
+        # and a human has read it. A file written from a statement may run
+        # with nobody reading it (Amendment 15).
+        from src.core.research.outcome_lint import findings as outcome_findings
+
+        out += [f"realised outcome: {x}" for x in outcome_findings(md)]
     length = _draft_length(md) if draft else dp._too_long(md)
     if length:
         out.append(f"length: {length}")
@@ -365,8 +373,13 @@ def _repair(found: list[str], cons: list[str]) -> str:
 
 
 def write(client, question: str, draft: str, papers: list[dict],
-          house: list[dict] | None = None) -> dict:
-    """The distil loop, on a question: mechanical gates, then the review seat."""
+          house: list[dict] | None = None, seat=None) -> dict:
+    """The distil loop, on a question: mechanical gates, then the review seat.
+
+    `seat` replaces `dp._review_seat` (same contract) -- how `--reviewer-model`
+    reaches it. Looked up at call time when None, so a test that stubs
+    `dp._review_seat` stubs this too.
+    """
     system = PROMPT.read_text()
     user = context(question, draft, papers)
     src = sources(question, draft, papers)
@@ -382,7 +395,7 @@ def write(client, question: str, draft: str, papers: list[dict],
         cons: list[str] = []          # see `valid_items`: never a reason to rewrite
         if not found:
             if reviews < dp.MAX_REVIEW_REPAIRS:
-                rev, reviewer = dp._review_seat(md)
+                rev, reviewer = (seat or dp._review_seat)(md)
                 if rev:
                     reviews += 1
                     print(f"    reviewer objected ({reviews}/{dp.MAX_REVIEW_REPAIRS}):"
@@ -442,21 +455,29 @@ def write(client, question: str, draft: str, papers: list[dict],
 
 
 def write_files(got: dict, *, question: str, draft_path: str | None,
-                papers: list[dict], model: str, served: str) -> list[pathlib.Path]:
-    dest = HYPOTHESES / f"{got['slug']}.md"
+                papers: list[dict], model: str, served: str,
+                into: pathlib.Path | None = None,
+                extra: dict | None = None) -> list[pathlib.Path]:
+    # Looked up at CALL time, not bound as a default: a default would freeze
+    # the real folder at import, and a test (or a rehearsal) that repoints
+    # HYPOTHESES would write into config/hypotheses/ anyway.
+    into = into if into is not None else HYPOTHESES
+    into.mkdir(parents=True, exist_ok=True)
+    dest = into / f"{got['slug']}.md"
     if dest.exists():
-        raise FileExistsError(f"{dest.relative_to(ROOT)} exists; a hypothesis is "
+        raise FileExistsError(f"{_shown(dest)} exists; a hypothesis is "
                               "written once. Rerun, or rename the slug.")
     dest.write_text(got["markdown"])
     written = [dest]
     if got["constraints_yaml"]:
-        side = HYPOTHESES / f"{got['slug']}.constraints.yaml"
+        side = into / f"{got['slug']}.constraints.yaml"
         side.write_text(got["constraints_yaml"])
         written.append(side)
     # Where it came from, beside it and not in it: the .md is pasted into every
     # prompt of the campaign, and provenance is for the human who commits it.
-    origin = HYPOTHESES / f"{got['slug']}.origin.json"
+    origin = into / f"{got['slug']}.origin.json"
     origin.write_text(json.dumps({
+        **(extra or {}),
         "written": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "by": "scripts/write_hypothesis.py", "model": model, "model_served": served,
         "question": question, "draft": draft_path,
@@ -470,6 +491,178 @@ def write_files(got: dict, *, question: str, draft_path: str | None,
     }, indent=2, ensure_ascii=False) + "\n")
     written.append(origin)
     return written
+
+
+# --------------------------------------------------------------------------- #
+# unattended: a statement in, a committed hypothesis out (Amendment 15)
+# --------------------------------------------------------------------------- #
+AMENDMENT = 15
+
+
+class Unattended(RuntimeError):
+    """A question that cannot run unread. Says why; writes and commits nothing
+    that a campaign could be registered on."""
+
+
+def seat_cleared(status: str) -> bool:
+    """Did the review seat READ the question and find nothing to stop?
+
+    `_review_seat` never raises, so its status is the only record of whether
+    anybody looked. A human reading the file would make CANNOT_TELL, a seat
+    that never ran, or one overruled at the repair cap a judgement call. With no
+    human, each is a refusal: the seat is the only reader this question gets
+    before trials are spent on it.
+    """
+    s = status or ""
+    return (s.startswith("NO_OBJECTION") and "NOT reviewed" not in s
+            and "WITHOUT" not in s and "NOT-REACHED" not in s)
+
+
+def _rehearsing() -> bool:
+    import os
+    return bool(os.environ.get("PRACTICUM_RUNS_ROOT"))
+
+
+def hypotheses_dir() -> pathlib.Path:
+    """`config/hypotheses/`, or the rehearsal's own folder (Amendment 13), the
+    way `refine_hypothesis.HYPOTHESES` chooses: a rehearsal does not touch the
+    real pre-registration."""
+    import os
+    root = os.environ.get("PRACTICUM_RUNS_ROOT")
+    return pathlib.Path(root) / "hypotheses" if root else HYPOTHESES
+
+
+def commit_message(got: dict, *, statement: str, campaign: str, model: str,
+                   served: str, papers: list[dict]) -> str:
+    cannot = got.get("cannot_test") or "nothing"
+    return (
+        f"hypothesis: {got['slug']}, written from a researcher's statement\n\n"
+        f"MACHINE-WRITTEN AND MACHINE-COMMITTED under Amendment {AMENDMENT}. No "
+        f"human read this before {campaign} was registered on it.\n\n"
+        f"Statement, verbatim: {statement}\n"
+        f"As the writer read it: {got.get('question_as_asked')}\n"
+        f"What it tests: {got.get('adapted_claim')}\n"
+        f"What it says it cannot test: {cannot}\n"
+        f"Model: {model} (served {served})\n"
+        f"Papers cited: {', '.join(got.get('papers_used') or []) or 'none'} "
+        f"(offered: {', '.join(p['id'] for p in papers) or 'none'})\n\n"
+        f"Gates passed: shape, gate-vocabulary lint, realised-outcome lint, "
+        f"grounding, length, and a review seat that read it and did not object.\n\n"
+        f"Containment (Amendment 11, unchanged): this may spend trials and may "
+        f"NOT support a claim until a human has read it and said so.\n\n"
+        f"Machine-Written: {campaign}\n"
+        f"Hypothesis-Review: {got['review']}\n"
+    )
+
+
+def _shown(p: pathlib.Path) -> str:
+    try:
+        return str(p.relative_to(ROOT))
+    except ValueError:           # a rehearsal's folder may sit outside the repo
+        return str(p)
+
+
+def commit_files(files: list[pathlib.Path], message: str) -> str:
+    """Commit exactly `files` with `message`; return the commit's sha.
+
+    `git commit -- <paths>` commits only those paths, so whatever else the
+    researcher has staged stays staged and out of a pre-registration commit.
+    """
+    import subprocess
+
+    rel = [str(f.relative_to(ROOT)) for f in files]
+    subprocess.run(["git", "add", "--", *rel], cwd=ROOT, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", message, "--", *rel],
+                   cwd=ROOT, check=True)
+    return subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
+                          capture_output=True, text=True).stdout.strip()
+
+
+def write_unattended(statement: str, *, campaign: str, model: str | None = None,
+                     papers: bool = True, house: bool = False,
+                     reviewer_model: str | None = None) -> dict:
+    """A researcher's statement in; a hypothesis written, gated and committed.
+
+    What `--stage register --question` runs. Everything `main()` does for
+    `--question`, plus what running unread requires: the review seat must have
+    cleared it, the new files are committed with a `Machine-Written` trailer
+    (the commit is the pre-registration; a rehearsal writes and does not
+    commit), and nothing is written at all while a campaign is running.
+
+    Returns what the campaign record keeps: the path, the commit, and what the
+    statement was turned into. Raises `Unattended` naming the reason otherwise.
+    """
+    # `--writer-model` / `--reviewer-model`. None means the defaults: MODEL for
+    # the writer, `review_hypothesis.MODEL` for the seat. They may differ, and
+    # by default they do not; a seat on another model than the writer is a
+    # more independent reader, which matters more when it is the only one.
+    model = model or MODEL
+    seat = (None if reviewer_model is None else
+            (lambda md: dp._review_seat(md, model=reviewer_model)))
+    statement = " ".join(statement.split())
+    if not statement:
+        raise Unattended("an empty statement is not a question")
+    busy = dp.campaign_in_flight()
+    if busy:
+        raise Unattended(f"{busy} is running; a new file in config/hypotheses/ "
+                         "would change its artifact fingerprint mid-flight")
+    from audit.committee.llm import LLMUnavailable, ModelSubstituted
+
+    # **A gateway failure is a refusal with a reason, not a traceback.** The
+    # first live run (2026-11-11) found the writer's model being answered by
+    # gemini; `preflight` refused, correctly, and the refusal escaped as a stack
+    # trace from inside `register`. Same outcome -- nothing written -- but a
+    # session reading the log could not tell a gateway fault from a bug.
+    try:
+        offered = pick_papers(statement) if papers else []
+        print(f"  papers offered: {[p['id'] for p in offered] or 'none'}",
+              flush=True)
+        client, served = dp._client(model)
+        print(f"  writing the hypothesis on {model} (served {served}) ...",
+              flush=True)
+        got = write(client, statement, "", offered,
+                    house=load_house() if house else None, seat=seat)
+    except ValueError as exc:
+        raise Unattended(str(exc)) from None
+    except (LLMUnavailable, ModelSubstituted) as exc:
+        raise Unattended(f"the writer's model could not be used "
+                         f"({type(exc).__name__}: {exc})") from None
+    if not seat_cleared(got["review"]):
+        raise Unattended(
+            f"the review seat did not clear it ({got['review']}). With no human "
+            "reading it first, the seat is its only reader; write it with "
+            "scripts/write_hypothesis.py --question, read it, and register on "
+            "the file instead")
+    files = write_files(
+        got, question=statement, draft_path=None, papers=offered, model=model,
+        served=served, into=hypotheses_dir(),
+        extra={"machine_written": {"amendment": AMENDMENT, "campaign": campaign,
+                                   "read_by_a_human": False}})
+    commit = None
+    if _rehearsing():
+        print("  REHEARSAL: written but NOT committed (Amendment 13).", flush=True)
+    else:
+        commit = commit_files(files, commit_message(
+            got, statement=statement, campaign=campaign, model=model,
+            served=served, papers=offered))
+        print(f"  committed {commit[:10]}, marked `Machine-Written: {campaign}`",
+              flush=True)
+    for f in files:
+        print(f"  wrote {_shown(f)}", flush=True)
+    print(f"  asked:   {got['question_as_asked']}", flush=True)
+    print(f"  testing: {got['adapted_claim']}", flush=True)
+    if got["cannot_test"]:
+        print(f"  CANNOT TEST: {got['cannot_test']}", flush=True)
+    return {"path": files[0], "commit": commit,
+            "origin": {"machine_written": True, "amendment": AMENDMENT,
+                       "statement": statement,
+                       "question_as_asked": got["question_as_asked"],
+                       "adapted_claim": got["adapted_claim"],
+                       "cannot_test": got["cannot_test"],
+                       "writer_model": model, "writer_served": served,
+                       "reviewer_model": reviewer_model or "default",
+                       "review": got["review"], "commit": commit,
+                       "read_by_a_human": False}}
 
 
 def main() -> int:

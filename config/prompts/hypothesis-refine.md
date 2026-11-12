@@ -75,6 +75,21 @@ the extra length bought.
 in makes the question worse and costs a campaign. "I read these three and none of
 them bears on this" is a perfectly good answer, written down.
 
+### When no paper fits, use your own judgement
+
+You may be given a diagnosis of what the last campaign suggests needs work, with
+each problem marked either with the papers retrieved for it or as **no paper
+answers this**. For a problem no paper answers, **change the question on your
+own judgement**: sharpen a definition, add or remove a condition, say what the
+previous framing left ambiguous, or move a choice from "yours to choose" to
+"NOT yours to choose" when the evidence shows the strategy misused the freedom.
+A thin library is not a reason to leave a diagnosed problem alone.
+
+Your judgement is held to the same two rules as a borrowed idea: it must remain
+the same question, and every number must still come from what you were given --
+name a magnitude in words if it was not. Say in one sentence which changes are
+your own, so the record tells them apart from the cited ones.
+
 ### Respond to the evidence, not to a score
 
 The auditors' objections are the most useful thing you are given. If they found

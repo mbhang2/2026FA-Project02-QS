@@ -398,3 +398,67 @@ def test_the_family_seat_runs_in_the_refiner_after_the_mechanical_one():
     # the agentic seats sit inside the mechanically-clean branch
     assert loop.index("if not (leaks or loose or fam or length") < \
            loop.index("family_findings_agentic")
+
+
+# --------------------------------------------------------------------------- #
+# 2026-11-12: a question no seat read is not committed
+# --------------------------------------------------------------------------- #
+def _rh():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "refine_hypothesis_t", REPO_ROOT / "scripts" / "refine_hypothesis.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@pytest.mark.parametrize("status,unread", [
+    ("DID-NOT-RUN (ModelSubstituted) -- NOT reviewed", True),
+    ("NO_OBJECTION (m) -- unreadable verdict, NOT reviewed", True),
+    ("NOT-REACHED (the mechanical gates were never all clean)", True),
+    ("NO_OBJECTION (gemini-2.5-pro)", False),
+    ("CANNOT_TELL (gemini-2.5-pro)", False),
+    ("OBJECT (m) -- objected 2x, cap reached", False),
+])
+def test_only_a_seat_that_never_read_it_blocks_the_commit(status, unread):
+    assert _rh().never_read(status) is unread
+
+
+def test_the_refusal_comes_before_the_file_is_written():
+    """An uncommitted file in config/hypotheses/ would move every later
+    trial's artifact fingerprint."""
+    src = (REPO_ROOT / "scripts" / "refine_hypothesis.py").read_text()
+    main = src.split("def main()", 1)[1]
+    assert main.index("if a.commit and unread:") < main.index("dest.write_text(")
+    assert main.index("if a.commit and unread:") < main.index('PRACTICUM_RUNS_ROOT"):')
+
+
+def test_the_reviewer_model_reaches_both_seats(monkeypatch):
+    rh = _rh()
+    seen = []
+
+    class Fake:
+        @staticmethod
+        def review(md, parent, **kw):
+            seen.append(("hypothesis", kw))
+            return {"verdict": "NO_OBJECTION", "model_served": kw.get("model", "d"), "concerns": []}
+
+        @staticmethod
+        def family_review(parent, md, **kw):
+            seen.append(("family", kw))
+            return {"verdict": "NO_OBJECTION", "model_served": kw.get("model", "d"), "concerns": []}
+
+    import sys as _sys
+    monkeypatch.setitem(_sys.modules, "review_hypothesis", Fake)
+    rh.REVIEWER_MODEL = "gemini-2.5-pro"
+    assert rh.review_findings("md", "p")[1] == "NO_OBJECTION (gemini-2.5-pro)"
+    assert rh.family_findings_agentic("p", "md")[1] == "NO_OBJECTION (gemini-2.5-pro)"
+    rh.REVIEWER_MODEL = None
+    rh.review_findings("md", "p")
+    assert seen == [("hypothesis", {"model": "gemini-2.5-pro"}),
+                    ("family", {"model": "gemini-2.5-pro"}), ("hypothesis", {})]
+
+
+def test_a_session_can_set_the_refiners_reviewer():
+    sess = (REPO_ROOT / "scripts" / "research_session.py").read_text()
+    assert '["--reviewer-model", str(fam["refine_reviewer_model"])]' in sess

@@ -34,10 +34,17 @@ _spec.loader.exec_module(g)
 
 PAPER = "2605.04004v3"
 
+# Third-party full texts are local-only (.gitignore, docs/PUBLIC_RELEASE.md):
+# a clone has none until `scripts/fetch_fulltext.py` re-fetches them.
+needs_fulltext = pytest.mark.skipif(
+    not (REPO_ROOT / "data" / "papers" / "text").is_dir(),
+    reason="data/papers/text/ is local-only; run scripts/fetch_fulltext.py")
+
 
 # --------------------------------------------------------------------------- #
 # the defect, on the real paper
 # --------------------------------------------------------------------------- #
+@needs_fulltext
 def test_the_fabricated_range_is_caught_against_the_whole_paper():
     """The exact sentence the model wrote, against the whole paper.
 
@@ -80,6 +87,7 @@ def test_the_papers_own_figures_are_all_grounded():
     assert g.findings(abstract, *src) == []
 
 
+@needs_fulltext
 def test_the_full_text_is_what_makes_a_body_figure_groundable():
     """Grounding against the abstract alone would flag every figure the paper
     states in its body -- a check that punishes the faithful distillation and

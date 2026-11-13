@@ -58,12 +58,25 @@ PROFILE = "rehearsal"          # fixed in code, never an argument
 PY = sys.executable
 
 
+# Plan keys an argument may set, beside the proposer's `model`. Each is an
+# endpoint fact (which model answers today), never a protocol fact.
+MODEL_KEYS = ("writer_model", "reviewer_model", "picker_model", "refine_model",
+              "refine_reviewer_model", "retrieval_model", "paper_model",
+              "audit_model", "judge_model")
+
+
 def _plan(path: pathlib.Path, *, campaigns: int, n: int, width: int,
-          seed: pathlib.Path, model: str) -> pathlib.Path:
+          seed: pathlib.Path | None, model: str, seed_question: str | None = None,
+          models: dict | None = None) -> pathlib.Path:
+    # A statement instead of a file (Amendment 15): campaign 1 is registered
+    # with --question, and the chain refines the file it writes.
+    first = (f"  seed_question: {json.dumps(seed_question)}\n" if seed_question
+             else f"  seed: {seed.relative_to(ROOT)}\n")
+    extra = "".join(f"  {k}: {v}\n" for k, v in (models or {}).items() if v)
     path.write_text(
         "# Written by scripts/rehearse.py. Synthetic data; Amendment 13.\n"
         "session: rehearsal\n\nfamily:\n"
-        f"  seed: {seed.relative_to(ROOT)}\n"
+        + first + extra +
         f"  iterations: {campaigns}\n"
         "  refine: true\n"
         f"  n: {n}\n"
@@ -74,7 +87,7 @@ def _plan(path: pathlib.Path, *, campaigns: int, n: int, width: int,
     return path
 
 
-def check(campaigns: int) -> list[str]:
+def check(campaigns: int, seed_question: str | None = None) -> list[str]:
     """What must be true of a rehearsal that really exercised the chain.
 
     Returns the failures. A green run with an empty list is the only green.
@@ -109,13 +122,26 @@ def check(campaigns: int) -> list[str]:
             bad.append(f"{d.name}: nulls never computed")
         else:
             ne = [x for x in json.loads(nulls.read_text())["samples"] if x]
-            if not ne:
+            # **Empty is a defect only when something was scored.** A campaign
+            # whose every trial was rejected (on synthetic data: strategies that
+            # never traded, under the exposure floor) has no candidate to build
+            # a null for, and that is a result, not the nq-s05b-01 merge bug.
+            scored = [x for x in rows
+                      if (x.get("score") or {}).get("primary") is not None
+                      and not (x.get("score") or {}).get("rejected")]
+            if not ne and scored:
                 bad.append(f"{d.name}: every null sample is EMPTY -- this is "
                            f"the nq-s05b-01 defect, p would be 1.0")
         if not (d / "tier2-summary.json").is_file():
             bad.append(f"{d.name}: no gate verdict")
-        if not (d / "committee-verdict.json").is_file():
+        cv = d / "committee-verdict.json"
+        if not cv.is_file():
             bad.append(f"{d.name}: the committee was never asked")
+        elif json.loads(cv.read_text()).get("verdict") == "ERROR":
+            # Recorded as ERROR is honest, and still not a committee that ran:
+            # the refinement then has no objections to diagnose from.
+            bad.append(f"{d.name}: the committee failed to run -- "
+                       f"{json.loads(cv.read_text()).get('error', '')[:120]}")
         # Amendment 7, which was armed on one agent in four
         if r.get("probe_before_trial"):
             pl = d / "probe-ledger.jsonl"
@@ -136,6 +162,21 @@ def check(campaigns: int) -> list[str]:
                        f"the chain did not write every next question")
         if not (log.get("l2") or {}).get("verdict"):
             bad.append("no L2 verdict")
+    # **Amendment 15: the first question came from a statement**, and each
+    # later campaign ran on a different question -- the refinement reached the
+    # registration rather than being written and ignored.
+    recs = [json.loads((d / "campaign.json").read_text()).get("record") or {}
+            for d in camps if (d / "campaign.json").is_file()]
+    if seed_question and recs:
+        origin = (recs[0].get("agent_config") or {}).get("hypothesis_origin") or {}
+        if not origin.get("machine_written") or origin.get("statement") != \
+                " ".join(seed_question.split()):
+            bad.append(f"{camps[0].name}: not registered from the statement "
+                       f"(hypothesis_origin={origin or None})")
+    paths = [r.get("hypothesis_path") for r in recs]
+    if len(paths) > 1 and len(set(paths)) < len(paths):
+        bad.append(f"campaigns share a question file -- the refinement did not "
+                   f"reach the next registration: {paths}")
     return bad
 
 
@@ -147,13 +188,18 @@ def main() -> int:
     ap.add_argument("--width", type=int, default=2)
     ap.add_argument("--seed-hypothesis", type=lambda x: pathlib.Path(x).resolve(),
                     default=ROOT / "config" / "hypotheses" / "intraday-continuation.md")
-    ap.add_argument("--model", default="deepseek-v4-pro",
+    ap.add_argument("--model", default="deepseek-v4.1-flash",
                     help="the proposer to rehearse with. The MODEL is an "
                          "argument and the PROFILE is not, on purpose: which "
                          "model answers is an endpoint fact that changes hourly "
                          "-- 2026-10-05, deepseek-v4-pro was substituted even at "
                          "the preflight prompt -- while which data is looked at "
                          "is a protocol fact and must not be selectable.")
+    ap.add_argument("--seed-question", default=None, metavar="STATEMENT",
+                    help="start the family from a statement instead of "
+                         "--seed-hypothesis (Amendment 15)")
+    for k in MODEL_KEYS:
+        ap.add_argument(f"--{k.replace('_', '-')}", default=None, metavar="MODEL")
     ap.add_argument("--keep", action="store_true",
                     help="leave .scratch/rehearsal in place for inspection")
     ap.add_argument("--check-only", action="store_true",
@@ -161,7 +207,7 @@ def main() -> int:
     a = ap.parse_args()
 
     if a.check_only:
-        bad = check(a.campaigns)
+        bad = check(a.campaigns, a.seed_question)
         for b in bad:
             print(f"  FAIL  {b}")
         print(f"\n{'REHEARSAL FAILED' if bad else 'rehearsal clean'}")
@@ -171,7 +217,9 @@ def main() -> int:
         shutil.rmtree(SCRATCH)
     (SCRATCH / "sessions").mkdir(parents=True)
     plan = _plan(SCRATCH / "plan.yaml", campaigns=a.campaigns, n=a.n,
-                 width=a.width, seed=a.seed_hypothesis, model=a.model)
+                 width=a.width, seed=a.seed_hypothesis, model=a.model,
+                 seed_question=a.seed_question,
+                 models={k: getattr(a, k) for k in MODEL_KEYS})
 
     print(f"rehearsing: {a.campaigns} campaign(s), N={a.n}, width={a.width}, "
           f"profile={PROFILE} (synthetic)")
@@ -185,7 +233,7 @@ def main() -> int:
         cwd=str(ROOT), env=env).returncode
 
     print(f"\nsession driver exited {code}; checking what actually ran\n")
-    bad = check(a.campaigns)
+    bad = check(a.campaigns, a.seed_question)
     for b in bad:
         print(f"  FAIL  {b}")
     if not bad:

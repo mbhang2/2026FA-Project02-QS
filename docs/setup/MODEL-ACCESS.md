@@ -4,6 +4,69 @@
 
 The headline: **the frontier models are not available to us.** Of the 88 models the gateway lists, **28 return HTTP 403** and **19 silently answer as a different model**. What is left for the proposer is a short list.
 
+## Current reading: 2026-11-11/12
+
+Where this disagrees with section 0 or anything below, **this is the current
+reading.** Each point was measured against the live gateway.
+
+**Afternoon of 2026-11-12: `mimo-v2.6-pro` and `mimo-v2.6-flash` serve
+themselves again; both DeepSeek models still do not, for our key.** In the
+morning all four were answered by `gemini-3.1-pro-preview`. By the afternoon the
+mimo pair answered as themselves (2.9 s and 1.7 s on a short call), while
+`deepseek-v4-pro` and `deepseek-v4.1-flash` fell back to Gemini at **every**
+request shape tried -- a bare one-line request, `max_tokens` 64 and 64,000,
+with and without `no-cache` -- each with `x-litellm-attempted-fallbacks: 1` and
+Google's Vertex endpoint in `x-litellm-model-api-base`. So it is not our request
+shape and not section 0's output-ceiling trigger: the DeepSeek deployment fails
+for our key and LiteLLM falls back. The primary error is in the gateway's logs,
+not in anything our key can read. Both clients refuse with `ModelSubstituted`.
+
+**Brian's advice: pin `deepseek-v4.1-flash`**, whose latest checkpoint he reports
+smarter, faster and cheaper than `deepseek-v4-pro` (section 2's 2026-10-03
+reading of it, 676 s at 8,096 tokens, predates that checkpoint). It is the
+proposer default from 2026-11-12, unmeasured here until the fallback is fixed.
+Until then, pass `--model gemini-3.1-pro-preview`.
+
+**"On the opencode models list" is not "served".** `opencode models` lists the
+same gateway's catalogue (`litellm/deepseek-v4-pro`, `litellm/mimo-v2.6-pro`, …)
+plus opencode's own free tier (`opencode/deepseek-v4.1-flash-free`, …). A model
+on the list can still be substituted; only a preflight shows what answers.
+
+**Every agent part's model can now be set separately**, from the command line or
+a session plan; the full table is in [guide/models.md](../guide/models.md).
+
+Keep each reviewer on a different model from what it reviews where you can.
+
+**HTTP 502 after exactly 300 s is the proxy's timeout, not a model failure.**
+An Apache 2.4.41 (Ubuntu) reverse proxy sits in front of LiteLLM 1.109.0
+(`Server:` header on every response), and Apache's proxy timeout defaults to
+300 s. Of 297 recorded 502s, 294 arrived at 300.3-300.6 s; of 5,342 successful
+calls, all but one finished under 300 s. Calls return nothing until the reply
+is complete, so any reply that takes longer than ~300 s to generate (about
+28,000 output tokens on deepseek at ~90-100 tokens/s) is cut off, while
+`PROPOSER_MAX_TOKENS` allows 64,000. The model is fine: 72% of resends succeed,
+because a fresh sample at temperature 0.7 is often shorter. Costs measured on
+the `nq-s07-*` campaigns: 2.5-4.1 h of 300 s hangs on the critical path, plus
+0.8-1.9 h of client backoff sleeps (30, 120, 300 s) after them. Fixes, best
+first: raise `ProxyTimeout` on the Apache vhost (e.g. 900, matching the
+committee client); stream responses, since Apache's timeout is between bytes;
+resend immediately after a 300 s 502 rather than backing off; shorter replies.
+Unconfirmed: that it is Apache's timer and not a 300 s timeout inside LiteLLM.
+The Apache error log would say ("Error reading from remote server").
+
+**Prompt caching works on gemini called directly, and saves money, not time.**
+Both clients now record `cached_tokens` per call (`agent-calls.jsonl`, the
+committee's call log). The real 25.7k-token proposal prompt sent three times to
+`gemini-3.1-pro-preview`: 0, then 20,457 and 20,457 tokens cached (80%), with
+no change in latency. Through the deepseek-to-gemini fallback, 0 cached. A fit
+over 3,162 deepseek calls: latency is about 3 s plus 11 s per 1,000 output
+tokens, with no measurable dependence on prompt length (R² = 0.78). Faster calls
+come from shorter replies, not caching. `NO_CACHE` is unrelated: it disables
+the gateway's *response* replay, and stays on.
+
+**Our key cannot read `/model/info` or `/spend/logs`** (HTTP 403), so routing
+and caching per model are visible only to the gateway's administrator.
+
 ## 0. Re-measured 2026-10-22. The gateway changed; some of section 1-4 no longer holds
 
 Everything below this section is the 2026-10-03 sweep and is kept because it is

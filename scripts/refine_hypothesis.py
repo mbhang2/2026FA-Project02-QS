@@ -294,9 +294,14 @@ def papers_for(parent_text: str = "", limit: int = MAX_PAPERS) -> list[dict]:
     return out
 
 
-def context(parent_text: str, ev: dict, papers: list[dict]) -> str:
-    parts = ["# The question as it stands\n", parent_text,
-             "\n\n# What a strategy written against it actually did\n",
+def evidence_text(ev: dict) -> str:
+    """What the refiner is told about campaign k, and nothing more.
+
+    One function because two readers need it identically: the refiner, and the
+    diagnosis in `outcome_retrieval.py` that chooses its papers. A second copy
+    is a second place for a score to slip in.
+    """
+    parts = ["# What a strategy written against it actually did\n",
              json.dumps({k: ev[k] for k in
                          ("what_the_strategy_did", "concentration",
                           "candidates_tried")}, indent=2, default=str),
@@ -313,6 +318,13 @@ def context(parent_text: str, ev: dict, papers: list[dict]) -> str:
     parts.append(
         "\nYou are not told how the study scored this, because a question "
         "written to score well is not the same as a question that is true.\n")
+    return "".join(parts)
+
+
+def context(parent_text: str, ev: dict, papers: list[dict],
+            diagnosis: str = "") -> str:
+    parts = ["# The question as it stands\n", parent_text, "\n\n",
+             evidence_text(ev), diagnosis]
     if papers:
         parts.append(
             "\n\n# Papers judged relevant, with what each one would have a "
@@ -324,6 +336,13 @@ def context(parent_text: str, ev: dict, papers: list[dict]) -> str:
             parts.append(f"\n## {p['id']} -- {p['title']}\n")
             parts.append(f"rated: campaign axis {p['campaign_axis']}, "
                          f"gate axis {p['gate_axis']}\n")
+            if p.get("retrieved_for"):
+                parts.append("\n**Retrieved because:** "
+                             + "; ".join(p["retrieved_for"]) + "\n")
+            if p.get("how"):
+                parts.append(f"\n**The idea, as a reader judged it:** {p['how']}\n")
+            if p.get("claim"):
+                parts.append(f"\n**What it claims:** {p['claim']}\n")
             if p.get("speaks_to_deferral"):
                 parts.append(f"\n**Speaks to a question we set aside:** "
                              f"{p['speaks_to_deferral']}\n")
@@ -343,6 +362,25 @@ def context(parent_text: str, ev: dict, papers: list[dict]) -> str:
 # --------------------------------------------------------------------------- #
 # gates 1, 2, 4
 # --------------------------------------------------------------------------- #
+# `--reviewer-model`: the model both agentic seats run on. None is
+# `review_hypothesis.MODEL`. Module-level because both seats read it and main()
+# sets it once, before either runs.
+REVIEWER_MODEL: str | None = None
+
+
+def _kw() -> dict:
+    return {} if REVIEWER_MODEL is None else {"model": REVIEWER_MODEL}
+
+
+def never_read(status: str) -> bool:
+    """A seat that did not read the question, as opposed to one that read it.
+
+    DID-NOT-RUN, an unreadable verdict, or never reached. CANNOT_TELL and an
+    objection overruled at the repair cap are readings, and stay what Amendment
+    11 says they are."""
+    return "NOT reviewed" in (status or "") or "NOT-REACHED" in (status or "")
+
+
 def review_findings(md: str, parent: str) -> tuple[list[str], str]:
     """The first agentic seat: is this question worth spending trials on?
 
@@ -354,7 +392,7 @@ def review_findings(md: str, parent: str) -> tuple[list[str], str]:
     nothing. A reader would have seen in a minute that a strategy obeying that
     question could barely act.
     """
-    return _seat("hypothesis", lambda m: m.review(md, parent))
+    return _seat("hypothesis", lambda m: m.review(md, parent, **_kw()))
 
 
 def family_findings_agentic(parent: str, md: str) -> tuple[list[str], str]:
@@ -366,7 +404,7 @@ def family_findings_agentic(parent: str, md: str) -> tuple[list[str], str]:
     steps, which is the shape the failure actually takes. Mechanical first
     because it is free, this second and only on a draft that cleared it.
     """
-    return _seat("family", lambda m: m.family_review(parent, md))
+    return _seat("family", lambda m: m.family_review(parent, md, **_kw()))
 
 
 def _seat(name: str, call) -> tuple[list[str], str]:
@@ -473,7 +511,25 @@ def main() -> int:
                     help="commit it (Amendment 11). Without this, it writes the "
                          "file and stops.")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--reviewer-model", default=None, metavar="MODEL",
+                    help="the model both review seats run on (hypothesis and "
+                         "family). Default: review_hypothesis.MODEL")
+    ap.add_argument("--retrieval-model", default=None, metavar="MODEL",
+                    help="the model that diagnoses campaign k and vets papers. "
+                         "Default: the refiner's --model")
+    ap.add_argument("--paper-model", default=None, metavar="MODEL",
+                    help="with --fetch-new: the model that screens and ranks "
+                         "new papers. Default: their own (gemini-2.5-pro)")
+    ap.add_argument("--no-retrieve", action="store_true",
+                    help="skip the outcome diagnosis and choose papers by "
+                         "overlap with the question, as before 2026-11-12")
+    ap.add_argument("--fetch-new", action="store_true",
+                    help="before retrieving, search arXiv for the diagnosed "
+                         "problems (scripts/retrieve.py: fetch, screen, rank). "
+                         "Network calls and two model passes; off by default")
     a = ap.parse_args()
+    global REVIEWER_MODEL
+    REVIEWER_MODEL = a.reviewer_model
 
     if not prereg.in_force(11) and a.commit:
         sys.exit("Amendment 11 is not in force, so a machine may not commit a "
@@ -522,7 +578,53 @@ def main() -> int:
     print(f"model       asked {a.model!r}, served {served!r}")
     client = Client(model=a.model, temperature=0.7,
                     max_tokens=REFINE_MAX_TOKENS)
-    sources = [parent, user] + [p["body"] + p["abstract"] for p in papers]
+
+    # **Papers chosen for the outcome, not only the question**
+    # (`outcome_retrieval.py`). A diagnosis of campaign k from the same redacted
+    # evidence the refiner reads, a search for each problem, and each paper
+    # labelled with the problem it answers. Falls back to the overlap choice,
+    # and says so, when nothing is diagnosed or nothing is found.
+    found = None
+    if not a.no_retrieve:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import outcome_retrieval as orr
+        from audit.committee.llm import LLMUnavailable, ModelSubstituted
+        import requests
+        try:
+            retrieval_model = a.retrieval_model or a.model
+            if retrieval_model != a.model:
+                preflight(retrieval_model)
+            found = orr.plan(Client(model=retrieval_model, temperature=0.0,
+                                    max_tokens=8_192),
+                             parent, evidence_text(ev), parent_path=parent_path,
+                             fetch=a.fetch_new, paper_model=a.paper_model)
+            found["retrieval_model"] = retrieval_model
+        # Retrieval is advice: a timeout here must not cost the refinement,
+        # which the session would otherwise retry from scratch.
+        except (LLMUnavailable, ModelSubstituted, ValueError,
+                requests.exceptions.RequestException) as exc:
+            print(f"retrieval   did not run ({type(exc).__name__}); papers by "
+                  f"overlap instead", flush=True)
+            found = {"problems": [], "papers": [], "error": str(exc)[:200]}
+        for prob in found["problems"]:
+            print(f"diagnosis   {prob['what'][:100]}  [{prob['query']}]")
+        if found["papers"]:
+            papers = found["papers"]
+            print(f"retrieved   {', '.join(x['id'] for x in papers)}")
+        elif found["problems"]:
+            # **The diagnosis stands without papers.** Falling back to the
+            # overlap choice here would hand the refiner exactly the loose
+            # matches the vetting just rejected, under another name.
+            papers = []
+            print("retrieved   no paper answers the diagnosis; the refiner "
+                  "works from the diagnosis alone")
+        else:
+            print("retrieved   nothing diagnosed; papers by overlap")
+        user = context(parent, ev, papers, orr.render(found))
+    sources = [parent, user] + [
+        " ".join(str(p.get(k) or "") for k in
+                 ("body", "abstract", "claim", "acts_on", "adaptation"))
+        for p in papers]
 
     def _ask(extra: str = "") -> dict:
         """One call, retried only for a reply that was not usable JSON.
@@ -693,6 +795,23 @@ def main() -> int:
         parent.splitlines(), md.splitlines(),
         fromfile=str(parent_path.relative_to(ROOT)),
         tofile=str(dest.relative_to(ROOT)), lineterm=""))
+    # **A question no seat read is not committed** (2026-11-12). Amendment 11
+    # let a seat fail OPEN so a dead model call could not end a night -- and on
+    # 2026-11-12 the seats' model was being substituted by the gateway, so
+    # every refinement would have been committed with no model having read it,
+    # including rewrites made on the refiner's own judgement. A night that
+    # stops is logged as a stop; a question nobody read is logged as passed.
+    # Checked BEFORE the file is written: an uncommitted file left in
+    # config/hypotheses/ would move every later trial's artifact fingerprint.
+    unread = [n for n, st in (("hypothesis", reviewer), ("family", family_seat))
+              if never_read(st)]
+    if a.commit and unread:
+        print(f"\nREFUSED: the {' and '.join(unread)} seat(s) never read this "
+              f"question ({reviewer} / {family_seat}), so it is not written or "
+              f"committed. Pass --reviewer-model with a model the gateway "
+              f"serves, or run without --commit and read it yourself.",
+              flush=True)
+        return 3
     # The real `config/hypotheses/` always exists; a rehearsal's does not until
     # the first question is written into it.
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -729,7 +848,11 @@ def main() -> int:
         f"objections only.\n"
         f"Withheld from the refiner: {'; '.join(ev['redacted'])}.\n"
         f"Model: {a.model} (served {served})\n"
-        f"Papers cited: {', '.join(p['id'] for p in papers) or 'none'}\n\n"
+        f"Papers cited: {', '.join(p['id'] for p in papers) or 'none'}\n"
+        + (orr.commit_lines(found) if found is not None else
+           "Retrieval: not run (--no-retrieve).\n") + "\n"
+        # Implicit concatenation binds before `+`, so everything from here to
+        # the closing paren is one string added to the line above.
         f"Gates passed: hypothesis lint, grounding, family-unchanged, length, "
         f"and no validation artefact was readable for {a.campaign} when this "
         f"ran.\n\n"

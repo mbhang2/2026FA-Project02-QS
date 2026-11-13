@@ -1,0 +1,25 @@
+schema: constraints/1
+hypothesis: orderflow-absorption.md
+clock: America/Chicago
+constraints:
+  - id: uses-delta
+    says: "Work in **delta** — signed trade flow."
+    check: code_uses
+    any_of: [delta, buy_volume, sell_volume, Side, side]
+
+  # Added 2026-11-05 with the probe checks (src/core/loop/perturb.py).
+  - id: flow-drives-trades
+    says: "Work in **delta** — signed trade flow."
+    check: uses_flow
+judged:
+  - id: absorption-on-1m-bar
+    says: "Does absorption on the 1-minute bar mark a turn?"
+  - id: trades-the-turn
+    says: "After a bar where aggressive flow is absorbed, price is more likely to move against that flow than with it."
+  - id: unknown-ignored
+    says: "Trades whose aggressor is unknown are counted in volume and in neither side; ignore them."
+  - id: not-regime-model
+    says: "Not a regime model."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "Not a book- or quote-based measure." -- the engine already refuses quotes on this adapter

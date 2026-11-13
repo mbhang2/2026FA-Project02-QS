@@ -55,6 +55,9 @@ class AuditorVerdict:
     reasons: tuple[str, ...] = ()
     confidence_note: str = ""
     error: str | None = None
+    # Calls it took to get this verdict, retries included. 1 is a first-time
+    # answer; a seat that needed five is one to read with that in mind.
+    attempts: int = 1
 
     def __post_init__(self) -> None:
         if self.verdict not in VERDICTS:
@@ -77,6 +80,11 @@ class CommitteeVerdict:
     # "was this an independent check" is answerable from the artefact instead of
     # from reading the caller, which is how it went unnoticed for 17 campaigns.
     proposer_model: str = ""
+    # Per-auditor models, when not all four ran on `model`. Empty means all did.
+    auditor_models: dict = field(default_factory=dict)
+
+    def _models(self) -> set[str]:
+        return set(self.auditor_models.values()) or ({self.model} if self.model else set())
 
     @property
     def vetoed_by(self) -> tuple[str, ...]:
@@ -90,9 +98,11 @@ class CommitteeVerdict:
         does not say, and collapsing the two would let an unknown read as a
         pass the next time someone greps for it.
         """
-        if not self.model or not self.proposer_model:
+        if not self._models() or not self.proposer_model:
             return None
-        return self.model != self.proposer_model
+        # Every auditor, not only the default: one seat on the proposer's own
+        # model is one seat that did not check independently.
+        return self.proposer_model not in self._models()
 
     @property
     def seats_failed(self) -> tuple[str, ...]:
@@ -134,6 +144,7 @@ class CommitteeVerdict:
                 if self.seats_failed else ""),
             "usage": list(self.usage),
             "model": self.model,
+            "auditor_models": dict(self.auditor_models),
             "proposer_model": self.proposer_model,
             "independent": self.independent,
             "independence_note": (
@@ -358,51 +369,90 @@ def _is_transient(exc: Exception) -> bool:
     return any(t in blob for t in _TRANSIENT)
 
 
+# **A reply the seat could not use is asked again, a bounded number of times.**
+# Of the 27 committees on record, 9 economics seats never ran, and only three of
+# those were the gateway's 502s that `SEAT_BACKOFF_S` already retries. The rest
+# were the model's own reply: `"reply was not JSON"` (nq-ml-02, nq-s03-02,
+# nq-s04-03) and `"empty reply: finish_reason='length'"` (nq-t72b-01..03). Those
+# went straight to CANNOT_TELL on the first attempt, so the seat that checks
+# whether the champion implements its question was skipped for one campaign in
+# three. Every call opts out of the gateway cache (`llm.NO_CACHE`), so asking
+# again is a fresh sample rather than the same bytes served twice.
+#
+# Safe for the same reason the transport retry is: the seat sees the same
+# evidence every time and can only veto, so a retry can cost power but cannot
+# manufacture a pass. The attempts are recorded on the verdict.
+UNUSABLE_RETRIES = 2
+UNUSABLE_BACKOFF_S = 10
+_UNUSABLE = ("reply was not JSON", "empty reply")
+
+
+def _is_unusable(exc: Exception) -> bool:
+    return any(t in str(exc) for t in _UNUSABLE)
+
+
 def _one(axis: str, client: Client, summary: dict, source: str | None,
          hypothesis: str | None) -> AuditorVerdict:
     import time
     last = None
-    for attempt in range(len(SEAT_BACKOFF_S) + 1):
+    transport = 0           # transient faults and substitutions, SEAT_BACKOFF_S
+    unusable = 0            # replies the seat could not use, UNUSABLE_RETRIES
+    attempts = 0
+    while True:
+        attempts += 1
         try:
             got = client.ask(_prompt(axis), _slice(axis, summary, source, hypothesis))
-            break
         except ModelSubstituted as exc:
             last = exc                      # retried, never accepted
         except LLMUnavailable as exc:
+            last = exc
+            if _is_unusable(exc) and unusable < UNUSABLE_RETRIES:
+                unusable += 1
+                time.sleep(UNUSABLE_BACKOFF_S)
+                continue
             if not _is_transient(exc):
                 return AuditorVerdict(
                     axis=axis, verdict="CANNOT_TELL",
-                    reasons=(f"the auditor did not run: {exc}",), error=str(exc))
-            last = exc
-        if attempt == len(SEAT_BACKOFF_S):
+                    reasons=(f"the auditor did not run after {attempts} "
+                             f"attempt(s): {exc}",), error=str(exc),
+                    attempts=attempts)
+        else:
+            verdict = str(got.get("verdict", "")).upper()
+            if verdict in VERDICTS:
+                break
+            if unusable < UNUSABLE_RETRIES:
+                unusable += 1
+                time.sleep(UNUSABLE_BACKOFF_S)
+                continue
+            return AuditorVerdict(
+                axis=axis, verdict="CANNOT_TELL",
+                reasons=(f"the auditor did not run: returned {verdict!r}, which "
+                         f"is not a verdict, on {attempts} attempt(s)",),
+                error="unparseable verdict", attempts=attempts)
+        if transport == len(SEAT_BACKOFF_S):
             # Exhausted. Still CANNOT_TELL -- no verdict is not no veto -- but the
             # reason now says how hard we tried, so a reader can tell a flaky
             # endpoint from a seat nobody asked.
             return AuditorVerdict(
                 axis=axis, verdict="CANNOT_TELL",
                 reasons=(f"the auditor did not run after "
-                         f"{len(SEAT_BACKOFF_S) + 1} attempts over "
+                         f"{attempts} attempts over "
                          f"{sum(SEAT_BACKOFF_S) // 60} minutes: {last}",),
-                error=str(last))
-        time.sleep(SEAT_BACKOFF_S[attempt])
-    else:                                   # pragma: no cover - loop always breaks
-        raise AssertionError("unreachable")
-    verdict = str(got.get("verdict", "")).upper()
-    if verdict not in VERDICTS:
-        return AuditorVerdict(
-            axis=axis, verdict="CANNOT_TELL",
-            reasons=(f"returned {verdict!r}, which is not a verdict",),
-            error="unparseable verdict")
+                error=str(last), attempts=attempts)
+        time.sleep(SEAT_BACKOFF_S[transport])
+        transport += 1
     reasons = tuple(str(r) for r in (got.get("reasons") or []))
     if verdict == "VETO" and not reasons:
         reasons = ("vetoed without stating a reason",)
     return AuditorVerdict(axis=axis, verdict=verdict, reasons=reasons,
-                          confidence_note=str(got.get("confidence_note", "")))
+                          confidence_note=str(got.get("confidence_note", "")),
+                          attempts=attempts)
 
 
 def review(summary: dict, *, source: str | None, model: str = AUDIT_MODEL,
            hypothesis: str | None = None, proposer_model: str = "",
-           axes: tuple[str, ...] = AXES) -> CommitteeVerdict:
+           axes: tuple[str, ...] = AXES,
+           auditor_models: dict | None = None) -> CommitteeVerdict:
     """The four, in parallel, isolated. Returns a verdict that cannot approve.
 
     Preflight first: a committee that ran on a model its record does not name is
@@ -418,11 +468,22 @@ def review(summary: dict, *, source: str | None, model: str = AUDIT_MODEL,
     `proposer_model` so the artefact can say whether the check was independent
     instead of leaving it to be inferred from the caller.
     """
-    served = preflight(model)
-    client = Client(model=model)
+    # `auditor_models` (`--auditor-model AXIS=MODEL`): a seat may run on its
+    # own model; the rest run on `model`. Unknown axes are refused, so a typo
+    # cannot silently leave a seat on the default.
+    over = dict(auditor_models or {})
+    unknown = sorted(set(over) - set(axes))
+    if unknown:
+        raise ValueError(f"no auditor named {unknown}; the axes are {list(axes)}")
+    per_axis = {a: over.get(a, model) for a in axes}
+    served_by = {m: preflight(m) for m in sorted(set(per_axis.values()))}
+    clients = {m: Client(model=m) for m in served_by}
+    served = served_by[model] if model in served_by else "; ".join(
+        f"{a}={served_by[m]}" for a, m in per_axis.items())
     with ThreadPoolExecutor(max_workers=len(axes)) as pool:
         verdicts = tuple(pool.map(
-            lambda a: _one(a, client, summary, source, hypothesis), axes))
+            lambda a: _one(a, clients[per_axis[a]], summary, source, hypothesis),
+            axes))
 
     if any(v.verdict == "VETO" for v in verdicts):
         overall = "VETO"
@@ -431,6 +492,8 @@ def review(summary: dict, *, source: str | None, model: str = AUDIT_MODEL,
     else:
         overall = "PASS"
     return CommitteeVerdict(verdict=overall, auditors=verdicts, model=model,
-                            usage=tuple(client.calls),
+                            usage=tuple(c for cl in clients.values() for c in cl.calls),
+                            auditor_models=(per_axis if any(
+                                m != model for m in per_axis.values()) else {}),
                             model_served=served, prompt_digests=prompt_digests(),
                             proposer_model=proposer_model)

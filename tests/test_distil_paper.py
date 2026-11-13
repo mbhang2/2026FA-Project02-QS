@@ -475,7 +475,8 @@ def test_the_missing_citation_is_repairable_too():
 # --------------------------------------------------------------------------- #
 def test_the_reviewer_runs_on_a_distilled_question():
     src = (REPO_ROOT / "scripts" / "distil_paper.py").read_text()
-    assert "def _review_seat(md: str) -> tuple[list[str], str]:" in src
+    # `model` added 2026-11-11 for `--reviewer-model`; None is the default seat.
+    assert "def _review_seat(md: str, model: str | None = None) -> tuple[list[str], str]:" in src
     assert "MAX_REVIEW_REPAIRS = 2" in src
     assert "review_hypothesis.py" in src
 

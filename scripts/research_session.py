@@ -70,9 +70,27 @@ written into the plan before the session runs, which is the same rule
 `l2_gate.py` enforces by making `--campaigns` explicit: dropping the campaigns
 that did badly shrinks M and inflates the maximum's significance.
 
-**It will not invent hypotheses.** Each campaign in the plan names a committed
-hypothesis file. Amendment 8 makes the commit the human act, so a session cannot
-distil and register in one breath.
+**It will not invent questions.** Each campaign in the plan names either a
+committed hypothesis file (`hypothesis:`) or a researcher's statement
+(`question:`, or `seed_question:` for a family). A statement is written into a
+hypothesis at registration, gated, and committed marked `Machine-Written`
+(Amendment 15) -- the human act is choosing the statement, and what the machine
+writes from it may spend trials but cannot support a claim until somebody reads
+it. Choosing *which* statements to run is never the session's.
+
+```yaml
+campaigns:
+  - name: nq-cvd-01
+    question: "CVD divergence from price marks intraday trend exhaustion"
+    writer_model: gemini-3.1-pro-preview     # optional, with question:
+    reviewer_model: gemini-2.5-pro           # optional, with question:
+```
+
+Between the campaigns of a family, the refiner diagnoses what went wrong from
+the last campaign's train behaviour and auditors, retrieves registry papers for
+each problem, keeps the ones judged to answer it, and writes the next question
+(`outcome_retrieval.py`). `fetch_new_papers: true` searches arXiv for the
+problems first; `retrieve: false` restores the old choice by word overlap.
 
 ## Two shapes of plan: a list, or a family
 
@@ -331,8 +349,15 @@ def _main() -> int:
             sys.exit("a family needs at least 2 iterations; one is just a "
                      "campaign, and the list form says that more plainly.")
         prefix = str(fam.get("prefix") or session)
-        seed = ROOT / str(fam["seed"])
-        if not seed.is_file():
+        # **A family may start from a statement** (Amendment 15): campaign 1 is
+        # registered with `--question`, which writes and commits the seed file,
+        # and every later campaign reads that file's path back from campaign 1's
+        # record. Exactly one of the two, for the reason register needs one.
+        seed_question = fam.get("seed_question")
+        if bool(fam.get("seed")) == bool(seed_question):
+            sys.exit("a family needs exactly one of seed: (a committed "
+                     "hypothesis file) or seed_question: (a statement)")
+        if fam.get("seed") and not (ROOT / str(fam["seed"])).is_file():
             sys.exit(f"no seed hypothesis at {fam['seed']}")
         # **`refine: false` is the control arm.** Every campaign runs the SAME
         # question, so the family measures the run-to-run spread of best-of-N
@@ -340,8 +365,11 @@ def _main() -> int:
         # no sequence of per-campaign p values can be read at all (Task 72).
         refines = fam.get("refine", True)
         entries = [{"name": f"{prefix}-{k + 1:02d}",
-                    "hypothesis": str(fam["seed"]) if (k == 0 or not refines)
-                                  else None,
+                    "hypothesis": (str(fam["seed"]) if fam.get("seed")
+                                   and (k == 0 or not refines) else None),
+                    "question": seed_question if k == 0 else None,
+                    "writer_model": fam.get("writer_model"),
+                    "reviewer_model": fam.get("reviewer_model"),
                     "profile": fam.get("profile"), "n": fam.get("n"),
                     "model": fam.get("model"),
                     "min_exposed": fam.get("min_exposed"),
@@ -353,6 +381,10 @@ def _main() -> int:
                     # signed to avoid. A flag the driver can pass and the plan
                     # cannot set is a flag that silently does nothing.
                     "generation_width": fam.get("generation_width"),
+                    "audit_model": fam.get("audit_model"),
+                    "judge_model": fam.get("judge_model"),
+                    "picker_model": fam.get("picker_model"),
+                    "auditor_models": fam.get("auditor_models"),
                     "probe": fam.get("probe")}
                    for k in range(iterations)]
     if not entries:
@@ -413,11 +445,13 @@ def _main() -> int:
     except OSError:
         pass        # already a leader, or a platform without process groups
 
+    seed_shown = (fam.get("seed") or
+                  f"the statement \"{fam.get('seed_question')}\"") if fam else ""
     print(f"session {session}: {len(entries)} campaign(s)"
           + ("" if not fam else
-             f" -- a FAMILY refined from {fam['seed']}"
+             f" -- a FAMILY refined from {seed_shown}"
              if fam.get("refine", True) else
-             f" -- a CONTROL family, all on {fam['seed']}"))
+             f" -- a CONTROL family, all on {seed_shown}"))
     if fam and not fam.get("refine", True):
         print(f"  CONTROL ARM: all {len(entries)} campaigns run the SAME "
               f"question.\n  This measures the run-to-run spread of best-of-N, "
@@ -436,7 +470,10 @@ def _main() -> int:
                 else f"resume at {n}/{b}" if n and b else "to run")
         h = c.get("hypothesis")
         shown = (str(h).replace("config/hypotheses/", "") if h else
-                 "(refined from the campaign before it -- not written yet)")
+                 f"(written from: \"{c['question'][:60]}\")" if c.get("question")
+                 else "(the same question, written for the first campaign)"
+                 if fam and not fam.get("refine", True)
+                 else "(refined from the campaign before it -- not written yet)")
         print(f"  {c['name']:24} {mark:12} {shown}")
     if a.dry_run:
         print("\n  dry run: nothing was run")
@@ -474,7 +511,35 @@ def _main() -> int:
     stopped_by_cue = False
     aborted_by_failure = False
     completed: list[str] = []
-    cur_hypothesis = (ROOT / str(fam["seed"])) if fam else None
+    cur_hypothesis = (ROOT / str(fam["seed"])) if fam and fam.get("seed") else None
+
+    def _adopt_written_question(c: dict) -> None:
+        """After a campaign registered from a statement, use the file it wrote.
+
+        The path comes from the campaign's own record, not from the writer's
+        stdout: the record is what the campaign actually ran on. It becomes this
+        entry's hypothesis, the parent of the next refinement, and -- in a
+        family that does not refine -- every later campaign's question, which
+        is the control arm's point: one question, run again.
+        """
+        nonlocal cur_hypothesis
+        if c.get("hypothesis") is not None or not c.get("question"):
+            return
+        rec = CAMPAIGNS / str(c["name"]) / "campaign.json"
+        hp = ((json.loads(rec.read_text()).get("record") or {}
+               ).get("hypothesis_path") if rec.is_file() else None)
+        if not hp:
+            return
+        c["hypothesis"] = hp
+        cur_hypothesis = ROOT / hp
+        if fam and not refines:
+            for e in entries:
+                if e.get("hypothesis") is None:
+                    e["hypothesis"] = hp
+        log.setdefault("written_from_statements", []).append(
+            {"campaign": c["name"], "statement": c["question"], "wrote": hp,
+             "machine_written": True, "amendment": 15})
+
     def _refine_after(name: str, parent: pathlib.Path) -> tuple[pathlib.Path, bool]:
         """Write the next campaign's question from this one. `(parent, aborted)`.
 
@@ -511,6 +576,20 @@ def _main() -> int:
                        "--parent", str(parent), "--commit"]
         if fam.get("refine_model"):
             refine_argv += ["--model", str(fam["refine_model"])]
+        if fam.get("refine_reviewer_model"):
+            refine_argv += ["--reviewer-model", str(fam["refine_reviewer_model"])]
+        if fam.get("retrieval_model"):
+            refine_argv += ["--retrieval-model", str(fam["retrieval_model"])]
+        if fam.get("paper_model"):
+            refine_argv += ["--paper-model", str(fam["paper_model"])]
+        # Outcome-driven retrieval (`outcome_retrieval.py`) runs by default:
+        # campaign k's problems choose the papers the refiner reads.
+        # `fetch_new_papers: true` searches arXiv for them first;
+        # `retrieve: false` restores the overlap choice.
+        if fam.get("retrieve") is False:
+            refine_argv += ["--no-retrieve"]
+        elif fam.get("fetch_new_papers"):
+            refine_argv += ["--fetch-new"]
         code, out = _retrying(refine_argv,
                               label=f"{name} refine -> next question",
                               retries=MAX_STAGE_RETRIES)
@@ -553,6 +632,7 @@ def _main() -> int:
         if a.resume and already_run(name):
             print(f"  {name}: already has a ledger, skipping")
             log["campaigns"][name] = "skipped (resume)"
+            _adopt_written_question(c)
             # **But its refinement still has to run.** Skipping the campaign
             # used to skip this too, so a resumed family never got a question
             # for the campaign after it: on 2026-10-04 nq-s05b-02 and -03 were
@@ -571,20 +651,35 @@ def _main() -> int:
             continue
         try:
             if not registered(name):
-                if c.get("hypothesis") is None:
+                if c.get("hypothesis") is not None:
+                    extra = ["--hypothesis", str(c["hypothesis"])]
+                elif c.get("question"):
+                    # Amendment 15: register writes the question first.
+                    extra = ["--question", str(c["question"])]
+                    for flag, key in (("--writer-model", "writer_model"),
+                                      ("--reviewer-model", "reviewer_model"),
+                                      ("--picker-model", "picker_model")):
+                        if c.get(key):
+                            extra += [flag, str(c[key])]
+                else:
                     log["campaigns"][name] = ("no question: the refinement "
                                               "before it did not produce one")
                     continue
-                extra = ["--hypothesis", str(c["hypothesis"])]
                 for flag, key in (("--profile", "profile"), ("--n", "n"),
                                   ("--model", "model"),
                                   ("--min-exposed", "min_exposed"),
                                   # Amendment 12. Omitted from a plan means the
                                   # chain, which is what every session before
                                   # 2026-10-04 ran.
-                                  ("--generation-width", "generation_width")):
+                                  ("--generation-width", "generation_width"),
+                                  # the committee's model, frozen at register
+                                  ("--audit-model", "audit_model"),
+                                  ("--judge-model", "judge_model")):
                     if c.get(key) is not None:
                         extra += [flag, str(c[key])]
+                # `auditor_models: {leakage: gemini-2.5-pro}` -> one flag each.
+                for axis, m in sorted((c.get("auditor_models") or {}).items()):
+                    extra += ["--auditor-model", f"{axis}={m}"]
                 # **Amendment 7, and it is a BOOLEAN, so it does not fit the
                 # loop above.** A plan could not set it at all: the probe's
                 # default lives in `config/run.yaml` (`probe_before_trial:
@@ -603,6 +698,9 @@ def _main() -> int:
                 if code:
                     log["campaigns"][name] = "register failed"
                     continue
+            # Outside the `if`: a resumed campaign registered from a statement
+            # in an earlier attempt needs its file adopted just the same.
+            _adopt_written_question(c)
             for stage in ("run", "nulls", "report"):
                 code, body = campaign_stage(
                     name, stage,

@@ -1,0 +1,30 @@
+schema: constraints/1
+hypothesis: flow-continuation-5m.md
+clock: America/Chicago
+constraints:
+  - id: uses-signed-flow
+    says: "measure how much volume traded on the offer against how much traded on the bid. That difference is signed order flow"
+    check: code_uses
+    any_of: [delta, buy_volume, sell_volume, Side, side]
+  - id: hold-at-least-5m
+    says: "Position held at least 5 minutes."
+    check: hold_seconds
+    min: 300
+
+  # Added 2026-11-05 with the probe checks (src/core/loop/perturb.py).
+  - id: flow-drives-trades
+    says: "measure how much volume traded on the offer against how much traded on the bid. That difference is signed order flow"
+    check: uses_flow
+judged:
+  - id: signal-over-5m
+    says: "Signal measured over 5 minutes."
+  - id: not-a-fade
+    says: "A strategy that fades large flow is testing the opposite claim and is not an implementation of this one."
+  - id: unknown-not-folded
+    says: "Do not fold them into one side to make the arithmetic tidy."
+  - id: not-regime-model
+    says: "Not a regime model."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "A rule whose horizon drifts between proposals is being fitted rather than tested." -- needs the proposal history
+# - "Not a book- or quote-based measure." -- the engine already refuses quotes on this adapter

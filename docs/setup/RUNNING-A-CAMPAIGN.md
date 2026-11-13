@@ -29,6 +29,23 @@ python scripts/nq_campaign.py --stage validate --name nq-<you>-01   # ~5 minutes
 python scripts/nq_campaign.py --stage report   --name nq-<you>-01
 ```
 
+**No hypothesis file? Give the statement instead.** Register needs exactly one of
+`--hypothesis` or `--question`:
+
+```
+python scripts/nq_campaign.py --stage register --name nq-<you>-01 \
+       --question "CVD divergence from price marks intraday trend exhaustion"
+```
+
+`scripts/write_hypothesis.py` writes the statement into a hypothesis, runs every
+gate (lint, realised-outcome lint, grounding, length, and a review seat that must
+return `NO_OBJECTION`), commits it marked `Machine-Written: nq-<you>-01`, and then
+registers on it. Nobody reads it first, so under Amendment 15 the campaign may
+spend trials but **may not support a claim** until a human has read the question.
+If any gate fails nothing is registered; write it with
+`write_hypothesis.py --question`, read it, and register on the file. In a session
+plan, `question:` (or `seed_question:` for a family) does the same.
+
 **`--hypothesis` is register-only, and it is written into `campaign.json`.** Every
 later stage reads the path back out of the record and re-checks its digest, so a
 resumed run cannot answer a different question from the one you registered — and

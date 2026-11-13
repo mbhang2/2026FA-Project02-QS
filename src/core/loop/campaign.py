@@ -353,7 +353,8 @@ def run_campaign(agent, record: CampaignRecord, *, ledger: Path,
 
 def summarise(result: CampaignResult, *, dataset: str | None = None,
               null_samples: list | None = None, q: float | None = None,
-              null_routes: list | None = None) -> dict:
+              null_routes: list | None = None,
+              exclude: set | None = None) -> dict:
     """The correction over the campaign, and the uncorrected view beside it.
 
     **`max_of_n` over per-candidate nulls is the gate; BH and Holm are
@@ -373,12 +374,21 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
     producing something atypical, and its bill is going up. **A campaign's
     cost is therefore not known in advance**, and the null budget grows
     precisely when the loop starts working.
+
+    `exclude` is a set of `campaign_index` values whose scores the gate's
+    OBSERVED best is not taken over -- off-question trials under a registered
+    `fidelity_policy: enforce` (`src/core/loop/fidelity.py`). N, the FAR column
+    and the null samples are untouched: every excluded trial still counts and
+    still contributes its null, so the bar is the best of N nulls while the
+    observed side can only shrink. Conservative by construction.
     """
     from ..scoring.calibration import null as nullmod
     from ..scoring.correction import correct, deflation_view, max_of_n, resolution_cap
 
     trials = result.trials
     fars, labels, scores, n_sessions = [], [], [], []
+    gate_scores = []
+    exclude = exclude or set()
     for row in trials:
         score = row.get("score")
         label = f"{row.get('campaign_index')}:{(row.get('strategy_digest') or '')[:8]}"
@@ -393,6 +403,8 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
         fars.append(charge["far"])
         scores.append(score["primary"])
         n_sessions.append(score["n_sessions"])
+        if row.get("campaign_index") not in exclude:
+            gate_scores.append(score["primary"])
 
     q = result.record.q if q is None else q
     corrected = correct(fars, q=q, labels=labels)
@@ -444,7 +456,7 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
                      "something atypical, and that the bill is going up."),
         }
     if null_samples:
-        observed_best = max(scores) if scores else float("-inf")
+        observed_best = max(gate_scores) if gate_scores else float("-inf")
         # The rule comes from the REGISTERED record, never from an argument.
         rule = (result.record.correction_rule or "independent")
         kw: dict = {}
@@ -477,6 +489,7 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
         gate["observed_best"] = observed_best
         gate["observed_best_positive"] = bool(observed_best > 0)
         gate["accept"] = bool(gate["reject"] and observed_best > 0)
+        gate["excluded_off_question"] = sorted(exclude)
         gate["floor_note"] = (
             "accept = reject AND observed_best > 0. The second term is not a "
             "formality: under a sign-flip null a losing high-turnover candidate "

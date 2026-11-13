@@ -1,0 +1,34 @@
+schema: constraints/1
+hypothesis: opening-range-break-continuation-or-fade.md
+clock: America/Chicago
+constraints:
+  # The range is 08:30-09:00 CT, so a break of it cannot be entered before 09:00;
+  # 15:15 CT is the later of the two regular-hours closes the question allows.
+  - id: enter-after-range-in-rth
+    says: "Call the high and low of the **first 30 minutes after the regular-hours open** the opening range."
+    check: entry_window
+    start: "09:00"
+    end: "15:15"
+  # Neither allowed convention makes any claim past 15:15 CT. (flat_by also
+  # fails any round turn carried across a session, so "flat on every session"
+  # is covered by it.)
+  - id: flat-by-rth-close
+    says: "If the exit cannot be stated without reference to hours the question makes no claim about, the strategy is answering a different question"
+    check: flat_by
+    time: "15:15"
+
+judged:
+  - id: range-is-first-30m-of-rth
+    says: "Call the high and low of the **first 30 minutes after the regular-hours open** the opening range."
+  - id: chicago-offset-derived
+    says: "The Chicago offset must be derived for the timestamp being used, never fixed."
+  - id: states-flat-time
+    says: "A strategy must state the clock time by which it is flat on every session"
+  - id: not-regime-model
+    says: "Not a regime model switching between the two accounts."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "say in its docstring which convention it used" -- docstrings are stripped
+# - "that time must follow from the claim it defends" -- the defence is prose
+# - "the strategy reports the hour-of-day split, the weekday split, and the month-by-month result" -- a report
+# - "Not a fast-execution idea." -- an outcome

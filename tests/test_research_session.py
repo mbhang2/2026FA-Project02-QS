@@ -158,11 +158,13 @@ def test_the_family_is_the_plan_and_the_plan_is_written_first():
     assert "written before the session" in FLAT.lower()
 
 
-def test_it_does_not_invent_hypotheses():
-    """Amendment 8 makes the commit the human act, so a session cannot distil a
-    question and register it in one breath."""
-    assert "will not invent hypotheses" in FLAT
-    assert "Amendment 8" in FLAT
+def test_it_does_not_invent_questions():
+    """Amendment 15: a session may run a statement a human chose, written into
+    a hypothesis at registration -- but choosing WHICH statements is never the
+    session's, and it never distils a paper into a question of its own."""
+    assert "will not invent questions" in FLAT
+    assert "Amendment 15" in FLAT
+    assert "never the session's" in FLAT
     # it never calls the distiller
     assert "distil_paper" not in SRC
 
@@ -439,10 +441,11 @@ def test_the_refinement_retries_like_every_other_stage():
     assert "_retrying(" in SRC
     # The refine call is built as `refine_argv` and then handed to `_retrying`,
     # so assert on the pairing rather than on their distance apart.
-    i = SRC.index("refine_argv = [PY")
-    block = SRC[i:i + 1200]
-    assert "_retrying(" in block and "refine_argv" in block
-    assert "retries=MAX_STAGE_RETRIES" in block
+    assert "refine_argv = [PY" in SRC
+    # The call itself, however many plan keys are added to the argv above it.
+    call = SRC[SRC.index("_retrying(refine_argv"):]
+    call = call[:call.index(")\n") + 1]
+    assert "retries=MAX_STAGE_RETRIES" in call
     assert "ReadTimeout" in SRC and "ConnectionError" in SRC
 
 
@@ -558,3 +561,70 @@ def test_a_session_that_produced_nothing_exits_non_zero():
     assert "no campaign completed, and nothing asked for that" in flat
     # and the reason is in the record, not only on stdout
     assert 'log["produced_nothing"]' in SRC
+
+
+# --------------------------------------------------------------------------- #
+# a statement instead of a file (Amendment 15)
+# --------------------------------------------------------------------------- #
+def _dry(plan, *extra):
+    return subprocess.run(
+        [sys.executable, "scripts/research_session.py", "--plan", str(plan),
+         "--dry-run", *extra], capture_output=True, text=True, cwd=str(REPO_ROOT))
+
+
+def test_a_list_campaign_may_name_a_statement(tmp_path):
+    import yaml
+    p = tmp_path / "q.yaml"
+    p.write_text(yaml.safe_dump({"session": "s-q", "campaigns": [
+        {"name": "nq-q-01", "question": "CVD divergence marks trend exhaustion"},
+        {"name": "nq-q-02", "hypothesis": "config/hypotheses/intraday-continuation.md"}]}))
+    proc = _dry(p)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert '(written from: "CVD divergence marks trend exhaustion")' in proc.stdout
+    assert "intraday-continuation.md" in proc.stdout
+
+
+def test_a_family_may_start_from_a_statement(tmp_path):
+    import yaml
+    p = tmp_path / "fq.yaml"
+    p.write_text(yaml.safe_dump({"session": "s-fq", "family": {
+        "seed_question": "CVD divergence marks trend exhaustion",
+        "iterations": 3, "n": 5, "prefix": "nq-fq"}}))
+    proc = _dry(p)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert proc.stdout.count("written from:") == 1, "only campaign 1 writes it"
+    assert proc.stdout.count("not written yet") == 2
+
+
+def test_a_control_family_from_a_statement_reuses_one_question(tmp_path):
+    import yaml
+    p = tmp_path / "cq.yaml"
+    p.write_text(yaml.safe_dump({"session": "s-cq", "family": {
+        "seed_question": "CVD divergence marks trend exhaustion",
+        "iterations": 3, "refine": False, "n": 5, "prefix": "nq-cq"}}))
+    proc = _dry(p, "--train-only")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert proc.stdout.count("written from:") == 1
+    assert proc.stdout.count("the same question, written for the first") == 2
+    assert "not written yet" not in proc.stdout
+
+
+@pytest.mark.parametrize("fam", [
+    {"seed": "config/hypotheses/intraday-continuation.md", "seed_question": "x"},
+    {},
+])
+def test_a_family_names_exactly_one_seed(tmp_path, fam):
+    import yaml
+    p = tmp_path / "bad.yaml"
+    p.write_text(yaml.safe_dump({"session": "s", "family": {
+        **fam, "iterations": 3, "prefix": "nq-b"}}))
+    proc = _dry(p)
+    assert proc.returncode != 0
+    assert "exactly one of seed" in (proc.stdout + proc.stderr)
+
+
+def test_a_written_question_is_read_back_from_the_record_not_stdout():
+    """The record is what the campaign ran on; the writer's stdout is a log."""
+    body = SRC.split("def _adopt_written_question", 1)[1].split("\n    def ", 1)[0]
+    assert "hypothesis_path" in body and "campaign.json" in body
+    assert '"--question"' in SRC

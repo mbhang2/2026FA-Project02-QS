@@ -1,0 +1,34 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "Seats re-run after the campaign's committee, because they never produced a verdict in committee-verdict.json. Written BESIDE that file and never over it: the committed artefact records what the campaign's committee actually did, and a seat that failed then did fail then. This is a later, separate read; it cannot change the recorded verdict and does not.",
+  "can_approve": false,
+  "seats": {
+    "economics": {
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The confirmation filter (close_position < 0.25 or > 0.75) accepts both extremes for either bar direction, so reversal-looking bars (bullish bars closing near the low, bearish bars closing near the high) are traded as continuation alongside the intended setups \u2014 a weakened signal but one the code implements consistently with its docstring; the result is a clear negative (score -0.29, gross -125 pts, commission 486 pts on 2430 trades / 384 sessions \u2248 6.3 trades per session), and gross is negative before costs so commissions are not deciding the sign.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 5,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    }
+  },
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  },
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4156,
+      "completion_tokens": 5610,
+      "reasoning_tokens": 5446,
+      "finish_reason": "stop"
+    }
+  ]
+}

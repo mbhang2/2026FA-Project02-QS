@@ -2095,3 +2095,138 @@ proves nothing about the driver that runs at night. This is why it runs the real
 the output root changed, and why `scripts/rehearse.py` asserts afterwards that a
 gate ran, nulls were computed and the committee was asked. A green rehearsal
 that skipped a stage is worse than no rehearsal.
+
+## Amendment 14 — 2026-11-05 — a candidate must answer the question it was registered under
+
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-05 by Claude on request; in force when a human signs this line.**
+
+### Why it was asked for
+
+A campaign registers a question, and nothing checked that the trials answered
+it until one model read one champion at the end. Read across the 27 committees on
+record (2026-11-05), the economics seat found three champions that answered a
+different question from the one they were registered under:
+
+| campaign | what the champion did | what the question fixed |
+|---|---|---|
+| nq-flowcont-5m | median hold 21 s | "Position held at least 5 minutes." |
+| nq-orderflow-absorption-02 | never used a volume profile | "It must condition on a level built from traded volume." |
+| nq-s04-02 | 22% of round turns open after the close | "must not carry a position into hours it makes no claim about" |
+
+Each spent its whole budget on the wrong question and learned so at the end --
+and nine of the 27 economics seats never ran at all. Run over every historical
+trial, the mechanical checks of `src/core/loop/fidelity.py`, with constraints
+written blind to the results, catch all three, and also find drifts the seat
+passed or never read: the `nq-s06-*` champions made about half their entries
+outside regular hours under "Not the overnight or Globex session", and
+`nq-s01-continuation` carried 41% of its round turns across a session boundary
+under "Within a single trading session". `docs/reviews/question-fidelity/` has
+the table.
+
+### What it permits
+
+`fidelity_policy: enforce` at registration, for a hypothesis with a constraints
+file beside it. Under it:
+
+1. **A code violation the agent cannot repair in two attempts is a blocked
+   proposal.** A trial, counted in N, like every blocked proposal.
+2. **An off-question trial cannot become the champion.** The next proposals would
+   otherwise be edits of an answer to another question.
+3. **The gate's observed best is taken over on-question trials only.** Every
+   trial's null sample stays in `max_of_n`, and N is unchanged.
+
+### Why (3) cannot raise the false-acceptance rate
+
+`max_of_n` compares the observed best against the distribution of the best of N
+nulls. Excluding candidates changes only the observed side, and the maximum over
+a subset is at most the maximum over the set. So for any campaign,
+`P(accept | enforce) <= P(accept | no exclusion)`, and Task 57's bound holds
+unchanged. The exclusion is decided by the constraints file frozen at
+registration and by the trial's own code and fills -- never by its score -- so it
+is not a selection on outcome.
+
+### What it does NOT permit
+
+- **A constraint the question did not state.** `load()` refuses any `says` that is
+  not a verbatim quote of the hypothesis. Writing constraints after seeing results
+  is writing a new question; that is a new hypothesis file and a new campaign.
+- **The shadow reviewer deciding anything.** `scripts/fidelity_judge.py` reads the
+  requirements no mechanical check can express and records its verdicts in
+  `fidelity-judge.jsonl`. Nothing reads them. Letting it act needs its measured
+  error rate and its own amendment.
+- **Changing a running campaign.** The constraints file's digest is in the record;
+  a run refuses to start if it has changed.
+
+### The argument against
+
+**A constraint written too tightly blocks the legitimate answer.** The first
+default -- every round turn must comply -- failed `nq-s04-01` for one entry in 375.
+The default is now 95% of round turns, and a constraint that means every fill
+says `share: 1`. A wrongly-written constraint costs power, never error rate,
+which is the right direction for a mistake to fall; but a campaign whose every
+trial is off-question has spent its budget learning about its constraints file.
+`record` exists so that cost can be seen before it is paid.
+
+## Amendment 15 — 2026-11-11 — a question written from a statement may run unread
+
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-11 by Claude on request; in force when a human signs this line.** The code ships with this text. Until the line is signed, a campaign registered with `--question` runs under an unsigned amendment, and its record says so (`hypothesis_origin.amendment: 15`).
+
+This amends Amendment 8 a second time. Amendment 11 let a machine commit a *refinement* of a question a human had chosen; this lets it commit the *first* question, written from a statement a human chose.
+
+### Why it was asked for
+
+The researcher wanted to hand the proposer a question or a one-line statement ("CVD divergence marks intraday trend exhaustion") and have a campaign run on it, with no hypothesis file written in advance and no human reading the one the machine writes. Under Amendment 8 that is two sittings: `write_hypothesis.py --question`, read, commit, register. The request is that it be one command and that it be usable inside an unattended session.
+
+### What it permits
+
+`nq_campaign.py --stage register --question "<statement>"` (and `question:` / `seed_question:` in a session plan) writes a hypothesis from the statement with `scripts/write_hypothesis.py`, commits it, and registers the campaign on it, **when every gate passes**:
+
+| | gate | what it stops |
+|---|---|---|
+| 1 | the shape: a heading, the claim, what is and is not the agent's to choose | a file the agent cannot read as a question |
+| 2 | `hypothesis.lint` (gate vocabulary) | the question naming the gate's machinery or the closed splits |
+| 3 | `outcome_lint` (realised outcomes; new, from Gowtam's `leak_lint.py`) | the writer stating what the market did -- "NQ fell 4% in March" -- which no human is there to strike |
+| 4 | `grounding.findings` is empty | a number or quotation that is in no source |
+| 5 | the word budget | a question the agent's prompt cannot afford |
+| 6 | the review seat returned `NO_OBJECTION` | a well-formed question not worth asking. `CANNOT_TELL`, a seat that did not run, or one overruled at the repair cap is a **refusal**: it is the only reader the question gets |
+| 7 | no campaign is running | a new file in `config/hypotheses/` changing a running campaign's artifact fingerprint |
+| 8 | every constraint says it came `from` the statement | the writer inventing limits the researcher did not set |
+
+A gate that fails registers nothing. The writer may repair against gates 1-5 and the seat's objections within `write_hypothesis.py`'s existing caps; it may not be re-run until a draft passes, because that is selection (below).
+
+### What it does NOT permit
+
+- **The machine choosing the statement.** The human act is now the statement, not the file. A session runs the statements in its plan and nothing else; nothing ranks, generates or substitutes statements.
+- **Writing several questions and keeping the one that looks best.** One statement, one write. A write that fails its gates is a failed registration, recorded as such, not a reason to sample again until one passes the seat.
+- **Editing the question after its campaign starts.** The digest check in `stage_run` is unchanged.
+- **A claim.** Amendment 11's containment applies unchanged: an unread machine-written question may spend trials and may not support a claim. `campaign.json` carries `agent_config.hypothesis_origin` with `read_by_a_human: false`, and the commit carries `Machine-Written: <campaign>` and `Hypothesis-Review: <seat status>` trailers, so `git log` and the record both answer "which questions did nobody read".
+
+**Not yet mechanical, stated plainly:** like Amendment 11's, this containment is enforced by the record and the trailers, not by code in `l2_gate.py` or `holdout.py`. A holdout request on a family containing an unread question is refused by protocol, not by a check. Making it a check is the obvious next step.
+
+### Also changed: there is no default question
+
+`--hypothesis` defaulted to `config/hypotheses/intraday-continuation.md`, so a campaign registered with neither flag ran on that file without anybody choosing it. Registration now requires exactly one of `--hypothesis` and `--question`.
+
+### The argument against signing it, stated fairly
+
+Amendment 11 was tolerable because its gate 4 -- the family is unchanged -- tied every unread question to one a human had read. Here there is no parent: the first reading of the question may come after several hundred looks have been spent on it. The review seat is a model, and the gates are string checks; neither can tell that the writer turned the statement into a *different* question. `question_as_asked`, `adapted_claim` and `cannot_test` are recorded so that drift can be seen afterwards, not prevented.
+
+What makes it tolerable: as with Amendment 11, **N is the only thing at risk.** The splits are untouched, validation is unreadable, the holdout keeps its refusals, and nothing can be claimed from an unread question. The worst case is a campaign spent on a question nobody would have chosen, logged as such.
+
+### What would invalidate this amendment
+
+- A campaign registered on a machine-written question whose commit lacks the `Machine-Written` trailer, or whose record lacks `hypothesis_origin`.
+- More than one write for one statement in one session, or any choice among written questions that consulted a score or a seat.
+- A claim, an L2 pass reported as a discovery, or a holdout look on a family containing a question with `read_by_a_human: false`.
+
+Code: `scripts/write_hypothesis.py` (`write_unattended`), `src/core/research/outcome_lint.py`, `scripts/nq_campaign.py` (`--question`), `scripts/research_session.py` (`question:`, `seed_question:`); tests in `tests/test_write_hypothesis.py`, `tests/test_outcome_lint.py`, `tests/test_research_session.py`.
+
+## Outcome-driven retrieval in refinement — 2026-11-12
+
+**Not an amendment.** Amendment 11 already lets the refiner read campaign k's train behaviour and its auditors' objections, and already lets it cite papers. `scripts/outcome_retrieval.py` changes *which* papers it reads: one model call diagnoses up to three problems from exactly the evidence the refiner is given (`refine_hypothesis.evidence_text`, which withholds the gate's p-value, verdict and the best score), each problem must quote a line of that evidence, and the papers retrieved for each are kept only when a second call judges that they answer it. No new information about the data reaches the question by this route, and nothing here reads market data, so it is not a look.
+
+Two things it does not do. It does not choose among candidate questions -- one refinement is written, as before. And with `--fetch-new` it adds papers to the registry through `retrieve.py`, which ranks them on properties of the paper against the live question, never on our results; the diagnosed problems become its search terms. The diagnosis, its queries, which paper was kept for which problem, and which were rejected are written into the refinement's commit.
+
+### And a refinement no seat read is not committed — 2026-11-12
+
+**A tightening of Amendment 11, not a loosening, so it needs no signature to be safe -- but it changes what the amendment says, so it is written here.** Amendment 11 let its two agentic seats fail *open*, so a dead model call could not end a night. On 2026-11-12 both seats' model (`mimo-v2.6-pro`) was being answered by another model, every seat call was refused as a substitution, and every refinement in an unattended family would have been committed with no model having read it -- including rewrites the refiner made on its own judgement when no paper answered a diagnosed problem. `refine_hypothesis.py --commit` now refuses, before writing the file, when either seat never read the question (did not run, unreadable verdict, or never reached). A seat that read it and could not tell, or objected past the repair cap, is a reading and is unchanged. `--reviewer-model` (plan key `refine_reviewer_model`) runs both seats on a model the gateway serves. A night that stops is logged as a stop; a question nobody read was being logged as passed.

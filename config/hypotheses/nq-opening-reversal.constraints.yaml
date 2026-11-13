@@ -1,0 +1,29 @@
+schema: constraints/1
+hypothesis: nq-opening-reversal.md
+clock: America/Chicago
+constraints:
+  - id: short-only
+    says: "The strategy must be short-only."
+    check: side
+    only: short
+  # Order-flow and volume-profile features are not price action.
+  - id: price-action-only
+    says: "strategies that use indicators other than price action in the opening minutes to generate a signal"
+    check: code_avoids
+    none_of: [delta, buy_volume, sell_volume, unknown_volume, SessionProfile]
+
+  # Added 2026-11-05 with the probe checks (src/core/loop/perturb.py).
+  - id: reversal-against-rise
+    says: "It must be a reversal strategy, meaning it sells after a price rise."
+    check: trades_move
+    direction: against
+judged:
+  - id: sells-after-a-rise
+    says: "It must be a reversal strategy, meaning it sells after a price rise."
+  - id: symmetric-stop-target
+    says: "The trade structure must use a symmetric 1:1 risk/reward target and stop."
+  - id: price-action-signal
+    says: "or strategies that use indicators other than price action in the opening minutes to generate a signal"
+
+# not mechanically checkable, and not decidable from the code alone:
+# - (the opening period is the agent's to define, so nothing about when to enter is fixed)

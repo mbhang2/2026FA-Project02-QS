@@ -1,0 +1,21 @@
+schema: constraints/1
+hypothesis: outsized-intraday-move-continuation-vs-giveback.md
+clock: America/Chicago
+constraints:
+  - id: within-one-session
+    says: "Within a single trading session, after price has made a move that is large relative to how that session has been moving so far, what happens over the rest of the session?"
+    check: no_overnight
+
+judged:
+  - id: large-relative-to-session
+    says: "has to be measured against something the session itself supplies"
+  - id: one-mechanism-across-hours
+    says: "A strategy that is long in one hour and short in the next is not expressing a view about continuation or give-back."
+  - id: not-regime-model
+    says: "Not a regime model that switches between the two accounts."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "or restrict itself to the hours where the mechanism is claimed to operate, and say why those hours" -- the why is prose
+# - "the strategy should say which days and why" -- prose
+# - "The strategy should not be one that only makes money in a few months." -- an outcome
+# - "Not a fast-execution idea." -- an outcome; no hold bound is stated

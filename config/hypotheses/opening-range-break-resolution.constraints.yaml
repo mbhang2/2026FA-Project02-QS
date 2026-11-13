@@ -1,0 +1,30 @@
+schema: constraints/1
+hypothesis: opening-range-break-resolution.md
+clock: America/Chicago
+constraints:
+  # Regular hours 08:30-15:15 CT (CME equity-index day session). The range
+  # length is the agent's, so entries are bounded only by regular hours.
+  - id: enter-in-regular-hours
+    says: "It must be the regular-hours open."
+    check: entry_window
+    start: "08:30"
+    end: "15:15"
+
+judged:
+  - id: conditions-on-opening-range
+    says: "It must condition on the opening range."
+  - id: not-multi-stage
+    says: "Not a multi-stage confirmation architecture"
+  - id: weekly-reopen-excluded
+    says: "Not the weekly Globex reopen."
+  - id: leaving-is-scaled
+    says: "State it explicitly: whether the move out is measured against the width of the opening range itself, or against how much this market has been moving recently."
+  - id: every-position-has-deadline
+    says: "Give every position a stated deadline"
+  - id: not-regime-model
+    says: "Not a regime model that switches between the two accounts by learning which regime is which."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "It must act on the ordinary run of sessions" -- participation across sessions needs the fills
+# - "It must not be carried by its extremes." -- an outcome
+# - "report separately the outcomes that resolved inside it from the ones that did not" -- a report

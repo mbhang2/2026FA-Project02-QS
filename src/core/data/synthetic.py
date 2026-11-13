@@ -93,15 +93,34 @@ class SyntheticSpec:
     # digest when off, so a spec that does not ask for quotes hashes exactly as
     # it did before the field existed.
     quotes: bool = False
+    # How the aggressor side is assigned. "tick_rule" (the default) classifies
+    # an uptick as a buy and a downtick as a sell, so delta is a function of the
+    # price path. "flipped" inverts every side and leaves the prices untouched:
+    # the fidelity probe (`src/core/loop/perturb.py`) runs a proposal on both
+    # and asks whether its trades moved, which is the mechanical test of "the
+    # strategy uses order flow". Absent from the digest at its default, like
+    # `quotes`, so every existing dataset hashes as it did.
+    aggressor: str = "tick_rule"
+    # When set ("08:30"), each session opens at that Chicago clock time on
+    # consecutive weekdays, DST-aware, instead of drifting around the clock.
+    # The fidelity probe needs it: a strategy anchored to the regular-hours open
+    # never trades on sessions that start at 16:13 and 12:33. Absent from the
+    # digest at its default.
+    session_open_ct: str | None = None
 
     @property
     def irregular(self) -> bool:
         return not self.uniform
 
     def as_dict(self) -> dict:
-        out = {k: getattr(self, k) for k in self.__dataclass_fields__ if k != "quotes"}
+        out = {k: getattr(self, k) for k in self.__dataclass_fields__
+               if k not in ("quotes", "aggressor", "session_open_ct")}
         if self.quotes:
             out["quotes"] = True
+        if self.aggressor != "tick_rule":
+            out["aggressor"] = self.aggressor
+        if self.session_open_ct is not None:
+            out["session_open_ct"] = self.session_open_ct
         return out
 
 
@@ -260,6 +279,9 @@ class SyntheticDataset:
             self._quiet_mult = [float(min(q, 4.0)) for q in quiet]
 
         starts, ends = [], []
+        if s.session_open_ct is not None:
+            self._starts, self._ends = self._clock_aligned(n, spacing)
+            return
         t = SESSION_ORIGIN_NS
         for k in range(n):
             starts.append(t)
@@ -268,6 +290,26 @@ class SyntheticDataset:
             ends.append(t + self._lengths[k] * spacing)
             t = ends[-1] + s.session_gap_ns
         self._starts, self._ends = starts, ends
+
+    def _clock_aligned(self, n: int, spacing: int) -> tuple[list[int], list[int]]:
+        """Weekday sessions opening at `session_open_ct` in Chicago, from the
+        origin's date on. Lengths are the schedule's, so early closes and jitter
+        still happen; only where the session sits on the clock changes."""
+        import datetime as dt
+        from zoneinfo import ZoneInfo
+
+        ct = ZoneInfo("America/Chicago")
+        hh, mm = (int(x) for x in self.spec.session_open_ct.split(":"))
+        day = dt.datetime.fromtimestamp(SESSION_ORIGIN_NS / 1e9, ct).date()
+        starts, ends = [], []
+        while len(starts) < n:
+            if day.weekday() < 5:
+                t0 = int(dt.datetime(day.year, day.month, day.day, hh, mm,
+                                     tzinfo=ct).timestamp()) * 10**9
+                starts.append(t0)
+                ends.append(t0 + self._lengths[len(starts) - 1] * spacing)
+            day += dt.timedelta(days=1)
+        return starts, ends
 
     # ---- generation -------------------------------------------------------- #
     def _build_calendar(self) -> Calendar:
@@ -355,6 +397,11 @@ class SyntheticDataset:
             elif i and prices[i] < prices[i - 1]:
                 last = Side.SELL
             sides.append(last)
+        if s.aggressor == "flipped":
+            sides = [None if x is None else (Side.SELL if x is Side.BUY else Side.BUY)
+                     for x in sides]
+        elif s.aggressor != "tick_rule":
+            raise ValueError(f"aggressor {s.aggressor!r} is not tick_rule or flipped")
 
         keep = self._observed(rng, n, self._quiet_mult[session])
         out = [

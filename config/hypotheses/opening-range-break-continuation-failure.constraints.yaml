@@ -1,0 +1,30 @@
+schema: constraints/1
+hypothesis: opening-range-break-continuation-failure.md
+clock: America/Chicago
+constraints:
+  # The range is 08:30-09:00 CT, so a break of it cannot be entered before 09:00;
+  # 15:15 CT is the later of the two regular-hours closes the question allows.
+  - id: enter-after-range-in-rth
+    says: "Call the high and low of the **first 30 minutes after the regular-hours open** the opening range."
+    check: entry_window
+    start: "09:00"
+    end: "15:15"
+  # Neither allowed convention makes any claim past 15:15 CT.
+  - id: flat-by-rth-close
+    says: "must not carry a position into hours it makes no claim about"
+    check: flat_by
+    time: "15:15"
+
+judged:
+  - id: range-is-first-30m-of-rth
+    says: "Call the high and low of the **first 30 minutes after the regular-hours open** the opening range."
+  - id: chicago-offset-derived
+    says: "The Chicago offset must be derived for the timestamp being used, never fixed."
+  - id: not-regime-model
+    says: "Not a regime model switching between the two accounts."
+
+# not mechanically checkable, and not decidable from the code alone:
+# - "say in its docstring which convention it used" / "state it in the docstring" -- docstrings are stripped
+# - "A strategy answering this question must say where it expects to be out of the market" -- a statement in prose; flat_by enforces the outer bound
+# - "report the month-by-month result as part of the claim" -- a report
+# - "Not a fast-execution idea." -- an outcome

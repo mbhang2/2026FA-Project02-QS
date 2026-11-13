@@ -1,0 +1,39 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "Seats re-run after the campaign's committee, because they never produced a verdict in committee-verdict.json. Written BESIDE that file and never over it: the committed artefact records what the campaign's committee actually did, and a seat that failed then did fail then. This is a later, separate read; it cannot change the recorded verdict and does not.",
+  "can_approve": false,
+  "seats": {
+    "economics": {
+      "verdict": "PASS",
+      "reasons": [
+        "Hypothesis fit: the original asks which of two accounts holds (continuation vs. give-back); the agent chose the give-back arm with an adaptive threshold, session-context filter, and one-bar pullback confirmation. That is squarely inside the family and the code executes a fade of the outsized bar in the direction opposite to it, matching the docstring's claim.",
+        "Train economics are internally consistent: net +1292.75 points (~$25.9k) on gross +1829.55 points with 2684 trades over 384 sessions (~7 trades/session) and ~35min average holds on 5m bars. Not a degenerate optimum; trade count and turnover (14.6 contracts/session at size=1) are plausible for NQ.",
+        "Commission is 536.8 / 1829.55 \u2248 29.3% of gross \u2014 heavy but does not flip the sign of P&L, so costs do not 'decide' the outcome on the train split. Fill at $2/contract/side (0.1 points) is realistic for retail futures.",
+        "Neither of the two listed artifact patterns (positive score with negative net P&L; inactivity-maximised score) is present in the train evidence."
+      ],
+      "confidence_note": "Could not see the fill model code or how `fill_model_spread: null` is handled \u2014 if entry/exit are filled at mid with no adverse tick, ~1 tick of spread per side across 2684 round trips would consume most of the gross edge; also out of my axis but worth flagging to other reviewers that validation net P&L is -1001.6 points on 629 trades with a 21% win rate.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 2,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    }
+  },
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  },
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 5594,
+      "completion_tokens": 4704,
+      "reasoning_tokens": 4293,
+      "finish_reason": "stop"
+    }
+  ]
+}

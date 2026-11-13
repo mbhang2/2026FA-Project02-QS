@@ -1,0 +1,38 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "Seats re-run after the campaign's committee, because they never produced a verdict in committee-verdict.json. Written BESIDE that file and never over it: the committed artefact records what the campaign's committee actually did, and a seat that failed then did fail then. This is a later, separate read; it cannot change the recorded verdict and does not.",
+  "can_approve": false,
+  "seats": {
+    "economics": {
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "No winning strategy source is available ('NO SOURCE AVAILABLE'), so I cannot check whether the code implements the opening-range-break continuation/failure question it claims, nor whether it obeys the pre-registered rule of a stated flat-by clock time derived from a DST-correct Chicago offset.",
+        "All primary economic fields in the evidence are null (net_pnl_points, gross_pnl_points, commission_paid_points, trade_count, n_sessions, avg_holding_period_ns, max_drawdown, fill_model_spread), so there is no measured result on the winner to assess for cost artifact, degenerate inactivity, or implausible turnover.",
+        "The only economic record present is the validation run, which was explicitly rejected (exposed in 4 of 86 sessions, below the registered 70% floor), with net_pnl -101.55 and primary -Infinity; this is a failed/non-qualifying candidate rather than a claimed result, so there is nothing here to disbelieve \u2014 but equally nothing to confirm the proposition is being tested."
+      ],
+      "confidence_note": "The module docstring and source are missing and the headline economics are null, so the only trace is a rejected 4-trade validation run; I could not see the strategy's exit-time convention, cost loadings, or any train-split economics.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "none"
+    }
+  },
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  },
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4404,
+      "completion_tokens": 757,
+      "reasoning_tokens": 456,
+      "finish_reason": "stop"
+    }
+  ]
+}

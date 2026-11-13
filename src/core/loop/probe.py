@@ -100,8 +100,25 @@ def probe_source(source: str, *, ledger: Path,
     projects it onto `ProbeResult` and discards the rest -- including the score,
     which `run.py` computes for every row and which must not reach the agent.
     """
-    strategy_path = strategy_path or REPO_ROOT / "src" / "strategies" / "current.py"
     profile = probe_profile_for(source)
+    row = run_on_profile(source, profile, ledger=ledger, strategy_path=strategy_path)
+    if row is None:
+        return ProbeResult(ran=False, crashed=False, profile=profile,
+                           trade_count=None, fill_log_digest=None,
+                           error="run.py produced no ledger row",
+                           traceback_tail="", wall_clock_s=None)
+    return result_from_row(row, profile)
+
+
+def run_on_profile(source: str, profile: str, *, ledger: Path,
+                   strategy_path: Path | None = None) -> dict | None:
+    """One synthetic run of `source` under `profile`, and the row it appended.
+
+    The whole row, for the harness's own use -- `perturb.py` reads its fill log.
+    Nothing returned here may reach the agent unprojected; `probe_source` and
+    `perturb.check` are the projections.
+    """
+    strategy_path = strategy_path or REPO_ROOT / "src" / "strategies" / "current.py"
     original = strategy_path.read_text()
     before = _line_count(ledger)
     strategy_path.write_text(source)
@@ -113,14 +130,8 @@ def probe_source(source: str, *, ledger: Path,
         )
     finally:
         strategy_path.write_text(original)
-
     rows = _read_rows(ledger)
-    if len(rows) <= before:
-        return ProbeResult(ran=False, crashed=False, profile=profile,
-                           trade_count=None, fill_log_digest=None,
-                           error="run.py produced no ledger row",
-                           traceback_tail="", wall_clock_s=None)
-    return result_from_row(rows[-1], profile)
+    return rows[-1] if len(rows) > before else None
 
 
 def result_from_row(row: dict, profile: str) -> ProbeResult:

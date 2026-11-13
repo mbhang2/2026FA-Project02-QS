@@ -250,7 +250,7 @@ def test_the_run_stage_passes_the_flag_and_the_records_profile():
     assert "allow_fitted=record.allow_fitted_proposals" in source, (
         "run_trial is called without the gate, so a fitted proposal would run "
         "in a campaign that did not register one")
-    assert "record.profile, model)" in source, (
+    assert "record.profile, model" in source, (
         "the agent is built from PROFILE rather than from the record, so a "
         "fitted campaign's agent would be given the unfitted run facts")
 
@@ -330,6 +330,8 @@ def test_a_fitted_seed_into_an_unfitted_profile_is_refused_without_writing():
     r = subprocess.run(
         [sys.executable, "scripts/nq_campaign.py", "--stage", "register",
          "--name", name, "--profile", "nq-train",
+         # Explicit since Amendment 15 removed the default question.
+         "--hypothesis", "config/hypotheses/intraday-continuation.md",
          "--seed", "src/strategies/viperq_amt.py"],
         capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=30)
     assert r.returncode != 0
@@ -386,6 +388,7 @@ def test_a_seed_that_fails_the_agents_static_check_is_refused_at_registration(tm
         r = subprocess.run(
             [sys.executable, "scripts/nq_campaign.py", "--stage", "register",
              "--name", "zz-bad-seed", "--profile", "nq-train-fitted",
+             "--hypothesis", "config/hypotheses/intraday-continuation.md",
              "--seed", str(inside)],
             capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=60)
     finally:

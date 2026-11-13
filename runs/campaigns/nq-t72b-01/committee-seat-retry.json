@@ -1,0 +1,34 @@
+{
+  "schema": "committee-verdict/1-partial",
+  "note": "Seats re-run after the campaign's committee, because they never produced a verdict in committee-verdict.json. Written BESIDE that file and never over it: the committed artefact records what the campaign's committee actually did, and a seat that failed then did fail then. This is a later, separate read; it cannot change the recorded verdict and does not.",
+  "can_approve": false,
+  "seats": {
+    "economics": {
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "On my axis nothing vetoes: the developed hypothesis (outsized-move continuation with a mild session-direction filter) stays inside the original's question family, the code enters in the direction of the triggering move as the docstring claims, costs are only ~2% of gross (108 of 5471 points), activity is non-degenerate (540 trades over 384 sessions, ~4.4h avg hold), and score sign tracks net P&L sign on both splits; however I could not see the train win-rate or the fill/slippage model (fill_model_spread is null) to decompose the ~9.9 points/trade average edge, and the held-out split is clearly negative (net -659 pts, primary -0.083, rule_a false) \u2014 but survival across periods is explicitly outside my axis, so I flag it rather than weigh it.",
+      "model": "mimo-v2.6-pro",
+      "model_served": "mimo-v2.6-pro",
+      "independent": true,
+      "attempts": 1,
+      "rerun_on": "2026-11-05",
+      "source_from": "tier2-summary"
+    }
+  },
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  },
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 5123,
+      "completion_tokens": 3604,
+      "reasoning_tokens": 3390,
+      "finish_reason": "stop"
+    }
+  ]
+}

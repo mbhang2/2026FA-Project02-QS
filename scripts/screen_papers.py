@@ -270,8 +270,11 @@ def _abstract_of(row: dict) -> str:
 
 
 def main() -> int:
+    global MODEL           # set from --model below
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--model", default=MODEL,
+                    help=f"the model that does this pass (default {MODEL})")
     ap.add_argument("--limit", type=int, default=20)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--force-rescreen", action="store_true",
@@ -288,6 +291,9 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true",
                     help="screen and print, write nothing back")
     a = ap.parse_args()
+    # Every use below reads the module-level MODEL, including what is
+    # recorded on each registry row, so one assignment reaches all of them.
+    MODEL = a.model
 
     if not REGISTRY.exists():
         sys.exit(f"no registry at {REGISTRY}. Run scripts/fetch_papers.py first.")

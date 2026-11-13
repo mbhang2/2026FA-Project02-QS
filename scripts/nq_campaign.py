@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """The MVP campaign: a model proposes, the harness scores, the gate decides.
 
-    python scripts/nq_campaign.py --stage register   # preflight, pre-register, hash
+    python scripts/nq_campaign.py --stage register --name X --hypothesis config/hypotheses/q.md
+    python scripts/nq_campaign.py --stage register --name X --question "CVD divergence reverses intraday trends"
+                                                     # preflight, pre-register, hash; the
+                                                     # second writes the question first
+                                                     # (Amendment 15)
     python scripts/nq_campaign.py --stage run        # N trials, resumable
     python scripts/nq_campaign.py --stage nulls      # sign-flip null per candidate
     python scripts/nq_campaign.py --stage report     # gate, summary, tier 3
@@ -68,11 +72,19 @@ OUT = _RUNS / "campaigns"
 #
 # deepseek-v4-pro is what the last nine campaigns actually used, named in their
 # plans rather than taken from here.
-MODEL = "deepseek-v4-pro"
-# The default only applies to `--stage register`, which writes the choice into
-# campaign.json. Every later stage reads the path back out of the record, so a
-# campaign cannot be registered against one question and run against another.
-DEFAULT_HYPOTHESIS = ROOT / "config" / "hypotheses" / "intraday-continuation.md"
+# **deepseek-v4.1-flash since 2026-11-12**, on Brian's advice: its latest
+# checkpoint is smarter, faster and cheaper than v4-pro. Unverified here: on
+# that date every request from our key to either DeepSeek model fell back to
+# gemini-3.1-pro-preview (`x-litellm-attempted-fallbacks: 1`), so neither could
+# be measured. A campaign records the model it registered with, so past
+# campaigns on deepseek-v4-pro keep saying so.
+MODEL = "deepseek-v4.1-flash"
+# **There is no default question.** `--stage register` takes `--hypothesis` or
+# `--question` and writes the choice into campaign.json; every later stage
+# reads it back from the record, so a campaign cannot be registered against one
+# question and run against another. The default this replaced
+# (intraday-continuation.md) meant a campaign registered with neither flag ran
+# on that file without anybody having chosen it.
 # **The proposer's token budget has to cover the model's REASONING, not just
 # the file it writes.** nq-ml-05 lost 4 of its first 10 trials to "no python
 # block in the reply" at 16,384: gemini-3.1-pro-preview spends ~12,000 tokens
@@ -251,14 +263,53 @@ def scored_session_count(profile: dict) -> int:
     return len(ds.scored_sessions(Split(profile["split"])))
 
 
+def constraints_for(hypothesis: pathlib.Path | None, policy: str | None):
+    """The question's constraints file, loaded and grounded, or None.
+
+    `policy` is the campaign's `fidelity_policy`: "off" or None loads nothing,
+    so a campaign that declines the check behaves exactly as one registered
+    before it existed. A hypothesis with no sidecar has nothing to check.
+    """
+    from src.core.loop import fidelity as F
+
+    if hypothesis is None or policy in (None, "off"):
+        return None
+    if policy not in F.POLICIES:
+        sys.exit(f"fidelity_policy {policy!r} is not one of off, "
+                 f"{', '.join(F.POLICIES)}")
+    if policy == "enforce":
+        # `record` changes nothing the correction reads -- a bounded repair that
+        # executes nothing, and a note in the agent's history. `enforce` changes
+        # which trial may become the champion and which scores the gate's
+        # observed best is taken over, and that is a change to a registered
+        # procedure, so it waits for its amendment like the probe did.
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import prereg
+
+        if not prereg.in_force(14):
+            sys.exit("fidelity_policy 'enforce' needs Amendment 14 IN FORCE "
+                     f"(docs/design/pre-registration.md); it is "
+                     f"{prereg.status(14)!r}. Sign it, or register with "
+                     "fidelity_policy: record.")
+    side = F.sidecar_for(hypothesis)
+    if not side.is_file():
+        return None
+    try:
+        return F.load(side, hypothesis.read_text())
+    except F.ConstraintsRejected as exc:
+        sys.exit(f"refusing {side.relative_to(ROOT)}: {exc}")
+
+
 def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
-              profile_name: str = PROFILE, model: str = MODEL):
+              profile_name: str = PROFILE, model: str = MODEL,
+              constraints=None, constraint_policy: str = "record"):
     from src.core.loop import hypothesis as H
     from src.core.loop.llm import LLMAgent
 
     c = cfg()
     profile = c["profiles"][profile_name]
     return LLMAgent(
+        constraints=constraints, constraint_policy=constraint_policy,
         model=model, temperature=0.7, max_tokens=PROPOSER_MAX_TOKENS, show_history=True,
         # None is a real state, not a missing argument: `hypothesis_path` is
         # optional on the record, and a campaign that registered without a
@@ -536,7 +587,7 @@ def _campaign_note(profile: dict) -> str:
             "acceptance from this campaign as uncalibrated until its own null "
             "is tabulated.")
 
-def stage_register(name: str, hypothesis: pathlib.Path,
+def stage_register(name: str, hypothesis: pathlib.Path | None,
                    profile_name: str = PROFILE,
                    seed: pathlib.Path | None = None,
                    n_trials: int | None = None,
@@ -549,7 +600,20 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                    # positional dispatch below put the PROFILE into the
                    # correction rule -- the same mistake `Tick.asset` made in
                    # the multi-asset work, caught the same way.
-                   correction_rule: str | None = None) -> None:
+                   correction_rule: str | None = None,
+                   # Amendment 15: a researcher's statement instead of a file.
+                   # `hypothesis` is then None and the question is written
+                   # HERE, after every local refusal and the proposer's
+                   # preflight, so nothing that would refuse the campaign can
+                   # do so after a Machine-Written question is committed.
+                   question: str | None = None,
+                   no_papers: bool = False,
+                   writer_model: str | None = None,
+                   reviewer_model: str | None = None,
+                   audit_model: str | None = None,
+                   judge_model: str | None = None,
+                   picker_model: str | None = None,
+                   auditor_models: dict | None = None) -> None:
     from src.core.loop.campaign import CampaignRecord
     from src.core.loop.llm import LLMAgent
 
@@ -614,6 +678,23 @@ def stage_register(name: str, hypothesis: pathlib.Path,
                         max_tokens=PROPOSER_MAX_TOKENS).preflight()
     print(f"  asked {served['requested']!r}  served {served['served']!r}")
 
+    hypothesis_origin = None
+    if question is not None:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import write_hypothesis as wh
+
+        print(f"{name}: no hypothesis file; writing one from the statement "
+              f"(Amendment 15)", flush=True)
+        try:
+            got = wh.write_unattended(question, campaign=name,
+                                      papers=not no_papers,
+                                      model=writer_model,
+                                      reviewer_model=reviewer_model,
+                                      picker_model=picker_model)
+        except wh.Unattended as exc:
+            sys.exit(f"{name}: NOT registered -- {exc}")
+        hypothesis, hypothesis_origin = got["path"].resolve(), got["origin"]
+
     cc = campaign_cfg()
     # N and the model are per-campaign decisions frozen here, like the q. The
     # config carries defaults; a flag at registration is the decision, and the
@@ -626,7 +707,38 @@ def stage_register(name: str, hypothesis: pathlib.Path,
         # Amendment 7. A flag at registration, frozen below; never read from
         # the config at run time.
         cc = {**cc, "probe_before_trial": bool(probe)}
-    agent_cfg = agent_for(None, hypothesis, profile_name, model).config()
+    # **What the question fixes, frozen with it** (`src/core/loop/fidelity.py`).
+    # The constraints file's digest goes into agent_config, which the record
+    # digest covers, so editing it mid-campaign is the same alarm as editing
+    # the hypothesis.
+    fidelity_policy = cc.get("fidelity_policy", "off")
+    cons = constraints_for(hypothesis, fidelity_policy)
+    agent_cfg = agent_for(None, hypothesis, profile_name, model,
+                          constraints=cons,
+                          constraint_policy=fidelity_policy).config()
+    if cons is not None:
+        print(f"  constraints: {len(cons.items)} from "
+              f"{pathlib.Path(cons.path).name}  policy={fidelity_policy}")
+    # The shadow reviewer (scripts/fidelity_judge.py), frozen like everything
+    # else the run reads. Recorded as None when off or when the question lists
+    # nothing for it to judge, so "declined" and "predates it" read the same.
+    judge_mode = cc.get("fidelity_judge", "off")
+    if judge_mode not in ("off", "shadow", "repair"):
+        sys.exit(f"fidelity_judge {judge_mode!r} is not off, shadow or repair; "
+                 "a reviewer that blocks needs its measured error rate and an "
+                 "amendment first")
+    agent_cfg["fidelity_judge"] = None
+    if judge_mode != "off" and cons is not None and cons.judged:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import fidelity_judge
+
+        agent_cfg["fidelity_judge"] = {
+            # `--judge-model`; frozen here and read back by stage_run.
+            "mode": judge_mode, "model": judge_model or fidelity_judge.MODEL,
+            "prompt_digest": hashlib.sha256(
+                fidelity_judge.PROMPT.read_bytes()).hexdigest()}
+        print(f"  fidelity reviewer ({judge_mode}): {len(cons.judged)} judged "
+              f"requirement(s) on {agent_cfg['fidelity_judge']['model']}")
     # **`aligned` and a shared table are incompatible, and the combination is
     # refused here rather than discovered in a p-value.** `aligned` reads
     # column j of every trial as the SAME randomisation and takes the maximum
@@ -683,6 +795,29 @@ def stage_register(name: str, hypothesis: pathlib.Path,
 
     agent_cfg["idle_charge"] = cc.get("idle_charge", IDLE_CHARGE)
     agent_cfg["probe_before_trial"] = bool(cc.get("probe_before_trial"))
+    # **Who wrote the question, in the record.** None for a file a human
+    # committed. Under Amendment 15 it names the statement, what the writer
+    # turned it into, and that nobody read it -- so a report, a committee or a
+    # holdout request can see that this campaign may spend trials and may not
+    # support a claim until a human has read its question.
+    agent_cfg["hypothesis_origin"] = hypothesis_origin
+    # **The committee's model, frozen here rather than chosen at report time.**
+    # None is audit.committee.review.AUDIT_MODEL. A model picked after the
+    # trials ran is a committee picked after seeing what it will judge.
+    agent_cfg["audit_model"] = audit_model
+    # `--auditor-model AXIS=MODEL`: one auditor on its own model. Validated now,
+    # not at report time, so a typo refuses registration instead of a report.
+    if auditor_models:
+        from audit.committee.review import AXES
+        bad = sorted(set(auditor_models) - set(AXES))
+        if bad:
+            sys.exit(f"--auditor-model names no auditor {bad}; the auditors are "
+                     f"{', '.join(AXES)}")
+    agent_cfg["auditor_models"] = dict(auditor_models or {}) or None
+    if hypothesis_origin:
+        print(f"  question MACHINE-WRITTEN from a statement (Amendment "
+              f"{hypothesis_origin.get('amendment')}); unread, so this campaign "
+              f"cannot support a claim until a human reads it", flush=True)
 
     d.mkdir(parents=True, exist_ok=True)
     # **`--generation-width auto`: the conditioning stage decides W here.**
@@ -863,8 +998,63 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
     # Model from the record too. Registering one model and running another
     # would make agent_config describe a campaign that never happened.
     model = (record.agent_config or {}).get("model", MODEL)
+    # The constraints the record froze, re-read and re-checked by digest for
+    # the reason the hypothesis is: the file is a path, and a path can change.
+    reg_cons = (record.agent_config or {}).get("constraints")
+    cons, policy = None, "record"
+    if reg_cons:
+        from src.core.loop import fidelity as F
+
+        policy = reg_cons["policy"]
+        cpath = pathlib.Path(reg_cons["path"])
+        cpath = cpath if cpath.is_absolute() else ROOT / cpath
+        cons = F.load(cpath, hyp_path.read_text()) if cpath.is_file() else None
+        if cons is None or cons.digest != reg_cons["digest"]:
+            sys.exit(
+                f"{cpath} has changed or gone since {name} was registered.\n"
+                f"  registered digest {reg_cons['digest']}\n"
+                f"  current digest    {cons.digest if cons else None}\n"
+                "A campaign checks the constraints it registered.")
+        print(f"  constraints: {len(cons.items)}  policy={policy}", flush=True)
+        # A resumed campaign's agent must see the earlier trials' notes too.
+        for i, note in F.read_ledger(d).items():
+            if i < len(rows) and note.get("violations"):
+                rows[i]["off_question"] = note["violations"]
     agent = agent_for(champion if champion.exists() else None, hyp_path,
-                      record.profile, model)
+                      record.profile, model, constraints=cons,
+                      constraint_policy=policy)
+    judge = None
+    reg_judge = (record.agent_config or {}).get("fidelity_judge")
+    if reg_judge and cons is not None:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import fidelity_judge
+
+        got = hashlib.sha256(fidelity_judge.PROMPT.read_bytes()).hexdigest()
+        if got != reg_judge["prompt_digest"]:
+            sys.exit(f"{fidelity_judge.PROMPT} has changed since {name} was "
+                     "registered; the reviewer must read the prompt it registered.")
+        judge = fidelity_judge.make_judge(reg_judge["model"])
+        print(f"  fidelity reviewer: {reg_judge['mode']} ({reg_judge['model']}); "
+              "never blocks", flush=True)
+
+    def _arm_fidelity(a, root: pathlib.Path | None = None) -> None:
+        """The constraints' probe checks and the reviewer, on one agent.
+
+        Per agent and per worker, for the reason `_arm_probe` is: under
+        Amendment 12 an agent armed against the repository's strategy file
+        races the others.
+        """
+        if cons is None:
+            return
+        import functools
+        if cons.probe:
+            from src.core.loop.perturb import check as perturb_check
+            a.perturb = functools.partial(
+                perturb_check, cons=cons, ledger=d / "probe-ledger.jsonl",
+                strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")
+        if judge is not None:
+            a.judge = lambda src: judge(src, cons)
+            a.judge_mode = reg_judge["mode"]
     def _arm_probe(a, root: pathlib.Path | None = None) -> None:
         """Amendment 7 on one agent, from the record.
 
@@ -904,6 +1094,7 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
             strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")
 
     _arm_probe(agent)
+    _arm_fidelity(agent)
     if record.probe_before_trial:
         print("  probe before trial: ON (Amendment 7); synthetic rows in "
               "probe-ledger.jsonl", flush=True)
@@ -927,12 +1118,15 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         # Re-armed on its own worker: `_arm_probe(agent)` above pointed it at
         # the repository, which is right at width 1 and a race above it.
         _arm_probe(agent, workers[0])
+        _arm_fidelity(agent, workers[0])
         agents = [agent]
         for slot in range(1, width):
             extra = agent_for(champion if champion.exists() else None,
-                              hyp_path, record.profile, model)
+                              hyp_path, record.profile, model,
+                              constraints=cons, constraint_policy=policy)
             # Every agent, on its own worker. See `_arm_probe`.
             _arm_probe(extra, workers[slot])
+            _arm_fidelity(extra, workers[slot])
             agents.append(extra)
     else:
         agents = [agent]
@@ -1065,11 +1259,36 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
             with (d / "agent-calls.jsonl").open("a") as fh:
                 fh.write(json.dumps({"trial": i, **row["agent_call"]}) + "\n")
 
+          # **What the question fixes, on what the trial did.** Code violations
+          # the agent could not repair arrive in its drain log; behaviour is
+          # read off the trial's own fills. Written beside the ledger, never in
+          # it -- `run.py` owns the row -- and shown to the agent on the
+          # in-memory row.
+          off = None
+          if cons is not None:
+            from src.core.loop import fidelity as F
+
+            off = F.check_trial(row, cons, root=ROOT,
+                                code=(row.get("agent_call") or {}).get(
+                                    "off_question_code") or [])
+            F.append_ledger(d, i, off, policy)
+            verdict = (row.get("agent_call") or {}).get("judge")
+            if verdict:
+                F.append_judgement(d, i, verdict)
+            if off:
+                row["off_question"] = off
+                print(f"    off question: "
+                      f"{', '.join(v['id'] for v in off)}", flush=True)
+
           # The champion advances only on a strict improvement. A tie keeps the
           # incumbent, so the base does not drift between equivalent files.
+          # Under `enforce` an off-question trial cannot become the base: the
+          # next proposals would be edits of an answer to another question.
           score = (row.get("score") or {}).get("primary")
           rejected = (row.get("score") or {}).get("rejected")
-          if score is not None and not rejected and (best is None or score > best):
+          eligible = not (off and policy == "enforce")
+          if eligible and score is not None and not rejected \
+                  and (best is None or score > best):
             best = score
             champion.write_text(source)
             state.write_text(json.dumps({"best": best, "trial": i}))
@@ -1351,6 +1570,106 @@ def _record_outcome(name: str) -> None:
         print(f"  feedback edge FAILED (report stands): {type(exc).__name__}: {exc}")
 
 
+def committee_evidence(d: pathlib.Path, record, tier2: dict) -> tuple[str | None, str | None]:
+    """What the committee reads besides the summary: the hypothesis text, the
+    validation evidence and buy-and-hold attached to `tier2` in place, and the
+    winning source.
+
+    One function so that a later re-run of a seat that failed
+    (`scripts/committee_retry.py`) hands the auditor exactly what the campaign's
+    own committee was handed, rather than a reconstruction of it.
+    """
+    if record.hypothesis_path:
+        hyp_text = (ROOT / record.hypothesis_path).read_text()
+    else:
+        hyp_text = None
+    # Section 5's out-of-sample evidence, if `--stage validate` has run. Absent is
+    # a state the slices state explicitly rather than omit -- see
+    # `_validation_evidence`: "not checked" and "checked and held up" are opposite
+    # readings and a silent gap gets read as the flattering one.
+    vfile = d / "validation.json"
+    if vfile.exists():
+        tier2["validation"] = json.loads(vfile.read_text())
+        print(f"  validation: train {tier2['validation']['train']['primary']:+.4f}"
+              f"  validation {tier2['validation']['validation']['primary']:+.4f}")
+    else:
+        print("  validation: not run (--stage validate)")
+
+    # **Buy-and-hold, for the COMMITTEE only.** Michael's call, 2026-10-26:
+    # the economics seat has no way to see a campaign's opportunity cost, and
+    # "+9,937 while one contract would have made +5,257 with a 5,073-point
+    # drawdown" is exactly the judgement a seat exists to make. Attached here
+    # rather than in the proposal prompt, deliberately -- an agent told the
+    # benchmark can take the exposure instead of beating it, and
+    # `docs/agent/*.md` is in ARTIFACT_GLOBS so adding it there would open a
+    # new regime. NOT a gate: measured on NQ this benchmark's own Sortino runs
+    # -0.0705 to +0.3309 across rolling windows of the same data and changes
+    # sign, so a pass/fail rule on it would ask a different question of every
+    # campaign.
+    try:
+        import run as runner                  # stage_report does not import it
+        from src.core.scoring import metrics as _m
+        from src.core.types import Split as _Split
+
+        _prof = cfg()["profiles"][record.profile]
+        _ds = runner.build_dataset(cfg(), _prof["dataset"], _prof["seed"])
+        tier2["buy_and_hold"] = _m.buy_and_hold(
+            _ds, _Split(_prof["split"]),
+            commission_per_contract=_prof.get("commission_per_contract", 0.0),
+            notional_base=_prof.get("notional_base", 1.0))
+        bh = tier2["buy_and_hold"]
+        if bh.get("available"):
+            print(f"  buy-and-hold over {bh['n_sessions']} sessions: "
+                  f"{bh['pnl']:+,.2f} pts, primary {bh['primary']:+.4f}, "
+                  f"max drawdown {bh['max_drawdown']:,.2f}")
+    except (Exception, SystemExit) as _e:                         # noqa: BLE001
+        # Evidence, not a gate: a benchmark that cannot be built must not stop
+        # a report. It is recorded as unavailable so a reader knows it is
+        # missing rather than zero. `SystemExit` too: the NQ adapter exits
+        # rather than raises when the bucket credentials are absent, which
+        # killed the report before the committee ever ran.
+        tier2["buy_and_hold"] = {"available": False, "error": f"{type(_e).__name__}: {_e}"}
+        print(f"  buy-and-hold unavailable: {type(_e).__name__}: {_e}")
+
+    best_source = (tier2.get("best_candidate") or {}).get("source")
+    if not best_source:
+        best_source = _source_from_ledger(d)
+    return hyp_text, best_source
+
+
+def _source_from_ledger(d: pathlib.Path) -> str | None:
+    """The best-scoring trial's stored source, when the summary carries none.
+
+    `nq-s04-03`'s summary has no `best_candidate.source`, so its economics seat
+    was asked whether code it could not see implemented the question, and said
+    CANNOT_TELL. The source was on disk all along under `sources/`, named by the
+    ledger row that scored best. Same selection as the champion: highest
+    unrejected primary, earliest trial on a tie.
+    """
+    led = d / "ledger.jsonl"
+    if not led.exists():
+        return None
+    best = None
+    for line in led.read_text().splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        sc = row.get("score") or {}
+        p = sc.get("primary")
+        if p is None or sc.get("rejected"):
+            continue
+        if best is None or p > best[0]:
+            best = (p, row.get("strategy_source"))
+    if best is None or not best[1]:
+        return None
+    for root in (ROOT, d):
+        f = root / best[1]
+        if f.is_file():
+            return f.read_text()
+    f = d / "sources" / pathlib.Path(best[1]).name
+    return f.read_text() if f.is_file() else None
+
+
 def stage_report(name: str) -> None:
     from src.core.loop.campaign import CampaignRecord, CampaignResult, summarise
 
@@ -1363,8 +1682,11 @@ def stage_report(name: str) -> None:
     result = CampaignResult(record=record, record_digest=digest, rows=rows)
     # From the record, not the literal `"nq-trades"` that was here: the
     # same hard-coding that put NQ into an SPX campaign's provenance.
+    from src.core.loop.fidelity import excluded_trials
+
     summary = summarise(result, dataset=record.dataset,
-                        null_samples=samples, q=record.q)
+                        null_samples=samples, q=record.q,
+                        exclude=excluded_trials(d, record.agent_config))
 
     # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
     # same route every other campaign's do rather than through this script.
@@ -1414,57 +1736,7 @@ def stage_report(name: str) -> None:
     # Folding an unreproducible judgement into a reproducible one would make the
     # combined artefact neither, and `ledger_check` could no longer tell a
     # changed verdict from a changed apparatus.
-    if record.hypothesis_path:
-        hyp_text = (ROOT / record.hypothesis_path).read_text()
-    else:
-        hyp_text = None
-    # Section 5's out-of-sample evidence, if `--stage validate` has run. Absent is
-    # a state the slices state explicitly rather than omit -- see
-    # `_validation_evidence`: "not checked" and "checked and held up" are opposite
-    # readings and a silent gap gets read as the flattering one.
-    vfile = d / "validation.json"
-    if vfile.exists():
-        tier2["validation"] = json.loads(vfile.read_text())
-        print(f"  validation: train {tier2['validation']['train']['primary']:+.4f}"
-              f"  validation {tier2['validation']['validation']['primary']:+.4f}")
-    else:
-        print("  validation: not run (--stage validate)")
-
-    # **Buy-and-hold, for the COMMITTEE only.** Michael's call, 2026-10-26:
-    # the economics seat has no way to see a campaign's opportunity cost, and
-    # "+9,937 while one contract would have made +5,257 with a 5,073-point
-    # drawdown" is exactly the judgement a seat exists to make. Attached here
-    # rather than in the proposal prompt, deliberately -- an agent told the
-    # benchmark can take the exposure instead of beating it, and
-    # `docs/agent/*.md` is in ARTIFACT_GLOBS so adding it there would open a
-    # new regime. NOT a gate: measured on NQ this benchmark's own Sortino runs
-    # -0.0705 to +0.3309 across rolling windows of the same data and changes
-    # sign, so a pass/fail rule on it would ask a different question of every
-    # campaign.
-    try:
-        import run as runner                  # stage_report does not import it
-        from src.core.scoring import metrics as _m
-        from src.core.types import Split as _Split
-
-        _prof = cfg()["profiles"][record.profile]
-        _ds = runner.build_dataset(cfg(), _prof["dataset"], _prof["seed"])
-        tier2["buy_and_hold"] = _m.buy_and_hold(
-            _ds, _Split(_prof["split"]),
-            commission_per_contract=_prof.get("commission_per_contract", 0.0),
-            notional_base=_prof.get("notional_base", 1.0))
-        bh = tier2["buy_and_hold"]
-        if bh.get("available"):
-            print(f"  buy-and-hold over {bh['n_sessions']} sessions: "
-                  f"{bh['pnl']:+,.2f} pts, primary {bh['primary']:+.4f}, "
-                  f"max drawdown {bh['max_drawdown']:,.2f}")
-    except Exception as _e:                                       # noqa: BLE001
-        # Evidence, not a gate: a benchmark that cannot be built must not stop
-        # a report. It is recorded as unavailable so a reader knows it is
-        # missing rather than zero.
-        tier2["buy_and_hold"] = {"available": False, "error": f"{type(_e).__name__}: {_e}"}
-        print(f"  buy-and-hold unavailable: {type(_e).__name__}: {_e}")
-
-    best_source = (tier2.get("best_candidate") or {}).get("source")
+    hyp_text, best_source = committee_evidence(d, record, tier2)
     print("  committee ...", flush=True)
     # **Retried on a fault that is the endpoint's.** On 2026-09-30 a single
     # `ReadTimeout` recorded this campaign's committee as ERROR, which is a
@@ -1485,8 +1757,13 @@ def stage_report(name: str) -> None:
             # independence defect docs/setup/MODEL-ACCESS.md recorded: all 17
             # verdicts to 2026-10-04 had a model auditing its own work.
             proposer = (record.agent_config or {}).get("model", MODEL)
+            audit_model = (record.agent_config or {}).get("audit_model")
+            auditor_models = (record.agent_config or {}).get("auditor_models")
             cv = review(tier2, source=best_source, hypothesis=hyp_text,
-                        proposer_model=proposer)
+                        proposer_model=proposer,
+                        **({"model": audit_model} if audit_model else {}),
+                        **({"auditor_models": auditor_models}
+                           if auditor_models else {}))
             exc = None
             break
         except Exception as e:                                    # noqa: BLE001
@@ -1520,7 +1797,20 @@ def stage_report(name: str) -> None:
              if cv.verdict == "VETO" else ""))
     for v in cv.auditors:
         print(f"    {v.axis:<12} {v.verdict}")
+    if cv.seats_failed:
+        print(f"    {len(cv.seats_failed)} seat(s) never ran: "
+              f"{', '.join(cv.seats_failed)}. This is NOT a pass. Re-run them "
+              f"beside the record with:\n      python scripts/committee_retry.py "
+              f"--campaign {name}", flush=True)
     _record_outcome(name)
+
+
+def _axis_model(v: str) -> dict:
+    """`AXIS=MODEL` for --auditor-model."""
+    axis, sep, model = v.partition("=")
+    if not sep or not axis.strip() or not model.strip():
+        raise argparse.ArgumentTypeError(f"expected AXIS=MODEL, got {v!r}")
+    return {axis.strip(): model.strip()}
 
 
 def _width_arg(v: str):
@@ -1548,11 +1838,51 @@ def main() -> int:
     ap.add_argument("--stage", required=True,
                     choices=("register", "run", "nulls", "validate", "report"))
     ap.add_argument("--name", required=True)
-    ap.add_argument("--hypothesis", type=pathlib.Path,
-                    default=DEFAULT_HYPOTHESIS,
-                    help="path to the hypothesis markdown; --stage register only, "
-                         "and it is written into campaign.json. Later stages read "
-                         "it from there and ignore this flag.")
+    ap.add_argument("--hypothesis", type=pathlib.Path, default=None,
+                    help="path to a committed hypothesis markdown; --stage "
+                         "register only, and it is written into campaign.json. "
+                         "Later stages read it from there. Give this or "
+                         "--question.")
+    ap.add_argument("--question", default=None, metavar="STATEMENT",
+                    help="a researcher's question or short statement to test, "
+                         "when there is no hypothesis file; --stage register "
+                         "only. scripts/write_hypothesis.py writes it into a "
+                         "hypothesis, gates it, and commits it marked "
+                         "Machine-Written before registering (Amendment 15). "
+                         "Nobody reads it first, so the campaign may spend "
+                         "trials and may not support a claim until a human has.")
+    ap.add_argument("--no-papers", action="store_true",
+                    help="with --question: write from the statement alone, "
+                         "without citing papers from the registry")
+    ap.add_argument("--writer-model", default=None, metavar="MODEL",
+                    help="with --question: the model that writes the "
+                         "hypothesis. Default: write_hypothesis.MODEL "
+                         "(mimo-v2.6-pro). Recorded in campaign.json.")
+    ap.add_argument("--audit-model", default=None, metavar="MODEL",
+                    help="the committee's model (all four auditors); --stage "
+                         "register only, frozen into campaign.json and read by "
+                         "--stage report. Default: audit.committee.review."
+                         "AUDIT_MODEL (mimo-v2.6-pro). Ideally not the "
+                         "proposer's model.")
+    ap.add_argument("--auditor-model", action="append", default=None,
+                    type=_axis_model, metavar="AXIS=MODEL",
+                    help="one auditor on its own model, e.g. leakage=gemini-2.5-pro; "
+                         "repeatable. The rest use --audit-model. --stage "
+                         "register only, frozen into campaign.json")
+    ap.add_argument("--judge-model", default=None, metavar="MODEL",
+                    help="the fidelity judge's model (fidelity_judge in "
+                         "config/run.yaml). Default: fidelity_judge.MODEL "
+                         "(gemini-2.5-pro). --stage register only, frozen")
+    ap.add_argument("--picker-model", default=None, metavar="MODEL",
+                    help="with --question: the model that picks registry papers "
+                         "for the writer. Default: write_hypothesis.PICK_MODEL "
+                         "(gemini-2.5-pro)")
+    ap.add_argument("--reviewer-model", default=None, metavar="MODEL",
+                    help="with --question: the review seat's model, which must "
+                         "return NO_OBJECTION for the campaign to register. "
+                         "Default: review_hypothesis.MODEL (mimo-v2.6-pro). "
+                         "Ideally not the writer's model: it is the question's "
+                         "only reader.")
     ap.add_argument("--n", type=int, default=None,
                     help="trials in this campaign; --stage register only, frozen "
                          "into campaign.json. Default is campaign.n_trials in "
@@ -1617,18 +1947,36 @@ def main() -> int:
                          f"which withholds a fit window from the score. Later "
                          f"stages read it from the record and ignore this flag.")
     a = ap.parse_args()
+    if a.auditor_model:
+        merged: dict = {}
+        for pair in a.auditor_model:
+            merged.update(pair)
+        a.auditor_model = merged
     if a.stage == "register":
-        hyp = a.hypothesis.resolve()
-        try:
-            hyp.relative_to(ROOT)
-        except ValueError:
-            sys.exit(f"{hyp} is outside the repository. A campaign's question has "
-                     "to be a committed file, or the record points at nothing a "
-                     "reader can check.")
+        # **Exactly one question, and never a silent one.** `--hypothesis` used
+        # to default to intraday-continuation.md, so a campaign registered with
+        # neither flag ran on somebody else's question without saying so.
+        if a.question is None and (a.writer_model or a.reviewer_model
+                                   or a.no_papers or a.picker_model):
+            sys.exit("--writer-model, --reviewer-model, --picker-model and "
+                     "--no-papers only mean something with --question")
+        if (a.hypothesis is None) == (a.question is None):
+            sys.exit("register needs exactly one of --hypothesis FILE (a "
+                     "committed question) or --question \"...\" (a statement, "
+                     "written into a hypothesis now; Amendment 15)")
+        if a.hypothesis is not None:
+            hyp = a.hypothesis.resolve()
+            try:
+                hyp.relative_to(ROOT)
+            except ValueError:
+                sys.exit(f"{hyp} is outside the repository. A campaign's question "
+                         "has to be a committed file, or the record points at "
+                         "nothing a reader can check.")
         profiles = cfg()["profiles"]
         if a.profile not in profiles:
             sys.exit(f"unknown profile {a.profile!r}. config/run.yaml has: "
                      f"{', '.join(sorted(profiles))}")
+        hyp = None if a.hypothesis is None else a.hypothesis.resolve()
         seed = None
         if a.seed is not None:
             seed = a.seed.resolve()
@@ -1641,13 +1989,23 @@ def main() -> int:
                          "committed file or the record points at nothing.")
         stage_register(a.name, hyp, a.profile, seed, a.n, a.model, a.min_exposed,
                        a.probe, a.generation_width,
-                       correction_rule=a.correction_rule)
+                       correction_rule=a.correction_rule,
+                       question=a.question, no_papers=a.no_papers,
+                       writer_model=a.writer_model,
+                       reviewer_model=a.reviewer_model,
+                       audit_model=a.audit_model,
+                       judge_model=a.judge_model,
+                       picker_model=a.picker_model,
+                       auditor_models=a.auditor_model)
     else:
         # Refused rather than ignored. Silently accepting it on a run stage is how
         # someone believes they changed the question and did not.
-        if a.hypothesis.resolve() != DEFAULT_HYPOTHESIS.resolve():
-            sys.exit(f"--hypothesis applies to --stage register only; "
-                     f"--stage {a.stage} reads it from campaign.json.")
+        if a.hypothesis is not None or a.question is not None or a.no_papers \
+                or a.writer_model or a.reviewer_model or a.audit_model \
+                or a.judge_model or a.picker_model or a.auditor_model:
+            sys.exit(f"--hypothesis, --question, --no-papers and the --*-model "
+                     f"flags apply to --stage register only; --stage {a.stage} "
+                     f"reads them from campaign.json.")
         if a.profile != PROFILE:
             sys.exit(f"--profile applies to --stage register only; "
                      f"--stage {a.stage} reads it from campaign.json.")

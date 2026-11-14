@@ -50,7 +50,11 @@ the `nq-s07-*` campaigns: 2.5-4.1 h of 300 s hangs on the critical path, plus
 0.8-1.9 h of client backoff sleeps (30, 120, 300 s) after them. Fixes, best
 first: raise `ProxyTimeout` on the Apache vhost (e.g. 900, matching the
 committee client); stream responses, since Apache's timeout is between bytes;
-resend immediately after a 300 s 502 rather than backing off; shorter replies.
+shorter replies. **Done on our side, 2026-11-12:** a 502 after ~300 s is no
+longer backed off -- proposals retry once at once, optional rewrites not at all
+and are skipped after 3 timeouts, auditors retry once then say why. Found on a
+mimo-v2.6-flash rehearsal, whose 20k-37k-token rewrites hit the limit 19 times
+in 20: the old backoff made each doomed rewrite cost ~55 minutes.
 Unconfirmed: that it is Apache's timer and not a 300 s timeout inside LiteLLM.
 The Apache error log would say ("Error reading from remote server").
 

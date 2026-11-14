@@ -169,6 +169,29 @@ PREFLIGHT_FLOOR_TOKENS = 512
 
 MAX_TRANSPORT_RETRIES = 5
 TRANSPORT_BACKOFF_S = (30, 120, 300, 600, 600)
+# **The gateway's front proxy (Apache) cuts any request off at 300 s with HTTP
+# 502** (docs/setup/MODEL-ACCESS.md). That is not a fault waiting helps with:
+# the same long reply hits the same limit. Measured 2026-11-12 on a rehearsal
+# with mimo-v2.6-flash, whose rewrites ran 20k-37k tokens: 19 of 20
+# fidelity_repair calls hit it, and the backoff above turned each doomed
+# rewrite into ~55 minutes (6 x 300 s + 27.5 min of sleeps) -- 100 minutes for
+# the first four trials. A 502 arriving this late is treated as the proxy's
+# timeout: an optional rewrite is not retried (the trial runs on the last
+# valid file regardless), and anything else is retried once, at once.
+PROXY_TIMEOUT_S = 300
+PROXY_TIMEOUT_FLOOR_S = PROXY_TIMEOUT_S - 15
+OPTIONAL_REWRITES = frozenset({"fidelity_repair", "judge_repair", "probe_repair"})
+PROXY_TIMEOUT_RETRIES = 1
+# After this many proxy timeouts on one kind of optional rewrite, this agent
+# stops asking for that kind for the rest of its campaign. Not retrying still
+# leaves 300 s burnt per doomed rewrite, and on mimo-v2.6-flash 19 of 20 were
+# doomed. A token cap does not help a model that reasons 17k-33k tokens before
+# writing code: capped, it returns no code at all. Each skip is in the call log.
+REWRITE_TIMEOUT_LIMIT = 3
+
+
+class ProxyTimeout(RuntimeError):
+    """HTTP 502 after ~300 s: the front proxy gave up on a long reply."""
 
 
 class LLMTransportError(RuntimeError):
@@ -364,6 +387,8 @@ class LLMAgent:
     # Everything below is state, not configuration.
     calls: list[Call] = field(default_factory=list, init=False, repr=False)
     _pending: list[Call] = field(default_factory=list, init=False, repr=False)
+    # Proxy timeouts per optional-rewrite kind, over this agent's campaign.
+    _rewrite_timeouts: dict = field(default_factory=dict, init=False, repr=False)
     _repairs: int = field(default=0, init=False, repr=False)
     _n: int = field(default=0, init=False, repr=False)
     # The reference file's own probe result, keyed by a digest of its text, so
@@ -1025,9 +1050,25 @@ class LLMAgent:
         rather than hiding them.
         """
         last: Exception | None = None
+        proxy_timeouts = 0
+        if kind in OPTIONAL_REWRITES and \
+                self._rewrite_timeouts.get(kind, 0) >= REWRITE_TIMEOUT_LIMIT:
+            note = (f"skipped: {kind} hit the proxy's {PROXY_TIMEOUT_S}s limit "
+                    f"{self._rewrite_timeouts[kind]} times this campaign")
+            self._pending.append(Call(kind, False, 0.0, error=note))
+            raise LLMError(note)
         for attempt in range(MAX_TRANSPORT_RETRIES + 1):
             try:
                 return self._one_attempt(prompt, kind)
+            except ProxyTimeout as exc:
+                # See PROXY_TIMEOUT_S: waiting does not shorten a reply.
+                if kind in OPTIONAL_REWRITES:
+                    self._rewrite_timeouts[kind] = self._rewrite_timeouts.get(kind, 0) + 1
+                if kind in OPTIONAL_REWRITES or proxy_timeouts >= PROXY_TIMEOUT_RETRIES:
+                    raise LLMError(f"{exc}") from None
+                proxy_timeouts += 1
+                last = exc
+                continue
             except LLMTransportError as exc:
                 last = exc
                 if attempt == MAX_TRANSPORT_RETRIES:
@@ -1074,6 +1115,10 @@ class LLMAgent:
                                       error=f"HTTP {resp.status_code}"))
             # 429 and 5xx mean "ask again"; 400 and 401 mean "you are wrong",
             # and re-asking those just burns the budget on the same mistake.
+            if resp.status_code == 502 and latency >= PROXY_TIMEOUT_FLOOR_S:
+                raise ProxyTimeout(
+                    f"HTTP 502 after {latency:.0f}s: the gateway's proxy cut off "
+                    f"a reply longer than its {PROXY_TIMEOUT_S}s limit")
             if resp.status_code == 429 or 500 <= resp.status_code < 600:
                 raise LLMTransportError(
                     f"HTTP {resp.status_code}: {resp.text[:200]}")

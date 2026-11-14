@@ -383,6 +383,14 @@ def _is_transient(exc: Exception) -> bool:
 # evidence every time and can only veto, so a retry can cost power but cannot
 # manufacture a pass. The attempts are recorded on the verdict.
 UNUSABLE_RETRIES = 2
+# A 502 that arrives after ~300 s is the gateway proxy's timeout on a long
+# reply, not a flaky endpoint, and SEAT_BACKOFF_S cannot shorten a reply: up to
+# five more 300 s attempts with sleeps of 30 s to 10 min, nearly an hour per
+# seat. One immediate retry (a fresh sample may be shorter), then CANNOT_TELL
+# saying why. Same rule as `src/core/loop/llm.py` PROXY_TIMEOUT_S; this module
+# imports nothing from src/, so the number is repeated.
+PROXY_TIMEOUT_FLOOR_S = 285
+PROXY_TIMEOUT_RETRIES = 1
 UNUSABLE_BACKOFF_S = 10
 _UNUSABLE = ("reply was not JSON", "empty reply")
 
@@ -397,15 +405,26 @@ def _one(axis: str, client: Client, summary: dict, source: str | None,
     last = None
     transport = 0           # transient faults and substitutions, SEAT_BACKOFF_S
     unusable = 0            # replies the seat could not use, UNUSABLE_RETRIES
+    proxy = 0               # 502s at the proxy's 300 s limit, PROXY_TIMEOUT_RETRIES
     attempts = 0
     while True:
         attempts += 1
+        t0 = time.monotonic()
         try:
             got = client.ask(_prompt(axis), _slice(axis, summary, source, hypothesis))
         except ModelSubstituted as exc:
             last = exc                      # retried, never accepted
         except LLMUnavailable as exc:
             last = exc
+            if "502" in str(exc) and time.monotonic() - t0 >= PROXY_TIMEOUT_FLOOR_S:
+                if proxy < PROXY_TIMEOUT_RETRIES:
+                    proxy += 1
+                    continue                # at once: waiting cannot shorten it
+                return AuditorVerdict(
+                    axis=axis, verdict="CANNOT_TELL",
+                    reasons=(f"the auditor did not run: its reply exceeded the "
+                             f"gateway proxy's 300 s limit on {attempts} "
+                             f"attempt(s)",), error=str(exc), attempts=attempts)
             if _is_unusable(exc) and unusable < UNUSABLE_RETRIES:
                 unusable += 1
                 time.sleep(UNUSABLE_BACKOFF_S)

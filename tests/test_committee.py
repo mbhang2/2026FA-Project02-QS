@@ -626,3 +626,47 @@ def test_the_leakage_seat_is_meant_to_pass():
     text = (PROMPTS / "leakage.md").read_text()
     assert "verification, not prevention" in text
     assert "PASS is correct" in text
+
+
+# --------------------------------------------------------------------------- #
+# 2026-11-12: a seat cut off at the proxy's 300 s limit
+# --------------------------------------------------------------------------- #
+def _seat_at(monkeypatch, outcomes, elapsed):
+    import importlib
+    import time as _time
+    R = importlib.import_module("audit.committee.review")
+    from audit.committee.llm import LLMUnavailable
+    calls, slept, now = [], [], [0.0]
+
+    class C:
+        def ask(self, system, user):
+            calls.append(1)
+            now[0] += elapsed
+            out = outcomes[len(calls) - 1]
+            if isinstance(out, str):
+                raise LLMUnavailable(out)
+            return out
+
+    monkeypatch.setattr(_time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(_time, "sleep", slept.append)
+    monkeypatch.setattr(R, "_prompt", lambda axis: "s")
+    monkeypatch.setattr(R, "_slice", lambda *a: "u")
+    return R._one("leakage", C(), {}, None, None), calls, slept
+
+
+def test_a_seat_cut_off_by_the_proxy_is_retried_once_then_says_why(monkeypatch):
+    v, calls, slept = _seat_at(monkeypatch, ["HTTP 502: proxy"] * 6, elapsed=300.5)
+    assert len(calls) == 2 and slept == []
+    assert v.verdict == "CANNOT_TELL" and "300 s limit" in v.reasons[0]
+
+
+def test_a_seat_whose_retry_fits_the_limit_gives_its_verdict(monkeypatch):
+    v, calls, _ = _seat_at(monkeypatch, ["HTTP 502: proxy",
+                                         {"verdict": "PASS", "reasons": []}], elapsed=300.5)
+    assert len(calls) == 2 and v.verdict == "PASS"
+
+
+def test_a_quick_502_still_backs_off(monkeypatch):
+    v, calls, slept = _seat_at(monkeypatch, ["HTTP 502: flaky",
+                                             {"verdict": "PASS", "reasons": []}], elapsed=3.0)
+    assert v.verdict == "PASS" and slept and slept[0] == 30

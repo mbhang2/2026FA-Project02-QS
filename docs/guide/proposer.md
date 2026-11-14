@@ -35,7 +35,10 @@ the p-values, or how many trials the correction will charge for.
    sends `cache: {"no-cache": true}` so the gateway never replays an earlier
    reply. A reply from a different model than the one asked for raises
    `ModelSubstituted` and stops the campaign. HTTP 429 and 5xx are retried up to
-   5 times after 30, 120, 300, 600, 600 s.
+   5 times after 30, 120, 300, 600, 600 s, **except a 502 at the proxy's 300 s
+   limit**: a proposal is retried once at once, an optional rewrite not at all,
+   and a rewrite kind that hits it 3 times is skipped for the rest of the
+   campaign (`PROXY_TIMEOUT_S` in `llm.py`).
 4. **Static check.** `compile()`, an AST pass and mypy, on a scratch copy;
    nothing executes. A failure goes back to the model as a `repair`, at most
    twice (`max_repair_attempts`).

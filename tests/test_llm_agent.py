@@ -498,3 +498,83 @@ def test_every_attempt_is_recorded_rather_than_only_the_last():
     # the Call append happens inside _one_attempt, which the loop calls per try
     i = src.index("def _one_attempt")
     assert "self._pending.append" in src[i:i + 3000]
+
+
+# --------------------------------------------------------------------------- #
+# 2026-11-12: a 502 at the proxy's 300 s limit is not a fault waiting helps
+# --------------------------------------------------------------------------- #
+def test_an_optional_rewrite_cut_off_by_the_proxy_is_not_retried(monkeypatch):
+    """Measured: 19 of 20 fidelity_repair calls on a rehearsal hit the 300 s
+    proxy limit, and the backoff made each doomed rewrite cost ~55 minutes."""
+    slept = []
+    for kind in ("fidelity_repair", "judge_repair", "probe_repair"):
+        agent = _agent()
+        seen = _attempts(agent, monkeypatch, [llm.ProxyTimeout("HTTP 502 after 300s")] * 6)
+        monkeypatch.setattr(llm.time, "sleep", slept.append)
+        with pytest.raises(llm.LLMError, match="300s limit|after 300s"):
+            agent._one("p", kind)
+        assert seen == [kind]
+    assert slept == []
+
+
+def test_a_proposal_cut_off_by_the_proxy_is_retried_once_at_once(monkeypatch):
+    slept = []
+    agent = _agent()
+    seen = _attempts(agent, monkeypatch, [llm.ProxyTimeout("HTTP 502 after 300s"), "code"])
+    monkeypatch.setattr(llm.time, "sleep", slept.append)
+    assert agent._one("p", "propose") == "code"
+    assert seen == ["propose", "propose"] and slept == []
+
+    agent = _agent()
+    seen = _attempts(agent, monkeypatch, [llm.ProxyTimeout("x")] * 6)
+    with pytest.raises(llm.LLMError):
+        agent._one("p", "propose")
+    assert len(seen) == 1 + llm.PROXY_TIMEOUT_RETRIES
+
+
+def test_a_quick_502_still_backs_off_as_before(monkeypatch):
+    """A 502 in seconds is a flaky upstream; waiting does help with that."""
+    slept = []
+    agent = _agent()
+    seen = _attempts(agent, monkeypatch, [llm.LLMTransportError("HTTP 502: x"), "code"])
+    monkeypatch.setattr(llm.time, "sleep", slept.append)
+    assert agent._one("p", "fidelity_repair") == "code"
+    assert slept == [llm.TRANSPORT_BACKOFF_S[0]]
+
+
+@pytest.mark.parametrize("elapsed,expected", [(300.4, "ProxyTimeout"), (12.0, "LLMTransportError")])
+def test_only_a_late_502_is_classed_as_the_proxy_timeout(monkeypatch, elapsed, expected):
+    import requests
+    agent = _agent()
+
+    class R:
+        status_code = 502
+        text = "Proxy Error"
+
+    clock = iter([1000.0, 1000.0 + elapsed])
+    monkeypatch.setattr(llm.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(requests, "post", lambda *a, **k: R())
+    monkeypatch.setenv("LITELLM_API_KEY", "k")
+    with pytest.raises(Exception) as got:
+        agent._one_attempt("## SYSTEM\ns\n## USER\nu", "propose")
+    assert type(got.value).__name__ == expected
+    assert agent._pending[-1].error == "HTTP 502"          # still recorded
+
+
+def test_a_rewrite_kind_that_keeps_timing_out_is_skipped_for_the_campaign(monkeypatch):
+    """Not retrying still burns 300 s per doomed rewrite; after the limit this
+    agent stops asking for that kind, and says so in its call log."""
+    agent = _agent()
+    seen = _attempts(agent, monkeypatch, [llm.ProxyTimeout("x")] * 20)
+    for _ in range(llm.REWRITE_TIMEOUT_LIMIT):
+        with pytest.raises(llm.LLMError):
+            agent._one("p", "fidelity_repair")
+    assert len(seen) == llm.REWRITE_TIMEOUT_LIMIT
+    with pytest.raises(llm.LLMError, match="skipped"):
+        agent._one("p", "fidelity_repair")
+    assert len(seen) == llm.REWRITE_TIMEOUT_LIMIT          # no call made
+    assert agent._pending[-1].error.startswith("skipped: fidelity_repair")
+    # other kinds are unaffected
+    with pytest.raises(llm.LLMError, match="300s|x"):
+        agent._one("p", "probe_repair")
+    assert seen[-1] == "probe_repair"

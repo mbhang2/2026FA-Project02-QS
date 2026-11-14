@@ -47,7 +47,8 @@ than v4-pro), not yet measured here.
 | Failure | What it means | What the loop does |
 |---|---|---|
 | `ModelSubstituted` | Another model answered | Refuses. Running on, the record would name a model that did not answer |
-| HTTP 502 at ~300 s | The Apache proxy timed out a long reply | Resends after 30, 120, 300, 600, 600 s (5 tries); ~72% of resends succeed |
+| HTTP 502 at ~300 s | The Apache proxy timed out a long reply | Since 2026-11-12: an optional rewrite is not retried, and after 3 such timeouts its kind is skipped for the campaign; a proposal or static repair is retried once, at once. Each auditor likewise: one immediate retry, then `CANNOT_TELL` naming the limit |
+| HTTP 502 within seconds | A flaky upstream | Resends after 30, 120, 300, 600, 600 s (5 tries) |
 | HTTP 429 / other 5xx | Rate limit or upstream fault | Same retries |
 | HTTP 400 / 401 / 422 | Our request is wrong, or the key's budget is spent | No retry |
 | `finish_reason: length` | Ran out of output tokens (often in reasoning) | Recorded; the proposal is blocked or repaired |

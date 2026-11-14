@@ -98,7 +98,8 @@ commit path is the one thing it cannot test.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `no validation profile 'X-validation'` | The training profile has no validation pair in `config/run.yaml` | Add the pair. **Known gap: `rehearsal` has none, so a rehearsal never reaches L2** |
+| `no validation profile 'X-validation'` | The training profile has no validation pair in `config/run.yaml` | Add the pair (`rehearsal-validation` was added 2026-11-12) |
+| L2 `VERDICT WITHHELD … campaigns have no validation null` | Those campaigns' winners never traded on validation, so there is nothing to build a null from | A result, not a fault: M cannot be established, so no correction is computed |
 | `not scored on validation, so cannot be in a family` | Validation did not run for those campaigns | The validate logs under `runs/sessions/<session>/` |
 | `refinement FAILED … STOPPING WITHOUT VALIDATING` | The refiner could not write the next question | Its log under `runs/sessions/<session>/`; often a seat that could not run |
 | `a family needs exactly one of seed: … or seed_question:` | Both or neither given | Give one |

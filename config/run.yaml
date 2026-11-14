@@ -119,6 +119,25 @@ profiles:
     history_window: 512
     commission_per_contract: 0.62
 
+  # **The rehearsal's validation pair, added 2026-11-12.** A session validates
+  # each winner on `<base>-validation` (`nq_campaign.validation_profile_for`),
+  # which must share the training profile's dataset, fill model and commission.
+  # `rehearsal` had no pair, so every rehearsal stopped at phase 2 with "no
+  # validation profile" and never reached L2 -- the step rehearsals exist to
+  # exercise. Identical to `rehearsal` but for the split. Still synthetic data,
+  # so validating on it is not a look (Amendment 13).
+  rehearsal-validation:
+    dataset: synthetic
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 0
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+    commission_per_contract: 0.62
+
   # Task 37's positive control. The same campaign profile in every respect --
   # train split, unfavorable fills, seed 1, same caps and budgets -- with a
   # planted signal of known strength and nothing else changed. Two strengths,

@@ -72,3 +72,16 @@ def test_empty_nulls_are_a_defect_only_when_a_trial_was_scored(tmp_path, monkeyp
     bad = "\n".join(reh.check(2))
     assert "reh-01: every null sample is EMPTY" not in bad      # nothing scored
     assert "reh-02: every null sample is EMPTY" in bad          # the merge bug
+
+
+def test_a_rehearsal_can_reach_validation_and_l2():
+    """`rehearsal` had no validation pair, so every rehearsal stopped at phase 2
+    with "no validation profile" and never reached L2."""
+    spec = importlib.util.spec_from_file_location("nq_campaign_t", ROOT / "scripts" / "nq_campaign.py")
+    nq = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(nq)
+    assert nq.validation_profile_for("rehearsal", False) == "rehearsal-validation"
+    profiles = nq.cfg()["profiles"]
+    t, v = profiles["rehearsal"], profiles["rehearsal-validation"]
+    assert v["split"] == "validation" and v["dataset"] == "synthetic"
+    assert {k: t[k] for k in t if k != "split"} == {k: v[k] for k in v if k != "split"}

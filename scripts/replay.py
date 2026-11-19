@@ -322,7 +322,8 @@ def main() -> int:
         replayed_digest = engine.fill_log_digest()
         recorded_digest = row.get("fill_log_digest", "")
         same_fills = log_digest(stored) == recorded_digest == replayed_digest
-        rebuilt = reconstruct(stored, commission_per_contract=engine.commission)
+        rebuilt = reconstruct(stored, commission_per_contract=engine.commission,
+                              commission_bps=engine.commission_bps)
         net = rebuilt.realized_pnl - rebuilt.commission
         print(f"fills      {len(stored):,}  digest {recorded_digest[:16]}  "
               f"{'same as replayed' if same_fills else 'DIFFERENT from replayed'}")

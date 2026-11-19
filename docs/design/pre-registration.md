@@ -2230,3 +2230,44 @@ Two things it does not do. It does not choose among candidate questions -- one r
 ### And a refinement no seat read is not committed — 2026-11-12
 
 **A tightening of Amendment 11, not a loosening, so it needs no signature to be safe -- but it changes what the amendment says, so it is written here.** Amendment 11 let its two agentic seats fail *open*, so a dead model call could not end a night. On 2026-11-12 both seats' model (`mimo-v2.6-pro`) was being answered by another model, every seat call was refused as a substitution, and every refinement in an unattended family would have been committed with no model having read it -- including rewrites the refiner made on its own judgement when no paper answered a diagnosed problem. `refine_hypothesis.py --commit` now refuses, before writing the file, when either seat never read the question (did not run, unreadable verdict, or never reached). A seat that read it and could not tell, or objected past the repair cap, is a reading and is unchanged. `--reviewer-model` (plan key `refine_reviewer_model`) runs both seats on a model the gateway serves. A night that stops is logged as a stop; a question nobody read was being logged as passed.
+
+## Amendment 16 — 2026-11-19 — crypto perpetuals: costs and returns on notional
+
+**Status: IN FORCE from 2026-11-19, signed off by Michael.** Drafted the same day by Claude on request and approved as written. It governs every crypto profile from its first scored trial; no crypto trial was scored before it was signed. No NQ or options profile is affected: every number they produce is unchanged to the bit (`scoring_units: points` is the default and reproduces the previous code path exactly).
+
+### Why
+
+The second dataset, Binance USDT-margined perpetuals (`crypto-trades:BTCUSDT`, `crypto-trades:ETHUSDT`; split in `config/calendars/crypto-trades.yaml`), breaks three assumptions the metric was built on:
+
+1. **Costs are a share of notional.** Crypto exchanges charge basis points of `price x size`. `commission_per_contract` is a fixed number of price points, which at BTC $16k and $100k is a 6x different fee for the same trade.
+2. **A price point means a different amount every month.** Session returns were P&L in points divided by a constant. BTC traded from about $16k to over $100k inside the training split, so a constant-divided score would weight the late sessions several times more than the early ones and reward whatever worked in the highest-priced stretch.
+3. **Holding a perpetual costs funding.** Every 8 hours a long pays `rate x notional` to shorts (or receives it when the rate is negative). A strategy that holds through settlements without paying them is scored on P&L it would not have had.
+
+### What changes, for profiles that opt in
+
+| | rule | where |
+|---|---|---|
+| a | `commission_bps`: every fill pays `bps x 1e-4 x price x size` on top of `commission_per_contract`. Crypto profiles set **5.0 bp per side** (the retail taker tier on all three exchanges; maker fills are charged the same, the expensive side of realistic) and `commission_per_contract: 0`. | `src/core/engine/reconstruct.py` (`fill_commission`), used by the engine and the reconstruction alike |
+| b | `scoring_units: notional`: each session's return is divided by that session's opening price (the first 1-minute kline's open), so a return is a share of one lot-coin's notional | `src/core/scoring/terms.py`, `metrics.session_returns` |
+| c | the idle charge becomes `idle_charge_fraction x opening price` points per lot per session, i.e. a constant share of notional | same |
+| d | `funding: true`: at each Binance settlement (00:00, 08:00, 16:00 UTC) the position held pays `position x mark x rate`, the mark being the open of the 1-minute kline containing the settlement; charged to the session it falls in | `metrics.funding_points` |
+
+**The idle charge is re-derived, not fitted**, by Amendment 3's method: the cost of the capital the position ties up. NQ's 0.18 points is $20k of margin at ~4.5% over 252 sessions, about **0.9 x 10^-5** of NQ's notional per session. For a perpetual at 10% initial margin (10x), 4.5% over 365 sessions gives **1.2 x 10^-5**; margin 5-20% and rates 4-5% span 0.55-2.7 x 10^-5. `idle_charge_fraction: 1.2e-5` is registered. Re-derive if rates move; never re-fit to a result.
+
+### Every path uses the same terms
+
+`scoring_terms(cfg, profile, dataset, calendar)` is the one place the notional, the idle charge and the funding series are resolved, and `run.py`, `scripts/l2_gate.py`, `scripts/holdout.py` and `scripts/nq_campaign.py` (the max-of-N null) all call it. Before this, the scripts used the module default `IDLE_CHARGE`, which matched `campaign.idle_charge` only because both were 0.18. A crypto trial and the null rebuilt for it later now cannot be scored under different terms; `round_turn.identity_primary` still checks it.
+
+**Funding reaches the null the way the idle charge does: as the observed run's fixed per-session vector.** It is not re-signed when a round turn's direction is flipped. That is a simplification, stated: a flipped trade would have paid the opposite funding. At Binance's typical 1 bp per 8 hours it is small next to the 10 bp round-trip commission, which the null does charge again.
+
+### What it does NOT change
+
+The splits, the embargo, the holdout lock, the pass rules, `max_of_n`, the exposure floor, MIN_SESSIONS, and the gate's statistic. No NQ profile sets `commission_bps` or `scoring_units`.
+
+### What would invalidate this amendment
+
+- A crypto profile scored with `scoring_units: points`, or with a `notional_base` constant (refused in code).
+- A crypto trial whose null was built with terms other than `scoring_terms` returned for its profile.
+- `idle_charge_fraction` or `commission_bps` changed after a crypto campaign has scored a trial, without a new amendment.
+
+Code: `src/core/data/crypto.py`, `src/core/scoring/terms.py`, `src/core/scoring/metrics.py` (`PerSession`, `FundingEvent`, `funding_points`), `src/core/engine/reconstruct.py` (`fill_commission`); profiles `crypto-btc-train`, `crypto-btc-validation` in `config/run.yaml`.

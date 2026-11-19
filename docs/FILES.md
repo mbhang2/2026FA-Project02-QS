@@ -69,6 +69,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/check_agent_paths.py` | CI guard: the research agent may only ever change `src/strategies/**`. |
 | `scripts/committee_retry.py` | Re-run the committee seats that never ran, beside the record and never over it. |
 | `scripts/correction_fwer.py` | Measure FWER for the `max_of_n` variants, under the global null. |
+| `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/detectability.py` | What size of edge could this gate have found? Power, from our own nulls. |
 | `scripts/gen_agent_data.py` | Generate the data reference the RESEARCH agent is handed. |
 | `scripts/gen_context_api.py` | Generate the context API reference the agent is handed. |
@@ -155,7 +156,9 @@ The metric, the nulls, and the correction.
 | `src/core/scoring/randomization/random_trader.py` | The dataset's own yardstick: what does trading it at RANDOM earn? |
 | `src/core/scoring/randomization/rotation.py` | Circular rotation of each session's price path against the clock. |
 | `src/core/scoring/randomization/round_turn.py` | A candidate's null from its own round turns: flip the direction, keep the cost. |
+| `src/core/scoring/randomization/txnsim.py` | Round turn trade Monte Carlo: random traders with the candidate's own style. |
 | `src/core/scoring/scorer.py` | Blotter in, score tuple out. Nothing dataset-specific. |
+| `src/core/scoring/terms.py` | The scoring terms for a profile: what a session return is divided by, what an |
 
 ## Data
 
@@ -164,6 +167,9 @@ Datasets, calendars, and where the split is enforced.
 | File | What it does |
 |---|---|
 | `src/core/data/__init__.py` | Datasets: the protocol, the adapters, and the DBN reading rules. |
+| `src/core/data/bucket_layout.py` | Where each object lives in the R2 bucket, separately from what it is called. |
+| `src/core/data/crypto.py` | Crypto perpetual trades (Binance USDT-margined) behind the `Dataset` interface. |
+| `src/core/data/crypto_raw.py` | Read raw crypto-perpetual archive files from Binance, Bybit and OKX into one schema. |
 | `src/core/data/dataset.py` | The `Dataset` protocol and the split machinery that enforces pre-registration. |
 | `src/core/data/dbn.py` | Reading Databento DBN objects, in one place. |
 | `src/core/data/nq.py` | NQ futures trades, behind the `Dataset` interface. The first real adapter. |
@@ -274,6 +280,7 @@ Profiles, the correction, and house limits.
 | File | What it does |
 |---|---|
 | `config/bwis-priors.json` | data (JSON) |
+| `config/calendars/crypto-trades.yaml` | Pre-registered train / validation / holdout split for the crypto trades dataset |
 | `config/calendars/nq-trades.yaml` | Pre-registered train / validation / holdout split for the NQ trades dataset. |
 | `config/corrections.yaml` | Historical corrections record. |
 | `config/house-constraints.yaml` | House constraints: the operating limits this desk usually fixes, added to a |
@@ -400,6 +407,8 @@ What each test file pins.
 | `tests/test_committee.py` | The four-auditor committee: isolated, veto-only, and outside the harness. |
 | `tests/test_committee_retry.py` | A seat that never ran is asked again: inside the committee, and afterwards. |
 | `tests/test_context_and_run.py` | The context facade and the run entry point. |
+| `tests/test_crypto_data.py` | Crypto archives: each exchange's conventions normalise to one schema, and the fetcher's listing parsers. |
+| `tests/test_crypto_scoring.py` | Amendment 16: crypto scoring on notional, with funding -- and NQ left untouched. |
 | `tests/test_data_integrity.py` | Integrity guards for `raw/`, the one canonical location. |
 | `tests/test_detectability.py` | What the gate could have found, computed from the nulls it already used. |
 | `tests/test_distil_paper.py` | Stage 3 of paper retrieval: the one stage that produces a registerable file. |
@@ -468,6 +477,7 @@ What each test file pins.
 | `tests/test_teammate_integration.py` | Cross-tree checks (Task 41). These run in CI; the teammate suites do not. |
 | `tests/test_tier_contract.py` | The tier-2 / tier-3 contract (Task 43). Runs in CI; the teammate suites do not. |
 | `tests/test_trajectory.py` | The fail-closed whitelist, lifted from Gowtam's TrajectoryLeak. |
+| `tests/test_txnsim.py` | Round turn trade Monte Carlo: blotter's `txnsim`, scored by the gate. |
 | `tests/test_viperq_amt.py` | The ViperQ-derived champion: the properties that would fail quietly. |
 | `tests/test_volume_profile.py` | Volume at price: VPOC, Value Area, Low Volume Nodes. |
 | `tests/test_worker_tree.py` | Isolated working copies — Brian's point 4, the half that needs no new |
@@ -479,6 +489,8 @@ What each test file pins.
 |---|---|
 | `.github/workflows/tests.yml` | The agent may only ever change src/strategies/**. Tool permissions are |
 | `README.md` | 2026FA-Project02-2-QS — AutoResearch for Quantitative Finance |
+| `config/datasets/crypto.yaml` | Crypto perpetuals: which public archives scripts/crypto_fetch.py pulls, and from when. |
+| `data/crypto-manifest.json` | data (JSON) |
 | `data/dbn-version-equivalence.json` | data (JSON) |
 | `data/manifest.json` | data (JSON) |
 | `data/nq-contract-selection.json` | data (JSON) |
@@ -494,6 +506,7 @@ What each test file pins.
 | `docs/agent/data.md` | Data available to a strategy |
 | `docs/agent/strategy-api.md` | Writing a strategy |
 | `docs/data-inventory.md` | Data Inventory |
+| `docs/datasets/crypto.md` | Crypto perpetuals: Binance, Bybit, OKX |
 | `docs/datasets/nq-es-qqq.md` | Dataset — NQ / ES futures and QQQ options |
 | `docs/design/architecture.md` | Architecture |
 | `docs/design/ast-strategies.md` | AST strategies — Nalin's primitive library, used from a streaming engine |

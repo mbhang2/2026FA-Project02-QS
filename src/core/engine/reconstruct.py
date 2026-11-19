@@ -9,7 +9,7 @@ The arithmetic is a re-derivation, not a redefinition. Average price moves only
 when exposure increases, is left alone while reducing or flattening, and resets
 at the fill that flips a position through zero; realized P&L is booked on the
 closing portion at the price it closed at; commission is per contract on every
-fill. Those are the rules `Engine._apply_fill` already followed, transcribed. If
+fill, plus `commission_bps` of the fill's notional where a profile sets it. Those are the rules `Engine._apply_fill` already followed, transcribed. If
 the two ever disagree, that is a defect to name and not a tie to break.
 
 The output is a `Blotter`, deliberately. Everything downstream -- the metric, the
@@ -35,8 +35,18 @@ class FillLogFull(RuntimeError):
     """
 
 
+def fill_commission(price: float, size: int, *, commission_per_contract: float,
+                    commission_bps: float = 0.0) -> float:
+    """What one fill costs, in price units x size: a fixed amount per contract
+    (NQ, in index points) plus a share of notional (crypto, in basis points of
+    `price x size`). The engine and this module both charge through here, so the
+    accumulator and the reconstruction cannot price a fill two ways."""
+    return commission_per_contract * size + commission_bps * 1e-4 * price * size
+
+
 def reconstruct(
-    fills: Sequence[FillRecord], *, commission_per_contract: float
+    fills: Sequence[FillRecord], *, commission_per_contract: float,
+    commission_bps: float = 0.0,
 ) -> Blotter:
     """The blotter the fills imply.
 
@@ -97,7 +107,10 @@ def reconstruct(
                 price=fill.price,
                 size=fill.size,
                 position_after=position,
-                commission=commission_per_contract * fill.size,
+                commission=fill_commission(
+                    fill.price, fill.size,
+                    commission_per_contract=commission_per_contract,
+                    commission_bps=commission_bps),
                 realized_pnl=realized,
                 tag=fill.tag,
                 asset=fill.asset,

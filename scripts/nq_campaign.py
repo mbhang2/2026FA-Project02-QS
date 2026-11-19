@@ -772,6 +772,17 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
             "'txnsim': replicate j is not the same randomisation for two "
             "candidates that trade differently. Use correction_rule "
             "'independent'.")
+    # **txnsim prices its random traders in points with a per-contract fee**, so
+    # it cannot reproduce a crypto profile's terms (Amendment 16: bp fees,
+    # per-session notional, funding). Refused here rather than mis-scored later.
+    if cc["null_source"] == "txnsim" and (
+            profile.get("scoring_units", "points") != "points"
+            or profile.get("commission_bps", 0.0)):
+        sys.exit(
+            f"null_source 'txnsim' does not yet support profile {profile_name!r}: "
+            "it scores in points with a per-contract commission, and this profile "
+            "uses Amendment 16's notional returns or basis-point fees. Use "
+            "'round_turn_mc', whose null takes the same scoring_terms as the trial.")
     agent_cfg["null_source"] = cc["null_source"]
     if cc["null_source"] == "txnsim":
         # Frozen at registration like the null itself: the two modes are
@@ -1349,6 +1360,9 @@ def stage_nulls(name: str) -> None:
     calendar = metrics.session_calendar(dataset, sessions)
     print(f"  calendar: {len(calendar)} scored sessions on the train split",
           flush=True)
+    # The terms run.py scored each trial with; see src/core/scoring/terms.py.
+    from src.core.scoring.terms import scoring_terms
+    terms = scoring_terms(cfg(), profile, dataset, calendar)
 
     samples, t0 = [], time.monotonic()
     rule = _rec.correction_rule or "independent"
@@ -1463,7 +1477,8 @@ def stage_nulls(name: str) -> None:
         if not fills or score.get("primary") is None or score.get("rejected"):
             samples.append([])
             continue
-        blotter = reconstruct(fills, commission_per_contract=commission)
+        blotter = reconstruct(fills, commission_per_contract=commission,
+                              commission_bps=profile.get("commission_bps", 0.0))
         # **The seed decides whether the nulls can be read jointly.**
         #
         # `70_000 + i` gives every trial its own randomisation stream, so
@@ -1491,9 +1506,11 @@ def stage_nulls(name: str) -> None:
         if tape is not None:
             samples.append(tx.null_sample(
                 blotter, calendar, tape, commission_per_contract=commission,
-                b=B_NULL, seed=seed, mode=tx_mode))
+                b=B_NULL, seed=seed, mode=tx_mode,
+                idle_charge=terms["idle_charge"],
+                notional_base=terms["notional_base"]))
         else:
-            samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed))
+            samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed, **terms))
         print(f"  {i + 1}/{len(rows)}  {len(samples[-1])} draws  "
               f"{time.monotonic() - t0:.0f}s", flush=True)
     # **The recorded source is the one that RAN.** This was hardcoded to

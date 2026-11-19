@@ -263,6 +263,26 @@ def build_dataset(cfg: dict, name: str, seed: int):
             sys.exit(f"unknown spx-options keys for dataset {name!r}: {sorted(spec)}")
         return SPXHestonDataset(spec=_SSpec(n_sessions=n_sessions),
                                 surface=surface, path_seed=seed)
+    if kind == "crypto":
+        # Same credentials as NQ: the read-only key reads `crypto/` too. Files
+        # already in the local lake (`$CRYPTO_LAKE`) are read from disk instead.
+        import os
+
+        import boto3
+
+        from src.core.data.crypto import CryptoDataset, CryptoSpec
+
+        client = None
+        if all(os.environ.get(v) for v in ("R2_ENDPOINT", "R2_ACCESS_KEY_ID",
+                                           "R2_SECRET_ACCESS_KEY", "R2_BUCKET")):
+            client = boto3.client(
+                "s3",
+                endpoint_url=os.environ["R2_ENDPOINT"],
+                aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
+                aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
+                region_name="auto",
+            )
+        return CryptoDataset(client, os.environ.get("R2_BUCKET"), CryptoSpec(**spec))
     sys.exit(f"no adapter for dataset kind {kind!r} yet")
 
 
@@ -587,6 +607,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
                 # rather than silent.
                 **({"commission_per_contract": profile["commission_per_contract"]}
                    if "commission_per_contract" in profile else {}),
+                commission_bps=profile.get("commission_bps", 0.0),
             )
             record = _run_and_score(cfg, profile, engine, strategy, split, seed,
                                     ledger_path)
@@ -691,11 +712,14 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     # said 0.10 while the P&L said 0.01. Nothing cross-checked the two, and this
     # identity would have caught it on the first trial.
     want = profile.get("commission_per_contract", engine.commission)
+    want_bps = profile.get("commission_bps", 0.0)
     charged = sum(r.commission for r in scored_blotter.rows)
-    expected = want * sum(r.size for r in scored_blotter.rows)
+    expected = (want * sum(r.size for r in scored_blotter.rows)
+                + want_bps * 1e-4 * sum(r.price * r.size for r in scored_blotter.rows))
     if abs(charged - expected) > 1e-9 * max(1.0, abs(expected)):
         raise ScoringMismatch(
-            f"the profile charges {want} per contract per side and the blotter "
+            f"the profile charges {want} per contract plus {want_bps} bp of notional "
+            f"per side and the blotter "
             f"paid {charged:.6f} on {sum(r.size for r in scored_blotter.rows)} "
             f"contract-fills, which should be {expected:.6f}. The configured "
             "cost model did not reach the engine, so the P&L is not the P&L "
@@ -716,14 +740,20 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     # value declared in run.yaml that never reaches the code is a value the whole
     # record claims and nothing charges. Scoring and diagnostics must be handed
     # the same one or the diagnostics describe a different return vector.
-    idle_charge = cfg.get("campaign", {}).get("idle_charge", IDLE_CHARGE)
+    # Amendment 16: the notional, idle charge and funding come from one resolver
+    # that the gates call too, so a trial and the null rebuilt for it later use
+    # the same terms. For every `points` profile this is exactly what was here.
+    from src.core.scoring.terms import scoring_terms
+    terms = scoring_terms(cfg, profile, engine.dataset, period)
+    idle_charge = terms["idle_charge"]
     # Amendment 6. None when the config does not set it -> no floor. Passed to
     # BOTH score() calls below: a candidate rejected on exposure must not carry
     # an uncharged figure either.
     min_exposed = cfg.get("campaign", {}).get("min_exposed_fraction")
     result = score(scored_blotter, period=period,
-                   notional_base=profile.get("notional_base", 1.0),
+                   notional_base=terms["notional_base"],
                    idle_charge=idle_charge,
+                   funding=terms["funding"],
                    min_exposed_fraction=min_exposed)
     engine.record.score = result.as_dict()
     # **Amendment 5: the same Sortino with the charge at zero, reported beside
@@ -734,16 +764,18 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     # one that selected it and break train-vs-validation comparability (Task
     # 61). So both are recorded, and `primary` stays what it was.
     uncharged = score(scored_blotter, period=period,
-                      notional_base=profile.get("notional_base", 1.0),
+                      notional_base=terms["notional_base"],
                       idle_charge=0.0,
+                      funding=terms["funding"],
                       min_exposed_fraction=min_exposed)
     engine.record.score["primary_uncharged"] = (
         None if uncharged.rejected else uncharged.primary)
     engine.record.diagnostics = score_diagnostics(
         scored_blotter,
         period,
-        notional_base=profile.get("notional_base", 1.0),
+        notional_base=terms["notional_base"],
         idle_charge=idle_charge,
+        funding=terms["funding"],
         fill_model_spread=(
             _fill_model_spread(cfg, profile, seed, strategy, split, engine)
             if profile.get("record_fill_spread")

@@ -116,9 +116,11 @@ def test_the_real_documents_current_statuses():
     # at registration until it is. Flip this when a human signs it.
     # 15 drafted 2026-11-11, NOT signed: a question written from a statement
     # may run unread (`--question`). Flip this when a human signs it.
+    # 16 drafted and signed 2026-11-19: crypto perpetuals scored on notional,
+    # with bp fees and funding.
     expected = {1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
                 8: True, 9: True, 10: True, 11: True, 12: True, 13: True,
-                14: False, 15: False}
+                14: False, 15: False, 16: True}
     actual = {n: ok for n, ok, _ in mod.all_amendments()}
     assert actual == expected, actual
 

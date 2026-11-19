@@ -716,6 +716,19 @@ def test_the_shipped_profiles_satisfy_it():
             dataset = run.build_dataset(cfg, profile["dataset"], profile["seed"])
             run.check_warmup_against_embargo(name, warmup, dataset)
             embargo = dataset.calendar().embargo_sessions
+        elif spec["kind"] == "crypto":
+            # Every UTC day is a session (no holidays), so the session list is
+            # the day range the pre-registration covers -- the same arithmetic
+            # the adapter does once the archive is complete, without the bucket.
+            import yaml
+
+            path = REPO_ROOT / "config" / "calendars" / "crypto-trades.yaml"
+            doc = yaml.safe_load(path.read_text())["splits"]
+            first = dt.date.fromisoformat(str(doc["train"]["start"]))
+            last = dt.date.fromisoformat(str(doc["holdout"]["end"]))
+            dates = [first + dt.timedelta(days=i) for i in range((last - first).days + 1)]
+            embargo = load_calendar(path, dates).embargo_sessions
+            assert warmup <= embargo, (name, warmup, embargo)
         else:
             manifest = json.loads((REPO_ROOT / "data" / "manifest.json").read_text())
             dates = [
@@ -1234,8 +1247,10 @@ def test_reconstruction_is_a_pure_function_of_the_fills():
 
     from src.core.engine import reconstruct as rec
 
+    # `commission_bps` (Amendment 16) is a rate, like `commission_per_contract`:
+    # still nothing that a run could have reached.
     params = list(inspect.signature(rec.reconstruct).parameters)
-    assert params == ["fills", "commission_per_contract"], params
+    assert params == ["fills", "commission_per_contract", "commission_bps"], params
 
     engine = Engine.for_test(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
     engine.run()

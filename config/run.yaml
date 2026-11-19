@@ -208,6 +208,43 @@ profiles:
     commission_per_contract: 0.10
     record_fill_spread: false
 
+  # CRYPTO, Binance BTCUSDT perpetual (pre-registration Amendment 16, in force 2026-11-19).
+  # A matched pair: same costs, fill model, warmup and scoring terms, because a
+  # campaign's winner is compared train-against-validation.
+  #
+  # Costs: 5 bp of notional per side (retail taker on all three exchanges, maker
+  # fills charged the same) and no per-contract fee. Returns are a share of the
+  # session's opening notional; the idle charge is 1.2e-5 of it per session
+  # (re-derived by Amendment 3's method: 10% margin at 4.5% over 365 sessions);
+  # funding is paid at each 8-hour settlement on the position held.
+  crypto-btc-train:
+    dataset: crypto-btc
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 7200
+    commission_per_contract: 0.0
+    commission_bps: 5.0
+    scoring_units: notional
+    idle_charge_fraction: 1.2e-5
+    funding: true
+    record_fill_spread: false
+
+  crypto-btc-validation:
+    dataset: crypto-btc
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 7200
+    commission_per_contract: 0.0
+    commission_bps: 5.0
+    scoring_units: notional
+    idle_charge_fraction: 1.2e-5
+    funding: true
+    record_fill_spread: false
+
   nq-train:
     dataset: nq
     split: train
@@ -502,6 +539,20 @@ datasets:
   nq:
     kind: nq
     symbol: NQ
+
+  # Binance USDT-margined perpetuals. One lot = 0.001 coin, so engine sizes are
+  # integers and P&L is USD per lot per $1 of price x lots. Sessions are UTC days;
+  # split in config/calendars/crypto-trades.yaml. See docs/datasets/crypto.md.
+  crypto-btc:
+    kind: crypto
+    symbol: BTCUSDT
+    exchange: binance
+    lot: 0.001
+  crypto-eth:
+    kind: crypto
+    symbol: ETHUSDT
+    exchange: binance
+    lot: 0.001
 
 # Campaign-level settings. Pre-registered by `docs/design/pre-registration.md`;
 # the values here are copied into `CampaignRecord` and hashed before trial 0, so

@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import databento_dbn as ddbn  # noqa: E402
 
 import inventory as inv  # noqa: E402
+from inventory import stored_key  # noqa: E402
 
 
 def is_local(target: str) -> bool:
@@ -75,7 +76,7 @@ def open_target(target: str):
         return LocalFetcher(p), "", target, p.stat().st_size
     bucket, key = split_uri(target)
     s3 = inv.s3_client(8)
-    size = s3.head_object(Bucket=bucket, Key=key)["ContentLength"]
+    size = s3.head_object(Bucket=bucket, Key=stored_key(key))["ContentLength"]
     return s3, bucket, key, size
 
 

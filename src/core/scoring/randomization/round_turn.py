@@ -75,7 +75,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from ...types import Blotter, BlotterRow
-from ..metrics import SessionSpan
+from ..metrics import FundingEvent, PerSession, SessionSpan, per_session
 
 B_DEFAULT = 10_000
 
@@ -146,8 +146,9 @@ def null_sample(
     *,
     b: int = B_DEFAULT,
     seed: int = 17,
-    notional_base: float = 1.0,
-    idle_charge: float | None = None,
+    notional_base: PerSession = 1.0,
+    idle_charge: PerSession | None = None,
+    funding: Sequence[FundingEvent] | None = None,
 ) -> list[float]:
     """`b` Sortinos under the sign-flip null. This is `null_samples[i]`.
 
@@ -189,14 +190,15 @@ def null_sample(
                            b=b, seed=seed, notional_base=notional_base,
                            charges=idle_charges(blotter, calendar,
                                                 idle_charge=charge,
-                                                notional_base=notional_base))
+                                                notional_base=notional_base,
+                                                funding=funding))
 
 
 def identity_primary(
     turns: Sequence[RoundTurn],
     sessions: Sequence[int],
     *,
-    notional_base: float = 1.0,
+    notional_base: PerSession = 1.0,
     charges: Sequence[float] | None = None,
 ):
     """The **no-flip** draw: the one assignment that must reproduce the observed.
@@ -234,19 +236,32 @@ def identity_primary(
     acc = np.zeros(len(sessions), dtype=float)
     for t in turns:
         acc[slot[t.session]] += t.gross - t.cost
-    if notional_base != 1.0:
-        acc /= notional_base
+    acc = _divide_by_notional(acc, notional_base, sessions)
     if charges is not None:
         acc += np.asarray(charges, dtype=float)
     return score_returns(acc.tolist())
+
+
+def _divide_by_notional(acc, notional_base: PerSession, sessions: Sequence[int]):
+    """`acc / notional_base` over the session axis (the last one). A constant of 1.0
+    is left alone, so every NQ number is unchanged to the bit."""
+    import numpy as np
+
+    if isinstance(notional_base, (int, float)):
+        if notional_base != 1.0:
+            acc /= notional_base
+        return acc
+    acc /= np.array([per_session(notional_base, s) for s in sessions], dtype=float)
+    return acc
 
 
 def identity_from_blotter(
     blotter: Blotter,
     calendar: Sequence[SessionSpan],
     *,
-    notional_base: float = 1.0,
-    idle_charge: float | None = None,
+    notional_base: PerSession = 1.0,
+    idle_charge: PerSession | None = None,
+    funding: Sequence[FundingEvent] | None = None,
 ):
     """`identity_primary`, built the way `null_sample` builds its own inputs.
 
@@ -261,7 +276,7 @@ def identity_from_blotter(
         round_turns(blotter, calendar), [c.session for c in calendar],
         notional_base=notional_base,
         charges=idle_charges(blotter, calendar, idle_charge=charge,
-                             notional_base=notional_base))
+                             notional_base=notional_base, funding=funding))
 
 
 def null_from_turns(
@@ -270,7 +285,7 @@ def null_from_turns(
     *,
     b: int = B_DEFAULT,
     seed: int = 17,
-    notional_base: float = 1.0,
+    notional_base: PerSession = 1.0,
     charges: Sequence[float] | None = None,
 ) -> list[float]:
     """The same null, from round turns and a session list rather than a blotter.
@@ -324,8 +339,7 @@ def null_from_turns(
         contrib = signs * gross - cost
         acc = np.zeros((c, n_sessions), dtype=float)
         np.add.at(acc, (np.arange(c)[:, None], slot[None, :]), contrib)
-        if notional_base != 1.0:
-            acc /= notional_base
+        acc = _divide_by_notional(acc, notional_base, sessions)
         if charge_vec is not None:
             # Already divided by notional_base by `idle_charges`, so it is added
             # after the division above rather than before it.

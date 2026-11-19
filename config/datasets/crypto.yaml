@@ -1,0 +1,31 @@
+# Crypto perpetuals: which public archives scripts/crypto_fetch.py pulls, and from when.
+#
+# No API key is needed for any of this: every source below is a public archive.
+# Downloads go OUTSIDE the repo (lake_root, or $CRYPTO_LAKE), the way vendor
+# downloads go to ~/dl/databento/ -- see docs/datasets/crypto.md.
+
+lake_root: ~/dl/crypto
+
+# Repo-wide symbol names; each exchange's own spelling is derived in the script
+# (OKX: BTCUSDT -> BTC-USDT-SWAP).
+symbols: [BTCUSDT, ETHUSDT]
+
+start: "2023-01-01"
+end: null            # null: through the latest file the exchange has published
+
+exchanges:
+  binance:
+    # trades = aggTrades (daily); klines_1m (daily, with taker-buy volume);
+    # funding (monthly); metrics = open interest and long/short ratios (daily, 5 min)
+    kinds: [trades, klines_1m, funding, metrics]
+  bybit:
+    # Only trades are archived. Bybit's REST API, the one source of its funding
+    # history, refuses requests from the United States (CloudFront geo-block).
+    kinds: [trades]
+  okx:
+    kinds: [trades, klines_1m, funding]
+    # OKX trade sizes are contracts. Checked against /api/v5/public/instruments
+    # on every fetch; a mismatch stops the fetch rather than scaling volume wrong.
+    contract_value:
+      BTCUSDT: 0.01
+      ETHUSDT: 0.1

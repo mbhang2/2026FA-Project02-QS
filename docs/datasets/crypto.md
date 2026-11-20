@@ -148,6 +148,18 @@ fetch on one machine and a trades fetch on another never edit the same file.
 `read_quotes(path, contract_value=0.01)` returns exchange-time `ts_ns` and
 `bid_px`, `bid_qty` (coin), `bid_cnt`, `ask_*` as (rows, 5) arrays, best level first.
 
+**OKX does not publish every day.** Its index lists no tick-by-tick file for
+some days, for example eleven between 2023-02-16 and 2023-03-07, and yesterday's
+file appears only after a delay. Those days are never attempted. They are gaps
+in the source, not failed downloads.
+
+**Transient failures are retried.** The first full desktop run (2026-11-20) lost
+37 of 1,402 days to dropped connections and truncated downloads. Each day is now
+tried up to three times, with a fresh link each time, before it is reported as
+failed. A file that is complete but wrong (clock running back, a row outside its
+day, an unknown header) is not retried. Rerunning `fetch` retries anything still
+missing.
+
 Not fetched by a bare `fetch`. Name it with `--kind quotes`. OKX's download links
 expire within hours, so each day's link is requested just before it is downloaded.
 

@@ -345,3 +345,47 @@ def test_an_unknown_quotes_header_is_refused_not_guessed(tmp_path):
         fh.write("a,b,c\n1,2,3\n")
     with pytest.raises(ValueError, match="unrecognised OKX quotes header"):
         compact_okx_quotes(src, tmp_path / "x.npz", day=dt.date(2023, 1, 1))
+
+
+def test_a_truncated_quotes_download_is_retried_but_bad_data_is_not(tmp_path, monkeypatch):
+    import contextlib
+
+    import src.core.data.crypto_raw as raw_mod
+
+    class Resp:
+        def raise_for_status(self):
+            pass
+
+        def iter_content(self, n):
+            yield b"x"
+
+    class Http:
+        def get(self, *a, **k):
+            return contextlib.nullcontext(Resp())
+
+    monkeypatch.setattr(cf, "okx_quotes_url", lambda http, sym, day: "http://x")
+    monkeypatch.setattr(cf.time, "sleep", lambda s: None)
+    calls = []
+
+    def flaky(src, dest, *, day):
+        calls.append(day)
+        if len(calls) == 1:
+            raise EOFError("Compressed file ended before the end-of-stream marker")
+        open(dest, "wb").write(b"npz")
+        return {"rows": 1, "kept": 1, "levels": 5, "backsteps": 0, "max_backstep_ms": 0, "crossed": 0}
+
+    monkeypatch.setattr(raw_mod, "compact_okx_quotes", flaky)
+    f = cf.RemoteFile("okx", "quotes", "BTCUSDT", "2024-08-19", "", None, False,
+                      "BTCUSDT-quotes-top5-2024-08-19.npz")
+    _, rec = cf.download_quotes(f, tmp_path, Http())
+    assert len(calls) == 2 and rec[0] == 3
+
+    def bad(src, dest, *, day):
+        calls.append(day)
+        raise ValueError("exchange time steps back 5000 ms")
+
+    monkeypatch.setattr(raw_mod, "compact_okx_quotes", bad)
+    calls.clear()
+    with pytest.raises(ValueError, match="steps back"):
+        cf.download_quotes(f, tmp_path, Http())
+    assert len(calls) == 1

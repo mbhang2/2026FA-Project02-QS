@@ -24,6 +24,11 @@ exchanges:
     kinds: [trades]
   okx:
     kinds: [trades, klines_1m, funding]
+    # Fetched only when named (`--kind quotes`): order-book quotes, best 50 levels
+    # on every change, ~450 MB a day for BTC before compaction to the top 5 levels
+    # (~60-70 MB). Meant for a machine with disk and bandwidth to spare; see
+    # docs/datasets/crypto.md, "Quotes".
+    on_request: [quotes]
     # OKX trade sizes are contracts. Checked against /api/v5/public/instruments
     # on every fetch; a mismatch stops the fetch rather than scaling volume wrong.
     contract_value:

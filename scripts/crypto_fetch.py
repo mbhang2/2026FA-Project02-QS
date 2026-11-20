@@ -62,6 +62,9 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config" / "datasets" / "crypto.yaml"
 MANIFEST = ROOT / "data" / "crypto-manifest.json"
+# Quotes are fetched on a different machine from trades (they are ~10x the bytes),
+# so they keep their own manifest and two fetches never edit the same file.
+QUOTES_MANIFEST = ROOT / "data" / "crypto-quotes-manifest.json"
 
 BINANCE_LIST = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision"
 BINANCE_FILES = "https://data.binance.vision"
@@ -69,7 +72,7 @@ BYBIT_FILES = "https://public.bybit.com"
 OKX_API = "https://www.okx.com"
 USER_AGENT = "qs-crypto-fetch/1"
 
-KINDS = ("trades", "klines_1m", "funding", "metrics")
+KINDS = ("trades", "klines_1m", "funding", "metrics", "quotes")
 
 # exchange -> kind -> (granularity, how the exchange names it)
 SOURCES: dict[str, dict[str, tuple[str, str]]] = {
@@ -84,6 +87,9 @@ SOURCES: dict[str, dict[str, tuple[str, str]]] = {
         "trades": ("daily", "1"),       # module ids of market-data-history
         "klines_1m": ("daily", "2"),
         "funding": ("monthly", "3"),
+        # Order-book quotes, the best 50 levels on every change ("tick-by-tick").
+        # Compacted on download to the top 5 levels; see `compact_okx_quotes`.
+        "quotes": ("daily", "6"),
     },
 }
 
@@ -93,7 +99,7 @@ DAY_BASIS = {"binance": "UTC", "bybit": "UTC", "okx": "UTC+8"}
 
 MANIFEST_FIELDS = ["size_bytes", "sha256", "source_url", "verified_by", "fetched_at", "r2_bucket"]
 
-_DATE_IN_NAME = re.compile(r"(\d{4}-\d{2}(?:-\d{2})?)\.(?:zip|csv\.gz)$")
+_DATE_IN_NAME = re.compile(r"(\d{4}-\d{2}(?:-\d{2})?)\.(?:zip|csv\.gz|npz)$")
 
 
 @dataclass(frozen=True)
@@ -109,7 +115,10 @@ class RemoteFile:
 
     @property
     def key(self) -> str:
-        return f"crypto/raw/{self.exchange}/{self.kind}/{self.symbol}/{self.filename}"
+        # Quotes are stored compacted, not as published, so they live under
+        # `compact/` rather than `raw/`: the bytes are ours, derived by code.
+        stage = "compact" if self.kind == "quotes" else "raw"
+        return f"crypto/{stage}/{self.exchange}/{self.kind}/{self.symbol}/{self.filename}"
 
 
 # --------------------------------------------------------------------------- #
@@ -159,6 +168,20 @@ def parse_s3_listing(xml_text: str) -> tuple[list[tuple[str, int]], bool]:
 
 def parse_bybit_listing(html: str, symbol: str) -> list[str]:
     return sorted(set(re.findall(rf'href="({re.escape(symbol)}\d{{4}}-\d{{2}}-\d{{2}}\.csv\.gz)"', html)))
+
+
+def okx_quotes_entries(payload: dict) -> list[tuple[str, str, float]]:
+    """(UTC date, url, sizeMB) for module 6, whose filename is the same every day
+    (`BTC-USDT-SWAP.OK.csv.gz`), so the day comes from `dateTs` (UTC midnight)."""
+    if payload.get("code") != "0":
+        raise RuntimeError(f"OKX market-data-history: {payload.get('code')} {payload.get('msg')}")
+    out = []
+    for block in payload.get("data", []):
+        for detail in block.get("details", []):
+            for g in detail.get("groupDetails", []):
+                day = dt.datetime.fromtimestamp(int(g["dateTs"]) / 1000, tz=dt.timezone.utc).date()
+                out.append((day.isoformat(), g["url"], float(g.get("sizeMB") or 0)))
+    return out
 
 
 def parse_okx_listing(payload: dict) -> list[tuple[str, str, float]]:
@@ -236,11 +259,19 @@ def list_okx(http, kind: str, symbol: str, start: dt.date, end: dt.date) -> list
                 time.sleep(2 ** attempt)
                 continue
             break
-        for fname, url, size_mb in parse_okx_listing(payload):
-            period = period_of(fname)
-            if period and in_range(period, start, end):
-                seen[fname] = RemoteFile("okx", kind, symbol, period, url,
-                                         int(size_mb * 1024 * 1024) or None, False, fname)
+        if kind == "quotes":
+            for day, url, size_mb in okx_quotes_entries(payload):
+                if in_range(day, start, end):
+                    fname = f"{symbol}-quotes-top5-{day}.npz"
+                    # `size` is the RAW download, which is what the disk guard needs.
+                    seen[fname] = RemoteFile("okx", kind, symbol, day, url,
+                                             int(size_mb * 1024 * 1024) or None, False, fname)
+        else:
+            for fname, url, size_mb in parse_okx_listing(payload):
+                period = period_of(fname)
+                if period and in_range(period, start, end):
+                    seen[fname] = RemoteFile("okx", kind, symbol, period, url,
+                                             int(size_mb * 1024 * 1024) or None, False, fname)
         lo = w_end + dt.timedelta(days=1)
         time.sleep(0.25)
     return sorted(seen.values(), key=lambda f: f.period)
@@ -330,7 +361,69 @@ def verify_file(f: RemoteFile, path: Path, sha256: str, http) -> str:
     raise ValueError(f.exchange)
 
 
+def okx_quotes_url(http, symbol: str, day: str) -> str:
+    """A fresh link for one day. The index's links are signed and expire within a
+    few hours, and a full history takes far longer than that to download."""
+    family = okx_inst_id(symbol).removesuffix("-SWAP")
+    d = dt.date.fromisoformat(day)
+    ms = int(dt.datetime(d.year, d.month, d.day, tzinfo=dt.timezone.utc).timestamp() * 1000)
+    params = {"module": "6", "instType": "SWAP", "instFamilyList": family,
+              "dateAggrType": "daily", "begin": ms, "end": ms}
+    for attempt in range(6):
+        r = http.get(f"{OKX_API}/api/v5/public/market-data-history", params=params, timeout=60)
+        r.raise_for_status()
+        payload = r.json()
+        if payload.get("code") == "50011":
+            time.sleep(2 ** attempt)
+            continue
+        for got_day, url, _ in okx_quotes_entries(payload):
+            if got_day == day:
+                return url
+        raise RuntimeError(f"OKX lists no quotes file for {symbol} {day}")
+    raise RuntimeError(f"OKX index rate-limited for {symbol} {day}")
+
+
+def download_quotes(f: RemoteFile, lake: Path, http) -> tuple[RemoteFile, list]:
+    """Download one day of OKX quotes, compact it to the top 5 levels, delete the raw file.
+
+    OKX publishes no checksum. The raw file is hashed as it arrives and read to
+    the end by the compaction, which refuses a file whose exchange time runs
+    backwards by more than a second or leaves its day; both facts are recorded.
+    """
+    sys.path.insert(0, str(ROOT))
+    from src.core.data.crypto_raw import compact_okx_quotes
+
+    dest = lake / f.key
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    raw = dest.with_name(dest.name + ".raw.csv.gz")
+    url = okx_quotes_url(http, f.symbol, f.period)
+    h = hashlib.sha256()
+    try:
+        with http.get(url, stream=True, timeout=300) as r:
+            r.raise_for_status()
+            with open(raw, "wb") as out:
+                for chunk in r.iter_content(1 << 20):
+                    h.update(chunk)
+                    out.write(chunk)
+        raw_size = raw.stat().st_size
+        facts = compact_okx_quotes(raw, dest, day=dt.date.fromisoformat(f.period))
+    finally:
+        raw.unlink(missing_ok=True)
+    c = hashlib.sha256()
+    with open(dest, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 22), b""):
+            c.update(chunk)
+    how = (f"compacted from {raw_size} B raw (sha256 {h.hexdigest()}): {facts['rows']} rows read to the "
+           f"end, {facts['kept']} kept where the top {facts['levels']} levels changed; "
+           f"{facts['backsteps']} exchange-time step(s) back, max {facts['max_backstep_ms']} ms; "
+           f"{facts['crossed']} crossed row(s)")
+    now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return f, [dest.stat().st_size, c.hexdigest(), url.split("?", 1)[0], how, now, None]
+
+
 def download(f: RemoteFile, lake: Path, http) -> tuple[RemoteFile, list]:
+    if f.kind == "quotes":
+        return download_quotes(f, lake, http)
     dest = lake / f.key
     dest.parent.mkdir(parents=True, exist_ok=True)
     part = dest.with_name(dest.name + ".part")
@@ -445,7 +538,10 @@ def selection(cfg: dict, args) -> list[tuple[str, str, str]]:
     for ex, spec in cfg["exchanges"].items():
         if args.exchange and ex not in args.exchange:
             continue
-        for kind in spec["kinds"]:
+        # `on_request` kinds (OKX quotes: ~450 MB a day before compaction) are
+        # fetched only when named with --kind, never by a bare `fetch`.
+        kinds = list(spec["kinds"]) + (list(spec.get("on_request", [])) if args.kind else [])
+        for kind in kinds:
             if args.kind and kind not in args.kind:
                 continue
             if kind not in SOURCES[ex]:
@@ -510,11 +606,22 @@ def summarise(files: list[RemoteFile], have: dict, lake: Path) -> list[RemoteFil
     return missing
 
 
+def manifest_for(cfg: dict, args) -> Path:
+    """Quotes have their own manifest; a fetch is all quotes or none."""
+    if args.cmd in ("upload", "verify"):
+        return QUOTES_MANIFEST if args.quotes else MANIFEST
+    kinds = {k for _, k, _ in selection(cfg, args)}
+    if "quotes" in kinds and len(kinds) > 1:
+        sys.exit("fetch quotes on their own (--kind quotes): they keep a separate manifest, "
+                 "data/crypto-quotes-manifest.json")
+    return QUOTES_MANIFEST if kinds == {"quotes"} else MANIFEST
+
+
 def cmd_plan(args) -> int:
     cfg, http = load_config(), http_session()
     lake = lake_root(cfg)
     files, gaps = plan(cfg, args, http)
-    summarise(files, load_manifest()["files"], lake)
+    summarise(files, load_manifest(manifest_for(cfg, args))["files"], lake)
     for g, days in gaps.items():
         print(f"upstream gap {g}: {len(days)} day(s), first {days[0]}")
     return 0
@@ -524,7 +631,8 @@ def cmd_fetch(args) -> int:
     cfg, http = load_config(), http_session()
     lake = lake_root(cfg)
     lake.mkdir(parents=True, exist_ok=True)
-    manifest = load_manifest()
+    mpath = manifest_for(cfg, args)
+    manifest = load_manifest(mpath)
     okx_syms = {s for ex, _, s in selection(cfg, args) if ex == "okx"}
     if okx_syms:
         check_okx_contracts(cfg, http, sorted(okx_syms), manifest)
@@ -574,11 +682,11 @@ def cmd_fetch(args) -> int:
                         failed += 1
                         print(f"FAILED {f.key}: {e}", file=sys.stderr)
                     if (done + failed) % 25 == 0:
-                        save_manifest(manifest)
+                        save_manifest(manifest, mpath)
                         rate = (done + failed) / max(time.time() - t0, 1e-9)
                         print(f"  {done + failed}/{len(missing)}  {rate:.1f} files/s", file=sys.stderr)
         finally:
-            save_manifest(manifest)
+            save_manifest(manifest, mpath)
     print(f"fetched {done}, failed {failed}, left {len(queue)}" + (f" -- stopped: {stopped}" if stopped else ""))
     return 1 if failed else 0
 
@@ -587,7 +695,8 @@ def cmd_upload(args) -> int:
     """Push files already on disk and in the manifest, but not yet in R2."""
     cfg = load_config()
     lake = lake_root(cfg)
-    manifest = load_manifest()
+    mpath = manifest_for(cfg, args)
+    manifest = load_manifest(mpath)
     r2 = r2_target(args.drop_local, args.r2_remote)
     todo = [k for k, rec in manifest["files"].items() if (lake / k).exists() and not (len(rec) > 5 and rec[5])]
     print(f"uploading {len(todo)} file(s) to r2://{r2.bucket}/")
@@ -603,16 +712,17 @@ def cmd_upload(args) -> int:
                     failed += 1
                     print(f"FAILED {k}: {e}", file=sys.stderr)
                 if i % 25 == 0:
-                    save_manifest(manifest)
+                    save_manifest(manifest, mpath)
     finally:
-        save_manifest(manifest)
+        save_manifest(manifest, mpath)
     return 1 if failed else 0
 
 
 def cmd_verify(args) -> int:
     cfg = load_config()
     lake = lake_root(cfg)
-    manifest = load_manifest()
+    mpath = manifest_for(cfg, args)
+    manifest = load_manifest(mpath)
     bad = 0
     r2 = None
     for key, (size, sha, *rest) in manifest["files"].items():
@@ -663,8 +773,10 @@ def main(argv: list[str] | None = None) -> int:
     up.add_argument("--workers", type=int, default=4)
     up.add_argument("--drop-local", action="store_true")
     up.add_argument("--r2-remote", default="r2w")
+    up.add_argument("--quotes", action="store_true", help="the quotes manifest")
     ver = sub.add_parser("verify")
     ver.add_argument("--r2-remote", default="r2w")
+    ver.add_argument("--quotes", action="store_true", help="the quotes manifest")
     args = ap.parse_args(argv)
     return {"plan": cmd_plan, "fetch": cmd_fetch, "upload": cmd_upload,
             "verify": cmd_verify}[args.cmd](args)

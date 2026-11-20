@@ -231,3 +231,77 @@ def test_the_holdout_is_locked(tmp_path):
     ds = CryptoDataset(spec=CryptoSpec(cache=False), manifest_path=man, lake=lake)
     with pytest.raises(HoldoutLocked):
         next(ds.ticks(Split.HOLDOUT))
+
+
+# ---- OKX order-book quotes -------------------------------------------------- #
+def _tbt(path, rows):
+    """A tiny OKX tick-by-tick file: (exch_ms, bid1, ask1, deep) per row, 6 levels."""
+    cols = ["timeMs", "exchTimeMs"] + [f"{s}_{i}_{f}" for i in range(1, 7)
+                                       for s in ("bid", "ask") for f in ("px", "qty", "ordCnt")]
+    lines = [",".join(f'"{c}"' for c in cols)]
+    for e, b1, a1, deep in rows:
+        vals = [e + 25, e]
+        for i in range(1, 7):
+            px_b, px_a = (b1, a1) if i == 1 else (b1 - i, a1 + i)
+            q = deep if i == 6 else 1.0          # level 6 is outside the kept top 5
+            vals += [px_b, q, 1, px_a, q, 1]
+        lines.append(",".join(str(v) for v in vals))
+    with gzip.open(path, "wt") as fh:
+        fh.write("\n".join(lines) + "\n")
+    return path
+
+
+def test_quotes_keep_only_rows_where_the_top_five_changed(tmp_path):
+    import datetime as dt
+
+    from src.core.data.crypto_raw import compact_okx_quotes, read_quotes
+
+    t0 = 1794787200000                                      # 2026-11-16 00:00 UTC
+    src = _tbt(tmp_path / "q.csv.gz", [(t0 + 1, 100.0, 100.1, 5.0),
+                                       (t0 + 2, 100.0, 100.1, 9.0),     # only level 6 moved
+                                       (t0 + 3, 100.0, 100.2, 9.0)])
+    facts = compact_okx_quotes(src, tmp_path / "q.npz", day=dt.date(2026, 11, 16), chunksize=1)
+    assert facts["rows"] == 3 and facts["kept"] == 2 and facts["crossed"] == 0
+    q = read_quotes(tmp_path / "q.npz", contract_value=0.01)
+    assert q["ts_ns"].tolist() == [(t0 + 1) * 10**6, (t0 + 3) * 10**6]
+    assert q["ask_px"][:, 0].tolist() == [100.1, 100.2]
+    assert q["bid_px"].shape == (2, 5) and q["bid_qty"][0, 0] == pytest.approx(0.01)
+
+
+def test_quotes_refuse_a_clock_that_runs_back_or_a_row_from_another_day(tmp_path):
+    import datetime as dt
+
+    from src.core.data.crypto_raw import compact_okx_quotes
+
+    t0 = 1794787200000
+    back = _tbt(tmp_path / "b.csv.gz", [(t0 + 5_000, 1.0, 2.0, 1.0), (t0 + 1_000, 1.0, 2.5, 1.0)])
+    with pytest.raises(ValueError, match="steps back"):
+        compact_okx_quotes(back, tmp_path / "b.npz", day=dt.date(2026, 11, 16))
+    late = _tbt(tmp_path / "l.csv.gz", [(t0 + 86_400_000 + 5_000, 1.0, 2.0, 1.0)])
+    with pytest.raises(ValueError, match="outside"):
+        compact_okx_quotes(late, tmp_path / "l.npz", day=dt.date(2026, 11, 16))
+    assert not (tmp_path / "b.npz").exists() and not (tmp_path / "l.npz").exists()
+
+
+def test_okx_quotes_take_their_day_from_the_index_not_the_filename():
+    payload = {"code": "0", "data": [{"details": [{"groupDetails": [
+        {"dateTs": "1794787200000", "filename": "BTC-USDT-SWAP.OK.csv.gz",
+         "url": "http://x/BTC-USDT-SWAP.OK.csv.gz?Expires=1", "sizeMB": "426.73"}]}]}]}
+    assert cf.okx_quotes_entries(payload) == [("2026-11-16", "http://x/BTC-USDT-SWAP.OK.csv.gz?Expires=1", 426.73)]
+    f = cf.RemoteFile("okx", "quotes", "BTCUSDT", "2026-11-16", "u", None, False,
+                      "BTCUSDT-quotes-top5-2026-11-16.npz")
+    assert f.key == "crypto/compact/okx/quotes/BTCUSDT/BTCUSDT-quotes-top5-2026-11-16.npz"
+    assert cf.period_of(f.filename) == "2026-11-16"
+
+
+def test_quotes_are_fetched_only_when_asked_and_into_their_own_manifest():
+    import argparse
+
+    cfg = cf.load_config()
+    bare = argparse.Namespace(cmd="fetch", exchange=None, kind=None, symbol=None)
+    assert all(k != "quotes" for _, k, _ in cf.selection(cfg, bare))
+    asked = argparse.Namespace(cmd="fetch", exchange=["okx"], kind=["quotes"], symbol=["BTCUSDT"])
+    assert cf.manifest_for(cfg, asked) == cf.QUOTES_MANIFEST
+    mixed = argparse.Namespace(cmd="fetch", exchange=["okx"], kind=["quotes", "trades"], symbol=None)
+    with pytest.raises(SystemExit, match="on their own"):
+        cf.manifest_for(cfg, mixed)

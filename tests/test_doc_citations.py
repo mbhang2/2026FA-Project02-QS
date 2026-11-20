@@ -91,6 +91,11 @@ ABSENT_BY_DESIGN: dict[str, str] = {
         "credentials a teammate writes by following `docs/setup/R2_ACCESS.md`; "
         "`secrets/*` is git-ignored with only `.gitkeep` excepted. Cited so the "
         "setup can be followed, absent so it cannot be leaked.",
+    "data/crypto-quotes-manifest.json":
+        "written by the first `crypto_fetch.py fetch --kind quotes`, which runs on "
+        "a desktop with the disk and bandwidth for ~640 GB of OKX order book "
+        "(docs/datasets/crypto.md, 'Quotes'). Committed from there once it has "
+        "run; until then no quotes are held, so there is nothing to record.",
     "secrets/rclone.conf":
         "same as `secrets/r2.env`: a local credential file, never committed.",
     "runs/fills/":

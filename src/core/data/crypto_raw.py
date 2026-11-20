@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import gzip
 import io
+import os
 import zipfile
+from datetime import date as dt_date
 from pathlib import Path
 
 import numpy as np
@@ -189,3 +191,111 @@ def read_funding(exchange: str, path: str | Path) -> pd.DataFrame:
     else:
         raise ValueError(f"no funding archive is read for {exchange!r}")
     return _finish(out, FUNDING_COLUMNS)
+
+
+# --------------------------------------------------------------------------- #
+# OKX order-book quotes (market-data-history module 6, "tick-by-tick")
+# --------------------------------------------------------------------------- #
+# One CSV per UTC day (by exchange time; unlike OKX's trade files, which are
+# UTC+8 days): `timeMs` (OKX's receive/publish time), `exchTimeMs` (the matching
+# engine's time) and the best 50 bid and ask levels as `bid_<i>_px`,
+# `bid_<i>_qty`, `bid_<i>_ordCnt`, `ask_<i>_...`, one row per book change.
+# Sizes are CONTRACTS, like OKX trades. A BTC day is ~7M rows and ~450 MB gzipped.
+#
+# Compacted on download to the top `levels` levels, keeping only the rows where
+# one of them changed: lossless for that depth, ~60% of rows and ~13% of bytes.
+
+QUOTE_LEVELS = 5
+QUOTE_FIELDS = ("px", "qty", "ordCnt")
+MAX_BACKSTEP_MS = 1_000
+
+
+def quote_columns(levels: int = QUOTE_LEVELS) -> list[str]:
+    """The book columns kept, in storage order: level-major, bid then ask, px/qty/count."""
+    return [f"{side}_{i}_{f}" for i in range(1, levels + 1)
+            for side in ("bid", "ask") for f in QUOTE_FIELDS]
+
+
+def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
+                       levels: int = QUOTE_LEVELS, chunksize: int = 1_000_000) -> dict:
+    """Read one OKX tick-by-tick file to the end and write the compact `.npz`.
+
+    Raises -- and writes nothing -- if the file is not what it should be: no rows,
+    exchange time stepping back by more than `MAX_BACKSTEP_MS`, or a row stamped
+    outside `day` (one second of slack either side: the first row of a day is
+    routinely a few ms before midnight). Returns the facts the manifest records.
+
+    **Row order is the publish order and is kept.** Exchange time is almost but
+    not perfectly monotone -- 2026-11-16 had one 20 ms step back in 7.1M rows --
+    and the rows are successive book states, so re-sorting by a jittered clock
+    would reorder states rather than fix them. Small steps are counted and
+    recorded; a reader that needs a monotone clock takes the running maximum.
+    """
+    import datetime as _dt
+
+    book_cols = quote_columns(levels)
+    cols = ["timeMs", "exchTimeMs", *book_cols]
+    lo = int(_dt.datetime(day.year, day.month, day.day, tzinfo=_dt.timezone.utc).timestamp() * 1000)
+    lo_ok, hi_ok = lo - 1_000, lo + 86_400_000 + 1_000
+
+    recv, exch, book = [], [], []
+    prev_row: np.ndarray | None = None
+    prev_exch = -1
+    rows = crossed = backsteps = max_back = 0
+    for ch in pd.read_csv(src, usecols=cols, chunksize=chunksize, dtype="float64"):
+        ch = ch[cols]
+        e = ch["exchTimeMs"].to_numpy(np.int64)
+        if len(e) == 0:
+            continue
+        steps = np.diff(np.concatenate(([prev_exch], e)) if prev_exch >= 0 else e)
+        back = -steps[steps < 0]
+        if len(back):
+            backsteps += len(back)
+            max_back = max(max_back, int(back.max()))
+            if max_back > MAX_BACKSTEP_MS:
+                raise ValueError(f"{src}: exchange time steps back {max_back} ms")
+        if e.min() < lo_ok or e.max() > hi_ok:
+            raise ValueError(f"{src}: rows stamped outside {day} UTC")
+        prev_exch = int(e[-1])
+        b = ch[book_cols].to_numpy(np.float64)
+        keep = np.ones(len(b), dtype=bool)
+        keep[1:] = np.any(b[1:] != b[:-1], axis=1)
+        if prev_row is not None:
+            keep[0] = bool(np.any(b[0] != prev_row))
+        prev_row = b[-1].copy()
+        rows += len(b)
+        crossed += int((b[:, 0] >= b[:, 3]).sum())        # bid_1_px >= ask_1_px
+        recv.append(ch["timeMs"].to_numpy(np.int64)[keep])
+        exch.append(e[keep])
+        book.append(b[keep])
+    if rows == 0:
+        raise ValueError(f"{src}: no rows")
+
+    out = {"recv_ms": np.concatenate(recv), "exch_ms": np.concatenate(exch),
+           "book": np.concatenate(book), "columns": np.array(book_cols)}
+    dest = Path(dest)
+    tmp = dest.with_name(dest.name + ".tmp")
+    with open(tmp, "wb") as fh:
+        np.savez_compressed(fh, **out)
+    os.replace(tmp, dest)
+    return {"rows": rows, "kept": int(len(out["exch_ms"])), "crossed": crossed,
+            "levels": levels, "backsteps": backsteps, "max_backstep_ms": max_back}
+
+
+def read_quotes(path: str | Path, *, contract_value: float) -> dict:
+    """A compact OKX quotes file as arrays: `ts_ns` (exchange time), `recv_ns`, and
+    `bid_px`, `bid_qty`, `bid_cnt`, `ask_px`, `ask_qty`, `ask_cnt`, each
+    (rows, levels) with level 1 the best. Quantities in base coin
+    (contracts x `contract_value`)."""
+    if not contract_value or contract_value <= 0:
+        raise ValueError("OKX sizes are contracts: pass contract_value (ctVal)")
+    with np.load(path, allow_pickle=False) as z:
+        book, cols = z["book"], [str(c) for c in z["columns"]]
+        out = {"ts_ns": z["exch_ms"].astype(np.int64) * _MS, "recv_ns": z["recv_ms"].astype(np.int64) * _MS}
+    levels = len(cols) // 6
+    grid = book.reshape(len(book), levels, 2, 3)               # rows, level, side, field
+    for s, side in enumerate(("bid", "ask")):
+        out[f"{side}_px"] = grid[:, :, s, 0]
+        out[f"{side}_qty"] = grid[:, :, s, 1] * contract_value
+        out[f"{side}_cnt"] = grid[:, :, s, 2].astype(np.int64)
+    return out

@@ -115,3 +115,74 @@ The data is public. Trading is not: Binance.com, Bybit and OKX's global platform
 do not accept US residents for perpetual futures. A strategy found on this data
 is evidence about the market, but a live track record from the United States
 would have to come from a venue that admits US persons.
+
+## Quotes (OKX order book)
+
+OKX publishes its order book free and without a key. The fetcher uses the
+"tick-by-tick" file (`market-data-history` module 6): the best 50 bid and ask
+levels (price, size in contracts, order count) on every book change, one gzipped
+CSV per **UTC** day by exchange time. Unlike OKX's trade files, which are UTC+8.
+It covers the whole window from 2023-01-01. A BTC day is ~7M rows and ~450 MB.
+
+**Compacted on download.** `compact_okx_quotes` keeps the top 5 levels and only
+the rows where one of them changed. That is lossless at that depth, ~60% of the
+rows and ~15% of the bytes: about 70 MB a day, so roughly 100 GB for BTC over the
+window instead of ~640 GB. The raw file is deleted after compaction. Its size and
+SHA-256 go in the manifest, with the row counts and the checks it passed:
+
+- read to the end;
+- no exchange-time step back of more than 1 s (2026-11-15 and -16 each had one
+  20 ms step);
+- no row outside its day;
+- the number of crossed rows (zero so far).
+
+Files are stored at `crypto/compact/okx/quotes/<symbol>/<symbol>-quotes-top5-<date>.npz`.
+They keep their own manifest, `data/crypto-quotes-manifest.json`, so a quotes
+fetch on one machine and a trades fetch on another never edit the same file.
+`read_quotes(path, contract_value=0.01)` returns exchange-time `ts_ns` and
+`bid_px`, `bid_qty` (coin), `bid_cnt`, `ask_*` as (rows, 5) arrays, best level first.
+
+Not fetched by a bare `fetch`. Name it with `--kind quotes`. OKX's download links
+expire within hours, so each day's link is requested just before it is downloaded.
+
+Quotes and trades must come from the same venue to be used together. An adapter
+that serves OKX trades with OKX quotes is the next step, and is not written yet.
+
+### Running it on a desktop
+
+Needs Python 3.11, git, ~5 GB free disk (one raw day per worker plus the reserve),
+and the read-write R2 key.
+
+1. Get the branch and an environment.
+
+   ```bash
+   git clone https://github.com/mbhang2/2026FA-Project02-QS.git && cd 2026FA-Project02-QS
+   git checkout feature/crypto-perpetuals
+   python -m venv .venv
+   source .venv/bin/activate        # Windows PowerShell: .venv\Scripts\Activate.ps1
+   pip install requests pyyaml boto3 pandas numpy    # all the fetcher needs
+   ```
+
+2. Copy `secrets/rclone.conf` (with the `[r2w]` remote) and `secrets/r2.env` from
+   the laptop into `secrets/`. They are gitignored. Never commit them.
+
+3. Check it, then run it. It resumes where it stopped if interrupted.
+
+   ```bash
+   python scripts/crypto_fetch.py plan  --exchange okx --kind quotes --symbol BTCUSDT
+   python scripts/crypto_fetch.py fetch --exchange okx --kind quotes --symbol BTCUSDT --to-r2 --drop-local --workers 6
+   python scripts/crypto_fetch.py verify --quotes
+   ```
+
+   Each day is downloaded (~450 MB), compacted (~50 s of one core), uploaded and
+   deleted. Total time is set by bandwidth: ~640 GB at 100 Mbit/s is about 14
+   hours. Watch the first hour's `files/s` line and adjust `--workers`. Keep the
+   machine awake.
+
+4. Commit the manifest so other machines see what R2 holds:
+
+   ```bash
+   git add data/crypto-quotes-manifest.json
+   git commit -m "OKX BTC quotes: manifest through <last date>"
+   git push
+   ```

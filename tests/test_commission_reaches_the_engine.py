@@ -139,3 +139,41 @@ def test_every_nq_profile_declares_its_commission():
     assert len(set(rates.values())) == 1, (
         f"NQ profiles disagree on commission: {rates}. Scores from different "
         "splits are compared directly and cannot be priced differently.")
+
+
+# ---- proportional (basis-point) commission, for crypto ---------------------- #
+def _run_bps(per_contract: float, bps: float):
+    ds = SyntheticDataset(SyntheticSpec(
+        n_sessions=40, ticks_per_session=390, vol_per_tick=0.15,
+        seed=4_242, signal_strength=0.0))
+    ns: dict = {}
+    exec(compile(open(REFERENCE).read(), REFERENCE, "exec"), ns)
+    cls = next(v for k, v in ns.items() if isinstance(v, type) and not k.startswith("_"))
+    engine = Engine.for_test(ds, cls(), split=Split.TRAIN, warmup_sessions=0,
+                             fill_model="unfavorable", seed=1,
+                             commission_per_contract=per_contract, commission_bps=bps)
+    engine.run()
+    return engine
+
+
+def test_bps_commission_is_a_share_of_each_fills_notional():
+    engine = _run_bps(0.0, 5.0)
+    b = engine.reconstructed()
+    assert b.rows, "the reference strategy must trade for this to test anything"
+    for r in b.rows:
+        assert r.commission == pytest.approx(5e-4 * r.price * r.size)
+
+
+def test_bps_adds_to_the_per_contract_rate_and_both_derivations_agree():
+    engine = _run_bps(0.10, 5.0)
+    b = engine.reconstructed()
+    expected = sum(0.10 * r.size + 5e-4 * r.price * r.size for r in b.rows)
+    assert _charged(b) == pytest.approx(expected)
+    assert engine.reconciliation()["agree"]
+    assert engine.blotter.commission == pytest.approx(b.commission)
+
+
+def test_zero_bps_leaves_every_existing_charge_unchanged():
+    a = _run(0.10)
+    b = _run_bps(0.10, 0.0).reconstructed()
+    assert [r.commission for r in a.rows] == [r.commission for r in b.rows]

@@ -16,7 +16,7 @@ Status markers: **[decided]** · **[open]** · **[proposed]**
 
 ## Coverage and session arithmetic
 
-Bucket `msfe-practicum`, single prefix `raw/`, 2,703 objects, ~48 GiB. Format is
+Bucket `msfe-practicum`, 2,703 objects, ~48 GiB, stored under `futures/raw/cme/trades/` and `options/raw/opra/` since 2026-11-19 but still named by their logical `raw/...` keys everywhere in this repo (`src/core/data/bucket_layout.py` maps one to the other). Format is
 **Databento DBN under zstd, not parquet** — no footer, `read_parquet` does not apply.
 
 **File-dates are not sessions.** Objects are split on UTC day and a CME session spans

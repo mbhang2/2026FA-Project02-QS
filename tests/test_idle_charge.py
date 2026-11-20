@@ -316,10 +316,18 @@ def test_run_py_reads_the_configured_idle_charge():
     """
     from pathlib import Path
 
-    src = (Path(__file__).resolve().parents[1] / "run.py").read_text()
+    root = Path(__file__).resolve().parents[1]
+    src = (root / "run.py").read_text()
     body = src[src.index("def _run_and_score"):src.index("def _failure_record")]
     assert "idle_charge" in body, "run.py scores without reading the idle charge"
-    assert 'cfg.get("campaign", {}).get("idle_charge"' in body, (
+    # Since Amendment 15 the read lives in the one resolver every scoring path
+    # calls (run.py and the gates), so it is checked there -- and run.py is
+    # checked for taking its charge from that resolver.
+    assert 'terms = scoring_terms(cfg, profile' in body and \
+        'idle_charge = terms["idle_charge"]' in body, (
+            "run.py does not take its idle charge from scoring_terms")
+    terms_src = (root / "src" / "core" / "scoring" / "terms.py").read_text()
+    assert 'cfg.get("campaign", {}).get("idle_charge"' in terms_src, (
         "the idle charge is not being read from the campaign config")
     # Scoring and diagnostics must be handed the SAME value, or the recorded
     # diagnostics describe a return vector the score was not computed from.

@@ -1,0 +1,57 @@
+# Pre-registered train / validation / holdout split for the crypto trades dataset
+# (Binance USDT-margined perpetuals, BTCUSDT and ETHUSDT).
+#
+# THE PRE-REGISTRATION DATE IS THE COMMIT DATE OF THIS FILE, as for nq-trades.yaml:
+# `git log --follow --diff-filter=A config/calendars/crypto-trades.yaml`.
+#
+# Chosen 2026-11-19, before any crypto strategy had been run or scored: no adapter
+# existed until the same day, and the only crypto statistics looked at were
+# data-quality checks (row counts, duplicate bars, gaps; docs/datasets/crypto.md).
+#
+# A session is a UTC calendar day, 00:00 to 24:00 UTC. Crypto trades continuously,
+# so there are no holidays and no early closes: every UTC day with a Binance trades
+# file is a session, and the archive skipped none in 2023-01-01..2026-11-18.
+#
+# Counts at the time of writing (UTC days):
+#   train        974 sessions   2023-01-01 .. 2025-08-31
+#   validation   263 sessions   2025-09-11 .. 2026-05-31
+#   holdout      161 sessions   2026-06-11 .. 2026-11-18
+# Twenty embargo sessions are in no split.
+
+dataset: crypto-trades
+
+# Ten sessions at each boundary, as for NQ. With one session per calendar day the
+# boundary dates follow directly: 2025-09-01..2025-09-10 and 2026-06-01..2026-06-10
+# are the embargoes, exactly ten each, which the `Calendar` constructor checks.
+embargo_sessions: 10
+
+splits:
+
+  train:
+    start: 2023-01-01
+    end: 2025-08-31
+    reason: >
+      The start of the downloaded window through the end of August 2025. Covers the
+      2023 range, the 2024 rally and 2025's first eight months, so a strategy is fitted
+      across more than one regime rather than one trend.
+
+  validation:
+    start: 2025-09-11
+    end: 2026-05-31
+    reason: >
+      Ends at the backbone model's knowledge cutoff (end of May 2026), so the holdout
+      can lie entirely after it. The loop scores here repeatedly and this split is
+      expected to be overfit by selection -- that is what the holdout is for.
+
+  holdout:
+    start: 2026-06-11
+    end: 2026-11-18
+    reason: >
+      Entirely after the model cutoff, so a memorised result is distinguishable from
+      a real one. Opened once, at the end, by deliberate unlock, with the reason
+      recorded in the ledger. 161 sessions is confirmatory, not primary: inference is
+      carried by train and validation.
+
+# Refit procedure: the same three steps as nq-trades.yaml. Select on validation;
+# refit the selected candidate once on train + validation with no hyper-parameter
+# changed; evaluate only that refit on the holdout.

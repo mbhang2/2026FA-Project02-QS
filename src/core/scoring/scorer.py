@@ -51,11 +51,12 @@ def score(
     blotter: Blotter,
     *,
     period: Sequence[SessionSpan] | None = None,
-    notional_base: float = 1.0,
+    notional_base: "metrics.PerSession" = 1.0,
     min_sessions: int = MIN_SESSIONS,
     min_downside_sessions: int = MIN_DOWNSIDE_SESSIONS,
-    idle_charge: float = IDLE_CHARGE,
+    idle_charge: "metrics.PerSession" = IDLE_CHARGE,
     min_exposed_fraction: float | None = None,
+    funding: "Sequence[metrics.FundingEvent] | None" = None,
 ) -> ScoreTuple:
     """Sortino on per-session returns, with Sharpe and the shape moments beside it.
 
@@ -82,7 +83,7 @@ def score(
         )
 
     returns = metrics.session_returns(blotter, period, notional_base=notional_base,
-                                      idle_charge=idle_charge)
+                                      idle_charge=idle_charge, funding=funding)
     net = blotter.realized_pnl - blotter.commission
     trades = sum(1 for r in blotter.rows if r.realized_pnl != 0.0)
     # Amendment 6: exposed in too few of the scored sessions -> not scored at
@@ -279,13 +280,14 @@ def score_diagnostics(
     blotter: Blotter,
     period: Sequence[SessionSpan],
     *,
-    notional_base: float = 1.0,
+    notional_base: "metrics.PerSession" = 1.0,
     fill_model_spread: float | None = None,
-    idle_charge: float = IDLE_CHARGE,
+    idle_charge: "metrics.PerSession" = IDLE_CHARGE,
+    funding: "Sequence[metrics.FundingEvent] | None" = None,
 ) -> Diagnostics:
     """Recorded per run, never terms in the objective. See `metrics.Diagnostics`."""
     returns = metrics.session_returns(blotter, period, notional_base=notional_base,
-                                      idle_charge=idle_charge)
+                                      idle_charge=idle_charge, funding=funding)
     d = metrics.diagnostics(
         blotter, period, returns, fill_model_spread=fill_model_spread
     )

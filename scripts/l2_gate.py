@@ -145,7 +145,8 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
                                        profile.get("warmup_sessions", 0))
     calendar = metrics.session_calendar(dataset, sessions)
     blotter = reconstruct(fills,
-                          commission_per_contract=profile["commission_per_contract"])
+                          commission_per_contract=profile["commission_per_contract"],
+                          commission_bps=profile.get("commission_bps", 0.0))
     # **Seeded from the name with a STABLE hash.** `hash()` on a str is salted
     # per process (PYTHONHASHSEED), so `abs(hash(name))` would give this campaign
     # a different null on every run -- invisibly, because the cache below would
@@ -163,8 +164,10 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
     # Sortino -- a different objective and a different metric, reading as +17.8
     # standard deviations of skill. Re-deriving the identity assignment catches
     # every version skew of this shape, not only that one.
-    nb = profile.get("notional_base", 1.0)
-    ident = rt.identity_from_blotter(blotter, calendar, notional_base=nb)
+    # The same terms run.py scored the trial with (src/core/scoring/terms.py).
+    from src.core.scoring.terms import scoring_terms
+    terms = scoring_terms(cfg(), profile, dataset, calendar)
+    ident = rt.identity_from_blotter(blotter, calendar, **terms)
     observed = (v.get("validation") or {}).get("score", {}).get("primary")
     obs_metric = (v.get("validation") or {}).get("score", {}).get("metric")
 
@@ -196,8 +199,7 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
         }
         print(f"    !! {name}: stored {observed} on {obs_metric} -> rescored "
               f"{ident.primary:.6f} on {ident.metric}", flush=True)
-    sample = rt.null_sample(blotter, calendar, b=b, seed=seed,
-                            notional_base=nb)
+    sample = rt.null_sample(blotter, calendar, b=b, seed=seed, **terms)
     cache.write_text(json.dumps(
         {"source": "round_turn_mc", "split": "validation", "b": b, "seed": seed,
          "profile": profile_name, "n_sessions": len(calendar),

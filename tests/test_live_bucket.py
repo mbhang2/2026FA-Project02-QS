@@ -11,6 +11,7 @@ import re
 
 import pytest
 
+from src.core.data.bucket_layout import stored_key
 from test_data_integrity import CORRECTED_DATES, as_date, header_root
 
 pytestmark = pytest.mark.live
@@ -29,6 +30,9 @@ def live_listing(inv, s3, bucket):
 
 
 def test_bucket_has_one_canonical_location(live_listing):
+    # `inventory.list_objects` reports keys under their logical `raw/...` names and
+    # skips `crypto/` and the legacy `raw/` copies, so a stray here is an object
+    # under no mapped prefix.
     strays = sorted(k for k in live_listing if not k.startswith("raw/"))
     assert not strays, f"objects outside raw/: {strays[:10]}"
     assert not [k for k in live_listing if k.startswith("patches/")]
@@ -53,7 +57,7 @@ def test_corrected_objects_report_nq_v3(inv, s3, bucket, corrections):
     assert len(corrections) == len(CORRECTED_DATES)
     for e in corrections:
         key = e["key"]
-        size = s3.head_object(Bucket=bucket, Key=key)["ContentLength"]
+        size = s3.head_object(Bucket=bucket, Key=stored_key(key))["ContentLength"]
         meta = inv.dbn_metadata(s3, bucket, key, size)
         assert header_root(meta["query_symbols"][0]) == "NQ", (
             f"{key} reports {meta['query_symbols']}"

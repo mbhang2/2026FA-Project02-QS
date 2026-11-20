@@ -54,6 +54,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # The DBN reading rules -- double zstd, never seek by fixed offset, symbol from
 # the header -- live in one place so this script and the NQ adapter cannot drift
 # apart on them.
+from src.core.data.bucket_layout import LEGACY_ROOT, logical_key, stored_key  # noqa: E402
 from src.core.data.dbn import (  # noqa: E402
     count_records,
     dbn_metadata,
@@ -263,9 +264,15 @@ def list_objects(s3, bucket: str) -> list[dict]:
     out: list[dict] = []
     for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket):
         for o in page.get("Contents", []):
+            # Keys are reported under their LOGICAL name (`raw/...`); see
+            # src/core/data/bucket_layout.py. Crypto has its own manifest, and the
+            # pre-reorganisation `raw/` copies are not a second canonical location.
+            stored = o["Key"]
+            if stored.startswith(LEGACY_ROOT) or stored.startswith("crypto/"):
+                continue
             out.append(
                 {
-                    "key": o["Key"],
+                    "key": logical_key(stored) or stored,
                     "size": o["Size"],
                     "etag": o["ETag"].strip('"'),
                     "last_modified": o["LastModified"]
@@ -1285,7 +1292,7 @@ def build(args) -> dict:
     for o in unparsed:
         sidecars.append({"key": o["key"], "size": o["size"]})
         if o["key"].endswith("condition.json"):
-            body = s3.get_object(Bucket=bucket, Key=o["key"])["Body"].read()
+            body = s3.get_object(Bucket=bucket, Key=stored_key(o["key"]))["Body"].read()
             cond = json.loads(body)
             by_cond = Counter(c["condition"] for c in cond)
             sidecars[-1]["conditions"] = dict(sorted(by_cond.items()))

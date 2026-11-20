@@ -58,6 +58,51 @@ profiles:
     wall_clock_budget_s: 120
     notional_base: 1.0
 
+  # Crypto campaigns' probes (src/core/loop/probe.py, perturb.py): the same
+  # roles as `agent`, `harness-fitted` and the probe-nq-shape pair, on the
+  # crypto-shaped synthetic data and with crypto's cost model (Amendment 16).
+  agent-crypto:
+    dataset: synthetic-crypto-shape
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 120
+    commission_per_contract: 0.0
+    commission_bps: 5.0
+    notional_base: 1.0
+  harness-fitted-crypto:
+    dataset: synthetic-crypto-shape
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    fit_sessions: 12
+    wall_clock_budget_s: 120
+    commission_per_contract: 0.0
+    commission_bps: 5.0
+    notional_base: 1.0
+  probe-crypto-shape:
+    dataset: synthetic-crypto-shape
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 120
+    commission_per_contract: 0.0
+    commission_bps: 5.0
+    notional_base: 1.0
+  probe-crypto-shape-flipped:
+    dataset: synthetic-crypto-shape-flipped
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 120
+    commission_per_contract: 0.0
+    commission_bps: 5.0
+    notional_base: 1.0
+
   # The fidelity probe's pair (src/core/loop/perturb.py). Same seed, same
   # prices, same split; the second inverts every aggressor side.
   probe-nq-shape:
@@ -206,6 +251,43 @@ profiles:
     wall_clock_budget_s: 7200
     notional_base: 1.0
     commission_per_contract: 0.10
+    record_fill_spread: false
+
+  # CRYPTO, Binance BTCUSDT perpetual (pre-registration Amendment 16, in force 2026-11-19).
+  # A matched pair: same costs, fill model, warmup and scoring terms, because a
+  # campaign's winner is compared train-against-validation.
+  #
+  # Costs: 5 bp of notional per side (retail taker on all three exchanges, maker
+  # fills charged the same) and no per-contract fee. Returns are a share of the
+  # session's opening notional; the idle charge is 1.2e-5 of it per session
+  # (re-derived by Amendment 3's method: 10% margin at 4.5% over 365 sessions);
+  # funding is paid at each 8-hour settlement on the position held.
+  crypto-btc-train:
+    dataset: crypto-btc
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 7200
+    commission_per_contract: 0.0
+    commission_bps: 5.0
+    scoring_units: notional
+    idle_charge_fraction: 1.2e-5
+    funding: true
+    record_fill_spread: false
+
+  crypto-btc-validation:
+    dataset: crypto-btc
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 7200
+    commission_per_contract: 0.0
+    commission_bps: 5.0
+    scoring_units: notional
+    idle_charge_fraction: 1.2e-5
+    funding: true
     record_fill_spread: false
 
   nq-train:
@@ -411,6 +493,42 @@ datasets:
     vol_per_tick: 5.0
     signal_strength: 0.0
     session_open_ct: "08:30"
+  # The crypto twin of synthetic-nq-shape, for crypto campaigns' probe and
+  # fidelity check: daily sessions at 00:00 UTC, every day, 24 h long (17,280
+  # ticks of 5 s, no early closes), prices near $30,000 with ~2.5% daily
+  # volatility, and sizes x500 so a volume threshold in lots of 0.001 BTC can
+  # fire. Still seeded noise, signal 0: what a strategy does here says nothing
+  # about Binance.
+  synthetic-crypto-shape:
+    kind: synthetic
+    n_sessions: 40
+    ticks_per_session: 17280
+    tick_spacing_ns: 5000000000
+    session_gap_ns: 0
+    start_price: 30000.0
+    tick_size: 0.1
+    vol_per_tick: 6.0
+    signal_strength: 0.0
+    early_close_rate: 0.0
+    length_jitter: 0.0
+    session_open_utc: "00:00"
+    size_scale: 500
+  synthetic-crypto-shape-flipped:
+    kind: synthetic
+    n_sessions: 40
+    ticks_per_session: 17280
+    tick_spacing_ns: 5000000000
+    session_gap_ns: 0
+    start_price: 30000.0
+    tick_size: 0.1
+    vol_per_tick: 6.0
+    signal_strength: 0.0
+    early_close_rate: 0.0
+    length_jitter: 0.0
+    session_open_utc: "00:00"
+    size_scale: 500
+    aggressor: flipped
+
   # The same, with every aggressor side inverted and every price untouched.
   synthetic-nq-shape-flipped:
     kind: synthetic
@@ -502,6 +620,20 @@ datasets:
   nq:
     kind: nq
     symbol: NQ
+
+  # Binance USDT-margined perpetuals. One lot = 0.001 coin, so engine sizes are
+  # integers and P&L is USD per lot per $1 of price x lots. Sessions are UTC days;
+  # split in config/calendars/crypto-trades.yaml. See docs/datasets/crypto.md.
+  crypto-btc:
+    kind: crypto
+    symbol: BTCUSDT
+    exchange: binance
+    lot: 0.001
+  crypto-eth:
+    kind: crypto
+    symbol: ETHUSDT
+    exchange: binance
+    lot: 0.001
 
 # Campaign-level settings. Pre-registered by `docs/design/pre-registration.md`;
 # the values here are copied into `CampaignRecord` and hashed before trial 0, so

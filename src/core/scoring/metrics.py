@@ -34,7 +34,7 @@ import inspect
 import math
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping, Sequence, Union
 
 from ..types import Blotter, BlotterRow, Ts
 
@@ -107,6 +107,80 @@ class SessionSpan:
     session: int
     start_ts: Ts
     end_ts: Ts
+
+
+# A per-run constant (NQ: 1.0, so returns are index points) or a value per
+# session id (crypto: the session's opening price, so returns are a share of one
+# lot-coin's notional and mean the same at $16k and at $100k). The idle charge
+# takes the same two forms and is always in PRICE POINTS, so `charge / notional`
+# is in return units either way.
+PerSession = Union[float, Mapping[int, float]]
+
+
+def per_session(value: PerSession, session: int) -> float:
+    """`value` for one session: the constant, or the mapping's entry (which must exist)."""
+    if isinstance(value, Mapping):
+        try:
+            return float(value[session])
+        except KeyError:
+            raise KeyError(f"no per-session value for session {session}; a scoring term "
+                           "that skips a session would silently score it differently") from None
+    return float(value)
+
+
+def _check_positive(notional_base: PerSession, calendar: Sequence["SessionSpan"]) -> None:
+    for s in calendar:
+        if per_session(notional_base, s.session) <= 0:
+            raise ValueError("notional_base must be positive")
+
+
+@dataclass(frozen=True, slots=True)
+class FundingEvent:
+    """One perpetual-swap funding settlement: at `ts`, a position of `q` lots pays
+    `q x mark x rate` in price points (a long pays a positive rate, a short
+    receives it)."""
+    ts: Ts
+    rate: float
+    mark: float
+
+
+def funding_points(
+    blotter: Blotter,
+    calendar: Sequence["SessionSpan"],
+    events: Sequence[FundingEvent] | None,
+) -> list[float]:
+    """Funding PAID per session, in price points (positive = a cost), from the
+    position held at each settlement instant.
+
+    The position at `ts` is the `position_after` of the last fill strictly before
+    it, summed over assets -- a crypto run trades one. Attributed to the session
+    the settlement falls in, not to the round turn: it is a carrying cost, like
+    the idle charge, and travels to the null the same way (as a fixed vector).
+    """
+    out = [0.0] * len(calendar)
+    if not events:
+        return out
+    index = {s.session: i for i, s in enumerate(calendar)}
+    rows = sorted(blotter.rows, key=lambda r: (r.ts, r.seq))
+    ts_list = [r.ts for r in rows]
+    live: dict[str, int] = {}
+    positions: list[int] = []
+    for r in rows:
+        live[r.asset] = r.position_after
+        positions.append(sum(live.values()))
+    lo, hi = calendar[0].start_ts if calendar else 0, calendar[-1].end_ts if calendar else -1
+    for e in events:
+        if e.ts < lo or e.ts > hi:
+            continue
+        k = bisect.bisect_left(ts_list, e.ts) - 1
+        q = positions[k] if k >= 0 else 0
+        if q == 0:
+            continue
+        s = _session_of(e.ts, calendar)
+        if s is None or s not in index:
+            continue
+        out[index[s]] += q * e.mark * e.rate
+    return out
 
 
 def session_calendar(dataset, sessions: Iterable[int]) -> list[SessionSpan]:
@@ -264,8 +338,9 @@ def idle_charges(
     blotter: Blotter,
     calendar: Sequence[SessionSpan],
     *,
-    idle_charge: float = IDLE_CHARGE,
-    notional_base: float = 1.0,
+    idle_charge: PerSession = IDLE_CHARGE,
+    notional_base: PerSession = 1.0,
+    funding: Sequence[FundingEvent] | None = None,
 ) -> list[float]:
     """The per-session charge vector: `-idle_charge * contracts * (1 - exposure)`.
 
@@ -274,11 +349,15 @@ def idle_charges(
     0.0367 to 0.1813, because the null is handed free upside on sessions that
     never carried a bet.
     """
-    if idle_charge <= 0:
-        return [0.0] * len(calendar)
+    paid = funding_points(blotter, calendar, funding)
+    if not isinstance(idle_charge, Mapping) and idle_charge <= 0:
+        if not funding:
+            return [0.0] * len(calendar)     # bit-identical to before funding existed
+        return [-p / per_session(notional_base, s.session) for s, p in zip(calendar, paid)]
     scale = position_scale(blotter)
-    return [-idle_charge * scale * (1.0 - f) / notional_base
-            for f in session_exposure(blotter, calendar)]
+    return [(-per_session(idle_charge, s.session) * scale * (1.0 - f) - p)
+            / per_session(notional_base, s.session)
+            for s, f, p in zip(calendar, session_exposure(blotter, calendar), paid)]
 
 
 def sessions_exposed(blotter: Blotter, calendar: Sequence[SessionSpan]) -> int:
@@ -295,8 +374,9 @@ def session_returns(
     blotter: Blotter,
     calendar: Sequence[SessionSpan],
     *,
-    notional_base: float = 1.0,
-    idle_charge: float = IDLE_CHARGE,
+    notional_base: PerSession = 1.0,
+    idle_charge: PerSession = IDLE_CHARGE,
+    funding: Sequence[FundingEvent] | None = None,
 ) -> list[float]:
     """One observation per session in the calendar, flat sessions included.
 
@@ -306,8 +386,7 @@ def session_returns(
     sessions ending with a position open is reported as a diagnostic so that
     distortion is visible rather than silent.
     """
-    if notional_base <= 0:
-        raise ValueError("notional_base must be positive")
+    _check_positive(notional_base, calendar)
     # Collected then summed with `math.fsum`, not accumulated with `+=`. A
     # running float total is order-deterministic and therefore platform-stable,
     # so this is not the cross-platform fix -- that was `Blotter.realized_pnl`
@@ -321,8 +400,8 @@ def session_returns(
             continue
         per[s].append(row.realized_pnl - row.commission)
     charges = idle_charges(blotter, calendar, idle_charge=idle_charge,
-                           notional_base=notional_base)
-    return [math.fsum(per[s.session]) / notional_base + c
+                           notional_base=notional_base, funding=funding)
+    return [math.fsum(per[s.session]) / per_session(notional_base, s.session) + c
             for s, c in zip(calendar, charges)]
 
 

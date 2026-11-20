@@ -366,6 +366,9 @@ def context(parent_text: str, ev: dict, papers: list[dict],
 # `review_hypothesis.MODEL`. Module-level because both seats read it and main()
 # sets it once, before either runs.
 REVIEWER_MODEL: str | None = None
+# The market the family trades, from campaign k's profile; set once in main().
+# The refiner and the hypothesis seat are told it (src/core/loop/market.py).
+MARKET: str = "nq"
 
 
 def _kw() -> dict:
@@ -392,7 +395,10 @@ def review_findings(md: str, parent: str) -> tuple[list[str], str]:
     nothing. A reader would have seen in a minute that a strategy obeying that
     question could barely act.
     """
-    return _seat("hypothesis", lambda m: m.review(md, parent, **_kw()))
+    # `market` only when it is not NQ, so an NQ family's seat is called exactly
+    # as it was before markets existed.
+    extra = {} if MARKET == "nq" else {"market": MARKET}
+    return _seat("hypothesis", lambda m: m.review(md, parent, **_kw(), **extra))
 
 
 def family_findings_agentic(parent: str, md: str) -> tuple[list[str], str]:
@@ -553,6 +559,9 @@ def main() -> int:
             "validation runs at the stop.")
 
     record = json.loads((d / "campaign.json").read_text()).get("record", {})
+    global MARKET
+    from src.core.loop.market import market_for_profile, render
+    MARKET = market_for_profile(record.get("profile"))
     parent_path = a.parent or (ROOT / record["hypothesis_path"])
     parent = parent_path.read_text()
 
@@ -647,7 +656,7 @@ def main() -> int:
         last = None
         for i in range(MAX_FORMAT_RETRIES + 1):
             try:
-                return client.ask(PROMPT.read_text(), user + extra + (
+                return client.ask(render(PROMPT.read_text(), MARKET), user + extra + (
                     "" if i == 0 else
                     "\n\n# Your last reply was not usable JSON\n"
                     "Return ONLY a JSON object with keys \"slug\" and "

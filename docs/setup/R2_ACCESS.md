@@ -94,8 +94,8 @@ nobody will be annoyed.
 ## 4. Test it works
 
 ```bash
-rclone ls r2:msfe-practicum/raw/trades | head -5
-rclone size r2:msfe-practicum/raw/trades --fast-list
+rclone ls r2:msfe-practicum/futures/raw/cme/trades | head -5
+rclone size r2:msfe-practicum/futures/raw/cme/trades --fast-list
 ```
 
 Expected: a few filenames, then a four-figure object count. Don't match on the exact
@@ -114,7 +114,7 @@ c = boto3.client('s3', endpoint_url=os.environ['R2_ENDPOINT'],
                  aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],
                  aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],
                  region_name='auto')
-r = c.list_objects_v2(Bucket=os.environ['R2_BUCKET'], Prefix='raw/', MaxKeys=5)
+r = c.list_objects_v2(Bucket=os.environ['R2_BUCKET'], Prefix='futures/', MaxKeys=5)
 print([o['Key'] for o in r['Contents']])
 "
 ```
@@ -127,17 +127,26 @@ broken key — see section 5 for the error that is.
 
 ## 5. What's in the bucket
 
-Databento DBN under zstd — **not parquet**, so `read_parquet` won't open it. Use the
-`databento` package. One prefix, `raw/`, 2,703 objects, roughly 48 GiB. These counts
+**The bucket is organised by asset class (since 2026-11-19):** `futures/`, `options/`,
+`crypto/`, each with `raw/` underneath. The futures and options objects keep their old
+names (`raw/trades/...`, `raw/opra_*/...`) as their *logical* keys: the manifest, the
+corrections and every recorded dataset digest use those, and
+`src/core/data/bucket_layout.py` maps them to where they are stored. Read through
+`src/core/data/dbn.py` and you never see the difference. **The old `raw/` copies are
+still in the bucket** until every branch reads the new layout; do not add to them.
+
+Futures and options are Databento DBN under zstd — **not parquet**, so `read_parquet`
+won't open it. Use the `databento` package. 2,703 objects, roughly 48 GiB. These counts
 move as the series are extended; `docs/data-inventory.md` is generated and is the live
 source. Don't match on a total in a script.
 
-| Prefix | Data files | Notes |
-|---|---|---|
-| `raw/trades` | 1,056 | tick trades, NQ + ES — our primary price source |
-| `raw/opra_cbbo1m` | 548 | QQQ options quotes, per-minute; feeds GEX only |
-| `raw/opra_definition` | 548 | options instrument definitions |
-| `raw/opra_statistics` | 548 | options statistics |
+| Stored at | Logical key | Data files | Notes |
+|---|---|---|---|
+| `futures/raw/cme/trades` | `raw/trades` | 1,056 | tick trades, NQ + ES — our primary price source |
+| `options/raw/opra/cbbo1m` | `raw/opra_cbbo1m` | 548 | QQQ options quotes, per-minute; feeds GEX only |
+| `options/raw/opra/definition` | `raw/opra_definition` | 548 | options instrument definitions |
+| `options/raw/opra/statistics` | `raw/opra_statistics` | 548 | options statistics |
+| `crypto/raw/<exchange>` | same | see `data/crypto-manifest.json` | Binance, Bybit, OKX perpetuals; [datasets/crypto.md](../datasets/crypto.md) |
 
 **Plus 3 sidecar objects under `raw/opra_definition/`** — `condition.json`,
 `manifest.json`, `metadata.json`. They are vendor bookkeeping, not data, which is why
@@ -184,7 +193,7 @@ identity — that will bite you otherwise.
 
 Isolate #3 with:
 ```bash
-rclone --config secrets/rclone.conf ls r2:msfe-practicum/raw/trades | head -3
+rclone --config secrets/rclone.conf ls r2:msfe-practicum/futures/raw/cme/trades | head -3
 ```
 If that works but bare `rclone` doesn't, it's a direnv problem, not a key problem.
 

@@ -46,7 +46,7 @@ from .context import (
 from ..data.dataset import Dataset
 from ..data.options import parse_option_asset
 from .fills import FillModel, check_capabilities, get_fill_model
-from .reconstruct import FillLogFull, log_digest, reconstruct
+from .reconstruct import FillLogFull, fill_commission, log_digest, reconstruct
 from ..runlog import RunNotAccounted, RunTicket
 from ..types import (
     DEFAULT_ASSET,
@@ -223,6 +223,12 @@ class _SealedDataset:
         # is a feed that turns a forward into quotes and holds nothing else, so
         # forwarding it does not widen what the engine can reach.
         "options",
+        # Added 2026-11-19 for crypto scoring (Amendment 16). `run.py` reads the
+        # session opening prices and the funding settlements through the engine's
+        # dataset to build the scoring terms. Both are exchange reference data for
+        # the sessions being scored, and the engine is not reachable from a
+        # strategy, so forwarding them widens nothing a strategy can see.
+        "session_open_prices", "funding_series",
     )
 
     def __init__(self, dataset) -> None:
@@ -509,6 +515,11 @@ class Engine:
         # that exceeds the target makes every strategy a loser and hides whether
         # the harness can see an edge at all. A real adapter passes its own.
         commission_per_contract: float = 0.01,
+        # Proportional fee, in basis points of each fill's notional (price x
+        # size), charged on top of `commission_per_contract`. Zero unless a
+        # profile sets it: crypto exchanges charge a share of notional, which a
+        # fixed per-contract figure cannot express once the price moves 6x.
+        commission_bps: float = 0.0,
         action_cap: int = DEFAULT_ACTION_CAP,
         seed: int | None = None,
         wall_clock_budget_s: float | None = None,
@@ -535,6 +546,7 @@ class Engine:
         check_capabilities(self.model, dataset.capabilities())
         self.warmup_sessions = warmup_sessions
         self.commission = commission_per_contract
+        self.commission_bps = commission_bps
         self.action_cap = action_cap
         self.seed = seed
         self.wall_clock_budget_s = wall_clock_budget_s
@@ -1661,7 +1673,9 @@ class Engine:
             )
             st.position += signed
 
-        commission = self.commission * fill.size
+        commission = fill_commission(fill.price, fill.size,
+                                     commission_per_contract=self.commission,
+                                     commission_bps=self.commission_bps)
         # Accumulated here rather than summed from the blotter on demand, so the
         # context can read it without the blotter being reachable -- a mutable
         # list of rows is a place a strategy could write its own result.
@@ -2048,7 +2062,8 @@ class Engine:
         two disagreeing is a finding.
         """
         return reconstruct(
-            self._fill_log, commission_per_contract=self.commission
+            self._fill_log, commission_per_contract=self.commission,
+            commission_bps=self.commission_bps,
         )
 
     def fill_log_digest(self) -> str:

@@ -21,7 +21,7 @@ WHAT IS DELIBERATELY NOT IN THE CONTEXT THIS PROMPT RECEIVES:
 
 ## SYSTEM
 
-You revise a research question for a quantitative trading study on NQ futures.
+You revise a research question for a quantitative trading study on {market_name}.
 
 You are given: the current question, evidence about what a strategy written
 against it actually did, the objections four independent auditors raised, and

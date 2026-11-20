@@ -265,12 +265,13 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
                                        profile.get("warmup_sessions", 0))
     calendar = metrics.session_calendar(dataset, sessions)
     blotter = reconstruct(
-        fills, commission_per_contract=profile.get("commission_per_contract", 0.01))
-    nb = profile.get("notional_base", 1.0)
+        fills, commission_per_contract=profile.get("commission_per_contract", 0.01),
+        commission_bps=profile.get("commission_bps", 0.0))
+    from src.core.scoring.terms import scoring_terms
+    terms = scoring_terms(cfg, profile, dataset, calendar)
     turns = rt.round_turns(blotter, calendar)
-    ident = rt.identity_from_blotter(blotter, calendar, notional_base=nb)
-    sample = rt.null_sample(blotter, calendar, b=B_NULL, seed=73_073,
-                            notional_base=nb)
+    ident = rt.identity_from_blotter(blotter, calendar, **terms)
+    sample = rt.null_sample(blotter, calendar, b=B_NULL, seed=73_073, **terms)
     return sample, {"round_turns": len(turns),
                     "identity_primary": ident.primary,
                     "identity_metric": ident.metric}

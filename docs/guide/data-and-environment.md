@@ -12,6 +12,7 @@ machine needs to run campaigns.
 | NQ futures trades | `nq-trades:NQ` (`src/core/data/nq.py`) | Every real campaign (profiles `nq-train`, `nq-train-fitted`) |
 | SPX options | `src/core/data/options_spx.py` | `spx-*` profiles |
 | Synthetic | `src/core/data/synthetic.py` | Rehearsals, the probe, positive controls |
+| Crypto perpetuals (Binance BTC/ETH served; Bybit, OKX downloaded) | `crypto-trades:BTCUSDT` (`src/core/data/crypto.py`) | Profiles `crypto-btc-train`, `crypto-btc-validation` (Amendment 16, in force 2026-11-19); see [datasets/crypto.md](../datasets/crypto.md) |
 
 - **Sessions, not files.** A CME session runs 17:00 CT to 16:00 CT the next day;
   N counts sessions. 564 NQ sessions are assemblable (2024-07-04 to 2026-09-09).

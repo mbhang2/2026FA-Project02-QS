@@ -699,7 +699,10 @@ def test_the_probe_writes_its_own_workers_strategy_file():
     """
     src = (REPO_ROOT / "scripts" / "nq_campaign.py").read_text()
     assert "def _arm_probe(a, root: pathlib.Path | None = None) -> None:" in src
-    assert 'strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")' in src
+    # Followed by `market=` since 2026-11-20 (a crypto campaign probes on
+    # crypto-shaped data); the per-worker path is what this pins.
+    assert ('probe_source, ledger=d / "probe-ledger.jsonl",\n'
+            '            strategy_path=(root or ROOT) / "src" / "strategies" / "current.py",') in src
     # every agent gets its own worker, including the first
     assert "_arm_probe(agent, workers[0])" in src
     assert "_arm_probe(extra, workers[slot])" in src

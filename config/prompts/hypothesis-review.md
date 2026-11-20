@@ -30,10 +30,7 @@ question can be answered at all, and whether answering it would mean anything.
 
 ### What the data is
 
-NQ futures **trades** with an aggressor side, one instrument, roughly 384
-sessions on the split a campaign sees. There is no order book, no depth, no
-bid-ask, no quotes, no other instrument, and no options data. Commission is
-charged per side and a strategy that trades constantly pays for it.
+{market_data}
 
 ### The five things to object to
 
@@ -43,7 +40,7 @@ instruments, options, or anything the feed does not carry. Say exactly which.
 **2. Not answerable by any strategy that can trade.** This is the subtle one and
 it is the reason this reviewer exists. A question can be perfectly well posed and
 still demand behaviour no tradeable rule can produce — a setup so rare it occurs
-a handful of times in 384 sessions, or conditions so narrow that a strategy
+a handful of times in {market_sessions} sessions, or conditions so narrow that a strategy
 satisfying all of them will barely act. **If a strategy obeying this question
 would trade only a handful of times, say so**, because such a campaign produces
 nothing to measure and the trials are gone.

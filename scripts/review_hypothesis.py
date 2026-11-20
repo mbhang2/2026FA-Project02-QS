@@ -141,20 +141,25 @@ def family_findings(parent: str, child: str, *,
     return [f"family reviewer: {c}" for c in r["concerns"]]
 
 
-def review(text: str, parent: str | None = None, *, model: str = MODEL) -> dict:
-    """One call. Returns the verdict dict, normalised and safe to record."""
+def review(text: str, parent: str | None = None, *, model: str = MODEL,
+           market: str = "nq") -> dict:
+    """One call. Returns the verdict dict, normalised and safe to record.
+
+    `market` decides what the seat is told the data is (src/core/loop/market.py);
+    a question about BTC judged against a description of NQ is judged wrongly."""
     from audit.committee.llm import Client, preflight
+    from src.core.loop.market import render
 
     served = preflight(model)
     client = Client(model=model, temperature=0.0, max_tokens=MAX_TOKENS)
-    out = client.ask(PROMPT.read_text(), context(text, parent))
+    out = client.ask(render(PROMPT.read_text(), market), context(text, parent))
     return _normalise(out, model, served, seat="hypothesis")
 
 
 def findings(text: str, parent: str | None = None, *,
-             model: str = MODEL) -> list[str]:
+             model: str = MODEL, market: str = "nq") -> list[str]:
     """The reviewer's concerns as repair lines, empty when it did not object."""
-    r = review(text, parent, model=model)
+    r = review(text, parent, model=model, market=market)
     if r["verdict"] != "OBJECT":
         return []
     return [f"reviewer: {c}" for c in r["concerns"]]
@@ -167,6 +172,8 @@ def main() -> int:
     ap.add_argument("--parent", type=pathlib.Path, default=None)
     ap.add_argument("--model", default=MODEL)
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--market", default="nq",
+                    help="the market the question is about: nq, crypto-BTCUSDT, crypto-ETHUSDT")
     ap.add_argument("--family", action="store_true",
                     help="run the FAMILY seat instead: is this revision still "
                          "the same question as --parent, or a new one? Needs "
@@ -183,7 +190,7 @@ def main() -> int:
                      "compare a first question to")
         r = family_review(parent, a.hypothesis.read_text(), model=a.model)
     else:
-        r = review(a.hypothesis.read_text(), parent, model=a.model)
+        r = review(a.hypothesis.read_text(), parent, model=a.model, market=a.market)
     if a.json:
         print(json.dumps(r, indent=2))
         return 0

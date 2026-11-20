@@ -229,6 +229,31 @@ def _dataset_facts(profile: dict) -> tuple[str, str]:
             "multiplier, so the legs of one package and the index itself are "
             "directly comparable.\n\n",
         )
+    if kind == "crypto":
+        sym = spec.get("symbol", "BTCUSDT")
+        lot = spec.get("lot", 0.001)
+        coin = sym.removesuffix("USDT")
+        bps = profile.get("commission_bps", 0.0)
+        return (
+            f"real Binance {sym} perpetual-futures trades. A session is a UTC day "
+            "(00:00 to 24:00 UTC); the market trades continuously, with no close, "
+            "no holidays and no overnight gap, so `session` boundaries are a "
+            "calendar convention, not a market event. Every trade carries its "
+            "aggressor side, so `unknown_volume` is always zero",
+            f"Sizes are integer lots of {lot} {coin}: `ctx.buy(1)` is {lot} {coin}, and "
+            f"P&L is the price move in USD times lots, so one lot earns {lot} USD per "
+            "$1 the price moves. "
+            f"Commission: {bps:g} basis points of notional per side "
+            f"({2 * bps / 100:.2f}% a round trip), charged on every fill: a round "
+            f"trip must move the price {2 * bps / 100:.2f}% just to break even -- $30 "
+            "at $30,000, $100 at $100,000 -- so high turnover is very expensive "
+            "here. Holding a "
+            "position through a funding settlement (00:00, 08:00, 16:00 UTC) pays the "
+            "funding rate on its notional when long and receives it when short "
+            "(the reverse when the rate is negative). Returns are scored relative to "
+            "each session's opening price, so a move of 1% counts the same in 2023 "
+            "and in 2026.\n\n",
+        )
     return (
         "real NQ futures trades",
         f"Commission: {per} index points per contract per side. NQ is $20 a "
@@ -686,11 +711,13 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
         print(f"{name}: no hypothesis file; writing one from the statement "
               f"(Amendment 15)", flush=True)
         try:
+            from src.core.loop.market import market_for_profile
             got = wh.write_unattended(question, campaign=name,
                                       papers=not no_papers,
                                       model=writer_model,
                                       reviewer_model=reviewer_model,
-                                      picker_model=picker_model)
+                                      picker_model=picker_model,
+                                      market=market_for_profile(profile_name))
         except wh.Unattended as exc:
             sys.exit(f"{name}: NOT registered -- {exc}")
         hypothesis, hypothesis_origin = got["path"].resolve(), got["origin"]
@@ -772,6 +799,17 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
             "'txnsim': replicate j is not the same randomisation for two "
             "candidates that trade differently. Use correction_rule "
             "'independent'.")
+    # **txnsim prices its random traders in points with a per-contract fee**, so
+    # it cannot reproduce a crypto profile's terms (Amendment 16: bp fees,
+    # per-session notional, funding). Refused here rather than mis-scored later.
+    if cc["null_source"] == "txnsim" and (
+            profile.get("scoring_units", "points") != "points"
+            or profile.get("commission_bps", 0.0)):
+        sys.exit(
+            f"null_source 'txnsim' does not yet support profile {profile_name!r}: "
+            "it scores in points with a per-contract commission, and this profile "
+            "uses Amendment 16's notional returns or basis-point fees. Use "
+            "'round_turn_mc', whose null takes the same scoring_terms as the trial.")
     agent_cfg["null_source"] = cc["null_source"]
     if cc["null_source"] == "txnsim":
         # Frozen at registration like the null itself: the two modes are
@@ -1049,9 +1087,11 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         import functools
         if cons.probe:
             from src.core.loop.perturb import check as perturb_check
+            from src.core.loop.market import market_for_profile
             a.perturb = functools.partial(
                 perturb_check, cons=cons, ledger=d / "probe-ledger.jsonl",
-                strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")
+                strategy_path=(root or ROOT) / "src" / "strategies" / "current.py",
+                market=market_for_profile(record.profile))
         if judge is not None:
             a.judge = lambda src: judge(src, cons)
             a.judge_mode = reg_judge["mode"]
@@ -1089,9 +1129,11 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         # The scored TRIALS were never affected -- `run_trial` takes `root` and
         # writes the worker's file -- so session 07's results stand. Only the
         # probe leaked, and only its attribution.
+        from src.core.loop.market import market_for_profile
         a.probe = functools.partial(
             probe_source, ledger=d / "probe-ledger.jsonl",
-            strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")
+            strategy_path=(root or ROOT) / "src" / "strategies" / "current.py",
+            market=market_for_profile(record.profile))
 
     _arm_probe(agent)
     _arm_fidelity(agent)
@@ -1349,6 +1391,9 @@ def stage_nulls(name: str) -> None:
     calendar = metrics.session_calendar(dataset, sessions)
     print(f"  calendar: {len(calendar)} scored sessions on the train split",
           flush=True)
+    # The terms run.py scored each trial with; see src/core/scoring/terms.py.
+    from src.core.scoring.terms import scoring_terms
+    terms = scoring_terms(cfg(), profile, dataset, calendar)
 
     samples, t0 = [], time.monotonic()
     rule = _rec.correction_rule or "independent"
@@ -1463,7 +1508,8 @@ def stage_nulls(name: str) -> None:
         if not fills or score.get("primary") is None or score.get("rejected"):
             samples.append([])
             continue
-        blotter = reconstruct(fills, commission_per_contract=commission)
+        blotter = reconstruct(fills, commission_per_contract=commission,
+                              commission_bps=profile.get("commission_bps", 0.0))
         # **The seed decides whether the nulls can be read jointly.**
         #
         # `70_000 + i` gives every trial its own randomisation stream, so
@@ -1491,9 +1537,11 @@ def stage_nulls(name: str) -> None:
         if tape is not None:
             samples.append(tx.null_sample(
                 blotter, calendar, tape, commission_per_contract=commission,
-                b=B_NULL, seed=seed, mode=tx_mode))
+                b=B_NULL, seed=seed, mode=tx_mode,
+                idle_charge=terms["idle_charge"],
+                notional_base=terms["notional_base"]))
         else:
-            samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed))
+            samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed, **terms))
         print(f"  {i + 1}/{len(rows)}  {len(samples[-1])} draws  "
               f"{time.monotonic() - t0:.0f}s", flush=True)
     # **The recorded source is the one that RAN.** This was hardcoded to

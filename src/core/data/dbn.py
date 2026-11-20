@@ -26,6 +26,8 @@ import databento_dbn as ddbn
 import pandas as pd
 import zstandard
 
+from .bucket_layout import stored_key
+
 ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
 DBN_MAGIC = b"DBN"
 
@@ -81,7 +83,7 @@ def dbn_metadata(s3, bucket: str, key: str, size: int) -> dict:
     want = HEAD_BYTES
     while True:
         end = min(want, size) - 1
-        raw = s3.get_object(Bucket=bucket, Key=key, Range=f"bytes=0-{end}")["Body"].read()
+        raw = s3.get_object(Bucket=bucket, Key=stored_key(key), Range=f"bytes=0-{end}")["Body"].read()
         buf, layers = unwrap_zstd(raw)
         if buf[:3] != DBN_MAGIC:
             if want >= size:
@@ -124,7 +126,7 @@ def count_records(s3, bucket: str, key: str) -> dict:
     records (e.g. interleaved symbol-mapping or error messages) the remainder is
     non-zero and we say so rather than reporting a wrong number.
     """
-    body = s3.get_object(Bucket=bucket, Key=key)["Body"]
+    body = s3.get_object(Bucket=bucket, Key=stored_key(key))["Body"]
     dctx = zstandard.ZstdDecompressor()
     reader = dctx.stream_reader(body, read_across_frames=True)
 
@@ -171,7 +173,7 @@ def read_head_df(s3, bucket: str, key: str, max_bytes: int = 8 << 20) -> pd.Data
     """
     import databento as db
 
-    raw = s3.get_object(Bucket=bucket, Key=key, Range=f"bytes=0-{max_bytes - 1}")["Body"].read()
+    raw = s3.get_object(Bucket=bucket, Key=stored_key(key), Range=f"bytes=0-{max_bytes - 1}")["Body"].read()
     buf, _ = unwrap_zstd(raw, limit=max_bytes * 8)
     mlen = int.from_bytes(buf[4:8], "little")
     header = 8 + mlen
@@ -185,7 +187,7 @@ def read_full_df(s3, bucket: str, key: str) -> pd.DataFrame:
     and on the small `opra_definition` files."""
     import databento as db
 
-    raw = s3.get_object(Bucket=bucket, Key=key)["Body"].read()
+    raw = s3.get_object(Bucket=bucket, Key=stored_key(key))["Body"].read()
     buf, _ = unwrap_zstd(raw, limit=1 << 62)
     return db.DBNStore.from_bytes(buf).to_df()
 
@@ -193,7 +195,7 @@ def read_full_df(s3, bucket: str, key: str) -> pd.DataFrame:
 def sha256_of(s3, bucket: str, key: str) -> str:
     """SHA-256 of the compressed object exactly as stored, streamed."""
     h = hashlib.sha256()
-    body = s3.get_object(Bucket=bucket, Key=key)["Body"]
+    body = s3.get_object(Bucket=bucket, Key=stored_key(key))["Body"]
     while True:
         chunk = body.read(1 << 22)
         if not chunk:

@@ -90,7 +90,7 @@ It is the place to fit parameters.
 | `ctx.subscribe(interval, emit_empty=False)` | declares a subscription, returns a `Subscription` — keep it |
 | `ctx.ticks()` | every training tick, in order, as a tuple |
 | `ctx.train_bars("5m")` | the training split aggregated at any interval, through the same code the live walk uses |
-| `ctx.dataset_name` | e.g. `"nq-trades:NQ"` |
+| `ctx.dataset_name` | e.g. `"nq-trades:NQ"`, `"crypto-trades:BTCUSDT"` |
 
 `setup()` **returns nothing**. Returning a list of subscriptions is the old shape
 and is refused with a message rather than silently ignored.
@@ -235,7 +235,7 @@ unknown arrives as `None`.
 
 | Read | What it is |
 |---|---|
-| `ctx.position` | signed contracts; `0` when flat |
+| `ctx.position` | signed contracts (NQ) or lots of 0.001 coin (crypto); `0` when flat |
 | `ctx.average_entry_price` | average price of the open position |
 | `ctx.realized_pnl` | realized P&L **net of commission** |
 | `ctx.unrealized_pnl` | mark-to-market on the open position, `0.0` when flat |
@@ -255,7 +255,7 @@ element of `ctx.fills` — has exactly these fields:
 | `order_id` | the id of the order that filled |
 | `side` | buy or sell |
 | `price` | the fill price |
-| `size` | contracts filled |
+| `size` | contracts (NQ) or lots (crypto) filled |
 | `position` | your signed position *after* this fill |
 | `last_trade_price` | the market's last trade price |
 | `working_order_ids` | ids of every order that can still do something |
@@ -323,7 +323,7 @@ ctx.find_orders(tag=..., order_type=..., side=..., parent_id=...)   # read
 
 | Keyword | Meaning |
 |---|---|
-| `size` | positive whole contracts; use `sell()` rather than a negative size |
+| `size` | positive whole contracts (NQ) or lots of 0.001 coin (crypto); use `sell()` rather than a negative size |
 | `type` | `"market"` (default), `"limit"`, `"stop"`, `"stop_limit"` |
 | `limit` | limit price — required for `"limit"` and `"stop_limit"` |
 | `trigger` | stop trigger price — required for `"stop"` and `"stop_limit"` |

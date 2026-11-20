@@ -216,6 +216,39 @@ def quote_columns(levels: int = QUOTE_LEVELS) -> list[str]:
             for side in ("bid", "ask") for f in QUOTE_FIELDS]
 
 
+# OKX changed the file's column names between January 2024 and January 2025.
+# Older files name levels `bidPx1` .. `askCnt50` in no particular order and add a
+# `maxLevel` column; newer ones use `bid_1_px` .. `ask_50_ordCnt`. Same data, same
+# units (sizes in contracts). Mapped onto the new names here, by header.
+_OLD_QUOTE_FIELDS = {"px": "Px", "qty": "Sz", "ordCnt": "Cnt"}
+
+
+def _okx_quote_header(src: str | Path) -> list[str]:
+    with gzip.open(src, "rt") as fh:
+        line = fh.readline()
+    return [c.strip().strip('"') for c in line.rstrip("\r\n").split(",")]
+
+
+def _okx_quote_source_columns(header: list[str], levels: int) -> dict[str, str]:
+    """{source column: canonical column} for the time columns and the kept book."""
+    have = set(header)
+    canonical = quote_columns(levels)
+    if "bid_1_px" in have:
+        mapping = {c: c for c in canonical}
+    elif "bidPx1" in have:
+        mapping = {}
+        for c in canonical:
+            side, i, field = c.split("_")
+            mapping[f"{side}{_OLD_QUOTE_FIELDS[field]}{i}"] = c
+    else:
+        raise ValueError(f"unrecognised OKX quotes header, starting {header[:6]}")
+    mapping.update({"timeMs": "timeMs", "exchTimeMs": "exchTimeMs"})
+    missing = [s for s in mapping if s not in have]
+    if missing:
+        raise ValueError(f"OKX quotes header lacks {missing[:6]}")
+    return mapping
+
+
 def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
                        levels: int = QUOTE_LEVELS, chunksize: int = 1_000_000) -> dict:
     """Read one OKX tick-by-tick file to the end and write the compact `.npz`.
@@ -235,6 +268,7 @@ def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
 
     book_cols = quote_columns(levels)
     cols = ["timeMs", "exchTimeMs", *book_cols]
+    rename = _okx_quote_source_columns(_okx_quote_header(src), levels)
     lo = int(_dt.datetime(day.year, day.month, day.day, tzinfo=_dt.timezone.utc).timestamp() * 1000)
     lo_ok, hi_ok = lo - 1_000, lo + 86_400_000 + 1_000
 
@@ -242,8 +276,8 @@ def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
     prev_row: np.ndarray | None = None
     prev_exch = -1
     rows = crossed = backsteps = max_back = 0
-    for ch in pd.read_csv(src, usecols=cols, chunksize=chunksize, dtype="float64"):
-        ch = ch[cols]
+    for ch in pd.read_csv(src, usecols=list(rename), chunksize=chunksize, dtype="float64"):
+        ch = ch.rename(columns=rename)[cols]
         e = ch["exchTimeMs"].to_numpy(np.int64)
         if len(e) == 0:
             continue

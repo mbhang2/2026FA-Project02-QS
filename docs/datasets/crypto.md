@@ -122,7 +122,13 @@ OKX publishes its order book free and without a key. The fetcher uses the
 "tick-by-tick" file (`market-data-history` module 6): the best 50 bid and ask
 levels (price, size in contracts, order count) on every book change, one gzipped
 CSV per **UTC** day by exchange time. Unlike OKX's trade files, which are UTC+8.
-It covers the whole window from 2023-01-01. A BTC day is ~7M rows and ~450 MB.
+It covers the whole window from 2023-01-01. A BTC day is ~7M rows and ~350-700 MB.
+
+**Two header formats.** Files up to at least January 2024 name the columns
+`bidPx1` .. `askCnt50` in no fixed order and add a `maxLevel` column. By January
+2025 they are `bid_1_px` .. `ask_50_ordCnt`. The data and units are the same.
+The compaction reads the header, maps either format onto the newer names, and
+refuses a third format rather than guessing.
 
 **Compacted on download.** `compact_okx_quotes` keeps the top 5 levels and only
 the rows where one of them changed. That is lossless at that depth, ~60% of the

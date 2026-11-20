@@ -305,3 +305,43 @@ def test_quotes_are_fetched_only_when_asked_and_into_their_own_manifest():
     mixed = argparse.Namespace(cmd="fetch", exchange=["okx"], kind=["quotes", "trades"], symbol=None)
     with pytest.raises(SystemExit, match="on their own"):
         cf.manifest_for(cfg, mixed)
+
+
+def test_quotes_read_okxs_older_column_names_the_same_way(tmp_path):
+    """Files before 2025 name levels `bidPx1`..`askCnt50`, unordered, plus `maxLevel`."""
+    import datetime as dt
+    import random
+
+    from src.core.data.crypto_raw import compact_okx_quotes, read_quotes
+
+    t0 = 1672531200000                                      # 2023-01-01 00:00 UTC
+    cols = ["exchTimeMs", "timeMs", "maxLevel"] + [f"{s}{f}{i}" for i in range(1, 7)
+                                                   for s in ("bid", "ask") for f in ("Px", "Sz", "Cnt")]
+    random.Random(1).shuffle(cols)
+    def row(e, a1):
+        v = {"exchTimeMs": e, "timeMs": e + 3, "maxLevel": 400}
+        for i in range(1, 7):
+            v.update({f"bidPx{i}": 100.0 - i, f"bidSz{i}": 2.0, f"bidCnt{i}": 1,
+                      f"askPx{i}": a1 + i - 1, f"askSz{i}": 3.0, f"askCnt{i}": 2})
+        return ",".join(str(v[c]) for c in cols)
+    src = tmp_path / "old.csv.gz"
+    with gzip.open(src, "wt") as fh:
+        fh.write(",".join(cols) + "\n" + row(t0 + 1, 100.5) + "\n" + row(t0 + 2, 100.6) + "\n")
+    facts = compact_okx_quotes(src, tmp_path / "o.npz", day=dt.date(2023, 1, 1))
+    assert facts["kept"] == 2
+    q = read_quotes(tmp_path / "o.npz", contract_value=0.01)
+    assert q["bid_px"][0].tolist() == [99.0, 98.0, 97.0, 96.0, 95.0]
+    assert q["ask_px"][:, 0].tolist() == [100.5, 100.6]
+    assert q["ask_qty"][0, 0] == pytest.approx(0.03) and q["ask_cnt"][0, 0] == 2
+
+
+def test_an_unknown_quotes_header_is_refused_not_guessed(tmp_path):
+    import datetime as dt
+
+    from src.core.data.crypto_raw import compact_okx_quotes
+
+    src = tmp_path / "x.csv.gz"
+    with gzip.open(src, "wt") as fh:
+        fh.write("a,b,c\n1,2,3\n")
+    with pytest.raises(ValueError, match="unrecognised OKX quotes header"):
+        compact_okx_quotes(src, tmp_path / "x.npz", day=dt.date(2023, 1, 1))

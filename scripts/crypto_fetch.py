@@ -434,7 +434,8 @@ def download_quotes(f: RemoteFile, lake: Path, http) -> tuple[RemoteFile, list]:
             c.update(chunk)
     how = (f"compacted from {raw_size} B raw (sha256 {h.hexdigest()}): {facts['rows']} rows read to the "
            f"end, {facts['kept']} kept where the top {facts['levels']} levels changed; "
-           f"{facts['backsteps']} exchange-time step(s) back, max {facts['max_backstep_ms']} ms; "
+           f"{facts['backsteps']} exchange-time step(s) back, max {facts['max_backstep_ms']} ms, "
+           f"{facts['dropped_backdated']} backdated row(s) dropped; "
            f"{facts['crossed']} crossed row(s)")
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return f, [dest.stat().st_size, c.hexdigest(), url.split("?", 1)[0], how, now, None]

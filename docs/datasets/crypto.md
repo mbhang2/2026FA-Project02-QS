@@ -137,8 +137,13 @@ window instead of ~640 GB. The raw file is deleted after compaction. Its size an
 SHA-256 go in the manifest, with the row counts and the checks it passed:
 
 - read to the end;
-- no exchange-time step back of more than 1 s (2026-11-15 and -16 each had one
-  20 ms step);
+- no exchange-time step back of more than a minute. Rows stamped earlier than a
+  row before them are dropped and counted. On 23 days of 2023-2026, OKX's file
+  holds a ~10 s stretch stamped back in time. On 2026-11-02, for example, 812 rows
+  from 10:04:18.842 UTC are stamped 10:04:08.892 onward, 421 of them have a
+  crossed book, and the book then resumes as it was before them. Those rows are
+  not book states and are dropped. Ordinary days have one or two
+  10-20 ms steps;
 - no row outside its day;
 - the number of crossed rows (zero so far).
 

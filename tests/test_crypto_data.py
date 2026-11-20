@@ -274,7 +274,7 @@ def test_quotes_refuse_a_clock_that_runs_back_or_a_row_from_another_day(tmp_path
     from src.core.data.crypto_raw import compact_okx_quotes
 
     t0 = 1794787200000
-    back = _tbt(tmp_path / "b.csv.gz", [(t0 + 5_000, 1.0, 2.0, 1.0), (t0 + 1_000, 1.0, 2.5, 1.0)])
+    back = _tbt(tmp_path / "b.csv.gz", [(t0 + 75_000, 1.0, 2.0, 1.0), (t0 + 1_000, 1.0, 2.5, 1.0)])
     with pytest.raises(ValueError, match="steps back"):
         compact_okx_quotes(back, tmp_path / "b.npz", day=dt.date(2026, 11, 16))
     late = _tbt(tmp_path / "l.csv.gz", [(t0 + 86_400_000 + 5_000, 1.0, 2.0, 1.0)])
@@ -372,7 +372,8 @@ def test_a_truncated_quotes_download_is_retried_but_bad_data_is_not(tmp_path, mo
         if len(calls) == 1:
             raise EOFError("Compressed file ended before the end-of-stream marker")
         open(dest, "wb").write(b"npz")
-        return {"rows": 1, "kept": 1, "levels": 5, "backsteps": 0, "max_backstep_ms": 0, "crossed": 0}
+        return {"rows": 1, "kept": 1, "levels": 5, "backsteps": 0, "max_backstep_ms": 0,
+                "crossed": 0, "dropped_backdated": 0}
 
     monkeypatch.setattr(raw_mod, "compact_okx_quotes", flaky)
     f = cf.RemoteFile("okx", "quotes", "BTCUSDT", "2024-08-19", "", None, False,
@@ -389,3 +390,22 @@ def test_a_truncated_quotes_download_is_retried_but_bad_data_is_not(tmp_path, mo
     with pytest.raises(ValueError, match="steps back"):
         cf.download_quotes(f, tmp_path, Http())
     assert len(calls) == 1
+
+
+def test_a_corrupt_backdated_stretch_is_dropped(tmp_path):
+    """OKX 2026-11-02: rows stamped ~10 s back, crossed, then the book resumes."""
+    import datetime as dt
+
+    from src.core.data.crypto_raw import compact_okx_quotes, read_quotes
+
+    t0 = 1794787200000
+    src = _tbt(tmp_path / "s.csv.gz", [(t0 + 20_000, 100.0, 100.1, 1.0),
+                                       (t0 + 10_050, 100.5, 100.2, 1.0),     # backdated, crossed
+                                       (t0 + 10_060, 100.6, 100.3, 1.0),     # backdated, crossed
+                                       (t0 + 20_070, 100.0, 100.4, 1.0)])
+    facts = compact_okx_quotes(src, tmp_path / "s.npz", day=dt.date(2026, 11, 16))
+    assert facts["backsteps"] == 1 and facts["max_backstep_ms"] == 9_950
+    assert facts["dropped_backdated"] == 2 and facts["kept"] == 2 and facts["crossed"] == 0
+    q = read_quotes(tmp_path / "s.npz", contract_value=0.01)
+    assert q["ask_px"][:, 0].tolist() == [100.1, 100.4]
+    assert (q["ts_ns"] // 10**6).tolist() == [t0 + 20_000, t0 + 20_070]

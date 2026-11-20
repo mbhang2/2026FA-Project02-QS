@@ -274,8 +274,11 @@ def test_quotes_refuse_a_clock_that_runs_back_or_a_row_from_another_day(tmp_path
     from src.core.data.crypto_raw import compact_okx_quotes
 
     t0 = 1794787200000
-    back = _tbt(tmp_path / "b.csv.gz", [(t0 + 75_000, 1.0, 2.0, 1.0), (t0 + 1_000, 1.0, 2.5, 1.0)])
-    with pytest.raises(ValueError, match="steps back"):
+    # one row stamped far in the future would make every genuine row after it look
+    # backdated: refused, not cut
+    back = _tbt(tmp_path / "b.csv.gz", [(t0 + 1_000, 1.0, 2.0, 1.0), (t0 + 80_000_000, 1.0, 2.1, 1.0)]
+                + [(t0 + 2_000 + i, 1.0, 2.0 + i / 100, 1.0) for i in range(20)])
+    with pytest.raises(ValueError, match="stamped in the future"):
         compact_okx_quotes(back, tmp_path / "b.npz", day=dt.date(2026, 11, 16))
     late = _tbt(tmp_path / "l.csv.gz", [(t0 + 86_400_000 + 5_000, 1.0, 2.0, 1.0)])
     with pytest.raises(ValueError, match="outside"):
@@ -399,13 +402,14 @@ def test_a_corrupt_backdated_stretch_is_dropped(tmp_path):
     from src.core.data.crypto_raw import compact_okx_quotes, read_quotes
 
     t0 = 1794787200000
-    src = _tbt(tmp_path / "s.csv.gz", [(t0 + 20_000, 100.0, 100.1, 1.0),
-                                       (t0 + 10_050, 100.5, 100.2, 1.0),     # backdated, crossed
-                                       (t0 + 10_060, 100.6, 100.3, 1.0),     # backdated, crossed
-                                       (t0 + 20_070, 100.0, 100.4, 1.0)])
+    lead = [(t0 + 10 * i, 99.0, 99.5 + i / 1000, 1.0) for i in range(60)]    # ordinary rows
+    src = _tbt(tmp_path / "s.csv.gz", lead + [(t0 + 20_000, 100.0, 100.1, 1.0),
+                                              (t0 + 10_050, 100.5, 100.2, 1.0),  # backdated, crossed
+                                              (t0 + 10_060, 100.6, 100.3, 1.0),  # backdated, crossed
+                                              (t0 + 20_070, 100.0, 100.4, 1.0)])
     facts = compact_okx_quotes(src, tmp_path / "s.npz", day=dt.date(2026, 11, 16))
     assert facts["backsteps"] == 1 and facts["max_backstep_ms"] == 9_950
-    assert facts["dropped_backdated"] == 2 and facts["kept"] == 2 and facts["crossed"] == 0
+    assert facts["dropped_backdated"] == 2 and facts["kept"] == 62 and facts["crossed"] == 0
     q = read_quotes(tmp_path / "s.npz", contract_value=0.01)
-    assert q["ask_px"][:, 0].tolist() == [100.1, 100.4]
-    assert (q["ts_ns"] // 10**6).tolist() == [t0 + 20_000, t0 + 20_070]
+    assert q["ask_px"][-2:, 0].tolist() == [100.1, 100.4]
+    assert (q["ts_ns"][-2:] // 10**6).tolist() == [t0 + 20_000, t0 + 20_070]

@@ -212,9 +212,16 @@ QUOTE_FIELDS = ("px", "qty", "ordCnt")
 # 421 of them are CROSSED (best bid above best ask by up to $5.40), and after
 # them the book resumes exactly as it was before. Those rows are not book states
 # and are DROPPED: a row stamped earlier than any row before it (exchange time
-# below the running maximum) is removed, counted and recorded. A step back of
-# more than a minute is refused as something other than this.
-MAX_BACKSTEP_MS = 60_000
+# below the running maximum) is removed, counted and recorded.
+#
+# The stretches run from ~10 s to 13.7 min (2025-09-04: 76,175 rows stamped
+# 03:13:13 .. 03:26:56, all 4,401 of the day's crossed rows among them, while
+# that window was already in the file, complete, before the jump). What the rule
+# must not do is follow a row stamped in the FUTURE: every genuine row after it
+# would then look backdated and be dropped. That shows as a large share of the
+# day dropped, so a file that would lose more than `MAX_DROPPED_SHARE` of its
+# rows is refused instead.
+MAX_DROPPED_SHARE = 0.05
 
 
 def quote_columns(levels: int = QUOTE_LEVELS) -> list[str]:
@@ -261,13 +268,14 @@ def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
     """Read one OKX tick-by-tick file to the end and write the compact `.npz`.
 
     Raises -- and writes nothing -- if the file is not what it should be: no rows,
-    exchange time stepping back by more than `MAX_BACKSTEP_MS`, or a row stamped
+    more than `MAX_DROPPED_SHARE` of its rows stamped back in time, or a row stamped
     outside `day` (one second of slack either side: the first row of a day is
     routinely a few ms before midnight). Returns the facts the manifest records.
 
     **Rows stamped back in time are dropped, not re-sorted.** Exchange time is
     almost monotone -- 2026-11-16 had one 20 ms step back in 7.1M rows -- but 23
-    days of 2023-2026 carry a corrupt ~10 s stretch (see `MAX_BACKSTEP_MS`) whose
+    days of 2023-2026 carry a corrupt stretch of ~10 s to 14 min (see
+    `MAX_DROPPED_SHARE`) whose
     rows are crossed and are followed by the book as it was before them. A row
     whose exchange time is below the running maximum is removed before anything
     else; `backsteps`, `max_backstep_ms` and `dropped_backdated` record it, and
@@ -297,8 +305,6 @@ def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
         if len(back):
             backsteps += len(back)
             max_back = max(max_back, int(back.max()))
-            if max_back > MAX_BACKSTEP_MS:
-                raise ValueError(f"{src}: exchange time steps back {max_back} ms")
         if e.min() < lo_ok or e.max() > hi_ok:
             raise ValueError(f"{src}: rows stamped outside {day} UTC")
         prev_exch = int(e[-1])
@@ -322,6 +328,11 @@ def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
         book.append(b[keep])
     if rows == 0:
         raise ValueError(f"{src}: no rows")
+    if backdated > MAX_DROPPED_SHARE * rows:
+        raise ValueError(f"{src}: {backdated} of {rows} rows are stamped earlier than a row "
+                         f"before them (max step back {max_back} ms); more than "
+                         f"{MAX_DROPPED_SHARE:.0%} suggests a row stamped in the future, not a "
+                         "corrupt stretch, so the file is refused rather than cut")
 
     out = {"recv_ms": np.concatenate(recv), "exch_ms": np.concatenate(exch),
            "book": np.concatenate(book), "columns": np.array(book_cols)}

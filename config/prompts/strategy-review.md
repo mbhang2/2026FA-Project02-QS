@@ -28,10 +28,7 @@ imports.** You are reading for things a type checker cannot see.
 
 ### What the data is
 
-NQ futures **trades** with an aggressor side, one instrument, roughly 384
-sessions. There is no order book, no depth, no bid-ask, no quotes, no other
-instrument, no options. Commission is charged per side and a strategy that
-trades constantly pays for it.
+{market_data}
 
 ### The five things to object to
 
@@ -40,7 +37,7 @@ question did not ask about, or ignores the condition the question is built
 around. Quote the line and the part of the question it departs from.
 
 **2. It can barely act.** Conditions so narrow that the rule fires a handful of
-times in 384 sessions, or never. This is the most consequential one: a candidate
+times in {market_sessions} sessions, or never. This is the most consequential one: a candidate
 that makes four trades produces nothing to measure and the trial is gone. Walk
 through the conditions and say which combination is the binding one.
 

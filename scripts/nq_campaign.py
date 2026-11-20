@@ -229,6 +229,31 @@ def _dataset_facts(profile: dict) -> tuple[str, str]:
             "multiplier, so the legs of one package and the index itself are "
             "directly comparable.\n\n",
         )
+    if kind == "crypto":
+        sym = spec.get("symbol", "BTCUSDT")
+        lot = spec.get("lot", 0.001)
+        coin = sym.removesuffix("USDT")
+        bps = profile.get("commission_bps", 0.0)
+        return (
+            f"real Binance {sym} perpetual-futures trades. A session is a UTC day "
+            "(00:00 to 24:00 UTC); the market trades continuously, with no close, "
+            "no holidays and no overnight gap, so `session` boundaries are a "
+            "calendar convention, not a market event. Every trade carries its "
+            "aggressor side, so `unknown_volume` is always zero",
+            f"Sizes are integer lots of {lot} {coin}: `ctx.buy(1)` is {lot} {coin}, and "
+            f"P&L is the price move in USD times lots, so one lot earns {lot} USD per "
+            "$1 the price moves. "
+            f"Commission: {bps:g} basis points of notional per side "
+            f"({2 * bps / 100:.2f}% a round trip), charged on every fill: a round "
+            f"trip must move the price {2 * bps / 100:.2f}% just to break even -- $30 "
+            "at $30,000, $100 at $100,000 -- so high turnover is very expensive "
+            "here. Holding a "
+            "position through a funding settlement (00:00, 08:00, 16:00 UTC) pays the "
+            "funding rate on its notional when long and receives it when short "
+            "(the reverse when the rate is negative). Returns are scored relative to "
+            "each session's opening price, so a move of 1% counts the same in 2023 "
+            "and in 2026.\n\n",
+        )
     return (
         "real NQ futures trades",
         f"Commission: {per} index points per contract per side. NQ is $20 a "
@@ -686,11 +711,13 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
         print(f"{name}: no hypothesis file; writing one from the statement "
               f"(Amendment 15)", flush=True)
         try:
+            from src.core.loop.market import market_for_profile
             got = wh.write_unattended(question, campaign=name,
                                       papers=not no_papers,
                                       model=writer_model,
                                       reviewer_model=reviewer_model,
-                                      picker_model=picker_model)
+                                      picker_model=picker_model,
+                                      market=market_for_profile(profile_name))
         except wh.Unattended as exc:
             sys.exit(f"{name}: NOT registered -- {exc}")
         hypothesis, hypothesis_origin = got["path"].resolve(), got["origin"]
@@ -1060,9 +1087,11 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         import functools
         if cons.probe:
             from src.core.loop.perturb import check as perturb_check
+            from src.core.loop.market import market_for_profile
             a.perturb = functools.partial(
                 perturb_check, cons=cons, ledger=d / "probe-ledger.jsonl",
-                strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")
+                strategy_path=(root or ROOT) / "src" / "strategies" / "current.py",
+                market=market_for_profile(record.profile))
         if judge is not None:
             a.judge = lambda src: judge(src, cons)
             a.judge_mode = reg_judge["mode"]
@@ -1100,9 +1129,11 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         # The scored TRIALS were never affected -- `run_trial` takes `root` and
         # writes the worker's file -- so session 07's results stand. Only the
         # probe leaked, and only its attribution.
+        from src.core.loop.market import market_for_profile
         a.probe = functools.partial(
             probe_source, ledger=d / "probe-ledger.jsonl",
-            strategy_path=(root or ROOT) / "src" / "strategies" / "current.py")
+            strategy_path=(root or ROOT) / "src" / "strategies" / "current.py",
+            market=market_for_profile(record.profile))
 
     _arm_probe(agent)
     _arm_fidelity(agent)

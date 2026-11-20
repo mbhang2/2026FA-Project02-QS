@@ -63,6 +63,17 @@ REPO_ROOT = repo_root()
 # engine refuses a strategy with no `fit()` under a profile that has a fit
 # window (and vice versa). Both are synthetic, seeded, `signal_strength: 0`.
 PROBE_PROFILES = {"plain": "agent", "fitted": "harness-fitted"}
+# A crypto campaign's proposals are written for BTC-scale prices, UTC-day
+# sessions and lot sizes; probed on `synthetic-check` (prices near 100) many
+# would never trade, and the probe would report a fact about the wrong market.
+PROBE_PROFILES_BY_MARKET = {
+    "nq": PROBE_PROFILES,
+    "crypto": {"plain": "agent-crypto", "fitted": "harness-fitted-crypto"},
+}
+
+
+def _family(market: str) -> str:
+    return "crypto" if market.startswith("crypto-") else "nq"
 
 # The last lines of a child traceback are the ones that name the fault. Bounded
 # so a pathological traceback cannot become a prompt on its own.
@@ -86,12 +97,12 @@ class ProbeResult:
         return asdict(self)
 
 
-def probe_profile_for(source: str) -> str:
-    return PROBE_PROFILES["fitted" if declares_fit(source) else "plain"]
+def probe_profile_for(source: str, market: str = "nq") -> str:
+    return PROBE_PROFILES_BY_MARKET[_family(market)]["fitted" if declares_fit(source) else "plain"]
 
 
 def probe_source(source: str, *, ledger: Path,
-                 strategy_path: Path | None = None) -> ProbeResult:
+                 strategy_path: Path | None = None, market: str = "nq") -> ProbeResult:
     """Run `source` once under its synthetic probe profile; return the facts.
 
     Writes `src/strategies/current.py`, invokes `run.py` exactly as
@@ -100,7 +111,7 @@ def probe_source(source: str, *, ledger: Path,
     projects it onto `ProbeResult` and discards the rest -- including the score,
     which `run.py` computes for every row and which must not reach the agent.
     """
-    profile = probe_profile_for(source)
+    profile = probe_profile_for(source, market)
     row = run_on_profile(source, profile, ledger=ledger, strategy_path=strategy_path)
     if row is None:
         return ProbeResult(ran=False, crashed=False, profile=profile,

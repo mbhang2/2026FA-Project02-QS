@@ -44,6 +44,8 @@ from .probe import run_on_profile
 
 REPO_ROOT = repo_root()
 BASE, FLIPPED = "probe-nq-shape", "probe-nq-shape-flipped"
+# The same pair on crypto-shaped synthetic data, for crypto campaigns.
+PAIRS = {"nq": (BASE, FLIPPED), "crypto": ("probe-crypto-shape", "probe-crypto-shape-flipped")}
 LOOKBACK_MINUTES = (1, 5, 15, 30, 60)
 # A direction claim is about a tendency, not every entry: 60% at the strategy's
 # best-matching lookback. A rule entering at random sits near 50% at every one.
@@ -109,14 +111,16 @@ def move_shares(fills: list, prices: dict) -> dict[int, tuple[int, int]]:
 
 
 def check(source: str, cons: Constraints, *, ledger: Path,
-          strategy_path: Path | None = None) -> tuple[list[Violation], dict]:
+          strategy_path: Path | None = None,
+          market: str = "nq") -> tuple[list[Violation], dict]:
     """The probe constraints' violations, and a report of what was checked."""
+    base_profile, flipped_profile = PAIRS["crypto" if market.startswith("crypto-") else "nq"]
     items = [c for c in cons.items if c.check in ("uses_flow", "trades_move")]
     if not items:
         return [], {}
     if declares_fit(source):
         return [], {"ran": False, "reason": "fitted proposals are not perturbed"}
-    base = run_on_profile(source, BASE, ledger=ledger, strategy_path=strategy_path)
+    base = run_on_profile(source, base_profile, ledger=ledger, strategy_path=strategy_path)
     fills = _fills(base)
     report: dict = {"ran": True, "base_trades": len(fills) // 2}
     if not fills:
@@ -125,7 +129,7 @@ def check(source: str, cons: Constraints, *, ledger: Path,
     out: list[Violation] = []
     for c in items:
         if c.check == "uses_flow":
-            flipped = run_on_profile(source, FLIPPED, ledger=ledger,
+            flipped = run_on_profile(source, flipped_profile, ledger=ledger,
                                      strategy_path=strategy_path)
             if not flipped or flipped.get("outcome") != "completed":
                 report[c.id] = "inconclusive: the flipped run did not complete"
@@ -140,7 +144,7 @@ def check(source: str, cons: Constraints, *, ledger: Path,
         else:
             want = c.params["direction"]
             need = float(c.params.get("share", DEFAULT_MOVE_SHARE))
-            shares = move_shares(fills, _probe_prices())
+            shares = move_shares(fills, _probe_prices(base_profile))
             counted = {lb: a + w for lb, (a, w) in shares.items()}
             if max(counted.values()) < MIN_ENTRIES:
                 report[c.id] = "inconclusive: too few entries after a move"

@@ -111,6 +111,7 @@ The LLM agent, the campaign record, and the question-fidelity checks.
 | `src/core/loop/hypothesis.py` | The human's question, as a committed file, checked before it reaches a prompt. |
 | `src/core/loop/knowledge.py` | Cross-campaign constraints, compiled into a frozen prompt block. |
 | `src/core/loop/llm.py` | The proposing agent, with a model behind it. |
+| `src/core/loop/market.py` | What an agent is told about the market, per dataset. One source, every prompt. |
 | `src/core/loop/perturb.py` | Does the strategy's behaviour depend on what the question says it depends on? |
 | `src/core/loop/probe.py` | The synthetic probe: run the proposal before the trial counts, tell the agent |
 
@@ -436,6 +437,7 @@ What each test file pins.
 | `tests/test_live_bucket.py` | The same guarantees, checked against the live bucket instead of the manifest. |
 | `tests/test_llm_agent.py` | The proposing agent, offline. No network is touched by anything in here. |
 | `tests/test_loop.py` | The loop: trial driver, campaign runner, and the correction over the ledger. |
+| `tests/test_market_facts.py` | Every agent is told the market its campaign trades, and NQ is told what it always was. |
 | `tests/test_max_of_m.py` | The L2 gate: the best of M campaign winners, on validation. |
 | `tests/test_metrics.py` | Property tests for the scoring metric. |
 | `tests/test_model_options.py` | Every agent part's model can be chosen, reaches its own call, and is recorded. |

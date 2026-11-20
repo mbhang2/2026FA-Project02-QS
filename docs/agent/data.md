@@ -11,14 +11,20 @@ This is the reference for writing a strategy: what you can subscribe to, what fi
 | ES | **no adapter yet** | 307 | 2025-07-04 | 2026-09-09 |
 | NQ | `nq-trades:NQ` | 564 | 2024-07-04 | 2026-09-09 |
 | QQQ.OPT | **no adapter yet** | 548 | 2024-07-03 | 2026-09-09 |
+| BTCUSDT (Binance perpetual) | `crypto-trades:BTCUSDT` | 1,418 | 2023-01-01 | 2026-11-18 |
+| ETHUSDT (Binance perpetual) | `crypto-trades:ETHUSDT` | 1,418 | 2023-01-01 | 2026-11-18 |
 
-Sessions are **assemblable CME sessions**, not files. A session runs 17:00 CT on the previous day to 16:00 CT, so it straddles exactly two UTC-day objects and a session exists only when both are present. File counts are larger and using one as N is wrong.
+**NQ** sessions are **assemblable CME sessions**, not files. A session runs 17:00 CT on the previous day to 16:00 CT, so it straddles exactly two UTC-day objects and a session exists only when both are present. File counts are larger and using one as N is wrong.
 
-Coverage is full Globex, not RTH.
+NQ coverage is full Globex, not RTH.
+
+**Crypto** sessions are **UTC days**, 00:00 to 24:00 UTC, one archive file each. The market trades continuously: there is no close, no holiday and no overnight gap, so a session boundary is a calendar convention and a position held across it is simply held. Sizes are integer **lots of 0.001 coin**, and every trade carries its aggressor, so `unknown_volume` is zero. Commission is a share of notional (basis points), and holding through a funding settlement (00:00, 08:00, 16:00 UTC) pays or receives the funding rate; this run's exact costs are in its run facts.
 
 ## Which split this run serves
 
 - **NQ** — `config/calendars/nq-trades.yaml` (committed). 564 sessions total.
+- **BTCUSDT** (Binance) — `config/calendars/crypto-trades.yaml` (committed). 1,418 sessions total.
+- **ETHUSDT** (Binance) — `config/calendars/crypto-trades.yaml` (committed). 1,418 sessions total.
 
 You are given one split per run and cannot ask for another. The holdout requires an explicit unlock whose reason lands in the run record.
 
@@ -51,11 +57,11 @@ Subscribing to the same interval twice returns the same subscription. When sever
 | `high` | `float` | Highest trade price in the interval. |
 | `low` | `float` | Lowest trade price in the interval. |
 | `close` | `float` | Last trade price in the interval. |
-| `volume` | `int` | Contracts traded in the interval. Equals `buy_volume + sell_volume + unknown_volume`. |
+| `volume` | `int` | Contracts (NQ) or lots of 0.001 coin (crypto) traded in the interval. Equals `buy_volume + sell_volume + unknown_volume`. |
 | `tick_count` | `int` | Number of trade events in the interval. Zero only on an `emit_empty=True` bar, where OHLC all carry the previous close forward. |
 | `session` | `int` | Session index within the dataset, counting from 0. Bars never span a session boundary. |
-| `buy_volume` | `int` | Contracts in the interval whose aggressor was `Side.BUY`. Accumulated per tick by the bar builder, so it is available without subscribing to ticks. |
-| `sell_volume` | `int` | Contracts in the interval whose aggressor was `Side.SELL`. Ticks with an unknown aggressor are in **neither** this nor `buy_volume` — see `unknown_volume` below. |
+| `buy_volume` | `int` | Contracts or lots in the interval whose aggressor was `Side.BUY`. Accumulated per tick by the bar builder, so it is available without subscribing to ticks. |
+| `sell_volume` | `int` | Contracts or lots in the interval whose aggressor was `Side.SELL`. Ticks with an unknown aggressor are in **neither** this nor `buy_volume` — see `unknown_volume` below. |
 
 `bar.is_empty` is `tick_count == 0`.
 
@@ -83,7 +89,7 @@ What `on_tick(ctx)` hands you as `ctx.tick`:
 | `ts` | `int (ns UTC)` | Nanoseconds UTC of the trade. |
 | `seq` | `int` | Position in the walk, assigned by the engine. Ticks with equal `ts` keep their feed order through it. |
 | `price` | `float` | Trade price. |
-| `size` | `int` | Contracts traded. |
+| `size` | `int` | Contracts (NQ) or lots of 0.001 coin (crypto) traded. |
 | `side` | `Side \| None` | Aggressor. See below — this is the field that gets silently mishandled. |
 | `session` | `int` | Session index within the dataset, counting from 0. |
 
@@ -152,7 +158,9 @@ The UNDERLYING price source is **trades only**. There is no book and no quote fe
 
 A fill model declares what it requires and the dataset declares what it has; a mismatch is refused at wiring time rather than half-way through a run. Do not write a feature that needs a quote and hope.
 
-## Contract selection
+## Contract selection (NQ)
+
+Crypto perpetuals have no contracts to choose between and never roll; this section is about NQ only.
 
 The bucket is requested with `stype_in=PARENT`, which means a `trades` file holds **every** NQ contract — outrights, back months and calendar spreads — not the front month. Choosing one is a research convention, not a fact, so it is written down per session rather than inferred:
 

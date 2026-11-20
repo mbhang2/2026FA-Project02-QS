@@ -107,6 +107,14 @@ class SyntheticSpec:
     # never trades on sessions that start at 16:13 and 12:33. Absent from the
     # digest at its default.
     session_open_ct: str | None = None
+    # When set ("00:00"), each session opens at that UTC clock time on EVERY
+    # day, weekends included -- the shape of a crypto session, which is a UTC day
+    # of a market that never closes. Absent from the digest at its default.
+    session_open_utc: str | None = None
+    # Every trade size is multiplied by this. Crypto sizes are lots of 0.001
+    # coin, so a volume threshold written for BTC is thousands of lots, and the
+    # default 1-4 per trade would never reach one. Absent from the digest at 1.
+    size_scale: int = 1
 
     @property
     def irregular(self) -> bool:
@@ -114,13 +122,18 @@ class SyntheticSpec:
 
     def as_dict(self) -> dict:
         out = {k: getattr(self, k) for k in self.__dataclass_fields__
-               if k not in ("quotes", "aggressor", "session_open_ct")}
+               if k not in ("quotes", "aggressor", "session_open_ct",
+                            "session_open_utc", "size_scale")}
         if self.quotes:
             out["quotes"] = True
         if self.aggressor != "tick_rule":
             out["aggressor"] = self.aggressor
         if self.session_open_ct is not None:
             out["session_open_ct"] = self.session_open_ct
+        if self.session_open_utc is not None:
+            out["session_open_utc"] = self.session_open_utc
+        if self.size_scale != 1:
+            out["size_scale"] = self.size_scale
         return out
 
 
@@ -279,8 +292,13 @@ class SyntheticDataset:
             self._quiet_mult = [float(min(q, 4.0)) for q in quiet]
 
         starts, ends = [], []
+        if s.session_open_ct is not None and s.session_open_utc is not None:
+            raise ValueError("session_open_ct and session_open_utc are exclusive")
         if s.session_open_ct is not None:
             self._starts, self._ends = self._clock_aligned(n, spacing)
+            return
+        if s.session_open_utc is not None:
+            self._starts, self._ends = self._utc_aligned(n, spacing)
             return
         t = SESSION_ORIGIN_NS
         for k in range(n):
@@ -308,6 +326,22 @@ class SyntheticDataset:
                                      tzinfo=ct).timestamp()) * 10**9
                 starts.append(t0)
                 ends.append(t0 + self._lengths[len(starts) - 1] * spacing)
+            day += dt.timedelta(days=1)
+        return starts, ends
+
+    def _utc_aligned(self, n: int, spacing: int) -> tuple[list[int], list[int]]:
+        """Daily sessions opening at `session_open_utc`, every day of the week, from
+        the origin's UTC date on. The crypto shape: no weekend, no close."""
+        import datetime as dt
+
+        hh, mm = (int(x) for x in self.spec.session_open_utc.split(":"))
+        day = dt.datetime.fromtimestamp(SESSION_ORIGIN_NS / 1e9, dt.timezone.utc).date()
+        starts, ends = [], []
+        for k in range(n):
+            t0 = int(dt.datetime(day.year, day.month, day.day, hh, mm,
+                                 tzinfo=dt.timezone.utc).timestamp()) * 10**9
+            starts.append(t0)
+            ends.append(t0 + self._lengths[k] * spacing)
             day += dt.timedelta(days=1)
         return starts, ends
 
@@ -382,7 +416,7 @@ class SyntheticDataset:
         # Round to the tick grid: a simulator that fills at unquantised prices
         # flatters any strategy whose edge is smaller than a tick.
         prices = np.round(path / s.tick_size) * s.tick_size
-        sizes = rng.integers(1, 5, size=n)
+        sizes = rng.integers(1, 5, size=n) * s.size_scale
 
         # Aggressor from the tick rule: an uptick is a buy, a downtick a sell,
         # an unchanged trade inherits the last classification. Not a claim about

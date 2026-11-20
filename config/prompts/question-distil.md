@@ -36,22 +36,7 @@ hold across the whole period", not "does it hold out of sample".
 
 ### What we have, and what we cannot do
 
-- **One instrument**, NQ index futures, tick data: every trade with price, size and
-  the aggressor side where the feed reports it. Bars at any interval from one
-  second up, each carrying open, high, low, close, volume, trade count, and volume
-  split by aggressor (`buy_volume`, `sell_volume`, `delta`) with an
-  unknown-aggressor residual (`unknown_volume`). A running sum of bar delta is
-  cumulative volume delta; the strategy can build it bar by bar.
-- **No order book, no quotes, no depth, no other instrument, no options.**
-- **543 sessions total**, and a campaign sees a few hundred of them. A claim
-  needing thousands of independent observations, a cross-section or a panel
-  cannot be tested here -- say so and state the reduced claim that can be.
-- The strategy is event-driven: it sees each bar when it closes and may place
-  market or bracketed orders. It cannot see the future or fit outside its window.
-- Every trade pays commission and fills are modelled pessimistically. An edge
-  smaller than costs is not an edge here.
-- The CME session runs 17:00 CT the previous day to 16:00 CT; regular trading
-  hours open at 08:30 CT.
+{market_have}
 
 If the question needs something on the "no" list, say plainly what cannot be
 tested and ask the nearest question that can.

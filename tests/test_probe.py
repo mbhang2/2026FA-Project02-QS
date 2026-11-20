@@ -134,7 +134,9 @@ def test_a_harness_failure_or_an_empty_row_is_not_a_crash():
 # --------------------------------------------------------------------------- #
 def test_both_probe_profiles_are_seeded_noise_with_no_signal():
     cfg = yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text())
-    for name in probe.PROBE_PROFILES.values():
+    names = {n for by in probe.PROBE_PROFILES_BY_MARKET.values() for n in by.values()}
+    assert set(probe.PROBE_PROFILES.values()) <= names
+    for name in sorted(names):
         prof = cfg["profiles"][name]
         ds = cfg["datasets"][prof["dataset"]]
         assert ds["kind"] == "synthetic", (name, prof["dataset"])

@@ -126,7 +126,8 @@ def context(source: str, hypothesis: str) -> str:
         "above, not whether it will make money.\n")
 
 
-def review(source: str, hypothesis: str, *, model: str = MODEL) -> dict:
+def review(source: str, hypothesis: str, *, model: str = MODEL,
+           market: str = "nq") -> dict:
     """One call, one verdict, normalised the way every other seat here is.
 
     Retried only for a reply that was not usable JSON, and bounded. A malformed
@@ -140,10 +141,13 @@ def review(source: str, hypothesis: str, *, model: str = MODEL) -> dict:
     retryable = (LLMUnavailable, requests.exceptions.Timeout,
                  requests.exceptions.ConnectionError)
     base = context(source, hypothesis)
+    # The seat is told what market the candidate trades (src/core/loop/market.py).
+    from src.core.loop.market import render
+    system = render(PROMPT.read_text(), market)
     out = last = None
     for i in range(MAX_FORMAT_RETRIES + 1):
         try:
-            out = client.ask(PROMPT.read_text(), base + ("" if i == 0 else
+            out = client.ask(system, base + ("" if i == 0 else
                 "\n\n# Your last reply was not usable JSON\n"
                 "Return ONLY a JSON object with keys \"verdict\", \"concerns\" "
                 "and \"note\". When you quote a line of code inside a string, "
@@ -252,13 +256,17 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--market", default=None,
+                    help="with --source: the market the code trades (nq, crypto-BTCUSDT); "
+                         "with --campaign it comes from the campaign's profile")
     a = ap.parse_args()
 
     if a.source:
         if not a.hypothesis or not a.hypothesis.is_file():
             sys.exit("--source needs --hypothesis: the seat judges the code "
                      "against the question, and has nothing to say without it")
-        r = review(a.source.read_text(), a.hypothesis.read_text(), model=a.model)
+        r = review(a.source.read_text(), a.hypothesis.read_text(), model=a.model,
+                   market=a.market or "nq")
         print(json.dumps(r, indent=2) if a.json else
               f"{a.source.name}: {r['verdict']}")
         for c in r["concerns"]:
@@ -268,6 +276,8 @@ def main() -> int:
     if not a.campaign:
         sys.exit("pass --campaign or --source")
     hyp, hyp_path = hypothesis_for(a.campaign)
+    from src.core.loop.market import market_for_campaign
+    market = a.market or market_for_campaign(CAMPAIGNS / a.campaign)
     cands = candidates(a.campaign)
     if a.limit:
         cands = cands[:a.limit]
@@ -281,7 +291,7 @@ def main() -> int:
 
     def one(c: dict) -> dict:
         try:
-            r = review(c["path"].read_text(), hyp, model=a.model)
+            r = review(c["path"].read_text(), hyp, model=a.model, market=market)
         except Exception as exc:                                 # noqa: BLE001
             r = {"verdict": "CANNOT_TELL", "concerns": [], "failed": True,
                  "note": f"{type(exc).__name__}: {exc}"}

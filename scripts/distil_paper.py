@@ -235,7 +235,8 @@ MAX_LINT_REPAIRS = 3
 MAX_REVIEW_REPAIRS = 2
 
 
-def _review_seat(md: str, model: str | None = None) -> tuple[list[str], str]:
+def _review_seat(md: str, model: str | None = None,
+                 market: str = "nq") -> tuple[list[str], str]:
     """Brian's point 2 on the FIRST question, not only on revisions.
 
     The mechanical gates here are the lint, grounding, length and the citation,
@@ -259,7 +260,9 @@ def _review_seat(md: str, model: str | None = None) -> tuple[list[str], str]:
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         # `model` None is the seat's own default (`review_hypothesis.MODEL`).
-        r = mod.review(md) if model is None else mod.review(md, model=model)
+        kw = ({} if model is None else {"model": model}) | (
+            {} if market == "nq" else {"market": market})
+        r = mod.review(md, **kw)
     except Exception as exc:                                     # noqa: BLE001
         print(f"      the reviewer did not run ({type(exc).__name__}); "
               f"treating that as no objection, which it is not", flush=True)

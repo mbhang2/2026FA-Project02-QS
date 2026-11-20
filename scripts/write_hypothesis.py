@@ -148,7 +148,24 @@ def mechanical_findings(md: str, *sources: str, draft: bool = False) -> list[str
     return out
 
 
-def assess(md: str, *, review: bool = True) -> dict:
+def _seat_call(md: str, market: str, model: str | None = None):
+    """`dp._review_seat` for `market`, looked up at call time so a test stub of it
+    is honoured. NQ is called exactly as it always was."""
+    if market == "nq" and model is None:
+        return dp._review_seat(md)
+    kw = ({} if model is None else {"model": model}) | (
+        {} if market == "nq" else {"market": market})
+    return dp._review_seat(md, **kw)
+
+
+def _prompt(market: str) -> str:
+    """The writer's system prompt, told which market the question is about."""
+    from src.core.loop.market import render
+
+    return render(PROMPT.read_text(), market)
+
+
+def assess(md: str, *, review: bool = True, market: str = "nq") -> dict:
     """The verdict on a draft: refined enough, or not and why.
 
     The draft is its own source for grounding -- a researcher's number is theirs
@@ -156,12 +173,12 @@ def assess(md: str, *, review: bool = True) -> dict:
     not hold. The review seat is the judgement half: whether the question is
     worth asking and answerable on this data.
     """
-    found = mechanical_findings(md, md, PROMPT.read_text(), draft=True)
+    found = mechanical_findings(md, md, _prompt(market), draft=True)
     advice = [f"recommended section absent: {name}"
               for name, pat in RECOMMENDED_SECTIONS.items() if not _has(md, pat)]
     concerns, status = ([], "not run (mechanical findings first)")
     if review and not found:
-        concerns, status = dp._review_seat(md)
+        concerns, status = _seat_call(md, market)
     return {"refined_enough": not found and not concerns,
             "findings": found, "concerns": concerns, "advice": advice,
             "review": status}
@@ -228,8 +245,9 @@ def paper_block(papers: list[dict]) -> str:
     return "\n".join(out)
 
 
-def sources(question: str, draft: str, papers: list[dict]) -> list[str]:
-    out = [question, draft, PROMPT.read_text()]
+def sources(question: str, draft: str, papers: list[dict],
+            market: str = "nq") -> list[str]:
+    out = [question, draft, _prompt(market)]
     for p in papers:
         out += gr.sources_for(p["id"])
     return [s for s in out if s]
@@ -373,16 +391,16 @@ def _repair(found: list[str], cons: list[str]) -> str:
 
 
 def write(client, question: str, draft: str, papers: list[dict],
-          house: list[dict] | None = None, seat=None) -> dict:
+          house: list[dict] | None = None, seat=None, market: str = "nq") -> dict:
     """The distil loop, on a question: mechanical gates, then the review seat.
 
     `seat` replaces `dp._review_seat` (same contract) -- how `--reviewer-model`
     reaches it. Looked up at call time when None, so a test that stubs
     `dp._review_seat` stubs this too.
     """
-    system = PROMPT.read_text()
+    system = _prompt(market)
     user = context(question, draft, papers)
-    src = sources(question, draft, papers)
+    src = sources(question, draft, papers, market)
     out = client.ask(system, user)
     mech = reviews = 0
     reviewer = "NOT-REACHED (the mechanical gates were never all clean)"
@@ -395,7 +413,7 @@ def write(client, question: str, draft: str, papers: list[dict],
         cons: list[str] = []          # see `valid_items`: never a reason to rewrite
         if not found:
             if reviews < dp.MAX_REVIEW_REPAIRS:
-                rev, reviewer = (seat or dp._review_seat)(md)
+                rev, reviewer = (seat or (lambda m: _seat_call(m, market)))(md)
                 if rev:
                     reviews += 1
                     print(f"    reviewer objected ({reviews}/{dp.MAX_REVIEW_REPAIRS}):"
@@ -581,7 +599,8 @@ def commit_files(files: list[pathlib.Path], message: str) -> str:
 def write_unattended(statement: str, *, campaign: str, model: str | None = None,
                      papers: bool = True, house: bool = False,
                      reviewer_model: str | None = None,
-                     picker_model: str | None = None) -> dict:
+                     picker_model: str | None = None,
+                     market: str = "nq") -> dict:
     """A researcher's statement in; a hypothesis written, gated and committed.
 
     What `--stage register --question` runs. Everything `main()` does for
@@ -599,7 +618,7 @@ def write_unattended(statement: str, *, campaign: str, model: str | None = None,
     # more independent reader, which matters more when it is the only one.
     model = model or MODEL
     seat = (None if reviewer_model is None else
-            (lambda md: dp._review_seat(md, model=reviewer_model)))
+            (lambda md: _seat_call(md, market, model=reviewer_model)))
     statement = " ".join(statement.split())
     if not statement:
         raise Unattended("an empty statement is not a question")
@@ -623,7 +642,7 @@ def write_unattended(statement: str, *, campaign: str, model: str | None = None,
         print(f"  writing the hypothesis on {model} (served {served}) ...",
               flush=True)
         got = write(client, statement, "", offered,
-                    house=load_house() if house else None, seat=seat)
+                    house=load_house() if house else None, seat=seat, market=market)
     except ValueError as exc:
         raise Unattended(str(exc)) from None
     except (LLMUnavailable, ModelSubstituted) as exc:
@@ -684,6 +703,8 @@ def main() -> int:
                     help="add the usual limits in config/house-constraints.yaml, "
                          "word for word")
     ap.add_argument("--model", default=MODEL)
+    ap.add_argument("--market", default="nq",
+                    help="the market the question is about: nq, crypto-BTCUSDT, crypto-ETHUSDT")
     a = ap.parse_args()
     if not a.question and not a.draft:
         ap.error("give --question, --draft, or both")
@@ -691,7 +712,7 @@ def main() -> int:
     draft = a.draft.read_text() if a.draft else ""
     if a.draft:
         print(f"assessing {a.draft}", flush=True)
-        verdict = assess(draft)
+        verdict = assess(draft, market=a.market)
         for f in verdict["findings"]:
             print(f"  finding  {f}")
         for c in verdict["concerns"]:
@@ -717,7 +738,7 @@ def main() -> int:
     client, served = dp._client(a.model)
     print(f"writing on {a.model} (served {served}) ...", flush=True)
     got = write(client, question, draft, papers,
-                house=load_house() if a.house else None)
+                house=load_house() if a.house else None, market=a.market)
     files = write_files(got, question=question,
                         draft_path=str(a.draft) if a.draft else None,
                         papers=papers, model=a.model, served=served)

@@ -40,6 +40,9 @@ from src.core.types import (  # noqa: E402
 )
 
 MANIFEST = REPO_ROOT / "data" / "manifest.json"
+CRYPTO_MANIFEST = REPO_ROOT / "data" / "crypto-manifest.json"
+# Crypto symbols the crypto adapter serves (Binance only), and the name it reports.
+CRYPTO_ADAPTERS = {"BTCUSDT": "crypto-trades:BTCUSDT", "ETHUSDT": "crypto-trades:ETHUSDT"}
 CONTRACTS = REPO_ROOT / "data" / "nq-contract-selection.json"
 OUT = REPO_ROOT / "docs" / "agent" / "data.md"
 
@@ -70,12 +73,12 @@ BAR_NOTES = {
     "high": "Highest trade price in the interval.",
     "low": "Lowest trade price in the interval.",
     "close": "Last trade price in the interval.",
-    "volume": "Contracts traded in the interval. Equals "
+    "volume": "Contracts (NQ) or lots of 0.001 coin (crypto) traded in the interval. Equals "
               "`buy_volume + sell_volume + unknown_volume`.",
-    "buy_volume": "Contracts in the interval whose aggressor was `Side.BUY`. "
+    "buy_volume": "Contracts or lots in the interval whose aggressor was `Side.BUY`. "
                   "Accumulated per tick by the bar builder, so it is available "
                   "without subscribing to ticks.",
-    "sell_volume": "Contracts in the interval whose aggressor was `Side.SELL`. "
+    "sell_volume": "Contracts or lots in the interval whose aggressor was `Side.SELL`. "
                    "Ticks with an unknown aggressor are in **neither** this nor "
                    "`buy_volume` — see `unknown_volume` below.",
     "tick_count": "Number of trade events in the interval. Zero only on an "
@@ -94,7 +97,7 @@ TICK_NOTES = {
     "seq": "Position in the walk, assigned by the engine. Ticks with equal `ts` "
            "keep their feed order through it.",
     "price": "Trade price.",
-    "size": "Contracts traded.",
+    "size": "Contracts (NQ) or lots of 0.001 coin (crypto) traded.",
     "side": "Aggressor. See below — this is the field that gets silently "
             "mishandled.",
     "session": "Session index within the dataset, counting from 0.",
@@ -119,6 +122,21 @@ def _coverage_rows(m: dict) -> list[tuple[str, str, str, str, str]]:
     return rows
 
 
+def _crypto_days() -> dict[str, list[str]]:
+    """{symbol: sorted trade-file dates} for the Binance symbols the adapter serves."""
+    if not CRYPTO_MANIFEST.exists():
+        return {}
+    import re
+
+    pat = re.compile(r"^crypto/raw/binance/trades/([A-Z0-9]+)/\1-aggTrades-(\d{4}-\d{2}-\d{2})\.zip$")
+    out: dict[str, list[str]] = {}
+    for key in json.loads(CRYPTO_MANIFEST.read_text())["files"]:
+        mm = pat.match(key)
+        if mm and mm.group(1) in CRYPTO_ADAPTERS:
+            out.setdefault(mm.group(1), []).append(mm.group(2))
+    return {k: sorted(v) for k, v in sorted(out.items())}
+
+
 def _split_section(m: dict) -> list[str]:
     """What split this run serves. Truthful when no calendar exists, which is
     the state that matters: an agent must not be told a split it cannot get."""
@@ -139,6 +157,11 @@ def _split_section(m: dict) -> list[str]:
                 f"at all. All {total:,} assemblable sessions exist, and the "
                 f"adapter raises rather than serving a default."
             )
+    for sym, days in _crypto_days().items():
+        rel = calendar_path(CRYPTO_ADAPTERS[sym])
+        if (REPO_ROOT / rel).exists():
+            any_calendar = True
+            L.append(f"- **{sym}** (Binance) — `{rel}` (committed). {len(days):,} sessions total.")
     if not any_calendar:
         L += [
             "",
@@ -205,14 +228,26 @@ def render() -> str:
     ]
     for sym, served, n, first, last in _coverage_rows(m):
         L.append(f"| {sym} | {served} | {n} | {first} | {last} |")
+    for sym, days in _crypto_days().items():
+        L.append(f"| {sym} (Binance perpetual) | `{CRYPTO_ADAPTERS[sym]}` | {len(days):,} "
+                 f"| {days[0]} | {days[-1]} |")
     L += [
         "",
-        "Sessions are **assemblable CME sessions**, not files. A session runs "
+        "**NQ** sessions are **assemblable CME sessions**, not files. A session runs "
         "17:00 CT on the previous day to 16:00 CT, so it straddles exactly two "
         "UTC-day objects and a session exists only when both are present. File "
         "counts are larger and using one as N is wrong.",
         "",
-        "Coverage is full Globex, not RTH.",
+        "NQ coverage is full Globex, not RTH.",
+        "",
+        "**Crypto** sessions are **UTC days**, 00:00 to 24:00 UTC, one archive file "
+        "each. The market trades continuously: there is no close, no holiday and "
+        "no overnight gap, so a session boundary is a calendar convention and a "
+        "position held across it is simply held. Sizes are integer **lots of 0.001 "
+        "coin**, and every trade carries its aggressor, so `unknown_volume` is "
+        "zero. Commission is a share of notional (basis points), and holding "
+        "through a funding settlement (00:00, 08:00, 16:00 UTC) pays or receives "
+        "the funding rate; this run's exact costs are in its run facts.",
         "",
     ]
 
@@ -414,7 +449,10 @@ def render() -> str:
         "has; a mismatch is refused at wiring time rather than half-way through a "
         "run. Do not write a feature that needs a quote and hope.",
         "",
-        "## Contract selection",
+        "## Contract selection (NQ)",
+        "",
+        "Crypto perpetuals have no contracts to choose between and never roll; "
+        "this section is about NQ only.",
         "",
     ]
     L += _contract_section(m)

@@ -270,11 +270,21 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
     from src.core.scoring.terms import scoring_terms
     terms = scoring_terms(cfg, profile, dataset, calendar)
     turns = rt.round_turns(blotter, calendar)
-    ident = rt.identity_from_blotter(blotter, calendar, **terms)
-    sample = rt.null_sample(blotter, calendar, b=B_NULL, seed=73_073, **terms)
-    return sample, {"round_turns": len(turns),
-                    "identity_primary": ident.primary,
-                    "identity_metric": ident.metric}
+    # Amendment 17: read from its status line, so it is off until it is signed.
+    attribution = rt.attribution_for(profile, prereg.in_force(17))
+    ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution, **terms)
+    sample = rt.null_sample(blotter, calendar, b=B_NULL, seed=73_073,
+                            attribution=attribution, **terms)
+    facts = {"round_turns": len(turns),
+             "identity_primary": ident.primary,
+             "identity_metric": ident.metric,
+             "identity_tolerance": rt.IDENTITY_TOLERANCE[attribution]}
+    # Amendment 18: one champion judged once, so alpha is q.
+    from src.core.scoring.profitability import applies, profitability_bound
+    if applies(profile, prereg.in_force(18)):
+        facts["profitability"] = profitability_bound(
+            metrics.session_returns(blotter, calendar, **terms), Q)
+    return sample, facts
 
 
 # Amendment 9: a sign-flip null over k round turns has at most 2**k distinct
@@ -309,13 +319,19 @@ def judge(row: dict, null: list[float], facts: dict | None = None) -> dict:
     score = row.get("score") or {}
     primary = score.get("primary")
     rule_i = primary is not None and primary > 0
+    bound = facts.get("profitability")
+    if bound is not None:
+        rule_i = bool(bound.get("passes"))         # Amendment 18 replaces the floor
 
     k = facts.get("round_turns")
     too_few = k is not None and k < MIN_ROUND_TURNS
     ident = facts.get("identity_primary")
     ident_metric = facts.get("identity_metric")
+    # Amendment 17 tightens this for notional profiles. The look has already been
+    # taken here, so a mismatch is recorded as not evaluable rather than raised.
+    tolerance = facts.get("identity_tolerance", 1e-3)
     skewed = (ident is not None and primary is not None
-              and (abs(float(primary) - float(ident)) > 1e-3
+              and (abs(float(primary) - float(ident)) > tolerance
                    or (score.get("metric") and ident_metric
                        and score.get("metric") != ident_metric)))
 
@@ -326,7 +342,10 @@ def judge(row: dict, null: list[float], facts: dict | None = None) -> dict:
     else:
         p = None
     rule_ii = p is not None and p <= Q
+    extra = {} if bound is None else {"rule_i_basis": "amendment_18_profitability_bound",
+                                      "profitability": bound}
     return {
+        **extra,
         "rule_i_sortino_positive": bool(rule_i),
         "rule_ii_p": p,
         "rule_ii_reject": bool(rule_ii),

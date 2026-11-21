@@ -50,6 +50,9 @@ CALIBRATION_SITES = {
     # themselves are not here -- those are `run.py`, via `run_trial`.
     "scripts/llm_campaign.py",
     "scripts/positive_control.py",
+    # Simulated crypto gate control. Runs only the committed reference strategy,
+    # so it takes `for_calibration`, whose digest check refuses anything else.
+    "scripts/crypto_gate_control.py",
 }
 
 

@@ -69,7 +69,10 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/check_agent_paths.py` | CI guard: the research agent may only ever change `src/strategies/**`. |
 | `scripts/committee_retry.py` | Re-run the committee seats that never ran, beside the record and never over it. |
 | `scripts/correction_fwer.py` | Measure FWER for the `max_of_n` variants, under the global null. |
+| `scripts/crypto_a18_control.py` | Amendment 18's acceptance control. Simulated data only. |
+| `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
+| `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
 | `scripts/detectability.py` | What size of edge could this gate have found? Power, from our own nulls. |
 | `scripts/gen_agent_data.py` | Generate the data reference the RESEARCH agent is handed. |
 | `scripts/gen_context_api.py` | Generate the context API reference the agent is handed. |
@@ -151,6 +154,7 @@ The metric, the nulls, and the correction.
 | `src/core/scoring/correction.py` | Multiple-testing correction over a campaign's trial ledger. |
 | `src/core/scoring/integrity.py` | Did the scoring code change while the trial was running? |
 | `src/core/scoring/metrics.py` | The scoring metric and its diagnostics. Pure functions over a blotter and a |
+| `src/core/scoring/profitability.py` | Amendment 18: a crypto pass must show profit after costs. |
 | `src/core/scoring/randomization/__init__.py` | A null that knows which candidate it is. |
 | `src/core/scoring/randomization/candidate.py` | The per-candidate null: run this candidate against R rotations of its own data. |
 | `src/core/scoring/randomization/hybrid.py` | Bucket when covered, rotation when not. The selection keys on profile only. |
@@ -398,6 +402,8 @@ What each test file pins.
 | `tests/test_agent_docs.py` | The two documents the research agent reads have to agree with each other. |
 | `tests/test_allow_fitted_proposals.py` | Whether the proposing agent may write a strategy that fits. |
 | `tests/test_alpha_bridge.py` | `harness_alpha`: Nalin's vectorised AST library, used from a streaming callback. |
+| `tests/test_amendment_17.py` | Amendment 17: the crypto null charges each fill to its own session. |
+| `tests/test_amendment_18.py` | Amendment 18: a crypto pass must show profit after costs. No control arm runs here. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
 | `tests/test_boundary.py` | Nothing mutable crosses the context boundary, and nothing resolves silently. |
 | `tests/test_bwis.py` | Source priors: the three things Gowtam's version got wrong, pinned. |
@@ -409,7 +415,9 @@ What each test file pins.
 | `tests/test_committee.py` | The four-auditor committee: isolated, veto-only, and outside the harness. |
 | `tests/test_committee_retry.py` | A seat that never ran is asked again: inside the committee, and afterwards. |
 | `tests/test_context_and_run.py` | The context facade and the run entry point. |
+| `tests/test_crypto_c3b_control.py` | C3b's fixed design and decision rules. Neither real stage runs here. |
 | `tests/test_crypto_data.py` | Crypto archives: each exchange's conventions normalise to one schema, and the fetcher's listing parsers. |
+| `tests/test_crypto_gate_control.py` | The simulated crypto gate control: its market, its bounds and one small campaign. |
 | `tests/test_crypto_scoring.py` | Amendment 16: crypto scoring on notional, with funding -- and NQ left untouched. |
 | `tests/test_data_integrity.py` | Integrity guards for `raw/`, the one canonical location. |
 | `tests/test_detectability.py` | What the gate could have found, computed from the nulls it already used. |

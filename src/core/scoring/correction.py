@@ -653,7 +653,11 @@ def max_of_m(
         return 0 if sample is None else len(sample)
 
     incomplete = [str(w.get("campaign_id")) for w in entries if not _n_null(w)]
-    rule_a = {str(w.get("campaign_id")): float(w.get("validation_primary", 0.0)) > 0.0
+    # Amendment 18: an entry carrying `profitability_pass` is judged by that bound
+    # instead of the Sortino floor. Entries without it behave exactly as before.
+    bound_basis = any("profitability_pass" in w for w in entries)
+    rule_a = {str(w.get("campaign_id")): (bool(w.get("profitability_pass", False)) if bound_basis
+                                          else float(w.get("validation_primary", 0.0)) > 0.0)
               for w in entries}
     best = max(entries, key=lambda w: float(w.get("validation_primary", float("-inf"))))
     best_id = str(best.get("campaign_id"))
@@ -770,6 +774,11 @@ def max_of_m(
             "tests directional skill, not profitability (section 3b), so a small "
             "p with a losing candidate is exactly the case rule (a) exists for. "
             + MAX_OF_M_NOTE)
+        if bound_basis:
+            out["note"] = ("rule (b) rejected the null but the best winner's Amendment 18 "
+                           "profitability bound is not above zero. " + MAX_OF_M_NOTE)
+    if bound_basis:
+        out["rule_a_basis"] = "amendment_18_profitability_bound"
     # Recorded in BOTH directions, and whichever statistic is in force. The
     # asymmetric version only fired when the standardised statistic rejected and
     # the raw one did not, so a family where the raw maximum rejects alone -- the

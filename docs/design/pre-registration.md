@@ -2271,3 +2271,117 @@ The splits, the embargo, the holdout lock, the pass rules, `max_of_n`, the expos
 - `idle_charge_fraction` or `commission_bps` changed after a crypto campaign has scored a trial, without a new amendment.
 
 Code: `src/core/data/crypto.py`, `src/core/scoring/terms.py`, `src/core/scoring/metrics.py` (`PerSession`, `FundingEvent`, `funding_points`), `src/core/engine/reconstruct.py` (`fill_commission`); profiles `crypto-btc-train`, `crypto-btc-validation` in `config/run.yaml`.
+
+## Amendment 17 — 2026-11-20 — crypto: the null charges each fill to its own session
+
+**Status: IN FORCE from 2026-11-21, signed off by Michael.** Drafted 2026-11-20 by Claude on request. The code reads this line. It governs every crypto profile from its first scored trial; no crypto trial was scored before it was signed.
+
+### Why
+
+The score and the sign-flip null attribute the same fills differently. `metrics.session_returns` puts each fill's realized P&L and commission in the session that fill happened in. `round_turn.round_turns` adds up the whole excursion and puts it in the session of the **closing** fill. For a position held across a session boundary, the entry fee is therefore in the entry session for the score and in the closing session for the null, so the observed score is not exactly the null's no-flip draw.
+
+A perpetual has no daily close and trades through 00:00 UTC, so a crypto strategy can hold across the session boundary as an ordinary part of trading. With fees proportional to notional and returns divided by a different opening price each session, the moved cost also changes size when it changes session.
+
+**What it breaks at each gate.** `scripts/l2_gate.py` replaces the observed score with the no-flip draw when the two differ by more than 1e-3. `scripts/holdout.py` treats the same gap as version skew and leaves rule (ii) unevaluable, so an ordinary overnight hold could spend the single holdout look and return no p-value.
+
+### What was measured
+
+`scripts/crypto_gate_control.py`, on simulated BTC-scale prices with the Amendment 16 terms, 700 campaigns of 5 trials: the score and the no-flip draw differed in **1,345 of 3,500 trials**. Nine exceeded the 1e-3 tolerance, all in the 25 bp arm, the largest **3.69e-3**. The mechanism was traced on one trial, in an earlier version of the simulator, where the only two differing sessions were the two sides of the one round turn crossing a boundary. The other gaps were not traced one by one; the acceptance check below covers them.
+
+**No real crypto result motivated this.** No crypto trial has been scored. The only real-data crypto run is the reference strategy's smoke run on the train split, recorded in a separate ledger and counted as no trial; 5 of its 974 sessions ended with a position open. The defect was found by the no-flip check on simulated data.
+
+### What changes, for `scoring_units: notional` profiles only
+
+| | rule |
+|---|---|
+| a | An excursion keeps **one sign** per replication, drawn as now. A flip through zero still does not end it. |
+| b | Each fill's realized P&L and commission stay in **the session of that fill**, resolved by the same `_session_of` the metric uses. A session's replicated P&L is the sum over excursions of `sign x gross in that session - cost in that session`. |
+| c | A trailing excursion that never returns to flat is **included**, because its fills are in the observed series. Its realized P&L takes its sign and its commission is charged. |
+| d | The idle charge and funding reach the null unchanged, as Amendment 16's fixed per-session vector. |
+| e | The no-flip draw must reproduce the observed score to **1e-9** in value and in metric. A mismatch **stops the run**. It is not rescored, because for these profiles it can only mean a defect. At the holdout the single look has already been taken, so stopping would lose its record: there the mismatch is recorded and rule (ii) is **not evaluable**. |
+
+### What it does NOT change
+
+Every `scoring_units: points` profile, whose nulls and recorded results must stay identical to the bit, and whose 1e-3 tolerance and rescoring stay as they are. Also the score itself, the splits, the embargo, the holdout lock, Amendment 16's costs and returns, the pass rules, `max_of_n`, `B`, `q`, the exposure floor and the gate's statistic.
+
+### Acceptance, before the first crypto campaign
+
+1. A rerun of `scripts/crypto_gate_control.py` reports **zero** trials where the score and the no-flip draw differ by more than 1e-9.
+2. A test pins that NQ nulls are bit-identical before and after the change.
+3. Tests cover a round turn crossing a session boundary, a partial exit in a later session, and a trailing excursion.
+
+**Rehearsed before signing, on simulated data (2026-11-20).** `scripts/crypto_gate_control.py --attribution fill` on the same 700 campaigns: no trial of 3,500 differed by more than 1e-9 (largest 8.9e-16), and no campaign's gate verdict changed. The points null on a fixture containing cross-session holds has the same SHA-256 on `main` and with this code, and a test pins it.
+
+**This amendment does not settle the control's failed criterion C3** (a 5 bp edge passed the full gate in 2 of 100 campaigns, Wilson upper bound 0.070 against 0.05). That result stands. Any rerun needs its own arms, seeds and pass criteria stated before it runs.
+
+### What would invalidate this amendment
+
+- A crypto trial's null built with the closing-session attribution after this is in force.
+- A no-flip mismatch on a notional profile resolved by rescoring rather than by finding its cause.
+- Any change to a `points` profile's null made under this amendment.
+- Signing or changing this amendment after a crypto campaign has scored a trial, without saying so here.
+
+Code: `src/core/scoring/randomization/round_turn.py` (`attribution_for`, `excursion_legs`, `null_from_legs`, `require_identity`), read by `scripts/nq_campaign.py`, `scripts/l2_gate.py` and `scripts/holdout.py` through `prereg.in_force(17)`.
+
+## Amendment 18 — 2026-11-21 — crypto: a pass must show profit after costs
+
+**Status: IN FORCE from 2026-11-21, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. It governs every crypto profile from its first scored trial; no crypto trial was scored before it was signed. Its acceptance control below ran once from commit `7eac4aa`, before signing, and met all three conditions: 2 of 1,000 unprofitable campaigns passed, 0 of 400 noise campaigns, and 100 of 100 strong-edge campaigns (`~/crypto-controls/a18/control.json`, SHA-256 `67c95c1c2c74ba9358e574803d2e06c8312c43da5408bbefb9afa38c0fd6f556`).
+
+### Why
+
+§5 rule (a), and Amendment 9's rule (i) at the holdout, ask whether the Sortino is above zero. That is a statement about **one sample**. The other pass condition, the sign-flip test, asks whether direction beat chance. Neither asks whether the strategy's expected return after costs is positive, so a strategy with real directional skill that loses slightly after fees passes whenever its sample happens to end positive.
+
+**Measured by the pre-registered control C3b** (`docs/reviews/crypto-c3b/RESULT.md`), on simulated BTC-scale prices. At an 8 bp edge whose five strategy variants all had a 99% upper bound below zero, the full gate passed **371 of 1,000** campaigns against a limit of 36. Rule (b) rejected in 909 campaigns. All 371 campaigns with a positive best score also passed rule (b), so the Sortino floor was the only filter that mattered.
+
+**No real crypto result motivated this.** No crypto trial has been scored. This rule was written after C3b's simulated result was known, and that is why it needs its own control on fresh seeds.
+
+### What changes, for `scoring_units: notional` profiles only
+
+Rule (a) at L1 and L2, and rule (i) at the holdout, become one **profitability bound**:
+
+| | rule |
+|---|---|
+| a | The series is the **charged session-return vector the score is computed from**: after fees, funding and the idle charge, one value per scored session, flat sessions included. |
+| b | The standard error of its mean is **Newey-West** with a Bartlett kernel and lag `floor(4 x (T / 100)^(2/9))`, for `T` scored sessions. It has no fitted parameter and uses no random draws. |
+| c | The candidate passes when `mean - z x SE > 0`, with `z` the one-sided normal critical value at `alpha`. A zero or undefined standard error fails. |
+| d | `alpha` carries the selection each level has already made: **`q / N` at L1**, with `N` the campaign's registered trials; **`q / M` at L2**, with `M` the declared family; **`q` at the holdout**, where one champion is judged once. `q` is 0.05. |
+| e | The Sortino remains the score and ranking statistic. A positive bound implies a positive mean, so the old floor needs no separate check. |
+
+### What this costs
+
+The bound is deliberately hard to clear. Ignoring autocorrelation, the smallest Sharpe that can pass:
+
+| level | sessions | alpha | z | Sharpe per session | annualised (x sqrt 365) |
+|---|---|---|---|---|---|
+| L1, N = 5 | 973 | 0.01 | 2.326 | 0.075 | 1.42 |
+| L1, N = 50 | 973 | 0.001 | 3.090 | 0.099 | 1.89 |
+| L1, N = 100 | 973 | 0.0005 | 3.291 | 0.105 | 2.02 |
+| L2, M = 1 | 262 | 0.05 | 1.645 | 0.102 | 1.94 |
+| L2, M = 5 | 262 | 0.01 | 2.326 | 0.144 | 2.75 |
+| Holdout | 160 | 0.05 | 1.645 | 0.130 | 2.48 |
+
+**A genuinely profitable strategy with an annualised Sharpe near 1 would usually fail.** Bonferroni is conservative when trials are correlated, as variants of one idea are. This is the stated trade: on this project a missed strategy costs less than a false claim. The bars are a consequence of `q`, `N`, `M` and the session counts, and must not be adjusted after a result.
+
+### What it does NOT change
+
+Every `scoring_units: points` profile, whose rules and recorded results must stay identical to the bit. Also rule (b), rule (ii), `max_of_n`, `max_of_m`, `B`, `q`, the score, the splits, the embargo, the holdout lock, Amendment 16's costs and returns, Amendment 17's attribution, the exposure floor and the activity floor.
+
+### Acceptance, before signing
+
+A control on the simulated market of `scripts/crypto_gate_control.py`, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000 and Amendment 17's fill attribution. Every seed below is fresh, and each arm runs once from a clean commit.
+
+| arm | seeds | campaigns | pass condition |
+|---|---|---|---|
+| unprofitable, 8 bp (C3b's E\*) | 300001 to 301000 | 1,000 | **36 or fewer** pass the full gate |
+| noise | 301001 to 301400 | 400 | Wilson 95% upper bound on the full-gate pass rate <= 0.05 |
+| strong edge, 25 bp | 301401 to 301500 | 100 | **at least 80** pass the full gate |
+
+A test must also pin the Newey-West calculation on a fixture, and pin that points profiles are unchanged. If any arm fails, this amendment is **not signed**, BTC campaigns stay blocked, and any revision needs new seeds and its own pre-registration.
+
+### What would invalidate this amendment
+
+- `alpha`, the lag rule or the critical value changed after a crypto trial is scored, without a new amendment.
+- `N` or `M` counted so as to leave out crashed, rejected or poorly performing trials or campaigns.
+- A crypto candidate described as passing on a positive Sortino alone once this is in force.
+
+Code: `src/core/scoring/profitability.py`, read through `prereg.in_force(18)` by `scripts/nq_campaign.py` (with `src/core/loop/campaign.py`), `scripts/l2_gate.py` (with `src/core/scoring/correction.py`) and `scripts/holdout.py`. The acceptance control is `scripts/crypto_a18_control.py`.

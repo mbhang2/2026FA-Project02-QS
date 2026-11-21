@@ -79,6 +79,29 @@ from ..metrics import FundingEvent, PerSession, SessionSpan, per_session
 
 B_DEFAULT = 10_000
 
+# Where a round turn's P&L and cost land in the null. `closing` is the original
+# rule. `fill` is pre-registration Amendment 17, for notional profiles once it is
+# signed: each fill stays in its own session, as it does in the metric.
+ATTRIBUTION_CLOSING = "closing"
+ATTRIBUTION_FILL = "fill"
+IDENTITY_TOLERANCE = {ATTRIBUTION_CLOSING: 1e-3, ATTRIBUTION_FILL: 1e-9}
+
+
+class NoFlipMismatch(RuntimeError):
+    """Under Amendment 17 the no-flip draw must be the observed score."""
+
+
+def attribution_for(profile: dict, amendment_17_in_force: bool) -> str:
+    """The attribution a profile's null uses. Callers pass `prereg.in_force(17)`."""
+    if amendment_17_in_force and profile.get("scoring_units", "points") == "notional":
+        return ATTRIBUTION_FILL
+    return ATTRIBUTION_CLOSING
+
+
+def _check_attribution(attribution: str) -> None:
+    if attribution not in IDENTITY_TOLERANCE:
+        raise ValueError(f"unknown null attribution {attribution!r}")
+
 
 @dataclass(frozen=True, slots=True)
 class RoundTurn:
@@ -149,6 +172,7 @@ def null_sample(
     notional_base: PerSession = 1.0,
     idle_charge: PerSession | None = None,
     funding: Sequence[FundingEvent] | None = None,
+    attribution: str = ATTRIBUTION_CLOSING,
 ) -> list[float]:
     """`b` Sortinos under the sign-flip null. This is `null_samples[i]`.
 
@@ -184,7 +208,16 @@ def null_sample(
     # takes triples rather than a blotter, and passed through as a vector.
     from ..metrics import IDLE_CHARGE, idle_charges
 
+    _check_attribution(attribution)
     charge = IDLE_CHARGE if idle_charge is None else idle_charge
+    if attribution == ATTRIBUTION_FILL:
+        return null_from_legs(excursion_legs(blotter, calendar),
+                              [c.session for c in calendar],
+                              b=b, seed=seed, notional_base=notional_base,
+                              charges=idle_charges(blotter, calendar,
+                                                   idle_charge=charge,
+                                                   notional_base=notional_base,
+                                                   funding=funding))
     return null_from_turns(round_turns(blotter, calendar),
                            [c.session for c in calendar],
                            b=b, seed=seed, notional_base=notional_base,
@@ -262,6 +295,7 @@ def identity_from_blotter(
     notional_base: PerSession = 1.0,
     idle_charge: PerSession | None = None,
     funding: Sequence[FundingEvent] | None = None,
+    attribution: str = ATTRIBUTION_CLOSING,
 ):
     """`identity_primary`, built the way `null_sample` builds its own inputs.
 
@@ -271,7 +305,14 @@ def identity_from_blotter(
     """
     from ..metrics import IDLE_CHARGE, idle_charges
 
+    _check_attribution(attribution)
     charge = IDLE_CHARGE if idle_charge is None else idle_charge
+    if attribution == ATTRIBUTION_FILL:
+        return identity_from_legs(
+            excursion_legs(blotter, calendar), [c.session for c in calendar],
+            notional_base=notional_base,
+            charges=idle_charges(blotter, calendar, idle_charge=charge,
+                                 notional_base=notional_base, funding=funding))
     return identity_primary(
         round_turns(blotter, calendar), [c.session for c in calendar],
         notional_base=notional_base,
@@ -343,6 +384,140 @@ def null_from_turns(
         if charge_vec is not None:
             # Already divided by notional_base by `idle_charges`, so it is added
             # after the division above rather than before it.
+            acc += charge_vec
+        for row in acc:
+            out.append(score_returns(row.tolist()).primary)
+        done += c
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# Amendment 17: one sign per excursion, each fill in its own session
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True, slots=True)
+class ExcursionLeg:
+    """The part of one flat-to-flat excursion that falls in one session."""
+
+    excursion: int
+    session: int
+    gross: float
+    cost: float
+
+
+def excursion_legs(blotter: Blotter, calendar: Sequence[SessionSpan]) -> list[ExcursionLeg]:
+    """Every excursion split by the session of each fill.
+
+    A trailing excursion that never returns to flat is included, because the metric
+    counts its fills. Fills outside the calendar are left out, as the metric leaves
+    them out.
+    """
+    from ..metrics import _session_of
+
+    out: list[ExcursionLeg] = []
+    excursion = 0
+    current: dict[int, list[float]] = {}
+
+    def flush() -> None:
+        nonlocal excursion, current
+        if current:
+            out.extend(ExcursionLeg(excursion, s, v[0], v[1]) for s, v in current.items())
+            excursion += 1
+            current = {}
+
+    for row in sorted(blotter.rows, key=lambda r: (r.seq, r.order_id)):
+        session = _session_of(row.ts, calendar)
+        if session is not None:
+            leg = current.setdefault(session, [0.0, 0.0])
+            leg[0] += row.realized_pnl
+            leg[1] += row.commission
+        if row.position_after == 0:
+            flush()
+    flush()
+    return out
+
+
+def identity_from_legs(
+    legs: Sequence[ExcursionLeg],
+    sessions: Sequence[int],
+    *,
+    notional_base: PerSession = 1.0,
+    charges: Sequence[float] | None = None,
+):
+    """The no-flip draw under Amendment 17."""
+    import numpy as np
+
+    from ..scorer import score_returns
+
+    slot = {s: i for i, s in enumerate(sessions)}
+    acc = np.zeros(len(sessions), dtype=float)
+    for leg in legs:
+        acc[slot[leg.session]] += leg.gross - leg.cost
+    acc = _divide_by_notional(acc, notional_base, sessions)
+    if charges is not None:
+        acc += np.asarray(charges, dtype=float)
+    return score_returns(acc.tolist())
+
+
+def require_identity(observed: float | None, observed_metric: str | None,
+                     identity, attribution: str) -> None:
+    """Amendment 17 rule (e). The closing rule keeps its callers' own handling."""
+    _check_attribution(attribution)
+    if attribution != ATTRIBUTION_FILL:
+        return
+    tolerance = IDENTITY_TOLERANCE[attribution]
+    if observed is None or abs(float(observed) - identity.primary) > tolerance \
+            or (observed_metric and observed_metric != identity.metric):
+        raise NoFlipMismatch(
+            f"the no-flip draw {identity.primary!r} on {identity.metric} is not the observed "
+            f"score {observed!r} on {observed_metric} (tolerance {tolerance:g}, Amendment 17)")
+
+
+def null_from_legs(
+    legs: Sequence[ExcursionLeg],
+    sessions: Sequence[int],
+    *,
+    b: int = B_DEFAULT,
+    seed: int = 17,
+    notional_base: PerSession = 1.0,
+    charges: Sequence[float] | None = None,
+) -> list[float]:
+    """The sign-flip null with one sign per excursion and each leg in its session.
+
+    Separate from `null_from_turns` so that the path every points profile uses is
+    not edited. With one leg per excursion the two draw the same signs and agree.
+    """
+    import numpy as np
+
+    from ..scorer import score_returns
+
+    if not legs:
+        return []
+    excursion = np.array([x.excursion for x in legs], dtype=np.int64)
+    gross = np.array([x.gross for x in legs], dtype=float)
+    cost = np.array([x.cost for x in legs], dtype=float)
+    index = {s: i for i, s in enumerate(sessions)}
+    slot = np.array([index[x.session] for x in legs], dtype=np.int64)
+    n_sessions = len(sessions)
+    n_excursions = int(excursion.max()) + 1
+
+    charge_vec = None
+    if charges is not None:
+        if len(charges) != n_sessions:
+            raise ValueError(f"charges has {len(charges)} entries for {n_sessions} sessions")
+        charge_vec = np.asarray(charges, dtype=float)
+
+    rng = np.random.default_rng(seed)
+    out: list[float] = []
+    chunk = max(1, min(b, 4_000_000 // n_excursions))
+    done = 0
+    while done < b:
+        c = min(chunk, b - done)
+        signs = rng.integers(0, 2, size=(c, n_excursions), dtype=np.int8) * 2 - 1
+        contrib = signs[:, excursion] * gross - cost
+        acc = np.zeros((c, n_sessions), dtype=float)
+        np.add.at(acc, (np.arange(c)[:, None], slot[None, :]), contrib)
+        acc = _divide_by_notional(acc, notional_base, sessions)
+        if charge_vec is not None:
             acc += charge_vec
         for row in acc:
             out.append(score_returns(row.tolist()).primary)

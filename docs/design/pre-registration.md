@@ -2322,3 +2322,66 @@ Every `scoring_units: points` profile, whose nulls and recorded results must sta
 - Signing or changing this amendment after a crypto campaign has scored a trial, without saying so here.
 
 Code: `src/core/scoring/randomization/round_turn.py` (`attribution_for`, `excursion_legs`, `null_from_legs`, `require_identity`), read by `scripts/nq_campaign.py`, `scripts/l2_gate.py` and `scripts/holdout.py` through `prereg.in_force(17)`.
+
+## Amendment 18 — 2026-11-21 — crypto: a pass must show profit after costs
+
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-21 by Claude on request; in force when a human signs this line.** The code it describes is not written, and the gate behaves as before. It should not be signed until its acceptance control below has passed. No crypto campaign should be registered until this is settled.
+
+### Why
+
+§5 rule (a), and Amendment 9's rule (i) at the holdout, ask whether the Sortino is above zero. That is a statement about **one sample**. The other pass condition, the sign-flip test, asks whether direction beat chance. Neither asks whether the strategy's expected return after costs is positive, so a strategy with real directional skill that loses slightly after fees passes whenever its sample happens to end positive.
+
+**Measured by the pre-registered control C3b** (`docs/reviews/crypto-c3b/RESULT.md`), on simulated BTC-scale prices. At an 8 bp edge whose five strategy variants all had a 99% upper bound below zero, the full gate passed **371 of 1,000** campaigns against a limit of 36. Rule (b) rejected in 909 campaigns. All 371 campaigns with a positive best score also passed rule (b), so the Sortino floor was the only filter that mattered.
+
+**No real crypto result motivated this.** No crypto trial has been scored. This rule was written after C3b's simulated result was known, and that is why it needs its own control on fresh seeds.
+
+### What changes, for `scoring_units: notional` profiles only
+
+Rule (a) at L1 and L2, and rule (i) at the holdout, become one **profitability bound**:
+
+| | rule |
+|---|---|
+| a | The series is the **charged session-return vector the score is computed from**: after fees, funding and the idle charge, one value per scored session, flat sessions included. |
+| b | The standard error of its mean is **Newey-West** with a Bartlett kernel and lag `floor(4 x (T / 100)^(2/9))`, for `T` scored sessions. It has no fitted parameter and uses no random draws. |
+| c | The candidate passes when `mean - z x SE > 0`, with `z` the one-sided normal critical value at `alpha`. A zero or undefined standard error fails. |
+| d | `alpha` carries the selection each level has already made: **`q / N` at L1**, with `N` the campaign's registered trials; **`q / M` at L2**, with `M` the declared family; **`q` at the holdout**, where one champion is judged once. `q` is 0.05. |
+| e | The Sortino remains the score and ranking statistic. A positive bound implies a positive mean, so the old floor needs no separate check. |
+
+### What this costs
+
+The bound is deliberately hard to clear. Ignoring autocorrelation, the smallest Sharpe that can pass:
+
+| level | sessions | alpha | z | Sharpe per session | annualised (x sqrt 365) |
+|---|---|---|---|---|---|
+| L1, N = 5 | 973 | 0.01 | 2.326 | 0.075 | 1.42 |
+| L1, N = 50 | 973 | 0.001 | 3.090 | 0.099 | 1.89 |
+| L1, N = 100 | 973 | 0.0005 | 3.291 | 0.105 | 2.02 |
+| L2, M = 1 | 262 | 0.05 | 1.645 | 0.102 | 1.94 |
+| L2, M = 5 | 262 | 0.01 | 2.326 | 0.144 | 2.75 |
+| Holdout | 160 | 0.05 | 1.645 | 0.130 | 2.48 |
+
+**A genuinely profitable strategy with an annualised Sharpe near 1 would usually fail.** Bonferroni is conservative when trials are correlated, as variants of one idea are. This is the stated trade: on this project a missed strategy costs less than a false claim. The bars are a consequence of `q`, `N`, `M` and the session counts, and must not be adjusted after a result.
+
+### What it does NOT change
+
+Every `scoring_units: points` profile, whose rules and recorded results must stay identical to the bit. Also rule (b), rule (ii), `max_of_n`, `max_of_m`, `B`, `q`, the score, the splits, the embargo, the holdout lock, Amendment 16's costs and returns, Amendment 17's attribution, the exposure floor and the activity floor.
+
+### Acceptance, before signing
+
+A control on the simulated market of `scripts/crypto_gate_control.py`, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000 and Amendment 17's fill attribution. Every seed below is fresh, and each arm runs once from a clean commit.
+
+| arm | seeds | campaigns | pass condition |
+|---|---|---|---|
+| unprofitable, 8 bp (C3b's E\*) | 300001 to 301000 | 1,000 | **36 or fewer** pass the full gate |
+| noise | 301001 to 301400 | 400 | Wilson 95% upper bound on the full-gate pass rate <= 0.05 |
+| strong edge, 25 bp | 301401 to 301500 | 100 | **at least 80** pass the full gate |
+
+A test must also pin the Newey-West calculation on a fixture, and pin that points profiles are unchanged. If any arm fails, this amendment is **not signed**, BTC campaigns stay blocked, and any revision needs new seeds and its own pre-registration.
+
+### What would invalidate this amendment
+
+- `alpha`, the lag rule or the critical value changed after a crypto trial is scored, without a new amendment.
+- `N` or `M` counted so as to leave out crashed, rejected or poorly performing trials or campaigns.
+- A crypto candidate described as passing on a positive Sortino alone once this is in force.
+
+Code to change when signed: a profitability-bound function in `src/core/scoring/`, and the rule (a) and rule (i) checks in `scripts/nq_campaign.py`, `src/core/scoring/correction.py` and `scripts/holdout.py`.

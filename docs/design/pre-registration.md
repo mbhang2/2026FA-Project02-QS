@@ -2274,7 +2274,7 @@ Code: `src/core/data/crypto.py`, `src/core/scoring/terms.py`, `src/core/scoring/
 
 ## Amendment 17 — 2026-11-20 — crypto: the null charges each fill to its own session
 
-**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-20 by Claude on request; in force when a human signs this line.** The code ships with this text and reads this line. Until it is signed, the round-turn null behaves as it did under Amendment 16, and no crypto campaign should be registered.
+**Status: IN FORCE from 2026-11-21, signed off by Michael.** Drafted 2026-11-20 by Claude on request. The code reads this line. It governs every crypto profile from its first scored trial; no crypto trial was scored before it was signed.
 
 ### Why
 
@@ -2325,7 +2325,7 @@ Code: `src/core/scoring/randomization/round_turn.py` (`attribution_for`, `excurs
 
 ## Amendment 18 — 2026-11-21 — crypto: a pass must show profit after costs
 
-**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-21 by Claude on request; in force when a human signs this line.** The code ships with this text and reads this line, so until it is signed the gate behaves as before. It should not be signed until its acceptance control below has passed. No crypto campaign should be registered until this is settled.
+**Status: IN FORCE from 2026-11-21, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. It governs every crypto profile from its first scored trial; no crypto trial was scored before it was signed. Its acceptance control below ran once from commit `7eac4aa`, before signing, and met all three conditions: 2 of 1,000 unprofitable campaigns passed, 0 of 400 noise campaigns, and 100 of 100 strong-edge campaigns (`~/crypto-controls/a18/control.json`, SHA-256 `67c95c1c2c74ba9358e574803d2e06c8312c43da5408bbefb9afa38c0fd6f556`).
 
 ### Why
 

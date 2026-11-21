@@ -1394,6 +1394,9 @@ def stage_nulls(name: str) -> None:
     # The terms run.py scored each trial with; see src/core/scoring/terms.py.
     from src.core.scoring.terms import scoring_terms
     terms = scoring_terms(cfg(), profile, dataset, calendar)
+    # Amendment 17: read from its status line, so it is off until it is signed.
+    import prereg
+    attribution = rt.attribution_for(profile, prereg.in_force(17))
 
     samples, t0 = [], time.monotonic()
     rule = _rec.correction_rule or "independent"
@@ -1541,7 +1544,16 @@ def stage_nulls(name: str) -> None:
                 idle_charge=terms["idle_charge"],
                 notional_base=terms["notional_base"]))
         else:
-            samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed, **terms))
+            if attribution == rt.ATTRIBUTION_FILL:
+                ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution,
+                                                 **terms)
+                try:
+                    rt.require_identity(score.get("primary"), score.get("metric"), ident,
+                                        attribution)
+                except rt.NoFlipMismatch as exc:
+                    raise SystemExit(f"{name} trial {i}: {exc}") from exc
+            samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed,
+                                          attribution=attribution, **terms))
         print(f"  {i + 1}/{len(rows)}  {len(samples[-1])} draws  "
               f"{time.monotonic() - t0:.0f}s", flush=True)
     # **The recorded source is the one that RAN.** This was hardcoded to

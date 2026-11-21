@@ -270,11 +270,15 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
     from src.core.scoring.terms import scoring_terms
     terms = scoring_terms(cfg, profile, dataset, calendar)
     turns = rt.round_turns(blotter, calendar)
-    ident = rt.identity_from_blotter(blotter, calendar, **terms)
-    sample = rt.null_sample(blotter, calendar, b=B_NULL, seed=73_073, **terms)
+    # Amendment 17: read from its status line, so it is off until it is signed.
+    attribution = rt.attribution_for(profile, prereg.in_force(17))
+    ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution, **terms)
+    sample = rt.null_sample(blotter, calendar, b=B_NULL, seed=73_073,
+                            attribution=attribution, **terms)
     return sample, {"round_turns": len(turns),
                     "identity_primary": ident.primary,
-                    "identity_metric": ident.metric}
+                    "identity_metric": ident.metric,
+                    "identity_tolerance": rt.IDENTITY_TOLERANCE[attribution]}
 
 
 # Amendment 9: a sign-flip null over k round turns has at most 2**k distinct
@@ -314,8 +318,11 @@ def judge(row: dict, null: list[float], facts: dict | None = None) -> dict:
     too_few = k is not None and k < MIN_ROUND_TURNS
     ident = facts.get("identity_primary")
     ident_metric = facts.get("identity_metric")
+    # Amendment 17 tightens this for notional profiles. The look has already been
+    # taken here, so a mismatch is recorded as not evaluable rather than raised.
+    tolerance = facts.get("identity_tolerance", 1e-3)
     skewed = (ident is not None and primary is not None
-              and (abs(float(primary) - float(ident)) > 1e-3
+              and (abs(float(primary) - float(ident)) > tolerance
                    or (score.get("metric") and ident_metric
                        and score.get("metric") != ident_metric)))
 

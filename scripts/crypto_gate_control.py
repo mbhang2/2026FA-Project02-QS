@@ -41,7 +41,9 @@ from dataclasses import replace
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "scripts"))
 
+import prereg  # noqa: E402
 import yaml  # noqa: E402
 
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
@@ -125,8 +127,8 @@ def load_config() -> dict:
     return yaml.safe_load((REPO / "config" / "run.yaml").read_text())
 
 
-def run_campaign(edge_bp: float, seed: int, *, n_sessions: int = 300,
-                 b: int = B) -> dict:
+def run_campaign(edge_bp: float, seed: int, *, n_sessions: int = 300, b: int = B,
+                 attribution: str = rt.ATTRIBUTION_CLOSING) -> dict:
     """One simulated campaign: five trials, their nulls, and the gate's two rules."""
     cfg = load_config()
     profile = cfg["profiles"][PROFILE]
@@ -151,15 +153,19 @@ def run_campaign(edge_bp: float, seed: int, *, n_sessions: int = 300,
         if result.rejected:
             samples.append([])
             continue
-        identity = rt.identity_from_blotter(engine.blotter, calendar, **terms)
-        # A round turn held across 00:00 UTC has its entry fee in the entry session
-        # for the score and in the closing session for the null, so the two can
-        # differ. Every gap is recorded. Past its tolerance `l2_gate.py` rescoring
-        # uses the no-flip draw as the observed value, so this does the same.
+        identity = rt.identity_from_blotter(engine.blotter, calendar,
+                                            attribution=attribution, **terms)
+        # Under `closing`, a round turn held across 00:00 UTC has its entry fee in the
+        # entry session for the score and in the closing session for the null, so the
+        # two can differ. Every gap is recorded. Past its tolerance `l2_gate.py`
+        # rescoring uses the no-flip draw as the observed value, so this does the same.
+        # Under `fill` (Amendment 17) any mismatch stops the run.
+        rt.require_identity(result.primary, result.metric, identity, attribution)
         gap = abs(identity.primary - result.primary)
         gaps.append(gap)
         primaries.append(identity.primary if gap > IDENTITY_TOLERANCE else result.primary)
-        samples.append(rt.null_sample(engine.blotter, calendar, b=b, seed=70_000 + i, **terms))
+        samples.append(rt.null_sample(engine.blotter, calendar, b=b, seed=70_000 + i,
+                                      attribution=attribution, **terms))
     if not primaries:
         return {"edge_bp": edge_bp, "seed": seed, "best": None, "p": 1.0,
                 "rule_b": False, "passed": False, "trades": trades, "identity_gaps": gaps}
@@ -209,7 +215,8 @@ def criteria(arms: dict) -> dict:
 
 
 def _job(args):
-    return run_campaign(*args)
+    edge_bp, seed, attribution = args
+    return run_campaign(edge_bp, seed, attribution=attribution)
 
 
 def main() -> int:
@@ -221,12 +228,18 @@ def main() -> int:
                          "criteria are not evaluated")
     ap.add_argument("--out", type=pathlib.Path,
                     default=pathlib.Path.home() / "crypto-controls" / "gate-control.json")
+    ap.add_argument("--attribution", choices=(rt.ATTRIBUTION_CLOSING, rt.ATTRIBUTION_FILL),
+                    help="the null's attribution; default is what Amendment 17's status "
+                         "line selects. `fill` rehearses it on simulated data before signing")
     a = ap.parse_args()
+    attribution = a.attribution or rt.attribution_for(load_config()["profiles"][PROFILE],
+                                                      prereg.in_force(17))
+    print(f"null attribution: {attribution}", flush=True)
 
     if a.pilot:
-        jobs = [(e, 9001 + s) for e in ARMS for s in range(a.pilot)]
+        jobs = [(e, 9001 + s, attribution) for e in ARMS for s in range(a.pilot)]
     else:
-        jobs = [(e, s + 1) for e, n in ARMS.items() for s in range(n)]
+        jobs = [(e, s + 1, attribution) for e, n in ARMS.items() for s in range(n)]
     t0 = time.monotonic()
     rows = []
     with ProcessPoolExecutor(a.workers, max_tasks_per_child=1) as pool:
@@ -251,6 +264,7 @@ def main() -> int:
         print(f"{'PASS' if ok else 'FAIL'}  {name}")
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(json.dumps({"pilot": bool(a.pilot), "profile": PROFILE, "q": Q, "b": B,
+                                 "attribution": attribution,
                                  "arms": {str(k): v for k, v in arms.items()},
                                  "criteria": verdicts, "rows": rows}, indent=1) + "\n")
     print(f"wrote {a.out}")

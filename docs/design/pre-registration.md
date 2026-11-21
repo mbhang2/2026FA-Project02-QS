@@ -2274,7 +2274,7 @@ Code: `src/core/data/crypto.py`, `src/core/scoring/terms.py`, `src/core/scoring/
 
 ## Amendment 17 — 2026-11-20 — crypto: the null charges each fill to its own session
 
-**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-20 by Claude on request; in force when a human signs this line.** The code it describes is not written. Until it is signed and implemented, the round-turn null behaves as it did under Amendment 16, and no crypto campaign should be registered.
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-20 by Claude on request; in force when a human signs this line.** The code ships with this text and reads this line. Until it is signed, the round-turn null behaves as it did under Amendment 16, and no crypto campaign should be registered.
 
 ### Why
 
@@ -2298,7 +2298,7 @@ A perpetual has no daily close and trades through 00:00 UTC, so a crypto strateg
 | b | Each fill's realized P&L and commission stay in **the session of that fill**, resolved by the same `_session_of` the metric uses. A session's replicated P&L is the sum over excursions of `sign x gross in that session - cost in that session`. |
 | c | A trailing excursion that never returns to flat is **included**, because its fills are in the observed series. Its realized P&L takes its sign and its commission is charged. |
 | d | The idle charge and funding reach the null unchanged, as Amendment 16's fixed per-session vector. |
-| e | The no-flip draw must reproduce the observed score to **1e-9** in value and in metric. A mismatch **stops the run**. It is not rescored, because for these profiles it can only mean a defect. |
+| e | The no-flip draw must reproduce the observed score to **1e-9** in value and in metric. A mismatch **stops the run**. It is not rescored, because for these profiles it can only mean a defect. At the holdout the single look has already been taken, so stopping would lose its record: there the mismatch is recorded and rule (ii) is **not evaluable**. |
 
 ### What it does NOT change
 
@@ -2310,6 +2310,8 @@ Every `scoring_units: points` profile, whose nulls and recorded results must sta
 2. A test pins that NQ nulls are bit-identical before and after the change.
 3. Tests cover a round turn crossing a session boundary, a partial exit in a later session, and a trailing excursion.
 
+**Rehearsed before signing, on simulated data (2026-11-20).** `scripts/crypto_gate_control.py --attribution fill` on the same 700 campaigns: no trial of 3,500 differed by more than 1e-9 (largest 8.9e-16), and no campaign's gate verdict changed. The points null on a fixture containing cross-session holds has the same SHA-256 on `main` and with this code, and a test pins it.
+
 **This amendment does not settle the control's failed criterion C3** (a 5 bp edge passed the full gate in 2 of 100 campaigns, Wilson upper bound 0.070 against 0.05). That result stands. Any rerun needs its own arms, seeds and pass criteria stated before it runs.
 
 ### What would invalidate this amendment
@@ -2319,4 +2321,4 @@ Every `scoring_units: points` profile, whose nulls and recorded results must sta
 - Any change to a `points` profile's null made under this amendment.
 - Signing or changing this amendment after a crypto campaign has scored a trial, without saying so here.
 
-Code to change when signed: `src/core/scoring/randomization/round_turn.py`, and the no-flip checks in `scripts/l2_gate.py` and `scripts/holdout.py`.
+Code: `src/core/scoring/randomization/round_turn.py` (`attribution_for`, `excursion_legs`, `null_from_legs`, `require_identity`), read by `scripts/nq_campaign.py`, `scripts/l2_gate.py` and `scripts/holdout.py` through `prereg.in_force(17)`.

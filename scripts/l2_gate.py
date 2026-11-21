@@ -167,9 +167,17 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
     # The same terms run.py scored the trial with (src/core/scoring/terms.py).
     from src.core.scoring.terms import scoring_terms
     terms = scoring_terms(cfg(), profile, dataset, calendar)
-    ident = rt.identity_from_blotter(blotter, calendar, **terms)
+    # Amendment 17: read from its status line, so it is off until it is signed.
+    attribution = rt.attribution_for(profile, prereg.in_force(17))
+    ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution, **terms)
     observed = (v.get("validation") or {}).get("score", {}).get("primary")
     obs_metric = (v.get("validation") or {}).get("score", {}).get("metric")
+    try:
+        rt.require_identity(observed, obs_metric, ident, attribution)
+    except rt.NoFlipMismatch as exc:
+        # SystemExit, because the caller's `except Exception` would otherwise drop
+        # this trial from the family and carry on.
+        raise SystemExit(f"{name}: {exc}") from exc
 
     # **The gate scores the observed in the same process as the null, from the
     # same fill log.** Using the number recorded at look-time against a null
@@ -199,7 +207,7 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
         }
         print(f"    !! {name}: stored {observed} on {obs_metric} -> rescored "
               f"{ident.primary:.6f} on {ident.metric}", flush=True)
-    sample = rt.null_sample(blotter, calendar, b=b, seed=seed, **terms)
+    sample = rt.null_sample(blotter, calendar, b=b, seed=seed, attribution=attribution, **terms)
     cache.write_text(json.dumps(
         {"source": "round_turn_mc", "split": "validation", "b": b, "seed": seed,
          "profile": profile_name, "n_sessions": len(calendar),

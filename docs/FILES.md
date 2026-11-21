@@ -399,6 +399,7 @@ What each test file pins.
 | `tests/test_agent_docs.py` | The two documents the research agent reads have to agree with each other. |
 | `tests/test_allow_fitted_proposals.py` | Whether the proposing agent may write a strategy that fits. |
 | `tests/test_alpha_bridge.py` | `harness_alpha`: Nalin's vectorised AST library, used from a streaming callback. |
+| `tests/test_amendment_17.py` | Amendment 17: the crypto null charges each fill to its own session. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
 | `tests/test_boundary.py` | Nothing mutable crosses the context boundary, and nothing resolves silently. |
 | `tests/test_bwis.py` | Source priors: the three things Gowtam's version got wrong, pinned. |

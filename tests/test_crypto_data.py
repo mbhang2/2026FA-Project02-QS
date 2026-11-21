@@ -274,8 +274,11 @@ def test_quotes_refuse_a_clock_that_runs_back_or_a_row_from_another_day(tmp_path
     from src.core.data.crypto_raw import compact_okx_quotes
 
     t0 = 1794787200000
-    back = _tbt(tmp_path / "b.csv.gz", [(t0 + 5_000, 1.0, 2.0, 1.0), (t0 + 1_000, 1.0, 2.5, 1.0)])
-    with pytest.raises(ValueError, match="steps back"):
+    # one row stamped far in the future would make every genuine row after it look
+    # backdated: refused, not cut
+    back = _tbt(tmp_path / "b.csv.gz", [(t0 + 1_000, 1.0, 2.0, 1.0), (t0 + 80_000_000, 1.0, 2.1, 1.0)]
+                + [(t0 + 2_000 + i, 1.0, 2.0 + i / 100, 1.0) for i in range(20)])
+    with pytest.raises(ValueError, match="stamped in the future"):
         compact_okx_quotes(back, tmp_path / "b.npz", day=dt.date(2026, 11, 16))
     late = _tbt(tmp_path / "l.csv.gz", [(t0 + 86_400_000 + 5_000, 1.0, 2.0, 1.0)])
     with pytest.raises(ValueError, match="outside"):
@@ -345,3 +348,68 @@ def test_an_unknown_quotes_header_is_refused_not_guessed(tmp_path):
         fh.write("a,b,c\n1,2,3\n")
     with pytest.raises(ValueError, match="unrecognised OKX quotes header"):
         compact_okx_quotes(src, tmp_path / "x.npz", day=dt.date(2023, 1, 1))
+
+
+def test_a_truncated_quotes_download_is_retried_but_bad_data_is_not(tmp_path, monkeypatch):
+    import contextlib
+
+    import src.core.data.crypto_raw as raw_mod
+
+    class Resp:
+        def raise_for_status(self):
+            pass
+
+        def iter_content(self, n):
+            yield b"x"
+
+    class Http:
+        def get(self, *a, **k):
+            return contextlib.nullcontext(Resp())
+
+    monkeypatch.setattr(cf, "okx_quotes_url", lambda http, sym, day: "http://x")
+    monkeypatch.setattr(cf.time, "sleep", lambda s: None)
+    calls = []
+
+    def flaky(src, dest, *, day):
+        calls.append(day)
+        if len(calls) == 1:
+            raise EOFError("Compressed file ended before the end-of-stream marker")
+        open(dest, "wb").write(b"npz")
+        return {"rows": 1, "kept": 1, "levels": 5, "backsteps": 0, "max_backstep_ms": 0,
+                "crossed": 0, "dropped_backdated": 0}
+
+    monkeypatch.setattr(raw_mod, "compact_okx_quotes", flaky)
+    f = cf.RemoteFile("okx", "quotes", "BTCUSDT", "2024-08-19", "", None, False,
+                      "BTCUSDT-quotes-top5-2024-08-19.npz")
+    _, rec = cf.download_quotes(f, tmp_path, Http())
+    assert len(calls) == 2 and rec[0] == 3
+
+    def bad(src, dest, *, day):
+        calls.append(day)
+        raise ValueError("exchange time steps back 5000 ms")
+
+    monkeypatch.setattr(raw_mod, "compact_okx_quotes", bad)
+    calls.clear()
+    with pytest.raises(ValueError, match="steps back"):
+        cf.download_quotes(f, tmp_path, Http())
+    assert len(calls) == 1
+
+
+def test_a_corrupt_backdated_stretch_is_dropped(tmp_path):
+    """OKX 2026-11-02: rows stamped ~10 s back, crossed, then the book resumes."""
+    import datetime as dt
+
+    from src.core.data.crypto_raw import compact_okx_quotes, read_quotes
+
+    t0 = 1794787200000
+    lead = [(t0 + 10 * i, 99.0, 99.5 + i / 1000, 1.0) for i in range(60)]    # ordinary rows
+    src = _tbt(tmp_path / "s.csv.gz", lead + [(t0 + 20_000, 100.0, 100.1, 1.0),
+                                              (t0 + 10_050, 100.5, 100.2, 1.0),  # backdated, crossed
+                                              (t0 + 10_060, 100.6, 100.3, 1.0),  # backdated, crossed
+                                              (t0 + 20_070, 100.0, 100.4, 1.0)])
+    facts = compact_okx_quotes(src, tmp_path / "s.npz", day=dt.date(2026, 11, 16))
+    assert facts["backsteps"] == 1 and facts["max_backstep_ms"] == 9_950
+    assert facts["dropped_backdated"] == 2 and facts["kept"] == 62 and facts["crossed"] == 0
+    q = read_quotes(tmp_path / "s.npz", contract_value=0.01)
+    assert q["ask_px"][-2:, 0].tolist() == [100.1, 100.4]
+    assert (q["ts_ns"][-2:] // 10**6).tolist() == [t0 + 20_000, t0 + 20_070]

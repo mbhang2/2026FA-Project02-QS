@@ -137,8 +137,16 @@ window instead of ~640 GB. The raw file is deleted after compaction. Its size an
 SHA-256 go in the manifest, with the row counts and the checks it passed:
 
 - read to the end;
-- no exchange-time step back of more than 1 s (2026-11-15 and -16 each had one
-  20 ms step);
+- rows stamped earlier than a row before them are dropped and counted, and a file
+  that would lose more than 5% of its rows that way is refused (that pattern
+  means a row stamped in the future, not a corrupt stretch). On 23 days of
+  2023-2026, OKX's file holds a stretch of ~10 s to 14 min stamped back in time.
+  On 2025-09-04 that stretch is 76,175 rows replaying 03:13-03:27, which the file
+  already held complete, and it contains all of the day's crossed rows. On 2026-11-02, for example, 812 rows
+  from 10:04:18.842 UTC are stamped 10:04:08.892 onward, 421 of them have a
+  crossed book, and the book then resumes as it was before them. Those rows are
+  not book states and are dropped. Ordinary days have one or two
+  10-20 ms steps;
 - no row outside its day;
 - the number of crossed rows (zero so far).
 
@@ -147,6 +155,18 @@ They keep their own manifest, `data/crypto-quotes-manifest.json`, so a quotes
 fetch on one machine and a trades fetch on another never edit the same file.
 `read_quotes(path, contract_value=0.01)` returns exchange-time `ts_ns` and
 `bid_px`, `bid_qty` (coin), `bid_cnt`, `ask_*` as (rows, 5) arrays, best level first.
+
+**OKX does not publish every day.** Its index lists no tick-by-tick file for
+some days, for example eleven between 2023-02-16 and 2023-03-07, and yesterday's
+file appears only after a delay. Those days are never attempted. They are gaps
+in the source, not failed downloads.
+
+**Transient failures are retried.** The first full desktop run (2026-11-20) lost
+37 of 1,402 days to dropped connections and truncated downloads. Each day is now
+tried up to three times, with a fresh link each time, before it is reported as
+failed. A file that is complete but wrong (clock running back, a row outside its
+day, an unknown header) is not retried. Rerunning `fetch` retries anything still
+missing.
 
 Not fetched by a bare `fetch`. Name it with `--kind quotes`. OKX's download links
 expire within hours, so each day's link is requested just before it is downloaded.

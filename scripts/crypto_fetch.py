@@ -361,6 +361,9 @@ def verify_file(f: RemoteFile, path: Path, sha256: str, http) -> str:
     raise ValueError(f.exchange)
 
 
+QUOTES_ATTEMPTS = 3
+
+
 def okx_quotes_url(http, symbol: str, day: str) -> str:
     """A fresh link for one day. The index's links are signed and expire within a
     few hours, and a full history takes far longer than that to download."""
@@ -393,29 +396,46 @@ def download_quotes(f: RemoteFile, lake: Path, http) -> tuple[RemoteFile, list]:
     sys.path.insert(0, str(ROOT))
     from src.core.data.crypto_raw import compact_okx_quotes
 
+    import requests
+
     dest = lake / f.key
     dest.parent.mkdir(parents=True, exist_ok=True)
     raw = dest.with_name(dest.name + ".raw.csv.gz")
-    url = okx_quotes_url(http, f.symbol, f.period)
-    h = hashlib.sha256()
-    try:
-        with http.get(url, stream=True, timeout=300) as r:
-            r.raise_for_status()
-            with open(raw, "wb") as out:
-                for chunk in r.iter_content(1 << 20):
-                    h.update(chunk)
-                    out.write(chunk)
-        raw_size = raw.stat().st_size
-        facts = compact_okx_quotes(raw, dest, day=dt.date.fromisoformat(f.period))
-    finally:
-        raw.unlink(missing_ok=True)
+    # **Transient failures are retried here, with a fresh link each time.** The
+    # first full run on a desktop lost 37 of 1,402 days to dropped connections
+    # and truncated downloads (a truncated gzip fails as EOFError or a zlib
+    # OSError while compacting); all of them downloaded on a second try. A file
+    # that is complete but wrong -- a clock running back, a row outside its
+    # day, an unknown header -- is a ValueError and is not retried.
+    for attempt in range(QUOTES_ATTEMPTS):
+        url = okx_quotes_url(http, f.symbol, f.period)
+        h = hashlib.sha256()
+        try:
+            with http.get(url, stream=True, timeout=300) as r:
+                r.raise_for_status()
+                with open(raw, "wb") as out:
+                    for chunk in r.iter_content(1 << 20):
+                        h.update(chunk)
+                        out.write(chunk)
+            raw_size = raw.stat().st_size
+            facts = compact_okx_quotes(raw, dest, day=dt.date.fromisoformat(f.period))
+            break
+        except (requests.RequestException, EOFError, OSError) as exc:
+            if attempt + 1 == QUOTES_ATTEMPTS:
+                raise
+            print(f"  retrying {f.period} after {type(exc).__name__}: {str(exc)[:120]}",
+                  file=sys.stderr, flush=True)
+            time.sleep(10 * (attempt + 1))
+        finally:
+            raw.unlink(missing_ok=True)
     c = hashlib.sha256()
     with open(dest, "rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 22), b""):
             c.update(chunk)
     how = (f"compacted from {raw_size} B raw (sha256 {h.hexdigest()}): {facts['rows']} rows read to the "
            f"end, {facts['kept']} kept where the top {facts['levels']} levels changed; "
-           f"{facts['backsteps']} exchange-time step(s) back, max {facts['max_backstep_ms']} ms; "
+           f"{facts['backsteps']} exchange-time step(s) back, max {facts['max_backstep_ms']} ms, "
+           f"{facts['dropped_backdated']} backdated row(s) dropped; "
            f"{facts['crossed']} crossed row(s)")
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return f, [dest.stat().st_size, c.hexdigest(), url.split("?", 1)[0], how, now, None]

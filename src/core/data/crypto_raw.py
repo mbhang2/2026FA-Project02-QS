@@ -207,7 +207,21 @@ def read_funding(exchange: str, path: str | Path) -> pd.DataFrame:
 
 QUOTE_LEVELS = 5
 QUOTE_FIELDS = ("px", "qty", "ordCnt")
-MAX_BACKSTEP_MS = 1_000
+# Some OKX days carry a corrupt stretch: on 2026-11-02 at 10:04:18.842 UTC the
+# clock steps back 9,950 ms and 812 rows are stamped 10:04:08.892 .. 18.822;
+# 421 of them are CROSSED (best bid above best ask by up to $5.40), and after
+# them the book resumes exactly as it was before. Those rows are not book states
+# and are DROPPED: a row stamped earlier than any row before it (exchange time
+# below the running maximum) is removed, counted and recorded.
+#
+# The stretches run from ~10 s to 13.7 min (2025-09-04: 76,175 rows stamped
+# 03:13:13 .. 03:26:56, all 4,401 of the day's crossed rows among them, while
+# that window was already in the file, complete, before the jump). What the rule
+# must not do is follow a row stamped in the FUTURE: every genuine row after it
+# would then look backdated and be dropped. That shows as a large share of the
+# day dropped, so a file that would lose more than `MAX_DROPPED_SHARE` of its
+# rows is refused instead.
+MAX_DROPPED_SHARE = 0.05
 
 
 def quote_columns(levels: int = QUOTE_LEVELS) -> list[str]:
@@ -254,15 +268,19 @@ def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
     """Read one OKX tick-by-tick file to the end and write the compact `.npz`.
 
     Raises -- and writes nothing -- if the file is not what it should be: no rows,
-    exchange time stepping back by more than `MAX_BACKSTEP_MS`, or a row stamped
+    more than `MAX_DROPPED_SHARE` of its rows stamped back in time, or a row stamped
     outside `day` (one second of slack either side: the first row of a day is
     routinely a few ms before midnight). Returns the facts the manifest records.
 
-    **Row order is the publish order and is kept.** Exchange time is almost but
-    not perfectly monotone -- 2026-11-16 had one 20 ms step back in 7.1M rows --
-    and the rows are successive book states, so re-sorting by a jittered clock
-    would reorder states rather than fix them. Small steps are counted and
-    recorded; a reader that needs a monotone clock takes the running maximum.
+    **Rows stamped back in time are dropped, not re-sorted.** Exchange time is
+    almost monotone -- 2026-11-16 had one 20 ms step back in 7.1M rows -- but 23
+    days of 2023-2026 carry a corrupt stretch of ~10 s to 14 min (see
+    `MAX_DROPPED_SHARE`) whose
+    rows are crossed and are followed by the book as it was before them. A row
+    whose exchange time is below the running maximum is removed before anything
+    else; `backsteps`, `max_backstep_ms` and `dropped_backdated` record it, and
+    `crossed` counts what is left. The kept rows are in publish order with a
+    non-decreasing clock.
     """
     import datetime as _dt
 
@@ -275,7 +293,8 @@ def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
     recv, exch, book = [], [], []
     prev_row: np.ndarray | None = None
     prev_exch = -1
-    rows = crossed = backsteps = max_back = 0
+    rows = crossed = backsteps = max_back = backdated = 0
+    running_max = -1
     for ch in pd.read_csv(src, usecols=list(rename), chunksize=chunksize, dtype="float64"):
         ch = ch.rename(columns=rename)[cols]
         e = ch["exchTimeMs"].to_numpy(np.int64)
@@ -286,24 +305,34 @@ def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
         if len(back):
             backsteps += len(back)
             max_back = max(max_back, int(back.max()))
-            if max_back > MAX_BACKSTEP_MS:
-                raise ValueError(f"{src}: exchange time steps back {max_back} ms")
         if e.min() < lo_ok or e.max() > hi_ok:
             raise ValueError(f"{src}: rows stamped outside {day} UTC")
         prev_exch = int(e[-1])
+        cummax = np.maximum.accumulate(np.concatenate(([running_max], e)))[1:]
+        on_time = e >= cummax
+        rows += len(on_time)                       # every row read, dropped or kept
+        backdated += int((~on_time).sum())
+        running_max = int(cummax[-1])
+        ch, e = ch[on_time], e[on_time]
+        if len(e) == 0:
+            continue
         b = ch[book_cols].to_numpy(np.float64)
         keep = np.ones(len(b), dtype=bool)
         keep[1:] = np.any(b[1:] != b[:-1], axis=1)
         if prev_row is not None:
             keep[0] = bool(np.any(b[0] != prev_row))
         prev_row = b[-1].copy()
-        rows += len(b)
         crossed += int((b[:, 0] >= b[:, 3]).sum())        # bid_1_px >= ask_1_px
         recv.append(ch["timeMs"].to_numpy(np.int64)[keep])
         exch.append(e[keep])
         book.append(b[keep])
     if rows == 0:
         raise ValueError(f"{src}: no rows")
+    if backdated > MAX_DROPPED_SHARE * rows:
+        raise ValueError(f"{src}: {backdated} of {rows} rows are stamped earlier than a row "
+                         f"before them (max step back {max_back} ms); more than "
+                         f"{MAX_DROPPED_SHARE:.0%} suggests a row stamped in the future, not a "
+                         "corrupt stretch, so the file is refused rather than cut")
 
     out = {"recv_ms": np.concatenate(recv), "exch_ms": np.concatenate(exch),
            "book": np.concatenate(book), "columns": np.array(book_cols)}
@@ -313,11 +342,13 @@ def compact_okx_quotes(src: str | Path, dest: str | Path, *, day: "dt_date",
         np.savez_compressed(fh, **out)
     os.replace(tmp, dest)
     return {"rows": rows, "kept": int(len(out["exch_ms"])), "crossed": crossed,
-            "levels": levels, "backsteps": backsteps, "max_backstep_ms": max_back}
+            "levels": levels, "backsteps": backsteps, "max_backstep_ms": max_back,
+            "dropped_backdated": backdated}
 
 
 def read_quotes(path: str | Path, *, contract_value: float) -> dict:
-    """A compact OKX quotes file as arrays: `ts_ns` (exchange time), `recv_ns`, and
+    """A compact OKX quotes file as arrays: `ts_ns` (exchange time, non-decreasing),
+    `recv_ns`, and
     `bid_px`, `bid_qty`, `bid_cnt`, `ask_px`, `ask_qty`, `ask_cnt`, each
     (rows, levels) with level 1 the best. Quantities in base coin
     (contracts x `contract_value`)."""
@@ -325,7 +356,14 @@ def read_quotes(path: str | Path, *, contract_value: float) -> dict:
         raise ValueError("OKX sizes are contracts: pass contract_value (ctVal)")
     with np.load(path, allow_pickle=False) as z:
         book, cols = z["book"], [str(c) for c in z["columns"]]
-        out = {"ts_ns": z["exch_ms"].astype(np.int64) * _MS, "recv_ns": z["recv_ms"].astype(np.int64) * _MS}
+        exch = z["exch_ms"].astype(np.int64)
+        recv = z["recv_ms"].astype(np.int64)
+    # Backdated rows are dropped here too, by the same rule as compaction. Files
+    # compacted before 2026-11-20 kept steps back of under a second (a few rows a
+    # day); this makes every file read the same way.
+    on_time = exch >= np.maximum.accumulate(exch)
+    book, exch, recv = book[on_time], exch[on_time], recv[on_time]
+    out = {"ts_ns": exch * _MS, "recv_ns": recv * _MS}
     levels = len(cols) // 6
     grid = book.reshape(len(book), levels, 2, 3)               # rows, level, side, field
     for s, side in enumerate(("bid", "ask")):

@@ -31,6 +31,11 @@ include = ["src*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The repo root, so `pytest` finds `src` on a fresh clone. `python -m pytest`
+# adds the working directory itself and always worked; plain `pytest`, which the
+# README gives, failed with "No module named 'src'" unless the repo had been
+# installed with `pip install -e .`, which the lockfile deliberately leaves out.
+pythonpath = ["."]
 markers = [
     "live: needs read access to the R2 bucket (skipped without R2_* in the environment)",
     "slow: calibration sweeps; deselect with -m 'not slow'",

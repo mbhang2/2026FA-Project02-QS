@@ -96,6 +96,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/tabulate_null.py` | Build the empirical null and commit it. |
 | `scripts/tabulate_profile_null.py` | Build the profile-indexed null and commit it. |
 | `scripts/warm_cache.py` | Populate the session cache in one process, before a parallel campaign. |
+| `scripts/warm_crypto_cache.py` | Populate the crypto session cache before a crypto run, in parallel. |
 | `scripts/worker_tree.py` | Isolated working copies, so trials can run in parallel without lying. |
 
 ## The proposer and the loop
@@ -493,6 +494,7 @@ What each test file pins.
 | `README.md` | 2026FA-Project02-2-QS — AutoResearch for Quantitative Finance |
 | `config/datasets/crypto.yaml` | Crypto perpetuals: which public archives scripts/crypto_fetch.py pulls, and from when. |
 | `data/crypto-manifest.json` | data (JSON) |
+| `data/crypto-quotes-manifest.json` | data (JSON) |
 | `data/dbn-version-equivalence.json` | data (JSON) |
 | `data/manifest.json` | data (JSON) |
 | `data/nq-contract-selection.json` | data (JSON) |

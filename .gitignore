@@ -39,6 +39,7 @@ inst/doc
 # citing it -- so a clone would have had a doc naming a file that was not
 # there, and test_doc_citations would have failed for everyone but the author.
 !scripts/warm_cache.py
+!scripts/warm_crypto_cache.py
 *_files*
 *.bak
 *.sav*

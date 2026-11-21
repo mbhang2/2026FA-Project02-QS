@@ -19,6 +19,7 @@ Bybit and OKX are downloaded but not yet served.
 | size | integer lots of 0.001 coin (Binance's quantity step); asserted whole, never rounded |
 | aggressor | always known, so `bar.delta` is exact |
 | P&L | price points x lots; times 0.001 for USD |
+| warming it | `python scripts/warm_crypto_cache.py --dataset crypto-btc --split train --workers 8` before the first run; ~10 s a session cold |
 | decoded cache | under `data/cache/` (gitignored, in `crypto-sessions/`), ~5 MB per 2023 session and several times that in 2025-26; the train split needs roughly 10-15 GB |
 
 [Data and environment](../guide/data-and-environment.md) · config: `config/datasets/crypto.yaml` · record: `data/crypto-manifest.json`
@@ -212,3 +213,42 @@ and the read-write R2 key.
    git commit -m "OKX BTC quotes: manifest through <last date>"
    git push
    ```
+
+## First runs on a desktop
+
+The train split needs ~10-15 GB of decoded cache and, at an estimated 30-60+
+minutes, more time per trial than a laptop should spend. The first time on a
+machine, run these in order. They are smoke runs: recorded in a separate ledger,
+counted as no trial, and scored only so the plumbing is seen to work.
+
+1. **The full environment**, not only the downloader's packages, and the suite's
+   crypto tests (the readers were written against pandas 2.1, and the lock pins
+   pandas 3.0):
+
+   ```bash
+   git switch main && git pull
+   python3 -m venv .venv-run && source .venv-run/bin/activate
+   pip install -r requirements.lock
+   set -a && . secrets/r2.env && set +a          # read-only R2 for run.py
+   pytest -q tests/test_crypto_data.py tests/test_crypto_scoring.py tests/test_market_facts.py
+   ```
+
+2. **Warm the cache** (a few minutes per 100 sessions on 8 workers):
+
+   ```bash
+   python scripts/warm_crypto_cache.py --dataset crypto-btc --split train --limit 6
+   python scripts/warm_crypto_cache.py --dataset crypto-btc --split train --workers 8
+   ```
+
+3. **Time one trial** of the committed reference strategy on the train split:
+
+   ```bash
+   mkdir -p ~/crypto-smoke
+   /usr/bin/time -v python run.py --human --purpose smoke --profile crypto-btc-train \
+       --ledger ~/crypto-smoke/ledger.jsonl
+   ```
+
+   The figures that matter are the wall-clock time and the "Maximum resident set
+   size" that `time -v` prints at the end. `wall_clock_budget_s` in the profile
+   is 7200 s; if one trial runs longer, the profile's budget is a decision to
+   make before a campaign, not a default to discover in one.

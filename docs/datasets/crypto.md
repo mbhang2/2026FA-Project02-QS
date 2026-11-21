@@ -230,7 +230,7 @@ counted as no trial, and scored only so the plumbing is seen to work.
    python3 -m venv .venv-run && source .venv-run/bin/activate
    pip install -r requirements.lock
    set -a && . secrets/r2.env && set +a          # read-only R2 for run.py
-   pytest -q tests/test_crypto_data.py tests/test_crypto_scoring.py tests/test_market_facts.py
+   python -m pytest -q tests/test_crypto_data.py tests/test_crypto_scoring.py tests/test_market_facts.py
    ```
 
 2. **Warm the cache** (a few minutes per 100 sessions on 8 workers):

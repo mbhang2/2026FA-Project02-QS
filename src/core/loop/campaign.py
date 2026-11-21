@@ -354,8 +354,12 @@ def run_campaign(agent, record: CampaignRecord, *, ledger: Path,
 def summarise(result: CampaignResult, *, dataset: str | None = None,
               null_samples: list | None = None, q: float | None = None,
               null_routes: list | None = None,
-              exclude: set | None = None) -> dict:
+              exclude: set | None = None,
+              profitability: dict | None = None) -> dict:
     """The correction over the campaign, and the uncorrected view beside it.
+
+    `profitability` is Amendment 18's `{campaign_index: bound}`. When supplied, the
+    selected trial's bound replaces the `observed_best > 0` floor in `accept`.
 
     **`max_of_n` over per-candidate nulls is the gate; BH and Holm are
     diagnostics.** Task 32 demoted the tabulated FAR column to screening: it is
@@ -489,11 +493,26 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
         gate["observed_best"] = observed_best
         gate["observed_best_positive"] = bool(observed_best > 0)
         gate["accept"] = bool(gate["reject"] and observed_best > 0)
+        if profitability is not None:
+            # Amendment 18: the bound on the trial the gate selected replaces the
+            # floor. Earliest trial on a tie, and a missing bound fails.
+            winner = next((r for r in trials
+                           if r.get("campaign_index") not in exclude
+                           and (r.get("score") or {}).get("primary") == observed_best
+                           and not (r.get("score") or {}).get("rejected")), None)
+            bound = (profitability.get(str(winner.get("campaign_index")))
+                     if winner is not None else None)
+            gate["profitability"] = bound
+            gate["accept"] = bool(gate["reject"] and bound and bound.get("passes"))
         gate["excluded_off_question"] = sorted(exclude)
         gate["floor_note"] = (
             "accept = reject AND observed_best > 0. The second term is not a "
             "formality: under a sign-flip null a losing high-turnover candidate "
             "can clear the first one decisively.")
+        if profitability is not None:
+            gate["floor_note"] = (
+                "accept = reject AND the selected trial's Amendment 18 profitability "
+                "bound is above zero.")
         out["gate"] = gate
     else:
         out["gate"] = {

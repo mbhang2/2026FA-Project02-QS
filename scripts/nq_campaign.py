@@ -1397,6 +1397,11 @@ def stage_nulls(name: str) -> None:
     # Amendment 17: read from its status line, so it is off until it is signed.
     import prereg
     attribution = rt.attribution_for(profile, prereg.in_force(17))
+    # Amendment 18, the same way: q / N, with N the campaign's registered trials.
+    from src.core.scoring.profitability import applies, profitability_bound
+    profit_on = applies(profile, prereg.in_force(18))
+    profit_alpha = _rec.q / _rec.budget
+    profitability: dict[str, dict] = {}
 
     samples, t0 = [], time.monotonic()
     rule = _rec.correction_rule or "independent"
@@ -1513,6 +1518,9 @@ def stage_nulls(name: str) -> None:
             continue
         blotter = reconstruct(fills, commission_per_contract=commission,
                               commission_bps=profile.get("commission_bps", 0.0))
+        if profit_on:
+            profitability[str(row.get("campaign_index"))] = profitability_bound(
+                metrics.session_returns(blotter, calendar, **terms), profit_alpha)
         # **The seed decides whether the nulls can be read jointly.**
         #
         # `70_000 + i` gives every trial its own randomisation stream, so
@@ -1564,6 +1572,8 @@ def stage_nulls(name: str) -> None:
     # trial was actually ranked against.
     payload = {"source": source, "b": B_NULL, "samples": samples,
                "spec": "docs/design/pre-registration.md section 3b"}
+    if profit_on:
+        payload["profitability"] = profitability
     if tabled is not None:
         payload["b"] = max((len(v) for v in tabled.values()), default=0)
         payload["tables"] = sorted(
@@ -1744,9 +1754,17 @@ def stage_report(name: str) -> None:
     # same hard-coding that put NQ into an SPX campaign's provenance.
     from src.core.loop.fidelity import excluded_trials
 
+    # Amendment 18. In force with no stored bounds means nulls.json predates it, so
+    # an empty mapping makes the gate fail closed.
+    import prereg
+    from src.core.scoring.profitability import applies
+    profitability = (nulls.get("profitability", {})
+                     if applies(cfg()["profiles"][record.profile], prereg.in_force(18))
+                     else None)
     summary = summarise(result, dataset=record.dataset,
                         null_samples=samples, q=record.q,
-                        exclude=excluded_trials(d, record.agent_config))
+                        exclude=excluded_trials(d, record.agent_config),
+                        profitability=profitability)
 
     # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
     # same route every other campaign's do rather than through this script.

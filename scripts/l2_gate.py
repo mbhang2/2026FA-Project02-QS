@@ -218,6 +218,38 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
     return sample, rescored
 
 
+def validation_profitability(name: str, alpha: float) -> dict | None:
+    """Amendment 18's bound on one winner's validation run, or None if it does not apply.
+
+    Built from the same fill log, calendar and terms as `build_validation_null`.
+    """
+    from replay import load_fill_log
+    from src.core.engine.reconstruct import reconstruct
+    from src.core.scoring import metrics
+    from src.core.scoring.profitability import applies, profitability_bound
+    from src.core.scoring.terms import scoring_terms
+    from src.core.types import Split
+    import run as runner
+
+    d = CAMPAIGNS / name
+    v = json.loads((d / "validation.json").read_text())
+    profile = cfg()["profiles"][(v.get("validation") or {}).get("profile")]
+    if not applies(profile, prereg.in_force(18)):
+        return None
+    rows = [json.loads(x) for x in (d / "validation.jsonl").read_text().splitlines()
+            if x.strip()]
+    fills = load_fill_log(rows[-1])
+    if not fills:
+        raise SystemExit(f"{name}: the validation run left no fill log for Amendment 18")
+    dataset = runner.build_dataset(cfg(), profile["dataset"], profile["seed"])
+    sessions = dataset.scored_sessions(Split.VALIDATION, profile.get("warmup_sessions", 0))
+    calendar = metrics.session_calendar(dataset, sessions)
+    blotter = reconstruct(fills, commission_per_contract=profile["commission_per_contract"],
+                          commission_bps=profile.get("commission_bps", 0.0))
+    terms = scoring_terms(cfg(), profile, dataset, calendar)
+    return profitability_bound(metrics.session_returns(blotter, calendar, **terms), alpha)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -269,9 +301,16 @@ def main() -> int:
         print(f"  {name:28} validation {c['validation_primary']:+.4f}  "
               f"{len(sample):>6} null draws  {time.monotonic() - t0:.0f}s",
               flush=True)
-        winners.append({"campaign_id": name,
-                        "validation_primary": c["validation_primary"],
-                        "validation_null": sample})
+        winner = {"campaign_id": name,
+                  "validation_primary": c["validation_primary"],
+                  "validation_null": sample}
+        # Amendment 18: q / M, with M the declared family.
+        bound = validation_profitability(name, a.q / len(family))
+        if bound is not None:
+            winner["profitability_pass"] = bound["passes"]
+            print(f"  {name:28} profitability lower bound {bound['lower_bound']} "
+                  f"at alpha {bound['alpha']:g}: {bound['passes']}", flush=True)
+        winners.append(winner)
 
     from src.core.scoring.correction import max_of_m
     # Which statistic decides is read from the pre-registration, never from a

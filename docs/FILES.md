@@ -69,6 +69,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/check_agent_paths.py` | CI guard: the research agent may only ever change `src/strategies/**`. |
 | `scripts/committee_retry.py` | Re-run the committee seats that never ran, beside the record and never over it. |
 | `scripts/correction_fwer.py` | Measure FWER for the `max_of_n` variants, under the global null. |
+| `scripts/crypto_a18_control.py` | Amendment 18's acceptance control. Simulated data only. |
 | `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
@@ -153,6 +154,7 @@ The metric, the nulls, and the correction.
 | `src/core/scoring/correction.py` | Multiple-testing correction over a campaign's trial ledger. |
 | `src/core/scoring/integrity.py` | Did the scoring code change while the trial was running? |
 | `src/core/scoring/metrics.py` | The scoring metric and its diagnostics. Pure functions over a blotter and a |
+| `src/core/scoring/profitability.py` | Amendment 18: a crypto pass must show profit after costs. |
 | `src/core/scoring/randomization/__init__.py` | A null that knows which candidate it is. |
 | `src/core/scoring/randomization/candidate.py` | The per-candidate null: run this candidate against R rotations of its own data. |
 | `src/core/scoring/randomization/hybrid.py` | Bucket when covered, rotation when not. The selection keys on profile only. |
@@ -401,6 +403,7 @@ What each test file pins.
 | `tests/test_allow_fitted_proposals.py` | Whether the proposing agent may write a strategy that fits. |
 | `tests/test_alpha_bridge.py` | `harness_alpha`: Nalin's vectorised AST library, used from a streaming callback. |
 | `tests/test_amendment_17.py` | Amendment 17: the crypto null charges each fill to its own session. |
+| `tests/test_amendment_18.py` | Amendment 18: a crypto pass must show profit after costs. No control arm runs here. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
 | `tests/test_boundary.py` | Nothing mutable crosses the context boundary, and nothing resolves silently. |
 | `tests/test_bwis.py` | Source priors: the three things Gowtam's version got wrong, pinned. |

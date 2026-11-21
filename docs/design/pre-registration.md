@@ -2325,7 +2325,7 @@ Code: `src/core/scoring/randomization/round_turn.py` (`attribution_for`, `excurs
 
 ## Amendment 18 — 2026-11-21 — crypto: a pass must show profit after costs
 
-**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-21 by Claude on request; in force when a human signs this line.** The code it describes is not written, and the gate behaves as before. It should not be signed until its acceptance control below has passed. No crypto campaign should be registered until this is settled.
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-21 by Claude on request; in force when a human signs this line.** The code ships with this text and reads this line, so until it is signed the gate behaves as before. It should not be signed until its acceptance control below has passed. No crypto campaign should be registered until this is settled.
 
 ### Why
 
@@ -2384,4 +2384,4 @@ A test must also pin the Newey-West calculation on a fixture, and pin that point
 - `N` or `M` counted so as to leave out crashed, rejected or poorly performing trials or campaigns.
 - A crypto candidate described as passing on a positive Sortino alone once this is in force.
 
-Code to change when signed: a profitability-bound function in `src/core/scoring/`, and the rule (a) and rule (i) checks in `scripts/nq_campaign.py`, `src/core/scoring/correction.py` and `scripts/holdout.py`.
+Code: `src/core/scoring/profitability.py`, read through `prereg.in_force(18)` by `scripts/nq_campaign.py` (with `src/core/loop/campaign.py`), `scripts/l2_gate.py` (with `src/core/scoring/correction.py`) and `scripts/holdout.py`. The acceptance control is `scripts/crypto_a18_control.py`.

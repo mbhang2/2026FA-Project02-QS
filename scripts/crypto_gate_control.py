@@ -52,6 +52,7 @@ from src.core.runlog import RunTicket  # noqa: E402
 from src.core.scoring.calibration.reference import ReferenceStrategy  # noqa: E402
 from src.core.scoring.correction import max_of_n  # noqa: E402
 from src.core.scoring.metrics import FundingEvent, session_returns  # noqa: E402
+from src.core.scoring.profitability import profitability_bound  # noqa: E402
 from src.core.scoring.randomization import round_turn as rt  # noqa: E402
 from src.core.scoring.scorer import score  # noqa: E402
 from src.core.scoring.terms import scoring_terms  # noqa: E402
@@ -156,12 +157,17 @@ def variant_mean_returns(edge_bp: float, seed: int, *, n_sessions: int = 300) ->
 
 
 def run_campaign(edge_bp: float, seed: int, *, n_sessions: int = 300, b: int = B,
-                 attribution: str = rt.ATTRIBUTION_CLOSING) -> dict:
-    """One simulated campaign: five trials, their nulls, and the gate's two rules."""
+                 attribution: str = rt.ATTRIBUTION_CLOSING,
+                 profit_alpha: float | None = None) -> dict:
+    """One simulated campaign: five trials, their nulls, and the gate's two rules.
+
+    With `profit_alpha`, Amendment 18's bound on the selected trial replaces rule (a).
+    """
     cfg = load_config()
     profile = cfg["profiles"][PROFILE]
     dataset = CryptoControlDataset(spec_for(edge_bp, seed, n_sessions))
     samples, primaries, trades, gaps = [], [], [], []
+    bounds = []
     for i, (stop, target) in enumerate(VARIANTS):
         engine, calendar, terms = _run_variant(dataset, stop, target, cfg, profile, seed)
         result = score(engine.blotter, period=calendar,
@@ -182,6 +188,9 @@ def run_campaign(edge_bp: float, seed: int, *, n_sessions: int = 300, b: int = B
         gap = abs(identity.primary - result.primary)
         gaps.append(gap)
         primaries.append(identity.primary if gap > IDENTITY_TOLERANCE else result.primary)
+        if profit_alpha is not None:
+            bounds.append(profitability_bound(session_returns(engine.blotter, calendar, **terms),
+                                              profit_alpha))
         samples.append(rt.null_sample(engine.blotter, calendar, b=b, seed=70_000 + i,
                                       attribution=attribution, **terms))
     if not primaries:
@@ -189,10 +198,16 @@ def run_campaign(edge_bp: float, seed: int, *, n_sessions: int = 300, b: int = B
                 "rule_b": False, "passed": False, "trades": trades, "identity_gaps": gaps}
     best = max(primaries)
     gate = max_of_n(samples, best, b=b, seed=17, q=Q)
-    return {"edge_bp": edge_bp, "seed": seed, "best": best, "p": gate["p"],
-            "rule_b": bool(gate["reject"]),
-            "passed": bool(gate["reject"]) and best > 0, "trades": trades,
-            "identity_gaps": gaps}
+    row = {"edge_bp": edge_bp, "seed": seed, "best": best, "p": gate["p"],
+           "rule_b": bool(gate["reject"]),
+           "passed": bool(gate["reject"]) and best > 0, "trades": trades,
+           "identity_gaps": gaps}
+    if profit_alpha is not None:
+        selected = bounds[primaries.index(best)]      # earliest trial on a tie
+        row["sortino_rule_passed"] = row["passed"]
+        row["profitability"] = selected
+        row["passed"] = bool(gate["reject"]) and selected["passes"]
+    return row
 
 
 def wilson(k: int, n: int, z: float = 1.959964) -> tuple[float, float]:

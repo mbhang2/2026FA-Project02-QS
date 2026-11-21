@@ -51,7 +51,7 @@ from src.core.engine import Engine  # noqa: E402
 from src.core.runlog import RunTicket  # noqa: E402
 from src.core.scoring.calibration.reference import ReferenceStrategy  # noqa: E402
 from src.core.scoring.correction import max_of_n  # noqa: E402
-from src.core.scoring.metrics import FundingEvent  # noqa: E402
+from src.core.scoring.metrics import FundingEvent, session_returns  # noqa: E402
 from src.core.scoring.randomization import round_turn as rt  # noqa: E402
 from src.core.scoring.scorer import score  # noqa: E402
 from src.core.scoring.terms import scoring_terms  # noqa: E402
@@ -127,25 +127,43 @@ def load_config() -> dict:
     return yaml.safe_load((REPO / "config" / "run.yaml").read_text())
 
 
+def _run_variant(dataset, stop: float, target: float, cfg: dict, profile: dict, seed: int):
+    """One trial on the simulated market: the engine, its calendar and scoring terms."""
+    strategy = ReferenceStrategy(interval="1h", stop_atr=stop, target_atr=target,
+                                 exit_margin_ns=61 * 60 * NS_PER_SECOND)
+    engine = Engine(dataset, strategy,
+                    ticket=RunTicket.for_calibration("crypto gate control"),
+                    split=Split.TRAIN, fill_model=profile["fill_model"],
+                    warmup_sessions=profile["warmup_sessions"],
+                    commission_per_contract=profile["commission_per_contract"],
+                    commission_bps=profile["commission_bps"], seed=seed)
+    engine.run()
+    calendar = engine.session_calendar()
+    return engine, calendar, scoring_terms(cfg, profile, dataset, calendar)
+
+
+def variant_mean_returns(edge_bp: float, seed: int, *, n_sessions: int = 300) -> list[float]:
+    """Each variant's mean session return after fees, funding and the idle charge."""
+    cfg = load_config()
+    profile = cfg["profiles"][PROFILE]
+    dataset = CryptoControlDataset(spec_for(edge_bp, seed, n_sessions))
+    out = []
+    for stop, target in VARIANTS:
+        engine, calendar, terms = _run_variant(dataset, stop, target, cfg, profile, seed)
+        returns = session_returns(engine.blotter, calendar, **terms)
+        out.append(math.fsum(returns) / len(returns))
+    return out
+
+
 def run_campaign(edge_bp: float, seed: int, *, n_sessions: int = 300, b: int = B,
                  attribution: str = rt.ATTRIBUTION_CLOSING) -> dict:
     """One simulated campaign: five trials, their nulls, and the gate's two rules."""
     cfg = load_config()
     profile = cfg["profiles"][PROFILE]
     dataset = CryptoControlDataset(spec_for(edge_bp, seed, n_sessions))
-    ticket = RunTicket.for_calibration("crypto gate control")
     samples, primaries, trades, gaps = [], [], [], []
     for i, (stop, target) in enumerate(VARIANTS):
-        strategy = ReferenceStrategy(interval="1h", stop_atr=stop, target_atr=target,
-                                     exit_margin_ns=61 * 60 * NS_PER_SECOND)
-        engine = Engine(dataset, strategy, ticket=ticket, split=Split.TRAIN,
-                        fill_model=profile["fill_model"],
-                        warmup_sessions=profile["warmup_sessions"],
-                        commission_per_contract=profile["commission_per_contract"],
-                        commission_bps=profile["commission_bps"], seed=seed)
-        engine.run()
-        calendar = engine.session_calendar()
-        terms = scoring_terms(cfg, profile, dataset, calendar)
+        engine, calendar, terms = _run_variant(dataset, stop, target, cfg, profile, seed)
         result = score(engine.blotter, period=calendar,
                        min_exposed_fraction=cfg.get("campaign", {}).get("min_exposed_fraction"),
                        **terms)

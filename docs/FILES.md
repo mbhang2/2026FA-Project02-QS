@@ -69,6 +69,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/check_agent_paths.py` | CI guard: the research agent may only ever change `src/strategies/**`. |
 | `scripts/committee_retry.py` | Re-run the committee seats that never ran, beside the record and never over it. |
 | `scripts/correction_fwer.py` | Measure FWER for the `max_of_n` variants, under the global null. |
+| `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
 | `scripts/detectability.py` | What size of edge could this gate have found? Power, from our own nulls. |
@@ -411,6 +412,7 @@ What each test file pins.
 | `tests/test_committee.py` | The four-auditor committee: isolated, veto-only, and outside the harness. |
 | `tests/test_committee_retry.py` | A seat that never ran is asked again: inside the committee, and afterwards. |
 | `tests/test_context_and_run.py` | The context facade and the run entry point. |
+| `tests/test_crypto_c3b_control.py` | C3b's fixed design and decision rules. Neither real stage runs here. |
 | `tests/test_crypto_data.py` | Crypto archives: each exchange's conventions normalise to one schema, and the fetcher's listing parsers. |
 | `tests/test_crypto_gate_control.py` | The simulated crypto gate control: its market, its bounds and one small campaign. |
 | `tests/test_crypto_scoring.py` | Amendment 16: crypto scoring on notional, with funding -- and NQ left untouched. |

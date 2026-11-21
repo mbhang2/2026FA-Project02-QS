@@ -201,7 +201,11 @@ class CryptoDataset:
         if local.exists():
             return local
         if self._s3 is None:
-            raise RuntimeError(f"{key} is not in {self._lake} and no S3 client was given")
+            raise RuntimeError(
+                f"{key} is not in {self._lake} and there is no R2 client to fetch it. "
+                "run.py builds one only when R2_ENDPOINT, R2_ACCESS_KEY_ID, "
+                "R2_SECRET_ACCESS_KEY and R2_BUCKET are all set: in this shell, run "
+                "`set -a && . secrets/r2.env && set +a` (docs/setup/R2_ACCESS.md)")
         dest = CACHE_ROOT / ("raw" if keep else "transient") / key
         if dest.exists():
             return dest

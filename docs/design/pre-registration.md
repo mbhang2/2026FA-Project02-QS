@@ -2271,3 +2271,52 @@ The splits, the embargo, the holdout lock, the pass rules, `max_of_n`, the expos
 - `idle_charge_fraction` or `commission_bps` changed after a crypto campaign has scored a trial, without a new amendment.
 
 Code: `src/core/data/crypto.py`, `src/core/scoring/terms.py`, `src/core/scoring/metrics.py` (`PerSession`, `FundingEvent`, `funding_points`), `src/core/engine/reconstruct.py` (`fill_commission`); profiles `crypto-btc-train`, `crypto-btc-validation` in `config/run.yaml`.
+
+## Amendment 17 — 2026-11-20 — crypto: the null charges each fill to its own session
+
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-20 by Claude on request; in force when a human signs this line.** The code it describes is not written. Until it is signed and implemented, the round-turn null behaves as it did under Amendment 16, and no crypto campaign should be registered.
+
+### Why
+
+The score and the sign-flip null attribute the same fills differently. `metrics.session_returns` puts each fill's realized P&L and commission in the session that fill happened in. `round_turn.round_turns` adds up the whole excursion and puts it in the session of the **closing** fill. For a position held across a session boundary, the entry fee is therefore in the entry session for the score and in the closing session for the null, so the observed score is not exactly the null's no-flip draw.
+
+A perpetual has no daily close and trades through 00:00 UTC, so a crypto strategy can hold across the session boundary as an ordinary part of trading. With fees proportional to notional and returns divided by a different opening price each session, the moved cost also changes size when it changes session.
+
+**What it breaks at each gate.** `scripts/l2_gate.py` replaces the observed score with the no-flip draw when the two differ by more than 1e-3. `scripts/holdout.py` treats the same gap as version skew and leaves rule (ii) unevaluable, so an ordinary overnight hold could spend the single holdout look and return no p-value.
+
+### What was measured
+
+`scripts/crypto_gate_control.py`, on simulated BTC-scale prices with the Amendment 16 terms, 700 campaigns of 5 trials: the score and the no-flip draw differed in **1,345 of 3,500 trials**. Nine exceeded the 1e-3 tolerance, all in the 25 bp arm, the largest **3.69e-3**. The mechanism was traced on one trial, in an earlier version of the simulator, where the only two differing sessions were the two sides of the one round turn crossing a boundary. The other gaps were not traced one by one; the acceptance check below covers them.
+
+**No real crypto result motivated this.** No crypto trial has been scored. The only real-data crypto run is the reference strategy's smoke run on the train split, recorded in a separate ledger and counted as no trial; 5 of its 974 sessions ended with a position open. The defect was found by the no-flip check on simulated data.
+
+### What changes, for `scoring_units: notional` profiles only
+
+| | rule |
+|---|---|
+| a | An excursion keeps **one sign** per replication, drawn as now. A flip through zero still does not end it. |
+| b | Each fill's realized P&L and commission stay in **the session of that fill**, resolved by the same `_session_of` the metric uses. A session's replicated P&L is the sum over excursions of `sign x gross in that session - cost in that session`. |
+| c | A trailing excursion that never returns to flat is **included**, because its fills are in the observed series. Its realized P&L takes its sign and its commission is charged. |
+| d | The idle charge and funding reach the null unchanged, as Amendment 16's fixed per-session vector. |
+| e | The no-flip draw must reproduce the observed score to **1e-9** in value and in metric. A mismatch **stops the run**. It is not rescored, because for these profiles it can only mean a defect. |
+
+### What it does NOT change
+
+Every `scoring_units: points` profile, whose nulls and recorded results must stay identical to the bit, and whose 1e-3 tolerance and rescoring stay as they are. Also the score itself, the splits, the embargo, the holdout lock, Amendment 16's costs and returns, the pass rules, `max_of_n`, `B`, `q`, the exposure floor and the gate's statistic.
+
+### Acceptance, before the first crypto campaign
+
+1. A rerun of `scripts/crypto_gate_control.py` reports **zero** trials where the score and the no-flip draw differ by more than 1e-9.
+2. A test pins that NQ nulls are bit-identical before and after the change.
+3. Tests cover a round turn crossing a session boundary, a partial exit in a later session, and a trailing excursion.
+
+**This amendment does not settle the control's failed criterion C3** (a 5 bp edge passed the full gate in 2 of 100 campaigns, Wilson upper bound 0.070 against 0.05). That result stands. Any rerun needs its own arms, seeds and pass criteria stated before it runs.
+
+### What would invalidate this amendment
+
+- A crypto trial's null built with the closing-session attribution after this is in force.
+- A no-flip mismatch on a notional profile resolved by rescoring rather than by finding its cause.
+- Any change to a `points` profile's null made under this amendment.
+- Signing or changing this amendment after a crypto campaign has scored a trial, without saying so here.
+
+Code to change when signed: `src/core/scoring/randomization/round_turn.py`, and the no-flip checks in `scripts/l2_gate.py` and `scripts/holdout.py`.

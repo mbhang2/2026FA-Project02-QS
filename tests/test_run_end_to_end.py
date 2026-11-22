@@ -21,6 +21,8 @@ suite and much faster than the five-minute NQ run that finally caught the third.
 
 from __future__ import annotations
 
+from src.core.costs import apply_costs
+
 import json
 import subprocess
 import sys
@@ -88,7 +90,7 @@ def test_the_profiles_cost_model_reaches_the_row(tmp_path):
     times."""
     import yaml
 
-    profiles = yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text())["profiles"]
+    profiles = apply_costs(yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text()))["profiles"]
     declared = {k: v["commission_per_contract"] for k, v in profiles.items()
                 if "commission_per_contract" in v}
     assert declared, "no profile declares a commission; this check has gone blind"

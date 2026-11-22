@@ -2385,3 +2385,77 @@ A test must also pin the Newey-West calculation on a fixture, and pin that point
 - A crypto candidate described as passing on a positive Sortino alone once this is in force.
 
 Code: `src/core/scoring/profitability.py`, read through `prereg.in_force(18)` by `scripts/nq_campaign.py` (with `src/core/loop/campaign.py`), `scripts/l2_gate.py` (with `src/core/scoring/correction.py`) and `scripts/holdout.py`. The acceptance control is `scripts/crypto_a18_control.py`.
+
+## Amendment 19 — 2026-11-21 — execution latency and an overnight rule
+
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-21 by Claude on request; in force when a human signs this line.** The code ships with this text and reads this line, so until it is signed every run behaves as before. No crypto campaign should be registered until this is settled.
+
+### Why
+
+The engine fills an order from the next trade, however close in time that trade is. On BTC, trades can be milliseconds apart, so a strategy reacting to a trade can fill almost instantly and cancel a resting order before the market moves through it. That flatters short-horizon strategies. Separately, whether a strategy may hold overnight has only been a per-hypothesis check after the run, not a condition of the run.
+
+**No real result motivated this, and none may set its value.** No crypto trial has been scored, and no real data has been scored with a non-zero latency.
+
+### The two profile settings
+
+| setting | default | meaning |
+|---|---|---|
+| `latency_ns` | 0 | One delay, in whole nanoseconds, from the strategy's callback to the market |
+| `allow_overnight` | true | When false, nothing survives a session's close |
+
+`crypto-btc-train` and `crypto-btc-validation` register **`latency_ns: 100000000`** (100 ms) and **`allow_overnight: true`**. The 100 ms is a judgement for a retail connection to an offshore venue. **It was not measured.** It must be set before signing and cannot be chosen by comparing scores at different latencies.
+
+**Timestamp resolution limits what a latency can mean.** Measured on 12 cached train sessions of each market: every Binance BTC trade time is a whole millisecond and 50.2% of trades share the previous trade's time, so a crypto latency between 1 ns and 1 ms is refused. NQ times are finer, with a 1st-percentile positive gap of about 14 microseconds.
+
+### The two uses of latency
+
+**1. Testing a strategy under a stated latency.** A campaign registers one latency before its first trial, through its profile, and every trial runs at it. Testing another latency is **another registered campaign**, and every such campaign belongs in the L2 family `M`, including those that did badly. Otherwise, trying latencies until one passes is an uncounted search.
+
+**2. Latency analysis.** `scripts/latency_sweep.py` runs one fixed strategy across a latency grid stated before the sweep, on the **train split only**, and reports the latencies at which the Amendment 18 bound holds, with `alpha = q / (grid points)`. It reports the lowest and highest profitable latency and whether the profitable range has gaps. Its runs are `check` rows in the sweep's own ledger and are never trials. **It is descriptive:** it cannot run on validation or the holdout, cannot produce a pass, and **a latency read from a sweep may not become a campaign's registered latency**.
+
+### What latency does
+
+| | rule |
+|---|---|
+| a | An order, a modification or a bracket leg sent at time `t` can match only trades at or after `t + latency`, and still only after the T+1 rule. |
+| b | A cancel takes effect at `t + latency`. **The order can still fill until then.** A second cancel does not move that time, and a modification of an order with a cancel in flight is rejected. |
+| c | A modified order is out of the market until the modification arrives. |
+| d | When a fill arms a bracket, its stop and target also wait for the latency, so a position is briefly unprotected. An OCO sibling is cancelled at the fill, as an exchange-side link. |
+| e | Delayed arrivals never move a fill's price rule. The fill model still decides every fill. |
+
+**What it does not model:** market-data delay, the bid-ask spread, queue position, or latency that varies. It is a floor on reaction time and not a full execution model.
+
+### What `allow_overnight: false` does
+
+At each session's close, working orders expire, and any position is closed **at that session's last trade**, paying the normal commission, tagged `session-flat`. New orders from the callbacks this raises are dropped and counted. The exit is a rule of the run: no later trade exists for a delayed order to match, so latency does not apply to it. That price is optimistic by up to the spread unless a slippage rate is registered.
+
+### Fees and slippage per instrument
+
+`config/costs.yaml` holds each instrument's rates, and a profile takes them with `costs: <instrument>`. A fee is `per_contract` (price points, for futures) or `bps_notional` (crypto), with **separate `maker` and `taker` rates**. `taker` applies to market orders, triggered stops and the `session-flat` close. `maker` applies to resting limit fills. A negative maker rate is a rebate, and `maker + taker` must be at least 0 so that fees alone cannot pay for a round trip. NQ stays at 0.10 points per contract per side on both and BTCUSDT at Amendment 16's 5 bp on both, so **moving the fees changes no result**. A maker rate that differs from the taker rate applies only while this amendment is in force. A profile that names an instrument and also states a rate is refused, as is one priced as a different symbol than it trades.
+
+**Slippage** is a registered rate in the same two units, paid per side on **taker fills only**: market orders, triggered stops and the `session-flat` close. Resting limit fills pay none. Every instrument registers **0**, and a non-zero rate applies only while this amendment is in force. It is charged as a cost and **never moves the fill price**, because the sign-flip null flips gross P&L and re-charges cost: slippage inside the price would become a gain on half the draws. Bracket levels are therefore computed from the unslipped fill price. A flat rate does not model size, volatility or book depth.
+
+A campaign records its fees and execution terms at registration and is refused if they later change.
+
+### Scope and what it does NOT change
+
+These settings apply to single-asset, trade-based runs. A profile combining latency, slippage or the overnight rule with a quote-based fill model or options is refused. A campaign using non-default terms must use `null_source: round_turn_mc`, records them at registration, and is refused if they later change. Non-default terms are written to each run's ledger row and replay reads them from there.
+
+Every existing profile keeps the defaults, and its results must stay identical to the bit. Also unchanged: the score, the splits, the embargo, the holdout lock, costs, funding, Amendments 16 to 18, the pass rules, `max_of_n`, `B` and `q`.
+
+### Acceptance, before signing
+
+1. At the default terms, real NQ and crypto train runs reproduce the digests and score of the code before this change.
+2. Stepping every tick and the event walk produce identical blotters with latency, cancels, modifications and brackets.
+3. Tests pin the arrival rule, a fill while a cancel is in flight, the overnight close, maker and taker rates, slippage on taker fills only, slippage staying a cost in the null, the registry's rates, and replay from a row's recorded terms.
+4. No real data is scored at a non-zero latency before signing.
+
+### What would invalidate this amendment
+
+- `latency_ns` or `allow_overnight` changed for a crypto profile after a crypto campaign has scored a trial, without a new amendment.
+- A latency or slippage value chosen by comparing real scores, including from a latency sweep.
+- A rate in `config/costs.yaml` changed after a campaign on that instrument has scored a trial, without a new amendment.
+- A campaign run at another latency and left out of the L2 family.
+- A train and validation pair run under different terms.
+
+Code: `src/core/engine/engine.py` (`latency_ns`, `allow_overnight`, `_flatten_at_close`), `src/core/costs.py`, `config/costs.yaml`, `src/core/engine/reconstruct.py` (`fill_commission`), `run.py` (`execution_terms`), `scripts/replay.py`, `scripts/nq_campaign.py`, `scripts/latency_sweep.py`.

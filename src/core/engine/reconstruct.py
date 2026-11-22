@@ -36,17 +36,33 @@ class FillLogFull(RuntimeError):
 
 
 def fill_commission(price: float, size: int, *, commission_per_contract: float,
-                    commission_bps: float = 0.0) -> float:
+                    commission_bps: float = 0.0, slippage_per_contract: float = 0.0,
+                    slippage_bps: float = 0.0, liquidity: str = "taker",
+                    maker_commission_per_contract: float | None = None,
+                    maker_commission_bps: float | None = None) -> float:
     """What one fill costs, in price units x size: a fixed amount per contract
     (NQ, in index points) plus a share of notional (crypto, in basis points of
     `price x size`). The engine and this module both charge through here, so the
-    accumulator and the reconstruction cannot price a fill two ways."""
-    return commission_per_contract * size + commission_bps * 1e-4 * price * size
+    accumulator and the reconstruction cannot price a fill two ways.
+
+    A maker fill pays the maker rates where they are set, and the same rates otherwise.
+    A taker fill also pays slippage (Amendment 19). It is a cost and not a moved
+    price, so the sign-flip null charges it again rather than flipping it."""
+    per, bps = commission_per_contract, commission_bps
+    if liquidity == "maker":
+        per = per if maker_commission_per_contract is None else maker_commission_per_contract
+        bps = bps if maker_commission_bps is None else maker_commission_bps
+    cost = per * size + bps * 1e-4 * price * size
+    if liquidity == "taker" and (slippage_per_contract or slippage_bps):
+        cost += slippage_per_contract * size + slippage_bps * 1e-4 * price * size
+    return cost
 
 
 def reconstruct(
     fills: Sequence[FillRecord], *, commission_per_contract: float,
-    commission_bps: float = 0.0,
+    commission_bps: float = 0.0, slippage_per_contract: float = 0.0,
+    slippage_bps: float = 0.0, maker_commission_per_contract: float | None = None,
+    maker_commission_bps: float | None = None,
 ) -> Blotter:
     """The blotter the fills imply.
 
@@ -110,7 +126,11 @@ def reconstruct(
                 commission=fill_commission(
                     fill.price, fill.size,
                     commission_per_contract=commission_per_contract,
-                    commission_bps=commission_bps),
+                    commission_bps=commission_bps,
+                    slippage_per_contract=slippage_per_contract,
+                    slippage_bps=slippage_bps, liquidity=fill.liquidity,
+                    maker_commission_per_contract=maker_commission_per_contract,
+                    maker_commission_bps=maker_commission_bps),
                 realized_pnl=realized,
                 tag=fill.tag,
                 asset=fill.asset,

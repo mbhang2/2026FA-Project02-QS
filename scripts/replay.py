@@ -290,6 +290,8 @@ def replay(row: dict, cfg_path: Path = REPO_ROOT / "config" / "run.yaml",
             fill_model=row["fill_model"],
             warmup_sessions=row.get("warmup_sessions", 0),
             seed=row["seed"],
+            # Amendment 19: the row's recorded terms, not today's profile.
+            **(row.get("execution") or {}),
         )
         engine.run()
         run_log.update(engine.record.as_dict())
@@ -323,7 +325,11 @@ def main() -> int:
         recorded_digest = row.get("fill_log_digest", "")
         same_fills = log_digest(stored) == recorded_digest == replayed_digest
         rebuilt = reconstruct(stored, commission_per_contract=engine.commission,
-                              commission_bps=engine.commission_bps)
+                              commission_bps=engine.commission_bps,
+                              slippage_per_contract=engine.slippage_per_contract,
+                              slippage_bps=engine.slippage_bps,
+                              maker_commission_per_contract=engine.maker_commission_per_contract,
+                              maker_commission_bps=engine.maker_commission_bps)
         net = rebuilt.realized_pnl - rebuilt.commission
         print(f"fills      {len(stored):,}  digest {recorded_digest[:16]}  "
               f"{'same as replayed' if same_fills else 'DIFFERENT from replayed'}")

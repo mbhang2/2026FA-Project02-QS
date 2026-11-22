@@ -37,6 +37,7 @@ from typing import Iterator, Sequence
 import numpy as np
 
 from ..types import NS_PER_SECOND, DataCapabilities, Side, Split, Tick, Ts
+from .columns import SessionColumns
 from .crypto_raw import read_funding, read_klines, read_trades
 from .dataset import Calendar, HoldoutLock, calendar_path, load_calendar, sessions_for
 
@@ -278,9 +279,13 @@ class CryptoDataset:
     # ---- loading ----------------------------------------------------------- #
     def load(self, session) -> list[Tick]:
         d = self._as_date(session)
+        return self._ticks(d, *self._load_arrays(d))
+
+    def _load_arrays(self, d: dt.date) -> tuple:
+        """`(ts, price, size, side)` for one session, from the cache or the archive."""
         if d not in self._files:
             raise KeyError(f"no {self.name} file for session {d}")
-        cached = self._read_cache(d)
+        cached = self._read_arrays(d)
         if cached is not None:
             return cached
         src = self._fetch(self._files[d], keep=False)
@@ -302,7 +307,7 @@ class CryptoDataset:
         arrays = (ns, df["price"].to_numpy(dtype=np.float64), lots,
                   df["side"].to_numpy(dtype=np.int8))
         self._write_cache(d, *arrays)
-        return self._ticks(d, *arrays)
+        return arrays
 
     @staticmethod
     def _ticks(d: dt.date, ns, prices, lots, sides) -> list[Tick]:
@@ -326,20 +331,41 @@ class CryptoDataset:
         for d in self._sessions:
             yield from self.load(d)
 
+    def session_columns(self, split: Split, *, warmup: int = 0) -> Iterator[SessionColumns]:
+        """The same sessions as `ticks(split)`, as arrays. The holdout lock applies."""
+        self._lock.check(split)
+        if self.spec.smoke_sessions is not None:
+            if split is Split.HOLDOUT:
+                raise NotImplementedError("the smoke path never serves the holdout")
+            days = self._sessions[: self.spec.smoke_sessions]
+        else:
+            warm, live = self._split_positions(split, warmup)
+            days = [self._sessions[i] for i in warm + live]
+        for d in days:
+            ns, prices, lots, sides = self._load_arrays(d)
+            if ns.size:
+                # `_ticks` reads any positive code as a buy and anything else as a sell.
+                yield SessionColumns(d.toordinal(), ns, prices, lots,
+                                     np.where(sides > 0, 1, -1).astype(np.int8))
+
     # ---- cache ------------------------------------------------------------- #
     def _cache_path(self, d: dt.date) -> Path:
         key = self._files[d]
         digest = hashlib.sha256(f"{CACHE_VERSION}|{self.spec.lot}|{key}:{self._sha[key]}".encode()).hexdigest()[:12]
         return CACHE_ROOT / self.spec.exchange / self.spec.symbol / f"{d.isoformat()}-{digest}.npz"
 
-    def _read_cache(self, d: dt.date) -> list[Tick] | None:
+    def _read_arrays(self, d: dt.date) -> tuple | None:
         if not self.spec.cache:
             return None
         path = self._cache_path(d)
         if not path.exists():
             return None
         with np.load(path, allow_pickle=False) as z:
-            return self._ticks(d, z["ts"], z["price"], z["size"], z["side"])
+            return z["ts"], z["price"], z["size"], z["side"]
+
+    def _read_cache(self, d: dt.date) -> list[Tick] | None:
+        arrays = self._read_arrays(d)
+        return None if arrays is None else self._ticks(d, *arrays)
 
     def _write_cache(self, d: dt.date, ns, prices, lots, sides) -> None:
         """Atomic and content-keyed, for the same reasons as `NQDataset._write_cache`."""

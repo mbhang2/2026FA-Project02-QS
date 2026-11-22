@@ -18,6 +18,8 @@ that the plumbing works and that the assertion bites.
 
 from __future__ import annotations
 
+from src.core.costs import apply_costs
+
 import pytest
 
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec
@@ -125,8 +127,8 @@ def test_every_nq_profile_declares_its_commission():
 
     import yaml
 
-    cfg = yaml.safe_load(
-        (Path(__file__).resolve().parents[1] / "config/run.yaml").read_text())
+    cfg = apply_costs(yaml.safe_load(
+        (Path(__file__).resolve().parents[1] / "config/run.yaml").read_text()))
     nq = {name: p for name, p in cfg["profiles"].items()
           if p.get("dataset", "").startswith("nq")}
     assert nq, "no NQ profiles found -- this test is looking in the wrong place"

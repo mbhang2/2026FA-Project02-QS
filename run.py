@@ -46,6 +46,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.core.costs import apply_costs  # noqa: E402
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine, git_sha  # noqa: E402
 from src.core.engine.remote import (  # noqa: E402
@@ -185,7 +186,7 @@ def resolve_purpose(trigger: str, requested: str | None) -> str:
 def load_config(path: Path = CONFIG_PATH) -> dict:
     if not path.exists():
         sys.exit(f"missing run configuration at {path}")
-    return yaml.safe_load(path.read_text())
+    return apply_costs(yaml.safe_load(path.read_text()))
 
 
 def build_dataset(cfg: dict, name: str, seed: int):
@@ -321,6 +322,63 @@ def _attach_weights_safely(record: dict, engine, ledger_path: Path) -> dict:
         record["weights_source"] = ""
         record["weights_error"] = f"{type(exc).__name__}: {exc}"[:400]
         return record
+
+
+DEFAULT_EXECUTION = {"latency_ns": 0, "allow_overnight": True,
+                     "slippage_per_contract": 0.0, "slippage_bps": 0.0,
+                     "maker_commission_per_contract": None, "maker_commission_bps": None}
+
+
+def _maker_rate(profile: dict, maker_key: str, taker_key: str) -> float | None:
+    maker = profile.get(maker_key)
+    return None if maker is None or maker == profile.get(taker_key, 0.0) else float(maker)
+
+
+def latency_resolution_ns(profile: dict) -> int:
+    """The finest latency the dataset's timestamps can distinguish.
+
+    Binance trade times are whole milliseconds, measured on the cached train sessions.
+    """
+    name = profile.get("dataset")
+    spec = (load_config().get("datasets") or {}).get(name, {}) if name else {}
+    return 1_000_000 if spec.get("kind") == "crypto" else 1
+
+
+def execution_terms(profile: dict) -> dict:
+    """The latency and overnight rule this profile runs under (Amendment 19).
+
+    Read from the amendment's status line, like Amendments 17 and 18. A profile
+    asking for non-default terms before it is signed runs on the defaults, and says so.
+    """
+    default = dict(DEFAULT_EXECUTION)
+    requested = {"latency_ns": profile.get("latency_ns", 0),
+                 "allow_overnight": bool(profile.get("allow_overnight", True)),
+                 "slippage_per_contract": float(profile.get("slippage_per_contract", 0.0)),
+                 "slippage_bps": float(profile.get("slippage_bps", 0.0)),
+                 # None when makers pay what takers pay, so equal rates are the default.
+                 "maker_commission_per_contract": _maker_rate(
+                     profile, "maker_commission_per_contract", "commission_per_contract"),
+                 "maker_commission_bps": _maker_rate(
+                     profile, "maker_commission_bps", "commission_bps")}
+    if requested == default:
+        return default
+    latency = requested["latency_ns"]
+    if isinstance(latency, bool) or not isinstance(latency, int) or latency < 0:
+        raise ValueError(f"latency_ns must be a whole number >= 0, got {latency!r}")
+    floor = latency_resolution_ns(profile)
+    if 0 < latency < floor:
+        raise ValueError(f"latency_ns {latency} is below this dataset's {floor} ns timestamp "
+                         "resolution, so it could not be told apart from that resolution")
+    scripts = str(REPO_ROOT / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import prereg
+
+    if prereg.in_force(19):
+        return requested
+    print(f"note: Amendment 19 is not in force, so {requested} is not applied",
+          file=sys.stderr)
+    return default
 
 
 def _proxy_for(profile: dict):
@@ -466,7 +524,9 @@ def load_strategy():
 
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, latency_override_ns: int | None = None) -> int:
+    """`latency_override_ns` is for `scripts/latency_sweep.py` and is not a command-line
+    flag: a scored run's conditions come from the committed profile."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--profile", default="harness",
@@ -511,6 +571,10 @@ def main(argv: list[str] | None = None) -> int:
     profile = cfg["profiles"].get(profile_name)
     if profile is None:
         sys.exit(f"unknown profile {profile_name!r}; have {sorted(cfg['profiles'])}")
+    if latency_override_ns is not None:
+        if purpose != "check" or Split(profile["split"]) is not Split.TRAIN:
+            sys.exit("a latency override is for a train-split check run only")
+        profile = {**profile, "latency_ns": latency_override_ns}
 
     split = Split(profile["split"])
     seed = profile["seed"]
@@ -608,6 +672,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
                 **({"commission_per_contract": profile["commission_per_contract"]}
                    if "commission_per_contract" in profile else {}),
                 commission_bps=profile.get("commission_bps", 0.0),
+                **execution_terms(profile),
             )
             record = _run_and_score(cfg, profile, engine, strategy, split, seed,
                                     ledger_path)
@@ -716,6 +781,18 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     charged = sum(r.commission for r in scored_blotter.rows)
     expected = (want * sum(r.size for r in scored_blotter.rows)
                 + want_bps * 1e-4 * sum(r.price * r.size for r in scored_blotter.rows))
+    if engine.slippage_per_contract or engine.slippage_bps:
+        taker = [f for f in engine.fill_log if f.liquidity == "taker"]
+        expected += (engine.slippage_per_contract * sum(f.size for f in taker)
+                     + engine.slippage_bps * 1e-4 * sum(f.price * f.size for f in taker))
+    if engine.maker_commission_per_contract is not None \
+            or engine.maker_commission_bps is not None:
+        maker = [f for f in engine.fill_log if f.liquidity == "maker"]
+        per = (want if engine.maker_commission_per_contract is None
+               else engine.maker_commission_per_contract)
+        bps = want_bps if engine.maker_commission_bps is None else engine.maker_commission_bps
+        expected += ((per - want) * sum(f.size for f in maker)
+                     + (bps - want_bps) * 1e-4 * sum(f.price * f.size for f in maker))
     if abs(charged - expected) > 1e-9 * max(1.0, abs(expected)):
         raise ScoringMismatch(
             f"the profile charges {want} per contract plus {want_bps} bp of notional "
@@ -818,6 +895,7 @@ def _fill_model_spread(cfg, profile, seed, strategy, split, engine) -> float:
             fill_model=other,
             warmup_sessions=profile.get("warmup_sessions", 0),
             seed=seed,
+            **execution_terms(profile),
         )
         twin.run()
     a = twin.blotter.realized_pnl - twin.blotter.commission

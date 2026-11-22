@@ -141,7 +141,8 @@ ERROR_CONTROL_NOTES = {
 
 
 def cfg() -> dict:
-    return yaml.safe_load((ROOT / "config" / "run.yaml").read_text())
+    from src.core.costs import apply_costs
+    return apply_costs(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
 
 
 def campaign_cfg() -> dict:
@@ -192,9 +193,62 @@ def run_facts(profile: dict, n_sessions: int) -> str:
         f"Fill model: {profile['fill_model']} -- a fill requires a trade "
         "strictly through your limit, so you pay the spread on every entry and "
         "exit.\n\n"
-        + cost +
+        + cost + _execution_facts(profile) +
         f"Action cap: {profile.get('action_cap', 64)} per session. "
         f"History window: {profile.get('history_window', 512)} bars.\n")
+
+
+def _execution_facts(profile: dict) -> str:
+    """Amendment 19's terms for the proposer. Empty on the defaults, so an existing
+    campaign's prompt is unchanged."""
+    import run as _run
+
+    terms = _run.execution_terms(profile)
+    out = ""
+    if terms["latency_ns"]:
+        out += (f"Latency: {terms['latency_ns']:,} ns. Every order, modification and cancel "
+                "reaches the market that long after your callback, and a resting order "
+                "can still fill until its cancel arrives.\n\n")
+    if not terms["allow_overnight"]:
+        out += ("Overnight holding is off. At each session's last trade your working "
+                "orders expire and any position is closed at that price, paying the "
+                "normal fee.\n\n")
+    if terms["maker_commission_per_contract"] is not None \
+            or terms["maker_commission_bps"] is not None:
+        out += ("Resting limit fills pay a separate maker fee: "
+                f"{terms['maker_commission_per_contract'] or 0:g} points per contract plus "
+                f"{terms['maker_commission_bps'] or 0:g} bp of notional per side. "
+                "A negative rate is a rebate.\n\n")
+    if terms["slippage_per_contract"] or terms["slippage_bps"]:
+        out += (f"Slippage: market orders, triggered stops and forced closes also pay "
+                f"{terms['slippage_per_contract']:g} points per contract plus "
+                f"{terms['slippage_bps']:g} bp of notional per side.\n\n")
+    return out
+
+
+def _registered_fees(profile: dict) -> dict:
+    return {"commission_per_contract": profile["commission_per_contract"],
+            "commission_bps": profile.get("commission_bps", 0.0),
+            "maker_commission_per_contract": profile.get("maker_commission_per_contract"),
+            "maker_commission_bps": profile.get("maker_commission_bps")}
+
+
+def _refuse_if_execution_drifted(name: str) -> None:
+    """The registered latency and overnight rule must still be the one in force."""
+    from src.core.loop.campaign import CampaignRecord
+    import run as _run
+
+    record, _ = CampaignRecord.read(OUT / name / "campaign.json")
+    registered = (record.agent_config or {}).get("execution", _run.DEFAULT_EXECUTION)
+    profile = cfg()["profiles"][record.profile]
+    current = _run.execution_terms(profile)
+    if registered != current:
+        sys.exit(f"{name} was registered with execution terms {registered}, and its profile "
+                 f"now gives {current}. Register a new campaign for the new terms.")
+    fees = (record.agent_config or {}).get("registered_fees")
+    if fees is not None and fees != _registered_fees(profile):
+        sys.exit(f"{name} was registered with fees {fees}, and config/costs.yaml now gives "
+                 f"{_registered_fees(profile)}. Register a new campaign for the new rates.")
 
 
 def _dataset_facts(profile: dict) -> tuple[str, str]:
@@ -384,7 +438,9 @@ def validation_profile_for(train_profile: str, fitted: bool) -> str:
     v, t = c["profiles"][want], c["profiles"][train_profile]
     if v.get("split") != "validation":
         sys.exit(f"profile {want!r} is not a validation split ({v.get('split')!r})")
-    for key in ("dataset", "fill_model", "commission_per_contract"):
+    for key in ("dataset", "fill_model", "commission_per_contract",
+                "commission_bps", "maker_commission_per_contract", "maker_commission_bps",
+                "slippage_per_contract", "slippage_bps", "latency_ns", "allow_overnight"):
         if v.get(key) != t.get(key):
             sys.exit(
                 f"{want!r} and {train_profile!r} disagree on {key}: "
@@ -810,6 +866,17 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
             "it scores in points with a per-contract commission, and this profile "
             "uses Amendment 16's notional returns or basis-point fees. Use "
             "'round_turn_mc', whose null takes the same scoring_terms as the trial.")
+    # Amendment 19. Only `round_turn_mc` resamples the fills the run really made;
+    # the other nulls re-run or re-price trades without these terms.
+    import run as _run
+    execution = _run.execution_terms(profile)
+    if "costs" in profile:
+        agent_cfg["registered_fees"] = _registered_fees(profile)
+    if execution != _run.DEFAULT_EXECUTION:
+        if cc["null_source"] != "round_turn_mc":
+            sys.exit(f"null_source {cc['null_source']!r} does not apply {execution}. "
+                     "Use 'round_turn_mc'.")
+        agent_cfg["execution"] = execution
     agent_cfg["null_source"] = cc["null_source"]
     if cc["null_source"] == "txnsim":
         # Frozen at registration like the null itself: the two modes are
@@ -1401,6 +1468,7 @@ def stage_nulls(name: str) -> None:
     from src.core.scoring.profitability import applies, profitability_bound
     profit_on = applies(profile, prereg.in_force(18))
     profit_alpha = _rec.q / _rec.budget
+    from src.core.costs import row_cost_terms
     profitability: dict[str, dict] = {}
 
     samples, t0 = [], time.monotonic()
@@ -1517,7 +1585,8 @@ def stage_nulls(name: str) -> None:
             samples.append([])
             continue
         blotter = reconstruct(fills, commission_per_contract=commission,
-                              commission_bps=profile.get("commission_bps", 0.0))
+                              commission_bps=profile.get("commission_bps", 0.0),
+                              **row_cost_terms(row))
         if profit_on:
             profitability[str(row.get("campaign_index"))] = profitability_bound(
                 metrics.session_returns(blotter, calendar, **terms), profit_alpha)
@@ -2105,6 +2174,7 @@ def main() -> int:
         # After the argument refusals: those are about this invocation and are
         # free, this one reads the record off disk.
         _refuse_if_floor_drifted(a.name)
+        _refuse_if_execution_drifted(a.name)
         if a.stage == "run":
             stage_run(a.name, ignore_capacity=a.ignore_capacity)
         else:

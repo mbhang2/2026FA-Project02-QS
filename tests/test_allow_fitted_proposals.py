@@ -207,8 +207,10 @@ def test_the_agent_is_told_when_it_is_in_a_fitted_campaign():
     """
     import yaml
 
+    from src.core.costs import apply_costs
+
     m = _nq_campaign()
-    profiles = yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text())["profiles"]
+    profiles = apply_costs(yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text()))["profiles"]
 
     plain = m.run_facts(profiles["nq-train"], 384)
     assert "384 scored sessions" in plain

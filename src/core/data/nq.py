@@ -39,6 +39,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
+from .columns import SessionColumns
 from .dataset import (
     Calendar,
     HoldoutLock,
@@ -515,7 +516,8 @@ class NQDataset:
         payload = f"{CACHE_VERSION}|" + "|".join(f"{k}:{self._etag[k]}" for k in keys)
         return hashlib.sha256(payload.encode()).hexdigest()[:12]
 
-    def _read_cache(self, session: dt.date) -> list[Tick] | None:
+    def _read_arrays(self, session: dt.date) -> tuple | None:
+        """`(ts, price, size, side)` from the cache, recording the session's contract."""
         if not self.spec.cache:
             return None
         path = self._cache_path(session)
@@ -525,6 +527,55 @@ class NQDataset:
             ns, prices, sizes, sides = z["ts"], z["price"], z["size"], z["side"]
             meta = json.loads(str(z["meta"]))
         self._contracts[session.isoformat()] = ContractSelection(**meta)
+        return ns, prices, sizes, sides
+
+    def _columns(self, session: dt.date) -> SessionColumns | None:
+        """One session as arrays. A cache miss goes through `load`, which fills it."""
+        if session not in self._files:
+            raise KeyError(f"no {self.spec.symbol} object for session {session}")
+        key = session.toordinal()
+        arrays = self._read_arrays(session)
+        if arrays is None:
+            ticks = self.load(session)
+            if not ticks:
+                return None
+            n = len(ticks)
+            return SessionColumns(
+                key,
+                np.fromiter((t.ts for t in ticks), dtype=np.int64, count=n),
+                np.fromiter((t.price for t in ticks), dtype=np.float64, count=n),
+                np.fromiter((t.size for t in ticks), dtype=np.int64, count=n),
+                np.fromiter((1 if t.side is Side.BUY else -1 if t.side is Side.SELL else 0
+                             for t in ticks), dtype=np.int8, count=n))
+        ns, prices, sizes, sides = arrays
+        if not ns.size:
+            return None
+        # The cache stores 1 for a buyer, 2 for a seller and anything else as unknown.
+        codes = np.zeros(sides.size, dtype=np.int8)
+        codes[sides == 1] = 1
+        codes[sides == 2] = -1
+        return SessionColumns(key, ns, prices, sizes.astype(np.int64), codes)
+
+    def session_columns(self, split: Split, *, warmup: int = 0) -> Iterator[SessionColumns]:
+        """The same sessions as `ticks(split)`, as arrays. The holdout lock applies."""
+        self._lock.check(split)
+        if self.spec.smoke_sessions is not None:
+            if split is Split.HOLDOUT:
+                raise NotImplementedError("the smoke path never serves the holdout")
+            days = self._sessions[: self.spec.smoke_sessions]
+        else:
+            warm, live = self._split_positions(split, warmup)
+            days = [self._sessions[i] for i in list(warm) + list(live)]
+        for d in days:
+            batch = self._columns(d)
+            if batch is not None:
+                yield batch
+
+    def _read_cache(self, session: dt.date) -> list[Tick] | None:
+        arrays = self._read_arrays(session)
+        if arrays is None:
+            return None
+        ns, prices, sizes, sides = arrays
         key = session.toordinal()
         by_code = {1: Side.BUY, 2: Side.SELL}
         return [

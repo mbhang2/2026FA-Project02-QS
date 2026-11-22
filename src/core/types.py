@@ -473,6 +473,10 @@ class Order:
     # `_resolve_option` rather than a queue model, so the paths do not meet
     # today. `docs/design/market-making.md` carries the warning.
     queue_ahead: float | None = None
+    # Amendment 19. The first trade time this order can match, and when a cancel
+    # sent for it reaches the market. Zero and None are the zero-latency run.
+    eligible_from_ts: Ts = 0
+    cancel_at_ts: Ts | None = None
 
     @property
     def remaining(self) -> int:

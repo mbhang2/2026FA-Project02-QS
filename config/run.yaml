@@ -250,7 +250,7 @@ profiles:
     fit_sessions: 284
     wall_clock_budget_s: 7200
     notional_base: 1.0
-    commission_per_contract: 0.10
+    costs: NQ
     record_fill_spread: false
 
   # CRYPTO, Binance BTCUSDT perpetual (pre-registration Amendment 16, in force 2026-11-19).
@@ -262,6 +262,9 @@ profiles:
   # session's opening notional; the idle charge is 1.2e-5 of it per session
   # (re-derived by Amendment 3's method: 10% margin at 4.5% over 365 sessions);
   # funding is paid at each 8-hour settlement on the position held.
+  #
+  # `latency_ns` (whole nanoseconds; 100,000,000 is 100 ms) and `allow_overnight` are
+  # Amendment 19's execution terms. They take effect only once it is signed.
   crypto-btc-train:
     dataset: crypto-btc
     split: train
@@ -269,12 +272,13 @@ profiles:
     seed: 1
     warmup_sessions: 1
     wall_clock_budget_s: 7200
-    commission_per_contract: 0.0
-    commission_bps: 5.0
+    costs: BTCUSDT
     scoring_units: notional
     idle_charge_fraction: 1.2e-5
     funding: true
     record_fill_spread: false
+    latency_ns: 100000000
+    allow_overnight: true
 
   crypto-btc-validation:
     dataset: crypto-btc
@@ -283,12 +287,13 @@ profiles:
     seed: 1
     warmup_sessions: 1
     wall_clock_budget_s: 7200
-    commission_per_contract: 0.0
-    commission_bps: 5.0
+    costs: BTCUSDT
     scoring_units: notional
     idle_charge_fraction: 1.2e-5
     funding: true
     record_fill_spread: false
+    latency_ns: 100000000
+    allow_overnight: true
 
   nq-train:
     dataset: nq
@@ -298,7 +303,7 @@ profiles:
     warmup_sessions: 1
     wall_clock_budget_s: 7200
     notional_base: 1.0
-    commission_per_contract: 0.10
+    costs: NQ
     record_fill_spread: false
 
   # The first real end-to-end run: reference strategy, real NQ data, the
@@ -320,7 +325,7 @@ profiles:
     warmup_sessions: 1
     wall_clock_budget_s: 3600
     notional_base: 1.0
-    commission_per_contract: 0.10
+    costs: NQ
     record_fill_spread: false
     weights_path: runs/current.weights
 
@@ -342,7 +347,7 @@ profiles:
     fill_model: unfavorable
     seed: 1
     warmup_sessions: 1
-    commission_per_contract: 0.10
+    costs: NQ
     notional_base: 1.0
     action_cap: 64
     history_window: 512
@@ -357,7 +362,7 @@ profiles:
     seed: 1
     warmup_sessions: 1
     weights_path: runs/current.weights
-    commission_per_contract: 0.10
+    costs: NQ
     notional_base: 1.0
     action_cap: 64
     history_window: 512
@@ -375,7 +380,7 @@ profiles:
     # was absent until Task 61, which meant validation silently charged the
     # engine default of 0.01 against train's 0.10 -- the Task 60 bug again, in
     # the one place where the difference would have been read as a result.
-    commission_per_contract: 0.10
+    costs: NQ
     record_fill_spread: false
 
   # ---- the SPX options surface ------------------------------------------- #

@@ -83,7 +83,8 @@ B_NULL = 10_000
 
 def cfg() -> dict:
     import yaml
-    return yaml.safe_load((ROOT / "config" / "run.yaml").read_text())
+    from src.core.costs import apply_costs
+    return apply_costs(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
 
 
 def candidates() -> list[dict]:
@@ -144,9 +145,11 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
     sessions = dataset.scored_sessions(Split.VALIDATION,
                                        profile.get("warmup_sessions", 0))
     calendar = metrics.session_calendar(dataset, sessions)
+    from src.core.costs import row_cost_terms
     blotter = reconstruct(fills,
                           commission_per_contract=profile["commission_per_contract"],
-                          commission_bps=profile.get("commission_bps", 0.0))
+                          commission_bps=profile.get("commission_bps", 0.0),
+                          **row_cost_terms(row))
     # **Seeded from the name with a STABLE hash.** `hash()` on a str is salted
     # per process (PYTHONHASHSEED), so `abs(hash(name))` would give this campaign
     # a different null on every run -- invisibly, because the cache below would
@@ -244,8 +247,10 @@ def validation_profitability(name: str, alpha: float) -> dict | None:
     dataset = runner.build_dataset(cfg(), profile["dataset"], profile["seed"])
     sessions = dataset.scored_sessions(Split.VALIDATION, profile.get("warmup_sessions", 0))
     calendar = metrics.session_calendar(dataset, sessions)
+    from src.core.costs import row_cost_terms
     blotter = reconstruct(fills, commission_per_contract=profile["commission_per_contract"],
-                          commission_bps=profile.get("commission_bps", 0.0))
+                          commission_bps=profile.get("commission_bps", 0.0),
+                          **row_cost_terms(rows[-1]))
     terms = scoring_terms(cfg(), profile, dataset, calendar)
     return profitability_bound(metrics.session_returns(blotter, calendar, **terms), alpha)
 

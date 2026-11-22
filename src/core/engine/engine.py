@@ -24,6 +24,7 @@ clean one-bar lookahead producing beautiful and entirely fake results.
 from __future__ import annotations
 
 import inspect
+import math
 import time
 
 import numpy as np
@@ -43,6 +44,7 @@ from .context import (
     TickContext,
     canonical_sub_id,
 )
+from ..data.columns import SessionColumns
 from ..data.dataset import Dataset
 from ..data.options import parse_option_asset
 from .fills import FillModel, check_capabilities, get_fill_model
@@ -229,6 +231,8 @@ class _SealedDataset:
         # the sessions being scored, and the engine is not reachable from a
         # strategy, so forwarding them widens nothing a strategy can see.
         "session_open_prices", "funding_series",
+        # The same trades as `ticks`, as arrays. Lock-checked by the dataset.
+        "session_columns",
     )
 
     def __init__(self, dataset) -> None:
@@ -301,9 +305,15 @@ class RunRecord:
     reconciliation: dict | None = None
     score: dict | None = None
     diagnostics: dict | None = None
+    # Amendment 19's settings when they differ from the defaults. Absent otherwise,
+    # so every existing row keeps its exact shape.
+    execution: dict | None = None
 
     def as_dict(self) -> dict:
-        return {k: getattr(self, k) for k in self.__dataclass_fields__}
+        out = {k: getattr(self, k) for k in self.__dataclass_fields__}
+        if out["execution"] is None:
+            del out["execution"]
+        return out
 
 
 def git_sha() -> str:
@@ -528,6 +538,19 @@ class Engine:
         # assert -- and this switch is how they are compared. It is not a tuning
         # knob: the fast path is not an approximation.
         event_walk: bool = True,
+        # Amendment 19. `latency_ns` delays every order, modification and cancel
+        # from the callback to the market. `allow_overnight=False` closes the book
+        # at each session's last trade. The defaults are the engine as it was.
+        latency_ns: int = 0,
+        allow_overnight: bool = True,
+        # Paid on taker fills as a cost, in price points per contract and in basis
+        # points of notional. Never moves a fill's price: see `src/core/costs.py`.
+        slippage_per_contract: float = 0.0,
+        slippage_bps: float = 0.0,
+        # What a resting limit fill pays, when it differs from the taker rate above.
+        # None charges makers the taker rate. Negative is a rebate.
+        maker_commission_per_contract: float | None = None,
+        maker_commission_bps: float | None = None,
     ):
         if not isinstance(ticket, RunTicket):
             raise RunNotAccounted(
@@ -551,6 +574,30 @@ class Engine:
         self.seed = seed
         self.wall_clock_budget_s = wall_clock_budget_s
         self.event_walk = event_walk
+        if isinstance(latency_ns, bool) or not isinstance(latency_ns, int) or latency_ns < 0:
+            raise ValueError(f"latency_ns must be a whole number >= 0, got {latency_ns!r}")
+        self.latency_ns = latency_ns
+        self.allow_overnight = bool(allow_overnight)
+        for name, value in (("slippage_per_contract", slippage_per_contract),
+                            ("slippage_bps", slippage_bps)):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) \
+                    or not math.isfinite(value) or value < 0:
+                raise ValueError(f"{name} must be finite and >= 0, got {value!r}")
+        self.slippage_per_contract = float(slippage_per_contract)
+        self.slippage_bps = float(slippage_bps)
+        for name, value in (("maker_commission_per_contract", maker_commission_per_contract),
+                            ("maker_commission_bps", maker_commission_bps)):
+            if value is not None and (isinstance(value, bool)
+                                      or not isinstance(value, (int, float))
+                                      or not math.isfinite(value)):
+                raise ValueError(f"{name} must be a finite number or None, got {value!r}")
+        self.maker_commission_per_contract = maker_commission_per_contract
+        self.maker_commission_bps = maker_commission_bps
+        self._no_new_orders = False
+        if self._custom_execution and (self.model.requires.has_quotes
+                                       or dataset.capabilities().has_options):
+            raise ValueError("latency_ns, slippage and allow_overnight=False support "
+                             "single-asset, trade-based runs only")
         self._deadline: float | None = None
         self._callbacks = 0
         self._next_budget_seq = BUDGET_CHECK_EVERY_TICKS
@@ -949,6 +996,9 @@ class Engine:
         self._quoted_walk = (
             self.model.requires.has_quotes or self._quote_subscribed
         )
+        if self._quoted_walk and self._custom_execution:
+            raise ValueError("latency_ns, slippage and allow_overnight=False support "
+                             "single-asset, trade-based runs only")
         self._quotes_for: dict[int, list[Quote]] = {}
         if self._quoted_walk:
             if not hasattr(self.dataset, "quotes"):
@@ -967,9 +1017,13 @@ class Engine:
 
         session = None
         seq = -1
-        for batch in self._sessions_of(
-            self.dataset.ticks(self.split, warmup=self.warmup_sessions)
-        ):
+        columns = None if self._quoted_walk else self._columns_source(self.dataset)
+        batches = (
+            columns(self.split, warmup=self.warmup_sessions) if columns is not None
+            else self._sessions_of(
+                self.dataset.ticks(self.split, warmup=self.warmup_sessions))
+        )
+        for batch in batches:
             if session is not None:
                 self._close_session(session, seq + 1,
                                     actionable=self._is_actionable(session))
@@ -989,16 +1043,19 @@ class Engine:
             if self._quoted_walk:
                 seq = self._walk_quoted(batch, session, actionable, seq)
                 continue
-            price = np.fromiter((t.price for t in batch), dtype=float, count=len(batch))
-            tsarr = np.fromiter((t.ts for t in batch), dtype=np.int64, count=len(batch))
-            sizes = np.fromiter((t.size for t in batch), dtype=np.int64, count=len(batch))
-            # The aggressor, encoded so a skipped span's signed volume is one
-            # vectorised pass rather than a Python loop: +1 buy, -1 sell, 0 for
-            # a feed that did not say. Built here beside price/ts/size because
-            # `add_span` needs it and the per-tick path gets it from `Tick.side`.
-            sides = np.fromiter(
-                (1 if t.side is Side.BUY else (-1 if t.side is Side.SELL else 0)
-                 for t in batch), dtype=np.int8, count=len(batch))
+            if isinstance(batch, SessionColumns):
+                price, tsarr, sizes, sides = batch.price, batch.ts, batch.size, batch.side
+            else:
+                price = np.fromiter((t.price for t in batch), dtype=float, count=len(batch))
+                tsarr = np.fromiter((t.ts for t in batch), dtype=np.int64, count=len(batch))
+                sizes = np.fromiter((t.size for t in batch), dtype=np.int64, count=len(batch))
+                # The aggressor, encoded so a skipped span's signed volume is one
+                # vectorised pass rather than a Python loop: +1 buy, -1 sell, 0 for
+                # a feed that did not say. Built here beside price/ts/size because
+                # `add_span` needs it and the per-tick path gets it from `Tick.side`.
+                sides = np.fromiter(
+                    (1 if t.side is Side.BUY else (-1 if t.side is Side.SELL else 0)
+                     for t in batch), dtype=np.int8, count=len(batch))
             n = len(batch)
 
             i = 0
@@ -1152,9 +1209,22 @@ class Engine:
         if cand <= i + 1:
             return i + 1
 
+        if self.latency_ns:
+            # A cancel reaching the market is an event: stepping would confirm it
+            # at the first trade at or after that instant.
+            for order in self._working.values():
+                if order.cancel_at_ts is not None:
+                    at = int(np.searchsorted(tsarr, order.cancel_at_ts, side="left"))
+                    cand = min(cand, max(at, i + 1))
+            if cand <= i + 1:
+                return i + 1
+
         for order in self._working.values():
             start = max(i + 1, order.eligible_from_seq - (self._seq_base(i)))
             start = max(start, i + 1)
+            if order.eligible_from_ts:
+                start = max(start, int(np.searchsorted(tsarr, order.eligible_from_ts,
+                                                       side="left")))
             if start >= cand:
                 continue
             if order.tif in (TimeInForce.IOC, TimeInForce.FOK):
@@ -1206,6 +1276,20 @@ class Engine:
                 return None, False
             return order.stop_price, order.side is Side.BUY
         return None, False
+
+    @staticmethod
+    def _columns_source(dataset):
+        """The dataset's `session_columns`, only if it comes from what serves `ticks`.
+
+        A wrapper can change `ticks` and forward everything else: `RotatedDataset`
+        does, so taking its forwarded columns would run its null on unrotated prices.
+        """
+        columns = getattr(dataset, "session_columns", None)
+        ticks = getattr(dataset, "ticks", None)
+        if columns is None or ticks is None:
+            return None
+        owner = getattr(columns, "__self__", None)
+        return columns if owner is not None and owner is getattr(ticks, "__self__", None) else None
 
     def _sessions_of(self, ticks):
         """Group the tick stream into sessions without materialising the whole
@@ -1285,6 +1369,7 @@ class Engine:
 
     # ---- sessions ---------------------------------------------------------- #
     def _open_session(self, session: int, tick: Tick) -> None:
+        self._no_new_orders = False
         start, end = self.dataset.session_bounds(session)
         for _book in self._states.values():
             _book.session_start, _book.session_end = start, end
@@ -1326,6 +1411,13 @@ class Engine:
         # session's last tick.
         self._settle_expiries(session, close_ts, seq, actionable=actionable)
 
+        if self.latency_ns:
+            for order in list(self._working.values()):
+                if order.cancel_at_ts is not None and order.cancel_at_ts <= close_ts:
+                    self._cancel(order, LifecycleKind.CANCEL_CONFIRMED, close_ts, seq)
+        if not self.allow_overnight:
+            self._flatten_at_close(session, close_ts, seq, actionable)
+
         # DAY cancels; GTD cancels if it expires at or before the close; GTC and
         # unexpired GTD survive, brackets included, and so does the position. A
         # strategy that wants to be flat overnight has to say so -- and the
@@ -1342,6 +1434,33 @@ class Engine:
         self._drain_lifecycle(
             Tick(close_ts, self.last_price, 0, session, seq), actionable
         )
+
+    def _flatten_at_close(self, session: int, close_ts: Ts, seq: int,
+                          actionable: bool) -> None:
+        """`allow_overnight=False`: nothing survives the session.
+
+        Working orders expire and the position closes at the session's last trade,
+        paying the normal fee. There is no later trade for a latency-delayed exit to
+        match, so this is a rule of the run rather than an order that can miss.
+        New orders from the callbacks this raises are dropped and counted.
+        """
+        self._no_new_orders = True
+        for order in list(self._working.values()):
+            self._cancel(order, LifecycleKind.DAY_EXPIRED, close_ts, seq)
+        position = self.position
+        if position == 0:
+            return
+        tick = Tick(close_ts, self.last_price, 0, session, seq)
+        closer = self._new_order(
+            Submit(side=Side.SELL if position > 0 else Side.BUY, size=abs(position),
+                   order_type=OrderType.MARKET, tif=TimeInForce.IOC, reduce_only=True,
+                   tag="session-flat"),
+            tick,
+        )
+        event = self._apply_fill(closer, Fill(price=self.last_price, size=abs(position)), tick)
+        if event is not None:
+            self._fills_since_callback.append(event)
+            self._dispatch("fill", event, tick, actionable)
 
     def _settle_expiries(self, session: int, close_ts: Ts, seq: int, *,
                          actionable: bool) -> None:
@@ -1457,8 +1576,12 @@ class Engine:
             if note is not None:
                 note(tick)
         for order in list(self._working.values()):
-            if tick.seq < order.eligible_from_seq:
-                continue  # the T+1 rule
+            if order.cancel_at_ts is not None and tick.ts >= order.cancel_at_ts:
+                # Amendment 19: the cancel arrived before this trade.
+                self._cancel(order, LifecycleKind.CANCEL_CONFIRMED, tick.ts, tick.seq)
+                continue
+            if tick.seq < order.eligible_from_seq or tick.ts < order.eligible_from_ts:
+                continue  # the T+1 rule, and the order's travel time
             if (
                 order.tif is TimeInForce.GTD
                 and order.expire_ts is not None
@@ -1673,9 +1796,17 @@ class Engine:
             )
             st.position += signed
 
+        # What the order did to the book, from its type: a market or a triggered
+        # stop crossed; a resting limit was crossed into.
+        liquidity = ("maker" if order.order_type in (OrderType.LIMIT, OrderType.STOP_LIMIT)
+                     else "taker")
         commission = fill_commission(fill.price, fill.size,
                                      commission_per_contract=self.commission,
-                                     commission_bps=self.commission_bps)
+                                     commission_bps=self.commission_bps,
+                                     slippage_per_contract=self.slippage_per_contract,
+                                     slippage_bps=self.slippage_bps, liquidity=liquidity,
+                                     maker_commission_per_contract=self.maker_commission_per_contract,
+                                     maker_commission_bps=self.maker_commission_bps)
         # Accumulated here rather than summed from the blotter on demand, so the
         # context can read it without the blotter being reachable -- a mutable
         # list of rows is a place a strategy could write its own result.
@@ -1701,13 +1832,7 @@ class Engine:
                 side=order.side,
                 size=fill.size,
                 price=fill.price,
-                # What the order did to the book, from its type: a market or a
-                # triggered stop crossed; a resting limit was crossed into.
-                liquidity=(
-                    "maker"
-                    if order.order_type in (OrderType.LIMIT, OrderType.STOP_LIMIT)
-                    else "taker"
-                ),
+                liquidity=liquidity,
                 tag=self._order_tags.get(order.order_id, ""),
                 asset=order.asset,
             )
@@ -1777,6 +1902,7 @@ class Engine:
             for leg in existing:
                 leg.size = parent.filled_size
                 leg.eligible_from_seq = tick.seq + 1
+                leg.eligible_from_ts = self._arrival_ts(tick)
             return
         group = self._next_oco_group
         self._next_oco_group += 1
@@ -1842,6 +1968,17 @@ class Engine:
     def _alloc_order_id(self) -> int:
         return self._book.allocate()
 
+    @property
+    def _custom_execution(self) -> bool:
+        return (bool(self.latency_ns) or not self.allow_overnight
+                or bool(self.slippage_per_contract) or bool(self.slippage_bps)
+                or self.maker_commission_per_contract is not None
+                or self.maker_commission_bps is not None)
+
+    def _arrival_ts(self, tick: Tick) -> Ts:
+        """When an action taken at `tick` reaches the market. 0 means no delay."""
+        return tick.ts + self.latency_ns if self.latency_ns else 0
+
     def _new_order(
         self,
         s: Submit,
@@ -1868,6 +2005,7 @@ class Engine:
             eligible_from_seq=tick.seq + 1,  # T+1, strictly after
             submitted_ts=tick.ts,
             asset=s.asset,
+            eligible_from_ts=self._arrival_ts(tick),
         )
         self.orders[oid] = order
         self._working[oid] = order
@@ -1992,6 +2130,9 @@ class Engine:
     ) -> None:
         for a, oid in actions:
             if isinstance(a, Submit):
+                if self._no_new_orders:
+                    self.actions_dropped += 1      # the book is closing for the night
+                    continue
                 if a.reduce_only:
                     a = self._clamp_reduce_only(a, tick, oid)
                     if a is None:
@@ -2000,7 +2141,13 @@ class Engine:
             elif isinstance(a, Cancel):
                 o = self.orders.get(a.order_id)
                 if o is not None and o.is_working:
-                    self._cancel(o, LifecycleKind.CANCEL_CONFIRMED, tick.ts, tick.seq)
+                    if self.latency_ns:
+                        # It can still fill until the cancel arrives. The first
+                        # cancel sent is the one that counts.
+                        if o.cancel_at_ts is None:
+                            o.cancel_at_ts = tick.ts + self.latency_ns
+                    else:
+                        self._cancel(o, LifecycleKind.CANCEL_CONFIRMED, tick.ts, tick.seq)
                 else:
                     self._emit(
                         LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, a.order_id,
@@ -2012,6 +2159,12 @@ class Engine:
                     self._emit(
                         LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, a.order_id,
                         "modify for an order that is not working",
+                    )
+                    continue
+                if o.cancel_at_ts is not None:
+                    self._emit(
+                        LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq, a.order_id,
+                        "modify for an order with a cancel in flight",
                     )
                     continue
                 if a.limit_price is not None:
@@ -2027,8 +2180,9 @@ class Engine:
                         continue
                     o.size = a.size
                 # A modified order is a new intent and re-enters the queue under
-                # the same T+1 rule.
+                # the same T+1 rule, and travels to the market like any other.
                 o.eligible_from_seq = tick.seq + 1
+                o.eligible_from_ts = self._arrival_ts(tick)
             else:
                 raise TypeError(f"unknown action {a!r}")
 
@@ -2064,6 +2218,10 @@ class Engine:
         return reconstruct(
             self._fill_log, commission_per_contract=self.commission,
             commission_bps=self.commission_bps,
+            slippage_per_contract=self.slippage_per_contract,
+            slippage_bps=self.slippage_bps,
+            maker_commission_per_contract=self.maker_commission_per_contract,
+            maker_commission_bps=self.maker_commission_bps,
         )
 
     def fill_log_digest(self) -> str:
@@ -2202,4 +2360,10 @@ class Engine:
             fill_log_digest=self.fill_log_digest(),
             fills_logged=len(self._fill_log),
             reconciliation=self.reconciliation(),
+            execution=({"latency_ns": self.latency_ns, "allow_overnight": self.allow_overnight,
+                        "slippage_per_contract": self.slippage_per_contract,
+                        "slippage_bps": self.slippage_bps,
+                        "maker_commission_per_contract": self.maker_commission_per_contract,
+                        "maker_commission_bps": self.maker_commission_bps}
+                       if self._custom_execution else None),
         )

@@ -1247,10 +1247,12 @@ def test_reconstruction_is_a_pure_function_of_the_fills():
 
     from src.core.engine import reconstruct as rec
 
-    # `commission_bps` (Amendment 16) is a rate, like `commission_per_contract`:
+    # `commission_bps` (Amendment 16) and slippage (Amendment 19) are rates, like `commission_per_contract`:
     # still nothing that a run could have reached.
     params = list(inspect.signature(rec.reconstruct).parameters)
-    assert params == ["fills", "commission_per_contract", "commission_bps"], params
+    assert params == ["fills", "commission_per_contract", "commission_bps",
+                      "slippage_per_contract", "slippage_bps",
+                      "maker_commission_per_contract", "maker_commission_bps"], params
 
     engine = Engine.for_test(ds(), _Trader(), split=Split.VALIDATION, warmup_sessions=1)
     engine.run()

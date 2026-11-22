@@ -46,6 +46,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 import prereg  # noqa: E402
 import yaml  # noqa: E402
 
+from src.core.costs import apply_costs  # noqa: E402
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
 from src.core.runlog import RunTicket  # noqa: E402
@@ -125,7 +126,7 @@ def spec_for(edge_bp: float, seed: int, n_sessions: int = 300) -> SyntheticSpec:
 
 
 def load_config() -> dict:
-    return yaml.safe_load((REPO / "config" / "run.yaml").read_text())
+    return apply_costs(yaml.safe_load((REPO / "config" / "run.yaml").read_text()))
 
 
 def _run_variant(dataset, stop: float, target: float, cfg: dict, profile: dict, seed: int):

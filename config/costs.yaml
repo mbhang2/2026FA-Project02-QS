@@ -1,0 +1,33 @@
+# What each instrument costs to trade. A profile names its instrument with
+# `costs: <name>` in config/run.yaml and takes its fee and slippage from here.
+#
+# Each side of a trade pays:
+#   fee       `taker` on market orders, triggered stops and forced closes;
+#             `maker` on resting limit fills. A negative maker rate is a rebate,
+#             and maker + taker must be >= 0 so fees alone cannot pay a round trip.
+#   slippage  on taker fills only: market orders, triggered stops, forced closes
+#
+# Models:
+#   per_contract   price points per contract (futures)
+#   bps_notional   basis points of price x size (crypto)
+#
+# THESE ARE PRE-REGISTERED EVALUATION CONDITIONS. This file is fingerprinted into every
+# ledger row. Changing a rate after a campaign has scored a trial needs a new amendment
+# (Amendments 16 and 19). A non-zero slippage takes effect only once Amendment 19 is signed.
+
+instruments:
+
+  NQ:
+    asset_class: futures
+    fee: {model: per_contract, maker: 0.10, taker: 0.10}   # index points; NQ is $20 a point
+    slippage: {model: per_contract, rate: 0.0}
+
+  BTCUSDT:
+    asset_class: crypto
+    fee: {model: bps_notional, maker: 5.0, taker: 5.0}     # Amendment 16
+    slippage: {model: bps_notional, rate: 0.0}
+
+  ETHUSDT:
+    asset_class: crypto
+    fee: {model: bps_notional, maker: 5.0, taker: 5.0}     # Amendment 16
+    slippage: {model: bps_notional, rate: 0.0}

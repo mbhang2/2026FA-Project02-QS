@@ -248,8 +248,9 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
     from src.core.types import Split
     import run as runner
     import yaml
+    from src.core.costs import apply_costs, row_cost_terms
 
-    cfg = yaml.safe_load((ROOT / "config" / "run.yaml").read_text())
+    cfg = apply_costs(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
     profile = cfg["profiles"][profile_name]
     fills = load_fill_log(row)
     if not fills:
@@ -266,7 +267,7 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
     calendar = metrics.session_calendar(dataset, sessions)
     blotter = reconstruct(
         fills, commission_per_contract=profile.get("commission_per_contract", 0.01),
-        commission_bps=profile.get("commission_bps", 0.0))
+        commission_bps=profile.get("commission_bps", 0.0), **row_cost_terms(row))
     from src.core.scoring.terms import scoring_terms
     terms = scoring_terms(cfg, profile, dataset, calendar)
     turns = rt.round_turns(blotter, calendar)

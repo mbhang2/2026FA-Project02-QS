@@ -13,6 +13,8 @@ number, because it invites a rule written afterwards to fit it.
 """
 from __future__ import annotations
 
+from src.core.costs import apply_costs
+
 import importlib.util
 import json
 import pathlib
@@ -195,7 +197,7 @@ def test_the_amendment_names_its_own_invalidations():
 # --------------------------------------------------------------------------- #
 def test_the_nq_holdout_profiles_read_the_real_split():
     import yaml
-    cfg = yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text())["profiles"]
+    cfg = apply_costs(yaml.safe_load((REPO_ROOT / "config" / "run.yaml").read_text()))["profiles"]
     for name in ("nq-holdout", "nq-holdout-fitted"):
         p = cfg[name]
         assert p["dataset"] == "nq" and p["split"] == "holdout"

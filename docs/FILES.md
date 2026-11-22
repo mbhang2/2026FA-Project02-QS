@@ -79,6 +79,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/gen_file_map.py` | Write docs/FILES.md: what every tracked file does, from the file's own words. |
 | `scripts/gen_remote_surface.py` | Generate the remote adapter's view of the context surface. |
 | `scripts/inventory.py` | Data inventory for the Cloudflare R2 bucket backing the L1 research loop. |
+| `scripts/latency_sweep.py` | At which latencies is one fixed strategy profitable? Train split only. |
 | `scripts/ledger_check.py` | Is every row in the ledger a row anyone could check? |
 | `scripts/llm_campaign.py` | Task 36: the first campaign with a model proposing, and its control arm. |
 | `scripts/lock_env.py` | Write `requirements.lock` from the environment that is actually installed. |
@@ -174,6 +175,7 @@ Datasets, calendars, and where the split is enforced.
 |---|---|
 | `src/core/data/__init__.py` | Datasets: the protocol, the adapters, and the DBN reading rules. |
 | `src/core/data/bucket_layout.py` | Where each object lives in the R2 bucket, separately from what it is called. |
+| `src/core/data/columns.py` | One session of trades as arrays, so the engine builds a `Tick` only when it steps. |
 | `src/core/data/crypto.py` | Crypto perpetual trades (Binance USDT-margined) behind the `Dataset` interface. |
 | `src/core/data/crypto_raw.py` | Read raw crypto-perpetual archive files from Binance, Bybit and OKX into one schema. |
 | `src/core/data/dataset.py` | The `Dataset` protocol and the split machinery that enforces pre-registration. |
@@ -205,6 +207,7 @@ Types, the run log, features and checks.
 | `src/core/checks/__init__.py` | Static analysis of the agent's file. Nothing here executes strategy code. |
 | `src/core/checks/static.py` | Does the agent's file look like a strategy? Answered without running it. |
 | `src/core/checks/typecheck.py` | Type-check the agent's file against `src.core.types.Strategy`. |
+| `src/core/costs.py` | Fees and slippage per instrument, from `config/costs.yaml`. |
 | `src/core/features/__init__.py` | Feature libraries a strategy may import. The engine never calls them. |
 | `src/core/features/volume_profile.py` | Volume at price for one session: VPOC, Value Area, Low Volume Nodes. |
 | `src/core/runlog.py` | No engine without a ledger row -- structurally, not by everyone remembering. |
@@ -404,6 +407,7 @@ What each test file pins.
 | `tests/test_alpha_bridge.py` | `harness_alpha`: Nalin's vectorised AST library, used from a streaming callback. |
 | `tests/test_amendment_17.py` | Amendment 17: the crypto null charges each fill to its own session. |
 | `tests/test_amendment_18.py` | Amendment 18: a crypto pass must show profit after costs. No control arm runs here. |
+| `tests/test_amendment_19.py` | Amendment 19: execution latency and an overnight rule. Synthetic data only. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
 | `tests/test_boundary.py` | Nothing mutable crosses the context boundary, and nothing resolves silently. |
 | `tests/test_bwis.py` | Source priors: the three things Gowtam's version got wrong, pinned. |
@@ -411,10 +415,12 @@ What each test file pins.
 | `tests/test_campaign_script.py` | `scripts/campaign.py` renders its own summary. |
 | `tests/test_capacity.py` | The conditioning stage: what the machine can carry, decided before a run. |
 | `tests/test_causality_probe.py` | The no-lookahead claim, measured rather than asserted. |
+| `tests/test_columnar_ticks.py` | Columnar ticks are an optimisation: every run must match the object path exactly. |
 | `tests/test_commission_reaches_the_engine.py` | The rate a profile declares is the rate the engine charges. |
 | `tests/test_committee.py` | The four-auditor committee: isolated, veto-only, and outside the harness. |
 | `tests/test_committee_retry.py` | A seat that never ran is asked again: inside the committee, and afterwards. |
 | `tests/test_context_and_run.py` | The context facade and the run entry point. |
+| `tests/test_costs.py` | The per-instrument cost file, and slippage as a cost. Synthetic data only. |
 | `tests/test_crypto_c3b_control.py` | C3b's fixed design and decision rules. Neither real stage runs here. |
 | `tests/test_crypto_data.py` | Crypto archives: each exchange's conventions normalise to one schema, and the fetcher's listing parsers. |
 | `tests/test_crypto_gate_control.py` | The simulated crypto gate control: its market, its bounds and one small campaign. |
@@ -441,6 +447,7 @@ What each test file pins.
 | `tests/test_idle_charge.py` | The idle-capital charge (pre-registration Amendment 3). |
 | `tests/test_knowledge.py` | Cross-campaign constraints: store, compiler, frozen snapshot, prompt slot. |
 | `tests/test_l2_gate.py` | The L2 gate's plumbing: a validation null per winner, and a declared family. |
+| `tests/test_latency_sweep.py` | The latency analysis, and the nanosecond rules around it. Synthetic data only. |
 | `tests/test_layout.py` | The build-time / run-time line, asserted rather than documented. |
 | `tests/test_ledger_integrity.py` | The ledger as an artifact with its own integrity requirements. |
 | `tests/test_live_bucket.py` | The same guarantees, checked against the live bucket instead of the manifest. |
@@ -500,6 +507,7 @@ What each test file pins.
 |---|---|
 | `.github/workflows/tests.yml` | The agent may only ever change src/strategies/**. Tool permissions are |
 | `README.md` | 2026FA-Project02-2-QS — AutoResearch for Quantitative Finance |
+| `config/costs.yaml` | What each instrument costs to trade. A profile names its instrument with |
 | `config/datasets/crypto.yaml` | Crypto perpetuals: which public archives scripts/crypto_fetch.py pulls, and from when. |
 | `data/crypto-manifest.json` | data (JSON) |
 | `data/crypto-quotes-manifest.json` | data (JSON) |

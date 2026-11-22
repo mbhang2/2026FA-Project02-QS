@@ -381,7 +381,8 @@ def constraints_for(hypothesis: pathlib.Path | None, policy: str | None):
 
 def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
               profile_name: str = PROFILE, model: str = MODEL,
-              constraints=None, constraint_policy: str = "record"):
+              constraints=None, constraint_policy: str = "record",
+              repair_reasoning_effort: str | None = None):
     from src.core.loop import hypothesis as H
     from src.core.loop.llm import LLMAgent
 
@@ -389,6 +390,7 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
     profile = c["profiles"][profile_name]
     return LLMAgent(
         constraints=constraints, constraint_policy=constraint_policy,
+        repair_reasoning_effort=repair_reasoning_effort,
         model=model, temperature=0.7, max_tokens=PROPOSER_MAX_TOKENS, show_history=True,
         # None is a real state, not a missing argument: `hypothesis_path` is
         # optional on the record, and a campaign that registered without a
@@ -403,6 +405,7 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
 
 # --------------------------------------------------------------------------- #
 
+REPAIR_REASONING_EFFORT = "low"
 VALIDATION_PROFILE = "nq-validation"
 VALIDATION_PROFILE_FITTED = "nq-validation-fitted"
 
@@ -900,6 +903,8 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
 
     agent_cfg["idle_charge"] = cc.get("idle_charge", IDLE_CHARGE)
     agent_cfg["probe_before_trial"] = bool(cc.get("probe_before_trial"))
+    # Frozen with the campaign: a repair fixes a file, so it need not re-derive it.
+    agent_cfg["repair_reasoning_effort"] = REPAIR_REASONING_EFFORT
     # **Who wrote the question, in the record.** None for a file a human
     # committed. Under Amendment 15 it names the statement, what the writer
     # turned it into, and that nobody read it -- so a report, a committee or a
@@ -1125,9 +1130,11 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         for i, note in F.read_ledger(d).items():
             if i < len(rows) and note.get("violations"):
                 rows[i]["off_question"] = note["violations"]
+    repair_effort = (record.agent_config or {}).get("repair_reasoning_effort")
     agent = agent_for(champion if champion.exists() else None, hyp_path,
                       record.profile, model, constraints=cons,
-                      constraint_policy=policy)
+                      constraint_policy=policy,
+                      repair_reasoning_effort=repair_effort)
     judge = None
     reg_judge = (record.agent_config or {}).get("fidelity_judge")
     if reg_judge and cons is not None:
@@ -1235,6 +1242,7 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
                               constraints=cons, constraint_policy=policy)
             # Every agent, on its own worker. See `_arm_probe`.
             _arm_probe(extra, workers[slot])
+            extra.repair_reasoning_effort = repair_effort
             _arm_fidelity(extra, workers[slot])
             agents.append(extra)
     else:

@@ -458,6 +458,7 @@ What each test file pins.
 | `tests/test_live_bucket.py` | The same guarantees, checked against the live bucket instead of the manifest. |
 | `tests/test_llm_agent.py` | The proposing agent, offline. No network is touched by anything in here. |
 | `tests/test_llm_metadata.py` | LiteLLM metadata says where a call sits and carries nothing from its content. |
+| `tests/test_llm_streaming.py` | Streamed proposer calls, cheap repairs, and a probe that runs the proposal. |
 | `tests/test_loop.py` | The loop: trial driver, campaign runner, and the correction over the ledger. |
 | `tests/test_market_facts.py` | Every agent is told the market its campaign trades, and NQ is told what it always was. |
 | `tests/test_max_of_m.py` | The L2 gate: the best of M campaign winners, on validation. |

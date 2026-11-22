@@ -2388,7 +2388,7 @@ Code: `src/core/scoring/profitability.py`, read through `prereg.in_force(18)` by
 
 ## Amendment 19 — 2026-11-21 — execution latency and an overnight rule
 
-**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-21 by Claude on request; in force when a human signs this line.** The code ships with this text and reads this line, so until it is signed every run behaves as before. No crypto campaign should be registered until this is settled.
+**Status: IN FORCE from 2026-11-21, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. No crypto trial had been scored and no real data had been scored at a non-zero latency before it was signed.
 
 ### Why
 

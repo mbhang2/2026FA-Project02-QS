@@ -48,6 +48,7 @@ import json
 import os
 import random
 import re
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -300,6 +301,29 @@ def _digest_source(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:16]
 
 
+def _tag_value(value) -> str | None:
+    text = re.sub(r"[^A-Za-z0-9_.:-]", "-", str(value))[:80]
+    return text or None
+
+
+def call_metadata(stage: str | None = None, *, trial: int | None = None,
+                  attempt: int | None = None) -> dict:
+    """LiteLLM request metadata: where this call sits, and nothing from its content.
+
+    Short identifiers only, so a gateway operator can group latency and spend by
+    campaign and stage. It never carries a prompt, a strategy, a score or a credential,
+    and it does not reach the model's messages.
+    """
+    script = Path(sys.argv[0]).stem if sys.argv and sys.argv[0] else ""
+    fields = {"project": "practicum",
+              "campaign": os.environ.get("PRACTICUM_LLM_CAMPAIGN"),
+              "stage": stage or script or "unknown",
+              "trial": trial, "attempt": attempt}
+    clean = {k: _tag_value(v) for k, v in fields.items() if v is not None}
+    clean = {k: v for k, v in clean.items() if v}
+    return {**clean, "tags": [f"{k}:{v}" for k, v in clean.items()]}
+
+
 @dataclass
 class LLMAgent:
     """`propose(history) -> str`. The same one method the stub implements.
@@ -402,6 +426,9 @@ class LLMAgent:
     # for `drain_log` and from there `fidelity.jsonl`.
     _off_question: list = field(default_factory=list, init=False, repr=False)
     _perturb_report: dict = field(default_factory=dict, init=False, repr=False)
+    # Where the next call sits, for LiteLLM metadata. Never in the campaign record.
+    tag_trial: int | None = field(default=None, init=False, repr=False)
+    _tag_attempt: int = field(default=1, init=False, repr=False)
     _judgement: dict = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -1005,6 +1032,7 @@ class LLMAgent:
         body = {"model": self.model,
                 "max_tokens": max(self.max_tokens, PREFLIGHT_FLOOR_TOKENS),
                 "temperature": 0, "cache": NO_CACHE,
+                "metadata": call_metadata("preflight"),
                 "messages": [{"role": "user", "content": "reply with: ok"}]}
         resp = requests.post(
             f"{self.base_url}/chat/completions", json=body,
@@ -1052,6 +1080,7 @@ class LLMAgent:
         """
         last: Exception | None = None
         for attempt in range(MAX_TRANSPORT_RETRIES + 1):
+            self._tag_attempt = attempt + 1
             try:
                 return self._one_attempt(prompt, kind)
             except LLMTransportError as exc:
@@ -1073,6 +1102,7 @@ class LLMAgent:
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "cache": NO_CACHE,
+            "metadata": call_metadata(kind, trial=self.tag_trial, attempt=self._tag_attempt),
             "messages": [
                 {"role": "system", "content": system.split("## SYSTEM", 1)[-1].strip()},
                 {"role": "user", "content": user.strip()},

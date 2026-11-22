@@ -1298,6 +1298,7 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
             slot, i = slot_and_index
             a = agents[slot]
             a.champion = champ_now
+            a.tag_trial = i
             source = a.propose(shown)
             if width == 1:
                 return i, slot, source, run_trial(
@@ -2094,6 +2095,8 @@ def main() -> int:
                          f"which withholds a fit window from the score. Later "
                          f"stages read it from the record and ignore this flag.")
     a = ap.parse_args()
+    # LiteLLM metadata for this process and the scripts it starts.
+    _os.environ["PRACTICUM_LLM_CAMPAIGN"] = a.name
     if a.auditor_model:
         merged: dict = {}
         for pair in a.auditor_model:

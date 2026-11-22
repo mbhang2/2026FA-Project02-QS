@@ -14,6 +14,10 @@ The measurements behind it are in [setup/MODEL-ACCESS.md](../setup/MODEL-ACCESS.
 | `audit/committee/llm.py` | The second client, used by the committee, the writer, the refiner and the review seats |
 | `.envrc` / environment | `LITELLM_BASE_URL`, `LITELLM_API_KEY` |
 
+## What the gateway can see
+
+Every call carries LiteLLM `metadata` and `tags`: `project`, `campaign`, `stage` (`propose`, `repair`, `probe_repair`, `committee:<axis>`, `preflight`, or the calling script), `trial` and `attempt`. They are short identifiers, so an operator can group latency and spend. They carry no prompt, strategy, score or credential.
+
 ## Which part calls which model
 
 Every part can be set separately. Options marked *register* are frozen into

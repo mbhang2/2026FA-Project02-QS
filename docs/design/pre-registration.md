@@ -2462,7 +2462,7 @@ Code: `src/core/engine/engine.py` (`latency_ns`, `allow_overnight`, `_flatten_at
 
 ## Amendment 20 — 2026-11-22 — quoted backtests against the OKX book
 
-**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-22 by Claude on request; in force when a human signs this line.** The code ships with this text and reads this line, and until it is signed a quoted backtest refuses to run. No real OKX strategy has been scored.
+**Status: IN FORCE from 2026-11-22, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. No real OKX strategy had been scored before it was signed. Its acceptance control ran once from commit `59ab08c`, before signing, and met all three conditions: 2 of 1,000 unprofitable campaigns passed, 0 of 400 noise campaigns, and 100 of 100 strong-edge campaigns (`~/crypto-controls/a20/control.json`, SHA-256 `fa9158e6aa9a175a68926b70a9b960afcf3a877a519e90ef748ca1c61f61ff32`).
 
 ### Why
 

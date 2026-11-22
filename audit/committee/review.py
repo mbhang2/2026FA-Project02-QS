@@ -33,7 +33,7 @@ import pathlib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 
-from .llm import Client, LLMUnavailable, ModelSubstituted, preflight
+from .llm import CALL_STAGE, Client, LLMUnavailable, ModelSubstituted, preflight
 
 PROMPTS = pathlib.Path(__file__).parent / "prompts"
 AXES = ("leakage", "statistics", "economics", "robustness")
@@ -401,6 +401,7 @@ def _one(axis: str, client: Client, summary: dict, source: str | None,
     while True:
         attempts += 1
         try:
+            CALL_STAGE.set(f"committee:{axis}")
             got = client.ask(_prompt(axis), _slice(axis, summary, source, hypothesis))
         except ModelSubstituted as exc:
             last = exc                      # retried, never accepted

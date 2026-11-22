@@ -2459,3 +2459,64 @@ Every existing profile keeps the defaults, and its results must stay identical t
 - A train and validation pair run under different terms.
 
 Code: `src/core/engine/engine.py` (`latency_ns`, `allow_overnight`, `_flatten_at_close`), `src/core/costs.py`, `config/costs.yaml`, `src/core/engine/reconstruct.py` (`fill_commission`), `run.py` (`execution_terms`), `scripts/replay.py`, `scripts/nq_campaign.py`, `scripts/latency_sweep.py`.
+
+## Amendment 20 — 2026-11-22 — quoted backtests against the OKX book
+
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-22 by Claude on request; in force when a human signs this line.** The code ships with this text and reads this line, and until it is signed a quoted backtest refuses to run. No real OKX strategy has been scored.
+
+### Why
+
+A trade-only fill cannot see the spread, the depth or a resting order's place in the queue, and those decide most high-frequency results. OKX is the one venue whose book we hold: top five levels for 1,403 BTC days.
+
+### The configuration
+
+`config/backtest.yaml` states each backtest and compiles to an ordinary profile. With `use_quotes: true`, a dataset with no book is refused when the file is read, and `run.py` refuses before the ledger if any required session has none. **It never falls back to trades.**
+
+### The data
+
+OKX trades with the OKX book, never one venue's trades against another's book. A session is a UTC day with an OKX quote file, cut from the two UTC+8 trade and kline files that cover it. `config/calendars/okx-book.yaml` keeps the Binance split dates and leaves out the 15 days OKX published no book: 14 in train and 2026-11-18 in the holdout. Sizes are whole lots of 0.0001 BTC, the finest step in the OKX files.
+
+### The fill model: `book-queue-pessimistic`
+
+| | rule |
+|---|---|
+| a | **Market orders, triggered stops and marketable limits** walk the visible levels at arrival, after Amendment 19's latency. Marketable limits stop at their limit. |
+| b | **An order larger than the five visible levels** is refused and does not partly fill. |
+| c | **A resting limit** joins behind the displayed size. Only aggressor trades at its price move it forward. **Cancels earn it nothing.** |
+| d | A trade **strictly through** a resting limit fills it at the limit. If the best moves away, the order rejoins at the back. |
+| e | **Rows sharing a millisecond** have no knowable order, so a taker gets the worst of them and the state just before them. |
+| f | **A quote more than 1 second old** cannot price a taker fill or fill a limit at the touch. Measured gaps reach 76 seconds in 2023. |
+| g | The `allow_overnight: false` close pays the last visible book. |
+
+The fill's liquidity sets its fee. Slippage stays at 0, because walking the book already charges it. Strategies do **not** read quotes under this amendment: the book affects their fills and not their signals.
+
+### The null
+
+A fill at the bid or ask has its spread inside its price, and the sign-flip null would turn that cost into a gain on half its draws. Each fill therefore records the book mid. The null flips only the mid-to-mid P&L and charges `side x (price - mid) x size` as a cost on every draw, so a maker's earned spread stays earned and a taker's paid spread stays paid. The no-flip draw still equals the score.
+
+### What it does NOT change
+
+Every existing profile, including Binance and NQ, which must reproduce their digests and scores. Also Amendments 16 to 19, the N and M gate, the splits' date boundaries, costs and the holdout lock. Fees stay at `costs: BTCUSDT`, 5 bp maker and taker, until a new amendment changes them.
+
+### Acceptance, before signing
+
+1. Hand-built books pin rules a to g.
+2. The event walk matches tick-by-tick stepping on a book with latency, cancels, modifications and brackets.
+3. Existing real NQ and Binance runs reproduce their digests and scores.
+4. `scripts/crypto_book_control.py`, on a simulated book with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 100 ms latency and fill attribution. Each arm runs once, from a clean commit:
+
+   | arm | seeds | campaigns | pass condition |
+   |---|---|---|---|
+   | unprofitable, 8 bp | 400001 to 401000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 401001 to 401400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge, 25 bp | 401401 to 401500 | 100 | **at least 80** pass the full gate |
+
+5. Real OKX sessions load and reconcile on a plumbing check that records no score.
+
+### What would invalidate this amendment
+
+- A quoted result that fell back to trades, or mixed venues.
+- A fill-model rule, the quote-age limit or the session list changed after a quoted trial is scored, without a new amendment.
+- A null that flips execution cost.
+
+Code: `config/backtest.yaml`, `src/core/backtest_config.py`, `src/core/data/okx_book.py`, `src/core/engine/fills.py` (`BookQueueFill`), `config/calendars/okx-book.yaml`.

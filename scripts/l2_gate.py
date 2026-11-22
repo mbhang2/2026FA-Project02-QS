@@ -83,8 +83,8 @@ B_NULL = 10_000
 
 def cfg() -> dict:
     import yaml
-    from src.core.costs import apply_costs
-    return apply_costs(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
+    from src.core.backtest_config import prepare_config
+    return prepare_config(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
 
 
 def candidates() -> list[dict]:

@@ -70,6 +70,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/committee_retry.py` | Re-run the committee seats that never ran, beside the record and never over it. |
 | `scripts/correction_fwer.py` | Measure FWER for the `max_of_n` variants, under the global null. |
 | `scripts/crypto_a18_control.py` | Amendment 18's acceptance control. Simulated data only. |
+| `scripts/crypto_book_control.py` | Amendment 20's acceptance control: the gate on a simulated order book. |
 | `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
@@ -181,6 +182,7 @@ Datasets, calendars, and where the split is enforced.
 | `src/core/data/dataset.py` | The `Dataset` protocol and the split machinery that enforces pre-registration. |
 | `src/core/data/dbn.py` | Reading Databento DBN objects, in one place. |
 | `src/core/data/nq.py` | NQ futures trades, behind the `Dataset` interface. The first real adapter. |
+| `src/core/data/okx_book.py` | OKX BTC or ETH perpetual: trades and the top-of-book, from one venue (Amendment 20). |
 | `src/core/data/options.py` | A synthetic options surface, arbitrage-free by construction, with an |
 | `src/core/data/options_spx.py` | An SPX options surface from a calibrated Heston model, arbitrage-free by |
 | `src/core/data/synthetic.py` | A tick generator with a switch for how much signal is in it. |
@@ -204,6 +206,7 @@ Types, the run log, features and checks.
 |---|---|
 | `src/core/__init__.py` | package marker |
 | `src/core/_roots.py` | Where the repository is, for the harness. A marker, never a directory count. |
+| `src/core/backtest_config.py` | `config/backtest.yaml`: what a backtest uses, compiled to an ordinary profile. |
 | `src/core/checks/__init__.py` | Static analysis of the agent's file. Nothing here executes strategy code. |
 | `src/core/checks/static.py` | Does the agent's file look like a strategy? Answered without running it. |
 | `src/core/checks/typecheck.py` | Type-check the agent's file against `src.core.types.Strategy`. |
@@ -291,6 +294,7 @@ Profiles, the correction, and house limits.
 | `config/bwis-priors.json` | data (JSON) |
 | `config/calendars/crypto-trades.yaml` | Pre-registered train / validation / holdout split for the crypto trades dataset |
 | `config/calendars/nq-trades.yaml` | Pre-registered train / validation / holdout split for the NQ trades dataset. |
+| `config/calendars/okx-book.yaml` | Pre-registered split for OKX trades with the OKX book (Amendment 20). |
 | `config/corrections.yaml` | Historical corrections record. |
 | `config/house-constraints.yaml` | House constraints: the operating limits this desk usually fixes, added to a |
 | `config/run.yaml` | Run configuration. Immutable, for the same reason the scorer is. |
@@ -409,6 +413,7 @@ What each test file pins.
 | `tests/test_amendment_18.py` | Amendment 18: a crypto pass must show profit after costs. No control arm runs here. |
 | `tests/test_amendment_19.py` | Amendment 19: execution latency and an overnight rule. Synthetic data only. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
+| `tests/test_book_fills.py` | Amendment 20: fills against a real book, pinned on hand-built books. |
 | `tests/test_boundary.py` | Nothing mutable crosses the context boundary, and nothing resolves silently. |
 | `tests/test_bwis.py` | Source priors: the three things Gowtam's version got wrong, pinned. |
 | `tests/test_calibration_null.py` | The empirical null, the reference strategy and the downside guard. |
@@ -507,6 +512,7 @@ What each test file pins.
 |---|---|
 | `.github/workflows/tests.yml` | The agent may only ever change src/strategies/**. Tool permissions are |
 | `README.md` | 2026FA-Project02-2-QS — AutoResearch for Quantitative Finance |
+| `config/backtest.yaml` | What each backtest uses. Every entry becomes a profile `run.py --profile <name>` can run. |
 | `config/costs.yaml` | What each instrument costs to trade. A profile names its instrument with |
 | `config/datasets/crypto.yaml` | Crypto perpetuals: which public archives scripts/crypto_fetch.py pulls, and from when. |
 | `data/crypto-manifest.json` | data (JSON) |

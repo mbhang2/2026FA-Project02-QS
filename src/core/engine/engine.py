@@ -233,6 +233,8 @@ class _SealedDataset:
         "session_open_prices", "funding_series",
         # The same trades as `ticks`, as arrays. Lock-checked by the dataset.
         "session_columns",
+        # One session of the venue's book, for the book-aware fill model.
+        "book_for",
     )
 
     def __init__(self, dataset) -> None:
@@ -594,6 +596,9 @@ class Engine:
         self.maker_commission_per_contract = maker_commission_per_contract
         self.maker_commission_bps = maker_commission_bps
         self._no_new_orders = False
+        self._book_fill = hasattr(self.model, "bind_book")
+        if self._book_fill:
+            self.model.bind_book(self.dataset.book_for)
         if self._custom_execution and (self.model.requires.has_quotes
                                        or dataset.capabilities().has_options):
             raise ValueError("latency_ns, slippage and allow_overnight=False support "
@@ -1229,6 +1234,8 @@ class Engine:
                 continue
             if order.tif in (TimeInForce.IOC, TimeInForce.FOK):
                 return start          # decided on its first eligible tick
+            if self._book_fill and self.model.needs_step(order):
+                return start          # it has yet to meet the book
             if order.order_type is OrderType.MARKET:
                 return start
             if order.expire_ts is not None:
@@ -1457,7 +1464,9 @@ class Engine:
                    tag="session-flat"),
             tick,
         )
-        event = self._apply_fill(closer, Fill(price=self.last_price, size=abs(position)), tick)
+        fill = (self.model.settle(closer.side, abs(position), session, self.last_price)
+                if self._book_fill else Fill(price=self.last_price, size=abs(position)))
+        event = self._apply_fill(closer, fill, tick)
         if event is not None:
             self._fills_since_callback.append(event)
             self._dispatch("fill", event, tick, actionable)
@@ -1606,6 +1615,13 @@ class Engine:
                     continue    # refused outright; already cancelled and emitted
             else:
                 fill = self.model.resolve(order, tick)
+                if self._book_fill:
+                    refused = self.model.take_rejection(order.order_id)
+                    if refused:
+                        self._cancel(order, LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq)
+                        self._emit(LifecycleKind.ORDER_REJECTED, tick.ts, tick.seq,
+                                   order.order_id, refused)
+                        continue
 
             if fill is None:
                 if order.tif in (TimeInForce.IOC, TimeInForce.FOK):
@@ -1798,8 +1814,9 @@ class Engine:
 
         # What the order did to the book, from its type: a market or a triggered
         # stop crossed; a resting limit was crossed into.
-        liquidity = ("maker" if order.order_type in (OrderType.LIMIT, OrderType.STOP_LIMIT)
-                     else "taker")
+        liquidity = fill.liquidity or (
+            "maker" if order.order_type in (OrderType.LIMIT, OrderType.STOP_LIMIT)
+            else "taker")
         commission = fill_commission(fill.price, fill.size,
                                      commission_per_contract=self.commission,
                                      commission_bps=self.commission_bps,
@@ -1835,6 +1852,7 @@ class Engine:
                 liquidity=liquidity,
                 tag=self._order_tags.get(order.order_id, ""),
                 asset=order.asset,
+                mid=fill.mid,
             )
         )
         self.blotter.add(
@@ -1850,6 +1868,8 @@ class Engine:
                 realized_pnl=realized,
                 tag=self._order_tags.get(order.order_id, ""),
                 asset=order.asset,
+                execution_cost=(order.side.sign * (fill.price - fill.mid) * fill.size
+                                if fill.mid is not None else 0.0),
             )
         )
 

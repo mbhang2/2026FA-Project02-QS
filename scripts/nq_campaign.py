@@ -141,8 +141,8 @@ ERROR_CONTROL_NOTES = {
 
 
 def cfg() -> dict:
-    from src.core.costs import apply_costs
-    return apply_costs(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
+    from src.core.backtest_config import prepare_config
+    return prepare_config(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
 
 
 def campaign_cfg() -> dict:
@@ -289,7 +289,7 @@ def _dataset_facts(profile: dict) -> tuple[str, str]:
         coin = sym.removesuffix("USDT")
         bps = profile.get("commission_bps", 0.0)
         return (
-            f"real Binance {sym} perpetual-futures trades. A session is a UTC day "
+            f"real {'OKX' if spec.get('book') else 'Binance'} {sym} perpetual-futures trades. A session is a UTC day "
             "(00:00 to 24:00 UTC); the market trades continuously, with no close, "
             "no holidays and no overnight gap, so `session` boundaries are a "
             "calendar convention, not a market event. Every trade carries its "

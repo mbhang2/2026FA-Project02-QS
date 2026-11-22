@@ -164,6 +164,20 @@ profiles:
     history_window: 512
     commission_per_contract: 0.62
 
+  # The rehearsal's validation split: the same synthetic data and costs, so a
+  # rehearsal can exercise validation, L2 and the holdout check (Amendment 13).
+  rehearsal-validation:
+    dataset: synthetic
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 0
+    wall_clock_budget_s: 120
+    notional_base: 1.0
+    action_cap: 64
+    history_window: 512
+    commission_per_contract: 0.62
+
   # Task 37's positive control. The same campaign profile in every respect --
   # train split, unfavorable fills, seed 1, same caps and budgets -- with a
   # planted signal of known strength and nothing else changed. Two strengths,
@@ -639,6 +653,14 @@ datasets:
     symbol: ETHUSDT
     exchange: binance
     lot: 0.001
+  # OKX trades with the OKX book (Amendment 20). OKX trades in 0.0001 BTC steps.
+  crypto-btc-okx-book:
+    kind: crypto
+    symbol: BTCUSDT
+    exchange: okx
+    lot: 0.0001
+    contract_value: 0.01
+    book: true
 
 # Campaign-level settings. Pre-registered by `docs/design/pre-registration.md`;
 # the values here are copied into `CampaignRecord` and hashed before trial 0, so

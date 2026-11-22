@@ -355,6 +355,10 @@ class QuoteEvent:
 class Fill:
     price: float
     size: int
+    # Set only by the book-aware model (Amendment 20): how the fill met the book, and
+    # the mid at that moment, which splits its P&L from its execution cost.
+    liquidity: str | None = None
+    mid: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -518,6 +522,7 @@ class FillRecord:
     liquidity: str          # "taker" -- crossed the book; "maker" -- rested
     tag: str = ""
     asset: str = DEFAULT_ASSET
+    mid: float | None = None    # Amendment 20: the book mid when this filled
 
     def as_row(self) -> tuple:
         """Stable tuple for the log digest. Rounded like `BlotterRow.as_row`, so
@@ -530,6 +535,8 @@ class FillRecord:
             self.seq, self.ts, self.session, self.order_id, str(self.side),
             self.size, round(self.price, 10), self.liquidity, self.tag,
         )
+        if self.mid is not None:
+            return row + (self.asset, round(self.mid, 10))
         return row if self.asset == DEFAULT_ASSET else row + (self.asset,)
 
 
@@ -637,6 +644,9 @@ class BlotterRow:
     realized_pnl: float
     tag: str = ""
     asset: str = DEFAULT_ASSET
+    # Amendment 20: what this fill paid against the mid (negative when a maker
+    # earned spread). Inside `realized_pnl` already; the null needs it separately.
+    execution_cost: float = 0.0
 
     def as_row(self) -> tuple:
         """Stable tuple used for the determinism digest.
@@ -674,6 +684,8 @@ class BlotterRow:
         golden cases and every ledger row at once, for no gain to anyone running
         one instrument.
         """
+        if self.execution_cost:
+            return (self.asset, round(self.execution_cost, 10))
         return () if self.asset == DEFAULT_ASSET else (self.asset,)
 
     def exact_row(self) -> tuple:

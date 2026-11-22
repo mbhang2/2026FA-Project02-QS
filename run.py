@@ -46,7 +46,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.core.costs import apply_costs  # noqa: E402
+from src.core.backtest_config import prepare_config, quote_data_problem  # noqa: E402
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine, git_sha  # noqa: E402
 from src.core.engine.remote import (  # noqa: E402
@@ -186,7 +186,7 @@ def resolve_purpose(trigger: str, requested: str | None) -> str:
 def load_config(path: Path = CONFIG_PATH) -> dict:
     if not path.exists():
         sys.exit(f"missing run configuration at {path}")
-    return apply_costs(yaml.safe_load(path.read_text()))
+    return prepare_config(yaml.safe_load(path.read_text()))
 
 
 def build_dataset(cfg: dict, name: str, seed: int):
@@ -272,6 +272,7 @@ def build_dataset(cfg: dict, name: str, seed: int):
         import boto3
 
         from src.core.data.crypto import CryptoDataset, CryptoSpec
+        from src.core.data.okx_book import OKXBookDataset, OKXBookSpec
 
         client = None
         if all(os.environ.get(v) for v in ("R2_ENDPOINT", "R2_ACCESS_KEY_ID",
@@ -283,6 +284,8 @@ def build_dataset(cfg: dict, name: str, seed: int):
                 aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
                 region_name="auto",
             )
+        if spec.pop("book", False):
+            return OKXBookDataset(client, os.environ.get("R2_BUCKET"), OKXBookSpec(**spec))
         return CryptoDataset(client, os.environ.get("R2_BUCKET"), CryptoSpec(**spec))
     sys.exit(f"no adapter for dataset kind {kind!r} yet")
 
@@ -584,6 +587,18 @@ def main(argv: list[str] | None = None, *, latency_override_ns: int | None = Non
 
     warmup_sessions = profile.get("warmup_sessions", 0)
     check_warmup_against_embargo(profile_name, warmup_sessions, dataset)
+    # Before the ledger: a backtest that cannot use its quotes does not run at all.
+    if profile.get("use_quotes"):
+        scripts = str(REPO_ROOT / "scripts")
+        if scripts not in sys.path:
+            sys.path.insert(0, scripts)
+        import prereg
+
+        if not prereg.in_force(20):
+            sys.exit("Amendment 20 is not in force, so a quoted backtest cannot run.")
+        problem = quote_data_problem(profile, dataset, split, warmup_sessions)
+        if problem:
+            sys.exit(f"refusing {profile_name!r}: {problem}. Nothing was run.")
 
     ledger_path = args.ledger or (REPO_ROOT / cfg.get("ledger", "runs/ledger.jsonl"))
 

@@ -248,9 +248,10 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
     from src.core.types import Split
     import run as runner
     import yaml
-    from src.core.costs import apply_costs, row_cost_terms
+    from src.core.backtest_config import prepare_config
+    from src.core.costs import row_cost_terms
 
-    cfg = apply_costs(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
+    cfg = prepare_config(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
     profile = cfg["profiles"][profile_name]
     fills = load_fill_log(row)
     if not fills:

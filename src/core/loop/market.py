@@ -105,10 +105,34 @@ def _crypto(symbol: str) -> dict:
     }
 
 
+def _crypto_okx(symbol: str) -> dict:
+    """OKX trades, with fills against the OKX book the strategy does not read."""
+    base = _crypto(symbol)
+    coin = symbol.removesuffix("USDT")
+    swap = lambda text: text.replace("Binance", "OKX").replace("lots of 0.001", "lots of 0.0001")
+    return {
+        "name": swap(base["name"]),
+        "sessions": "960",
+        "data": swap(base["data"]).replace("roughly 974 sessions", "roughly 960 sessions").replace(
+            "There is no\norder book, no depth, no bid-ask, no quotes,",
+            "Your strategy does\nnot read the order book, but its fills do: market and stop orders pay the\n"
+            "visible bid or ask, resting limits wait in the queue, and an order larger\n"
+            "than five visible levels is refused. There is"),
+        "have": swap(base["have"]).replace(
+            "- **No order book, no quotes, no depth, no other instrument, no options.**",
+            f"- **The strategy cannot read quotes or depth.** Fills use the OKX {coin} book.\n"
+            "- **No other instrument, no options.**").replace(
+            "**1,418 sessions total** (2023-01-01 to 2026-11-18)",
+            "**1,403 sessions total** (2023-01-01 to 2026-11-17, less days with no book)"),
+    }
+
+
 def facts(market: str) -> dict:
     """The four texts for a market key (`nq`, `crypto-BTCUSDT`, ...)."""
     if market == "nq":
         return _NQ
+    if market.startswith("crypto-okx-"):
+        return _crypto_okx(market.split("-", 2)[2])
     if market.startswith("crypto-"):
         return _crypto(market.split("-", 1)[1])
     raise ValueError(f"unknown market {market!r}")
@@ -121,11 +145,15 @@ def market_for_profile(profile: str | None, cfg: dict | None = None) -> str:
     if cfg is None:
         import yaml
 
-        cfg = yaml.safe_load((_ROOT / "config" / "run.yaml").read_text())
+        from ..backtest_config import prepare_config
+
+        cfg = prepare_config(yaml.safe_load((_ROOT / "config" / "run.yaml").read_text()))
     prof = cfg["profiles"].get(profile)
     if prof is None:
         raise KeyError(f"unknown profile {profile!r}")
     spec = cfg["datasets"].get(prof["dataset"], {})
+    if spec.get("kind") == "crypto" and spec.get("book"):
+        return f"crypto-okx-{spec['symbol']}"
     if spec.get("kind") == "crypto":
         return f"crypto-{spec['symbol']}"
     return DEFAULT_MARKET

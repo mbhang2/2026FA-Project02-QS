@@ -428,8 +428,10 @@ def excursion_legs(blotter: Blotter, calendar: Sequence[SessionSpan]) -> list[Ex
         session = _session_of(row.ts, calendar)
         if session is not None:
             leg = current.setdefault(session, [0.0, 0.0])
-            leg[0] += row.realized_pnl
-            leg[1] += row.commission
+            # Amendment 20: only the mid-to-mid move can be flipped. What the fill paid
+            # or earned against the mid is a cost, charged the same on every draw.
+            leg[0] += row.realized_pnl + row.execution_cost
+            leg[1] += row.commission + row.execution_cost
         if row.position_after == 0:
             flush()
     flush()

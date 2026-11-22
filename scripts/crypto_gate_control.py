@@ -46,7 +46,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 import prereg  # noqa: E402
 import yaml  # noqa: E402
 
-from src.core.costs import apply_costs  # noqa: E402
+from src.core.backtest_config import prepare_config  # noqa: E402
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec  # noqa: E402
 from src.core.engine import Engine  # noqa: E402
 from src.core.runlog import RunTicket  # noqa: E402
@@ -126,19 +126,21 @@ def spec_for(edge_bp: float, seed: int, n_sessions: int = 300) -> SyntheticSpec:
 
 
 def load_config() -> dict:
-    return apply_costs(yaml.safe_load((REPO / "config" / "run.yaml").read_text()))
+    return prepare_config(yaml.safe_load((REPO / "config" / "run.yaml").read_text()))
 
 
-def _run_variant(dataset, stop: float, target: float, cfg: dict, profile: dict, seed: int):
+def _run_variant(dataset, stop: float, target: float, cfg: dict, profile: dict, seed: int,
+                 **engine_kwargs):
     """One trial on the simulated market: the engine, its calendar and scoring terms."""
     strategy = ReferenceStrategy(interval="1h", stop_atr=stop, target_atr=target,
                                  exit_margin_ns=61 * 60 * NS_PER_SECOND)
     engine = Engine(dataset, strategy,
                     ticket=RunTicket.for_calibration("crypto gate control"),
-                    split=Split.TRAIN, fill_model=profile["fill_model"],
+                    split=Split.TRAIN,
+                    fill_model=engine_kwargs.pop("fill_model", profile["fill_model"]),
                     warmup_sessions=profile["warmup_sessions"],
                     commission_per_contract=profile["commission_per_contract"],
-                    commission_bps=profile["commission_bps"], seed=seed)
+                    commission_bps=profile["commission_bps"], seed=seed, **engine_kwargs)
     engine.run()
     calendar = engine.session_calendar()
     return engine, calendar, scoring_terms(cfg, profile, dataset, calendar)
@@ -159,18 +161,20 @@ def variant_mean_returns(edge_bp: float, seed: int, *, n_sessions: int = 300) ->
 
 def run_campaign(edge_bp: float, seed: int, *, n_sessions: int = 300, b: int = B,
                  attribution: str = rt.ATTRIBUTION_CLOSING,
-                 profit_alpha: float | None = None) -> dict:
+                 profit_alpha: float | None = None, dataset_class=None,
+                 engine_kwargs: dict | None = None) -> dict:
     """One simulated campaign: five trials, their nulls, and the gate's two rules.
 
     With `profit_alpha`, Amendment 18's bound on the selected trial replaces rule (a).
     """
     cfg = load_config()
     profile = cfg["profiles"][PROFILE]
-    dataset = CryptoControlDataset(spec_for(edge_bp, seed, n_sessions))
+    dataset = (dataset_class or CryptoControlDataset)(spec_for(edge_bp, seed, n_sessions))
     samples, primaries, trades, gaps = [], [], [], []
     bounds = []
     for i, (stop, target) in enumerate(VARIANTS):
-        engine, calendar, terms = _run_variant(dataset, stop, target, cfg, profile, seed)
+        engine, calendar, terms = _run_variant(dataset, stop, target, cfg, profile, seed,
+                                               **(engine_kwargs or {}))
         result = score(engine.blotter, period=calendar,
                        min_exposed_fraction=cfg.get("campaign", {}).get("min_exposed_fraction"),
                        **terms)

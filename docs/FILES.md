@@ -505,6 +505,7 @@ What each test file pins.
 | `tests/test_txnsim.py` | Round turn trade Monte Carlo: blotter's `txnsim`, scored by the gate. |
 | `tests/test_viperq_amt.py` | The ViperQ-derived champion: the properties that would fail quietly. |
 | `tests/test_volume_profile.py` | Volume at price: VPOC, Value Area, Low Volume Nodes. |
+| `tests/test_worker_quotes.py` | A parallel worker must be able to read the amendment that unlocks quoted backtests. |
 | `tests/test_worker_tree.py` | Isolated working copies — Brian's point 4, the half that needs no new |
 | `tests/test_write_hypothesis.py` | A question in, a hypothesis out -- or a draft judged refined enough, or refined. |
 

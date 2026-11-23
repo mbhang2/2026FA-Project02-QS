@@ -355,7 +355,8 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
               null_samples: list | None = None, q: float | None = None,
               null_routes: list | None = None,
               exclude: set | None = None,
-              profitability: dict | None = None) -> dict:
+              profitability: dict | None = None,
+              risk_units: dict | None = None,) -> dict:
     """The correction over the campaign, and the uncorrected view beside it.
 
     `profitability` is Amendment 18's `{campaign_index: bound}`. When supplied, the
@@ -515,6 +516,20 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
                      if winner is not None else None)
             gate["profitability"] = bound
             gate["accept"] = bool(gate["reject"] and bound and bound.get("passes"))
+        if risk_units is not None:
+            # Amendment 21 rule f, on the trial the gate selected.
+            from ..scoring.randomization.round_turn import MIN_RISK_UNITS, UNIT_ZERO_CROSSING
+            selected = next((r for r in trials
+                             if r.get("campaign_index") not in exclude
+                             and (r.get("score") or {}).get("primary") == observed_best
+                             and not (r.get("score") or {}).get("rejected")), None)
+            count = (risk_units.get(str(selected.get("campaign_index")))
+                     if selected is not None else None)
+            gate["null_unit"] = UNIT_ZERO_CROSSING
+            gate["risk_units"] = count
+            gate["min_risk_units"] = MIN_RISK_UNITS
+            gate["accept"] = bool(gate["accept"] and count is not None
+                                  and count >= MIN_RISK_UNITS)
         gate["excluded_off_question"] = sorted(exclude)
         gate["floor_note"] = (
             "accept = reject AND observed_best > 0. The second term is not a "

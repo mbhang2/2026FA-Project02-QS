@@ -74,6 +74,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
+| `scripts/crypto_reversal_control.py` | Amendment 21's acceptance control: the gate on strategies that reverse directly. |
 | `scripts/detectability.py` | What size of edge could this gate have found? Power, from our own nulls. |
 | `scripts/gen_agent_data.py` | Generate the data reference the RESEARCH agent is handed. |
 | `scripts/gen_context_api.py` | Generate the context API reference the agent is handed. |
@@ -492,6 +493,7 @@ What each test file pins.
 | `tests/test_remote.py` | The strategy runs in its own process, and the boundary is faithful. |
 | `tests/test_research_session.py` | One research session: K campaigns, validation at the stop, then L2. |
 | `tests/test_retrieve.py` | The retrieval pipeline as one command, and the line it stops at. |
+| `tests/test_reversal_null.py` | Amendment 21: a reversal ends a crypto round turn. |
 | `tests/test_review_hypothesis.py` | The reviewer for the question itself — Amendment 11's sixth gate. |
 | `tests/test_review_strategy.py` | The code reviewer — Brian's point 2, third place: "code review between trials". |
 | `tests/test_round_turn_null.py` | The sign-flip null: the decomposition is exact, and the null is not profit. |

@@ -132,8 +132,9 @@ def load_config() -> dict:
 def _run_variant(dataset, stop: float, target: float, cfg: dict, profile: dict, seed: int,
                  **engine_kwargs):
     """One trial on the simulated market: the engine, its calendar and scoring terms."""
-    strategy = ReferenceStrategy(interval="1h", stop_atr=stop, target_atr=target,
-                                 exit_margin_ns=61 * 60 * NS_PER_SECOND)
+    strategy = engine_kwargs.pop("strategy", None) or ReferenceStrategy(
+        interval="1h", stop_atr=stop, target_atr=target,
+        exit_margin_ns=61 * 60 * NS_PER_SECOND)
     engine = Engine(dataset, strategy,
                     ticket=RunTicket.for_calibration("crypto gate control"),
                     split=Split.TRAIN,

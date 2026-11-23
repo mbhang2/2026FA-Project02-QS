@@ -881,6 +881,11 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
                      "Use 'round_turn_mc'.")
         agent_cfg["execution"] = execution
     agent_cfg["null_source"] = cc["null_source"]
+    # Amendment 21, frozen at registration. Absent means the flat-to-flat unit.
+    if cc["null_source"] == "round_turn_mc" and profile.get("scoring_units") == "notional":
+        import prereg as _prereg
+        if _prereg.in_force(21):
+            agent_cfg["null_unit"] = "zero_crossing"
     if cc["null_source"] == "txnsim":
         # Frozen at registration like the null itself: the two modes are
         # different nulls, and switching after seeing a result is the free
@@ -1473,6 +1478,8 @@ def stage_nulls(name: str) -> None:
     # Amendment 17: read from its status line, so it is off until it is signed.
     import prereg
     attribution = rt.attribution_for(profile, prereg.in_force(17))
+    null_unit = (_rec.agent_config or {}).get("null_unit", rt.UNIT_FLAT)
+    unit_counts: dict[str, int] = {}
     # Amendment 18, the same way: q / N, with N the campaign's registered trials.
     from src.core.scoring.profitability import applies, profitability_bound
     profit_on = applies(profile, prereg.in_force(18))
@@ -1632,14 +1639,16 @@ def stage_nulls(name: str) -> None:
         else:
             if attribution == rt.ATTRIBUTION_FILL:
                 ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution,
-                                                 **terms)
+                                                 unit=null_unit, **terms)
                 try:
                     rt.require_identity(score.get("primary"), score.get("metric"), ident,
                                         attribution)
                 except rt.NoFlipMismatch as exc:
                     raise SystemExit(f"{name} trial {i}: {exc}") from exc
             samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed,
-                                          attribution=attribution, **terms))
+                                          attribution=attribution, unit=null_unit, **terms))
+            if null_unit != rt.UNIT_FLAT:
+                unit_counts[str(i)] = rt.risk_units(blotter, calendar, null_unit)
         print(f"  {i + 1}/{len(rows)}  {len(samples[-1])} draws  "
               f"{time.monotonic() - t0:.0f}s", flush=True)
     # **The recorded source is the one that RAN.** This was hardcoded to
@@ -1652,6 +1661,9 @@ def stage_nulls(name: str) -> None:
                "spec": "docs/design/pre-registration.md section 3b"}
     if profit_on:
         payload["profitability"] = profitability
+    if null_unit != rt.UNIT_FLAT:
+        payload["null_unit"] = null_unit
+        payload["risk_units"] = unit_counts
     if tabled is not None:
         payload["b"] = max((len(v) for v in tabled.values()), default=0)
         payload["tables"] = sorted(
@@ -1842,7 +1854,9 @@ def stage_report(name: str) -> None:
     summary = summarise(result, dataset=record.dataset,
                         null_samples=samples, q=record.q,
                         exclude=excluded_trials(d, record.agent_config),
-                        profitability=profitability)
+                        profitability=profitability,
+                        risk_units=(nulls.get("risk_units", {})
+                                    if (record.agent_config or {}).get("null_unit") else None))
 
     # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
     # same route every other campaign's do rather than through this script.

@@ -868,6 +868,7 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
         notional_base=terms["notional_base"],
         idle_charge=idle_charge,
         funding=terms["funding"],
+        risk_unit_holding=_risk_unit_diagnostics(profile),
         fill_model_spread=(
             _fill_model_spread(cfg, profile, seed, strategy, split, engine)
             if profile.get("record_fill_spread")
@@ -878,6 +879,18 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     attach_fill_log(record, engine, ledger_path)
     attach_weights(record, engine, ledger_path)
     return record
+
+
+def _risk_unit_diagnostics(profile: dict) -> bool:
+    """Amendment 21 rule g, for notional profiles once it is signed."""
+    if profile.get("scoring_units", "points") != "notional":
+        return False
+    scripts = str(REPO_ROOT / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import prereg
+
+    return prereg.in_force(21)
 
 
 def _fill_model_spread(cfg, profile, seed, strategy, split, engine) -> float:

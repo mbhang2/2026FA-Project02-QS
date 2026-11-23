@@ -75,6 +75,9 @@ ENCODERS = {
     # Top of book, as `on_quote(ctx)` delivers it. A stream, unlike the options
     # cross-section above: one row per update.
     "QuoteEvent": "quote_row",
+    # Amendment 22: one visible row, pulled only by a strategy that reads it.
+    "BookSnapshot": "book_row",
+    "BookSnapshot | None": "book_row",
 }
 
 

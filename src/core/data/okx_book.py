@@ -39,6 +39,9 @@ CACHE_VERSION = 1
 _DAY_NS = 86_400 * NS_PER_SECOND
 _DATE = re.compile(r"(\d{4}-\d{2}-\d{2})\.(?:zip|npz)$")
 _INST = {"BTCUSDT": "BTC-USDT-SWAP", "ETHUSDT": "ETH-USDT-SWAP"}
+# Prices in the depth store are whole ticks, and a value that does not fit is refused.
+_PRICE_SCALE = {"BTCUSDT": 10, "ETHUSDT": 100}
+EMPTY_LEVEL = -1
 
 
 def session_bounds_utc(session: dt.date) -> tuple[Ts, Ts]:
@@ -56,6 +59,33 @@ def to_lots(quantity: np.ndarray, lot: float, what: str) -> np.ndarray:
     return lots.astype(np.int64)
 
 
+def encode_depth(prices: np.ndarray, lots: np.ndarray, scale: int) -> tuple[np.ndarray, np.ndarray]:
+    """Levels as 32-bit ticks and lots. Refuses anything it cannot reproduce exactly."""
+    values = np.asarray(prices, dtype=float)
+    raw = np.asarray(lots, dtype=np.int64)
+    empty = np.isnan(values)
+    if (raw[empty] != 0).any():
+        raise ValueError("an empty depth level has a size")
+    ticks = np.rint(np.where(empty, 0.0, values) * scale)
+    limit = np.iinfo(np.int32).max
+    if ticks.size and (ticks.min() < 0 or ticks.max() > limit):
+        raise ValueError("a depth price does not fit in 32-bit ticks")
+    narrow = ticks.astype(np.int32)
+    narrow[empty] = EMPTY_LEVEL
+    if not np.array_equal(decode_depth(narrow, scale), values, equal_nan=True):
+        raise ValueError(f"a depth price is not a whole number of 1/{scale} ticks")
+    if raw.size and (raw.min() < 0 or raw.max() > limit):
+        raise ValueError("a depth size does not fit in 32 bits")
+    return narrow, raw.astype(np.int32)
+
+
+def decode_depth(ticks: np.ndarray, scale: int) -> np.ndarray:
+    """Stored ticks as prices, with an empty level back to NaN."""
+    arr = np.asarray(ticks)
+    out = arr / scale
+    return np.where(arr == EMPTY_LEVEL, np.nan, out)
+
+
 @dataclass
 class OKXBookSpec:
     symbol: str = "BTCUSDT"
@@ -68,11 +98,13 @@ class OKXBookSpec:
 class SessionBook:
     """One session's best bid and offer. `levels` reads the full five on demand."""
 
-    __slots__ = ("ts", "bid", "ask", "bid_qty", "ask_qty", "_deep", "_deep_rows")
+    __slots__ = ("ts", "bid", "ask", "bid_qty", "ask_qty", "_deep", "_deep_rows", "_depth")
 
-    def __init__(self, ts, bid, ask, bid_qty, ask_qty, deep=None):
+    def __init__(self, ts, bid, ask, bid_qty, ask_qty, deep=None, depth=None):
         self.ts, self.bid, self.ask, self.bid_qty, self.ask_qty = ts, bid, ask, bid_qty, ask_qty
         self._deep = deep
+        # Levels 2 to 5, memory-mapped in 32-bit ticks and lots, when the store exists.
+        self._depth = depth
         self._deep_rows = None
 
     def row_at(self, ts: Ts) -> int:
@@ -81,6 +113,15 @@ class SessionBook:
 
     def levels(self, row: int, side: Side) -> tuple[np.ndarray, np.ndarray]:
         """(prices, lots) a taker on `side` would walk, best first."""
+        if self._depth is not None:
+            buy = side is Side.BUY
+            key = "ask" if buy else "bid"
+            top_px, top_lots = (self.ask[row], self.ask_qty[row]) if buy else (self.bid[row],
+                                                                               self.bid_qty[row])
+            rest_px = decode_depth(self._depth[f"{key}_px"][row], self._depth["scale"])
+            rest_lots = np.asarray(self._depth[f"{key}_lots"][row], dtype=np.int64)
+            return (np.concatenate(([float(top_px)], rest_px)),
+                    np.concatenate(([int(top_lots)], rest_lots)))
         if self._deep is None:
             return (np.array([self.ask[row] if side is Side.BUY else self.bid[row]]),
                     np.array([self.ask_qty[row] if side is Side.BUY else self.bid_qty[row]]))
@@ -344,9 +385,49 @@ class OKXBookDataset:
             return out
 
         book = SessionBook(arrays["ts"], arrays["bid"], arrays["ask"], arrays["bid_qty"],
-                           arrays["ask_qty"], deep=deep)
+                           arrays["ask_qty"], deep=deep, depth=self._load_depth(where))
         self._book_cache = (key, book)
         return book
+
+    def _load_depth(self, where: Path) -> dict | None:
+        if not (where / "depth.ok").exists():
+            return None
+        out = {name: np.load(where / f"depth_{name}.npy", mmap_mode="r")
+               for name in ("bid_px", "bid_lots", "ask_px", "ask_lots")}
+        out["scale"] = json.loads((where / "depth.ok").read_text())["scale"]
+        return out
+
+    def has_depth(self, session) -> bool:
+        return (self._book_dir(self._as_date(session)) / "depth.ok").exists()
+
+    def warm_depth(self, session) -> None:
+        """Store levels 2 to 5 exactly, so a read does not decode the day's quote file."""
+        d = self._as_date(session)
+        where = self._book_dir(d)
+        if not where.exists():
+            self._build_book(d, where)
+        if (where / "depth.ok").exists():
+            return
+        scale = _PRICE_SCALE[self.spec.symbol]
+        quotes = self._read_session_quotes(d)
+        rows = np.load(where / "rows.npy")
+        tmp = Path(tempfile.mkdtemp(dir=where, prefix="depth."))
+        try:
+            for side in ("bid", "ask"):
+                prices = quotes[f"{side}_px"][rows]
+                lots = to_lots(quotes[f"{side}_qty"][rows], self.spec.lot, f"{d} quotes")
+                if not np.array_equal(prices[:, 0], np.load(where / f"{side}.npy"), equal_nan=True):
+                    raise ValueError(f"{d}: the stored best {side} differs from the quote file")
+                px, qty = encode_depth(prices[:, 1:], lots[:, 1:], scale)
+                np.save(tmp / f"depth_{side}_px.npy", px)
+                np.save(tmp / f"depth_{side}_lots.npy", qty)
+            for name in ("bid_px", "bid_lots", "ask_px", "ask_lots"):
+                os.replace(tmp / f"depth_{name}.npy", where / f"depth_{name}.npy")
+            marker = tmp / "depth.ok"
+            marker.write_text(json.dumps({"scale": scale, "rows": int(rows.size)}))
+            os.replace(marker, where / "depth.ok")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def warm(self, session) -> None:
         d = self._as_date(session)

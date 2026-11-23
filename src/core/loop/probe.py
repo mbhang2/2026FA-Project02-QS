@@ -70,10 +70,14 @@ PROBE_PROFILES = {"plain": "agent", "fitted": "harness-fitted"}
 PROBE_PROFILES_BY_MARKET = {
     "nq": PROBE_PROFILES,
     "crypto": {"plain": "agent-crypto", "fitted": "harness-fitted-crypto"},
+    # Amendment 22: a proposal that reads `ctx.book()` needs a synthetic book.
+    "crypto-book": {"plain": "agent-crypto-book", "fitted": "harness-fitted-crypto-book"},
 }
 
 
 def _family(market: str) -> str:
+    if market.startswith("crypto-okx-book-"):
+        return "crypto-book"
     return "crypto" if market.startswith("crypto-") else "nq"
 
 # The last lines of a child traceback are the ones that name the fault. Bounded

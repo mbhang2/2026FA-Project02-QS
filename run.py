@@ -600,6 +600,15 @@ def main(argv: list[str] | None = None, *, latency_override_ns: int | None = Non
         if problem:
             sys.exit(f"refusing {profile_name!r}: {problem}. Nothing was run.")
 
+    if profile.get("book_features"):
+        scripts = str(REPO_ROOT / "scripts")
+        if scripts not in sys.path:
+            sys.path.insert(0, scripts)
+        import prereg
+
+        if not prereg.in_force(22):
+            sys.exit("Amendment 22 is not in force, so a strategy cannot read the book.")
+
     ledger_path = args.ledger or (REPO_ROOT / cfg.get("ledger", "runs/ledger.jsonl"))
 
     fill_model = profile["fill_model"]
@@ -687,6 +696,8 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
                 **({"commission_per_contract": profile["commission_per_contract"]}
                    if "commission_per_contract" in profile else {}),
                 commission_bps=profile.get("commission_bps", 0.0),
+                book_features=bool(profile.get("book_features")),
+                two_sided_book=_two_sided_book(profile),
                 **execution_terms(profile),
             )
             record = _run_and_score(cfg, profile, engine, strategy, split, seed,
@@ -881,6 +892,18 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     return record
 
 
+def _two_sided_book(profile: dict) -> bool:
+    """Amendment 23, on the book fill model once it is signed."""
+    if profile.get("fill_model") != "book-queue-pessimistic":
+        return False
+    scripts = str(REPO_ROOT / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import prereg
+
+    return prereg.in_force(23)
+
+
 def _risk_unit_diagnostics(profile: dict) -> bool:
     """Amendment 21 rule g, for notional profiles once it is signed."""
     if profile.get("scoring_units", "points") != "notional":
@@ -923,6 +946,8 @@ def _fill_model_spread(cfg, profile, seed, strategy, split, engine) -> float:
             fill_model=other,
             warmup_sessions=profile.get("warmup_sessions", 0),
             seed=seed,
+            book_features=bool(profile.get("book_features")),
+            two_sided_book=_two_sided_book(profile) and other == fill_model,
             **execution_terms(profile),
         )
         twin.run()
@@ -953,6 +978,10 @@ def _row(record: dict, trigger: str, profile: str, ledger_path: Path,
         "trigger": trigger,
         "purpose": purpose,
         "profile": profile,
+        **({"two_sided_book": True}
+           if _two_sided_book((load_config().get("profiles") or {}).get(profile, {})) else {}),
+        **({"book_features": True}
+           if (load_config().get("profiles") or {}).get(profile, {}).get("book_features") else {}),
         "strategy": named,
         "strategy_digest": digest,
         "strategy_source": store_source(ledger_path, digest, strategy_path),

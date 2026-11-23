@@ -71,6 +71,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/correction_fwer.py` | Measure FWER for the `max_of_n` variants, under the global null. |
 | `scripts/crypto_a18_control.py` | Amendment 18's acceptance control. Simulated data only. |
 | `scripts/crypto_book_control.py` | Amendment 20's acceptance control: the gate on a simulated order book. |
+| `scripts/crypto_book_signal_control.py` | Amendment 22's acceptance control: strategies that read a simulated order book. |
 | `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
@@ -103,6 +104,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/tabulate_profile_null.py` | Build the profile-indexed null and commit it. |
 | `scripts/warm_cache.py` | Populate the session cache in one process, before a parallel campaign. |
 | `scripts/warm_crypto_cache.py` | Populate the crypto session cache before a crypto run, in parallel. |
+| `scripts/warm_okx_depth.py` | Store OKX book levels 2 to 5 for train and validation, so reads need no decode. |
 | `scripts/worker_tree.py` | Isolated working copies, so trials can run in parallel without lying. |
 
 ## The proposer and the loop
@@ -414,6 +416,8 @@ What each test file pins.
 | `tests/test_amendment_18.py` | Amendment 18: a crypto pass must show profit after costs. No control arm runs here. |
 | `tests/test_amendment_19.py` | Amendment 19: execution latency and an overnight rule. Synthetic data only. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
+| `tests/test_book_campaign_ready.py` | A book-aware campaign can be told about the book, probed and read quickly. |
+| `tests/test_book_features.py` | Amendment 22: a strategy may read the book visible before its own millisecond. |
 | `tests/test_book_fills.py` | Amendment 20: fills against a real book, pinned on hand-built books. |
 | `tests/test_boundary.py` | Nothing mutable crosses the context boundary, and nothing resolves silently. |
 | `tests/test_bwis.py` | Source priors: the three things Gowtam's version got wrong, pinned. |
@@ -469,6 +473,7 @@ What each test file pins.
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
 | `tests/test_no_depth_counted_roots.py` | No tree outside `src/core/**` finds its root by counting directories. |
 | `tests/test_nq_adapter.py` | The NQ adapter, checked against what was already established about this data. |
+| `tests/test_one_sided_book.py` | Amendment 23: no fill is priced from a book with an empty best side. |
 | `tests/test_open_questions.py` | Questions we asked and could not answer — the third kind of context. |
 | `tests/test_options_as_an_asset.py` | Options as a tradeable asset: naming, filling, size, and settlement. |
 | `tests/test_options_spx_dynamic.py` | The moving SPX surface: a Heston path, and options priced from its state. |

@@ -23,6 +23,7 @@ ALLOWED_KEYS = {
     "dataset", "split", "use_quotes", "fill_model", "costs", "seed", "warmup_sessions",
     "wall_clock_budget_s", "latency_ns", "allow_overnight", "scoring_units",
     "idle_charge_fraction", "funding", "record_fill_spread", "action_cap", "history_window",
+    "book_features",
 }
 REQUIRED_KEYS = {"dataset", "split", "use_quotes", "costs"}
 
@@ -65,6 +66,8 @@ def compile_backtests(cfg: dict, path: Path | None = None) -> dict:
             if merged["fill_model"] == BOOK_FILL_MODEL:
                 raise BacktestConfigError(f"backtest {name!r}: {BOOK_FILL_MODEL} needs "
                                           "use_quotes: true")
+        if merged.get("book_features") and not merged["use_quotes"]:
+            raise BacktestConfigError(f"backtest {name!r}: book_features needs use_quotes: true")
         profiles[name] = merged
     return cfg
 

@@ -2585,3 +2585,115 @@ Each arm runs once, from a clean commit. If any arm fails, this amendment is **n
 - A null that flips execution cost, or a no-flip draw that no longer equals the score.
 
 Code: `src/core/scoring/randomization/round_turn.py`, `src/core/scoring/metrics.py`, `scripts/nq_campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py`, `scripts/crypto_reversal_control.py`.
+
+## Amendment 22 — 2026-11-22 — book-aware BTC strategies under an HFT fee tier
+
+**Status: IN FORCE from 2026-11-23, signed off by Michael.** Drafted 2026-11-22 by Claude on request and revised before signing. The code reads this line. No real strategy had read the book before it was signed. Its revised calibration ran once from commit `8776bf4` on seeds 610001 to 610100 and selected a 10 bp unprofitable edge and a 26 bp strong edge (`docs/reviews/crypto-a22/edges.json`). Its acceptance control then ran once from commit `27567fd`, before signing, and met all three conditions: 8 of 1,000 unprofitable campaigns passed, 0 of 400 noise campaigns, and 100 of 100 strong-edge campaigns (`~/crypto-controls/a22-revised/control.json`, SHA-256 `534a0f5ebeaeba27bdd58a68227e17bf0a554bbdb1aa3b02117db332bfd3a725`).
+
+### Why
+
+Under Amendment 20 the OKX book decides a strategy's fills, but the strategy cannot read it. An absorption or queue-imbalance idea therefore has to infer displayed liquidity from trades. Separately, the registered 5 bp maker and taker fees describe a retail account, while a professional crypto market participant can trade at a far lower tier.
+
+**Real results preceded this.** `btc-cvd-02` and `btc-absorption-01` failed under the 5 bp terms. Their costs and validation reads are known, so this amendment does not rescore them, and every campaign under it counts in the same validation family.
+
+### The book a strategy may read
+
+| | rule |
+|---|---|
+| a | A profile enables this with `book_features: true`, and a strategy asks for it during setup. Without both, the run and its digests are unchanged. |
+| b | During an existing trade or bar callback at time `t`, the strategy may read the top five bid and ask prices and displayed sizes. |
+| c | It sees the latest book row whose timestamp is **strictly before the millisecond containing `t`**. Rows in the same millisecond have no knowable order relative to `t`, so they are hidden. |
+| d | A book older than 1 second is reported as unavailable, matching Amendment 20 rule f. |
+| e | The view is read-only and holds one row. It exposes no later row, queue position, order identity or fill-model state. |
+| f | Reading the book raises no new callback. A strategy still acts only on the callbacks it had before. |
+
+### The registered execution terms
+
+| term | value |
+|---|---|
+| Maker fee | **0 bp** |
+| Taker fee | **2 bp** |
+| Slippage | 0, because the book walk already charges depth |
+| Latency | **1,000,000 ns (1 ms)** |
+| Overnight | allowed |
+| Fill model | `book-queue-pessimistic` |
+
+These apply only to two new profiles, `btc-okx-hft-train` and `btc-okx-hft-validation`, through a named BTCUSDT fee tier. **The existing `BTCUSDT` rates do not change.**
+
+The fee tier is an assumption about an account that can obtain it, supplied by Michael from prior crypto HFT experience. It was not measured from an OKX account. Any result under it must state that it is conditional on **0 bp maker, 2 bp taker and 1 ms latency**.
+
+The 1 ms latency is the finest value the OKX timestamps can distinguish. It does not represent a colocated system at hundreds of microseconds, and it cannot resolve races within a millisecond.
+
+### What it does NOT change
+
+Recorded campaigns, the score, costs of existing profiles, funding, the fill rules, splits, embargo, holdout lock, `B`, `q`, `max_of_n`, `max_of_m`, Amendment 18's bound, Amendment 21's risk units and the exposure floor. **This is not a market-making amendment.** It adds no quote-driven callback, inventory model or spread-capture null, and a strategy whose edge is earned spread is not validly judged by the current sign-flip gate.
+
+**Any BTC campaign validated on this split joins the declared family** with `btc-cvd-02` and `btc-absorption-01`, so the next one has `M = 3`.
+
+### Acceptance, before signing
+
+1. Tests pin rules a to f, including a callback in the same millisecond as a book row, a stale book, and a refused request on a profile without `book_features`.
+2. **A lookahead test:** replacing every book row after a callback's visible row with random values leaves that callback's orders unchanged.
+3. Existing real NQ, Binance and OKX runs reproduce their digests and scores.
+4. A control on a simulated book, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 1 ms latency, 0 bp maker, 2 bp taker, fill attribution and Amendment 21's units. Its five strategies read top-of-book imbalance at thresholds 0.2, 0.3, 0.4, 0.5 and 0.6, enter by market order, and exit to flat after one hour. On edge arms, displayed size leans toward the sign of the **last completed hourly window** on 70% of book rows. Each window ends one second before a clock hour, so the row visible at an hourly callback can use that window and no later price. On the noise arm the lean carries no information.
+
+   **Edges are fixed first, on calibration seeds 610001 to 610100, from the grid 0, 2, ..., 60 bp per hour.** The unprofitable edge is the largest whose five variants all have a 99% upper bound on mean net return below zero. The strong edge is the smallest at which all five average a per-session Sharpe of at least 0.30. If either does not exist, the control fails. The chosen edges are committed before any arm below runs.
+
+   | arm | seeds | campaigns | pass condition |
+   |---|---|---|---|
+   | unprofitable | 611001 to 612000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 612001 to 612400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge | 612401 to 612500 | 100 | **at least 80** pass the full gate |
+
+5. A test changes every simulated price after a chosen time and shows that every control book row before that time is unchanged.
+
+Each arm runs once, from a clean commit. If any arm fails, this amendment is **not signed**, and a revision needs new seeds and its own pre-registration.
+
+### The first calibration failed
+
+The first control calibration ran once from commit `58f0cc5` on seeds 600001 to 600100 and selected 0 bp and 20 bp (`~/crypto-controls/a22/calibration.json`, SHA-256 `a2635c2023d6d179624f075e4f17bd4c90f9eb2786d5ac250bd126986e5d5e43`). **It is invalid and no arm was drawn from it.** Its simulator built each lean from a 120-tick interval that was still unfinished at 96.9% of hourly callbacks, so displayed size carried future prices. The real `ctx.book()` view was not involved. The pass conditions are unchanged; the lean rule and every seed above were revised before any new control number existed.
+
+### What would invalidate this amendment
+
+- A strategy reading a book row at or after its callback's millisecond.
+- The fee tier, latency, visibility rule, grid, seeds or a pass condition changed after a control or real result is seen, without a new amendment.
+- A result under this tier reported without its fee and latency assumptions.
+- A BTC campaign validated on this split and left out of the declared family.
+- A market-making result claimed from this amendment's gate.
+
+Code: `src/core/costs.py`, `src/core/backtest_config.py`, `src/core/engine/engine.py`, `src/core/engine/context.py`, `src/core/engine/remote/adapter.py`, `config/costs.yaml`, `config/backtest.yaml`, `scripts/crypto_book_signal_control.py`.
+
+## Amendment 23 — 2026-11-23 — no book fill from a one-sided quote
+
+**Status: IN FORCE from 2026-11-23, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. No recorded fill used a one-sided row, and recorded campaigns are not rescored. Before signing, hand-built books pinned rules a to e, real NQ, Binance and OKX runs reproduced their digests and scores, and orders around the four real one-sided rows on 2023-11-09 produced no undefined mid under this rule.
+
+### Why
+
+OKX occasionally publishes a row with no best bid or no best ask. Amendment 20 records each fill's mid, and a mid from an empty side is undefined, so one such fill would corrupt that trial's cost and null. Across the 1,224 train and validation sessions, **4 of 3,042,876,559 book rows** have an empty best side, all on 2023-11-09. None of the 54,498 fills recorded by `btc-cvd-01`, `btc-cvd-02` and `btc-absorption-01` used one.
+
+### The rule, for runs on `book-queue-pessimistic` after signing
+
+| | rule |
+|---|---|
+| a | A taker order cannot fill when any row it would be priced from has an empty best bid or ask. It stays working and tries again at the next trade, priced from the book at that trade. |
+| b | A limit order is not placed on a one-sided row. It waits for the next trade. |
+| c | A resting limit cannot fill while the current row is one-sided. Its queue position still updates by Amendment 20's rules. |
+| d | The forced `allow_overnight: false` close uses the latest two-sided row in the session. With none, it fills at the last trade with no recorded mid, as Amendment 20 already does when no book can price it. |
+| e | A run under this rule records `two_sided_book: true`, and replay reads it from the row. |
+
+### What it does NOT change
+
+Any fill on a two-sided row, the walk through visible levels, queue rules, quote-age limit, fees, latency, score, null, gates, splits or holdout lock. Recorded campaigns are not rescored.
+
+### Acceptance, before signing
+
+1. Hand-built books pin rules a to e.
+2. Real NQ, Binance and OKX runs reproduce their digests and scores.
+3. A real OKX check on 2023-11-09 with orders around the one-sided rows produces no undefined mid.
+
+### What would invalidate this amendment
+
+- A recorded fill with an undefined mid under this rule.
+- A change to a fill on a two-sided row.
+
+Code: `src/core/engine/fills.py`, `src/core/engine/engine.py`, `run.py`, `scripts/replay.py`.

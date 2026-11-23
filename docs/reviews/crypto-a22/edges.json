@@ -1,0 +1,9 @@
+{
+  "amendment": 22,
+  "unprofitable_bp": 10.0,
+  "strong_bp": 26.0,
+  "calibration_commit": "8776bf4858699d690e20f33314c8b28672c631b0",
+  "calibration_seeds": "610001 to 610100",
+  "calibration_sha256": "0aaf592ed3327a29a5d1b19b21ca31e0c5c342f175e54126cc790b58448f9b5a",
+  "note": "Selected by Amendment 22's revised rule before any control arm was drawn. The earlier calibration on seeds 600001 to 600100 is invalid and was not used."
+}

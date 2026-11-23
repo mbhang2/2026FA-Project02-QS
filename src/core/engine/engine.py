@@ -47,6 +47,8 @@ from .context import (
 from ..data.columns import SessionColumns
 from ..data.dataset import Dataset
 from ..data.options import parse_option_asset
+from ..types import BookSnapshot  # Amendment 22
+from .fills import MAX_QUOTE_AGE_NS  # Amendment 22
 from .fills import FillModel, check_capabilities, get_fill_model
 from .reconstruct import FillLogFull, fill_commission, log_digest, reconstruct
 from ..runlog import RunNotAccounted, RunTicket
@@ -545,6 +547,10 @@ class Engine:
         # at each session's last trade. The defaults are the engine as it was.
         latency_ns: int = 0,
         allow_overnight: bool = True,
+        # Amendment 22: a profile may let its strategy read `ctx.book()`.
+        book_features: bool = False,
+        # Amendment 23: no book fill from a row with an empty best bid or ask.
+        two_sided_book: bool = False,
         # Paid on taker fills as a cost, in price points per contract and in basis
         # points of notional. Never moves a fill's price: see `src/core/costs.py`.
         slippage_per_contract: float = 0.0,
@@ -596,9 +602,14 @@ class Engine:
         self.maker_commission_per_contract = maker_commission_per_contract
         self.maker_commission_bps = maker_commission_bps
         self._no_new_orders = False
+        self.book_features = bool(book_features)
+        self._book_access = {"requested": False}
         self._book_fill = hasattr(self.model, "bind_book")
         if self._book_fill:
             self.model.bind_book(self.dataset.book_for)
+            self.model.require_two_sided = bool(two_sided_book)
+        elif two_sided_book:
+            raise ValueError("two_sided_book applies to the book fill model only")
         if self._custom_execution and (self.model.requires.has_quotes
                                        or dataset.capabilities().has_options):
             raise ValueError("latency_ns, slippage and allow_overnight=False support "
@@ -878,7 +889,36 @@ class Engine:
                             *sorted(x for x in states if x != DEFAULT_ASSET))
                 if states[a].position != 0),
             options_snapshot=self._options_snapshot_fn(),
+            book_snapshot=self._book_snapshot_fn(),
         )
+
+    def _book_snapshot_fn(self):
+        """`ctx.book()`: one row visible before this millisecond, or None."""
+        if not self.book_features:
+            return None
+        if not hasattr(self.dataset, "book_for"):
+            raise ValueError("book_features needs a dataset with a book")
+        book_for, access = self.dataset.book_for, self._book_access
+
+        def snapshot(ts: int, session: int):
+            if not access["requested"]:
+                raise ContextError('call ctx.subscribe("book") in setup() to read ctx.book()')
+            book = book_for(session)
+            before = ts - ts % 1_000_000
+            row = int(np.searchsorted(book.ts, before, side="left")) - 1
+            if row < 0 or ts - int(book.ts[row]) > MAX_QUOTE_AGE_NS:
+                return None
+            bid_px, bid_lots = book.levels(row, Side.SELL)
+            ask_px, ask_lots = book.levels(row, Side.BUY)
+            bids = [(float(p), int(q)) for p, q in zip(bid_px, bid_lots) if q > 0][:5]
+            asks = [(float(p), int(q)) for p, q in zip(ask_px, ask_lots) if q > 0][:5]
+            if not bids or not asks:
+                return None
+            return BookSnapshot(int(book.ts[row]), tuple(x[0] for x in bids),
+                                tuple(x[1] for x in bids), tuple(x[0] for x in asks),
+                                tuple(x[1] for x in asks))
+
+        return snapshot
 
     def _options_snapshot_fn(self):
         """A callable that answers with the surface, or None if there is none.
@@ -963,7 +1003,12 @@ class Engine:
             self.dataset.name, self.dataset.session_bounds, train
         )
         declared = self.strategy.setup(setup_ctx)
+        book_requested = setup_ctx._book_requested
         setup_ctx._expire()
+        if book_requested and not self.book_features:
+            raise ValueError('setup() asked for ctx.subscribe("book"), and this profile does '
+                             "not set book_features: true")
+        self._book_access["requested"] = book_requested
         subs = list(setup_ctx.subscriptions())
         if declared:
             # tolerate the pre-Task-5 shape rather than silently ignoring it

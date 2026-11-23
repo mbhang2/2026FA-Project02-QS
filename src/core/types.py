@@ -192,6 +192,17 @@ SUBSCRIPTION_KINDS = ("time", "tick", "quote")
 
 
 @dataclass(frozen=True, slots=True)
+class BookSnapshot:
+    """Amendment 22: the visible top of book, best level first. One row, read-only."""
+
+    ts: int
+    bid_prices: tuple[float, ...]
+    bid_sizes: tuple[int, ...]
+    ask_prices: tuple[float, ...]
+    ask_sizes: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class Subscription:
     """A request for data. `kind` is what lets a new aggregation slot in.
 

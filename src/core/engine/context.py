@@ -36,6 +36,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Sequence
 
+from ..types import BookSnapshot  # noqa: F401 -- Amendment 22
 from ..types import (
     DEFAULT_ASSET,
     NS_PER_SECOND,
@@ -146,6 +147,8 @@ class EnginePort:
     # None when the dataset has no options channel, so `ctx.options()` can say
     # so by name instead of raising an AttributeError from inside the engine.
     options_snapshot: Any = None
+    # None unless the run enabled Amendment 22's book view.
+    book_snapshot: Any = None
 
 
 class IntentQueue:
@@ -445,6 +448,19 @@ class BaseContext:
                 "run on a dataset that provides one -- the mismatch is meant to "
                 "be caught at wiring time, not worked around here.")
         return self._port.options_snapshot(self._ts, self._session)
+
+    def book(self) -> "BookSnapshot | None":
+        """The top five book levels visible now, or None if there is no fresh book.
+
+        Only on a profile with `book_features: true`, after `ctx.subscribe("book")` in
+        `setup()`. It holds the latest row strictly before this millisecond and no
+        later row. A book more than one second old is None.
+        """
+        self._check()
+        if self._port.book_snapshot is None:
+            raise ContextError("this run has no book view: its profile does not set "
+                               "book_features: true")
+        return self._port.book_snapshot(self._ts, self._session)
 
     def sub_id(self, sub: str | Subscription) -> str:
         """The canonical id of a subscription you declared.
@@ -886,7 +902,8 @@ class SetupContext:
     still gets them and still pays for them; one that does not pays nothing.
     """
 
-    __slots__ = ("_name", "_session_bounds", "_train_ticks", "_subs", "_active")
+    __slots__ = ("_name", "_session_bounds", "_train_ticks", "_subs", "_active",
+                 "_book_requested")
 
     def __init__(self, dataset_name: str, session_bounds, train_ticks):
         # The dataset's *name* and one bound accessor, not the dataset. It was
@@ -905,6 +922,7 @@ class SetupContext:
             materialised = tuple(train_ticks)
             self._train_ticks = lambda: iter(materialised)
         self._subs: list[Subscription] = []
+        self._book_requested = False
         self._active = True
 
     def _expire(self) -> None:
@@ -936,11 +954,18 @@ class SetupContext:
         wall-clock budget is what makes that an honest cost rather than a hidden
         one.
 
+        `ctx.subscribe("book")` allows `ctx.book()` on a profile with
+        `book_features: true`. It adds no callback.
+
         `ctx.subscribe("quote")` for every top-of-book update. Refused by the
         engine on a dataset that has no quotes, which the NQ adapter does not.
         """
         self._check()
         spelling = interval.strip().lower() if isinstance(interval, str) else ""
+        if spelling == "book":
+            # Amendment 22: permission to read `ctx.book()`. It raises no callback.
+            self._book_requested = True
+            return Subscription(kind="quote")
         if spelling in ("tick", "ticks"):
             sub = Subscription(kind="tick", emit_empty=emit_empty)
         elif spelling in ("quote", "quotes"):

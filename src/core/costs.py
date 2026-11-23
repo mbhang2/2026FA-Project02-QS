@@ -103,7 +103,8 @@ def apply_costs(cfg: dict, path: Path | None = None) -> dict:
             raise CostConfigError(f"profile {name!r} names costs {instrument!r} and also "
                                   f"states {inline}. Keep the rate in one place.")
         symbol = (cfg.get("datasets") or {}).get(profile.get("dataset"), {}).get("symbol")
-        if symbol is not None and symbol != instrument:
+        # `BTCUSDT@tier` is a named fee tier of BTCUSDT (Amendment 22).
+        if symbol is not None and symbol != instrument.split("@", 1)[0]:
             raise CostConfigError(f"profile {name!r} trades {symbol} and is priced as "
                                   f"{instrument}")
         profile.update(registry[instrument])

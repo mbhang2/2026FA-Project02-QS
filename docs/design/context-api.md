@@ -75,6 +75,9 @@ expensive -- hundreds of thousands of callbacks a session -- and the
 wall-clock budget is what makes that an honest cost rather than a hidden
 one.
 
+`ctx.subscribe("book")` allows `ctx.book()` on a profile with
+`book_features: true`. It adds no callback.
+
 `ctx.subscribe("quote")` for every top-of-book update. Refused by the
 engine on a dataset that has no quotes, which the NQ adapter does not.
 
@@ -167,6 +170,14 @@ which made `if ctx.assets_held(): return` -- the obvious way to write
 #### `ctx.average_entry_price_in(asset: 'str') -> 'float'`
 
 _(no docstring)_
+
+#### `ctx.book() -> "'BookSnapshot | None'"`
+
+The top five book levels visible now, or None if there is no fresh book.
+
+Only on a profile with `book_features: true`, after `ctx.subscribe("book")` in
+`setup()`. It holds the latest row strictly before this millisecond and no
+later row. A book more than one second old is None.
 
 #### `ctx.buy(size: 'int' = 1, **kw) -> 'int | None'`
 

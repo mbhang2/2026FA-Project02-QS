@@ -27,6 +27,12 @@ instruments:
     fee: {model: bps_notional, maker: 5.0, taker: 5.0}     # Amendment 16
     slippage: {model: bps_notional, rate: 0.0}
 
+  # Amendment 22. An assumed professional tier, not a measured OKX account.
+  BTCUSDT@hft-0-2:
+    asset_class: crypto
+    fee: {model: bps_notional, maker: 0.0, taker: 2.0}
+    slippage: {model: bps_notional, rate: 0.0}
+
   ETHUSDT:
     asset_class: crypto
     fee: {model: bps_notional, maker: 5.0, taker: 5.0}     # Amendment 16

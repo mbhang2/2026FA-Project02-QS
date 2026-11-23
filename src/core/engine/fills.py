@@ -313,6 +313,8 @@ class BookQueueFill:
         self._book_for = None
         self._resting: dict[int, _Resting] = {}
         self._rejected: dict[int, str] = {}
+        # Amendment 23. Off until signed, so earlier runs replay as they ran.
+        self.require_two_sided = False
 
     def bind_book(self, book_for) -> None:
         self._book_for = book_for
@@ -356,9 +358,16 @@ class BookQueueFill:
             at, row = tick.ts, self._fresh_row(book, tick.ts)
         if row is None:
             return None
-        # Every row sharing this millisecond, and the state just before them.
-        first = int(np.searchsorted(book.ts, at, side="left"))
-        rows = range(max(first - 1, 0), row + 1) if first <= row else (row,)
+        rows = self._taker_rows(book, at, row)
+        if self.require_two_sided and any(self._one_sided(book, r) for r in rows):
+            if at == tick.ts:
+                return None
+            at, row = tick.ts, self._fresh_row(book, tick.ts)
+            if row is None:
+                return None
+            rows = self._taker_rows(book, at, row)
+            if any(self._one_sided(book, r) for r in rows):
+                return None
         worst = None
         for r in rows:
             got = self._walk(book, r, order.side, order.remaining, limit)
@@ -377,6 +386,16 @@ class BookQueueFill:
             return None
         mid = (float(book.bid[worst[2]]) + float(book.ask[worst[2]])) / 2
         return Fill(price=worst[1], size=worst[0], liquidity="taker", mid=mid)
+
+    @staticmethod
+    def _taker_rows(book, at: Ts, row: int):
+        """Every row sharing this millisecond, and the state just before them."""
+        first = int(np.searchsorted(book.ts, at, side="left"))
+        return range(max(first - 1, 0), row + 1) if first <= row else (row,)
+
+    @staticmethod
+    def _one_sided(book, row: int) -> bool:
+        return math.isnan(float(book.bid[row])) or math.isnan(float(book.ask[row]))
 
     @staticmethod
     def _walk(book, row: int, side: Side, size: int, limit: float | None):
@@ -411,6 +430,9 @@ class BookQueueFill:
         """The forced overnight close, against the session's last visible book."""
         book = self._book_for(session)
         row = len(book.ts) - 1
+        if self.require_two_sided:
+            while row >= 0 and self._one_sided(book, row):
+                row -= 1
         got = self._walk(book, row, side, size, None) if row >= 0 else None
         if got is None:
             return Fill(price=last_price, size=size, liquidity="taker")
@@ -429,6 +451,12 @@ class BookQueueFill:
                 at, row = tick.ts, self._fresh_row(book, tick.ts)
             if row is None:
                 return None
+            if self.require_two_sided and self._one_sided(book, row):
+                if at == tick.ts:
+                    return None
+                at, row = tick.ts, self._fresh_row(book, tick.ts)
+                if row is None or self._one_sided(book, row):
+                    return None
             crosses = (limit >= float(book.ask[row]) - _PRICE_TOL if order.side is Side.BUY
                        else limit <= float(book.bid[row]) + _PRICE_TOL)
             self._resting[order.order_id] = _Resting(tick.session, row, self._place(order, book, row))
@@ -439,6 +467,8 @@ class BookQueueFill:
             state = self._resting[order.order_id]
         row = book.row_at(tick.ts)
         self._advance(state, order, tick.session, book, row)
+        if self.require_two_sided and (row < 0 or self._one_sided(book, row)):
+            return None
         mid = None if row < 0 else (float(book.bid[row]) + float(book.ask[row])) / 2
         through = (tick.price < limit - _PRICE_TOL if order.side is Side.BUY
                    else tick.price > limit + _PRICE_TOL)

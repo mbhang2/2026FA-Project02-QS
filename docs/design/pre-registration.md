@@ -2635,17 +2635,23 @@ Recorded campaigns, the score, costs of existing profiles, funding, the fill rul
 1. Tests pin rules a to f, including a callback in the same millisecond as a book row, a stale book, and a refused request on a profile without `book_features`.
 2. **A lookahead test:** replacing every book row after a callback's visible row with random values leaves that callback's orders unchanged.
 3. Existing real NQ, Binance and OKX runs reproduce their digests and scores.
-4. A control on a simulated book, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 1 ms latency, 0 bp maker, 2 bp taker, fill attribution and Amendment 21's units. Its five strategies read top-of-book imbalance at thresholds 0.2, 0.3, 0.4, 0.5 and 0.6, enter by market order, and exit to flat after one hour. On edge arms, displayed size leans toward the next hour's planted drift on 70% of book rows. On the noise arm it carries no information.
+4. A control on a simulated book, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 1 ms latency, 0 bp maker, 2 bp taker, fill attribution and Amendment 21's units. Its five strategies read top-of-book imbalance at thresholds 0.2, 0.3, 0.4, 0.5 and 0.6, enter by market order, and exit to flat after one hour. On edge arms, displayed size leans toward the sign of the **last completed hourly window** on 70% of book rows. Each window ends one second before a clock hour, so the row visible at an hourly callback can use that window and no later price. On the noise arm the lean carries no information.
 
-   **Edges are fixed first, on calibration seeds 600001 to 600100, from the grid 0, 2, ..., 60 bp per hour.** The unprofitable edge is the largest whose five variants all have a 99% upper bound on mean net return below zero. The strong edge is the smallest at which all five average a per-session Sharpe of at least 0.30. If either does not exist, the control fails. The chosen edges are committed before any arm below runs.
+   **Edges are fixed first, on calibration seeds 610001 to 610100, from the grid 0, 2, ..., 60 bp per hour.** The unprofitable edge is the largest whose five variants all have a 99% upper bound on mean net return below zero. The strong edge is the smallest at which all five average a per-session Sharpe of at least 0.30. If either does not exist, the control fails. The chosen edges are committed before any arm below runs.
 
    | arm | seeds | campaigns | pass condition |
    |---|---|---|---|
-   | unprofitable | 601001 to 602000 | 1,000 | **36 or fewer** pass the full gate |
-   | noise | 602001 to 602400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
-   | strong edge | 602401 to 602500 | 100 | **at least 80** pass the full gate |
+   | unprofitable | 611001 to 612000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 612001 to 612400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge | 612401 to 612500 | 100 | **at least 80** pass the full gate |
+
+5. A test changes every simulated price after a chosen time and shows that every control book row before that time is unchanged.
 
 Each arm runs once, from a clean commit. If any arm fails, this amendment is **not signed**, and a revision needs new seeds and its own pre-registration.
+
+### The first calibration failed
+
+The first control calibration ran once from commit `58f0cc5` on seeds 600001 to 600100 and selected 0 bp and 20 bp (`~/crypto-controls/a22/calibration.json`, SHA-256 `a2635c2023d6d179624f075e4f17bd4c90f9eb2786d5ac250bd126986e5d5e43`). **It is invalid and no arm was drawn from it.** Its simulator built each lean from a 120-tick interval that was still unfinished at 96.9% of hourly callbacks, so displayed size carried future prices. The real `ctx.book()` view was not involved. The pass conditions are unchanged; the lean rule and every seed above were revised before any new control number existed.
 
 ### What would invalidate this amendment
 

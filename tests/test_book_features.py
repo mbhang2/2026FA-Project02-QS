@@ -127,8 +127,40 @@ def _control():
 def test_the_control_constants_are_the_registered_ones():
     c = _control()
     assert c.THRESHOLDS == (0.2, 0.3, 0.4, 0.5, 0.6) and c.LEAN_ACCURACY == 0.70
-    assert (c.CALIBRATION_SEEDS[0], len(c.CALIBRATION_SEEDS)) == (600_001, 100)
-    assert (c.UNPROFITABLE_SEEDS[0], len(c.UNPROFITABLE_SEEDS)) == (601_001, 1_000)
-    assert (c.NOISE_SEEDS[0], len(c.NOISE_SEEDS)) == (602_001, 400)
-    assert (c.STRONG_SEEDS[0], len(c.STRONG_SEEDS)) == (602_401, 100)
+    assert (c.CALIBRATION_SEEDS[0], len(c.CALIBRATION_SEEDS)) == (610_001, 100)
+    assert (c.UNPROFITABLE_SEEDS[0], len(c.UNPROFITABLE_SEEDS)) == (611_001, 1_000)
+    assert (c.NOISE_SEEDS[0], len(c.NOISE_SEEDS)) == (612_001, 400)
+    assert (c.STRONG_SEEDS[0], len(c.STRONG_SEEDS)) == (612_401, 100)
     assert c.EDGE_GRID[-1] == 60.0 and c.LATENCY_NS == 1_000_000
+
+
+@pytest.mark.parametrize("edge", [0.0, 8.0])
+def test_control_book_rows_do_not_change_when_later_prices_do(edge):
+    from dataclasses import replace
+
+    c = _control()
+    dataset = c.SignalBookDataset(c.gate.spec_for(edge, 9501))
+    session = 4
+    ticks = list(dataset._session_ticks(session))
+    before = dataset.book_for(session)
+    cut = ticks[len(ticks) // 2].ts
+    changed = [replace(t, price=t.price + 500.0) if t.ts >= cut else t for t in ticks]
+    dataset._geometric[session] = changed
+    after = dataset.book_for(session)
+    visible = np.asarray(before.ts) < cut - 1_000_000
+    assert visible.sum() > 100
+    for name in ("ts", "bid", "ask", "bid_qty", "ask_qty"):
+        assert np.array_equal(np.asarray(getattr(before, name))[visible],
+                              np.asarray(getattr(after, name))[visible]), name
+
+
+def test_the_control_lean_uses_only_a_finished_window():
+    c = _control()
+    dataset = c.SignalBookDataset(c.gate.spec_for(8.0, 9502))
+    book_view = dataset.book_for(4)
+    start = dataset.session_bounds(4)[0]
+    closes = start + np.arange(1, 25) * c.HOUR_NS - c.WINDOW_LEAD_NS
+    ts = np.asarray(book_view.ts)
+    assert np.all(np.diff(ts) > 0)
+    assert np.searchsorted(closes, ts[0], side="right") == 0
+    assert c.WINDOW_LEAD_NS == 1_000_000_000

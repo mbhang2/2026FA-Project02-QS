@@ -40,44 +40,60 @@ THRESHOLDS = (0.2, 0.3, 0.4, 0.5, 0.6)
 ALPHA = gate.Q / len(THRESHOLDS)
 LEAN_ACCURACY = 0.70
 EDGE_GRID = tuple(float(x) for x in range(0, 62, 2))
-CALIBRATION_SEEDS = tuple(range(600_001, 600_101))
-UNPROFITABLE_SEEDS = tuple(range(601_001, 602_001))
-NOISE_SEEDS = tuple(range(602_001, 602_401))
-STRONG_SEEDS = tuple(range(602_401, 602_501))
+CALIBRATION_SEEDS = tuple(range(610_001, 610_101))
+UNPROFITABLE_SEEDS = tuple(range(611_001, 612_001))
+NOISE_SEEDS = tuple(range(612_001, 612_401))
+STRONG_SEEDS = tuple(range(612_401, 612_501))
+HOUR_NS = 3_600_000_000_000
+WINDOW_LEAD_NS = 1_000_000_000
 MIN_STRONG_SHARPE = 0.30
 EDGES_PATH = REPO / "docs" / "reviews" / "crypto-a22" / "edges.json"
-DEFAULT_DIR = pathlib.Path.home() / "crypto-controls" / "a22"
+DEFAULT_DIR = pathlib.Path.home() / "crypto-controls" / "a22-revised"
 
 
 class SignalBookDataset(book.BookControlDataset):
-    """Displayed size leans toward the next hour's planted drift on 70% of rows."""
+    """Displayed size leans toward the last completed hourly window on 70% of rows.
+
+    A window ends one second before a clock hour. A row uses only a window that had
+    ended by its own timestamp, so it cannot carry a later price.
+    """
 
     def book_for(self, session) -> SessionBook:
         session = int(session)
         ticks = self._session_ticks(session)
         px = np.array([t.price for t in ticks], dtype=float)
         ts = np.array([t.ts for t in ticks], dtype=np.int64)
-        k = self.spec.signal_interval_ticks
+        start, end = self.session_bounds(session)
         rng = np.random.default_rng([self.spec.seed, session, 22])
-        hours = np.arange(px.size) // k
-        direction = np.zeros(px.size)
-        for hour in np.unique(hours):
-            where = np.flatnonzero(hours == hour)
-            move = px[where[-1]] - px[where[0]]
-            direction[where] = (np.sign(move) if self.spec.signal_strength
-                                else rng.choice((-1.0, 1.0)))
-        direction[direction == 0] = 1.0
-        honest = rng.random(px.size) < LEAN_ACCURACY
-        signed = np.where(honest, direction, -direction) * rng.uniform(0.1, 0.9, px.size)
+        # One row 1 ms before each later trade, holding the previous trade's price, so a
+        # callback at a trade can read a fresh row strictly before its own millisecond.
+        source = np.empty(2 * px.size - 1, dtype=np.int64)
+        source[0], source[1::2], source[2::2] = 0, np.arange(px.size - 1), np.arange(1, px.size)
+        row_ts = np.empty(source.size, dtype=np.int64)
+        row_ts[0], row_ts[1::2], row_ts[2::2] = ts[0], ts[1:] - 1_000_000, ts[1:]
+
+        count = max(1, int((end - start) // HOUR_NS) + 2)
+        closes = start + np.arange(1, count + 1) * HOUR_NS - WINDOW_LEAD_NS
+        random_sign = rng.choice((-1.0, 1.0), size=count + 1)
+        by_window = random_sign.copy()
+        if self.spec.signal_strength:
+            last = np.searchsorted(ts, closes, side="right") - 1
+            first_price = px[0]
+            for j, tick in enumerate(last):
+                if tick < 0:
+                    continue
+                move = px[tick] - first_price
+                by_window[j + 1] = np.sign(move) if move else random_sign[j + 1]
+                first_price = px[tick]
+        completed = np.searchsorted(closes, row_ts, side="right")
+        direction = by_window[completed]
+
+        honest = rng.random(source.size) < LEAN_ACCURACY
+        signed = np.where(honest, direction, -direction) * rng.uniform(0.1, 0.9, source.size)
         bid = np.rint(book.DISPLAYED_LOTS * (1 + signed)).astype(np.int64)
         ask = np.rint(book.DISPLAYED_LOTS * (1 - signed)).astype(np.int64)
-        # A row 1 ms before each trade holds the previous row's book, so a callback at a
-        # trade can read a fresh row strictly before its own millisecond.
-        before = np.concatenate(([0], np.arange(px.size - 1)))
-        all_ts = np.column_stack((ts - 1_000_000, ts)).ravel()
-        order = np.column_stack((before, np.arange(px.size))).ravel()
-        return SessionBook(all_ts, px[order] - book.HALF_SPREAD, px[order] + book.HALF_SPREAD,
-                           bid[order], ask[order])
+        price = px[source]
+        return SessionBook(row_ts, price - book.HALF_SPREAD, price + book.HALF_SPREAD, bid, ask)
 
 
 class BookImbalanceStrategy:

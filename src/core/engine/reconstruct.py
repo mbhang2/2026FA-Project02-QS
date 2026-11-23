@@ -114,6 +114,8 @@ def reconstruct(
             position += signed
 
         book[0], book[1] = position, avg_price
+        execution_cost = (fill.side.sign * (fill.price - fill.mid) * fill.size
+                          if fill.mid is not None else 0.0)
         blotter.add(
             BlotterRow(
                 seq=fill.seq,
@@ -134,6 +136,7 @@ def reconstruct(
                 realized_pnl=realized,
                 tag=fill.tag,
                 asset=fill.asset,
+                execution_cost=execution_cost,
             )
         )
 

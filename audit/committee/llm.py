@@ -19,7 +19,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
+from contextvars import ContextVar
 from dataclasses import dataclass, field
+from pathlib import Path
 
 FENCE = re.compile(r"```(?:json)?\s*\n(.*?)```", re.DOTALL)
 
@@ -68,6 +71,33 @@ class ModelSubstituted(RuntimeError):
     the committee did not run, which is a CANNOT_TELL. A substituted model means
     the record would be false, which is not something to degrade gracefully past.
     """
+
+
+# The stage of the current call, per thread: a committee asks its seats concurrently.
+CALL_STAGE: ContextVar[str | None] = ContextVar("litellm_call_stage", default=None)
+
+
+def _tag_value(value) -> str | None:
+    text = re.sub(r"[^A-Za-z0-9_.:-]", "-", str(value))[:80]
+    return text or None
+
+
+def call_metadata(stage: str | None = None, *, trial: int | None = None,
+                  attempt: int | None = None) -> dict:
+    """LiteLLM request metadata: where this call sits, and nothing from its content.
+
+    Short identifiers only, so a gateway operator can group latency and spend by
+    campaign and stage. It never carries a prompt, a strategy, a score or a credential,
+    and it does not reach the model's messages.
+    """
+    script = Path(sys.argv[0]).stem if sys.argv and sys.argv[0] else ""
+    fields = {"project": "practicum",
+              "campaign": os.environ.get("PRACTICUM_LLM_CAMPAIGN"),
+              "stage": stage or script or "unknown",
+              "trial": trial, "attempt": attempt}
+    clean = {k: _tag_value(v) for k, v in fields.items() if v is not None}
+    clean = {k: v for k, v in clean.items() if v}
+    return {**clean, "tags": [f"{k}:{v}" for k, v in clean.items()]}
 
 
 @dataclass
@@ -121,6 +151,7 @@ class Client:
 
         body = {"model": self.model, "temperature": self.temperature,
                 "max_tokens": self.max_tokens, "cache": NO_CACHE,
+                "metadata": call_metadata(CALL_STAGE.get()),
                 "messages": [{"role": "system", "content": system},
                              {"role": "user", "content": user}]}
         if self.reasoning_effort:
@@ -307,7 +338,7 @@ def preflight(model: str) -> str:
     resp = requests.post(
         f"{c.base_url}/chat/completions",
         json={"model": model, "max_tokens": PREFLIGHT_MAX_TOKENS, "temperature": 0,
-              "cache": NO_CACHE,
+              "cache": NO_CACHE, "metadata": call_metadata("preflight"),
               "messages": [{"role": "user", "content": "reply with: ok"}]},
         headers={"Authorization": f"Bearer {os.environ['LITELLM_API_KEY']}"},
         timeout=60)

@@ -2459,3 +2459,129 @@ Every existing profile keeps the defaults, and its results must stay identical t
 - A train and validation pair run under different terms.
 
 Code: `src/core/engine/engine.py` (`latency_ns`, `allow_overnight`, `_flatten_at_close`), `src/core/costs.py`, `config/costs.yaml`, `src/core/engine/reconstruct.py` (`fill_commission`), `run.py` (`execution_terms`), `scripts/replay.py`, `scripts/nq_campaign.py`, `scripts/latency_sweep.py`.
+
+## Amendment 20 — 2026-11-22 — quoted backtests against the OKX book
+
+**Status: IN FORCE from 2026-11-22, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. No real OKX strategy had been scored before it was signed. Its acceptance control ran once from commit `59ab08c`, before signing, and met all three conditions: 2 of 1,000 unprofitable campaigns passed, 0 of 400 noise campaigns, and 100 of 100 strong-edge campaigns (`~/crypto-controls/a20/control.json`, SHA-256 `fa9158e6aa9a175a68926b70a9b960afcf3a877a519e90ef748ca1c61f61ff32`).
+
+### Why
+
+A trade-only fill cannot see the spread, the depth or a resting order's place in the queue, and those decide most high-frequency results. OKX is the one venue whose book we hold: top five levels for 1,403 BTC days.
+
+### The configuration
+
+`config/backtest.yaml` states each backtest and compiles to an ordinary profile. With `use_quotes: true`, a dataset with no book is refused when the file is read, and `run.py` refuses before the ledger if any required session has none. **It never falls back to trades.**
+
+### The data
+
+OKX trades with the OKX book, never one venue's trades against another's book. A session is a UTC day with an OKX quote file, cut from the two UTC+8 trade and kline files that cover it. `config/calendars/okx-book.yaml` keeps the Binance split dates and leaves out the 15 days OKX published no book: 14 in train and 2026-11-18 in the holdout. Sizes are whole lots of 0.0001 BTC, the finest step in the OKX files.
+
+### The fill model: `book-queue-pessimistic`
+
+| | rule |
+|---|---|
+| a | **Market orders, triggered stops and marketable limits** walk the visible levels at arrival, after Amendment 19's latency. Marketable limits stop at their limit. |
+| b | **An order larger than the five visible levels** is refused and does not partly fill. |
+| c | **A resting limit** joins behind the displayed size. Only aggressor trades at its price move it forward. **Cancels earn it nothing.** |
+| d | A trade **strictly through** a resting limit fills it at the limit. If the best moves away, the order rejoins at the back. |
+| e | **Rows sharing a millisecond** have no knowable order, so a taker gets the worst of them and the state just before them. |
+| f | **A quote more than 1 second old** cannot price a taker fill or fill a limit at the touch. Measured gaps reach 76 seconds in 2023. |
+| g | The `allow_overnight: false` close pays the last visible book. |
+
+The fill's liquidity sets its fee. Slippage stays at 0, because walking the book already charges it. Strategies do **not** read quotes under this amendment: the book affects their fills and not their signals.
+
+### The null
+
+A fill at the bid or ask has its spread inside its price, and the sign-flip null would turn that cost into a gain on half its draws. Each fill therefore records the book mid. The null flips only the mid-to-mid P&L and charges `side x (price - mid) x size` as a cost on every draw, so a maker's earned spread stays earned and a taker's paid spread stays paid. The no-flip draw still equals the score.
+
+### What it does NOT change
+
+Every existing profile, including Binance and NQ, which must reproduce their digests and scores. Also Amendments 16 to 19, the N and M gate, the splits' date boundaries, costs and the holdout lock. Fees stay at `costs: BTCUSDT`, 5 bp maker and taker, until a new amendment changes them.
+
+### Acceptance, before signing
+
+1. Hand-built books pin rules a to g.
+2. The event walk matches tick-by-tick stepping on a book with latency, cancels, modifications and brackets.
+3. Existing real NQ and Binance runs reproduce their digests and scores.
+4. `scripts/crypto_book_control.py`, on a simulated book with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 100 ms latency and fill attribution. Each arm runs once, from a clean commit:
+
+   | arm | seeds | campaigns | pass condition |
+   |---|---|---|---|
+   | unprofitable, 8 bp | 400001 to 401000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 401001 to 401400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge, 25 bp | 401401 to 401500 | 100 | **at least 80** pass the full gate |
+
+5. Real OKX sessions load and reconcile on a plumbing check that records no score.
+
+### What would invalidate this amendment
+
+- A quoted result that fell back to trades, or mixed venues.
+- A fill-model rule, the quote-age limit or the session list changed after a quoted trial is scored, without a new amendment.
+- A null that flips execution cost.
+
+Code: `config/backtest.yaml`, `src/core/backtest_config.py`, `src/core/data/okx_book.py`, `src/core/engine/fills.py` (`BookQueueFill`), `config/calendars/okx-book.yaml`.
+
+## Amendment 21 — 2026-11-22 — crypto: a reversal ends a round turn
+
+**Status: IN FORCE from 2026-11-22, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. It governs `scoring_units: notional` campaigns registered after signing, and no recorded campaign is rescored. Calibration on seeds 500001 to 500100 ran once from commit `4bb6727` and selected a 2 bp unprofitable edge and a 44 bp strong edge (`docs/reviews/crypto-a21/edges.json`). The acceptance control then ran once from commit `491d5cb`, before signing, and met all three conditions: 7 of 1,000 unprofitable campaigns passed, 3 of 400 noise campaigns, and 100 of 100 strong-edge campaigns (`~/crypto-controls/a21/control.json`, SHA-256 `5c33d1667b13ea194ccd4a3d1812f5985cc6d08dc93b6564010f844f06338285`).
+
+### Why
+
+The sign-flip null gives one random sign to each flat-to-flat excursion. A strategy that reverses directly from long to short never reaches flat, so a long run of separate decisions becomes one excursion.
+
+**A real result motivated this, and that is why it needs its own control.** In `btc-cvd-02`, the winner made 167 trades, but its train null had 4 distinct values in 10,000 draws and its validation null had 2. A validation p-value could not fall below about 0.5. The campaign's FAIL does not depend on this, because its Amendment 18 profit bound failed on train and validation. `btc-absorption-01` required flat exits, made no direct reversals, and is not affected.
+
+### What changes, for `scoring_units: notional` campaigns registered after signing
+
+| | rule |
+|---|---|
+| a | A **risk unit** ends when the position reaches zero **or crosses zero**. A crossing fill closes the old unit and opens the next one. |
+| b | On a crossing fill of size `s` that closes `c` lots and opens `o = s - c`, all realized P&L belongs to the old unit. Commission and execution cost are split `c / s` to the old unit and `o / s` to the new one. |
+| c | Each part stays in the session of its fill (Amendment 17). Only the mid-to-mid move flips, and execution cost is charged on every draw (Amendment 20). |
+| d | Each unit gets one independent sign. The no-flip draw must still equal the score within Amendment 17's tolerance. |
+| e | A final unit that never closes stays included, as Amendment 17 includes it. |
+| f | **A candidate with fewer than 30 risk units cannot pass L1 or L2.** The unit count is recorded for every trial. This limit is a judgement, set so a null has far more possible outcomes than the gate's smallest `alpha` requires. |
+
+The registered campaign record states `null_unit: zero_crossing`. A campaign without that field keeps the rule it was registered under.
+
+### Diagnostics, for the same campaigns
+
+These change what a reader or the committee sees. They do not enter the score, the null or a pass rule.
+
+| | rule |
+|---|---|
+| g | `avg_holding_period_ns` measures risk units. The flat-to-flat figure reported about 426 days for a strategy that reversed roughly every 6 days. |
+| h | The count of sessions containing a fill is labelled `sessions_with_fills`. It is reported beside `sessions_exposed`, which counts sessions with a held position and is what Amendment 6 reads. |
+| i | L2 and holdout output name the Amendment 18 profitability bound on notional profiles, instead of calling it "Sortino > 0". |
+
+### What it does NOT change
+
+Every `scoring_units: points` profile, including NQ, whose results must stay identical to the bit. Every recorded campaign, including `btc-cvd-01`, `btc-cvd-02` and `btc-absorption-01`, which **are not rescored or revalidated**. Also the score, costs, funding, fills, splits, embargo, holdout lock, `B`, `q`, `max_of_n`, `max_of_m`, the Amendment 18 bound and the exposure floor.
+
+**Validation has been read by two BTC campaigns.** Any later BTC campaign validated on this split belongs in one declared family with `btc-cvd-02` and `btc-absorption-01`, so the next one has `M = 3`.
+
+### Acceptance, before signing
+
+1. Tests pin rules a to f on hand-built blotters: a direct reversal, a partial close, a scale-in, a reversal across midnight, and an open final unit.
+2. A strategy that never crosses zero gets the **same null draws** under both unit rules.
+3. Existing real NQ and Binance runs reproduce their digests and scores.
+4. `scripts/crypto_reversal_control.py` runs on the simulated book of Amendment 20, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 100 ms latency and fill attribution. Its five strategies stay in the market and reverse directly on a signal checked every 1, 2, 4, 8 or 12 hours.
+
+   **Edges are fixed first, on calibration seeds 500001 to 500100, from the grid 0, 2, ..., 60 bp per hour.** The unprofitable edge is the largest whose five variants all have a 99% upper bound on mean net return below zero. The strong edge is the smallest at which all five average a per-session Sharpe of at least 0.30. If either does not exist, the control fails. The chosen edges are committed before any arm below runs.
+
+   | arm | seeds | campaigns | pass condition |
+   |---|---|---|---|
+   | unprofitable | 501001 to 502000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 502001 to 502400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge | 502401 to 502500 | 100 | **at least 80** pass the full gate |
+
+Each arm runs once, from a clean commit. If any arm fails, this amendment is **not signed**, and a revision needs new seeds and its own pre-registration.
+
+### What would invalidate this amendment
+
+- A recorded campaign rescored under this rule, or described as passing because of it.
+- The 30-unit limit, the grid, the seeds or a pass condition changed after a control number is seen, without a new amendment.
+- A BTC campaign validated on this split and left out of the declared family.
+- A null that flips execution cost, or a no-flip draw that no longer equals the score.
+
+Code: `src/core/scoring/randomization/round_turn.py`, `src/core/scoring/metrics.py`, `scripts/nq_campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py`, `scripts/crypto_reversal_control.py`.

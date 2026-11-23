@@ -48,6 +48,7 @@ import json
 import os
 import random
 import re
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -192,6 +193,17 @@ MAX_TRANSPORT_RETRIES = 5
 TRANSPORT_BACKOFF_S = (30, 120, 300, 600, 600)
 
 
+# Streaming: the limit is on silence, so a long reply that keeps arriving is not
+# cut off by an intermediary. `request_timeout_s` still bounds the whole call.
+STREAM_CONNECT_TIMEOUT_S = 30.0
+STREAM_IDLE_TIMEOUT_S = 120.0
+# Calls that fix a proposal rather than write one.
+REPAIR_KINDS = frozenset({"repair", "probe_repair", "judge_repair", "fidelity_repair"})
+REPAIR_FOCUS = ("Make the smallest change that resolves the problem above. Keep the "
+                "strategy's idea and all unrelated code as they are, and return the "
+                "whole file.")
+
+
 class LLMTransportError(RuntimeError):
     """The endpoint never answered, so there is no proposal to judge.
 
@@ -300,6 +312,29 @@ def _digest_source(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:16]
 
 
+def _tag_value(value) -> str | None:
+    text = re.sub(r"[^A-Za-z0-9_.:-]", "-", str(value))[:80]
+    return text or None
+
+
+def call_metadata(stage: str | None = None, *, trial: int | None = None,
+                  attempt: int | None = None) -> dict:
+    """LiteLLM request metadata: where this call sits, and nothing from its content.
+
+    Short identifiers only, so a gateway operator can group latency and spend by
+    campaign and stage. It never carries a prompt, a strategy, a score or a credential,
+    and it does not reach the model's messages.
+    """
+    script = Path(sys.argv[0]).stem if sys.argv and sys.argv[0] else ""
+    fields = {"project": "practicum",
+              "campaign": os.environ.get("PRACTICUM_LLM_CAMPAIGN"),
+              "stage": stage or script or "unknown",
+              "trial": trial, "attempt": attempt}
+    clean = {k: _tag_value(v) for k, v in fields.items() if v is not None}
+    clean = {k: v for k, v in clean.items() if v}
+    return {**clean, "tags": [f"{k}:{v}" for k, v in clean.items()]}
+
+
 @dataclass
 class LLMAgent:
     """`propose(history) -> str`. The same one method the stub implements.
@@ -367,6 +402,9 @@ class LLMAgent:
     probe_before_trial: bool = False
     probe: "Callable[[str], ProbeResult] | None" = None
     max_probe_repairs: int = 2
+    # Frozen at registration. None is every campaign before this field: repairs
+    # think at the model default and their prompts are unchanged.
+    repair_reasoning_effort: str | None = None
     # **What the question fixes, checked on the code before the trial runs**
     # (`src/core/loop/fidelity.py`). `None` is a campaign with no constraints
     # file, which behaves exactly as every campaign before it did. The policy
@@ -402,6 +440,10 @@ class LLMAgent:
     # for `drain_log` and from there `fidelity.jsonl`.
     _off_question: list = field(default_factory=list, init=False, repr=False)
     _perturb_report: dict = field(default_factory=dict, init=False, repr=False)
+    # Where the next call sits, for LiteLLM metadata. Never in the campaign record.
+    tag_trial: int | None = field(default=None, init=False, repr=False)
+    _tag_attempt: int = field(default=1, init=False, repr=False)
+    _effort_refused: bool = field(default=False, init=False, repr=False)
     _judgement: dict = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -473,6 +515,9 @@ class LLMAgent:
             }),
             "request_timeout_s": self.request_timeout_s,
             "proposal_wall_clock_s": self.proposal_wall_clock_s,
+            # Absent rather than null, so earlier records keep their exact shape.
+            **({"repair_reasoning_effort": self.repair_reasoning_effort}
+               if self.repair_reasoning_effort else {}),
         }
 
     # -- what the campaign reads back -------------------------------------- #
@@ -1005,6 +1050,7 @@ class LLMAgent:
         body = {"model": self.model,
                 "max_tokens": max(self.max_tokens, PREFLIGHT_FLOOR_TOKENS),
                 "temperature": 0, "cache": NO_CACHE,
+                "metadata": call_metadata("preflight"),
                 "messages": [{"role": "user", "content": "reply with: ok"}]}
         resp = requests.post(
             f"{self.base_url}/chat/completions", json=body,
@@ -1052,6 +1098,7 @@ class LLMAgent:
         """
         last: Exception | None = None
         for attempt in range(MAX_TRANSPORT_RETRIES + 1):
+            self._tag_attempt = attempt + 1
             try:
                 return self._one_attempt(prompt, kind)
             except LLMTransportError as exc:
@@ -1068,36 +1115,48 @@ class LLMAgent:
         import requests
 
         system, user = prompt.split("## USER", 1)
+        repairing = bool(self.repair_reasoning_effort) and kind in REPAIR_KINDS
+        focus = f"\n\n{REPAIR_FOCUS}" if repairing else ""
         body = {
             "model": self.model,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "cache": NO_CACHE,
+            "metadata": call_metadata(kind, trial=self.tag_trial, attempt=self._tag_attempt),
             "messages": [
                 {"role": "system", "content": system.split("## SYSTEM", 1)[-1].strip()},
-                {"role": "user", "content": user.strip()},
+                {"role": "user", "content": user.strip() + focus},
             ],
+            "stream": True,
+            "stream_options": {"include_usage": True},
         }
         if self.seed is not None:
             body["seed"] = self.seed
+        if repairing and not self._effort_refused:
+            body["reasoning_effort"] = self.repair_reasoning_effort
 
         t0 = time.monotonic()
         try:
             resp = requests.post(
                 f"{self.base_url}/chat/completions", json=body,
                 headers={"Authorization": f"Bearer {os.environ['LITELLM_API_KEY']}"},
-                timeout=self.request_timeout_s,
+                timeout=(STREAM_CONNECT_TIMEOUT_S, STREAM_IDLE_TIMEOUT_S),
+                stream=True,
             )
         except Exception as exc:
             self._pending.append(Call(kind, False, time.monotonic() - t0,
                                       error=f"{type(exc).__name__}: {exc}"[:300]))
             # requests raised: timeout, DNS, refused, reset. No reply exists.
             raise LLMTransportError(f"{type(exc).__name__}: {exc}") from None
-        latency = time.monotonic() - t0
 
         if resp.status_code != 200:
+            latency = time.monotonic() - t0
             self._pending.append(Call(kind, False, latency,
                                       error=f"HTTP {resp.status_code}"))
+            if (resp.status_code == 400 and "reasoning_effort" in body
+                    and "reasoning_effort" in resp.text):
+                self._effort_refused = True     # a parameter, never a verdict
+                return self._one_attempt(prompt, kind)
             # 429 and 5xx mean "ask again"; 400 and 401 mean "you are wrong",
             # and re-asking those just burns the budget on the same mistake.
             if resp.status_code == 429 or 500 <= resp.status_code < 600:
@@ -1105,7 +1164,19 @@ class LLMAgent:
                     f"HTTP {resp.status_code}: {resp.text[:200]}")
             raise LLMError(f"HTTP {resp.status_code}: {resp.text[:200]}")
         try:
-            payload = resp.json()
+            payload = _read_completion(resp, t0 + self.request_timeout_s)
+        except LLMTransportError as exc:
+            self._pending.append(Call(kind, False, time.monotonic() - t0,
+                                      error=str(exc)[:300]))
+            raise
+        except requests.RequestException as exc:
+            self._pending.append(Call(kind, False, time.monotonic() - t0,
+                                      error=f"{type(exc).__name__}: {exc}"[:300]))
+            raise LLMTransportError(f"{type(exc).__name__}: {exc}") from None
+        finally:
+            resp.close()
+        latency = time.monotonic() - t0
+        try:
             usage = payload.get("usage") or {}
             choice = payload["choices"][0]
             text = choice["message"]["content"] or ""
@@ -1115,6 +1186,14 @@ class LLMAgent:
             raise LLMError(f"unparseable response envelope: {exc}") from None
 
         served = str(payload.get("model") or "")
+        if served and not self._same_model(served) and "reasoning_effort" in body:
+            # The gateway reroutes a parameter a model cannot take to one that
+            # can (see audit/committee/llm.py). Ask once more without it; a
+            # second mismatch is a real substitution and stops the campaign.
+            self._pending.append(Call(kind, False, latency, model_served=served,
+                                      error="reasoning_effort rerouted the call"))
+            self._effort_refused = True
+            return self._one_attempt(prompt, kind)
         if served and not self._same_model(served):
             # Before anything else, including before the reply is parsed. A
             # substituted model is not a proposal that went wrong; it is the
@@ -1158,6 +1237,41 @@ class LLMAgent:
                 f"{call.completion_tokens} of max_tokens={self.max_tokens}")
         self._pending.append(call)
         return source
+
+
+def _read_completion(resp, deadline: float) -> dict:
+    """A streamed completion, as the envelope a non-streamed call returns.
+
+    A stream that stops before its finish reason is not a short reply. It is no
+    reply, so it is a transport failure and never reaches the parser as a file.
+    """
+    if "text/event-stream" not in str(resp.headers.get("content-type", "")):
+        return resp.json()
+    parts: list[str] = []
+    model, finish, usage = "", None, {}
+    for raw in resp.iter_lines():
+        if time.monotonic() > deadline:
+            raise LLMTransportError("the streamed reply passed its request timeout")
+        if not raw or not raw.startswith(b"data:"):
+            continue
+        data = raw[5:].strip()
+        if data == b"[DONE]":
+            break
+        try:
+            chunk = json.loads(data)
+        except ValueError:
+            raise LLMTransportError("unparseable chunk in the stream") from None
+        if chunk.get("error"):
+            raise LLMTransportError(f"error in the stream: {str(chunk['error'])[:200]}")
+        model = chunk.get("model") or model
+        usage = chunk.get("usage") or usage
+        for choice in chunk.get("choices") or []:
+            parts.append((choice.get("delta") or {}).get("content") or "")
+            finish = choice.get("finish_reason") or finish
+    if finish is None:
+        raise LLMTransportError("the stream ended before a finish reason")
+    return {"model": model, "usage": usage,
+            "choices": [{"message": {"content": "".join(parts)}, "finish_reason": finish}]}
 
 
 def extract_source(text: str) -> str | None:

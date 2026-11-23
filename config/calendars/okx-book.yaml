@@ -1,0 +1,39 @@
+# Pre-registered split for OKX trades with the OKX book (Amendment 20).
+#
+# THE PRE-REGISTRATION DATE IS THE COMMIT DATE OF THIS FILE.
+#
+# The same date boundaries as crypto-trades.yaml, so an OKX result covers the same
+# market periods as a Binance one. A session is a UTC day with an OKX quote file. OKX did
+# not publish a book for 15 days, and they are not sessions here:
+#
+#   train    2023-02-16, 02-20, 02-23, 02-25, 02-26, 02-27, 03-03, 03-04, 03-05, 03-06,
+#            03-07, 05-26, 08-27, 10-15
+#   holdout  2026-11-18
+#
+# They were excluded because the file is missing, before any OKX strategy was scored.
+# Counts: train 960, validation 263, holdout 160.
+
+dataset: okx-book
+
+embargo_sessions: 10
+
+splits:
+
+  train:
+    start: 2023-01-01
+    end: 2025-08-31
+    reason: >
+      The dates of the Binance train split, less the days OKX published no book.
+
+  validation:
+    start: 2025-09-11
+    end: 2026-05-31
+    reason: >
+      The dates of the Binance validation split. OKX published a book for every day.
+
+  holdout:
+    start: 2026-06-11
+    end: 2026-11-18
+    reason: >
+      The dates of the Binance holdout, less 2026-11-18. Opened once, by deliberate
+      unlock, through scripts/holdout.py.

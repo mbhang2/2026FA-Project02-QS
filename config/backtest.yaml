@@ -1,0 +1,33 @@
+# What each backtest uses. Every entry becomes a profile `run.py --profile <name>` can run.
+#
+# use_quotes: true   fills against the venue's real book. If the dataset has no quote
+#                    data, the backtest is refused and nothing runs. It never falls back.
+# use_quotes: false  fills from trades only.
+#
+# THESE ARE PRE-REGISTERED EVALUATION CONDITIONS. This file is fingerprinted into every
+# ledger row, and quoted backtests run only while Amendment 20 is in force.
+
+defaults:
+  seed: 1
+  warmup_sessions: 1
+  wall_clock_budget_s: 7200
+  scoring_units: notional
+  idle_charge_fraction: 1.2e-5
+  funding: true
+  record_fill_spread: false
+  latency_ns: 100000000      # 100 ms. Whole nanoseconds; crypto minimum is 1 ms
+  allow_overnight: true
+
+backtests:
+
+  btc-okx-book-train:
+    dataset: crypto-btc-okx-book
+    split: train
+    use_quotes: true
+    costs: BTCUSDT
+
+  btc-okx-book-validation:
+    dataset: crypto-btc-okx-book
+    split: validation
+    use_quotes: true
+    costs: BTCUSDT

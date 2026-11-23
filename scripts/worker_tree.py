@@ -62,7 +62,9 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 WORKERS_DIR = ROOT / ".scratch" / "workers"
 
 # Copied per worker. Small, and every one of them can change a result.
-COPY = ("run.py", "pyproject.toml", "src", "config")
+# The last two are how `run.py` reads whether a quoted backtest's amendment is signed.
+COPY = ("run.py", "pyproject.toml", "src", "config", "scripts/prereg.py",
+        "docs/design/pre-registration.md")
 # Linked, shared, read-only to a trial. `data` is the 1.1 GiB one.
 LINK = ("data", "audit", "alternatives", "loop", "research", "agent-patterns")
 # Created empty and writable per worker.
@@ -89,6 +91,7 @@ def create(n: int, *, quiet: bool = False) -> list[pathlib.Path]:
                 shutil.copytree(src, w / name,
                                 ignore=shutil.ignore_patterns("__pycache__"))
             else:
+                (w / name).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, w / name)
         for name in LINK:
             src = ROOT / name

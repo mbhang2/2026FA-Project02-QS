@@ -70,9 +70,11 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/committee_retry.py` | Re-run the committee seats that never ran, beside the record and never over it. |
 | `scripts/correction_fwer.py` | Measure FWER for the `max_of_n` variants, under the global null. |
 | `scripts/crypto_a18_control.py` | Amendment 18's acceptance control. Simulated data only. |
+| `scripts/crypto_book_control.py` | Amendment 20's acceptance control: the gate on a simulated order book. |
 | `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
+| `scripts/crypto_reversal_control.py` | Amendment 21's acceptance control: the gate on strategies that reverse directly. |
 | `scripts/detectability.py` | What size of edge could this gate have found? Power, from our own nulls. |
 | `scripts/gen_agent_data.py` | Generate the data reference the RESEARCH agent is handed. |
 | `scripts/gen_context_api.py` | Generate the context API reference the agent is handed. |
@@ -181,6 +183,7 @@ Datasets, calendars, and where the split is enforced.
 | `src/core/data/dataset.py` | The `Dataset` protocol and the split machinery that enforces pre-registration. |
 | `src/core/data/dbn.py` | Reading Databento DBN objects, in one place. |
 | `src/core/data/nq.py` | NQ futures trades, behind the `Dataset` interface. The first real adapter. |
+| `src/core/data/okx_book.py` | OKX BTC or ETH perpetual: trades and the top-of-book, from one venue (Amendment 20). |
 | `src/core/data/options.py` | A synthetic options surface, arbitrage-free by construction, with an |
 | `src/core/data/options_spx.py` | An SPX options surface from a calibrated Heston model, arbitrage-free by |
 | `src/core/data/synthetic.py` | A tick generator with a switch for how much signal is in it. |
@@ -204,6 +207,7 @@ Types, the run log, features and checks.
 |---|---|
 | `src/core/__init__.py` | package marker |
 | `src/core/_roots.py` | Where the repository is, for the harness. A marker, never a directory count. |
+| `src/core/backtest_config.py` | `config/backtest.yaml`: what a backtest uses, compiled to an ordinary profile. |
 | `src/core/checks/__init__.py` | Static analysis of the agent's file. Nothing here executes strategy code. |
 | `src/core/checks/static.py` | Does the agent's file look like a strategy? Answered without running it. |
 | `src/core/checks/typecheck.py` | Type-check the agent's file against `src.core.types.Strategy`. |
@@ -291,6 +295,7 @@ Profiles, the correction, and house limits.
 | `config/bwis-priors.json` | data (JSON) |
 | `config/calendars/crypto-trades.yaml` | Pre-registered train / validation / holdout split for the crypto trades dataset |
 | `config/calendars/nq-trades.yaml` | Pre-registered train / validation / holdout split for the NQ trades dataset. |
+| `config/calendars/okx-book.yaml` | Pre-registered split for OKX trades with the OKX book (Amendment 20). |
 | `config/corrections.yaml` | Historical corrections record. |
 | `config/house-constraints.yaml` | House constraints: the operating limits this desk usually fixes, added to a |
 | `config/run.yaml` | Run configuration. Immutable, for the same reason the scorer is. |
@@ -409,6 +414,7 @@ What each test file pins.
 | `tests/test_amendment_18.py` | Amendment 18: a crypto pass must show profit after costs. No control arm runs here. |
 | `tests/test_amendment_19.py` | Amendment 19: execution latency and an overnight rule. Synthetic data only. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
+| `tests/test_book_fills.py` | Amendment 20: fills against a real book, pinned on hand-built books. |
 | `tests/test_boundary.py` | Nothing mutable crosses the context boundary, and nothing resolves silently. |
 | `tests/test_bwis.py` | Source priors: the three things Gowtam's version got wrong, pinned. |
 | `tests/test_calibration_null.py` | The empirical null, the reference strategy and the downside guard. |
@@ -452,10 +458,13 @@ What each test file pins.
 | `tests/test_ledger_integrity.py` | The ledger as an artifact with its own integrity requirements. |
 | `tests/test_live_bucket.py` | The same guarantees, checked against the live bucket instead of the manifest. |
 | `tests/test_llm_agent.py` | The proposing agent, offline. No network is touched by anything in here. |
+| `tests/test_llm_metadata.py` | LiteLLM metadata says where a call sits and carries nothing from its content. |
+| `tests/test_llm_streaming.py` | Streamed proposer calls, cheap repairs, and a probe that runs the proposal. |
 | `tests/test_loop.py` | The loop: trial driver, campaign runner, and the correction over the ledger. |
 | `tests/test_market_facts.py` | Every agent is told the market its campaign trades, and NQ is told what it always was. |
 | `tests/test_max_of_m.py` | The L2 gate: the best of M campaign winners, on validation. |
 | `tests/test_metrics.py` | Property tests for the scoring metric. |
+| `tests/test_missing_tabulated_null.py` | A dataset with no tabulated null loses a diagnostic and keeps its gate. |
 | `tests/test_model_options.py` | Every agent part's model can be chosen, reaches its own call, and is recorded. |
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
 | `tests/test_no_depth_counted_roots.py` | No tree outside `src/core/**` finds its root by counting directories. |
@@ -484,6 +493,7 @@ What each test file pins.
 | `tests/test_remote.py` | The strategy runs in its own process, and the boundary is faithful. |
 | `tests/test_research_session.py` | One research session: K campaigns, validation at the stop, then L2. |
 | `tests/test_retrieve.py` | The retrieval pipeline as one command, and the line it stops at. |
+| `tests/test_reversal_null.py` | Amendment 21: a reversal ends a crypto round turn. |
 | `tests/test_review_hypothesis.py` | The reviewer for the question itself — Amendment 11's sixth gate. |
 | `tests/test_review_strategy.py` | The code reviewer — Brian's point 2, third place: "code review between trials". |
 | `tests/test_round_turn_null.py` | The sign-flip null: the decomposition is exact, and the null is not profit. |
@@ -498,6 +508,7 @@ What each test file pins.
 | `tests/test_txnsim.py` | Round turn trade Monte Carlo: blotter's `txnsim`, scored by the gate. |
 | `tests/test_viperq_amt.py` | The ViperQ-derived champion: the properties that would fail quietly. |
 | `tests/test_volume_profile.py` | Volume at price: VPOC, Value Area, Low Volume Nodes. |
+| `tests/test_worker_quotes.py` | A parallel worker must be able to read the amendment that unlocks quoted backtests. |
 | `tests/test_worker_tree.py` | Isolated working copies — Brian's point 4, the half that needs no new |
 | `tests/test_write_hypothesis.py` | A question in, a hypothesis out -- or a draft judged refined enough, or refined. |
 
@@ -507,6 +518,7 @@ What each test file pins.
 |---|---|
 | `.github/workflows/tests.yml` | The agent may only ever change src/strategies/**. Tool permissions are |
 | `README.md` | 2026FA-Project02-2-QS — AutoResearch for Quantitative Finance |
+| `config/backtest.yaml` | What each backtest uses. Every entry becomes a profile `run.py --profile <name>` can run. |
 | `config/costs.yaml` | What each instrument costs to trade. A profile names its instrument with |
 | `config/datasets/crypto.yaml` | Crypto perpetuals: which public archives scripts/crypto_fetch.py pulls, and from when. |
 | `data/crypto-manifest.json` | data (JSON) |

@@ -534,6 +534,7 @@ def main() -> int:
                          "problems (scripts/retrieve.py: fetch, screen, rank). "
                          "Network calls and two model passes; off by default")
     a = ap.parse_args()
+    _os.environ["PRACTICUM_LLM_CAMPAIGN"] = a.campaign   # LiteLLM metadata only
     global REVIEWER_MODEL
     REVIEWER_MODEL = a.reviewer_model
 

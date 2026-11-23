@@ -230,7 +230,7 @@ def run_once(champ: dict, *, profile: str, reason: str | None,
     return row
 
 
-def holdout_null(row: dict, profile_name: str) -> list[float]:
+def holdout_null(row: dict, profile_name: str, null_unit: str = "flat") -> list[float]:
     """The champion's own sign-flip null, on the holdout sessions.
 
     Amendment 9 rule (ii). Built the way every other null in this project is:
@@ -248,9 +248,10 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
     from src.core.types import Split
     import run as runner
     import yaml
-    from src.core.costs import apply_costs, row_cost_terms
+    from src.core.backtest_config import prepare_config
+    from src.core.costs import row_cost_terms
 
-    cfg = apply_costs(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
+    cfg = prepare_config(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
     profile = cfg["profiles"][profile_name]
     fills = load_fill_log(row)
     if not fills:
@@ -273,10 +274,13 @@ def holdout_null(row: dict, profile_name: str) -> list[float]:
     turns = rt.round_turns(blotter, calendar)
     # Amendment 17: read from its status line, so it is off until it is signed.
     attribution = rt.attribution_for(profile, prereg.in_force(17))
-    ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution, **terms)
+    ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution,
+                                     unit=null_unit, **terms)
     sample = rt.null_sample(blotter, calendar, b=B_NULL, seed=73_073,
-                            attribution=attribution, **terms)
-    facts = {"round_turns": len(turns),
+                            attribution=attribution, unit=null_unit, **terms)
+    # Amendment 21: the support of the null is its risk units.
+    facts = {"round_turns": (len(turns) if null_unit == rt.UNIT_FLAT
+                             else rt.risk_units(blotter, calendar, null_unit)),
              "identity_primary": ident.primary,
              "identity_metric": ident.metric,
              "identity_tolerance": rt.IDENTITY_TOLERANCE[attribution]}
@@ -474,14 +478,19 @@ def main() -> int:
               f"The look is now spent\n  whatever happens next.")
 
     row = run_once(champ, profile=profile, reason=reason, ledger=ledger)
-    null, facts = holdout_null(row, profile)
+    record_path = CAMPAIGNS / campaign / "campaign.json"
+    registered = (json.loads(record_path.read_text()).get("record") or {}
+                  if record_path.exists() else {})
+    null, facts = holdout_null(row, profile,
+                               (registered.get("agent_config") or {}).get("null_unit", "flat"))
     verdict = judge(row, null, facts)
 
     print(f"\n  score            {(row.get('score') or {}).get('primary')}")
     print(f"  round turns      {verdict['round_turns']} "
           f"(rule (ii) needs {verdict['min_round_turns']})")
     print(f"  null draws       {len(null)}")
-    print(f"  rule (i)  Sortino > 0     {verdict['rule_i_sortino_positive']}")
+    rule_i_name = "profit bound" if facts.get("profitability") else "Sortino > 0"
+    print(f"  rule (i)  {rule_i_name:13} {verdict['rule_i_sortino_positive']}")
     if verdict["rule_ii_evaluable"]:
         print(f"  rule (ii) p <= {Q}        {verdict['rule_ii_reject']}  "
               f"(p = {verdict['rule_ii_p']})")

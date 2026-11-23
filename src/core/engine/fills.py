@@ -11,7 +11,10 @@ where its edge comes from.
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from typing import Protocol
+
+import numpy as np
 
 from ..types import (
     DataCapabilities,
@@ -21,6 +24,7 @@ from ..types import (
     Quote,
     Side,
     Tick,
+    Ts,
 )
 
 TRADES_ONLY = DataCapabilities(has_trades=True, has_quotes=False, has_book=False)
@@ -273,11 +277,229 @@ class QueueProrataFill(_QueueFill):
     credit_cancels = True
 
 
+# Amendment 20. A quote older than this cannot price a fill or place a queue.
+MAX_QUOTE_AGE_NS = 1_000_000_000
+BOOK_AND_TRADES = DataCapabilities(has_trades=True, has_quotes=False, has_book=True)
+
+
+@dataclass(slots=True)
+class _Resting:
+    """Where a resting limit stands in the book, as of `row` in `session`."""
+
+    session: int
+    row: int
+    queue: float | None
+
+
+class BookQueueFill:
+    """Fills against one venue's real book, on the fast trade-driven walk (Amendment 20).
+
+    * **Taker** orders (market, triggered stop, marketable limit) walk the visible
+      levels at their arrival. An order larger than the five visible levels is refused.
+    * **A resting limit** joins behind the displayed size. Only aggressor trades at its
+      price move it forward, and cancels earn it nothing. A trade strictly through it
+      fills it at the limit. If the best moves away, it rejoins at the back.
+    * **Rows sharing a millisecond** have no knowable order, so a taker gets the worst.
+    * **A quote older than `MAX_QUOTE_AGE_NS`** cannot price a taker or fill at the touch.
+
+    Each fill records the mid, so the sign-flip null flips the mid-to-mid move and
+    re-charges the spread and depth paid instead of turning them into a gain.
+    """
+
+    name = "book-queue-pessimistic"
+    requires = BOOK_AND_TRADES
+
+    def __init__(self) -> None:
+        self._book_for = None
+        self._resting: dict[int, _Resting] = {}
+        self._rejected: dict[int, str] = {}
+
+    def bind_book(self, book_for) -> None:
+        self._book_for = book_for
+
+    def needs_step(self, order: Order) -> bool:
+        """A limit must be placed against the book at its first eligible tick."""
+        if order.order_type is OrderType.STOP_LIMIT and not order.stop_armed:
+            return False
+        return (order.order_type in (OrderType.LIMIT, OrderType.STOP_LIMIT)
+                and order.order_id not in self._resting)
+
+    def take_rejection(self, order_id: int) -> str | None:
+        return self._rejected.pop(order_id, None)
+
+    def resolve(self, order: Order, tick: Tick) -> Fill | None:
+        book = self._book_for(tick.session)
+        if order.order_type is OrderType.MARKET:
+            return self._take(order, tick, book, order.eligible_from_ts or tick.ts, None)
+        if order.order_type is OrderType.STOP:
+            if _stop_triggered(order, tick.price, strict=True):
+                return self._take(order, tick, book, tick.ts, None)
+            return None
+        if order.order_type is OrderType.STOP_LIMIT and not order.stop_armed:
+            if _stop_triggered(order, tick.price, strict=True):
+                order.stop_armed = True
+            return None
+        if order.order_type in (OrderType.LIMIT, OrderType.STOP_LIMIT):
+            return self._limit(order, tick, book)
+        raise NotImplementedError(f"unhandled order type {order.order_type}")
+
+    @staticmethod
+    def _fresh_row(book, ts: Ts) -> int | None:
+        row = book.row_at(ts)
+        if row < 0 or ts - int(book.ts[row]) > MAX_QUOTE_AGE_NS:
+            return None
+        return row
+
+    def _take(self, order: Order, tick: Tick, book, at: Ts, limit: float | None) -> Fill | None:
+        row = self._fresh_row(book, at)
+        if row is None and at != tick.ts:
+            at, row = tick.ts, self._fresh_row(book, tick.ts)
+        if row is None:
+            return None
+        # Every row sharing this millisecond, and the state just before them.
+        first = int(np.searchsorted(book.ts, at, side="left"))
+        rows = range(max(first - 1, 0), row + 1) if first <= row else (row,)
+        worst = None
+        for r in rows:
+            got = self._walk(book, r, order.side, order.remaining, limit)
+            if got is None:
+                self._rejected[order.order_id] = (
+                    f"{order.remaining} lots exceed the five visible book levels")
+                return None
+            size, notional = got
+            if size <= 0:
+                continue
+            price = notional / size
+            if (worst is None or (order.side is Side.BUY and price > worst[1])
+                    or (order.side is Side.SELL and price < worst[1])):
+                worst = (size, price, r)
+        if worst is None:
+            return None
+        mid = (float(book.bid[worst[2]]) + float(book.ask[worst[2]])) / 2
+        return Fill(price=worst[1], size=worst[0], liquidity="taker", mid=mid)
+
+    @staticmethod
+    def _walk(book, row: int, side: Side, size: int, limit: float | None):
+        """(lots, notional) on the visible levels, or None if a market order cannot fit."""
+        best = float(book.ask[row] if side is Side.BUY else book.bid[row])
+        shown = int(book.ask_qty[row] if side is Side.BUY else book.bid_qty[row])
+        usable = limit is None or (best <= limit + _PRICE_TOL if side is Side.BUY
+                                   else best >= limit - _PRICE_TOL)
+        if not usable:
+            return 0, 0.0
+        if size <= shown:
+            return size, best * size
+        prices, lots = book.levels(row, side)
+        left, notional = size, 0.0
+        for px, qty in zip(prices, lots):
+            px, qty = float(px), int(qty)
+            if qty <= 0:
+                continue
+            if limit is not None and (px > limit + _PRICE_TOL if side is Side.BUY
+                                      else px < limit - _PRICE_TOL):
+                break
+            take = min(left, qty)
+            notional += take * px
+            left -= take
+            if not left:
+                break
+        if left and limit is None:
+            return None
+        return size - left, notional
+
+    def settle(self, side: Side, size: int, session: int, last_price: float) -> Fill:
+        """The forced overnight close, against the session's last visible book."""
+        book = self._book_for(session)
+        row = len(book.ts) - 1
+        got = self._walk(book, row, side, size, None) if row >= 0 else None
+        if got is None:
+            return Fill(price=last_price, size=size, liquidity="taker")
+        mid = (float(book.bid[row]) + float(book.ask[row])) / 2
+        return Fill(price=got[1] / got[0], size=size, liquidity="taker", mid=mid)
+
+    def _limit(self, order: Order, tick: Tick, book) -> Fill | None:
+        limit = order.limit_price
+        if limit is None:
+            return None
+        state = self._resting.get(order.order_id)
+        if state is None:
+            at = order.eligible_from_ts or tick.ts
+            row = self._fresh_row(book, at)
+            if row is None and at != tick.ts:
+                at, row = tick.ts, self._fresh_row(book, tick.ts)
+            if row is None:
+                return None
+            crosses = (limit >= float(book.ask[row]) - _PRICE_TOL if order.side is Side.BUY
+                       else limit <= float(book.bid[row]) + _PRICE_TOL)
+            self._resting[order.order_id] = _Resting(tick.session, row, self._place(order, book, row))
+            if crosses:
+                got = self._take(order, tick, book, at, limit)
+                self._rejected.pop(order.order_id, None)
+                return got
+            state = self._resting[order.order_id]
+        row = book.row_at(tick.ts)
+        self._advance(state, order, tick.session, book, row)
+        mid = None if row < 0 else (float(book.bid[row]) + float(book.ask[row])) / 2
+        through = (tick.price < limit - _PRICE_TOL if order.side is Side.BUY
+                   else tick.price > limit + _PRICE_TOL)
+        if through:
+            size = min(order.remaining, tick.size)
+            return Fill(price=limit, size=size, liquidity="maker", mid=mid) if size > 0 else None
+        hits = (abs(tick.price - limit) <= _PRICE_TOL
+                and tick.side is (Side.SELL if order.side is Side.BUY else Side.BUY))
+        if not hits or state.queue is None or self._fresh_row(book, tick.ts) is None:
+            return None
+        if tick.size <= state.queue + _PRICE_TOL:
+            state.queue -= tick.size
+            return None
+        got = min(order.remaining, int(math.floor(tick.size - state.queue + _PRICE_TOL)))
+        state.queue = 0.0
+        return Fill(price=limit, size=got, liquidity="maker", mid=mid) if got > 0 else None
+
+    @staticmethod
+    def _side_arrays(order: Order, book):
+        return (book.bid, book.bid_qty) if order.side is Side.BUY else (book.ask, book.ask_qty)
+
+    def _place(self, order: Order, book, row: int) -> float | None:
+        px, qty = self._side_arrays(order, book)
+        best, limit = float(px[row]), order.limit_price
+        if abs(best - limit) <= _PRICE_TOL:
+            return float(qty[row])
+        improves = limit > best if order.side is Side.BUY else limit < best
+        return 0.0 if improves else None
+
+    def _advance(self, state: _Resting, order: Order, session: int, book, row: int) -> None:
+        """Bring the queue forward from `state.row` to `row`, from the book alone."""
+        if state.session != session:
+            state.session, state.row, state.queue = session, -1, None
+        if row <= state.row:
+            return
+        start = state.row + 1
+        px, qty = self._side_arrays(order, book)
+        seen = np.asarray(px[start:row + 1], dtype=float)
+        limit = order.limit_price
+        sign = 1.0 if order.side is Side.BUY else -1.0
+        worse = sign * (seen - limit) > _PRICE_TOL        # the best is past us
+        better = sign * (limit - seen) > _PRICE_TOL       # we are the best price
+        queue = state.queue
+        begin = 0
+        if worse.any():
+            last = int(np.flatnonzero(worse)[-1])
+            queue, begin = None, last + 1
+        if begin < seen.size:
+            if better[begin:].any():
+                queue = 0.0
+            elif queue is None:
+                queue = float(qty[start + begin])
+        state.row, state.queue = row, queue
+
+
 FILL_MODELS = {
     "favorable": FavorableFill,
     "unfavorable": UnfavorableFill,
     "queue-pessimistic": QueuePessimisticFill,
     "queue-prorata": QueueProrataFill,
+    "book-queue-pessimistic": BookQueueFill,
 }
 
 

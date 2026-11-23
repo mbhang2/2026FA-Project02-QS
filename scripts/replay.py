@@ -74,10 +74,11 @@ def load_fill_log(row: dict) -> list[FillRecord] | None:
             (seq, ts, session, oid, side, size,
              price, liquidity, tag) = row_fields[:9]
             asset = row_fields[9] if len(row_fields) > 9 else DEFAULT_ASSET
+            mid = row_fields[10] if len(row_fields) > 10 else None
             fills.append(FillRecord(
                 seq=seq, ts=ts, session=session, order_id=oid, side=Side(side),
                 size=size, price=price, liquidity=liquidity, tag=tag,
-                asset=asset,
+                asset=asset, mid=mid,
             ))
     return fills
 

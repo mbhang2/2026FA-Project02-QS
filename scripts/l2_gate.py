@@ -83,8 +83,8 @@ B_NULL = 10_000
 
 def cfg() -> dict:
     import yaml
-    from src.core.costs import apply_costs
-    return apply_costs(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
+    from src.core.backtest_config import prepare_config
+    return prepare_config(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))
 
 
 def candidates() -> list[dict]:
@@ -172,7 +172,10 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
     terms = scoring_terms(cfg(), profile, dataset, calendar)
     # Amendment 17: read from its status line, so it is off until it is signed.
     attribution = rt.attribution_for(profile, prereg.in_force(17))
-    ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution, **terms)
+    record = json.loads((d / "campaign.json").read_text()).get("record") or {}
+    null_unit = (record.get("agent_config") or {}).get("null_unit", rt.UNIT_FLAT)
+    ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution,
+                                     unit=null_unit, **terms)
     observed = (v.get("validation") or {}).get("score", {}).get("primary")
     obs_metric = (v.get("validation") or {}).get("score", {}).get("metric")
     try:
@@ -210,13 +213,16 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
         }
         print(f"    !! {name}: stored {observed} on {obs_metric} -> rescored "
               f"{ident.primary:.6f} on {ident.metric}", flush=True)
-    sample = rt.null_sample(blotter, calendar, b=b, seed=seed, attribution=attribution, **terms)
+    sample = rt.null_sample(blotter, calendar, b=b, seed=seed, attribution=attribution,
+                            unit=null_unit, **terms)
+    units = {} if null_unit == rt.UNIT_FLAT else {
+        "null_unit": null_unit, "risk_units": rt.risk_units(blotter, calendar, null_unit)}
     cache.write_text(json.dumps(
         {"source": "round_turn_mc", "split": "validation", "b": b, "seed": seed,
          "profile": profile_name, "n_sessions": len(calendar),
          "fill_log_digest": row.get("fill_log_digest"),
          "spec": "docs/design/pre-registration.md sections 4 and 5",
-         "rescored": rescored,
+         "rescored": rescored, **units,
          "sample": sample}, indent=2))
     return sample, rescored
 
@@ -313,6 +319,14 @@ def main() -> int:
         bound = validation_profitability(name, a.q / len(family))
         if bound is not None:
             winner["profitability_pass"] = bound["passes"]
+            cached = CAMPAIGNS / name / "validation-null.json"
+            units = (json.loads(cached.read_text()).get("risk_units")
+                     if cached.exists() else None)
+            if units is not None:           # Amendment 21 rule f
+                from src.core.scoring.randomization.round_turn import MIN_RISK_UNITS
+                winner["risk_units"] = units
+                winner["profitability_pass"] = bool(bound["passes"]
+                                                    and units >= MIN_RISK_UNITS)
             print(f"  {name:28} profitability lower bound {bound['lower_bound']} "
                   f"at alpha {bound['alpha']:g}: {bound['passes']}", flush=True)
         winners.append(winner)
@@ -333,7 +347,9 @@ def main() -> int:
     else:
         print(f"  null max mean    {out['null_max_mean']:+.4f}")
         print(f"  p                {out['p']:.4f}   (q = {a.q})")
-        print(f"  rule (a) Sortino > 0 on the best   {out['rule_a_pass']}")
+        rule_a_name = ("profit bound on the best" if any("profitability_pass" in w for w in winners)
+                       else "Sortino > 0 on the best")
+        print(f"  rule (a) {rule_a_name:25} {out['rule_a_pass']}")
         print(f"  rule (b) max_of_m p <= q           {out['reject']}")
         print(f"  VERDICT          {out['verdict']}")
 

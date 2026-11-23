@@ -33,7 +33,7 @@ import pathlib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 
-from .llm import Client, LLMUnavailable, ModelSubstituted, preflight
+from .llm import CALL_STAGE, Client, LLMUnavailable, ModelSubstituted, preflight
 
 PROMPTS = pathlib.Path(__file__).parent / "prompts"
 AXES = ("leakage", "statistics", "economics", "robustness")
@@ -228,6 +228,14 @@ def _validation_evidence(summary: dict) -> dict:
             "validation_diagnostics": val.get("diagnostics")}
 
 
+def _exposure_fields(summary: dict, diag: dict, score: dict) -> dict:
+    """Amendment 21 rule h: fills per session is not held exposure."""
+    if (summary.get("gate") or {}).get("null_unit") != "zero_crossing":
+        return {"sessions_with_exposure": diag.get("sessions_with_exposure")}
+    return {"sessions_with_fills": diag.get("sessions_with_exposure"),
+            "sessions_exposed": score.get("sessions_exposed")}
+
+
 def _slice(axis: str, summary: dict, source: str | None,
            hypothesis: str | None = None) -> str:
     best = summary.get("best_candidate") or {}
@@ -280,7 +288,7 @@ def _slice(axis: str, summary: dict, source: str | None,
             "usd_per_index_point": 20,
             "trade_count": score.get("trade_count"),
             "n_sessions": score.get("n_sessions"),
-            "sessions_with_exposure": diag.get("sessions_with_exposure"),
+            **_exposure_fields(summary, diag, score),
             "primary": score.get("primary"),
             "metric": score.get("metric"),
             "avg_holding_period_ns": diag.get("avg_holding_period_ns"),
@@ -318,7 +326,7 @@ def _slice(axis: str, summary: dict, source: str | None,
             "by_weekday": diag.get("by_weekday"),
             "best_session_share": diag.get("best_session_share"),
             "profit_concentration_top5pct": diag.get("profit_concentration_top5pct"),
-            "sessions_with_exposure": diag.get("sessions_with_exposure"),
+            **_exposure_fields(summary, diag, score),
             "seasonality_caveat": diag.get("seasonality_caveat"),
             "downside_sessions": score.get("downside_sessions"),
             "n_sessions": score.get("n_sessions"),
@@ -401,6 +409,7 @@ def _one(axis: str, client: Client, summary: dict, source: str | None,
     while True:
         attempts += 1
         try:
+            CALL_STAGE.set(f"committee:{axis}")
             got = client.ask(_prompt(axis), _slice(axis, summary, source, hypothesis))
         except ModelSubstituted as exc:
             last = exc                      # retried, never accepted

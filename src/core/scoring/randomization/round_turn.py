@@ -85,6 +85,11 @@ B_DEFAULT = 10_000
 ATTRIBUTION_CLOSING = "closing"
 ATTRIBUTION_FILL = "fill"
 IDENTITY_TOLERANCE = {ATTRIBUTION_CLOSING: 1e-3, ATTRIBUTION_FILL: 1e-9}
+# What one sign covers. `flat` is every campaign registered before Amendment 21.
+UNIT_FLAT = "flat"
+UNIT_ZERO_CROSSING = "zero_crossing"
+# Amendment 21 rule f: fewer risk units than this cannot pass L1 or L2.
+MIN_RISK_UNITS = 30
 
 
 class NoFlipMismatch(RuntimeError):
@@ -101,6 +106,13 @@ def attribution_for(profile: dict, amendment_17_in_force: bool) -> str:
 def _check_attribution(attribution: str) -> None:
     if attribution not in IDENTITY_TOLERANCE:
         raise ValueError(f"unknown null attribution {attribution!r}")
+
+
+def _check_unit(unit: str, attribution: str = ATTRIBUTION_FILL) -> None:
+    if unit not in (UNIT_FLAT, UNIT_ZERO_CROSSING):
+        raise ValueError(f"unknown null unit {unit!r}")
+    if unit == UNIT_ZERO_CROSSING and attribution != ATTRIBUTION_FILL:
+        raise ValueError("Amendment 21 units need Amendment 17's fill attribution")
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,6 +185,7 @@ def null_sample(
     idle_charge: PerSession | None = None,
     funding: Sequence[FundingEvent] | None = None,
     attribution: str = ATTRIBUTION_CLOSING,
+    unit: str = UNIT_FLAT,
 ) -> list[float]:
     """`b` Sortinos under the sign-flip null. This is `null_samples[i]`.
 
@@ -209,9 +222,10 @@ def null_sample(
     from ..metrics import IDLE_CHARGE, idle_charges
 
     _check_attribution(attribution)
+    _check_unit(unit, attribution)
     charge = IDLE_CHARGE if idle_charge is None else idle_charge
     if attribution == ATTRIBUTION_FILL:
-        return null_from_legs(excursion_legs(blotter, calendar),
+        return null_from_legs(excursion_legs(blotter, calendar, unit),
                               [c.session for c in calendar],
                               b=b, seed=seed, notional_base=notional_base,
                               charges=idle_charges(blotter, calendar,
@@ -296,6 +310,7 @@ def identity_from_blotter(
     idle_charge: PerSession | None = None,
     funding: Sequence[FundingEvent] | None = None,
     attribution: str = ATTRIBUTION_CLOSING,
+    unit: str = UNIT_FLAT,
 ):
     """`identity_primary`, built the way `null_sample` builds its own inputs.
 
@@ -306,10 +321,11 @@ def identity_from_blotter(
     from ..metrics import IDLE_CHARGE, idle_charges
 
     _check_attribution(attribution)
+    _check_unit(unit, attribution)
     charge = IDLE_CHARGE if idle_charge is None else idle_charge
     if attribution == ATTRIBUTION_FILL:
         return identity_from_legs(
-            excursion_legs(blotter, calendar), [c.session for c in calendar],
+            excursion_legs(blotter, calendar, unit), [c.session for c in calendar],
             notional_base=notional_base,
             charges=idle_charges(blotter, calendar, idle_charge=charge,
                                  notional_base=notional_base, funding=funding))
@@ -404,8 +420,13 @@ class ExcursionLeg:
     cost: float
 
 
-def excursion_legs(blotter: Blotter, calendar: Sequence[SessionSpan]) -> list[ExcursionLeg]:
+def excursion_legs(blotter: Blotter, calendar: Sequence[SessionSpan],
+                   unit: str = UNIT_FLAT) -> list[ExcursionLeg]:
     """Every excursion split by the session of each fill.
+
+    Under Amendment 21 a fill that crosses zero ends one risk unit and opens the
+    next. Its realized P&L is the old unit's, and its commission and execution cost
+    are shared by the lots it closed and the lots it opened.
 
     A trailing excursion that never returns to flat is included, because the metric
     counts its fills. Fills outside the calendar are left out, as the metric leaves
@@ -413,8 +434,12 @@ def excursion_legs(blotter: Blotter, calendar: Sequence[SessionSpan]) -> list[Ex
     """
     from ..metrics import _session_of
 
+    _check_unit(unit)
+    if unit == UNIT_ZERO_CROSSING and len({r.asset for r in blotter.rows}) > 1:
+        raise ValueError("Amendment 21 units are defined for one asset")
     out: list[ExcursionLeg] = []
     excursion = 0
+    position = 0
     current: dict[int, list[float]] = {}
 
     def flush() -> None:
@@ -426,14 +451,30 @@ def excursion_legs(blotter: Blotter, calendar: Sequence[SessionSpan]) -> list[Ex
 
     for row in sorted(blotter.rows, key=lambda r: (r.seq, r.order_id)):
         session = _session_of(row.ts, calendar)
+        crosses = unit == UNIT_ZERO_CROSSING and position * row.position_after < 0
+        closing = (abs(position) / (abs(position) + abs(row.position_after))
+                   if crosses else 1.0)
         if session is not None:
             leg = current.setdefault(session, [0.0, 0.0])
-            leg[0] += row.realized_pnl
-            leg[1] += row.commission
-        if row.position_after == 0:
+            # Amendment 20: only the mid-to-mid move can be flipped. What the fill paid
+            # or earned against the mid is a cost, charged the same on every draw.
+            leg[0] += row.realized_pnl + row.execution_cost * closing
+            leg[1] += (row.commission + row.execution_cost) * closing
+        if row.position_after == 0 or crosses:
             flush()
+        if crosses and session is not None:
+            opening = 1.0 - closing
+            current[session] = [row.execution_cost * opening,
+                                (row.commission + row.execution_cost) * opening]
+        position = row.position_after
     flush()
     return out
+
+
+def risk_units(blotter: Blotter, calendar: Sequence[SessionSpan],
+               unit: str = UNIT_ZERO_CROSSING) -> int:
+    """How many independent signs the null has under `unit`."""
+    return len({leg.excursion for leg in excursion_legs(blotter, calendar, unit)})
 
 
 def identity_from_legs(

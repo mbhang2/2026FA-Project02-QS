@@ -1,0 +1,17 @@
+schema: constraints/1
+hypothesis: btc-cvd-continuation.md
+clock: UTC
+constraints:
+  - id: uses-signed-flow
+    says: "add up the volume bought by aggressors and subtract the volume sold by aggressors"
+    check: code_uses
+    any_of: [delta, buy_volume, sell_volume, Side, side]
+
+  - id: flow-drives-trades
+    says: "add up the volume bought by aggressors and subtract the volume sold by aggressors"
+    check: uses_flow
+judged:
+  - id: not-a-fade
+    says: "A strategy that fades large flow is testing the opposite claim and is not an implementation of this one."
+  - id: not-regime-model
+    says: "Not a regime model."

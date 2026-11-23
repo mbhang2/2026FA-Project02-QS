@@ -74,6 +74,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
+| `scripts/crypto_reversal_control.py` | Amendment 21's acceptance control: the gate on strategies that reverse directly. |
 | `scripts/detectability.py` | What size of edge could this gate have found? Power, from our own nulls. |
 | `scripts/gen_agent_data.py` | Generate the data reference the RESEARCH agent is handed. |
 | `scripts/gen_context_api.py` | Generate the context API reference the agent is handed. |
@@ -458,10 +459,12 @@ What each test file pins.
 | `tests/test_live_bucket.py` | The same guarantees, checked against the live bucket instead of the manifest. |
 | `tests/test_llm_agent.py` | The proposing agent, offline. No network is touched by anything in here. |
 | `tests/test_llm_metadata.py` | LiteLLM metadata says where a call sits and carries nothing from its content. |
+| `tests/test_llm_streaming.py` | Streamed proposer calls, cheap repairs, and a probe that runs the proposal. |
 | `tests/test_loop.py` | The loop: trial driver, campaign runner, and the correction over the ledger. |
 | `tests/test_market_facts.py` | Every agent is told the market its campaign trades, and NQ is told what it always was. |
 | `tests/test_max_of_m.py` | The L2 gate: the best of M campaign winners, on validation. |
 | `tests/test_metrics.py` | Property tests for the scoring metric. |
+| `tests/test_missing_tabulated_null.py` | A dataset with no tabulated null loses a diagnostic and keeps its gate. |
 | `tests/test_model_options.py` | Every agent part's model can be chosen, reaches its own call, and is recorded. |
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
 | `tests/test_no_depth_counted_roots.py` | No tree outside `src/core/**` finds its root by counting directories. |
@@ -490,6 +493,7 @@ What each test file pins.
 | `tests/test_remote.py` | The strategy runs in its own process, and the boundary is faithful. |
 | `tests/test_research_session.py` | One research session: K campaigns, validation at the stop, then L2. |
 | `tests/test_retrieve.py` | The retrieval pipeline as one command, and the line it stops at. |
+| `tests/test_reversal_null.py` | Amendment 21: a reversal ends a crypto round turn. |
 | `tests/test_review_hypothesis.py` | The reviewer for the question itself — Amendment 11's sixth gate. |
 | `tests/test_review_strategy.py` | The code reviewer — Brian's point 2, third place: "code review between trials". |
 | `tests/test_round_turn_null.py` | The sign-flip null: the decomposition is exact, and the null is not profit. |
@@ -504,6 +508,7 @@ What each test file pins.
 | `tests/test_txnsim.py` | Round turn trade Monte Carlo: blotter's `txnsim`, scored by the gate. |
 | `tests/test_viperq_amt.py` | The ViperQ-derived champion: the properties that would fail quietly. |
 | `tests/test_volume_profile.py` | Volume at price: VPOC, Value Area, Low Volume Nodes. |
+| `tests/test_worker_quotes.py` | A parallel worker must be able to read the amendment that unlocks quoted backtests. |
 | `tests/test_worker_tree.py` | Isolated working copies — Brian's point 4, the half that needs no new |
 | `tests/test_write_hypothesis.py` | A question in, a hypothesis out -- or a draft judged refined enough, or refined. |
 

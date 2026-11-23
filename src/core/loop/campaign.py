@@ -355,7 +355,8 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
               null_samples: list | None = None, q: float | None = None,
               null_routes: list | None = None,
               exclude: set | None = None,
-              profitability: dict | None = None) -> dict:
+              profitability: dict | None = None,
+              risk_units: dict | None = None,) -> dict:
     """The correction over the campaign, and the uncorrected view beside it.
 
     `profitability` is Amendment 18's `{campaign_index: bound}`. When supplied, the
@@ -393,6 +394,11 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
     fars, labels, scores, n_sessions = [], [], [], []
     gate_scores = []
     exclude = exclude or set()
+    # The tabulated column is a diagnostic and the gate never reads it. A campaign
+    # with per-candidate nulls still has its decision on a dataset nobody has
+    # tabulated, so the diagnostic is reported as absent. With no nulls there is no
+    # gate either, and a missing table stays the error it always was.
+    tabulated = not null_samples or nullmod.null_path_for(dataset).exists()
     for row in trials:
         score = row.get("score")
         label = f"{row.get('campaign_index')}:{(row.get('strategy_digest') or '')[:8]}"
@@ -402,16 +408,16 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
             # rather than being dropped. It was run and looked at.
             fars.append(1.0)
             continue
-        tup = _score_tuple(score)
-        charge = nullmod.far_for_score(tup, dataset=dataset)
-        fars.append(charge["far"])
+        if tabulated:
+            charge = nullmod.far_for_score(_score_tuple(score), dataset=dataset)
+            fars.append(charge["far"])
         scores.append(score["primary"])
         n_sessions.append(score["n_sessions"])
         if row.get("campaign_index") not in exclude:
             gate_scores.append(score["primary"])
 
     q = result.record.q if q is None else q
-    corrected = correct(fars, q=q, labels=labels)
+    corrected = correct(fars, q=q, labels=labels) if tabulated else None
     if result.unaccounted:
         # Loud rather than a field nobody reads. Every row is a trial or an
         # admitted harness failure; a third category means N is wrong and every
@@ -433,17 +439,23 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
         "harness_failures": len(result.harness_failures),
         "unaccounted": len(result.unaccounted),
         "outcomes": _counts(r.get("outcome") for r in result.rows),
-        "per_trial_accepts_at_0.001": sum(1 for f in fars if f <= 0.001),
+        "per_trial_accepts_at_0.001": (
+            sum(1 for f in fars if f <= 0.001) if tabulated else None),
         "diagnostics_only": {
             "note": ("BH and Holm over the tabulated FAR column are DIAGNOSTICS. "
                      "The column is one strategy's null (Task 30 measured 10-17x "
                      "its stated rate for candidates that trade differently), and "
                      "N <= q(R+1) caps how large a campaign a per-trial p-value "
                      "can survive at all."),
-            "correction": corrected.as_dict(),
+            "correction": corrected.as_dict() if corrected else None,
         },
         "wall_clock_s": round(result.wall_clock_s, 1),
     }
+    if not tabulated:
+        out["diagnostics_only"]["unavailable"] = (
+            f"no tabulated null exists for {nullmod.null_key(dataset)!r}, so BH, Holm, "
+            "the nominal FAR and the deflation view were not computed. The gate below "
+            "uses this campaign's per-candidate nulls and does not read that table.")
     if null_routes:
         rotation = sum(1 for r in null_routes
                        if r and r.get("route") == "rotation")
@@ -504,6 +516,20 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
                      if winner is not None else None)
             gate["profitability"] = bound
             gate["accept"] = bool(gate["reject"] and bound and bound.get("passes"))
+        if risk_units is not None:
+            # Amendment 21 rule f, on the trial the gate selected.
+            from ..scoring.randomization.round_turn import MIN_RISK_UNITS, UNIT_ZERO_CROSSING
+            selected = next((r for r in trials
+                             if r.get("campaign_index") not in exclude
+                             and (r.get("score") or {}).get("primary") == observed_best
+                             and not (r.get("score") or {}).get("rejected")), None)
+            count = (risk_units.get(str(selected.get("campaign_index")))
+                     if selected is not None else None)
+            gate["null_unit"] = UNIT_ZERO_CROSSING
+            gate["risk_units"] = count
+            gate["min_risk_units"] = MIN_RISK_UNITS
+            gate["accept"] = bool(gate["accept"] and count is not None
+                                  and count >= MIN_RISK_UNITS)
         gate["excluded_off_question"] = sorted(exclude)
         gate["floor_note"] = (
             "accept = reject AND observed_best > 0. The second term is not a "
@@ -522,7 +548,7 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
                      "substitute -- see docs/design/metric.md."),
             "resolution": resolution_cap(2_000, q),
         }
-    if scores:
+    if scores and tabulated:
         best = max(scores)
         out["uncorrected"] = {
             "best_score": best,

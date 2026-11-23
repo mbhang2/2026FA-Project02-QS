@@ -1,0 +1,23 @@
+schema: constraints/1
+hypothesis: btc-absorption-reversal.md
+clock: UTC
+constraints:
+  - id: uses-delta
+    says: "Work in delta: on each bar, the volume bought by aggressors minus the volume sold by aggressors"
+    check: code_uses
+    any_of: [delta, buy_volume, sell_volume, Side, side]
+
+  - id: flow-drives-trades
+    says: "Work in delta: on each bar, the volume bought by aggressors minus the volume sold by aggressors"
+    check: uses_flow
+
+  - id: flat-within-the-day
+    says: "Each trade opens from flat and closes back to flat within the same UTC day."
+    check: no_overnight
+judged:
+  - id: trades-the-reversal
+    says: "A long entry follows absorbed selling after a fall. A short entry follows absorbed buying after a rise."
+  - id: no-direct-reversal
+    says: "Do not reverse directly from long to short or from short to long."
+  - id: not-regime-model
+    says: "Not a regime model."

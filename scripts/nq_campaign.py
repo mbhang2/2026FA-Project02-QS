@@ -381,7 +381,8 @@ def constraints_for(hypothesis: pathlib.Path | None, policy: str | None):
 
 def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
               profile_name: str = PROFILE, model: str = MODEL,
-              constraints=None, constraint_policy: str = "record"):
+              constraints=None, constraint_policy: str = "record",
+              repair_reasoning_effort: str | None = None):
     from src.core.loop import hypothesis as H
     from src.core.loop.llm import LLMAgent
 
@@ -389,6 +390,7 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
     profile = c["profiles"][profile_name]
     return LLMAgent(
         constraints=constraints, constraint_policy=constraint_policy,
+        repair_reasoning_effort=repair_reasoning_effort,
         model=model, temperature=0.7, max_tokens=PROPOSER_MAX_TOKENS, show_history=True,
         # None is a real state, not a missing argument: `hypothesis_path` is
         # optional on the record, and a campaign that registered without a
@@ -403,6 +405,7 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
 
 # --------------------------------------------------------------------------- #
 
+REPAIR_REASONING_EFFORT = "low"
 VALIDATION_PROFILE = "nq-validation"
 VALIDATION_PROFILE_FITTED = "nq-validation-fitted"
 
@@ -878,6 +881,11 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
                      "Use 'round_turn_mc'.")
         agent_cfg["execution"] = execution
     agent_cfg["null_source"] = cc["null_source"]
+    # Amendment 21, frozen at registration. Absent means the flat-to-flat unit.
+    if cc["null_source"] == "round_turn_mc" and profile.get("scoring_units") == "notional":
+        import prereg as _prereg
+        if _prereg.in_force(21):
+            agent_cfg["null_unit"] = "zero_crossing"
     if cc["null_source"] == "txnsim":
         # Frozen at registration like the null itself: the two modes are
         # different nulls, and switching after seeing a result is the free
@@ -900,6 +908,8 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
 
     agent_cfg["idle_charge"] = cc.get("idle_charge", IDLE_CHARGE)
     agent_cfg["probe_before_trial"] = bool(cc.get("probe_before_trial"))
+    # Frozen with the campaign: a repair fixes a file, so it need not re-derive it.
+    agent_cfg["repair_reasoning_effort"] = REPAIR_REASONING_EFFORT
     # **Who wrote the question, in the record.** None for a file a human
     # committed. Under Amendment 15 it names the statement, what the writer
     # turned it into, and that nobody read it -- so a report, a committee or a
@@ -1125,9 +1135,11 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         for i, note in F.read_ledger(d).items():
             if i < len(rows) and note.get("violations"):
                 rows[i]["off_question"] = note["violations"]
+    repair_effort = (record.agent_config or {}).get("repair_reasoning_effort")
     agent = agent_for(champion if champion.exists() else None, hyp_path,
                       record.profile, model, constraints=cons,
-                      constraint_policy=policy)
+                      constraint_policy=policy,
+                      repair_reasoning_effort=repair_effort)
     judge = None
     reg_judge = (record.agent_config or {}).get("fidelity_judge")
     if reg_judge and cons is not None:
@@ -1235,6 +1247,7 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
                               constraints=cons, constraint_policy=policy)
             # Every agent, on its own worker. See `_arm_probe`.
             _arm_probe(extra, workers[slot])
+            extra.repair_reasoning_effort = repair_effort
             _arm_fidelity(extra, workers[slot])
             agents.append(extra)
     else:
@@ -1465,6 +1478,8 @@ def stage_nulls(name: str) -> None:
     # Amendment 17: read from its status line, so it is off until it is signed.
     import prereg
     attribution = rt.attribution_for(profile, prereg.in_force(17))
+    null_unit = (_rec.agent_config or {}).get("null_unit", rt.UNIT_FLAT)
+    unit_counts: dict[str, int] = {}
     # Amendment 18, the same way: q / N, with N the campaign's registered trials.
     from src.core.scoring.profitability import applies, profitability_bound
     profit_on = applies(profile, prereg.in_force(18))
@@ -1624,14 +1639,16 @@ def stage_nulls(name: str) -> None:
         else:
             if attribution == rt.ATTRIBUTION_FILL:
                 ident = rt.identity_from_blotter(blotter, calendar, attribution=attribution,
-                                                 **terms)
+                                                 unit=null_unit, **terms)
                 try:
                     rt.require_identity(score.get("primary"), score.get("metric"), ident,
                                         attribution)
                 except rt.NoFlipMismatch as exc:
                     raise SystemExit(f"{name} trial {i}: {exc}") from exc
             samples.append(rt.null_sample(blotter, calendar, b=B_NULL, seed=seed,
-                                          attribution=attribution, **terms))
+                                          attribution=attribution, unit=null_unit, **terms))
+            if null_unit != rt.UNIT_FLAT:
+                unit_counts[str(i)] = rt.risk_units(blotter, calendar, null_unit)
         print(f"  {i + 1}/{len(rows)}  {len(samples[-1])} draws  "
               f"{time.monotonic() - t0:.0f}s", flush=True)
     # **The recorded source is the one that RAN.** This was hardcoded to
@@ -1644,6 +1661,9 @@ def stage_nulls(name: str) -> None:
                "spec": "docs/design/pre-registration.md section 3b"}
     if profit_on:
         payload["profitability"] = profitability
+    if null_unit != rt.UNIT_FLAT:
+        payload["null_unit"] = null_unit
+        payload["risk_units"] = unit_counts
     if tabled is not None:
         payload["b"] = max((len(v) for v in tabled.values()), default=0)
         payload["tables"] = sorted(
@@ -1834,7 +1854,9 @@ def stage_report(name: str) -> None:
     summary = summarise(result, dataset=record.dataset,
                         null_samples=samples, q=record.q,
                         exclude=excluded_trials(d, record.agent_config),
-                        profitability=profitability)
+                        profitability=profitability,
+                        risk_units=(nulls.get("risk_units", {})
+                                    if (record.agent_config or {}).get("null_unit") else None))
 
     # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
     # same route every other campaign's do rather than through this script.

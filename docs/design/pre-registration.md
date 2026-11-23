@@ -2520,3 +2520,68 @@ Every existing profile, including Binance and NQ, which must reproduce their dig
 - A null that flips execution cost.
 
 Code: `config/backtest.yaml`, `src/core/backtest_config.py`, `src/core/data/okx_book.py`, `src/core/engine/fills.py` (`BookQueueFill`), `config/calendars/okx-book.yaml`.
+
+## Amendment 21 — 2026-11-22 — crypto: a reversal ends a round turn
+
+**Status: IN FORCE from 2026-11-22, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. It governs `scoring_units: notional` campaigns registered after signing, and no recorded campaign is rescored. Calibration on seeds 500001 to 500100 ran once from commit `4bb6727` and selected a 2 bp unprofitable edge and a 44 bp strong edge (`docs/reviews/crypto-a21/edges.json`). The acceptance control then ran once from commit `491d5cb`, before signing, and met all three conditions: 7 of 1,000 unprofitable campaigns passed, 3 of 400 noise campaigns, and 100 of 100 strong-edge campaigns (`~/crypto-controls/a21/control.json`, SHA-256 `5c33d1667b13ea194ccd4a3d1812f5985cc6d08dc93b6564010f844f06338285`).
+
+### Why
+
+The sign-flip null gives one random sign to each flat-to-flat excursion. A strategy that reverses directly from long to short never reaches flat, so a long run of separate decisions becomes one excursion.
+
+**A real result motivated this, and that is why it needs its own control.** In `btc-cvd-02`, the winner made 167 trades, but its train null had 4 distinct values in 10,000 draws and its validation null had 2. A validation p-value could not fall below about 0.5. The campaign's FAIL does not depend on this, because its Amendment 18 profit bound failed on train and validation. `btc-absorption-01` required flat exits, made no direct reversals, and is not affected.
+
+### What changes, for `scoring_units: notional` campaigns registered after signing
+
+| | rule |
+|---|---|
+| a | A **risk unit** ends when the position reaches zero **or crosses zero**. A crossing fill closes the old unit and opens the next one. |
+| b | On a crossing fill of size `s` that closes `c` lots and opens `o = s - c`, all realized P&L belongs to the old unit. Commission and execution cost are split `c / s` to the old unit and `o / s` to the new one. |
+| c | Each part stays in the session of its fill (Amendment 17). Only the mid-to-mid move flips, and execution cost is charged on every draw (Amendment 20). |
+| d | Each unit gets one independent sign. The no-flip draw must still equal the score within Amendment 17's tolerance. |
+| e | A final unit that never closes stays included, as Amendment 17 includes it. |
+| f | **A candidate with fewer than 30 risk units cannot pass L1 or L2.** The unit count is recorded for every trial. This limit is a judgement, set so a null has far more possible outcomes than the gate's smallest `alpha` requires. |
+
+The registered campaign record states `null_unit: zero_crossing`. A campaign without that field keeps the rule it was registered under.
+
+### Diagnostics, for the same campaigns
+
+These change what a reader or the committee sees. They do not enter the score, the null or a pass rule.
+
+| | rule |
+|---|---|
+| g | `avg_holding_period_ns` measures risk units. The flat-to-flat figure reported about 426 days for a strategy that reversed roughly every 6 days. |
+| h | The count of sessions containing a fill is labelled `sessions_with_fills`. It is reported beside `sessions_exposed`, which counts sessions with a held position and is what Amendment 6 reads. |
+| i | L2 and holdout output name the Amendment 18 profitability bound on notional profiles, instead of calling it "Sortino > 0". |
+
+### What it does NOT change
+
+Every `scoring_units: points` profile, including NQ, whose results must stay identical to the bit. Every recorded campaign, including `btc-cvd-01`, `btc-cvd-02` and `btc-absorption-01`, which **are not rescored or revalidated**. Also the score, costs, funding, fills, splits, embargo, holdout lock, `B`, `q`, `max_of_n`, `max_of_m`, the Amendment 18 bound and the exposure floor.
+
+**Validation has been read by two BTC campaigns.** Any later BTC campaign validated on this split belongs in one declared family with `btc-cvd-02` and `btc-absorption-01`, so the next one has `M = 3`.
+
+### Acceptance, before signing
+
+1. Tests pin rules a to f on hand-built blotters: a direct reversal, a partial close, a scale-in, a reversal across midnight, and an open final unit.
+2. A strategy that never crosses zero gets the **same null draws** under both unit rules.
+3. Existing real NQ and Binance runs reproduce their digests and scores.
+4. `scripts/crypto_reversal_control.py` runs on the simulated book of Amendment 20, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 100 ms latency and fill attribution. Its five strategies stay in the market and reverse directly on a signal checked every 1, 2, 4, 8 or 12 hours.
+
+   **Edges are fixed first, on calibration seeds 500001 to 500100, from the grid 0, 2, ..., 60 bp per hour.** The unprofitable edge is the largest whose five variants all have a 99% upper bound on mean net return below zero. The strong edge is the smallest at which all five average a per-session Sharpe of at least 0.30. If either does not exist, the control fails. The chosen edges are committed before any arm below runs.
+
+   | arm | seeds | campaigns | pass condition |
+   |---|---|---|---|
+   | unprofitable | 501001 to 502000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 502001 to 502400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge | 502401 to 502500 | 100 | **at least 80** pass the full gate |
+
+Each arm runs once, from a clean commit. If any arm fails, this amendment is **not signed**, and a revision needs new seeds and its own pre-registration.
+
+### What would invalidate this amendment
+
+- A recorded campaign rescored under this rule, or described as passing because of it.
+- The 30-unit limit, the grid, the seeds or a pass condition changed after a control number is seen, without a new amendment.
+- A BTC campaign validated on this split and left out of the declared family.
+- A null that flips execution cost, or a no-flip draw that no longer equals the score.
+
+Code: `src/core/scoring/randomization/round_turn.py`, `src/core/scoring/metrics.py`, `scripts/nq_campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py`, `scripts/crypto_reversal_control.py`.

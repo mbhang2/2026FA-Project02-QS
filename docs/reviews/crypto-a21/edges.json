@@ -1,0 +1,9 @@
+{
+  "amendment": 21,
+  "unprofitable_bp": 2.0,
+  "strong_bp": 44.0,
+  "calibration_commit": "4bb67271c1877593d0230dab11914ca23c690bce",
+  "calibration_seeds": "500001 to 500100",
+  "calibration_sha256": "f2ca66231afc2e8f973dccf0fc87aec45d59545f71f4f2a4d260d95ee411705e",
+  "note": "Selected by Amendment 21's rule before any control arm was drawn."
+}

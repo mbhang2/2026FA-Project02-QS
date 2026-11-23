@@ -284,12 +284,14 @@ def score_diagnostics(
     fill_model_spread: float | None = None,
     idle_charge: "metrics.PerSession" = IDLE_CHARGE,
     funding: "Sequence[metrics.FundingEvent] | None" = None,
+    risk_unit_holding: bool = False,
 ) -> Diagnostics:
     """Recorded per run, never terms in the objective. See `metrics.Diagnostics`."""
     returns = metrics.session_returns(blotter, period, notional_base=notional_base,
                                       idle_charge=idle_charge, funding=funding)
     d = metrics.diagnostics(
-        blotter, period, returns, fill_model_spread=fill_model_spread
+        blotter, period, returns, fill_model_spread=fill_model_spread,
+        risk_unit_holding=risk_unit_holding,
     )
     hit, curve = drop_best_fragility(returns)
     return replace(d, sessions_to_zero=hit, primary_after_drop=curve)

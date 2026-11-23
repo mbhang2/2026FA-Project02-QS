@@ -47,6 +47,7 @@ per campaign as `probe_before_trial`. Off unless a campaign registers it on.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -130,6 +131,13 @@ def run_on_profile(source: str, profile: str, *, ledger: Path,
     `perturb.check` are the projections.
     """
     strategy_path = strategy_path or REPO_ROOT / "src" / "strategies" / "current.py"
+    # **`run.py` loads the file under its own working directory.** Passing a
+    # worker's path while running from the repository wrote the proposal to the
+    # worker and probed the repository's baseline: every proposal in a width > 1
+    # campaign came back "byte-identical" and spent both its repairs on nothing.
+    root = repo_root(strategy_path)
+    ledger = ledger.resolve()
+    digest = hashlib.sha256(source.encode()).hexdigest()[:16]
     original = strategy_path.read_text()
     before = _line_count(ledger)
     strategy_path.write_text(source)
@@ -137,12 +145,13 @@ def run_on_profile(source: str, profile: str, *, ledger: Path,
         subprocess.run(
             [sys.executable, "run.py", "--human", "--quiet", "--purpose", "check",
              "--profile", profile, "--ledger", str(ledger)],
-            capture_output=True, text=True, cwd=str(REPO_ROOT),
+            capture_output=True, text=True, cwd=str(root),
         )
     finally:
         strategy_path.write_text(original)
-    rows = _read_rows(ledger)
-    return rows[-1] if len(rows) > before else None
+    # Workers share this ledger, so the last row may be another worker's.
+    mine = [r for r in _read_rows(ledger)[before:] if r.get("strategy_digest") == digest]
+    return mine[-1] if mine else None
 
 
 def result_from_row(row: dict, profile: str) -> ProbeResult:

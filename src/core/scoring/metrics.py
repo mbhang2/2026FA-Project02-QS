@@ -674,6 +674,25 @@ def _holding_periods(rows: Sequence[BlotterRow]) -> list[int]:
     return out
 
 
+def _risk_unit_holding_periods(rows: Sequence[BlotterRow]) -> list[int]:
+    """Amendment 21: a hold ends when the position reaches or crosses zero."""
+    out: list[int] = []
+    by_asset: dict[str, list[BlotterRow]] = defaultdict(list)
+    for row in rows:
+        by_asset[row.asset].append(row)
+    for asset_rows in by_asset.values():
+        opened, position = None, 0
+        for row in asset_rows:
+            if opened is not None and (row.position_after == 0
+                                       or position * row.position_after < 0):
+                out.append(row.ts - opened)
+                opened = row.ts if row.position_after != 0 else None
+            elif opened is None and row.position_after != 0:
+                opened = row.ts
+            position = row.position_after
+    return out
+
+
 def diagnostics(
     blotter: Blotter,
     calendar: Sequence[SessionSpan],
@@ -681,6 +700,7 @@ def diagnostics(
     *,
     fill_model_spread: float | None = None,
     reference_profile: dict | None = None,
+    risk_unit_holding: bool = False,
 ) -> Diagnostics:
     import datetime as dt
 
@@ -693,7 +713,8 @@ def diagnostics(
 
     closes = [r for r in rows if r.realized_pnl != 0.0]
     wins = sum(1 for r in closes if r.realized_pnl - r.commission > 0)
-    holds = _holding_periods(rows)
+    holds = (_risk_unit_holding_periods(rows) if risk_unit_holding
+             else _holding_periods(rows))
     gains = sorted((r for r in returns if r > 0), reverse=True)
     total_gain = math.fsum(gains)
 

@@ -596,6 +596,8 @@ def main(argv: list[str] | None = None, *, latency_override_ns: int | None = Non
 
         if not prereg.in_force(20):
             sys.exit("Amendment 20 is not in force, so a quoted backtest cannot run.")
+        if profile.get("book_features") and not prereg.in_force(22):
+            sys.exit("Amendment 22 is not in force, so a strategy cannot read the book.")
         problem = quote_data_problem(profile, dataset, split, warmup_sessions)
         if problem:
             sys.exit(f"refusing {profile_name!r}: {problem}. Nothing was run.")
@@ -687,6 +689,7 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
                 **({"commission_per_contract": profile["commission_per_contract"]}
                    if "commission_per_contract" in profile else {}),
                 commission_bps=profile.get("commission_bps", 0.0),
+                book_features=bool(profile.get("book_features")),
                 **execution_terms(profile),
             )
             record = _run_and_score(cfg, profile, engine, strategy, split, seed,
@@ -923,6 +926,7 @@ def _fill_model_spread(cfg, profile, seed, strategy, split, engine) -> float:
             fill_model=other,
             warmup_sessions=profile.get("warmup_sessions", 0),
             seed=seed,
+            book_features=bool(profile.get("book_features")),
             **execution_terms(profile),
         )
         twin.run()
@@ -953,6 +957,8 @@ def _row(record: dict, trigger: str, profile: str, ledger_path: Path,
         "trigger": trigger,
         "purpose": purpose,
         "profile": profile,
+        **({"book_features": True}
+           if (load_config().get("profiles") or {}).get(profile, {}).get("book_features") else {}),
         "strategy": named,
         "strategy_digest": digest,
         "strategy_source": store_source(ledger_path, digest, strategy_path),

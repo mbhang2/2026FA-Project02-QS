@@ -291,6 +291,7 @@ def replay(row: dict, cfg_path: Path = REPO_ROOT / "config" / "run.yaml",
             fill_model=row["fill_model"],
             warmup_sessions=row.get("warmup_sessions", 0),
             seed=row["seed"],
+            book_features=bool(row.get("book_features")),
             # Amendment 19: the row's recorded terms, not today's profile.
             **(row.get("execution") or {}),
         )

@@ -71,6 +71,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/correction_fwer.py` | Measure FWER for the `max_of_n` variants, under the global null. |
 | `scripts/crypto_a18_control.py` | Amendment 18's acceptance control. Simulated data only. |
 | `scripts/crypto_book_control.py` | Amendment 20's acceptance control: the gate on a simulated order book. |
+| `scripts/crypto_book_signal_control.py` | Amendment 22's acceptance control: strategies that read a simulated order book. |
 | `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
@@ -414,6 +415,7 @@ What each test file pins.
 | `tests/test_amendment_18.py` | Amendment 18: a crypto pass must show profit after costs. No control arm runs here. |
 | `tests/test_amendment_19.py` | Amendment 19: execution latency and an overnight rule. Synthetic data only. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
+| `tests/test_book_features.py` | Amendment 22: a strategy may read the book visible before its own millisecond. |
 | `tests/test_book_fills.py` | Amendment 20: fills against a real book, pinned on hand-built books. |
 | `tests/test_boundary.py` | Nothing mutable crosses the context boundary, and nothing resolves silently. |
 | `tests/test_bwis.py` | Source priors: the three things Gowtam's version got wrong, pinned. |

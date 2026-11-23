@@ -31,3 +31,21 @@ backtests:
     split: validation
     use_quotes: true
     costs: BTCUSDT
+
+  # Amendment 22: strategies may read the book, at an assumed 0 bp maker and 2 bp taker
+  # tier and 1 ms latency. These profiles refuse to run until it is signed.
+  btc-okx-hft-train:
+    dataset: crypto-btc-okx-book
+    split: train
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+
+  btc-okx-hft-validation:
+    dataset: crypto-btc-okx-book
+    split: validation
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000

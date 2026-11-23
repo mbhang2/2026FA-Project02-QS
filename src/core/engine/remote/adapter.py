@@ -580,6 +580,17 @@ class RemoteStrategy:
                 return {"ok": False, "rows": [],
                         "error": f"{type(exc).__name__}: {exc}"}
             return {"ok": True, "rows": rows}
+        if what == "book":
+            live = self._live_ctx
+            if live is None:
+                return {"ok": False, "rows": [],
+                        "error": "book is only available during a callback"}
+            try:
+                snapshot = live.book()
+            except Exception as exc:                          # noqa: BLE001
+                return {"ok": False, "rows": [],
+                        "error": f"{type(exc).__name__}: {exc}"}
+            return {"ok": True, "rows": [] if snapshot is None else [encode(snapshot)]}
         ctx = self._setup_ctx
         if ctx is None:
             return {"ok": False, "rows": [],

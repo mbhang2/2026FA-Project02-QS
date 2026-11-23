@@ -441,7 +441,7 @@ def validation_profile_for(train_profile: str, fitted: bool) -> str:
     v, t = c["profiles"][want], c["profiles"][train_profile]
     if v.get("split") != "validation":
         sys.exit(f"profile {want!r} is not a validation split ({v.get('split')!r})")
-    for key in ("dataset", "fill_model", "commission_per_contract",
+    for key in ("dataset", "fill_model", "book_features", "commission_per_contract",
                 "commission_bps", "maker_commission_per_contract", "maker_commission_bps",
                 "slippage_per_contract", "slippage_bps", "latency_ns", "allow_overnight"):
         if v.get(key) != t.get(key):

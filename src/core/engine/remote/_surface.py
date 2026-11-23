@@ -19,7 +19,7 @@ SETUPCONTEXT_ACTIONS = ('subscribe',)
 
 BASECONTEXT_SCALARS = ('actionable', 'average_entry_price', 'equity', 'last_price', 'position', 'realized_pnl', 'session', 'session_end', 'session_start', 'ts', 'unrealized_pnl', 'working_order_ids')
 BASECONTEXT_COLLECTIONS = (('bars', 'closed_bars_row'), ('closed', 'bar_row'), ('fills', 'fill_row'), ('now', 'datetime_row'), ('working_orders', 'order_row'))
-BASECONTEXT_PULLS = ('assets_held', 'average_entry_price_in', 'closed_ids', 'find_orders', 'history', 'options', 'position_in', 'realized_pnl_in', 'sub_id', 'ticks')
+BASECONTEXT_PULLS = ('assets_held', 'average_entry_price_in', 'book', 'closed_ids', 'find_orders', 'history', 'options', 'position_in', 'realized_pnl_in', 'sub_id', 'ticks')
 BASECONTEXT_ACTIONS = ('buy', 'cancel', 'cancel_all', 'close', 'modify', 'sell')
 
 BARCONTEXT_SCALARS = ()
@@ -49,7 +49,7 @@ QUOTECONTEXT_ACTIONS = ()
 
 SURFACE = {
     'SetupContext': ('dataset_name', 'subscribe', 'subscriptions', 'ticks', 'train_bars'),
-    'BaseContext': ('actionable', 'assets_held', 'average_entry_price', 'average_entry_price_in', 'bars', 'buy', 'cancel', 'cancel_all', 'close', 'closed', 'closed_ids', 'equity', 'fills', 'find_orders', 'history', 'last_price', 'modify', 'now', 'options', 'position', 'position_in', 'realized_pnl', 'realized_pnl_in', 'sell', 'session', 'session_end', 'session_start', 'sub_id', 'ticks', 'ts', 'unrealized_pnl', 'working_order_ids', 'working_orders'),
+    'BaseContext': ('actionable', 'assets_held', 'average_entry_price', 'average_entry_price_in', 'bars', 'book', 'buy', 'cancel', 'cancel_all', 'close', 'closed', 'closed_ids', 'equity', 'fills', 'find_orders', 'history', 'last_price', 'modify', 'now', 'options', 'position', 'position_in', 'realized_pnl', 'realized_pnl_in', 'sell', 'session', 'session_end', 'session_start', 'sub_id', 'ticks', 'ts', 'unrealized_pnl', 'working_order_ids', 'working_orders'),
     'BarContext': (),
     'FillContext': ('average_entry_price', 'fill', 'position', 'realized_pnl'),
     'LifecycleContext': ('event',),
@@ -57,4 +57,4 @@ SURFACE = {
     'QuoteContext': ('quote',),
 }
 
-ENCODERS = {'Bar': 'bar_row', 'TickEvent': 'tick_row', 'FillEvent': 'fill_row', 'LifecycleEvent': 'lifecycle_row', 'OrderView': 'order_row', 'Subscription': 'subscription_row', 'datetime': 'datetime_row', 'dt.datetime': 'datetime_row', '_ClosedBars': 'closed_bars_row', 'Tick': 'raw_tick_row', 'OptionQuote': 'option_quote_row', 'QuoteEvent': 'quote_row'}
+ENCODERS = {'Bar': 'bar_row', 'TickEvent': 'tick_row', 'FillEvent': 'fill_row', 'LifecycleEvent': 'lifecycle_row', 'OrderView': 'order_row', 'Subscription': 'subscription_row', 'datetime': 'datetime_row', 'dt.datetime': 'datetime_row', '_ClosedBars': 'closed_bars_row', 'Tick': 'raw_tick_row', 'OptionQuote': 'option_quote_row', 'QuoteEvent': 'quote_row', 'BookSnapshot': 'book_row', 'BookSnapshot | None': 'book_row'}

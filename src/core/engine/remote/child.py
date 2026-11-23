@@ -392,6 +392,17 @@ class RemoteContext:
                 "without one")
         return tuple(_decode_option_quote(r) for r in self._pull("options", {}))
 
+    def book(self):
+        """The visible book, fetched from the engine (Amendment 22)."""
+        if self._pull is None:
+            raise RemoteError("ctx.book() needs a pull channel")
+        rows = self._pull("book", {})
+        if not rows:
+            return None
+        from src.core.types import BookSnapshot
+        ts, bid_px, bid_q, ask_px, ask_q = rows[0]
+        return BookSnapshot(ts, tuple(bid_px), tuple(bid_q), tuple(ask_px), tuple(ask_q))
+
     @property
     def bars(self):
         return _ClosedBars(self)

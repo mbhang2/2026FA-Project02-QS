@@ -2523,7 +2523,7 @@ Code: `config/backtest.yaml`, `src/core/backtest_config.py`, `src/core/data/okx_
 
 ## Amendment 21 — 2026-11-22 — crypto: a reversal ends a round turn
 
-**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-22 by Claude on request; in force when a human signs this line.** Nothing here is implemented yet. Until it is signed, the null, the gate and every diagnostic behave as they did.
+**Status: IN FORCE from 2026-11-22, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. It governs `scoring_units: notional` campaigns registered after signing, and no recorded campaign is rescored. Calibration on seeds 500001 to 500100 ran once from commit `4bb6727` and selected a 2 bp unprofitable edge and a 44 bp strong edge (`docs/reviews/crypto-a21/edges.json`). The acceptance control then ran once from commit `491d5cb`, before signing, and met all three conditions: 7 of 1,000 unprofitable campaigns passed, 3 of 400 noise campaigns, and 100 of 100 strong-edge campaigns (`~/crypto-controls/a21/control.json`, SHA-256 `5c33d1667b13ea194ccd4a3d1812f5985cc6d08dc93b6564010f844f06338285`).
 
 ### Why
 
@@ -2565,7 +2565,7 @@ Every `scoring_units: points` profile, including NQ, whose results must stay ide
 1. Tests pin rules a to f on hand-built blotters: a direct reversal, a partial close, a scale-in, a reversal across midnight, and an open final unit.
 2. A strategy that never crosses zero gets the **same null draws** under both unit rules.
 3. Existing real NQ and Binance runs reproduce their digests and scores.
-4. A new control script, crypto_reversal_control.py, runs on the simulated book of Amendment 20, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 100 ms latency and fill attribution. Its five strategies stay in the market and reverse directly on a signal checked every 1, 2, 4, 8 or 12 hours.
+4. `scripts/crypto_reversal_control.py` runs on the simulated book of Amendment 20, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 100 ms latency and fill attribution. Its five strategies stay in the market and reverse directly on a signal checked every 1, 2, 4, 8 or 12 hours.
 
    **Edges are fixed first, on calibration seeds 500001 to 500100, from the grid 0, 2, ..., 60 bp per hour.** The unprofitable edge is the largest whose five variants all have a 99% upper bound on mean net return below zero. The strong edge is the smallest at which all five average a per-session Sharpe of at least 0.30. If either does not exist, the control fails. The chosen edges are committed before any arm below runs.
 
@@ -2584,4 +2584,4 @@ Each arm runs once, from a clean commit. If any arm fails, this amendment is **n
 - A BTC campaign validated on this split and left out of the declared family.
 - A null that flips execution cost, or a no-flip draw that no longer equals the score.
 
-Code, once implemented: `src/core/scoring/randomization/round_turn.py`, `src/core/scoring/metrics.py`, `scripts/nq_campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py`, and the new control script.
+Code: `src/core/scoring/randomization/round_turn.py`, `src/core/scoring/metrics.py`, `scripts/nq_campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py`, `scripts/crypto_reversal_control.py`.

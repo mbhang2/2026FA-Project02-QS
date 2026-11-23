@@ -2585,3 +2585,74 @@ Each arm runs once, from a clean commit. If any arm fails, this amendment is **n
 - A null that flips execution cost, or a no-flip draw that no longer equals the score.
 
 Code: `src/core/scoring/randomization/round_turn.py`, `src/core/scoring/metrics.py`, `scripts/nq_campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py`, `scripts/crypto_reversal_control.py`.
+
+## Amendment 22 — 2026-11-22 — book-aware BTC strategies under an HFT fee tier
+
+**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-22 by Claude on request; in force when a human signs this line.** Nothing here is implemented yet. Until it is signed, strategies cannot read the book, and every existing profile keeps its fees and latency.
+
+### Why
+
+Under Amendment 20 the OKX book decides a strategy's fills, but the strategy cannot read it. An absorption or queue-imbalance idea therefore has to infer displayed liquidity from trades. Separately, the registered 5 bp maker and taker fees describe a retail account, while a professional crypto market participant can trade at a far lower tier.
+
+**Real results preceded this.** `btc-cvd-02` and `btc-absorption-01` failed under the 5 bp terms. Their costs and validation reads are known, so this amendment does not rescore them, and every campaign under it counts in the same validation family.
+
+### The book a strategy may read
+
+| | rule |
+|---|---|
+| a | A profile enables this with `book_features: true`, and a strategy asks for it during setup. Without both, the run and its digests are unchanged. |
+| b | During an existing trade or bar callback at time `t`, the strategy may read the top five bid and ask prices and displayed sizes. |
+| c | It sees the latest book row whose timestamp is **strictly before the millisecond containing `t`**. Rows in the same millisecond have no knowable order relative to `t`, so they are hidden. |
+| d | A book older than 1 second is reported as unavailable, matching Amendment 20 rule f. |
+| e | The view is read-only and holds one row. It exposes no later row, queue position, order identity or fill-model state. |
+| f | Reading the book raises no new callback. A strategy still acts only on the callbacks it had before. |
+
+### The registered execution terms
+
+| term | value |
+|---|---|
+| Maker fee | **0 bp** |
+| Taker fee | **2 bp** |
+| Slippage | 0, because the book walk already charges depth |
+| Latency | **1,000,000 ns (1 ms)** |
+| Overnight | allowed |
+| Fill model | `book-queue-pessimistic` |
+
+These apply only to two new profiles, `btc-okx-hft-train` and `btc-okx-hft-validation`, through a named BTCUSDT fee tier. **The existing `BTCUSDT` rates do not change.**
+
+The fee tier is an assumption about an account that can obtain it, supplied by Michael from prior crypto HFT experience. It was not measured from an OKX account. Any result under it must state that it is conditional on **0 bp maker, 2 bp taker and 1 ms latency**.
+
+The 1 ms latency is the finest value the OKX timestamps can distinguish. It does not represent a colocated system at hundreds of microseconds, and it cannot resolve races within a millisecond.
+
+### What it does NOT change
+
+Recorded campaigns, the score, costs of existing profiles, funding, the fill rules, splits, embargo, holdout lock, `B`, `q`, `max_of_n`, `max_of_m`, Amendment 18's bound, Amendment 21's risk units and the exposure floor. **This is not a market-making amendment.** It adds no quote-driven callback, inventory model or spread-capture null, and a strategy whose edge is earned spread is not validly judged by the current sign-flip gate.
+
+**Any BTC campaign validated on this split joins the declared family** with `btc-cvd-02` and `btc-absorption-01`, so the next one has `M = 3`.
+
+### Acceptance, before signing
+
+1. Tests pin rules a to f, including a callback in the same millisecond as a book row, a stale book, and a refused request on a profile without `book_features`.
+2. **A lookahead test:** replacing every book row after a callback's visible row with random values leaves that callback's orders unchanged.
+3. Existing real NQ, Binance and OKX runs reproduce their digests and scores.
+4. A control on a simulated book, with best-of-5 campaigns, `alpha = 0.01`, B = 10,000, 1 ms latency, 0 bp maker, 2 bp taker, fill attribution and Amendment 21's units. Its five strategies read top-of-book imbalance at thresholds 0.2, 0.3, 0.4, 0.5 and 0.6, enter by market order, and exit to flat after one hour. On edge arms, displayed size leans toward the next hour's planted drift on 70% of book rows. On the noise arm it carries no information.
+
+   **Edges are fixed first, on calibration seeds 600001 to 600100, from the grid 0, 2, ..., 60 bp per hour.** The unprofitable edge is the largest whose five variants all have a 99% upper bound on mean net return below zero. The strong edge is the smallest at which all five average a per-session Sharpe of at least 0.30. If either does not exist, the control fails. The chosen edges are committed before any arm below runs.
+
+   | arm | seeds | campaigns | pass condition |
+   |---|---|---|---|
+   | unprofitable | 601001 to 602000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 602001 to 602400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge | 602401 to 602500 | 100 | **at least 80** pass the full gate |
+
+Each arm runs once, from a clean commit. If any arm fails, this amendment is **not signed**, and a revision needs new seeds and its own pre-registration.
+
+### What would invalidate this amendment
+
+- A strategy reading a book row at or after its callback's millisecond.
+- The fee tier, latency, visibility rule, grid, seeds or a pass condition changed after a control or real result is seen, without a new amendment.
+- A result under this tier reported without its fee and latency assumptions.
+- A BTC campaign validated on this split and left out of the declared family.
+- A market-making result claimed from this amendment's gate.
+
+Code, once implemented: `src/core/costs.py`, `src/core/backtest_config.py`, `src/core/engine/engine.py`, `src/core/engine/context.py`, `src/core/engine/remote/adapter.py`, `config/costs.yaml`, `config/backtest.yaml`.

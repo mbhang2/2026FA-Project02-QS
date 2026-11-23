@@ -123,10 +123,11 @@ def test_the_real_documents_current_statuses():
     # 19 signed 2026-11-21: latency, the overnight rule, and per-instrument costs.
     # 20 signed 2026-11-22: fills against the OKX book.
     # 21 signed 2026-11-22: a reversal ends a crypto round turn.
+    # 22 drafted 2026-11-22, NOT signed: book-aware strategies at an HFT fee tier.
     expected = {1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
                 8: True, 9: True, 10: True, 11: True, 12: True, 13: True,
                 14: False, 15: False, 16: True, 17: True, 18: True, 19: True,
-                20: True, 21: True}
+                20: True, 21: True, 22: False}
     actual = {n: ok for n, ok, _ in mod.all_amendments()}
     assert actual == expected, actual
 

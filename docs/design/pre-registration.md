@@ -2662,3 +2662,38 @@ The first control calibration ran once from commit `58f0cc5` on seeds 600001 to 
 - A market-making result claimed from this amendment's gate.
 
 Code: `src/core/costs.py`, `src/core/backtest_config.py`, `src/core/engine/engine.py`, `src/core/engine/context.py`, `src/core/engine/remote/adapter.py`, `config/costs.yaml`, `config/backtest.yaml`, `scripts/crypto_book_signal_control.py`.
+
+## Amendment 23 — 2026-11-23 — no book fill from a one-sided quote
+
+**Status: IN FORCE from 2026-11-23, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line. No recorded fill used a one-sided row, and recorded campaigns are not rescored. Before signing, hand-built books pinned rules a to e, real NQ, Binance and OKX runs reproduced their digests and scores, and orders around the four real one-sided rows on 2023-11-09 produced no undefined mid under this rule.
+
+### Why
+
+OKX occasionally publishes a row with no best bid or no best ask. Amendment 20 records each fill's mid, and a mid from an empty side is undefined, so one such fill would corrupt that trial's cost and null. Across the 1,224 train and validation sessions, **4 of 3,042,876,559 book rows** have an empty best side, all on 2023-11-09. None of the 54,498 fills recorded by `btc-cvd-01`, `btc-cvd-02` and `btc-absorption-01` used one.
+
+### The rule, for runs on `book-queue-pessimistic` after signing
+
+| | rule |
+|---|---|
+| a | A taker order cannot fill when any row it would be priced from has an empty best bid or ask. It stays working and tries again at the next trade, priced from the book at that trade. |
+| b | A limit order is not placed on a one-sided row. It waits for the next trade. |
+| c | A resting limit cannot fill while the current row is one-sided. Its queue position still updates by Amendment 20's rules. |
+| d | The forced `allow_overnight: false` close uses the latest two-sided row in the session. With none, it fills at the last trade with no recorded mid, as Amendment 20 already does when no book can price it. |
+| e | A run under this rule records `two_sided_book: true`, and replay reads it from the row. |
+
+### What it does NOT change
+
+Any fill on a two-sided row, the walk through visible levels, queue rules, quote-age limit, fees, latency, score, null, gates, splits or holdout lock. Recorded campaigns are not rescored.
+
+### Acceptance, before signing
+
+1. Hand-built books pin rules a to e.
+2. Real NQ, Binance and OKX runs reproduce their digests and scores.
+3. A real OKX check on 2023-11-09 with orders around the one-sided rows produces no undefined mid.
+
+### What would invalidate this amendment
+
+- A recorded fill with an undefined mid under this rule.
+- A change to a fill on a two-sided row.
+
+Code: `src/core/engine/fills.py`, `src/core/engine/engine.py`, `run.py`, `scripts/replay.py`.

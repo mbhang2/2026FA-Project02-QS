@@ -282,6 +282,13 @@ def _dataset_facts(profile: dict) -> tuple[str, str]:
     spec = cfg()["datasets"].get(name, {}) if name else {}
     kind = spec.get("kind")
     per = profile["commission_per_contract"]
+    if kind == "synthetic" and profile.get("book_features"):
+        return (
+            "seeded synthetic BTC-shaped trades with a synthetic five-level order book. "
+            "It is noise for a rehearsal and says nothing about a real market",
+            f"Sizes are integer lots. Taker fills pay {profile.get('commission_bps', 0.0):g} "
+            "basis points of notional and resting maker fills pay 0.\n\n",
+        )
     if kind == "spx-options":
         return (
             "a simulated SPX index path with a QUOTED OPTIONS SURFACE over it. "
@@ -1308,7 +1315,7 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
     # our market data. Tying it to the record means no caller can relabel a real
     # campaign's trials, which is the property run.py's own `--purpose` rule
     # exists to protect.
-    purpose = "check" if record.profile == "rehearsal" else "trial"
+    purpose = "check" if record.profile in ("rehearsal", "crypto-rehearsal-book") else "trial"
     if purpose == "check":
         print("  REHEARSAL: profile 'rehearsal' is synthetic, so these trials "
               "are purpose=check and count toward no N (Amendment 13)",

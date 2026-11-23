@@ -181,8 +181,8 @@ def market_for_profile(profile: str | None, cfg: dict | None = None) -> str:
     if prof is None:
         raise KeyError(f"unknown profile {profile!r}")
     spec = cfg["datasets"].get(prof["dataset"], {})
-    if spec.get("kind") == "crypto" and prof.get("book_features"):
-        return f"crypto-okx-book-{spec['symbol']}"
+    if prof.get("book_features"):
+        return f"crypto-okx-book-{spec.get('symbol', 'BTCUSDT')}"
     if spec.get("kind") == "crypto" and spec.get("book"):
         return f"crypto-okx-{spec['symbol']}"
     if spec.get("kind") == "crypto":

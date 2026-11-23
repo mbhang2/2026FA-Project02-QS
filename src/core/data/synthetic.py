@@ -173,6 +173,10 @@ class SyntheticDataset:
         )
         return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
+    def session_open_prices(self, sessions) -> dict[int, float]:
+        """The first trade of each session, for notional scoring of a synthetic book."""
+        return {int(s): self._session_ticks(int(s))[0].price for s in sessions}
+
     def book_for(self, session: int):
         """A noise book beside each trade. Later prices never reach an earlier row."""
         if not self.spec.book:

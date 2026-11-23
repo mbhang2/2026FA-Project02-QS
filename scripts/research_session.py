@@ -921,7 +921,7 @@ def _main() -> int:
         print(f"    L2 verdict        {g.get('verdict') or 'WITHHELD'}  "
               f"M = {g.get('m_campaigns')}  best {g.get('best_campaign')}  "
               f"p = {g.get('p')}")
-        print(f"    rule (a) Sortino > 0 on the best   {g.get('rule_a_pass')}")
+        print(f"    rule (a) profit or Sortino floor {g.get('rule_a_pass')}")
         print(f"    rule (b) max_of_m p <= q           {g.get('reject')}")
         for c in g.get("per_campaign") or ():
             z = c.get("sds_above_own_null")

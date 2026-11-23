@@ -225,6 +225,48 @@ profiles:
     history_window: 512
     commission_per_contract: 0.62
 
+  # A rehearsal of the book-aware path (Amendment 22): seeded noise, never a look.
+  crypto-rehearsal-book:
+    dataset: synthetic-crypto-book-rehearsal
+    split: train
+    fill_model: book-queue-pessimistic
+    book_features: true
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 240
+    scoring_units: notional
+    idle_charge_fraction: 1.2e-5
+    funding: false
+    latency_ns: 1000000
+    commission_per_contract: 0.0
+    maker_commission_per_contract: 0.0
+    commission_bps: 2.0
+    maker_commission_bps: 0.0
+    slippage_per_contract: 0.0
+    slippage_bps: 0.0
+    action_cap: 64
+    history_window: 512
+  crypto-rehearsal-book-validation:
+    dataset: synthetic-crypto-book-rehearsal
+    split: validation
+    fill_model: book-queue-pessimistic
+    book_features: true
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 240
+    scoring_units: notional
+    idle_charge_fraction: 1.2e-5
+    funding: false
+    latency_ns: 1000000
+    commission_per_contract: 0.0
+    maker_commission_per_contract: 0.0
+    commission_bps: 2.0
+    maker_commission_bps: 0.0
+    slippage_per_contract: 0.0
+    slippage_bps: 0.0
+    action_cap: 64
+    history_window: 512
+
   # Task 37's positive control. The same campaign profile in every respect --
   # train split, unfavorable fills, seed 1, same caps and budgets -- with a
   # planted signal of known strength and nothing else changed. Two strengths,
@@ -603,6 +645,22 @@ datasets:
     start_price: 30000.0
     tick_size: 0.1
     vol_per_tick: 6.0
+    signal_strength: 0.0
+    early_close_rate: 0.0
+    length_jitter: 0.0
+    session_open_utc: "00:00"
+    size_scale: 500
+    book: true
+  # Large enough that train and validation both clear the 30-session floor.
+  synthetic-crypto-book-rehearsal:
+    kind: synthetic
+    n_sessions: 360
+    ticks_per_session: 2880
+    tick_spacing_ns: 30000000000
+    session_gap_ns: 0
+    start_price: 30000.0
+    tick_size: 0.1
+    vol_per_tick: 14.7
     signal_strength: 0.0
     early_close_rate: 0.0
     length_jitter: 0.0

@@ -473,6 +473,7 @@ What each test file pins.
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
 | `tests/test_no_depth_counted_roots.py` | No tree outside `src/core/**` finds its root by counting directories. |
 | `tests/test_nq_adapter.py` | The NQ adapter, checked against what was already established about this data. |
+| `tests/test_one_sided_book.py` | Amendment 23: no fill is priced from a book with an empty best side. |
 | `tests/test_open_questions.py` | Questions we asked and could not answer — the third kind of context. |
 | `tests/test_options_as_an_asset.py` | Options as a tradeable asset: naming, filling, size, and settlement. |
 | `tests/test_options_spx_dynamic.py` | The moving SPX surface: a Heston path, and options priced from its state. |

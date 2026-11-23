@@ -549,6 +549,8 @@ class Engine:
         allow_overnight: bool = True,
         # Amendment 22: a profile may let its strategy read `ctx.book()`.
         book_features: bool = False,
+        # Amendment 23: no book fill from a row with an empty best bid or ask.
+        two_sided_book: bool = False,
         # Paid on taker fills as a cost, in price points per contract and in basis
         # points of notional. Never moves a fill's price: see `src/core/costs.py`.
         slippage_per_contract: float = 0.0,
@@ -605,6 +607,9 @@ class Engine:
         self._book_fill = hasattr(self.model, "bind_book")
         if self._book_fill:
             self.model.bind_book(self.dataset.book_for)
+            self.model.require_two_sided = bool(two_sided_book)
+        elif two_sided_book:
+            raise ValueError("two_sided_book applies to the book fill model only")
         if self._custom_execution and (self.model.requires.has_quotes
                                        or dataset.capabilities().has_options):
             raise ValueError("latency_ns, slippage and allow_overnight=False support "

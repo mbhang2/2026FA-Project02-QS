@@ -2588,7 +2588,7 @@ Code: `src/core/scoring/randomization/round_turn.py`, `src/core/scoring/metrics.
 
 ## Amendment 22 — 2026-11-22 — book-aware BTC strategies under an HFT fee tier
 
-**Status: REGISTERED, NOT YET IN FORCE. Drafted 2026-11-22 by Claude on request; in force when a human signs this line.** Nothing here is implemented yet. Until it is signed, strategies cannot read the book, and every existing profile keeps its fees and latency.
+**Status: IN FORCE from 2026-11-23, signed off by Michael.** Drafted 2026-11-22 by Claude on request and revised before signing. The code reads this line. No real strategy had read the book before it was signed. Its revised calibration ran once from commit `8776bf4` on seeds 610001 to 610100 and selected a 10 bp unprofitable edge and a 26 bp strong edge (`docs/reviews/crypto-a22/edges.json`). Its acceptance control then ran once from commit `27567fd`, before signing, and met all three conditions: 8 of 1,000 unprofitable campaigns passed, 0 of 400 noise campaigns, and 100 of 100 strong-edge campaigns (`~/crypto-controls/a22-revised/control.json`, SHA-256 `534a0f5ebeaeba27bdd58a68227e17bf0a554bbdb1aa3b02117db332bfd3a725`).
 
 ### Why
 
@@ -2661,4 +2661,4 @@ The first control calibration ran once from commit `58f0cc5` on seeds 600001 to 
 - A BTC campaign validated on this split and left out of the declared family.
 - A market-making result claimed from this amendment's gate.
 
-Code, once implemented: `src/core/costs.py`, `src/core/backtest_config.py`, `src/core/engine/engine.py`, `src/core/engine/context.py`, `src/core/engine/remote/adapter.py`, `config/costs.yaml`, `config/backtest.yaml`.
+Code: `src/core/costs.py`, `src/core/backtest_config.py`, `src/core/engine/engine.py`, `src/core/engine/context.py`, `src/core/engine/remote/adapter.py`, `config/costs.yaml`, `config/backtest.yaml`, `scripts/crypto_book_signal_control.py`.

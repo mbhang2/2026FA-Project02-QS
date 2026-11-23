@@ -103,6 +103,53 @@ profiles:
     commission_bps: 5.0
     notional_base: 1.0
 
+  # Probes for book-aware proposals (Amendment 22): seeded noise with a synthetic book.
+  agent-crypto-book:
+    dataset: synthetic-crypto-book
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 120
+    commission_per_contract: 0.0
+    commission_bps: 2.0
+    notional_base: 1.0
+    book_features: true
+  harness-fitted-crypto-book:
+    dataset: synthetic-crypto-book
+    split: train
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    fit_sessions: 12
+    wall_clock_budget_s: 120
+    commission_per_contract: 0.0
+    commission_bps: 2.0
+    notional_base: 1.0
+    book_features: true
+  probe-crypto-book:
+    dataset: synthetic-crypto-book
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 120
+    commission_per_contract: 0.0
+    commission_bps: 2.0
+    notional_base: 1.0
+    book_features: true
+  probe-crypto-book-flipped:
+    dataset: synthetic-crypto-book-flipped
+    split: validation
+    fill_model: unfavorable
+    seed: 1
+    warmup_sessions: 1
+    wall_clock_budget_s: 120
+    commission_per_contract: 0.0
+    commission_bps: 2.0
+    notional_base: 1.0
+    book_features: true
+
   # The fidelity probe's pair (src/core/loop/perturb.py). Same seed, same
   # prices, same split; the second inverts every aggressor side.
   probe-nq-shape:
@@ -547,6 +594,37 @@ datasets:
     session_open_utc: "00:00"
     size_scale: 500
     aggressor: flipped
+  synthetic-crypto-book:
+    kind: synthetic
+    n_sessions: 40
+    ticks_per_session: 17280
+    tick_spacing_ns: 5000000000
+    session_gap_ns: 0
+    start_price: 30000.0
+    tick_size: 0.1
+    vol_per_tick: 6.0
+    signal_strength: 0.0
+    early_close_rate: 0.0
+    length_jitter: 0.0
+    session_open_utc: "00:00"
+    size_scale: 500
+    book: true
+  synthetic-crypto-book-flipped:
+    kind: synthetic
+    n_sessions: 40
+    ticks_per_session: 17280
+    tick_spacing_ns: 5000000000
+    session_gap_ns: 0
+    start_price: 30000.0
+    tick_size: 0.1
+    vol_per_tick: 6.0
+    signal_strength: 0.0
+    early_close_rate: 0.0
+    length_jitter: 0.0
+    session_open_utc: "00:00"
+    size_scale: 500
+    aggressor: flipped
+    book: true
 
   # The same, with every aggressor side inverted and every price untouched.
   synthetic-nq-shape-flipped:

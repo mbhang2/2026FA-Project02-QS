@@ -127,10 +127,39 @@ def _crypto_okx(symbol: str) -> dict:
     }
 
 
+def _replace(text: str, old: str, new: str) -> str:
+    if old not in text:
+        raise ValueError(f"market text no longer contains {old[:50]!r}")
+    return text.replace(old, new)
+
+
+def _crypto_okx_book(symbol: str) -> dict:
+    """Amendment 22: OKX with a book the strategy can read, at the assumed HFT tier."""
+    base = _crypto_okx(symbol)
+    coin = symbol.removesuffix("USDT")
+    data = _replace(base["data"], "Your strategy does\nnot read the order book, but its fills do:",
+                    "Your strategy can\nread the top five book levels with `ctx.book()`, and its fills use that book:")
+    data = _replace(data, "Commission is 5 basis points of notional per side, so a round\n"
+                          "trip costs about 0.1% and a strategy that trades constantly pays for it.",
+                    "Resting maker fills pay 0 basis points and taker fills pay 2 basis points of\n"
+                    "notional, under an assumed professional fee tier.")
+    have = _replace(base["have"], f"- **The strategy cannot read quotes or depth.** Fills use the OKX {coin} book.",
+                    "- **The strategy can read the top five bid and ask prices and displayed sizes**\n"
+                    "  from the row before its current millisecond. It cannot see order identities,\n"
+                    f"  queue position or deeper levels. Fills use the same OKX {coin} book.")
+    have = _replace(have, "- Every trade pays 5 basis points of notional per side and fills are modelled\n  pessimistically.",
+                    "- Resting maker fills pay 0 bp and taker fills pay 2 bp of notional under an\n"
+                    "  assumed fee tier. Orders reach the market 1 ms after the decision, and fills\n"
+                    "  are modelled pessimistically.")
+    return {**base, "data": data, "have": have}
+
+
 def facts(market: str) -> dict:
     """The four texts for a market key (`nq`, `crypto-BTCUSDT`, ...)."""
     if market == "nq":
         return _NQ
+    if market.startswith("crypto-okx-book-"):
+        return _crypto_okx_book(market.split("-", 3)[3])
     if market.startswith("crypto-okx-"):
         return _crypto_okx(market.split("-", 2)[2])
     if market.startswith("crypto-"):
@@ -152,6 +181,8 @@ def market_for_profile(profile: str | None, cfg: dict | None = None) -> str:
     if prof is None:
         raise KeyError(f"unknown profile {profile!r}")
     spec = cfg["datasets"].get(prof["dataset"], {})
+    if spec.get("kind") == "crypto" and prof.get("book_features"):
+        return f"crypto-okx-book-{spec['symbol']}"
     if spec.get("kind") == "crypto" and spec.get("book"):
         return f"crypto-okx-{spec['symbol']}"
     if spec.get("kind") == "crypto":

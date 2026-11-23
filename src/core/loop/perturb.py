@@ -45,7 +45,8 @@ from .probe import run_on_profile
 REPO_ROOT = repo_root()
 BASE, FLIPPED = "probe-nq-shape", "probe-nq-shape-flipped"
 # The same pair on crypto-shaped synthetic data, for crypto campaigns.
-PAIRS = {"nq": (BASE, FLIPPED), "crypto": ("probe-crypto-shape", "probe-crypto-shape-flipped")}
+PAIRS = {"nq": (BASE, FLIPPED), "crypto": ("probe-crypto-shape", "probe-crypto-shape-flipped"),
+         "crypto-book": ("probe-crypto-book", "probe-crypto-book-flipped")}
 LOOKBACK_MINUTES = (1, 5, 15, 30, 60)
 # A direction claim is about a tendency, not every entry: 60% at the strategy's
 # best-matching lookback. A rule entering at random sits near 50% at every one.
@@ -114,7 +115,9 @@ def check(source: str, cons: Constraints, *, ledger: Path,
           strategy_path: Path | None = None,
           market: str = "nq") -> tuple[list[Violation], dict]:
     """The probe constraints' violations, and a report of what was checked."""
-    base_profile, flipped_profile = PAIRS["crypto" if market.startswith("crypto-") else "nq"]
+    family = ("crypto-book" if market.startswith("crypto-okx-book-")
+              else "crypto" if market.startswith("crypto-") else "nq")
+    base_profile, flipped_profile = PAIRS[family]
     items = [c for c in cons.items if c.check in ("uses_flow", "trades_move")]
     if not items:
         return [], {}

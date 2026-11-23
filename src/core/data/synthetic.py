@@ -115,6 +115,9 @@ class SyntheticSpec:
     # coin, so a volume threshold written for BTC is thousands of lots, and the
     # default 1-4 per trade would never reach one. Absent from the digest at 1.
     size_scale: int = 1
+    # A five-level book for the pre-trial probe of a book-aware proposal (Amendment 22).
+    # Seeded noise. Absent from the digest when off.
+    book: bool = False
 
     @property
     def irregular(self) -> bool:
@@ -123,7 +126,7 @@ class SyntheticSpec:
     def as_dict(self) -> dict:
         out = {k: getattr(self, k) for k in self.__dataclass_fields__
                if k not in ("quotes", "aggressor", "session_open_ct",
-                            "session_open_utc", "size_scale")}
+                            "session_open_utc", "size_scale", "book")}
         if self.quotes:
             out["quotes"] = True
         if self.aggressor != "tick_rule":
@@ -134,6 +137,8 @@ class SyntheticSpec:
             out["session_open_utc"] = self.session_open_utc
         if self.size_scale != 1:
             out["size_scale"] = self.size_scale
+        if self.book:
+            out["book"] = True
         return out
 
 
@@ -153,7 +158,7 @@ class SyntheticDataset:
     # ---- Dataset protocol ------------------------------------------------- #
     def capabilities(self) -> DataCapabilities:
         return DataCapabilities(
-            has_trades=True, has_quotes=self.spec.quotes, has_book=False
+            has_trades=True, has_quotes=self.spec.quotes, has_book=self.spec.book
         )
 
     def calendar(self) -> Calendar:
@@ -167,6 +172,35 @@ class SyntheticDataset:
             {"generator": "synthetic/1", **self.spec.as_dict()}, sort_keys=True
         )
         return hashlib.sha256(payload.encode()).hexdigest()[:16]
+
+    def book_for(self, session: int):
+        """A noise book beside each trade. Later prices never reach an earlier row."""
+        if not self.spec.book:
+            raise ValueError("this synthetic dataset has no book")
+        from .okx_book import SessionBook
+
+        session = int(session)
+        held = getattr(self, "_book_cache", None)
+        if held is not None and held[0] == session:
+            return held[1]
+        ticks = self._session_ticks(session)
+        px = np.array([t.price for t in ticks], dtype=float)
+        ts = np.array([t.ts for t in ticks], dtype=np.int64)
+        source = np.empty(2 * px.size - 1, dtype=np.int64)
+        source[0], source[1::2], source[2::2] = 0, np.arange(px.size - 1), np.arange(1, px.size)
+        row_ts = np.empty(source.size, dtype=np.int64)
+        row_ts[0], row_ts[1::2], row_ts[2::2] = ts[0], ts[1:] - 1_000_000, ts[1:]
+        rng = np.random.default_rng([self.spec.seed, session, 22])
+        offset = self.spec.tick_size * np.arange(1, 6)
+        bid_px = np.round(px[source, None] - offset, 10)
+        ask_px = np.round(px[source, None] + offset, 10)
+        bid_lots = rng.integers(1, 2_000, size=bid_px.shape, dtype=np.int64)
+        ask_lots = rng.integers(1, 2_000, size=ask_px.shape, dtype=np.int64)
+        deep = {"bid_px": bid_px, "bid_lots": bid_lots, "ask_px": ask_px, "ask_lots": ask_lots}
+        book = SessionBook(row_ts, bid_px[:, 0], ask_px[:, 0], bid_lots[:, 0], ask_lots[:, 0],
+                           deep=lambda: deep)
+        self._book_cache = (session, book)
+        return book
 
     def unlock_holdout(self, reason: str) -> None:
         self._lock.unlock(reason)

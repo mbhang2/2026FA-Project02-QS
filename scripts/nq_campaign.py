@@ -190,12 +190,25 @@ def run_facts(profile: dict, n_sessions: int) -> str:
         fitted_block
         + f"Dataset: {what}, {scored} scored sessions on the "
         f"pre-registered {profile['split']} split.\n\n"
-        f"Fill model: {profile['fill_model']} -- a fill requires a trade "
-        "strictly through your limit, so you pay the spread on every entry and "
-        "exit.\n\n"
+        + _fill_facts(profile)
         + cost + _execution_facts(profile) +
         f"Action cap: {profile.get('action_cap', 64)} per session. "
         f"History window: {profile.get('history_window', 512)} bars.\n")
+
+
+def _fill_facts(profile: dict) -> str:
+    if profile.get("book_features"):
+        return ("Fill model: book-queue-pessimistic. Market orders pay through the visible "
+                "book and are refused if they need more than five levels. A resting limit "
+                "joins behind displayed size and fills only when trades reach it.\n\n"
+                "Book: call `ctx.subscribe(\"book\")` in `setup()`, then `ctx.book()` in a "
+                "callback. It returns `None` or an object with `ts`, `bid_prices`, `bid_sizes`, "
+                "`ask_prices` and `ask_sizes`, best level first, sizes in lots. It holds the "
+                "latest row strictly before this millisecond, and a book over one second old "
+                "is `None`, so handle `None`. Reading it raises no extra callback.\n\n")
+    return (f"Fill model: {profile['fill_model']} -- a fill requires a trade "
+            "strictly through your limit, so you pay the spread on every entry and "
+            "exit.\n\n")
 
 
 def _execution_facts(profile: dict) -> str:
@@ -297,11 +310,15 @@ def _dataset_facts(profile: dict) -> tuple[str, str]:
             f"Sizes are integer lots of {lot} {coin}: `ctx.buy(1)` is {lot} {coin}, and "
             f"P&L is the price move in USD times lots, so one lot earns {lot} USD per "
             "$1 the price moves. "
-            f"Commission: {bps:g} basis points of notional per side "
-            f"({2 * bps / 100:.2f}% a round trip), charged on every fill: a round "
-            f"trip must move the price {2 * bps / 100:.2f}% just to break even -- $30 "
-            "at $30,000, $100 at $100,000 -- so high turnover is very expensive "
-            "here. Holding a "
+            + (f"Taker fills pay {bps:g} basis points of notional, so a round trip by "
+               f"market order costs {2 * bps / 100:.2f}% before spread and depth. These "
+               "are assumed professional rates. Holding a "
+               if profile.get("book_features") else
+               f"Commission: {bps:g} basis points of notional per side "
+               f"({2 * bps / 100:.2f}% a round trip), charged on every fill: a round "
+               f"trip must move the price {2 * bps / 100:.2f}% just to break even -- $30 "
+               "at $30,000, $100 at $100,000 -- so high turnover is very expensive "
+               "here. Holding a ") +
             "position through a funding settlement (00:00, 08:00, 16:00 UTC) pays the "
             "funding rate on its notional when long and receives it when short "
             "(the reverse when the rate is negative). Returns are scored relative to "

@@ -596,11 +596,18 @@ def main(argv: list[str] | None = None, *, latency_override_ns: int | None = Non
 
         if not prereg.in_force(20):
             sys.exit("Amendment 20 is not in force, so a quoted backtest cannot run.")
-        if profile.get("book_features") and not prereg.in_force(22):
-            sys.exit("Amendment 22 is not in force, so a strategy cannot read the book.")
         problem = quote_data_problem(profile, dataset, split, warmup_sessions)
         if problem:
             sys.exit(f"refusing {profile_name!r}: {problem}. Nothing was run.")
+
+    if profile.get("book_features"):
+        scripts = str(REPO_ROOT / "scripts")
+        if scripts not in sys.path:
+            sys.path.insert(0, scripts)
+        import prereg
+
+        if not prereg.in_force(22):
+            sys.exit("Amendment 22 is not in force, so a strategy cannot read the book.")
 
     ledger_path = args.ledger or (REPO_ROOT / cfg.get("ledger", "runs/ledger.jsonl"))
 

@@ -96,7 +96,7 @@ def check(source: str) -> ast.Module:
             raise KernelRejected("for loops must iterate over range()")
         if isinstance(node, ast.For) and not isinstance(node.target, ast.Name):
             raise KernelRejected("a loop target must be one name")
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AugAssign) else []
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, (ast.AugAssign, ast.For)) else []
         for target in targets:
             if isinstance(target, ast.Tuple):
                 raise KernelRejected("assign one value at a time")
@@ -158,7 +158,11 @@ class CompiledKernel:
                 book = carray(book_ptr, (24,))
                 state = carray(state_ptr, (state_len,))
                 orders = carray(order_ptr, (capacity, 6))
-                return int(body(event, book, state, orders))
+                result = body(event, book, state, orders)
+                # Checked before the cast: int32 would wrap a huge count and NaN would become 0.
+                if not (result >= 0 and result <= capacity):
+                    return -1
+                return int(result)
             except Exception:
                 return -1
 

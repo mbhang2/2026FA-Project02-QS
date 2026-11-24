@@ -40,6 +40,8 @@ def refusal(profile: dict) -> str | None:
         return "the native check needs book_features: true"
     if profile.get("fit_sessions", 0) or profile.get("weights_path"):
         return "fitted strategies are not ported"
+    if profile.get("action_cap", 64) != 64:
+        return "the native engine and its audit are proved only at an action cap of 64"
     if not profile.get("allow_overnight", True):
         return "the overnight flatten is not ported"
     return None
@@ -133,7 +135,7 @@ class Strategy:
     name = "check/kernel-audit"
 
     def __init__(self):
-        self.state = np.array([float.fromhex(x) for x in {state!r}], dtype=np.float64)
+        self.state = np.array({state!r}, dtype=np.uint64).view(np.float64)
         self.last_price = 0.0
 
     def setup(self, ctx):
@@ -207,12 +209,12 @@ def audit_strategy_source(source: str, state) -> str:
     """The kernel as an ordinary strategy file, for the process boundary.
 
     Python executes the kernel source here, so the audit does not trust Numba's compiled code.
-    `state` is the kernel's buffer at the end of warmup, written exactly as hexadecimal floats.
+    `state` is the kernel's buffer at the end of warmup, handed over as its exact bits.
     """
     K.check(source)
     constants = "\n".join(f"{name} = {value}" for name, value in K.CONSTANTS.items())
     return _AUDIT_TEMPLATE.format(constants=constants, kernel=source.strip(),
-                                  state=[float(x).hex() for x in state])
+                                  state=np.asarray(state, np.float64).view(np.uint64).tolist())
 
 
 def trades_for_events(trade_ts: np.ndarray, book_ts: np.ndarray, limit: int) -> int:

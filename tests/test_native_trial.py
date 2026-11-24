@@ -24,7 +24,7 @@ def columns(n=2):
 
 
 @pytest.mark.parametrize("change", [dict(split="validation"), dict(split="holdout"), dict(fill_model="favorable"),
-                                    dict(book_features=False), dict(fit_sessions=2),
+                                    dict(book_features=False), dict(fit_sessions=2), dict(action_cap=32),
                                     dict(weights_path="w"), dict(allow_overnight=False)])
 def test_unproved_profiles_are_refused(change):
     assert T.refusal({**GOOD, **change})
@@ -124,3 +124,31 @@ def test_the_audit_wrapper_serves_only_its_sessions_through_the_columns_path():
     walked = [(c.session, len(c)) for c in wrapped.session_columns(Split.VALIDATION)]
     assert walked == [(sessions[0], 7), (sessions[1], 50)]
     assert sum(1 for _ in wrapped.ticks(Split.VALIDATION)) == 57
+
+
+def test_the_audit_state_keeps_every_bit():
+    state = np.array([np.nan, -np.nan, 1e300, -0.0] + [0.0] * 60)
+    state[0] = np.frombuffer(np.uint64(0x7FF8000000000123).tobytes(), np.float64)[0]
+    namespace = {}
+    exec(T.audit_strategy_source(T.CHECK_KERNEL, state), namespace)
+    assert namespace["Strategy"]().state.view(np.uint64).tolist() == state.view(np.uint64).tolist()
+
+
+@pytest.mark.parametrize("name", ["int", "state", "B_PRICE"])
+def test_a_loop_cannot_rebind_a_protected_name(name):
+    with pytest.raises(K.KernelRejected):
+        K.check(f"def kernel(event, book, state, orders):\n    for {name} in range(2):\n        pass\n    return 0\n")
+
+
+@pytest.mark.skipif(importlib.util.find_spec("numba") is None, reason="numba is not installed")
+@pytest.mark.parametrize("value", ["4294967297", "65", "-1", "0.0 * (1e308 * 10.0)"])
+def test_an_out_of_range_action_count_stops_the_run(value):
+    """`int(nan)` inside a kernel becomes 0 under Numba and raises in Python. That is not
+    refusable here; the audit sees it as a crash, which still counts."""
+    kernel = K.CompiledKernel(f"def kernel(event, book, state, orders):\n    return {value}\n")
+    event, book, orders = np.zeros(41, np.int64), np.zeros(24), np.zeros((64, 6))
+    call = kernel._entry.ctypes
+    result = call(event.ctypes.data_as(call.argtypes[0]), book.ctypes.data_as(call.argtypes[1]),
+                  kernel.state.ctypes.data_as(call.argtypes[2]), orders.ctypes.data_as(call.argtypes[3]),
+                  kernel.state.size, 64)
+    assert result == -1

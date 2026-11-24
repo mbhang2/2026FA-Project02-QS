@@ -76,6 +76,8 @@ class _AuditSessions:
 def _child_run(spec: dict) -> dict:
     cfg = run.load_config()
     profile = cfg["profiles"][spec["profile"]]
+    if spec.get("latency_ns") is not None:
+        profile = {**profile, "latency_ns": spec["latency_ns"]}
     dataset = run.build_dataset(cfg, profile["dataset"], profile["seed"])
     terms = run.execution_terms(profile)
     warmup = int(profile.get("warmup_sessions", 0))
@@ -165,11 +167,12 @@ def _audit(profile_name, profile, dataset, source, state, columns, first_seq, ch
 
 
 def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessions=None, deep=False,
-              timeout_s=None) -> dict:
+              timeout_s=None, latency_ns: int | None = None) -> dict:
+    """`latency_ns` overrides the profile for an unsigned check only, like `run.main`'s override."""
     cfg = run.load_config()
     profile = cfg["profiles"].get(profile_name)
-    if profile is None:
-        raise T.NativeTrialRefused(f"unknown profile {profile_name!r}")
+    unknown = profile is None
+    profile = profile or {}
     source = Path(kernel_path).read_text()
     signed = prereg.in_force(24)
     if not signed:
@@ -179,6 +182,10 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
             raise T.NativeTrialRefused("Amendment 24 is not in force, so the ledger must be under .scratch/")
     elif profile.get("engine") != "native":
         raise T.NativeTrialRefused("the profile does not set engine: native")
+    if latency_ns is not None:
+        if signed:
+            raise T.NativeTrialRefused("a latency override is for an unsigned check only")
+        profile = {**profile, "latency_ns": latency_ns}
     purpose = "trial" if signed else "check"
     started = time.perf_counter()
     with LedgerRun(ledger_path, row_builder=lambda r: run._row(r, "human", profile_name, ledger_path, purpose,
@@ -187,6 +194,8 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                   "kernel_sha256": hashlib.sha256(source.encode()).hexdigest()}
         run_log.update(record)
         try:
+            if unknown:
+                raise T.NativeTrialRefused(f"unknown profile {profile_name!r}")
             K.check(source)
             problem = T.refusal(profile)
             if problem:
@@ -198,9 +207,10 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
             chosen = sorted(sessions) if sessions is not None else scored
             if not chosen or not set(chosen) <= set(scored):
                 raise T.NativeTrialRefused("sessions must be a non-empty part of the train split")
-            spec = {"profile": profile_name, "source": source, "sessions": chosen}
+            spec = {"profile": profile_name, "source": source, "sessions": chosen, "latency_ns": latency_ns}
             with tempfile.TemporaryDirectory(prefix="native-trial-") as folder:
-                columns, state, first_seq = _spawn_native(spec, folder, timeout_s)
+                columns, state, first_seq = _spawn_native(
+                    spec, folder, timeout_s if timeout_s is not None else profile.get("wall_clock_budget_s"))
             native_s = time.perf_counter() - started
             T.validate_columns(columns, set(chosen), dataset.session_bounds)
             audit_started = time.perf_counter()

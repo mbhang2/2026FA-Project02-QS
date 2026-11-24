@@ -100,15 +100,14 @@ def test_the_audit_state_round_trips_exactly():
     assert namespace["Strategy"]().state.tolist() == state
 
 
-def test_the_audit_wrapper_serves_only_its_sessions_through_the_columns_path():
+def test_the_audit_window_serves_one_slice_through_the_columns_path():
     import sys
     from pathlib import Path
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
     import run_native_trial as R
-    from src.core.engine.engine import Engine as E
-
     from src.core.data.columns import SessionColumns
+    from src.core.engine.engine import Engine as E
 
     class Columns:
         name = "fake"
@@ -116,16 +115,15 @@ def test_the_audit_wrapper_serves_only_its_sessions_through_the_columns_path():
         def session_columns(self, split, *, warmup=0):
             for session in (3, 4, 5):
                 n = 50
-                yield SessionColumns(session, np.arange(n, dtype=np.int64), np.full(n, 100.0),
+                yield SessionColumns(session, np.arange(n, dtype=np.int64) + session * 1000, np.full(n, 100.0),
                                      np.ones(n, np.int64), np.ones(n, np.int8))
 
-    sessions = [3, 4]
-    wrapped = R._AuditSessions(Columns(), sessions, first_trades=7)
-    assert E._columns_source(wrapped) is not None
-    walked = [(c.session, len(c)) for c in wrapped.session_columns(Split.VALIDATION)]
-    assert walked == [(sessions[0], 7), (sessions[1], 50)]
-    assert sum(1 for _ in wrapped.ticks(Split.VALIDATION)) == 57
-
+    window = R._AuditWindow(Columns(), 4, 10, 7)
+    assert E._columns_source(window) is not None
+    walked = [(c.session, int(c.ts[0]), len(c)) for c in window.session_columns(Split.VALIDATION)]
+    assert walked == [(4, 4010, 7)]
+    assert sum(1 for _ in window.ticks(Split.VALIDATION)) == 7
+    assert [(c.session, len(c)) for c in R._AuditWindow(Columns(), 5, 45).session_columns(Split.TRAIN)] == [(5, 5)]
 
 def test_the_audit_state_keeps_every_bit():
     state = np.array([np.nan, -np.nan, 1e300, -0.0] + [0.0] * 60)

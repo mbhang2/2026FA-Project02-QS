@@ -2700,7 +2700,7 @@ Code: `src/core/engine/fills.py`, `src/core/engine/engine.py`, `run.py`, `script
 
 ## Amendment 24 — 2026-11-23 — native kernel trials and BTC market making
 
-**Status: DRAFT, NOT IN FORCE.** Drafted 2026-11-23 by Claude on request and not signed. The code reads this line, so nothing below applies until Michael signs it. No candidate kernel has run. The native engine has run only fixed check strategies, which wrote no ledger row.
+**Status: DRAFT, NOT IN FORCE.** Drafted 2026-11-23 by Claude on request and not signed. The code reads this line, so nothing below applies until Michael signs it. No candidate kernel has run. The native engine has run only fixed check strategies, which wrote rows only to a scratch ledger under `.scratch/`.
 
 ### Why
 
@@ -2717,8 +2717,8 @@ The native engine reproduces the Python engine's fills about 100 to 200 times fa
 | | rule |
 |---|---|
 | A1 | A profile enables this with `engine: native`. Without it, the run and its digests are unchanged. |
-| A2 | **One ledger row is opened before the kernel is parsed.** A refused source, compile failure, crash, timeout, invalid fill or failed audit is that row's outcome and counts toward N. |
-| A3 | The kernel is compiled and run only in a child process. The child returns plain numeric fill columns. The parent reads them without pickle and rejects a wrong type, an impossible value, or a fill outside its session. |
+| A2 | **One ledger row is opened before the kernel is parsed.** A refused source, compile failure, crash, timeout, invalid fill or failed audit is that row's outcome and counts toward N. An open-trial entry is written first and removed only after the row is appended. An entry left behind, for example by a killed process, becomes a crashed row on the next run. |
+| A3 | The kernel is compiled and run only in a child process, started over an inherited pipe for an open trial, under a ticket that only the trial runner may mint. The native engine refuses to run without a ticket. The child returns plain numeric fill columns. The parent reads them without pickle and rejects a wrong type, an impossible value, or a fill outside its session. |
 | A4 | A kernel sees one event, the visible top five levels, and its own state of at most 4,096 numbers. It may not import, call arbitrary functions, loop without a literal bound, or write to the event or book. Bounds checks stay on, and an out-of-bounds access ends the trial. |
 | A5 | The score is computed from the validated fills by the unchanged reconstruction and scorer. |
 | A6 | The row records the kernel source digest, native library digest, ABI version, Numba version, fill-log digest and audit result. |
@@ -2728,9 +2728,9 @@ The native engine reproduces the Python engine's fills about 100 to 200 times fa
 
 | | rule |
 |---|---|
-| B1 | **Every trial:** the first 250,000 scored events, or the whole first scored session if shorter, are replayed through the Python engine behind a process boundary. |
-| B2 | Warmup places no orders, so the position is flat when it ends. The audit starts from the kernel state saved at that point, and a test must prove that this start is equivalent to replaying warmup. |
-| B3 | **Every trial that passes the train gate:** the first five scored sessions are replayed before its validation run is opened. |
+| B1 | **Every trial:** 250,000 events, or to the end of the session if fewer remain, starting at a trade drawn uniformly from a session drawn uniformly from the scored sessions, are replayed through the Python engine behind a process boundary. Python executes the kernel source, not the compiled code. |
+| B2 | The points are drawn from the operating system's randomness in the parent process after the trial is opened. The kernel cannot see them. The native child saves the engine just before each point: the position, next order id, last trade price, kernel state, and every working order with its queue state. The Python engine resumes from that state, and tests must prove that resuming is exact. The points are recorded in the row after the run. |
+| B3 | **Every trial that passes the train gate:** five whole scored sessions, drawn as in B2, are replayed before its validation run is opened. |
 | B4 | Any difference in fills, order, price, size, liquidity or mid **invalidates the trial, and it still counts toward N**. A native-engine mismatch stops the campaign until it is explained. |
 | B5 | **The holdout is scored by the Python engine only**, through `scripts/holdout.py`, and is opened once as before. |
 
@@ -2767,6 +2767,8 @@ Recorded campaigns, the score, costs of existing profiles, funding, fill rules o
 
 1. Tests pin rules A1 to A7, B1 to B5, C1 to C8 and D1 to D3.
 2. **An adversarial review** of the kernel checker and child boundary, by a reviewer given the code and not this conclusion, finds no route to later data, the ledger, or forged fills. Every finding is fixed or recorded.
+
+   *Recorded 2026-11-24, before signing.* A first review found no route to later data, outside memory or forged fills. It found that native runs could bypass the ledger, that a killed process could leave no row, and that an audit fixed at the start of a run let a kernel know where it stopped. Native and Python differ on some integer overflow and NaN conversions, so a kernel can tell which engine runs it. These led to A2's open-trial entry, A3's ticket and pipe, and B1 to B3's random audit points. One difference remains unfixed: `int(nan)` is 0 under Numba and an error in Python. The audit treats it as a crash, which counts toward N and cannot raise a score. A second review must run against the revised code.
 3. **A lookahead test:** replacing every trade and book row after an event's visible data with random values leaves that event's actions unchanged.
 4. Existing real NQ, Binance and OKX runs reproduce their digests and scores.
 5. Native and Python fills, scores and diagnostics are identical on real train sessions, with warmup, at 1 ms and 100 ms.

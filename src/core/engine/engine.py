@@ -552,6 +552,9 @@ class Engine:
         # Calls `strategy.on_book_event(ctx)` once per millisecond with a book update.
         # Not reachable from a profile or the strategy API: no campaign uses it.
         book_events: bool = False,
+        # Amendment 24's audit only: start the first session from a native engine's saved state.
+        # See `_apply_resume`. Nothing on a scored path passes it.
+        resume: dict | None = None,
         # Amendment 23: no book fill from a row with an empty best bid or ask.
         two_sided_book: bool = False,
         # Paid on taker fills as a cost, in price points per contract and in basis
@@ -607,6 +610,9 @@ class Engine:
         self._no_new_orders = False
         self.book_features = bool(book_features)
         self.book_events = bool(book_events)
+        if resume is not None and not self.book_events:
+            raise ValueError("resume is for the book-event audit only")
+        self._resume, self._resumed = resume, False
         if self.book_events and not self.book_features:
             raise ValueError("book_events needs book_features")
         self._book_access = {"requested": False}
@@ -1216,7 +1222,10 @@ class Engine:
         book_ts = np.asarray(self.dataset.book_for(session).ts)
         first, last = int(batch[0].ts), int(batch[-1].ts)
         releases = np.unique(book_ts - book_ts % 1_000_000) + 1_000_000
-        releases = releases[(releases > first) & (releases <= last)]
+        low = first
+        if self._resume is not None and not self._resumed:
+            low = self._apply_resume()
+        releases = releases[(releases > low) & (releases <= last)]
         next_release = 0
         for ti in range(len(batch)):
             src = batch[ti]
@@ -1238,6 +1247,39 @@ class Engine:
             self._step(Tick(src.ts, src.price, src.size, session, seq, src.side), actionable)
         self._close_seq = seq + 1
         return seq
+
+    def _apply_resume(self) -> int:
+        """Put a native engine's saved state in place before the first event. Returns the
+        time after which this session's book events are still to come.
+
+        The native engine saved it just before one trade: the position, the next order id, the
+        last trade price, and each working order with its queue state. Sequence numbers in it
+        are already relative to this run's first event.
+        """
+        from .fills import _Resting
+
+        r = self._resume
+        self._resumed = True
+        self._state.position = int(r["position"])
+        self.last_price = float(r["last_price"])
+        self._book.next_id = int(r["next_id"])
+        resting = getattr(self.model, "_resting", None)
+        for o in r["orders"]:
+            order = Order(order_id=int(o["id"]), side=Side.BUY if o["buy"] else Side.SELL, size=int(o["size"]),
+                          order_type=OrderType.MARKET if o["market"] else OrderType.LIMIT,
+                          tif=TimeInForce.GTC if o["gtc"] else TimeInForce.DAY,
+                          limit_price=None if o["market"] else float(o["limit"]),
+                          eligible_from_seq=int(o["eligible_seq"]), status=OrderStatus.WORKING,
+                          filled_size=int(o["filled"]), eligible_from_ts=int(o["eligible_ts"]),
+                          cancel_at_ts=int(o["cancel_at"]) if o["cancelling"] else None)
+            self._book.all[order.order_id] = order
+            self._book.working[order.order_id] = order
+            if o["placed"]:
+                if resting is None:
+                    raise ValueError("resume needs the book queue fill model")
+                resting[order.order_id] = _Resting(int(o["session"]), int(o["row"]),
+                                                   float(o["queue"]) if o["has_queue"] else None)
+        return int(r["after_ts"])
 
     def _on_quote(self, quote: Quote, seq: int, actionable: bool) -> None:
         """Update the book, then tell a subscribed strategy. No fill here.

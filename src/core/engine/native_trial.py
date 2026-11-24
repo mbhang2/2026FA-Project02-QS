@@ -136,7 +136,7 @@ class Strategy:
 
     def __init__(self):
         self.state = np.array({state!r}, dtype=np.uint64).view(np.float64)
-        self.last_price = 0.0
+        self.last_price = np.array([{last_price!r}], dtype=np.uint64).view(np.float64)[0]
 
     def setup(self, ctx):
         ctx.subscribe("tick")
@@ -205,7 +205,7 @@ class Strategy:
 """
 
 
-def audit_strategy_source(source: str, state) -> str:
+def audit_strategy_source(source: str, state, last_price: float = 0.0) -> str:
     """The kernel as an ordinary strategy file, for the process boundary.
 
     Python executes the kernel source here, so the audit does not trust Numba's compiled code.
@@ -214,12 +214,35 @@ def audit_strategy_source(source: str, state) -> str:
     K.check(source)
     constants = "\n".join(f"{name} = {value}" for name, value in K.CONSTANTS.items())
     return _AUDIT_TEMPLATE.format(constants=constants, kernel=source.strip(),
-                                  state=np.asarray(state, np.float64).view(np.uint64).tolist())
+                                  state=np.asarray(state, np.float64).view(np.uint64).tolist(),
+                                  last_price=int(np.asarray([last_price], np.float64).view(np.uint64)[0]))
 
 
-def trades_for_events(trade_ts: np.ndarray, book_ts: np.ndarray, limit: int) -> int:
-    """How many leading trades cover at least `limit` events, trades and book events together."""
+ORDER_FIELDS = ("id", "buy", "market", "gtc", "size", "filled", "eligible_seq", "eligible_ts", "cancelling",
+                "cancel_at", "placed", "session", "row", "has_queue")
+
+
+def resume_from_snapshot(snapshot: dict, after_ts: int) -> dict:
+    """A native snapshot as the Python engine's `resume`, with sequence numbers made relative
+    to the resumed run, whose first event is the native engine's `seq + 1`."""
+    first = snapshot["seq"] + 1
+    orders = []
+    for ints, doubles in zip(snapshot["order_ints"].tolist(), snapshot["order_doubles"].tolist()):
+        order = dict(zip(ORDER_FIELDS, ints))
+        order["eligible_seq"] -= first
+        order["limit"], order["queue"] = doubles
+        orders.append(order)
+    return {"position": snapshot["position"], "next_id": snapshot["next_id"], "last_price": snapshot["last_price"],
+            "orders": orders, "after_ts": int(after_ts), "first_seq": first}
+
+
+def trades_for_events(trade_ts: np.ndarray, book_ts: np.ndarray, limit: int, after: int | None = None) -> int:
+    """How many leading trades cover at least `limit` events, trades and book events together.
+
+    Book events count only after `after`, which is the session's first trade unless the run
+    resumes mid-session, where it is the trade before the first one here.
+    """
     releases = np.unique(book_ts - book_ts % 1_000_000) + 1_000_000
-    releases = releases[releases > trade_ts[0]]
+    releases = releases[releases > (trade_ts[0] if after is None else after)]
     events = np.arange(1, trade_ts.size + 1) + np.searchsorted(releases, trade_ts, side="right")
     return min(int(np.searchsorted(events, limit, side="left")) + 1, trade_ts.size)

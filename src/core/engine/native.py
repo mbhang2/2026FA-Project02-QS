@@ -17,7 +17,7 @@ from .fills import MAX_QUOTE_AGE_NS
 from .reconstruct import log_digest, reconstruct
 
 LIBRARY = repo_root() / ".scratch" / "native" / "libfastcore.so"
-ABI_VERSION = 6
+ABI_VERSION = 7
 WAIT, FILLED, REJECTED = 0, 1, 2
 
 
@@ -45,8 +45,12 @@ def load(path: Path = LIBRARY) -> ctypes.CDLL:
     lib.fc_engine_run_session.restype = ctypes.c_int64
     lib.fc_engine_run_session.argtypes = [
         pointer, *[pointer] * 9, ctypes.c_int64, *[pointer] * 4, ctypes.c_int64, ctypes.c_int64,
-        ctypes.c_int64, ctypes.c_int32, pointer, pointer,
+        ctypes.c_int64, ctypes.c_int32, pointer, pointer, ctypes.c_int64, pointer, pointer, ctypes.c_int32,
     ]
+    lib.fc_engine_snapshot.restype = ctypes.c_int64
+    lib.fc_engine_snapshot.argtypes = [pointer, pointer, pointer]
+    lib.fc_engine_snapshot_orders.restype = None
+    lib.fc_engine_snapshot_orders.argtypes = [pointer, pointer, pointer]
     for name in ("fc_engine_fill_count", "fc_engine_position", "fc_engine_callbacks", "fc_engine_seq"):
         getattr(lib, name).restype = ctypes.c_int64
         getattr(lib, name).argtypes = [pointer]
@@ -93,7 +97,10 @@ class NativeEngine:
         return False
 
     def run_session(self, book, trades: tuple, session: int, close_ts: int, *, actionable: bool = True,
-                    callback=None, user=None) -> None:
+                    callback=None, user=None, snapshot_trade: int = -1, state=None) -> None:
+        """`snapshot_trade` saves the engine, and a copy of `state`, just before that trade."""
+        state_src = None if state is None else _array(state, np.float64)
+        self._snap_state = None if state_src is None else np.zeros_like(state_src)
         depth = book._depth
         if depth is None:
             raise ValueError("the native engine needs the stored depth columns")
@@ -110,9 +117,24 @@ class NativeEngine:
         result = self.lib.fc_engine_run_session(
             self.handle, *[a.ctypes.data for a in (*columns, *levels)], columns[0].size,
             ts.ctypes.data, price.ctypes.data, size.ctypes.data, side.ctypes.data, ts.size,
-            session, close_ts, int(bool(actionable)), callback, user)
+            session, close_ts, int(bool(actionable)), callback, user, snapshot_trade,
+            None if state_src is None else state_src.ctypes.data,
+            None if self._snap_state is None else self._snap_state.ctypes.data,
+            0 if state_src is None else state_src.size)
         if result < 0:
             raise RuntimeError("the native strategy callback stopped the run")
+
+    def snapshot(self) -> dict | None:
+        """The engine saved by the last `run_session`'s `snapshot_trade`, or None."""
+        scalars, price = np.zeros(5, np.int64), np.zeros(1, np.float64)
+        n = int(self.lib.fc_engine_snapshot(self.handle, scalars.ctypes.data, price.ctypes.data))
+        if not scalars[0]:
+            return None
+        ints, doubles = np.zeros((n, 14), np.int64), np.zeros((n, 2), np.float64)
+        self.lib.fc_engine_snapshot_orders(self.handle, ints.ctypes.data, doubles.ctypes.data)
+        return {"seq": int(scalars[1]), "position": int(scalars[2]), "next_id": int(scalars[3]),
+                "trade": int(scalars[4]), "last_price": float(price[0]), "order_ints": ints,
+                "order_doubles": doubles, "state": self._snap_state}
 
     @property
     def seq(self) -> int:

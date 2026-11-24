@@ -179,3 +179,59 @@ def test_an_audit_started_after_warmup_equals_replaying_warmup(latency):
     native_digest = log_digest(T.records_from_columns(columns))
     assert log_digest(T.records_from_columns(_columns(replayed.fill_log))) == native_digest
     assert log_digest(T.records_from_columns(_columns(started.fill_log, first_seq))) == native_digest
+
+
+class _Slice:
+    """One session, from one trade on, through the tick path."""
+
+    def __init__(self, inner, session, start):
+        self._inner, self._session, self._start, self.name = inner, session, start, inner.name
+
+    def __getattr__(self, key):
+        return getattr(self._inner, key)
+
+    def ticks(self, split, *, warmup=0):
+        ticks = [t for t in self._inner.ticks(split, warmup=0) if t.session == self._session]
+        yield from ticks[self._start:]
+
+
+@pytest.mark.parametrize("latency", [0, 1_000_000, 100_000_000])
+@pytest.mark.parametrize("pick", [0, 1, 2, 3])
+def test_a_python_run_resumed_mid_session_matches_the_native_engine(latency, pick):
+    """Amendment 24 B1: the audit may start anywhere, so resuming must be exact."""
+    dataset = SyntheticDataset(SyntheticSpec(**SPEC))
+    scored = dataset.scored_sessions(Split.VALIDATION, 0)
+    rng = np.random.default_rng(100 + pick)
+    target = scored[int(rng.integers(2, len(scored)))]
+    target_trades = _trades(dataset, target)
+    start = 0 if pick == 0 else int(rng.integers(1, target_trades[0].size))
+    lib = native.load()
+    kernel = K.CompiledKernel(T.CHECK_KERNEL)
+    with native.NativeEngine(lib, ticket=RunTicket.for_test(), latency_ns=latency, require_two_sided=False,
+                             book_features=True, book_events=True) as fast:
+        for session in scored:
+            snap = start if session == target else -1
+            fast.run_session(_native_book(dataset, session), _trades(dataset, session), session,
+                             dataset.session_bounds(session)[1], callback=kernel.callback(lib),
+                             user=kernel.user_pointer(), snapshot_trade=snap, state=kernel.state)
+            if session == target:
+                saved = fast.snapshot()
+            if session == target:
+                break
+        columns = fast.fill_columns()
+    assert saved is not None and saved["trade"] == start
+    after = int(target_trades[0][start - 1]) if start else int(target_trades[0][0])
+    resume = T.resume_from_snapshot(saved, after)
+    namespace = {}
+    exec(T.audit_strategy_source(T.CHECK_KERNEL, saved["state"], saved["last_price"]), namespace)
+    engine = Engine.for_test(_Slice(dataset, target, start), namespace["Strategy"](), split=Split.VALIDATION,
+                             fill_model=T.BOOK_MODEL, warmup_sessions=0, seed=5, commission_bps=2.0,
+                             maker_commission_bps=0.0, latency_ns=latency, book_features=True, book_events=True,
+                             resume=resume)
+    engine.run()
+    first = resume["first_seq"]
+    window = (columns["seq"] >= first) & (columns["session"] == target)
+    native_part = T.records_from_columns({k: v[window] for k, v in columns.items()})
+    python_part = T.records_from_columns(_columns(engine.fill_log, first))
+    assert len(native_part) > 0 or pick == 3
+    assert log_digest(python_part) == log_digest(native_part)

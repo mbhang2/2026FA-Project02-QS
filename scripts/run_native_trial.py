@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import random
 import subprocess
 import sys
 import tempfile
@@ -78,24 +79,20 @@ def recover_open_trials(ledger_path: Path, row_builder) -> int:
     return recovered
 
 
-class _AuditSessions:
-    """The audited sessions, the first optionally cut to its leading trades."""
+class _AuditWindow:
+    """One session from one trade on, optionally cut to a number of trades."""
 
-    def __init__(self, inner, sessions, first_trades=None):
-        self._inner, self._kept, self._first_trades, self.name = inner, list(sessions), first_trades, inner.name
+    def __init__(self, inner, session, start, count=None):
+        self._inner, self._session, self._start, self._count, self.name = inner, session, start, count, inner.name
 
     def __getattr__(self, key):
         return getattr(self._inner, key)
 
     def session_columns(self, split, *, warmup=0):
-        for columns in self._inner.session_columns(split, warmup=0):
-            if columns.session not in self._kept:
-                continue
-            if self._first_trades is not None and columns.session == self._kept[0]:
-                n = self._first_trades
-                columns = SessionColumns(columns.session, columns.ts[:n], columns.price[:n], columns.size[:n],
-                                         columns.side[:n])
-            yield columns
+        columns = _session_columns(self._inner, self._session)
+        stop = None if self._count is None else self._start + self._count
+        cut = slice(self._start, stop)
+        yield SessionColumns(columns.session, columns.ts[cut], columns.price[cut], columns.size[cut], columns.side[cut])
 
     def ticks(self, split, *, warmup=0):
         """The same trades as `session_columns`, so the engine reads those columns rather than
@@ -103,6 +100,10 @@ class _AuditSessions:
         for columns in self.session_columns(split, warmup=warmup):
             for i in range(len(columns)):
                 yield columns[i]
+
+
+def _session_columns(dataset, session):
+    return next(c for c in dataset.session_columns(Split.TRAIN, warmup=0) if c.session == session)
 
 
 def _child_run(spec: dict) -> dict:
@@ -121,29 +122,40 @@ def _child_run(spec: dict) -> dict:
     warmup = int(profile.get("warmup_sessions", 0))
     warm = set(dataset.warmup_sessions(Split.TRAIN, warmup))
     keep = set(spec["sessions"])
+    points = {int(k): int(v) for k, v in spec["snapshots"].items()}
     kernel = K.CompiledKernel(spec["source"])
     lib = native.load()
-    state_at_start, first_seq = None, None
-    with native.NativeEngine(lib, ticket=ticket, latency_ns=terms["latency_ns"], require_two_sided=run._two_sided_book(profile),
-                             book_features=True, book_events=True) as fast:
+    saved = {}
+    with native.NativeEngine(lib, ticket=ticket, latency_ns=terms["latency_ns"],
+                             require_two_sided=run._two_sided_book(profile), book_features=True,
+                             book_events=True) as fast:
         for columns in dataset.session_columns(Split.TRAIN, warmup=warmup):
             is_warm = columns.session in warm
             if not is_warm and columns.session not in keep:
                 continue
-            if not is_warm and state_at_start is None:
-                state_at_start, first_seq = kernel.state.copy(), fast.seq + 1
             fast.run_session(dataset.book_for(columns.session),
                              (columns.ts, columns.price, columns.size, columns.side), columns.session,
                              dataset.session_bounds(columns.session)[1], actionable=not is_warm,
-                             callback=kernel.callback(lib), user=kernel.user_pointer())
+                             callback=kernel.callback(lib), user=kernel.user_pointer(),
+                             snapshot_trade=points.get(columns.session, -1), state=kernel.state)
+            if columns.session in points:
+                saved[columns.session] = fast.snapshot()
             if lib.fc_engine_fill_count(fast.handle) > MAX_FILL_LOG:
                 raise T.NativeTrialFailed(f"the kernel exceeded {MAX_FILL_LOG:,} fills")
-        if state_at_start is None:
-            raise T.NativeTrialFailed("no scored session ran")
-        return {**fast.fill_columns(), "_state": state_at_start, "_first_seq": np.array([first_seq], np.int64)}
+        out = fast.fill_columns()
+    for i, session in enumerate(sorted(points)):
+        snap = saved.get(session)
+        if snap is None:
+            raise T.NativeTrialFailed(f"no snapshot was taken in session {session}")
+        out[f"_snap{i}_ints"] = np.array([session, snap["seq"], snap["position"], snap["next_id"], snap["trade"]],
+                                         np.int64)
+        out[f"_snap{i}_price"] = np.array([snap["last_price"]], np.float64)
+        out[f"_snap{i}_orders_i"], out[f"_snap{i}_orders_d"] = snap["order_ints"], snap["order_doubles"]
+        out[f"_snap{i}_state"] = snap["state"]
+    return out
 
 
-def _spawn_native(spec: dict, folder: str, timeout_s) -> tuple[dict, np.ndarray, int]:
+def _spawn_native(spec: dict, folder: str, timeout_s) -> tuple[dict, dict]:
     out = Path(folder) / "native.npz"
     # The spec goes over an inherited pipe, never a path on the command line.
     read_fd, write_fd = os.pipe()
@@ -159,24 +171,51 @@ def _spawn_native(spec: dict, folder: str, timeout_s) -> tuple[dict, np.ndarray,
         raise T.NativeTrialFailed(f"the native child failed: {done.stderr[-800:]}")
     with np.load(out, allow_pickle=False) as data:
         loaded = {name: data[name] for name in data.files}
-    state, first = loaded.pop("_state"), loaded.pop("_first_seq")
-    if state.dtype != np.float64 or state.ndim != 1 or first.shape != (1,) or first.dtype != np.int64 or first[0] < 0:
-        raise T.NativeTrialFailed("the child returned an invalid audit start")
-    return loaded, state, int(first[0])
+    snapshots = {}
+    for i, (session, trade) in enumerate(sorted((int(k), int(v)) for k, v in spec["snapshots"].items())):
+        ints, price = loaded.pop(f"_snap{i}_ints"), loaded.pop(f"_snap{i}_price")
+        orders_i, orders_d, state = (loaded.pop(f"_snap{i}_orders_i"), loaded.pop(f"_snap{i}_orders_d"),
+                                     loaded.pop(f"_snap{i}_state"))
+        good = (ints.dtype == np.int64 and ints.shape == (5,) and int(ints[0]) == session and int(ints[4]) == trade
+                and int(ints[1]) >= -1 and int(ints[3]) >= 1 and price.dtype == np.float64 and price.shape == (1,)
+                and orders_i.dtype == np.int64 and orders_i.ndim == 2 and orders_i.shape[1] == 14
+                and orders_d.dtype == np.float64 and orders_d.shape == (orders_i.shape[0], 2)
+                and state.dtype == np.float64 and state.ndim == 1)
+        if not good:
+            raise T.NativeTrialFailed("the child returned an invalid snapshot")
+        snapshots[session] = {"seq": int(ints[1]), "position": int(ints[2]), "next_id": int(ints[3]),
+                              "trade": trade, "last_price": float(price[0]), "order_ints": orders_i,
+                              "order_doubles": orders_d, "state": state}
+    if any(name.startswith("_") for name in loaded):
+        raise T.NativeTrialFailed("the child returned unexpected arrays")
+    return loaded, snapshots
 
 
-def _audit(profile_name, profile, dataset, source, state, columns, first_seq, chosen, deep, ticket):
-    """Replay the leading events in Python. Returns (engine, fills compared)."""
+def _choose_windows(dataset, chosen: list[int], deep: bool) -> list[tuple[int, int, int | None]]:
+    """(session, first trade, trade count or None for the rest of the session).
+
+    Drawn from the operating system's randomness in this process. The kernel runs in the child
+    and sees only its own arrays, so it cannot know where an audit starts.
+    """
+    rng = random.SystemRandom()
     if deep:
-        audited, first_trades = chosen[:DEEP_AUDIT_SESSIONS], None
-    else:
-        audited = chosen[:1]
-        trades = next(c for c in dataset.session_columns(Split.TRAIN, warmup=0) if c.session == audited[0])
-        first_trades = T.trades_for_events(np.asarray(trades.ts), np.asarray(dataset.book_for(audited[0]).ts),
-                                           SHORT_AUDIT_EVENTS)
+        return [(s, 0, None) for s in sorted(rng.sample(chosen, min(DEEP_AUDIT_SESSIONS, len(chosen))))]
+    session = rng.choice(chosen)
+    return [(session, rng.randrange(len(_session_columns(dataset, session))), SHORT_AUDIT_EVENTS)]
+
+
+def _audit_window(profile, dataset, source, columns, snap, session, start, events, ticket) -> tuple:
+    """Resume the Python engine at the saved point and require the same fills. Returns
+    (engine, record of the window)."""
+    trades = _session_columns(dataset, session)
+    ts = np.asarray(trades.ts)
+    after = int(ts[start - 1]) if start else int(ts[0])
+    count = None if events is None else T.trades_for_events(ts[start:], np.asarray(dataset.book_for(session).ts),
+                                                            events, after)
+    resume = T.resume_from_snapshot(snap, after)
     folder = SCRATCH / "native-audit"
     folder.mkdir(parents=True, exist_ok=True)
-    text = T.audit_strategy_source(source, state)
+    text = T.audit_strategy_source(source, snap["state"], snap["last_price"])
     path = folder / f"{hashlib.sha256(text.encode()).hexdigest()[:16]}-{os.getpid()}.py"
     path.write_text(text)
     commission = ({"commission_per_contract": profile["commission_per_contract"]}
@@ -184,20 +223,22 @@ def _audit(profile_name, profile, dataset, source, state, columns, first_seq, ch
     try:
         with RemoteStrategy(path, class_name="Strategy", action_cap=profile.get("action_cap", 64), window=1,
                             tick_window=1, timeout_s=profile.get("wall_clock_budget_s")) as strategy:
-            engine = Engine(_AuditSessions(dataset, audited, first_trades), strategy, ticket=ticket, split=Split.TRAIN,
+            engine = Engine(_AuditWindow(dataset, session, start, count), strategy, ticket=ticket, split=Split.TRAIN,
                             fill_model=profile["fill_model"], warmup_sessions=0, seed=profile["seed"],
                             commission_bps=profile.get("commission_bps", 0.0), book_features=True, book_events=True,
-                            two_sided_book=run._two_sided_book(profile), **commission, **run.execution_terms(profile))
+                            two_sided_book=run._two_sided_book(profile), resume=resume, **commission,
+                            **run.execution_terms(profile))
             engine.run()
             if engine.record.outcome != "completed":
                 raise T.NativeTrialFailed(f"the audit did not complete: {engine.record.error}")
     finally:
         path.unlink(missing_ok=True)
-    last = first_seq + engine._close_seq - 1
-    keep = (columns["seq"] >= first_seq) & (columns["seq"] <= last)
+    first = resume["first_seq"]
+    last = first + engine._close_seq - 1
+    keep = (columns["seq"] >= first) & (columns["seq"] <= last)
     native_part = T.records_from_columns({k: v[keep] for k, v in columns.items()})
     log = engine.fill_log
-    shifted = {"seq": np.array([f.seq + first_seq for f in log], np.int64), "ts": np.array([f.ts for f in log], np.int64),
+    shifted = {"seq": np.array([f.seq + first for f in log], np.int64), "ts": np.array([f.ts for f in log], np.int64),
                "session": np.array([f.session for f in log], np.int64),
                "order_id": np.array([f.order_id for f in log], np.int64),
                "side": np.array([1 if f.side is Side.BUY else -1 for f in log], np.int8),
@@ -206,8 +247,9 @@ def _audit(profile_name, profile, dataset, source, state, columns, first_seq, ch
                "maker": np.array([1 if f.liquidity == "maker" else 0 for f in log], np.int8),
                "mid": np.array([f.mid for f in log], np.float64)}
     if log_digest(native_part) != log_digest(T.records_from_columns(shifted)):
-        raise T.AuditMismatch("the native fills differ from the Python audit")
-    return engine, len(native_part), int(engine._close_seq), len(audited)
+        raise T.AuditMismatch(f"the native fills differ from the Python audit in session {session} from trade {start}")
+    return engine, {"session": session, "start_trade": start, "events": int(engine._close_seq),
+                    "fills": len(native_part)}
 
 
 def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessions=None, deep=False,
@@ -261,16 +303,21 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                 chosen = sorted(sessions) if sessions is not None else scored
                 if not chosen or not set(chosen) <= set(scored):
                     raise T.NativeTrialRefused("sessions must be a non-empty part of the train split")
+                windows = _choose_windows(dataset, chosen, deep)
                 spec = {"profile": profile_name, "source": source, "sessions": chosen, "latency_ns": latency_ns,
-                        "trial_id": trial_id, "journal": str(journal)}
+                        "trial_id": trial_id, "journal": str(journal),
+                        "snapshots": {str(session): start for session, start, _ in windows}}
                 with tempfile.TemporaryDirectory(prefix="native-trial-") as folder:
-                    columns, state, first_seq = _spawn_native(
+                    columns, snapshots = _spawn_native(
                         spec, folder, timeout_s if timeout_s is not None else profile.get("wall_clock_budget_s"))
                 native_s = time.perf_counter() - started
                 T.validate_columns(columns, set(chosen), dataset.session_bounds)
                 audit_started = time.perf_counter()
-                engine, audited_fills, audited_events, audited_sessions = _audit(
-                    profile_name, profile, dataset, source, state, columns, first_seq, chosen, deep, run_log.ticket)
+                audited = []
+                for session, start, events in windows:
+                    engine, window = _audit_window(profile, dataset, source, columns, snapshots[session], session,
+                                                   start, events, run_log.ticket)
+                    audited.append(window)
                 audit_s = time.perf_counter() - audit_started
                 run.integrity.check(run.SCORING_AT_IMPORT, run.integrity.fingerprint())
                 run.integrity.check_artifacts(run.ARTIFACTS_AT_IMPORT, run.integrity.artifact_digests())
@@ -293,8 +340,7 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                               diagnostics=score_diagnostics(blotter, period, **kw).as_dict(),
                               native_library_sha256=hashlib.sha256(native.LIBRARY.read_bytes()).hexdigest(),
                               native_abi=native.ABI_VERSION, numba_version=__import__("numba").__version__,
-                              audit={"tier": "deep" if deep else "short", "sessions": audited_sessions,
-                                     "events": audited_events, "fills": audited_fills, "matched": True},
+                              audit={"tier": "deep" if deep else "short", "windows": audited, "matched": True},
                               native_seconds=round(native_s, 3), audit_seconds=round(audit_s, 3))
             except T.AuditMismatch as exc:
                 record.update(outcome="invalidated_fill_log_mismatch", error=str(exc), score=None)

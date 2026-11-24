@@ -376,6 +376,11 @@ struct FcEngine {
     std::vector<Order> working;
     std::vector<FillRow> fills;
     std::vector<FcAction> actions;
+    // The engine just before one trade of the last session run, for an audit that resumes there.
+    bool snapped = false;
+    int64_t snap_seq = -1, snap_position = 0, snap_next_id = 1, snap_trade = -1;
+    double snap_last_price = 0.0;
+    std::vector<Order> snap_orders;
 };
 
 }  // extern "C"
@@ -461,7 +466,7 @@ void apply_actions(FcEngine* e, const FcAction* actions, int32_t count, int64_t 
 
 extern "C" {
 
-int32_t fc_abi_version() { return 6; }
+int32_t fc_abi_version() { return 7; }
 
 // status: 0 keeps waiting, 1 filled, 2 refused because it exceeds the visible levels.
 int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double* ask,
@@ -513,7 +518,10 @@ int64_t fc_engine_run_session(FcEngine* e, const int64_t* ts, const double* bid,
                               const int64_t* trade_ts, const double* trade_price,
                               const int64_t* trade_size, const int8_t* trade_side,
                               int64_t trades, int64_t session, int64_t close_ts,
-                              int32_t actionable, FcCallback callback, void* user) {
+                              int32_t actionable, FcCallback callback, void* user,
+                              int64_t snapshot_trade, const double* state_src, double* state_out,
+                              int32_t state_len) {
+    e->snapped = false;
     const Book b = make_book(ts, bid, ask, bid_qty, ask_qty, bid_px, bid_lots, ask_px, ask_lots,
                              rows, e->scale, e->require_two_sided, e->max_age);
     FcEvent event{};
@@ -545,6 +553,18 @@ int64_t fc_engine_run_session(FcEngine* e, const int64_t* ts, const double* bid,
     double last_price = 0.0;
     for (int64_t t = 0; t < trades; ++t) {
         const int64_t now = trade_ts[t];
+        if (t == snapshot_trade) {   // after trade t-1 and its callback, before any later event
+            e->snapped = true;
+            e->snap_seq = e->seq;
+            e->snap_position = e->position;
+            e->snap_next_id = e->next_id;
+            e->snap_trade = t;
+            e->snap_last_price = last_price;
+            e->snap_orders = e->working;
+            if (state_src != nullptr && state_out != nullptr) {
+                for (int32_t i = 0; i < state_len; ++i) state_out[i] = state_src[i];
+            }
+        }
         // A row is known from the start of the next millisecond, before a trade at that time.
         while (e->book_events && book_row < rows) {
             const int64_t base = ts[book_row] - ts[book_row] % 1000000;
@@ -611,6 +631,32 @@ int64_t fc_engine_run_session(FcEngine* e, const int64_t* ts, const double* bid,
 int64_t fc_engine_fill_count(const FcEngine* e) { return static_cast<int64_t>(e->fills.size()); }
 int64_t fc_engine_position(const FcEngine* e) { return e->position; }
 int64_t fc_engine_seq(const FcEngine* e) { return e->seq; }
+
+// scalars: snapped, seq, position, next_id, trade. Returns the number of working orders.
+int64_t fc_engine_snapshot(const FcEngine* e, int64_t* scalars, double* last_price) {
+    scalars[0] = e->snapped;
+    scalars[1] = e->snap_seq;
+    scalars[2] = e->snap_position;
+    scalars[3] = e->snap_next_id;
+    scalars[4] = e->snap_trade;
+    *last_price = e->snap_last_price;
+    return static_cast<int64_t>(e->snap_orders.size());
+}
+
+// Per order, ints: id, buy, market, gtc, size, filled, eligible_seq, eligible_ts, cancelling,
+// cancel_at, placed, session, row, has_queue. doubles: limit, queue.
+void fc_engine_snapshot_orders(const FcEngine* e, int64_t* ints, double* doubles) {
+    for (size_t i = 0; i < e->snap_orders.size(); ++i) {
+        const Order& o = e->snap_orders[i];
+        int64_t* r = ints + i * 14;
+        r[0] = o.id; r[1] = o.buy; r[2] = o.market; r[3] = o.gtc; r[4] = o.size; r[5] = o.filled;
+        r[6] = o.eligible_seq; r[7] = o.eligible_ts; r[8] = o.cancelling; r[9] = o.cancel_at;
+        r[10] = o.resting.placed; r[11] = o.resting.session; r[12] = o.resting.row;
+        r[13] = o.resting.has_queue;
+        doubles[i * 2] = o.limit;
+        doubles[i * 2 + 1] = o.resting.queue;
+    }
+}
 int64_t fc_engine_callbacks(const FcEngine* e) { return e->callbacks; }
 
 void fc_engine_copy_fills(const FcEngine* e, int64_t* seq, int64_t* ts, int64_t* session,

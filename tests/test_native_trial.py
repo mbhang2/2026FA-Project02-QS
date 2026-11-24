@@ -24,7 +24,7 @@ def columns(n=2):
 
 
 @pytest.mark.parametrize("change", [dict(split="validation"), dict(split="holdout"), dict(fill_model="favorable"),
-                                    dict(book_features=False), dict(warmup_sessions=1), dict(fit_sessions=2),
+                                    dict(book_features=False), dict(fit_sessions=2),
                                     dict(weights_path="w"), dict(allow_overnight=False)])
 def test_unproved_profiles_are_refused(change):
     assert T.refusal({**GOOD, **change})
@@ -65,7 +65,9 @@ def test_the_audit_strategy_matches_the_native_engine():
                          start_price=30000.0, tick_size=0.1, vol_per_tick=6.0, early_close_rate=0.0, length_jitter=0.0,
                          session_open_utc="00:00", size_scale=20, book=True, seed=5)
     dataset = SyntheticDataset(spec)
-    engine = Engine.for_test(dataset, T.KernelStrategy(BOOK_KERNEL), split=Split.VALIDATION, fill_model=T.BOOK_MODEL, warmup_sessions=0, seed=5, commission_bps=2.0,
+    namespace = {}
+    exec(T.audit_strategy_source(BOOK_KERNEL, [0.0] * 64), namespace)
+    engine = Engine.for_test(dataset, namespace["Strategy"](), split=Split.VALIDATION, fill_model=T.BOOK_MODEL, warmup_sessions=0, seed=5, commission_bps=2.0,
                     maker_commission_bps=0.0, latency_ns=1_000_000, book_features=True, book_events=True)
     engine.run()
     lib = native.load()
@@ -80,3 +82,45 @@ def test_the_audit_strategy_matches_the_native_engine():
             fast.run_session(native_book(dataset, session), trades, session, dataset.session_bounds(session)[1],
                              callback=kernel.callback(lib), user=kernel.user_pointer())
         assert len(engine.fill_log) > 5 and fast.fill_digest() == engine.fill_log_digest()
+
+
+def test_the_event_cut_counts_trades_and_book_events():
+    trades = np.array([1, 2, 3, 4], np.int64) * 1_000_000
+    book = np.array([1, 2, 3], np.int64) * 1_000_000
+    assert T.trades_for_events(trades, book, 1) == 1
+    assert T.trades_for_events(trades, book, 3) == 2
+    assert T.trades_for_events(trades, book, 100) == 4
+
+
+def test_the_audit_state_round_trips_exactly():
+    state = [0.1, -1.0 / 3.0, 1e300] + [0.0] * 61
+    namespace = {}
+    exec(T.audit_strategy_source(T.CHECK_KERNEL, state), namespace)
+    assert namespace["Strategy"]().state.tolist() == state
+
+
+def test_the_audit_wrapper_serves_only_its_sessions_through_the_columns_path():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import run_native_trial as R
+    from src.core.engine.engine import Engine as E
+
+    from src.core.data.columns import SessionColumns
+
+    class Columns:
+        name = "fake"
+
+        def session_columns(self, split, *, warmup=0):
+            for session in (3, 4, 5):
+                n = 50
+                yield SessionColumns(session, np.arange(n, dtype=np.int64), np.full(n, 100.0),
+                                     np.ones(n, np.int64), np.ones(n, np.int8))
+
+    sessions = [3, 4]
+    wrapped = R._AuditSessions(Columns(), sessions, first_trades=7)
+    assert E._columns_source(wrapped) is not None
+    walked = [(c.session, len(c)) for c in wrapped.session_columns(Split.VALIDATION)]
+    assert walked == [(sessions[0], 7), (sessions[1], 50)]
+    assert sum(1 for _ in wrapped.ticks(Split.VALIDATION)) == 57

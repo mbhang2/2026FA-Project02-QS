@@ -10,6 +10,7 @@ import pytest
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec
 from src.core.engine import Engine, native
 from src.core.engine import kernel as K
+from src.core.engine import native_trial as T
 from src.core.types import Side, Split
 
 needs_numba = pytest.mark.skipif(importlib.util.find_spec("numba") is None, reason="numba is not installed")
@@ -81,38 +82,7 @@ def test_a_compiled_kernel_returns_its_count():
     assert call(kernel) == 0 and kernel.state[0] == 1.0
 
 
-BOOK_KERNEL = """
-def kernel(event, book, state, orders):
-    state[0] += 1.0
-    if book[B_OK] == 0.0:
-        state[2] += 1.0
-        return 0
-    for i in range(5):
-        if i < book[B_N_BID]:
-            state[1] = (state[1] * 31.0 + book[B_BID_PX + i] * book[B_BID_QTY + i]) % 1000000007.0
-    for i in range(5):
-        if i < book[B_N_ASK]:
-            state[1] = (state[1] * 31.0 + book[B_ASK_PX + i] * book[B_ASK_QTY + i]) % 1000000007.0
-    if state[0] % 50.0 != 0.0:
-        return 0
-    step = int(state[0]) // 50
-    if event[E_N_WORKING] > 0 and step % 7 == 0:
-        orders[0, O_OP] = OP_CANCEL
-        orders[0, O_ORDER_ID] = event[E_WORKING]
-        return 1
-    if event[E_N_WORKING] >= 4:
-        return 0
-    buy = event[E_POSITION] < 0 or (event[E_POSITION] == 0 and step % 2 == 0)
-    orders[0, O_OP] = OP_BUY if buy else OP_SELL
-    orders[0, O_SIZE] = 20.0
-    orders[0, O_TIF] = TIF_GTC if step % 3 == 0 else TIF_DAY
-    if step % 5 == 0:
-        orders[0, O_KIND] = KIND_MARKET
-    else:
-        orders[0, O_KIND] = KIND_LIMIT
-        orders[0, O_LIMIT] = book[B_BID_PX] if buy else book[B_ASK_PX]
-    return 1
-"""
+BOOK_KERNEL = T.CHECK_KERNEL
 
 
 class BookParityStrategy:

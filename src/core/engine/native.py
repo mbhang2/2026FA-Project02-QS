@@ -17,7 +17,7 @@ from .fills import MAX_QUOTE_AGE_NS
 from .reconstruct import log_digest, reconstruct
 
 LIBRARY = repo_root() / ".scratch" / "native" / "libfastcore.so"
-ABI_VERSION = 5
+ABI_VERSION = 6
 WAIT, FILLED, REJECTED = 0, 1, 2
 
 
@@ -47,7 +47,7 @@ def load(path: Path = LIBRARY) -> ctypes.CDLL:
         pointer, *[pointer] * 9, ctypes.c_int64, *[pointer] * 4, ctypes.c_int64, ctypes.c_int64,
         ctypes.c_int64, ctypes.c_int32, pointer, pointer,
     ]
-    for name in ("fc_engine_fill_count", "fc_engine_position", "fc_engine_callbacks"):
+    for name in ("fc_engine_fill_count", "fc_engine_position", "fc_engine_callbacks", "fc_engine_seq"):
         getattr(lib, name).restype = ctypes.c_int64
         getattr(lib, name).argtypes = [pointer]
     lib.fc_engine_copy_fills.restype = None
@@ -107,6 +107,11 @@ class NativeEngine:
             session, close_ts, int(bool(actionable)), callback, user)
         if result < 0:
             raise RuntimeError("the native strategy callback stopped the run")
+
+    @property
+    def seq(self) -> int:
+        """The last event's sequence number, -1 before the first."""
+        return int(self.lib.fc_engine_seq(self.handle))
 
     @property
     def position(self) -> int:

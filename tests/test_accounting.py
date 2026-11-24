@@ -32,7 +32,8 @@ STRATEGY_PATH = REPO_ROOT / "src" / "strategies" / "current.py"
 
 # Where the engine may be constructed, and with which ticket. Anything else is a
 # new route and has to be argued for rather than merged.
-LEDGER_SITES = {"run.py", "scripts/nq_smoke.py", "scripts/replay.py"}
+# `run_native_trial.py` (Amendment 24): one ledger row per kernel, audited behind RemoteStrategy.
+LEDGER_SITES = {"run.py", "scripts/nq_smoke.py", "scripts/replay.py", "scripts/run_native_trial.py"}
 CALIBRATION_SITES = {
     "src/core/scoring/calibration/null.py",
     "src/core/scoring/calibration/_sweep.py",

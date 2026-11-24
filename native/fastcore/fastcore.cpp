@@ -461,7 +461,7 @@ void apply_actions(FcEngine* e, const FcAction* actions, int32_t count, int64_t 
 
 extern "C" {
 
-int32_t fc_abi_version() { return 5; }
+int32_t fc_abi_version() { return 6; }
 
 // status: 0 keeps waiting, 1 filled, 2 refused because it exceeds the visible levels.
 int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double* ask,
@@ -610,6 +610,7 @@ int64_t fc_engine_run_session(FcEngine* e, const int64_t* ts, const double* bid,
 
 int64_t fc_engine_fill_count(const FcEngine* e) { return static_cast<int64_t>(e->fills.size()); }
 int64_t fc_engine_position(const FcEngine* e) { return e->position; }
+int64_t fc_engine_seq(const FcEngine* e) { return e->seq; }
 int64_t fc_engine_callbacks(const FcEngine* e) { return e->callbacks; }
 
 void fc_engine_copy_fills(const FcEngine* e, int64_t* seq, int64_t* ts, int64_t* session,
@@ -643,7 +644,7 @@ int32_t fc_kernel_callback(const FcEvent* event, FcAction* actions, int32_t cap,
     FcKernelUser* k = static_cast<FcKernelUser*>(user);
     constexpr int kMaxOrders = 64;
     const int32_t room = cap < kMaxOrders ? cap : kMaxOrders;
-    int64_t ints[41] = {event->ts, event->seq, event->session, event->size, event->position,
+    int64_t ints[41] = {event->ts, 0, event->session, event->size, event->position,
                         event->side, event->actionable, event->n_working};
     for (int i = 0; i < event->n_working; ++i) ints[8 + i] = event->working[i];
     ints[40] = event->kind;

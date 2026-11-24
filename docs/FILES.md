@@ -99,6 +99,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/release/resign_redacted_records.py` | Re-sign committed run records after the public-release redaction. |
 | `scripts/replay.py` | Re-run a ledger row from the strategy source stored beside it. |
 | `scripts/review_strategy.py` | A reviewer for the candidate code, not the question. |
+| `scripts/run_native_trial.py` | Run one Numba kernel on the native engine, under one ledger row (Amendment 24). |
 | `scripts/session_closes.py` | Record when each early-closing session actually ends. |
 | `scripts/supervise_campaign.sh` | Keep a campaign's run stage advancing until its budget is met. |
 | `scripts/tabulate_null.py` | Build the empirical null and commit it. |

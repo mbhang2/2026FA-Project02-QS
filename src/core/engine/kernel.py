@@ -22,7 +22,7 @@ import ast
 import ctypes
 
 CONSTANTS = {
-    "E_TS": 0, "E_SEQ": 1, "E_SESSION": 2, "E_SIZE": 3, "E_POSITION": 4, "E_SIDE": 5,
+    "E_TS": 0, "E_SESSION": 2, "E_SIZE": 3, "E_POSITION": 4, "E_SIDE": 5,
     "E_ACTIONABLE": 6, "E_N_WORKING": 7, "E_WORKING": 8, "E_KIND": 40,
     "EVENT_TRADE": 0, "EVENT_BOOK": 1,
     "B_PRICE": 0, "B_OK": 1, "B_N_BID": 2, "B_N_ASK": 3, "B_BID_PX": 4, "B_BID_QTY": 9,

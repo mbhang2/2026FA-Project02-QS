@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <vector>
 
 namespace {
 
@@ -44,6 +45,7 @@ struct Fill {
 // Where a resting limit stands, as of `row`.
 struct Resting {
     bool placed = false;
+    int64_t session = 0;
     int64_t row = -1;
     bool has_queue = false;
     double queue = 0.0;
@@ -239,8 +241,8 @@ void advance(const Book& b, bool buy, double limit, int64_t row, Resting* state)
 }
 
 int8_t limit_step(const Book& b, bool buy, double limit, int64_t remaining, int64_t eligible,
-                  int64_t tick_ts, double price, int64_t size, int8_t tick_side, Resting* state,
-                  Fill* out) {
+                  int64_t tick_ts, double price, int64_t size, int8_t tick_side, int64_t session,
+                  Resting* state, Fill* out) {
     if (!state->placed) {
         int64_t at = eligible != 0 ? eligible : tick_ts;
         int64_t row = fresh_row(b, at);
@@ -257,6 +259,7 @@ int8_t limit_step(const Book& b, bool buy, double limit, int64_t remaining, int6
         }
         const bool crosses = buy ? limit >= b.ask[row] - kPriceTol : limit <= b.bid[row] + kPriceTol;
         state->placed = true;
+        state->session = session;
         state->row = row;
         place(b, buy, limit, row, state);
         if (crosses) {
@@ -265,6 +268,12 @@ int8_t limit_step(const Book& b, bool buy, double limit, int64_t remaining, int6
         }
     }
     const int64_t row = upper_bound(b.ts, b.rows, tick_ts) - 1;
+    if (state->session != session) {     // a GTC order meets a new session's book
+        state->session = session;
+        state->row = -1;
+        state->has_queue = false;
+        state->queue = 0.0;
+    }
     advance(b, buy, limit, row, state);
     if (b.require_two_sided && (row < 0 || (b.gaps && one_sided(b, row)))) return kWait;
     const double mid = row < 0 ? std::numeric_limits<double>::quiet_NaN()
@@ -309,11 +318,107 @@ Book make_book(const int64_t* ts, const double* bid, const double* ask, const in
     return b;
 }
 
+struct Order {
+    int64_t id;
+    bool buy, market, gtc;
+    int64_t size, filled;
+    double limit;
+    int64_t eligible_seq, eligible_ts;
+    bool cancelling;
+    int64_t cancel_at;
+    Resting resting;
+};
+
+struct FillRow {
+    int64_t seq, ts, session, order_id;
+    int8_t side;
+    int64_t size;
+    double price;
+    int8_t maker;
+    double mid;
+};
+
 }  // namespace
 
 extern "C" {
 
-int32_t fc_abi_version() { return 2; }
+// What a strategy callback sees. It holds no array and no later event.
+struct FcEvent {
+    int64_t ts, seq, session;
+    double price;
+    int64_t size;
+    int64_t position;
+    int32_t side;
+    int32_t actionable;
+    int32_t n_working;
+    int32_t reserved;
+    int64_t working[32];
+};
+
+// op: 1 buy, 2 sell, 3 cancel. kind: 0 market, 1 limit. tif: 0 day, 1 good-till-cancelled.
+struct FcAction {
+    int32_t op, kind, tif, reserved;
+    int64_t size;
+    double limit;
+    int64_t order_id;
+};
+
+typedef int32_t (*FcCallback)(const FcEvent*, FcAction*, int32_t, void*);
+
+struct FcEngine {
+    int64_t latency, max_age;
+    int32_t scale, require_two_sided, action_cap;
+    int64_t seq = -1, next_id = 1, position = 0, stepped = 0, callbacks = 0;
+    std::vector<Order> working;
+    std::vector<FillRow> fills;
+    std::vector<FcAction> actions;
+};
+
+}  // extern "C"
+
+namespace {
+
+void apply_actions(FcEngine* e, const FcAction* actions, int32_t count, int64_t ts, int64_t seq) {
+    if (count > e->action_cap) count = e->action_cap;
+    // Ids are given when the callback queues them, before any action is applied.
+    int64_t next = e->next_id;
+    for (int32_t i = 0; i < count; ++i) {
+        const FcAction& a = actions[i];
+        if (a.op == 1 || a.op == 2) {
+            Order o{};
+            o.id = next++;
+            o.buy = a.op == 1;
+            o.market = a.kind == 0;
+            o.gtc = a.tif == 1;
+            o.size = a.size;
+            o.limit = a.limit;
+            o.eligible_seq = seq + 1;
+            o.eligible_ts = e->latency ? ts + e->latency : 0;
+            e->working.push_back(o);
+        } else if (a.op == 3) {
+            for (size_t k = 0; k < e->working.size(); ++k) {
+                Order& o = e->working[k];
+                if (o.id != a.order_id) continue;
+                if (e->latency) {
+                    if (!o.cancelling) {
+                        o.cancelling = true;
+                        o.cancel_at = ts + e->latency;
+                    }
+                } else {
+                    e->working.erase(e->working.begin() + static_cast<int64_t>(k));
+                }
+                break;
+            }
+        }
+    }
+    e->next_id = next;
+}
+
+}  // namespace
+
+extern "C" {
+
+int32_t fc_abi_version() { return 3; }
 
 // status: 0 keeps waiting, 1 filled, 2 refused because it exceeds the visible levels.
 int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double* ask,
@@ -341,6 +446,146 @@ int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double*
     return filled;
 }
 
+FcEngine* fc_engine_new(int64_t latency_ns, int64_t max_age_ns, int32_t scale,
+                        int32_t require_two_sided, int32_t action_cap) {
+    FcEngine* e = new FcEngine();
+    e->latency = latency_ns;
+    e->max_age = max_age_ns;
+    e->scale = scale;
+    e->require_two_sided = require_two_sided;
+    e->action_cap = action_cap;
+    e->actions.resize(static_cast<size_t>(action_cap));
+    return e;
+}
+
+void fc_engine_free(FcEngine* e) { delete e; }
+
+int64_t fc_engine_run_session(FcEngine* e, const int64_t* ts, const double* bid, const double* ask,
+                              const int64_t* bid_qty, const int64_t* ask_qty,
+                              const int32_t* bid_px, const int32_t* bid_lots,
+                              const int32_t* ask_px, const int32_t* ask_lots, int64_t rows,
+                              const int64_t* trade_ts, const double* trade_price,
+                              const int64_t* trade_size, const int8_t* trade_side,
+                              int64_t trades, int64_t session, int64_t close_ts,
+                              int32_t actionable, FcCallback callback, void* user) {
+    const Book b = make_book(ts, bid, ask, bid_qty, ask_qty, bid_px, bid_lots, ask_px, ask_lots,
+                             rows, e->scale, e->require_two_sided, e->max_age);
+    FcEvent event{};
+    for (int64_t t = 0; t < trades; ++t) {
+        const int64_t seq = ++e->seq;
+        const int64_t now = trade_ts[t];
+        ++e->stepped;
+        size_t keep = 0;
+        for (size_t k = 0; k < e->working.size(); ++k) {
+            Order& o = e->working[k];
+            bool done = false;
+            if (o.cancelling && now >= o.cancel_at) {
+                done = true;
+            } else if (seq >= o.eligible_seq && now >= o.eligible_ts) {
+                Fill fill;
+                const int64_t remaining = o.size - o.filled;
+                int8_t status;
+                if (o.market) {
+                    const int64_t at = o.eligible_ts != 0 ? o.eligible_ts : now;
+                    status = take(b, o.buy, remaining, at, now, false, 0.0, &fill);
+                } else {
+                    status = limit_step(b, o.buy, o.limit, remaining, o.eligible_ts, now,
+                                        trade_price[t], trade_size[t], trade_side[t], session,
+                                        &o.resting, &fill);
+                }
+                if (status == kRejected) {
+                    done = true;
+                } else if (status == kFilled) {
+                    e->position += o.buy ? fill.size : -fill.size;
+                    o.filled += fill.size;
+                    e->fills.push_back(FillRow{seq, now, session, o.id,
+                                               static_cast<int8_t>(o.buy ? 1 : -1), fill.size,
+                                               fill.price, static_cast<int8_t>(fill.maker ? 1 : 0),
+                                               fill.mid});
+                    done = o.filled >= o.size;
+                }
+            }
+            if (!done) {
+                if (keep != k) e->working[keep] = o;
+                ++keep;
+            }
+        }
+        e->working.resize(keep);
+        if (callback == nullptr) continue;
+        event.ts = now;
+        event.seq = seq;
+        event.session = session;
+        event.price = trade_price[t];
+        event.size = trade_size[t];
+        event.side = trade_side[t];
+        event.position = e->position;
+        event.actionable = actionable;
+        event.n_working = 0;
+        for (const Order& o : e->working) {
+            if (event.n_working == 32) break;
+            event.working[event.n_working++] = o.id;
+        }
+        ++e->callbacks;
+        const int32_t count = callback(&event, e->actions.data(), e->action_cap, user);
+        if (actionable && count > 0) apply_actions(e, e->actions.data(), count, now, seq);
+    }
+    size_t keep = 0;
+    for (size_t k = 0; k < e->working.size(); ++k) {
+        Order& o = e->working[k];
+        const bool cancelled = e->latency && o.cancelling && o.cancel_at <= close_ts;
+        if (cancelled || !o.gtc) continue;
+        if (keep != k) e->working[keep] = o;
+        ++keep;
+    }
+    e->working.resize(keep);
+    return e->stepped;
+}
+
+int64_t fc_engine_fill_count(const FcEngine* e) { return static_cast<int64_t>(e->fills.size()); }
+int64_t fc_engine_position(const FcEngine* e) { return e->position; }
+int64_t fc_engine_callbacks(const FcEngine* e) { return e->callbacks; }
+
+void fc_engine_copy_fills(const FcEngine* e, int64_t* seq, int64_t* ts, int64_t* session,
+                          int64_t* order_id, int8_t* side, int64_t* size, double* price,
+                          int8_t* maker, double* mid) {
+    for (size_t i = 0; i < e->fills.size(); ++i) {
+        const FillRow& f = e->fills[i];
+        seq[i] = f.seq;
+        ts[i] = f.ts;
+        session[i] = f.session;
+        order_id[i] = f.order_id;
+        side[i] = f.side;
+        size[i] = f.size;
+        price[i] = f.price;
+        maker[i] = f.maker;
+        mid[i] = f.mid;
+    }
+}
+
+// A fixed strategy for proving the event loop against the Python engine.
+struct FcParityState {
+    int64_t every, hold, offset, size, market_every, count;
+};
+
+int32_t fc_parity_strategy(const FcEvent* event, FcAction* actions, int32_t cap, void* user) {
+    FcParityState* s = static_cast<FcParityState*>(user);
+    const int64_t n = ++s->count;
+    if (n % s->every != 0 || cap < 1) return 0;
+    const int64_t step = n / s->every;
+    if (event->n_working > 0 && step % s->hold == 0) {
+        actions[0] = FcAction{3, 0, 0, 0, 0, 0.0, event->working[0]};
+        return 1;
+    }
+    if (event->n_working >= 4) return 0;
+    const bool buy = event->position < 0 || (event->position == 0 && step % 2 == 0);
+    const bool market = step % s->market_every == 0;
+    const double ticks = std::rint(event->price * 10.0);
+    const double limit = market ? 0.0
+        : (ticks + static_cast<double>(buy ? -s->offset : s->offset)) / 10.0;
+    actions[0] = FcAction{buy ? 1 : 2, market ? 0 : 1, step % 3 == 0 ? 1 : 0, 0, s->size, limit, 0};
+    return 1;
+}
+
 // Each limit order walks trades [start, end) until it is done. Returns the number of fills,
 // or -1 if the output arrays are too small.
 int64_t fc_run_limit_orders(const int64_t* ts, const double* bid, const double* ask,
@@ -364,7 +609,7 @@ int64_t fc_run_limit_orders(const int64_t* ts, const double* bid, const double* 
         for (int64_t t = start[i]; t < end[i] && remaining > 0; ++t) {
             Fill fill;
             if (limit_step(b, side[i] > 0, limit[i], remaining, eligible[i], trade_ts[t],
-                           trade_price[t], trade_size[t], trade_side[t], &state,
+                           trade_price[t], trade_size[t], trade_side[t], 0, &state,
                            &fill) != kFilled) {
                 continue;
             }

@@ -475,6 +475,7 @@ What each test file pins.
 | `tests/test_missing_tabulated_null.py` | A dataset with no tabulated null loses a diagnostic and keeps its gate. |
 | `tests/test_model_options.py` | Every agent part's model can be chosen, reaches its own call, and is recorded. |
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
+| `tests/test_native_event_loop.py` | The native event loop reproduces the Python engine's fill log. |
 | `tests/test_native_fastcore.py` | The native market-order walk matches the Python fill model exactly. |
 | `tests/test_no_depth_counted_roots.py` | No tree outside `src/core/**` finds its root by counting directories. |
 | `tests/test_nq_adapter.py` | The NQ adapter, checked against what was already established about this data. |

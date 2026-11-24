@@ -246,3 +246,41 @@ def test_book_events_refuse_a_strategy_without_the_callback():
                     commission_bps=2.0, maker_commission_bps=0.0, book_features=True, book_events=True)
     with pytest.raises(ValueError, match="on_book_event"):
         engine.run()
+
+
+@needs_numba
+@pytest.mark.skipif(not native.LIBRARY.exists(), reason="the native library is not built")
+def test_native_fills_score_identically_through_the_unchanged_scorer():
+    import json
+
+    from src.core.scoring.scorer import score
+    from test_native_event_loop import native_book
+
+    spec = SyntheticSpec(n_sessions=120, ticks_per_session=240, tick_spacing_ns=5_000_000_000, session_gap_ns=0,
+                         start_price=30000.0, tick_size=0.1, vol_per_tick=6.0, early_close_rate=0.0, length_jitter=0.0,
+                         session_open_utc="00:00", size_scale=20, book=True, seed=5)
+    dataset = SyntheticDataset(spec)
+    engine = Engine(dataset, BookEventParityStrategy(), ticket=RunTicket.for_calibration("native score parity"),
+                    split=Split.VALIDATION, fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5,
+                    commission_bps=2.0, maker_commission_bps=0.0, latency_ns=1_000_000, book_features=True,
+                    book_events=True)
+    engine.run()
+    lib = native.load()
+    kernel = K.CompiledKernel(BOOK_KERNEL)
+    period = engine.session_calendar()
+    terms = dict(notional_base=30000.0, idle_charge=0.0, funding=None)
+    costs = dict(commission_per_contract=engine.commission, commission_bps=2.0, maker_commission_bps=0.0)
+    with native.NativeEngine(lib, latency_ns=1_000_000, require_two_sided=False, book_features=True,
+                             book_events=True) as fast:
+        for session in dataset.scored_sessions(Split.VALIDATION, 0):
+            ticks = dataset._session_ticks(session)
+            trades = (np.array([t.ts for t in ticks], np.int64), np.array([t.price for t in ticks], float),
+                      np.array([t.size for t in ticks], np.int64),
+                      np.array([1 if t.side is Side.BUY else -1 if t.side is Side.SELL else 0 for t in ticks], np.int8))
+            fast.run_session(native_book(dataset, session), trades, session, dataset.session_bounds(session)[1],
+                             callback=kernel.callback(lib), user=kernel.user_pointer())
+        blotter, result = fast.scored(costs=costs, period=period, terms=terms)
+    reference = engine.reconstructed()
+    assert len(reference.rows) > 5 and blotter.exact_digest() == reference.exact_digest()
+    expected = score(reference, period=period, notional_base=30000.0, idle_charge=0.0, funding=None)
+    assert json.dumps(result.as_dict(), sort_keys=True) == json.dumps(expected.as_dict(), sort_keys=True)

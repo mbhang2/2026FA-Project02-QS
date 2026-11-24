@@ -14,7 +14,7 @@ import numpy as np
 from .._roots import repo_root
 from ..types import DEFAULT_ASSET, FillRecord, Side
 from .fills import MAX_QUOTE_AGE_NS
-from .reconstruct import log_digest
+from .reconstruct import log_digest, reconstruct
 
 LIBRARY = repo_root() / ".scratch" / "native" / "libfastcore.so"
 ABI_VERSION = 5
@@ -126,6 +126,19 @@ class NativeEngine:
 
     def fill_digest(self) -> str:
         return log_digest(self.fill_records())
+
+    def reconstructed(self, **costs):
+        """The blotter these fills imply, through the same function the Python engine uses."""
+        return reconstruct(self.fill_records(), **costs)
+
+    def scored(self, *, costs: dict, period, terms: dict, min_exposed_fraction=None):
+        """(blotter, score) through the unchanged scorer. Writes no ledger row."""
+        from ..scoring.scorer import score
+
+        blotter = self.reconstructed(**costs)
+        return blotter, score(blotter, period=period, notional_base=terms["notional_base"],
+                              idle_charge=terms["idle_charge"], funding=terms["funding"],
+                              min_exposed_fraction=min_exposed_fraction)
 
 
 def _array(values, dtype, ndim: int = 1) -> np.ndarray:

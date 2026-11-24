@@ -1,0 +1,507 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 8,
+    "diagnostics": {
+      "avg_holding_period_ns": 3.6836097949e+16,
+      "best_session_share": 0.052052144490513486,
+      "by_hour_utc": {
+        "00": 4439.777700000001,
+        "01": 2401.3965500000054,
+        "02": -3689.4898999999946,
+        "03": 1044.4836000000091,
+        "04": -1999.1064,
+        "05": 5685.597499999993,
+        "06": 9762.05,
+        "07": -5468.02670000001,
+        "08": -871.942199999995,
+        "09": -3547.697499999997,
+        "10": 5829.528400000002,
+        "11": 1800.8114999999866,
+        "12": 12235.650399999993,
+        "13": -7641.774900000007,
+        "14": -495.9194000000209,
+        "15": -7262.498799999968,
+        "16": -6761.361999999997,
+        "17": 16691.115200000004,
+        "18": 11666.493,
+        "19": -3275.4005999999927,
+        "20": 11844.918999999973,
+        "21": 34517.93879999999,
+        "22": 980.9986999999996,
+        "23": -3500.1372000000088
+      },
+      "by_hour_utc_entry": {
+        "01": 40413.819449999915,
+        "23": 33973.58530000006
+      },
+      "by_month": {
+        "2023-01": 1791.3474000000015,
+        "2023-02": -256.12679999999136,
+        "2023-03": 9046.2552,
+        "2023-04": 340.0828000000035,
+        "2023-05": -1087.6382999999978,
+        "2023-06": 4649.688700000003,
+        "2023-07": -542.7967999999935,
+        "2023-08": 479.927000000004,
+        "2023-09": -2106.1293000000037,
+        "2023-10": 7539.2458000000015,
+        "2023-11": -950.3542999999886,
+        "2023-12": 5598.882800000005,
+        "2024-01": 6864.751099999999,
+        "2024-02": 4752.282400000015,
+        "2024-03": -5470.946550000009,
+        "2024-04": 4665.956599999996,
+        "2024-05": 1974.0275000000188,
+        "2024-06": 1504.0806000000139,
+        "2024-07": 1857.5885000000026,
+        "2024-08": 4573.902900000004,
+        "2024-09": 10725.158000000007,
+        "2024-10": 9569.992399999992,
+        "2024-11": 9704.48759999997,
+        "2024-12": -14860.275900000011,
+        "2025-01": 112.51539999996612,
+        "2025-02": -1298.3519000000283,
+        "2025-03": 4246.189100000017,
+        "2025-04": 9910.657099999962,
+        "2025-05": 8354.433400000004,
+        "2025-06": -8973.967499999995,
+        "2025-07": 494.86789999999905,
+        "2025-08": 1177.6719
+      },
+      "by_weekday": {
+        "Fri": 26773.1283,
+        "Mon": -11074.616199999997,
+        "Sat": -10407.484400000001,
+        "Sun": 64176.253900000025,
+        "Thu": 16526.08069999997,
+        "Tue": 11289.671699999968,
+        "Wed": -22895.629249999998
+      },
+      "commission": 10411.59525,
+      "fill_model_spread": null,
+      "gross_pnl": 84798.99999999997,
+      "max_drawdown": -0.1912820124688794,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 21668.2929,
+        "exposure_share": 0.1719,
+        "return_dispersion": 0.0001,
+        "trades_per_session": 0.004
+      },
+      "primary_after_drop": {
+        "1": 0.14648402779417968,
+        "10": 0.015998168856399795,
+        "2": 0.1272586592129891,
+        "3": 0.10968543807168141,
+        "5": 0.0770035642577926
+      },
+      "profit_concentration_top5pct": 0.9075322250469269,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny. **Read `by_hour_utc` against `by_hour_utc_entry` before calling anything concentrated.** The first buckets P&L at the instant it was REALISED, which for any position held across time is the close -- and for an option the close is a cash settlement at an expiry the strategy neither chose nor can prevent. The second buckets the same P&L at the hour the position was OPENED. Where they disagree, the first is describing the expiry calendar and the second is describing the strategy. Note also that an hour-of-day is only a market clock if the dataset has one: on the synthetic calendar a session is a few hours long and its start drifts across the day, so hour-of-day there is arithmetic on the session index and carries no regime information at all",
+      "sessions_to_zero": 12,
+      "sessions_with_exposure": 165,
+      "trade_count": 167,
+      "turnover_contracts_per_session": 0.3489583333333333,
+      "win_rate": 0.46107784431137727
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 440,
+      "kurtosis": 29.38490678274283,
+      "metric": "sortino_per_session",
+      "min_exposed_fraction": 0.7,
+      "n_sessions": 960,
+      "net_pnl": 74387.40474999997,
+      "primary": 0.16770819653476926,
+      "primary_uncharged": 0.1677226900810121,
+      "reject_reason": "",
+      "rejected": false,
+      "sessions_exposed": 951,
+      "sharpe": 0.07691764939135479,
+      "significance": 5.196248417613134,
+      "skew": 3.7292829647785726,
+      "sortino": 0.16770819653476926,
+      "trade_count": 167
+    },
+    "source": "\"\"\"CVD continuation on the OKX BTCUSDT perpetual \u2014 campaign: \"BTC aggressive\nflow continues: cumulative volume delta predicts the next move\".\n\nThe claim under test\n--------------------\nAggressive buying that outweighs aggressive selling on the BTC perpetual is\nfollowed by higher prices, and aggressive selling by lower ones. The sign of the\naccumulated flow is the sign of the position. This file follows the flow; it does\nnot fade it. If continuation is wrong at this horizon the score says so, and\nrotating to the other side would answer a different question.\n\nWhere the eight trials have landed\n----------------------------------\n#0 (1h bars, 6h flow, 6h hold, rolling quantile) made 1,196 fills and scored\n-0.1415; at 10 bp per flip the fee bill (~60% of notional) was the whole of the\nloss, so its gross edge was about zero. #1 (short hold, wide bracket) lost more\nthan fees explain, so its gross was genuinely negative at that horizon. #2 and\n#3 cut the trade count and were refused for the exposure floor (251 and 392 of\n960 scored sessions against a registered 70%). #4 \u2014 a **persistent** position on\nthe sign of a 48-hour flow ratio, with hysteresis bands \u2014 traded 161 fills and\nscored **+0.1365**, the best result so far. #5 (72-hour window) +0.0201 with 133\nfills. #6 (12/24/48 consensus, entry_z 0.4, 24-bar minimum hold) +0.0864 with 264\nfills. #7 (#4 with flip_z 1.25 and a 12-bar minimum hold) +0.0778 with 127 fills.\n\nRead together, the record is consistent on one point and ambiguous on another:\n\n* **The shape is settled.** A continuously held long-or-short is present in every\n  session after the first entry, which clears the exposure floor by construction\n  rather than by tuning a trade rate \u2014 the property #2 and #3 lacked. A flip that\n  takes +1 straight to -1 in a single order is the only trade, so nothing is spent\n  flat between directions. Nothing here reopens that question.\n\n* **The trade-count axis is not settled.** #4 sits at a local optimum among the\n  four friends it has: fewer fills (#5, #7) scored worse and more fills (#6)\n  scored worse. But the spread between #4 and its neighbours is a few hundredths\n  of a point on a quantity \u2014 cumulative directional return on one lot of notional\n  \u2014 whose sampling error over 161 flips is far larger than that. I will not treat\n  #4's exact fill count as a tuned optimum, and I will not spend a trial moving\n  along that axis again on the strength of differences this small.\n\nWhat is left, then, is not a new signal and not a new state machine. It is the one\nthing in #4 that is unambiguously an artefact rather than a choice: **the latency\nbetween the flow crossing the band and the order reaching the market.**\n\nThe single change: sample the same rule four times as often\n-----------------------------------------------------------\n#4 evaluated a 48-hour flow window and a 30-day scale **once per hour**. The\nwindow is a 48-hour average; its value moves slowly, and an hourly close-to-close\nstep is a coarse sample of a path that is smooth at that scale. The cost is not in\nthe estimator, it is in the resolution of the decision: a reversal that crosses\n`-flip_z` twenty minutes after an hourly close is not acted on until the next\nhour, and the order then reaches the market 100 ms later. Every flip therefore\ncarries up to an hour of avoidable staleness on a horizon whose entire per-flip\nedge is about 0.185% of notional against a 0.100% round trip.\n\nSo this file keeps #4's statistic, #4's bands and #4's state machine, and evaluates\nthem on **15-minute bars**: `flow_window = 192` bars is the same 48 hours, the\nscale is `2880` bars (the same 30 days), the warmup for the scale is `672` bars\n(the same 7 days), and the post-stop cooldown is `96` bars (the same 24 hours).\nEvery parameter that could be expressed in hours is still expressed in the same\nnumber of hours; only the sampling of the decision changed.\n\nThis is a low-variance experiment by construction. A 48-hour average is a slowly\nvarying function of the last 48 hours, so the sequence of threshold crossings a\nfiner sampler sees is nearly the same sequence the coarse sampler saw \u2014 the count\nshould move by a few percent, not by a factor. What changes is *when* each\ncrossing is acted on, and it changes in one direction only: earlier. If the flow\nedge decays at all after the crossing, this collects part of what #4 left on the\ntable; if it does not decay, this is close to a no-op and the trial costs one\nround of sampling noise to establish that.\n\nThe rest is #4, unchanged, and deliberately so\n---------------------------------------------\n* **Measurement.** Over the last `flow_window` bars,\n\n      ratio = sum(bar.delta) / sum(bar.volume)\n\n  which is cumulative volume delta made dimensionless: the fraction of the\n  window's aggressive volume that was net buying, minus net selling. Dividing by\n  the window's own volume is the campaign's \"how to measure large\" answered once:\n  500 BTC of net buying is a different event in a quiet Asian morning and at a US\n  open, and this removes exactly that difference. `unknown_volume` is zero on this\n  feed \u2014 every trade carries its aggressor \u2014 so `bar.delta` is the exact signed\n  flow, there is no unknown branch to decide, and no tick subscription is needed:\n  ticks cost roughly five times the wall clock for a number the bar already\n  carries exactly.\n\n* **\"Large\" is standardised.** `z = ratio / sd(ratio)` over the trailing 30 days,\n  needing 7 days of observations. A fixed cut-off on a 24/7 asset is a bet on the\n  volatility regime of the year it was chosen in; standardising by the signal's own\n  recent dispersion keeps a band meaning the same thing in 2023 and in 2026, which\n  is what the campaign asks for when it wants the answer to hold across ordinary\n  sessions. The cut is on the *level* of the ratio, not on its deviation from a\n  trailing mean: the claim is that one-sided flow predicts, and a month of\n  persistent net buying should not be relabelled \"not unusual\" merely because it\n  happens to be the local average.\n\n* **Hysteresis between entry and flip.** Opening from flat (the first actionable\n  bar, or after a stop) needs |z| > 0.5; reversing needs |z| > 1.0. A flip pays two\n  fees and throws away a position the flow has not yet contradicted, so it demands\n  a more decisive reversal. The gap is what keeps the position on almost always\n  without ever paying to sit out.\n\n* **Market orders, and only on flips.** The fill model is book-queue-pessimistic: a\n  resting limit joins behind the displayed size and fills only when trades reach\n  through it, which on a continuation entry selects precisely the cases where the\n  expected move did not arrive. Paying the touch for a fill that actually happens\n  is the cheaper error, and 100 ms of latency on a one-lot order \u2014 0.0001 BTC \u2014 is\n  not meaningful slippage at this scale.\n\n* **Risk is a backstop, not a rule.** A close-of-bar check at 15% of adverse\n  excursion from the average entry, held in code rather than armed as an engine\n  order, so no bracket validation, DAY expiry or OCO event can end the run and no\n  order id is carried across a callback where an expiry could make it stale. It is\n  meant to be crossed by a crash and not by ordinary noise; afterwards the strategy\n  stands aside for a day and re-enters on a fresh `entry_z` reading.\n\n* **Bookkeeping is O(1) per bar.** The flow window is a bounded deque with running\n  delta and volume sums; the scale is running sums over a bounded deque with a\n  periodic exact re-sync. Nothing rescans history \u2014 there is no `ctx.history` read\n  at all, so the 512-bar pushed window cannot be overrun \u2014 and nothing grows across\n  sessions.\n\nPosition size is one lot, and it is unchanged. One lot is 0.0001 BTC; fees, funding\nand P&L are all linear in it, so the result is scale-free and the smallest tradable\nsize keeps the trial's risk honest while the statistics accumulate. Scaling up\nwould buy nothing except a bigger number in whatever units the score happens to be\nexpressed in, and would make this trial incomparable with the eight before it.\n\nWhat is deliberately absent: a tick subscription, any fade (the campaign names the\ndirection), any book-based input (not available on this adapter), a regime model\n(the standardisation is a scale, not a state), a second instrument, a target or\nbracket (a different claim \u2014 where the move stops), and any fixed-horizon exit.\nThe horizon *is* the flow window, and the position is held while the flow agrees\nwith it.\n\nOutcomes and what they would mean\n---------------------------------\nIf this scores above #4, the decision lag was real and the next step is the same\nlever once more \u2014 the cost of *when* the rule is evaluated, not *what* the rule is.\nIf it lands within noise of #4, the family's remaining question is the estimator\nitself, and the honest next experiment is a slower, smoother one, not another band.\nIf it scores materially below #4, the extra sampling is picking up crossings the\nhourly filter used to suppress, and the finding would be that #4's coarse cadence\nwas itself acting as a filter \u2014 which would be worth knowing before anything else\nis changed.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport math\nfrom collections import deque\n\n\nclass Strategy:\n    \"\"\"CVD continuation: hold with the flow, flip only on a decisive reversal.\"\"\"\n\n    def __init__(self, interval=\"15m\", flow_window=192, sd_window=2880,\n                 min_sd_obs=672, entry_z=0.5, flip_z=1.0, size=1,\n                 stop_bps=1500.0, cooldown_bars=96):\n        self.interval = interval            # 15m bars: same 48h rule, finer clock\n        self.flow_window = flow_window      # 192 bars = 48 hours of aggressor flow\n        self.sd_window = sd_window          # 2880 bars = 30 days of ratio history\n        self.min_sd_obs = min_sd_obs        # 672 bars = 7 days before a scale exists\n        self.entry_z = entry_z              # |z| needed to open from flat\n        self.flip_z = flip_z                # |z| needed to reverse an open position\n        self.size = size\n        self.stop_bps = stop_bps            # catastrophe stop, basis points\n        self.cooldown_bars = cooldown_bars  # 96 bars = 24 hours flat after a stop\n\n        # Rolling flow window with running sums: (delta, volume) per closed bar.\n        self.flow = deque()\n        self.sum_delta = 0.0\n        self.sum_volume = 0.0\n\n        # Rolling distribution of the raw ratio: running sums, bounded deque.\n        self.ratios = deque()\n        self.sr = 0.0\n        self.sr2 = 0.0\n        self._bars = 0\n\n        self.dir = 0                        # last known position direction\n        self.cooldown = 0\n\n    # ------------------------------------------------------------------ setup\n\n    def setup(self, ctx):\n        ctx.subscribe(self.interval)\n\n    # ------------------------------------------------------------------- bars\n\n    def on_bars(self, ctx):\n        # One subscription, but ask rather than assume: a bar from another\n        # interval closing at this instant must not be mistaken for ours.\n        if self.interval not in ctx.bars:\n            return\n        bar = ctx.bars[self.interval]\n\n        # --- flow window, O(1) ----------------------------------------------\n        if len(self.flow) >= self.flow_window:\n            old_delta, old_volume = self.flow.popleft()\n            self.sum_delta -= old_delta\n            self.sum_volume -= old_volume\n        delta = float(bar.delta)\n        volume = float(bar.volume)\n        self.flow.append((delta, volume))\n        self.sum_delta += delta\n        self.sum_volume += volume\n\n        if len(self.flow) < self.flow_window or self.sum_volume <= 0.0:\n            return\n        ratio = self.sum_delta / self.sum_volume\n\n        # The scale accumulates through warmup as well: those bars are real, only\n        # the orders would not be, and reaching the first actionable bar with no\n        # idea what \"large\" means here would waste the warmup.\n        self._push_ratio(ratio)\n        self._bars += 1\n        if self._bars % 2048 == 0:\n            self._resync()\n\n        if not ctx.actionable:\n            return\n        if ctx.working_order_ids:\n            return\n\n        if self.cooldown > 0:\n            self.cooldown -= 1\n\n        position = ctx.position\n        if position > 0:\n            self.dir = 1\n        elif position < 0:\n            self.dir = -1\n        else:\n            self.dir = 0\n\n        # ---- catastrophe stop: insurance, checked on closes -----------------\n        if position != 0:\n            entry = ctx.average_entry_price\n            price = ctx.last_price\n            if entry > 0.0 and price > 0.0:\n                if position > 0:\n                    adverse = entry - price\n                else:\n                    adverse = price - entry\n                if adverse > entry * self.stop_bps / 10000.0:\n                    ctx.close()\n                    self.dir = 0\n                    self.cooldown = self.cooldown_bars\n                    return\n\n        z = self._z(ratio)\n        if z is None:\n            return\n\n        # ---- already positioned: hold unless the flow has reversed hard ------\n        if self.dir == 1:\n            if z < -self.flip_z:\n                # One order takes the book from +position to -size: no bar spent\n                # flat, and no half-applied flip if only the close had filled.\n                if ctx.sell(size=position + self.size,\n                            tag=\"cvd-flip-short\") is not None:\n                    self.dir = -1\n            return\n        if self.dir == -1:\n            if z > self.flip_z:\n                if ctx.buy(size=(-position) + self.size,\n                           tag=\"cvd-flip-long\") is not None:\n                    self.dir = 1\n            return\n\n        # ---- flat: open with the sign of the flow ----------------------------\n        if self.cooldown > 0:\n            return\n        if z > self.entry_z:\n            if ctx.buy(size=self.size, tag=\"cvd-long\") is not None:\n                self.dir = 1\n        elif z < -self.entry_z:\n            if ctx.sell(size=self.size, tag=\"cvd-short\") is not None:\n                self.dir = -1\n\n    # ------------------------------------------------------------------ fills\n\n    def on_fill(self, ctx):\n        # Keep the direction in step with what actually happened; the flip order is\n        # a single order, so there is nothing else to reconcile and no order id is\n        # held across callbacks for an expiry to make stale.\n        position = ctx.fill.position\n        if position > 0:\n            self.dir = 1\n        elif position < 0:\n            self.dir = -1\n        else:\n            self.dir = 0\n\n    def on_lifecycle(self, ctx):\n        pass\n\n    # ---------------------------------------------------------------- helpers\n\n    def _push_ratio(self, value):\n        if len(self.ratios) >= self.sd_window:\n            old = self.ratios.popleft()\n            self.sr -= old\n            self.sr2 -= old * old\n        self.ratios.append(value)\n        self.sr += value\n        self.sr2 += value * value\n\n    def _resync(self):\n        self.sr = 0.0\n        self.sr2 = 0.0\n        for value in self.ratios:\n            self.sr += value\n            self.sr2 += value * value\n        d = 0.0\n        v = 0.0\n        for bar_delta, bar_volume in self.flow:\n            d += bar_delta\n            v += bar_volume\n        self.sum_delta = d\n        self.sum_volume = v\n\n    def _z(self, ratio):\n        n = len(self.ratios)\n        if n < self.min_sd_obs:\n            return None\n        mean = self.sr / n\n        var = self.sr2 / n - mean * mean\n        if var <= 0.0:\n            return None\n        sd = math.sqrt(var)\n        if sd < 1e-12:\n            return None\n        return ratio / sd\n",
+    "source_sha256": "e2eb6024291d0df63aa60facfa96b5f398d389a664dadf50e263c66f0e888c39",
+    "strategy_digest": "e2eb6024291d0df6"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "audit_model": null,
+      "auditor_models": null,
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.0,
+      "constraints": {
+        "digest": "5b266d930247ef9f6ab8df269c6421dfc0fc7e504140f370e168bda92aa11af4",
+        "max_repairs": 2,
+        "path": "config/hypotheses/btc-cvd-continuation.constraints.yaml",
+        "policy": "record"
+      },
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://braverock.com/llm/v1",
+      "execution": {
+        "allow_overnight": true,
+        "latency_ns": 100000000,
+        "maker_commission_bps": null,
+        "maker_commission_per_contract": null,
+        "slippage_bps": 0.0,
+        "slippage_per_contract": 0.0
+      },
+      "explore_epsilon": 0.0,
+      "fidelity_judge": {
+        "mode": "repair",
+        "model": "gemini-2.5-pro",
+        "prompt_digest": "72b333cf364db92cd40b4fa9ec6d484e5a8c7febbef0531bb7edf7e1c07f14e9"
+      },
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "f330f7a6e278e0f6c6e61002e34f5bfebd8ea18d2cdcd5da2c075bb88e5a348f",
+        "path": "config/hypotheses/btc-cvd-continuation.md"
+      },
+      "hypothesis_origin": null,
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "knowledge": null,
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 64000,
+      "model": "deepseek-v4.1-flash",
+      "model_served_at_registration": "deepseek-v4.1-flash",
+      "null_source": "round_turn_mc",
+      "parent_rng_seed": 0,
+      "probe_before_trial": true,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "ec04cb06748c9b087210252070f33ae8e10b153a921e67af94a61d622ce45ab2",
+      "proposal_wall_clock_s": 600.0,
+      "registered_fees": {
+        "commission_bps": 5.0,
+        "commission_per_contract": 0.0,
+        "maker_commission_bps": 5.0,
+        "maker_commission_per_contract": 0.0
+      },
+      "repair_reasoning_effort": "low",
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real OKX BTCUSDT perpetual-futures trades. A session is a UTC day (00:00 to 24:00 UTC); the market trades continuously, with no close, no holidays and no overnight gap, so `session` boundaries are a calendar convention, not a market event. Every trade carries its aggressor side, so `unknown_volume` is always zero, 960 scored sessions on the pre-registered train split.\n\nFill model: book-queue-pessimistic -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nSizes are integer lots of 0.0001 BTC: `ctx.buy(1)` is 0.0001 BTC, and P&L is the price move in USD times lots, so one lot earns 0.0001 USD per $1 the price moves. Commission: 5 basis points of notional per side (0.10% a round trip), charged on every fill: a round trip must move the price 0.10% just to break even -- $30 at $30,000, $100 at $100,000 -- so high turnover is very expensive here. Holding a position through a funding settlement (00:00, 08:00, 16:00 UTC) pays the funding rate on its notional when long and receives it when short (the reverse when the rate is negative). Returns are scored relative to each session's opening price, so a move of 1% counts the same in 2023 and in 2026.\n\nLatency: 100,000,000 ns. Every order, modification and cancel reaches the market that long after your callback, and a resting order can still fill until its cancel arrives.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "btc-cvd-02",
+    "budget": 20,
+    "campaign_id": "btc-cvd-02",
+    "dataset": "crypto-btc-okx-book",
+    "profile": "btc-okx-book-train",
+    "q": 0.05,
+    "record_digest": "c527635bbdfb960b4a2f7b4995b3fdbcbf15828987c4679f020a53e1478a4d5d",
+    "record_digest_now": "c527635bbdfb960b4a2f7b4995b3fdbcbf15828987c4679f020a53e1478a4d5d",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-11-22T20:10:56+00:00"
+  },
+  "deflation_view": null,
+  "diagnostics_only": {
+    "correction": null,
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "unavailable": "no tabulated null exists for 'crypto-btc-okx-book', so BH, Holm, the nominal FAR and the deflation view were not computed. The gate below uses this campaign's per-candidate nulls and does not read that table."
+  },
+  "digest": "1f36c2a7b616cd933e6bfdcbfcbf19b0839b3c4b1721939bd9caefc5e6678f49",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 18,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 0.16770819653476926,
+    "null_max_mean": 0.15280628925208517,
+    "null_max_quantiles": {
+      "0.01": 0.16770819653476926,
+      "0.05": 0.16770819653476926,
+      "0.1": 0.16770819653476926,
+      "0.2": 0.16770819653476926,
+      "0.5": 0.15446409526238378
+    },
+    "observed_best": 0.16770819653476926,
+    "p": 0.25237476252374763,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/btc-cvd-02/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "a682966b9ae2ebe54c80a901c72779b0afcf1bd586208138661388b2df0e1b9e",
+        "outcome": "completed",
+        "score": -0.1414920928572869,
+        "strategy_digest": "a0da72b726304858"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "6cf8bd79d7f860e887898c2bd0af68fdb5b4b0ffb1bdbfbb1625a013fdc0d18c",
+        "outcome": "completed",
+        "score": -0.23492441136153638,
+        "strategy_digest": "7061bc93ab89b1c2"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "493aff5ae9b9b6b2058b66602f2097d7b46c39a268223276c3def1aea83feb21",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "b8db18e733057631"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "e11bddf57e272c7f33a6398856336c0bc8d1ae64894628a56521ff6a408bb828",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "5c9e1a1c745d0340"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "67e159036eade5a6d5ae2a15037959dffc0906d0b100a6c35a46d876a3b0ffa4",
+        "outcome": "completed",
+        "score": 0.1365088956111853,
+        "strategy_digest": "879369fdb60632d6"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "60201efd5c61e31ceee2972e5784b86f3a6c9335e3b078b44aa4523f5431f2ae",
+        "outcome": "completed",
+        "score": 0.02012533805599006,
+        "strategy_digest": "f10085fa8019d60b"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "6a9c1ebcb7e27fe0d54397d828a07bd516f28ac86362655dd8d15dfd06a2548f",
+        "outcome": "completed",
+        "score": 0.08644194262393158,
+        "strategy_digest": "807f927fbad94f97"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "607fa74b640fb1b721c026c04197e0cfdf1dec6ff78d0f897b7362991dc0c363",
+        "outcome": "completed",
+        "score": 0.07782070569063468,
+        "strategy_digest": "fcd1436959c33b57"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "526afa80acdea825f7845b60725db14598cc747be94c7ecede8aa06c65447702",
+        "outcome": "completed",
+        "score": 0.16770819653476926,
+        "strategy_digest": "e2eb6024291d0df6"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "9a74fafc47e119a3025a86d95e21830f02b9fc526d5777b875aa3cdbcf659be0",
+        "outcome": "completed",
+        "score": 0.15446409526238378,
+        "strategy_digest": "a92f8cb6a90e7eeb"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "339d5a5b40a11a0f41222188777f5c0b7efe709e01ca5bb4bd4db1e24d40f2b0",
+        "outcome": "completed",
+        "score": 0.12686872550406808,
+        "strategy_digest": "58c1585ca1c11615"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "339d5a5b40a11a0f41222188777f5c0b7efe709e01ca5bb4bd4db1e24d40f2b0",
+        "outcome": "completed",
+        "score": 0.12686872550406808,
+        "strategy_digest": "cde7ba66be2126ae"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "de39ce4dd50b1bb4084be9a718b880fb6cb7af83a180f6ba3f635b6e5194cade",
+        "outcome": "completed",
+        "score": 0.0498005945642986,
+        "strategy_digest": "52e09c5d7d5fe511"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "001337b71c8d00274cc622ae864c644c60759d99e14bd37640aac2eb5917d131",
+        "outcome": "completed",
+        "score": 0.0898211958002227,
+        "strategy_digest": "d972f983a6e10346"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "4374ae68638d5e8bb57461104019c0548e068e33f087b524c2199959dd5436f1",
+        "outcome": "completed",
+        "score": 0.14124811225946943,
+        "strategy_digest": "f41833a901b81133"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "a23b53650666f1b5c7d674e568ebbcd5ff37827adec15099285f9f7ae48540da",
+        "outcome": "completed",
+        "score": 0.13807516077965218,
+        "strategy_digest": "3245d7fcca5658a1"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "48004302c068dba58cfa30ceac306f30741286a12d34b8f4af1a0b7ea16aa86c",
+        "outcome": "completed",
+        "score": 0.15125382705280102,
+        "strategy_digest": "782e314300c4e759"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "352438f62f1f22d74f1ea50774fcbcc2b7d12e6c52a412e982af38317a4a47ef",
+        "outcome": "completed",
+        "score": 0.15769975459161445,
+        "strategy_digest": "35c9e77766a56289"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "9312baf1cb7b914b59ddfba67a4528327942792f48bcf2d9c972d2ab001c4298",
+        "outcome": "completed",
+        "score": 0.08616796431868372,
+        "strategy_digest": "80f656b22822ac88"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": "1e8bd9313d8d40f1a9b8ca0ca823c450056efcd903f44b415c86b4b3626eb3b8",
+        "outcome": "completed",
+        "score": 0.010926830658368022,
+        "strategy_digest": "0f765c828f1f48a8"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 20
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 20,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 0.16770819653476926,
+    "mean": -0.013018824249266982,
+    "min": -0.2921515316729929,
+    "n_draws": 180000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.09714704687075007
+  },
+  "provenance": {
+    "artifact_fingerprint": "989647c7f99d80c50512d8fabadce231bdbc1a16b650efad61c5fa71c37a24a8",
+    "artifacts": {
+      "config/backtest.yaml": "9c0ecc68d88d2eabc98098edefd17096cca669b2ea8a82ff80b2fdf886920b93",
+      "config/calendars/crypto-trades.yaml": "341f204519220585953609d475d8f00590493411b02ee65c76417d88a98631f7",
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/calendars/okx-book.yaml": "deccded0c795c56a095f488559b47d422474b210a5b70318e2104d79b8406ba7",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/costs.yaml": "2af88ebe4d4674a1281c5265b84e6a097bff3bc394718b71bd4477b2c61b1437",
+      "config/house-constraints.yaml": "232979be0b3b4bb54b623907251e698fb66f8da211c098a13b6b8e5d47fc6176",
+      "config/hypotheses/auction-market-features.md": "c306848e27d52157a9e1ea478905aa4ad6e585b56b84bc892962aeeb02d826e9",
+      "config/hypotheses/btc-cvd-continuation.md": "f330f7a6e278e0f6c6e61002e34f5bfebd8ea18d2cdcd5da2c075bb88e5a348f",
+      "config/hypotheses/flow-continuation-5m.md": "13516e4d73d2286805b68d526fe8590581c3ed64c418e44f2557a319ba7a4fea",
+      "config/hypotheses/flow-continuation.md": "2fd992b524213040d9b59c1ae1cde0b54404fc5ca779d9dc68d774c72dca0528",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-move-continuation-vs-giveback.md": "dd898b0ac0548576dafc2f61169a5334e834d48f7bc83d2cfcaf2c8901cfe876",
+      "config/hypotheses/nq-opening-reversal.md": "37fcea5a90f37b7b05faaab7e15e74990878bbaba226b41171965908b2a40b91",
+      "config/hypotheses/ohlcv-momentum-friction-ceiling.md": "ff9d1893266f2f7eeb05f0f27a2751e9e95a4ea58f8c38f236aa9fc9e7c867a6",
+      "config/hypotheses/opening-range-break-continuation-failure.md": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+      "config/hypotheses/opening-range-break-continuation-or-fade.md": "4e48d6e16fba78098a993549b2528853e8c4c909908d501cf1d6ad3309988440",
+      "config/hypotheses/opening-range-break-hold-or-return.md": "660f66e68d536c243d47ecab73a73fdd6b5a529d97301a2d2f5cabd01488db0e",
+      "config/hypotheses/opening-range-break-resolution.md": "4c41b63249ae6113d53a032cde5c13651d107b7bf77450043f82d58e33488bfe",
+      "config/hypotheses/opening-range-breakout-30m.md": "021eb8f94018416e4294293831f5c8d4370ac0bd6cb1c39b42f3b57771ea6128",
+      "config/hypotheses/opening-range-departure-fates-by-clock.md": "1c0bbe82227d0c4b25c9bcf2c111ae8c3ebad943bf7bd84ee3c587ac44d17b02",
+      "config/hypotheses/opening-range-direction-agnostic.md": "48775a6bedc23838d451279d05dc15c2660300bb598e5cf508f3c677fa22d7e4",
+      "config/hypotheses/opening-range-exit-hold-or-return.md": "8b3d0872c848b58892611d7621245f32f739050b89bd645530888785268b8237",
+      "config/hypotheses/options-no-arbitrage-violation.md": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+      "config/hypotheses/options-surface-shape-and-the-index.md": "268c3ca73b695ff20a591b736b68f6562a21dbaa88b08cd1193ae4e281c9298a",
+      "config/hypotheses/orderflow-absorption-at-carried-levels.md": "97ad8b1db1a60f852bae58c5428270f528327a300832d74131d3fe97c52794d2",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md": "4a97e2e35a2111d81a49331782789191c9765efdb5df34c7aefedeb7234cf557",
+      "config/hypotheses/outsized-move-continuation-refined.md": "25d9b544894e7d214729ba058d1783e6b0d3d16608e560346538076341626c77",
+      "config/hypotheses/outsized-move-continuation-vs-giveback.md": "00074ec0231d64452b65b1515e9669d711425a1220e6039b3e61abd1638766a6",
+      "config/hypotheses/session-move-continuation-robustness.md": "087be6eedd20f472989bdadf3944e054b3a0daa42cafb589170455bc6ecb44b3",
+      "config/prompts/family-review.md": "012935b192b8ca9ff3ed3a3c9635dfdab4df9f8f95dc1db1791f35bc8532fb82",
+      "config/prompts/fidelity-judge.md": "72b333cf364db92cd40b4fa9ec6d484e5a8c7febbef0531bb7edf7e1c07f14e9",
+      "config/prompts/hypothesis-refine.md": "f89af454f9a00652f160ac0085944f533a35372ae0c4c92c381145447a4929a1",
+      "config/prompts/hypothesis-review.md": "fb5465beac2d4e1efcddbc998201a0cceecaee8924042581acd3ebb9fc2d223c",
+      "config/prompts/paper-distil.md": "0dcafaf00f0a1d990fd26880d532f3eac423a36b1488d1ebd7b28a8747fb4504",
+      "config/prompts/paper-rank.md": "b8acfdf9c01f9c3ec7c6e0c8da4ca1ff54f401c5e7bf60c41b6b366993c15784",
+      "config/prompts/paper-screen.md": "dc10f5d4cc98dd8aa463c81b79f1c710b648e70e2d9095c4245c100d02b9160a",
+      "config/prompts/question-distil.md": "001e88cb1830847d88d8709360851ac113f1103cb360a7ab7e74e4b34239598a",
+      "config/prompts/strategy-agent.md": "ec04cb06748c9b087210252070f33ae8e10b153a921e67af94a61d622ce45ab2",
+      "config/prompts/strategy-review.md": "4bb7b26f736eb58c38340963aec9723499003756e1b7b975c5c99943125ecb7c",
+      "config/run.yaml": "b36bd63130efada37bd53d55afabc1f879a6327231ae7be134cd31739a37fce6",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "a0da72b7263048581f5302d25b61ff8bcd55be6126bd1eb588bba7d41bd72269"
+    },
+    "code_fingerprint": "74855b0c451b0336ace4644213c690e04019b6929629ea1716b24af1dfcad2b8",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "518bb97bdeca748c98a93dbec6cee3169fab1282d927a02fb9c5145126cc5714",
+    "git_sha": "6642fa873a55a17fbf3318e7dd53d5da6102c977",
+    "isolation": {
+      "address_space": {
+        "active": true,
+        "mechanism": "RLIMIT_AS"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "",
+      "filesystem": {
+        "active": true,
+        "mechanism": "read-only bind mount, unprivileged user namespace (bubblewrap)"
+      },
+      "level": "isolated",
+      "network": {
+        "active": true,
+        "mechanism": "empty network namespace (bubblewrap --unshare-net)"
+      },
+      "platform": "Linux",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "absent",
+    "python_version": "3.14.4",
+    "scoring_fingerprint": "fdf7fffdf1c7fba6fa6cd8792a32dc67323961f9461820a3dcc9d524aee65c04"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/2",
+  "written_at": "2026-11-22T21:14:08+00:00"
+}

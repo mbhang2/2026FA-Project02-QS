@@ -1,0 +1,109 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "economics",
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The strategy reads only the current closed bar from ctx.bars and maintains its own bounded running state; I cannot see the harness's bar-close semantics or ctx.actionable definition to confirm the forming-bar guarantee, but nothing in the source reaches for future data, the scorer, or the dataset.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "statistics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "The gate's null_max_quantiles are degenerate: the 0.01, 0.05, 0.1, and 0.2 quantiles all equal 0.16770819653476926, which is exactly observed_best and null_max_at_q, so the reported p=0.2524 is not resolvable at the stated b=10000 resolution and the gate cannot be trusted as computed.",
+        "No out-of-sample or validation evidence exists (_validation: NOT RUN), so the winner's in-sample statistics cannot be assessed for overfitting on this axis."
+      ],
+      "confidence_note": "I cannot see the per-candidate null draws or the code that produced the quantile table, so I cannot tell whether the degenerate quantiles are a reporting artifact or a real failure of the null simulation.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "sessions_with_exposure is 165 of 960 (17%), which is below the registered 70% exposure floor and below the 251 and 392 counts that caused trials #2 and #3 to be refused for exactly that reason \u2014 the winner fails the same criterion that disqualified earlier trials, directly contradicting the docstring's claim that a persistent position 'clears the exposure floor by construction'",
+        "avg_holding_period_ns = 3.68e16 ns \u2248 426 days is impossible alongside 167 trades over 960 sessions; the holding-period statistic is mutually inconsistent with the trade count and session count, so the turnover/holding evidence cannot be read",
+        "The evidence is denominated in NQ index points at $20/point for a BTC perpetual campaign, and the magnitudes are not reconcilable with the stated 0.0001 BTC lot and 5bp-per-side fee: net_pnl_points 74387 and commission_paid_points 10411 cannot both arise from that position size and fee rule",
+        "commission_per_contract_per_side_points is reported as 0.0 while commission_paid_points is 10411.6, an internal contradiction in the cost accounting that makes the gross-vs-net decomposition unverifiable"
+      ],
+      "confidence_note": "I cannot see how the harness defines a 'session' or computes exposure and holding period, so a units or aggregation mismatch is possible \u2014 but the figures as given are mutually inconsistent and contradict the campaign's own registered exposure floor.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Entry-hour confinement: by_hour_utc_entry shows the strategy only opens positions in 2 of 24 hours (01 and 23 UTC), with breadth_by_hour_utc_entry = 2/2. The rule acts in under 10% of the day with no stated reason why that window should persist, which is 'behaviour confined to one part of the day' as the axis defines it. The wide spread in by_hour_utc (13/24 positive) is the expiry/settlement calendar per the seasonality_caveat, not evidence the strategy acts broadly.",
+        "Very few completed outcomes: outcomes.completed = 20 against trade_count = 167 and sessions_with_exposure = 165 out of 960. A rule that completes 20 trades across a 32-month sample is a rule that fires a few times; the monthly breadth (23/32 positive) is computed off a very thin per-cell base and cannot be read as broad-based support.",
+        "Weekday P&L is dominated by one day: Sunday contributes ~64.2k of the ~74.4k total (\u224886%) while Mon/Wed/Sat are negative. Combined with the 2-hour entry window this reads as a narrow calendar niche rather than a distributed edge."
+      ],
+      "confidence_note": "No out-of-sample evidence exists (validation NOT RUN), and per-cell counts behind the monthly/weekday breadth are tiny, so I cannot tell whether the 23/32 monthly figure reflects real breadth or noise on ~20 completed trades.",
+      "error": null,
+      "attempts": 1
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4648,
+      "cached_tokens": 640,
+      "completion_tokens": 77,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 1933,
+      "cached_tokens": 640,
+      "completion_tokens": 207,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 3737,
+      "cached_tokens": 1152,
+      "completion_tokens": 1087,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 6627,
+      "cached_tokens": 2048,
+      "completion_tokens": 2346,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "auditor_models": {},
+  "proposer_model": "deepseek-v4.1-flash",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  }
+}

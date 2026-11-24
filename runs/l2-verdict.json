@@ -1,78 +1,79 @@
 {
   "m_campaigns": 3,
   "campaigns": [
-    "nq-s07-01",
-    "nq-s07-02",
-    "nq-s07-03"
+    "btc-cvd-02",
+    "btc-absorption-01",
+    "btc-book-absorption-01"
   ],
   "b": 10000,
   "q": 0.05,
-  "observed_best": 0.26940652068142884,
-  "best_campaign": "nq-s07-02",
+  "observed_best": 0.19238944600856828,
+  "best_campaign": "btc-book-absorption-01",
   "rule_a_sortino_positive": {
-    "nq-s07-01": false,
-    "nq-s07-02": true,
-    "nq-s07-03": true
+    "btc-cvd-02": false,
+    "btc-absorption-01": false,
+    "btc-book-absorption-01": false
   },
-  "rule_a_pass": true,
+  "rule_a_pass": false,
   "incomplete": [],
-  "note": "max_of_m is max_of_n with the campaign as the unit, and that is deliberate rather than lazy: section 4 of the pre-registration chooses it over a Holm budget because it uses the actual null distribution of the maximum, and says the L2 gate INHERITS the family-wise error rate measured for that machinery (0.060, CI [0.041, 0.088] at R = 150, Task 38) rather than needing its own calibration study. A second implementation of the same simulation would be a second thing to calibrate.",
+  "note": "rule (b) rejected the null but the best winner's Amendment 18 profitability bound is not above zero. max_of_m is max_of_n with the campaign as the unit, and that is deliberate rather than lazy: section 4 of the pre-registration chooses it over a Holm budget because it uses the actual null distribution of the maximum, and says the L2 gate INHERITS the family-wise error rate measured for that machinery (0.060, CI [0.041, 0.088] at R = 150, Task 38) rather than needing its own calibration study. A second implementation of the same simulation would be a second thing to calibrate.",
   "per_campaign": [
     {
-      "campaign_id": "nq-s07-01",
-      "validation_primary": -0.2541766907583952,
-      "null_mean": 0.0350884590360412,
-      "null_sd": 0.24330203669452974,
-      "sds_above_own_null": -1.188913803288931
+      "campaign_id": "btc-cvd-02",
+      "validation_primary": 0.014449086866670964,
+      "null_mean": -0.007315609580810052,
+      "null_sd": 0.02158803113067114,
+      "sds_above_own_null": 1.0081834844382302
     },
     {
-      "campaign_id": "nq-s07-02",
-      "validation_primary": 0.26940652068142884,
-      "null_mean": 0.008926837546551322,
-      "null_sd": 0.15780142172874093,
-      "sds_above_own_null": 1.650680204786998
+      "campaign_id": "btc-absorption-01",
+      "validation_primary": -0.18103094427810976,
+      "null_mean": -0.1450073607267271,
+      "null_sd": 0.07089510293905008,
+      "sds_above_own_null": -0.5081251321738378
     },
     {
-      "campaign_id": "nq-s07-03",
-      "validation_primary": 0.14547818274047788,
-      "null_mean": -0.002447559761497335,
-      "null_sd": 0.15874770735257385,
-      "sds_above_own_null": 0.9318291581587167
+      "campaign_id": "btc-book-absorption-01",
+      "validation_primary": 0.19238944600856828,
+      "null_mean": -0.019685768655223014,
+      "null_sd": 0.08735300367138957,
+      "sds_above_own_null": 2.427795333307486
     }
   ],
   "standardised_view": {
-    "best_campaign": "nq-s07-02",
-    "observed_best_sds": 1.650680204786998,
-    "p": 0.1703829617038296,
-    "reject": false,
-    "null_max_mean": 0.842299133458738,
+    "best_campaign": "btc-book-absorption-01",
+    "observed_best_sds": 2.427795333307486,
+    "p": 0.030296970302969704,
+    "reject": true,
+    "null_max_mean": 0.8935220760412043,
     "note": "diagnostic unless statistic='standardised' set the verdict. The maximum over (observed - null mean) / null sd per campaign, which is the pivotal form step_down_max already assumes. Task 70 measured the raw maximum as valid but blind: on our six real validation nulls, whose sds differ by 20x, it named two of the six campaigns the best of M zero times in 4,000 families and a third of them once, and it rejected at 0.0505 against an eight-sigma planted effect in a tight-null campaign where the standardised maximum rejected at 1.0000."
   },
   "statistic": "standardised",
-  "p": 0.1703829617038296,
+  "p": 0.030296970302969704,
   "p_floor": 9.999000099990002e-05,
   "at_floor": false,
-  "reject": false,
-  "null_max_mean": 0.842299133458738,
+  "reject": true,
+  "null_max_mean": 0.8935220760412043,
   "null_max_quantiles": {
-    "0.5": 0.6716462242688311,
-    "0.2": 1.5032850101590398,
-    "0.1": 2.1416202419263675,
-    "0.05": 2.806484699510886,
-    "0.01": 4.292039163852907
+    "0.5": 1.0081834844382302,
+    "0.2": 1.3055712450465722,
+    "0.1": 1.7856618000041222,
+    "0.05": 2.174396699200662,
+    "0.01": 3.0024810387956786
   },
   "raw_view": {
-    "best_campaign": "nq-s07-02",
-    "observed_best": 0.26940652068142884,
-    "p": 0.20227977202279773,
-    "reject": false
+    "best_campaign": "btc-book-absorption-01",
+    "observed_best": 0.19238944600856828,
+    "p": 0.0150984901509849,
+    "reject": true
   },
   "passes": false,
   "verdict": "FAIL",
+  "rule_a_basis": "amendment_18_profitability_bound",
   "schema": "l2-verdict/1",
   "declared_family": [
-    "nq-s07-01",
-    "nq-s07-02",
-    "nq-s07-03"
+    "btc-cvd-02",
+    "btc-absorption-01",
+    "btc-book-absorption-01"
   ]
 }

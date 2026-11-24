@@ -1,0 +1,67 @@
+{
+  "campaign_id": "btc-book-absorption-01",
+  "record_digest": "22abd2482aa58f576bb7ee5e3e83983cab50d3ea13ec929dcb0b0a6b9f565db1",
+  "record_tampered": false,
+  "budget": 20,
+  "q": 0.05,
+  "n_trials": 20,
+  "harness_failures": 0,
+  "unaccounted": 0,
+  "outcomes": {
+    "completed": 20
+  },
+  "per_trial_accepts_at_0.001": null,
+  "diagnostics_only": {
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "correction": null,
+    "unavailable": "no tabulated null exists for 'crypto-btc-okx-book', so BH, Holm, the nominal FAR and the deflation view were not computed. The gate below uses this campaign's per-candidate nulls and does not read that table."
+  },
+  "wall_clock_s": 0.0,
+  "gate": {
+    "n_trials": 19,
+    "n_collapsed": 0,
+    "rule": "independent",
+    "b": 10000,
+    "observed_best": 0.1560756089067173,
+    "p": 0.0016998300169983002,
+    "p_floor": 9.999000099990002e-05,
+    "at_floor": false,
+    "exceedances": 16,
+    "p_is_bound": false,
+    "null_support_max": 0.17877130598282032,
+    "beyond_null_support": false,
+    "margin_over_support": -0.022695697076103027,
+    "reject": true,
+    "q": 0.05,
+    "null_max_mean": 0.046081855016822104,
+    "null_max_quantiles": {
+      "0.5": 0.04348102298930051,
+      "0.2": 0.06829623625042884,
+      "0.1": 0.0838088947332296,
+      "0.05": 0.09701484846177992,
+      "0.01": 0.124289688149323
+    },
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "correction_rule": "independent",
+    "is_the_gate": true,
+    "observed_best_positive": true,
+    "accept": true,
+    "profitability": {
+      "n_sessions": 960,
+      "alpha": 0.0025,
+      "z": 2.8070337683438114,
+      "lag": 6,
+      "mean": 0.07532651146740608,
+      "se": 0.023633531435454557,
+      "lower_bound": 0.008986390662870158,
+      "passes": true
+    },
+    "null_unit": "zero_crossing",
+    "risk_units": 953,
+    "min_risk_units": 30,
+    "excluded_off_question": [],
+    "floor_note": "accept = reject AND the selected trial's Amendment 18 profitability bound is above zero."
+  },
+  "null_source": "round_turn_mc",
+  "error_control_note": "This campaign's null is the sign-flip over round turns, not the conditional null, so Task 38's FWER of 0.060 CI [0.041, 0.088] does NOT describe it. The figure that does is Task 57's, measured on this configuration (round_turn_mc x max_of_n, q = 0.05, B = 10,000) at both N = 10 and N = 50: 0 acceptances in 400 campaigns per arm, FWER below about 0.010 at 95%, below 0.005 pooled over 800. It is conservative rather than merely correct, and Task 59 prices the conservatism: 80% power at a signal strength of 0.287 against 0.242 for the conditional null. See docs/design/pre-registration.md sections 3a and 3b."
+}

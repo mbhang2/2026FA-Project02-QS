@@ -1,4 +1,38 @@
 {
+  "59d8f1c5e62606e0": {
+    "machine": {
+      "brand": "unknown",
+      "cores_total": 20,
+      "memory_total": 16623960064,
+      "platform": "Linux"
+    },
+    "profiles": {
+      "btc-okx-book-train": {
+        "measured_at": "2026-11-22T18:38:30+00:00",
+        "peak_rss_bytes": 1805897728,
+        "profile": "btc-okx-book-train",
+        "purpose": "check",
+        "python": "3.14.4",
+        "wall_s": 385.12347244500415
+      },
+      "btc-okx-hft-train": {
+        "measured_at": "2026-11-23T18:57:13+00:00",
+        "peak_rss_bytes": 1788383232,
+        "profile": "btc-okx-hft-train",
+        "purpose": "check",
+        "python": "3.14.4",
+        "wall_s": 378.41335180497845
+      },
+      "crypto-rehearsal-book": {
+        "measured_at": "2026-11-23T16:49:32+00:00",
+        "peak_rss_bytes": 483430400,
+        "profile": "crypto-rehearsal-book",
+        "purpose": "check",
+        "python": "3.14.4",
+        "wall_s": 50.35496641500504
+      }
+    }
+  },
   "bfda0b2f6483a041": {
     "concurrency": {
       "nq-train": {

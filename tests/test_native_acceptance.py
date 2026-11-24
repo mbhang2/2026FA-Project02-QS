@@ -235,3 +235,36 @@ def test_a_python_run_resumed_mid_session_matches_the_native_engine(latency, pic
     python_part = T.records_from_columns(_columns(engine.fill_log, first))
     assert len(native_part) > 0 or pick == 3
     assert log_digest(python_part) == log_digest(native_part)
+
+
+@pytest.mark.parametrize("cap", [20, 30, 60])
+@pytest.mark.parametrize("latency", [0, 1_000_000])
+def test_the_inventory_cap_is_the_same_in_both_engines_and_holds(cap, latency):
+    """Amendment 24 D2: position plus same-side working orders never exceed the cap."""
+    dataset = SyntheticDataset(SyntheticSpec(**SPEC))
+    scored = dataset.scored_sessions(Split.VALIDATION, 0)
+    lib = native.load()
+    kernel = K.CompiledKernel(T.CHECK_KERNEL)
+    with native.NativeEngine(lib, ticket=RunTicket.for_test(), latency_ns=latency, require_two_sided=False,
+                             book_features=True, book_events=True, inventory_cap=cap) as fast:
+        for session in scored:
+            fast.run_session(_native_book(dataset, session), _trades(dataset, session), session,
+                             dataset.session_bounds(session)[1], callback=kernel.callback(lib),
+                             user=kernel.user_pointer())
+        columns = fast.fill_columns()
+    engine = Engine.for_test(dataset, _strategy(np.zeros(64)), split=Split.VALIDATION, fill_model=T.BOOK_MODEL,
+                             warmup_sessions=0, seed=5, commission_bps=2.0, maker_commission_bps=0.0,
+                             latency_ns=latency, book_features=True, book_events=True, inventory_cap=cap)
+    engine.run()
+    assert engine.actions_dropped > 0 or cap >= 60      # 60 lots never binds for this strategy
+    assert log_digest(T.records_from_columns(columns)) == log_digest(T.records_from_columns(_columns(engine.fill_log)))
+    path = np.cumsum(columns["side"].astype(np.int64) * columns["size"])
+    assert np.abs(path).max() <= cap
+
+
+def test_an_invalid_cap_is_refused():
+    dataset = SyntheticDataset(SyntheticSpec(**SPEC))
+    for bad in (0, -5, 1.5, True):
+        with pytest.raises(ValueError):
+            Engine.for_test(dataset, _strategy(np.zeros(64)), split=Split.VALIDATION, fill_model=T.BOOK_MODEL,
+                            book_features=True, book_events=True, inventory_cap=bad)

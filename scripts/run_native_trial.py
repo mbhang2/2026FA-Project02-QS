@@ -205,7 +205,7 @@ def _child_run(spec: dict) -> dict:
     saved = {}
     with native.NativeEngine(lib, ticket=ticket, latency_ns=terms["latency_ns"],
                              require_two_sided=run._two_sided_book(profile), book_features=True,
-                             book_events=True) as fast:
+                             book_events=True, inventory_cap=int(profile.get("inventory_cap_lots") or 0)) as fast:
         for columns in dataset.session_columns(Split.TRAIN, warmup=warmup):
             is_warm = columns.session in warm
             if not is_warm and columns.session not in keep:
@@ -372,7 +372,8 @@ def _audit_window(profile, dataset, source, columns, snap, segments, ticket) -> 
             engine = Engine(_AuditWindow(dataset, segments), strategy, ticket=ticket, split=Split.TRAIN,
                             fill_model=profile["fill_model"], warmup_sessions=0, seed=profile["seed"],
                             commission_bps=profile.get("commission_bps", 0.0), book_features=True, book_events=True,
-                            two_sided_book=run._two_sided_book(profile), resume=resume, **commission,
+                            two_sided_book=run._two_sided_book(profile), resume=resume,
+                            inventory_cap=profile.get("inventory_cap_lots"), **commission,
                             **run.execution_terms(profile))
             engine.run()
             if engine.record.outcome != "completed":
@@ -402,8 +403,12 @@ def _audit_window(profile, dataset, source, columns, snap, segments, ticket) -> 
 # one trial
 # --------------------------------------------------------------------------- #
 def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessions=None, deep=False,
-              timeout_s=None, latency_ns: int | None = None) -> dict:
-    """`latency_ns` overrides the profile for an unsigned check only, like `run.main`'s override."""
+              timeout_s=None, latency_ns: int | None = None, audit_of: str | None = None) -> dict:
+    """`latency_ns` overrides the profile for an unsigned check only, like `run.main`'s override.
+
+    `deep` is Amendment 24 B3's audit of a trial that passed train. It names that trial in
+    `audit_of`, and its row has purpose `audit`, so it is not another trial in N.
+    """
     cfg = run.load_config()
     profile = cfg["profiles"].get(profile_name)
     unknown = profile is None
@@ -421,7 +426,11 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
         if signed:
             raise T.NativeTrialRefused("a latency override is for an unsigned check only")
         profile = {**profile, "latency_ns": latency_ns}
-    purpose = "trial" if signed else "check"
+    if deep and signed and not audit_of:
+        raise T.NativeTrialRefused("a deep audit names the trial it verifies in audit_of")
+    if audit_of and not deep:
+        raise T.NativeTrialRefused("only a deep audit names another trial")
+    purpose = ("audit" if deep else "trial") if signed else "check"
     started = time.perf_counter()
 
     def recovered_row(record, entry, copy):
@@ -436,7 +445,8 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
     try:
         with run_log:
             record = {"engine": "native", "outcome": "crashed", "split": str(Split.TRAIN), "score": None,
-                      "trial_id": trial_id, "kernel_sha256": hashlib.sha256(source.encode()).hexdigest()}
+                      "trial_id": trial_id, "kernel_sha256": hashlib.sha256(source.encode()).hexdigest(),
+                      **({"audit_of": audit_of} if audit_of else {})}
             run_log.update(record)
             try:
                 if unknown:
@@ -523,6 +533,7 @@ def main(argv=None) -> int:
     ap.add_argument("--kernel", type=Path)
     ap.add_argument("--ledger", type=Path)
     ap.add_argument("--deep", action="store_true")
+    ap.add_argument("--audit-of", dest="audit_of")
     args = ap.parse_args(argv)
     if args.child:
         fd = os.environ.get("NATIVE_TRIAL_SPEC_FD")
@@ -538,7 +549,7 @@ def main(argv=None) -> int:
     if not (args.profile and args.kernel and args.ledger):
         ap.error("--profile, --kernel and --ledger are required")
     _stop_on_terminate()
-    record = run_trial(args.profile, args.kernel, args.ledger, deep=args.deep)
+    record = run_trial(args.profile, args.kernel, args.ledger, deep=args.deep, audit_of=args.audit_of)
     print(json.dumps({k: record.get(k) for k in ("outcome", "fills", "audit", "native_seconds", "audit_seconds", "error")}))
     return 0 if record["outcome"] == "completed" else 1
 

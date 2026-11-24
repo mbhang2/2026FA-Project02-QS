@@ -335,3 +335,20 @@ def test_deep_windows_start_at_the_previous_close():
         assert w[-1][1] == 0 and w[-1][2] is None
         if len(w) == 2:
             assert w[0][1] == 39 and w[0][0] + 1 == w[1][0]
+
+
+def test_validation_needs_a_matching_deep_audit(tmp_path):
+    import json
+
+    ledger = tmp_path / "ledger.jsonl"
+    good = {"engine": "native", "outcome": "completed", "audit_of": "t1", "kernel_sha256": "k", "profile": "p",
+            "audit": {"tier": "deep", "matched": True, "windows": [{"fills": 3}]}}
+    assert not T.deep_audit_passed(ledger, "t1", "k", "p")
+    rows = [{**good, "audit": {**good["audit"], "tier": "short"}}, {**good, "outcome": "crashed"},
+            {**good, "kernel_sha256": "other"}, {**good, "audit_of": "t2"}, {**good, "profile": "q"},
+            {**good, "audit": {"tier": "deep", "matched": True, "windows": []}}]
+    ledger.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert not T.deep_audit_passed(ledger, "t1", "k", "p")
+    with ledger.open("a") as fh:
+        fh.write(json.dumps(good) + "\n")
+    assert T.deep_audit_passed(ledger, "t1", "k", "p")

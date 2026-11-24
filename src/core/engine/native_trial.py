@@ -30,6 +30,30 @@ class AuditMismatch(NativeTrialFailed):
     """The native fills differ from the Python replay. The trial is invalid and still counts."""
 
 
+def deep_audit_passed(ledger_path, trial_id: str, kernel_sha256: str, profile: str) -> bool:
+    """Amendment 24 B3: whether a completed deep audit of this trial's kernel matched.
+
+    A validation run of a native kernel must call this and refuse when it is False. The audit row
+    names the trial it verifies, and only a row for the same kernel and profile counts.
+    """
+    import json
+    from pathlib import Path
+
+    path = Path(ledger_path)
+    if not path.is_file():
+        return False
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        audit = row.get("audit") or {}
+        if (row.get("engine") == "native" and row.get("outcome") == "completed" and row.get("audit_of") == trial_id
+                and row.get("kernel_sha256") == kernel_sha256 and row.get("profile") == profile
+                and audit.get("tier") == "deep" and audit.get("matched") is True and audit.get("windows")):
+            return True
+    return False
+
+
 def refusal(profile: dict) -> str | None:
     """Why this profile cannot run natively, or None."""
     if Split(profile["split"]) is not Split.TRAIN:

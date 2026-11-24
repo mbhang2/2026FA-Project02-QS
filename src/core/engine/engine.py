@@ -555,6 +555,8 @@ class Engine:
         # Amendment 24's audit only: start the first session from a native engine's saved state.
         # See `_apply_resume`. Nothing on a scored path passes it.
         resume: dict | None = None,
+        # Amendment 24 D2, for declared market-making runs: lots either way, None for no cap.
+        inventory_cap: int | None = None,
         # Amendment 23: no book fill from a row with an empty best bid or ask.
         two_sided_book: bool = False,
         # Paid on taker fills as a cost, in price points per contract and in basis
@@ -613,6 +615,10 @@ class Engine:
         if resume is not None and not self.book_events:
             raise ValueError("resume is for the book-event audit only")
         self._resume, self._resumed = resume, False
+        if inventory_cap is not None and (isinstance(inventory_cap, bool) or not isinstance(inventory_cap, int)
+                                          or inventory_cap < 1):
+            raise ValueError(f"inventory_cap must be a whole number of lots >= 1, got {inventory_cap!r}")
+        self.inventory_cap = inventory_cap
         if self.book_events and not self.book_features:
             raise ValueError("book_events needs book_features")
         self._book_access = {"requested": False}
@@ -1247,6 +1253,15 @@ class Engine:
             self._step(Tick(src.ts, src.price, src.size, session, seq, src.side), actionable)
         self._close_seq = seq + 1
         return seq
+
+    def _exceeds_cap(self, submit) -> bool:
+        """Position plus every same-side working order plus this one, against the cap."""
+        buy = submit.side is Side.BUY
+        exposure = (self.position if buy else -self.position) + submit.size
+        for order in self._working.values():
+            if (order.side is Side.BUY) == buy:
+                exposure += order.size - order.filled_size
+        return exposure > self.inventory_cap
 
     def _apply_resume(self) -> int:
         """Put a native engine's saved state in place before the first event. Returns the
@@ -2295,6 +2310,9 @@ class Engine:
                     a = self._clamp_reduce_only(a, tick, oid)
                     if a is None:
                         continue
+                if self.inventory_cap is not None and self._exceeds_cap(a):
+                    self.actions_dropped += 1      # Amendment 24 D2; the id stays used
+                    continue
                 self._new_order(a, tick, order_id=oid)
             elif isinstance(a, Cancel):
                 o = self.orders.get(a.order_id)

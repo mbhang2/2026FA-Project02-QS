@@ -17,7 +17,7 @@ from .fills import MAX_QUOTE_AGE_NS
 from .reconstruct import log_digest, reconstruct
 
 LIBRARY = repo_root() / ".scratch" / "native" / "libfastcore.so"
-ABI_VERSION = 7
+ABI_VERSION = 8
 WAIT, FILLED, REJECTED = 0, 1, 2
 
 
@@ -39,7 +39,7 @@ def load(path: Path = LIBRARY) -> ctypes.CDLL:
     ]
     lib.fc_engine_new.restype = pointer
     lib.fc_engine_new.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32, ctypes.c_int32,
-                                  ctypes.c_int32, ctypes.c_int32, ctypes.c_int32]
+                                  ctypes.c_int32, ctypes.c_int32, ctypes.c_int32, ctypes.c_int64]
     lib.fc_engine_free.argtypes = [pointer]
     lib.fc_engine_free.restype = None
     lib.fc_engine_run_session.restype = ctypes.c_int64
@@ -71,7 +71,7 @@ class NativeEngine:
 
     def __init__(self, lib: ctypes.CDLL, *, ticket, latency_ns: int, scale: int = 10,
                  require_two_sided: bool = True, action_cap: int = 64, book_features: bool = False,
-                 book_events: bool = False):
+                 book_events: bool = False, inventory_cap: int = 0):
         from ..runlog import RunNotAccounted, RunTicket
 
         # Like `Engine`: a native run is accounted for, through a trial's child or a test.
@@ -82,7 +82,7 @@ class NativeEngine:
         self.scale = scale
         self.handle = lib.fc_engine_new(latency_ns, MAX_QUOTE_AGE_NS, scale,
                                         int(bool(require_two_sided)), action_cap, int(bool(book_features)),
-                                        int(bool(book_events)))
+                                        int(bool(book_events)), int(inventory_cap))
 
     def close(self) -> None:
         if self.handle:

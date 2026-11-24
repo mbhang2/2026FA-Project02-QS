@@ -372,6 +372,7 @@ typedef int32_t (*FcCallback)(const FcEvent*, FcAction*, int32_t, void*);
 struct FcEngine {
     int64_t latency, max_age;
     int32_t scale, require_two_sided, action_cap, want_book, book_events;
+    int64_t inventory_cap = 0;   // lots either way; 0 is no cap (Amendment 24 D2)
     int64_t seq = -1, next_id = 1, position = 0, stepped = 0, callbacks = 0;
     std::vector<Order> working;
     std::vector<FillRow> fills;
@@ -442,6 +443,15 @@ void apply_actions(FcEngine* e, const FcAction* actions, int32_t count, int64_t 
             o.limit = a.limit;
             o.eligible_seq = seq + 1;
             o.eligible_ts = e->latency ? ts + e->latency : 0;
+            if (e->inventory_cap > 0) {
+                // Position plus every same-side working order plus this one. The id is used
+                // even when the order is refused, as it is in the Python engine.
+                int64_t exposure = (o.buy ? e->position : -e->position) + o.size;
+                for (const Order& w : e->working) {
+                    if (w.buy == o.buy) exposure += w.size - w.filled;
+                }
+                if (exposure > e->inventory_cap) continue;
+            }
             e->working.push_back(o);
         } else if (a.op == 3) {
             for (size_t k = 0; k < e->working.size(); ++k) {
@@ -466,7 +476,7 @@ void apply_actions(FcEngine* e, const FcAction* actions, int32_t count, int64_t 
 
 extern "C" {
 
-int32_t fc_abi_version() { return 7; }
+int32_t fc_abi_version() { return 8; }
 
 // status: 0 keeps waiting, 1 filled, 2 refused because it exceeds the visible levels.
 int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double* ask,
@@ -496,8 +506,9 @@ int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double*
 
 FcEngine* fc_engine_new(int64_t latency_ns, int64_t max_age_ns, int32_t scale,
                         int32_t require_two_sided, int32_t action_cap, int32_t want_book,
-                        int32_t book_events) {
+                        int32_t book_events, int64_t inventory_cap) {
     FcEngine* e = new FcEngine();
+    e->inventory_cap = inventory_cap;
     e->latency = latency_ns;
     e->max_age = max_age_ns;
     e->scale = scale;

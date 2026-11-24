@@ -104,6 +104,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/tabulate_profile_null.py` | Build the profile-indexed null and commit it. |
 | `scripts/warm_cache.py` | Populate the session cache in one process, before a parallel campaign. |
 | `scripts/warm_crypto_cache.py` | Populate the crypto session cache before a crypto run, in parallel. |
+| `scripts/warm_okx_arrow.py` | Write immutable Arrow trade files for OKX train and validation. |
 | `scripts/warm_okx_depth.py` | Store OKX book levels 2 to 5 for train and validation, so reads need no decode. |
 | `scripts/worker_tree.py` | Isolated working copies, so trials can run in parallel without lying. |
 
@@ -473,6 +474,7 @@ What each test file pins.
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
 | `tests/test_no_depth_counted_roots.py` | No tree outside `src/core/**` finds its root by counting directories. |
 | `tests/test_nq_adapter.py` | The NQ adapter, checked against what was already established about this data. |
+| `tests/test_okx_arrow.py` | The Arrow trade store is exact, read-only and read without copying. |
 | `tests/test_one_sided_book.py` | Amendment 23: no fill is priced from a book with an empty best side. |
 | `tests/test_open_questions.py` | Questions we asked and could not answer — the third kind of context. |
 | `tests/test_options_as_an_asset.py` | Options as a tradeable asset: naming, filling, size, and settlement. |

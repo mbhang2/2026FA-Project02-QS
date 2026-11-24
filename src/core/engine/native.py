@@ -17,7 +17,7 @@ from .fills import MAX_QUOTE_AGE_NS
 from .reconstruct import log_digest
 
 LIBRARY = repo_root() / ".scratch" / "native" / "libfastcore.so"
-ABI_VERSION = 3
+ABI_VERSION = 4
 WAIT, FILLED, REJECTED = 0, 1, 2
 
 
@@ -39,7 +39,7 @@ def load(path: Path = LIBRARY) -> ctypes.CDLL:
     ]
     lib.fc_engine_new.restype = pointer
     lib.fc_engine_new.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32, ctypes.c_int32,
-                                  ctypes.c_int32]
+                                  ctypes.c_int32, ctypes.c_int32]
     lib.fc_engine_free.argtypes = [pointer]
     lib.fc_engine_free.restype = None
     lib.fc_engine_run_session.restype = ctypes.c_int64
@@ -66,11 +66,11 @@ class NativeEngine:
     """One run of the native event loop for one asset."""
 
     def __init__(self, lib: ctypes.CDLL, *, latency_ns: int, scale: int = 10,
-                 require_two_sided: bool = True, action_cap: int = 64):
+                 require_two_sided: bool = True, action_cap: int = 64, book_features: bool = False):
         self.lib = lib
         self.scale = scale
         self.handle = lib.fc_engine_new(latency_ns, MAX_QUOTE_AGE_NS, scale,
-                                        int(bool(require_two_sided)), action_cap)
+                                        int(bool(require_two_sided)), action_cap, int(bool(book_features)))
 
     def close(self) -> None:
         if self.handle:
@@ -99,10 +99,12 @@ class NativeEngine:
                                  _array(trades[2], np.int64), _array(trades[3], np.int8))
         if not (ts.size == price.size == size.size == side.size):
             raise ValueError("trade columns must have equal lengths")
-        self.lib.fc_engine_run_session(
+        result = self.lib.fc_engine_run_session(
             self.handle, *[a.ctypes.data for a in (*columns, *levels)], columns[0].size,
             ts.ctypes.data, price.ctypes.data, size.ctypes.data, side.ctypes.data, ts.size,
             session, close_ts, int(bool(actionable)), callback, user)
+        if result < 0:
+            raise RuntimeError("the native strategy callback stopped the run")
 
     @property
     def position(self) -> int:

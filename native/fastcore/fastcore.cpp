@@ -351,8 +351,10 @@ struct FcEvent {
     int32_t side;
     int32_t actionable;
     int32_t n_working;
-    int32_t reserved;
+    int32_t book_ok;
     int64_t working[32];
+    int32_t n_bid, n_ask;
+    double bid_px[5], bid_qty[5], ask_px[5], ask_qty[5];
 };
 
 // op: 1 buy, 2 sell, 3 cancel. kind: 0 market, 1 limit. tif: 0 day, 1 good-till-cancelled.
@@ -367,7 +369,7 @@ typedef int32_t (*FcCallback)(const FcEvent*, FcAction*, int32_t, void*);
 
 struct FcEngine {
     int64_t latency, max_age;
-    int32_t scale, require_two_sided, action_cap;
+    int32_t scale, require_two_sided, action_cap, want_book;
     int64_t seq = -1, next_id = 1, position = 0, stepped = 0, callbacks = 0;
     std::vector<Order> working;
     std::vector<FillRow> fills;
@@ -377,6 +379,45 @@ struct FcEngine {
 }  // extern "C"
 
 namespace {
+
+// Amendment 22: the latest row strictly before this millisecond, at most one second old.
+void visible_book(const Book& b, int64_t now, FcEvent* event) {
+    event->book_ok = 0;
+    event->n_bid = event->n_ask = 0;
+    const auto clear = [&]() {
+        for (int i = 0; i < 5; ++i) {
+            event->bid_px[i] = event->bid_qty[i] = event->ask_px[i] = event->ask_qty[i] = 0.0;
+        }
+    };
+    clear();  // the event struct is reused, so no earlier book may survive in it
+    const int64_t before = now - now % 1000000;
+    const int64_t row = lower_bound(b.ts, b.rows, before) - 1;
+    if (row < 0 || now - b.ts[row] > b.max_age) return;
+    const auto copy = [&](bool bid, double* px, double* qty) {
+        int count = 0;
+        const int64_t top = bid ? b.bid_qty[row] : b.ask_qty[row];
+        if (top > 0) {
+            px[count] = bid ? b.bid[row] : b.ask[row];
+            qty[count++] = static_cast<double>(top);
+        }
+        const int32_t* prices = (bid ? b.bid_px : b.ask_px) + row * kLevels;
+        const int32_t* lots = (bid ? b.bid_lots : b.ask_lots) + row * kLevels;
+        for (int level = 0; level < kLevels; ++level) {
+            if (lots[level] <= 0) continue;
+            px[count] = prices[level] < 0 ? std::numeric_limits<double>::quiet_NaN()
+                                          : static_cast<double>(prices[level]) / b.scale;
+            qty[count++] = static_cast<double>(lots[level]);
+        }
+        return count;
+    };
+    event->n_bid = copy(true, event->bid_px, event->bid_qty);
+    event->n_ask = copy(false, event->ask_px, event->ask_qty);
+    event->book_ok = event->n_bid > 0 && event->n_ask > 0;
+    if (!event->book_ok) {     // ctx.book() is None here, so the kernel sees no levels
+        event->n_bid = event->n_ask = 0;
+        clear();
+    }
+}
 
 void apply_actions(FcEngine* e, const FcAction* actions, int32_t count, int64_t ts, int64_t seq) {
     if (count > e->action_cap) count = e->action_cap;
@@ -418,7 +459,7 @@ void apply_actions(FcEngine* e, const FcAction* actions, int32_t count, int64_t 
 
 extern "C" {
 
-int32_t fc_abi_version() { return 3; }
+int32_t fc_abi_version() { return 4; }
 
 // status: 0 keeps waiting, 1 filled, 2 refused because it exceeds the visible levels.
 int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double* ask,
@@ -447,13 +488,14 @@ int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double*
 }
 
 FcEngine* fc_engine_new(int64_t latency_ns, int64_t max_age_ns, int32_t scale,
-                        int32_t require_two_sided, int32_t action_cap) {
+                        int32_t require_two_sided, int32_t action_cap, int32_t want_book) {
     FcEngine* e = new FcEngine();
     e->latency = latency_ns;
     e->max_age = max_age_ns;
     e->scale = scale;
     e->require_two_sided = require_two_sided;
     e->action_cap = action_cap;
+    e->want_book = want_book;
     e->actions.resize(static_cast<size_t>(action_cap));
     return e;
 }
@@ -525,8 +567,10 @@ int64_t fc_engine_run_session(FcEngine* e, const int64_t* ts, const double* bid,
             if (event.n_working == 32) break;
             event.working[event.n_working++] = o.id;
         }
+        if (e->want_book) visible_book(b, now, &event);
         ++e->callbacks;
         const int32_t count = callback(&event, e->actions.data(), e->action_cap, user);
+        if (count < 0) return -1;
         if (actionable && count > 0) apply_actions(e, e->actions.data(), count, now, seq);
     }
     size_t keep = 0;
@@ -560,6 +604,74 @@ void fc_engine_copy_fills(const FcEngine* e, int64_t* seq, int64_t* ts, int64_t*
         maker[i] = f.maker;
         mid[i] = f.mid;
     }
+}
+
+// A Numba kernel sees copies of one event and its visible book, plus its own state.
+typedef int32_t (*FcKernel)(const int64_t*, const double*, double*, double*, int32_t, int32_t);
+
+struct FcKernelUser {
+    FcKernel kernel;
+    double* state;
+    int32_t state_len;
+    int32_t error;
+};
+
+int32_t fc_kernel_callback(const FcEvent* event, FcAction* actions, int32_t cap, void* user) {
+    FcKernelUser* k = static_cast<FcKernelUser*>(user);
+    constexpr int kMaxOrders = 64;
+    const int32_t room = cap < kMaxOrders ? cap : kMaxOrders;
+    int64_t ints[40] = {event->ts, event->seq, event->session, event->size, event->position,
+                        event->side, event->actionable, event->n_working};
+    for (int i = 0; i < event->n_working; ++i) ints[8 + i] = event->working[i];
+    double floats[24] = {event->price, static_cast<double>(event->book_ok),
+                         static_cast<double>(event->n_bid), static_cast<double>(event->n_ask)};
+    for (int i = 0; i < 5; ++i) {
+        floats[4 + i] = event->bid_px[i];
+        floats[9 + i] = event->bid_qty[i];
+        floats[14 + i] = event->ask_px[i];
+        floats[19 + i] = event->ask_qty[i];
+    }
+    double orders[kMaxOrders * 6] = {};
+    const int32_t count = k->kernel(ints, floats, k->state, orders, k->state_len, room);
+    if (count < 0) {
+        k->error = 1;
+        return -1;
+    }
+    if (count > room) {
+        k->error = 2;
+        return -1;
+    }
+    for (int32_t i = 0; i < count; ++i) {
+        const double* row = orders + i * 6;
+        const double op = row[0], kind = row[1], tif = row[2], size = row[3], limit = row[4], id = row[5];
+        if (op == 1.0 || op == 2.0) {
+            const bool valid = (kind == 0.0 || kind == 1.0) && (tif == 0.0 || tif == 1.0)
+                && std::isfinite(size) && size >= 1.0 && size <= 9007199254740992.0
+                && std::floor(size) == size
+                && (kind == 0.0 || (std::isfinite(limit) && limit > 0.0));
+            if (!valid) {
+                k->error = 3;
+                return -1;
+            }
+            actions[i] = FcAction{static_cast<int32_t>(op), static_cast<int32_t>(kind),
+                                  static_cast<int32_t>(tif), 0, static_cast<int64_t>(size),
+                                  kind == 1.0 ? limit : 0.0, 0};
+        } else if (op == 3.0) {
+            bool found = false;
+            for (int w = 0; w < event->n_working && !found; ++w) {
+                found = static_cast<double>(event->working[w]) == id;
+            }
+            if (!found) {
+                k->error = 4;
+                return -1;
+            }
+            actions[i] = FcAction{3, 0, 0, 0, 0, 0.0, static_cast<int64_t>(id)};
+        } else {
+            k->error = 3;
+            return -1;
+        }
+    }
+    return count;
 }
 
 // A fixed strategy for proving the event loop against the Python engine.

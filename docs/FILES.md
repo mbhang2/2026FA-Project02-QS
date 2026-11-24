@@ -137,6 +137,7 @@ The backtest walk, fills, and the isolated child process.
 | `src/core/engine/context.py` | What a strategy is handed, and the only surface it can act through. |
 | `src/core/engine/engine.py` | The event loop: the immutable side of the split. |
 | `src/core/engine/fills.py` | Trade-based fill models, and the reason the loop scores on the pessimistic one. |
+| `src/core/engine/kernel.py` | Restricted per-event strategy kernels, compiled by Numba for the native event loop. |
 | `src/core/engine/native.py` | The native event core, through a plain C interface. Not used by any backtest yet. |
 | `src/core/engine/reconstruct.py` | Rebuild position, average price and P&L from the fill log alone. |
 | `src/core/engine/remote/__init__.py` | Run the strategy in its own process. See `docs/design/architecture.md` §5c. |
@@ -479,6 +480,7 @@ What each test file pins.
 | `tests/test_native_fastcore.py` | The native market-order walk matches the Python fill model exactly. |
 | `tests/test_no_depth_counted_roots.py` | No tree outside `src/core/**` finds its root by counting directories. |
 | `tests/test_nq_adapter.py` | The NQ adapter, checked against what was already established about this data. |
+| `tests/test_numba_kernel.py` | Restricted Numba kernels are checked, bounded and exact on the native engine. |
 | `tests/test_okx_arrow.py` | The Arrow trade store is exact, read-only and read without copying. |
 | `tests/test_one_sided_book.py` | Amendment 23: no fill is priced from a book with an empty best side. |
 | `tests/test_open_questions.py` | Questions we asked and could not answer — the third kind of context. |

@@ -10,6 +10,7 @@ import pytest
 from src.core.data.okx_book import SessionBook
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec
 from src.core.engine import Engine, native
+from src.core.runlog import RunTicket
 from src.core.engine import kernel as K
 from src.core.engine import native_trial as T
 from src.core.engine.reconstruct import log_digest
@@ -74,7 +75,7 @@ def _scramble(book: SessionBook, trades: tuple, cut: int, rng) -> tuple[SessionB
 
 def _run(lib, source, book, trades, session, close_ts, latency):
     kernel = K.CompiledKernel(source)
-    with native.NativeEngine(lib, latency_ns=latency, require_two_sided=False, book_features=True,
+    with native.NativeEngine(lib, ticket=RunTicket.for_test(), latency_ns=latency, require_two_sided=False, book_features=True,
                              book_events=True) as fast:
         fast.run_session(book, trades, session, close_ts, callback=kernel.callback(lib), user=kernel.user_pointer())
         return kernel.state.copy(), fast.fill_columns()
@@ -158,7 +159,7 @@ def test_an_audit_started_after_warmup_equals_replaying_warmup(latency):
     assert len(warm) == warmup and scored
     lib = native.load()
     kernel = K.CompiledKernel(T.CHECK_KERNEL)
-    with native.NativeEngine(lib, latency_ns=latency, require_two_sided=False, book_features=True,
+    with native.NativeEngine(lib, ticket=RunTicket.for_test(), latency_ns=latency, require_two_sided=False, book_features=True,
                              book_events=True) as fast:
         state, first_seq = None, None
         for session in warm + list(scored):

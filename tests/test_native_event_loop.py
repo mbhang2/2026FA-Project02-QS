@@ -10,6 +10,7 @@ import pytest
 from src.core.data.okx_book import SessionBook, encode_depth
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec
 from src.core.engine import Engine, native
+from src.core.runlog import RunTicket
 from src.core.types import Side, Split
 
 if not native.LIBRARY.exists():
@@ -81,7 +82,7 @@ def test_the_fill_log_matches_the_python_engine(latency):
     lib = native.load()
     state = native.ParityState(*params, 0)
     strategy = ctypes.cast(lib.fc_parity_strategy, ctypes.c_void_p)
-    with native.NativeEngine(lib, latency_ns=latency, require_two_sided=False) as fast:
+    with native.NativeEngine(lib, ticket=RunTicket.for_test(), latency_ns=latency, require_two_sided=False) as fast:
         for session in dataset.scored_sessions(Split.VALIDATION, 0):
             ticks = dataset._session_ticks(session)
             trades = (np.array([t.ts for t in ticks], np.int64), np.array([t.price for t in ticks], float),

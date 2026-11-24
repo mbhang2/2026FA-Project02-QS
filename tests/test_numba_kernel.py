@@ -9,6 +9,7 @@ import pytest
 
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec
 from src.core.engine import Engine, native
+from src.core.runlog import RunTicket
 from src.core.engine import kernel as K
 from src.core.engine import native_trial as T
 from src.core.types import Side, Split
@@ -149,7 +150,7 @@ def test_a_book_reading_kernel_matches_the_python_engine():
     engine.run()
     lib = native.load()
     kernel = K.CompiledKernel(BOOK_KERNEL)
-    with native.NativeEngine(lib, latency_ns=1_000_000, require_two_sided=False, book_features=True) as fast:
+    with native.NativeEngine(lib, ticket=RunTicket.for_test(), latency_ns=1_000_000, require_two_sided=False, book_features=True) as fast:
         for session in dataset.scored_sessions(Split.VALIDATION, 0):
             ticks = dataset._session_ticks(session)
             trades = (np.array([t.ts for t in ticks], np.int64), np.array([t.price for t in ticks], float),
@@ -190,7 +191,7 @@ def test_book_update_events_match_the_python_engine(latency):
     lib = native.load()
     kernel = K.CompiledKernel(BOOK_KERNEL)
     trades_seen = 0
-    with native.NativeEngine(lib, latency_ns=latency, require_two_sided=False, book_features=True,
+    with native.NativeEngine(lib, ticket=RunTicket.for_test(), latency_ns=latency, require_two_sided=False, book_features=True,
                              book_events=True) as fast:
         for session in dataset.scored_sessions(Split.VALIDATION, 0):
             ticks = dataset._session_ticks(session)
@@ -237,7 +238,7 @@ def test_native_fills_score_identically_through_the_unchanged_scorer():
     period = engine.session_calendar()
     terms = dict(notional_base=30000.0, idle_charge=0.0, funding=None)
     costs = dict(commission_per_contract=engine.commission, commission_bps=2.0, maker_commission_bps=0.0)
-    with native.NativeEngine(lib, latency_ns=1_000_000, require_two_sided=False, book_features=True,
+    with native.NativeEngine(lib, ticket=RunTicket.for_test(), latency_ns=1_000_000, require_two_sided=False, book_features=True,
                              book_events=True) as fast:
         for session in dataset.scored_sessions(Split.VALIDATION, 0):
             ticks = dataset._session_ticks(session)

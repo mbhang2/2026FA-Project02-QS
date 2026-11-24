@@ -374,3 +374,17 @@ def test_the_oracle_answer_does_not_depend_on_the_threshold(tmp_path):
         report = static_check(path, source)
         answers.add((report.ok, tuple(str(f) for f in report.findings)))
     assert len(answers) == 1, answers
+
+
+def test_native_engines_are_built_only_by_the_accounted_runner():
+    """Amendment 24 A2: a native run belongs to a trial's row. Tests use `RunTicket.for_test`."""
+    offenders = {}
+    for path in python_files():
+        rel = str(path.relative_to(REPO_ROOT))
+        if rel == "src/core/runlog.py":
+            continue
+        for line, name in calls_named(path, {"NativeEngine", "for_native_child"}):
+            if rel != "scripts/run_native_trial.py":
+                offenders.setdefault(rel, []).append(f"line {line}: {name}")
+    assert not offenders, offenders
+    assert calls_named(REPO_ROOT / "scripts/run_native_trial.py", {"NativeEngine"})

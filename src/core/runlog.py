@@ -96,7 +96,7 @@ class RunTicket:
                 "RunTicket.for_test, never by calling RunTicket(...) directly. "
                 "Every engine run has to be accounted for somewhere."
             )
-        if self.kind not in ("ledger", "calibration", "test"):
+        if self.kind not in ("ledger", "calibration", "test", "native"):
             raise RunNotAccounted(f"unknown ticket kind {self.kind!r}")
 
     @classmethod
@@ -151,6 +151,15 @@ class RunTicket:
         if not reason:
             raise RunNotAccounted("for_null_calibration() needs a reason")
         return cls._mint(_MINT, "calibration", f"null calibration: {reason}")
+
+    @classmethod
+    def for_native_child(cls, trial_id: str) -> RunTicket:
+        """The native child of one Amendment 24 trial. Its parent holds that trial's ledger row
+        and an open-trial journal entry naming `trial_id`; the child refuses to start without
+        one. `tests/test_accounting.py` asserts the only caller is `scripts/run_native_trial.py`."""
+        if not trial_id:
+            raise RunNotAccounted("for_native_child() needs the trial id")
+        return cls._mint(_MINT, "native", trial_id)
 
     @classmethod
     def for_test(cls, reason: str = "fixture") -> RunTicket:

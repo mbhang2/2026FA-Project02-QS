@@ -65,9 +65,15 @@ class ParityState(ctypes.Structure):
 class NativeEngine:
     """One run of the native event loop for one asset."""
 
-    def __init__(self, lib: ctypes.CDLL, *, latency_ns: int, scale: int = 10,
+    def __init__(self, lib: ctypes.CDLL, *, ticket, latency_ns: int, scale: int = 10,
                  require_two_sided: bool = True, action_cap: int = 64, book_features: bool = False,
                  book_events: bool = False):
+        from ..runlog import RunNotAccounted, RunTicket
+
+        # Like `Engine`: a native run is accounted for, through a trial's child or a test.
+        if not isinstance(ticket, RunTicket) or ticket.kind not in ("native", "test"):
+            raise RunNotAccounted("NativeEngine needs RunTicket.for_native_child or RunTicket.for_test")
+        self.ticket = ticket
         self.lib = lib
         self.scale = scale
         self.handle = lib.fc_engine_new(latency_ns, MAX_QUOTE_AGE_NS, scale,

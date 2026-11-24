@@ -9,6 +9,7 @@ import pytest
 
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec
 from src.core.engine import Engine, native
+from src.core.runlog import RunTicket
 from src.core.engine import kernel as K
 from src.core.engine import native_trial as T
 from src.core.types import Side, Split
@@ -72,7 +73,7 @@ def test_the_audit_strategy_matches_the_native_engine():
     engine.run()
     lib = native.load()
     kernel = K.CompiledKernel(BOOK_KERNEL)
-    with native.NativeEngine(lib, latency_ns=1_000_000, require_two_sided=False, book_features=True,
+    with native.NativeEngine(lib, ticket=RunTicket.for_test(), latency_ns=1_000_000, require_two_sided=False, book_features=True,
                              book_events=True) as fast:
         for session in dataset.scored_sessions(Split.VALIDATION, 0):
             ticks = dataset._session_ticks(session)
@@ -152,3 +153,36 @@ def test_an_out_of_range_action_count_stops_the_run(value):
                   kernel.state.ctypes.data_as(call.argtypes[2]), orders.ctypes.data_as(call.argtypes[3]),
                   kernel.state.size, 64)
     assert result == -1
+
+
+def test_a_native_engine_needs_a_ticket():
+    from src.core.runlog import RunNotAccounted
+
+    if not native.LIBRARY.exists():
+        pytest.skip("the native library is not built")
+    with pytest.raises(TypeError):
+        native.NativeEngine(native.load(), latency_ns=0)
+    with pytest.raises(RunNotAccounted):
+        native.NativeEngine(native.load(), ticket="forged", latency_ns=0)
+
+
+def test_an_orphaned_trial_becomes_a_crashed_row(tmp_path):
+    import json
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import run_native_trial as R
+
+    ledger = tmp_path / "ledger.jsonl"
+    folder = tmp_path / R.OPEN_DIR
+    folder.mkdir()
+    (folder / "a.json").write_text(json.dumps({"trial_id": "a", "kernel_sha256": "k", "profile": "p"}))
+    (folder / "b.json").write_text(json.dumps({"trial_id": "b", "kernel_sha256": "k", "profile": "p"}))
+    ledger.write_text(json.dumps({"trial_id": "b", "outcome": "completed"}) + "\n")
+    assert R.recover_open_trials(ledger, lambda r: r) == 1
+    rows = [json.loads(line) for line in ledger.read_text().splitlines()]
+    assert [r["trial_id"] for r in rows] == ["b", "a"]
+    assert rows[1]["outcome"] == "crashed" and rows[1]["failure_kind"] == "killed_without_row"
+    assert not list(folder.glob("*.json"))
+    assert R.recover_open_trials(ledger, lambda r: r) == 0

@@ -118,12 +118,14 @@ def test_the_audit_window_serves_one_slice_through_the_columns_path():
                 yield SessionColumns(session, np.arange(n, dtype=np.int64) + session * 1000, np.full(n, 100.0),
                                      np.ones(n, np.int64), np.ones(n, np.int8))
 
-    window = R._AuditWindow(Columns(), 4, 10, 7)
+    window = R._AuditWindow(Columns(), [(4, 10, 7)])
     assert E._columns_source(window) is not None
     walked = [(c.session, int(c.ts[0]), len(c)) for c in window.session_columns(Split.VALIDATION)]
     assert walked == [(4, 4010, 7)]
     assert sum(1 for _ in window.ticks(Split.VALIDATION)) == 7
-    assert [(c.session, len(c)) for c in R._AuditWindow(Columns(), 5, 45).session_columns(Split.TRAIN)] == [(5, 5)]
+    assert [(c.session, len(c)) for c in R._AuditWindow(Columns(), [(5, 45, None)]).session_columns(Split.TRAIN)] == [(5, 5)]
+    across = R._AuditWindow(Columns(), [(3, 48, None), (4, 0, None)]).session_columns(Split.TRAIN)
+    assert [(c.session, len(c)) for c in across] == [(3, 2), (4, 50)]
 
 def test_the_audit_state_keeps_every_bit():
     state = np.array([np.nan, -np.nan, 1e300, -0.0] + [0.0] * 60)
@@ -178,9 +180,158 @@ def test_an_orphaned_trial_becomes_a_crashed_row(tmp_path):
     (folder / "a.json").write_text(json.dumps({"trial_id": "a", "kernel_sha256": "k", "profile": "p"}))
     (folder / "b.json").write_text(json.dumps({"trial_id": "b", "kernel_sha256": "k", "profile": "p"}))
     ledger.write_text(json.dumps({"trial_id": "b", "outcome": "completed"}) + "\n")
-    assert R.recover_open_trials(ledger, lambda r: r) == 1
+    (folder / "c.json").write_text("")
+    assert R.recover_open_trials(ledger, lambda r, e, c: r) == 2
     rows = [json.loads(line) for line in ledger.read_text().splitlines()]
-    assert [r["trial_id"] for r in rows] == ["b", "a"]
+    assert [r["trial_id"] for r in rows] == ["b", "a", "c"]
     assert rows[1]["outcome"] == "crashed" and rows[1]["failure_kind"] == "killed_without_row"
+    assert rows[2]["unreadable_entry"] is True
     assert not list(folder.glob("*.json"))
-    assert R.recover_open_trials(ledger, lambda r: r) == 0
+    assert R.recover_open_trials(ledger, lambda r, e, c: r) == 0
+
+
+def _runner():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import run_native_trial as R
+
+    return R
+
+
+def test_a_live_trial_is_not_recovered_and_its_source_is_kept(tmp_path):
+    import json
+
+    R = _runner()
+    ledger = tmp_path / "ledger.jsonl"
+    entry, copy, nonce, handle = R.open_trial(ledger, "live", "source text", "p", "check")
+    try:
+        assert R.recover_open_trials(ledger, lambda r, e, c: r) == 0
+        assert entry.is_file() and copy.read_text() == "source text"
+        assert json.loads(entry.read_text())["nonce"] == nonce
+    finally:
+        assert R.close_trial(ledger, "live", entry, copy, handle) is False
+    assert entry.is_file()
+    assert R.recover_open_trials(ledger, lambda r, e, c: {**r, "kept": c.read_text()}) == 1
+    row = json.loads(ledger.read_text())
+    assert row["trial_id"] == "live" and row["kept"] == "source text" and "nonce" not in row
+
+
+def test_a_ledger_run_that_fails_to_write_is_not_marked_written(tmp_path):
+    from src.core.runlog import LedgerRun
+
+    run_log = LedgerRun(tmp_path / "ledger.jsonl", row_builder=lambda r: {"bad": np.int64(1)})
+    with pytest.raises(TypeError):
+        with run_log:
+            pass
+    assert run_log.written is False
+
+
+def test_the_child_refuses_a_forged_entry(tmp_path):
+    import json
+
+    R = _runner()
+    ledger = R.SCRATCH / "test-child-gate" / "ledger.jsonl"
+    entry, copy, nonce, handle = R.open_trial(ledger, "t1", T.CHECK_KERNEL, "p", "check")
+    try:
+        good = {"ledger": str(ledger.resolve()), "journal": str(entry), "trial_id": "t1", "source": T.CHECK_KERNEL,
+                "nonce": nonce}
+        assert R._check_child_spec(good).kind == "native"
+        forged_dir = tmp_path / R.OPEN_DIR
+        forged_dir.mkdir()
+        (forged_dir / "t1.json").write_text(entry.read_text())
+        for bad in ({**good, "nonce": "0" * 32}, {**good, "journal": str(forged_dir / "t1.json")},
+                    {**good, "source": T.CHECK_KERNEL + "\n# changed\n"}, {**good, "trial_id": "t2"}):
+            with pytest.raises((T.NativeTrialRefused, KeyError, FileNotFoundError)):
+                R._check_child_spec(bad)
+    finally:
+        handle.close()
+    with pytest.raises(T.NativeTrialRefused):
+        R._check_child_spec(good)                     # no live parent holds the entry now
+    entry.unlink()
+    copy.unlink()
+
+
+def _snapshot(**change):
+    base = {"seq": 9, "position": 3, "next_id": 4, "trade": 5, "last_price": 100.0,
+            "order_ints": np.array([[3, 1, 0, 1, 5, 2, 4, 0, 0, 0, 1, 7, 2, 1]], np.int64),
+            "order_doubles": np.array([[99.5, 4.0]]), "state": np.zeros(64)}
+    base.update(change)
+    return base
+
+
+def _fills():
+    c = columns(3)
+    c["order_id"] = np.array([1, 3, 3], np.int64)
+    c["size"] = np.array([1, 1, 1], np.int64)
+    c["seq"] = np.array([2, 5, 8], np.int64)
+    return c
+
+
+def test_a_consistent_snapshot_passes():
+    T.check_snapshot(_snapshot(), _fills(), 5)
+
+
+@pytest.mark.parametrize("change", [dict(position=10 ** 15), dict(last_price=float("nan")), dict(next_id=3),
+                                    dict(order_doubles=np.array([[-1.0, 4.0]])),
+                                    dict(order_doubles=np.array([[99.5, -1e9]])),
+                                    dict(order_ints=np.array([[3, 1, 0, 1, 5, 99, 4, 0, 0, 0, 1, 7, 2, 1]], np.int64)),
+                                    dict(order_ints=np.array([[3, 1, 0, 1, 5, 2, 4, 0, 0, 0, 1, 7, -7, 1]], np.int64)),
+                                    dict(order_ints=np.array([[3, 2, 0, 1, 5, 2, 4, 0, 0, 0, 1, 7, 2, 1]], np.int64))])
+def test_an_inconsistent_snapshot_is_refused(change):
+    with pytest.raises(T.NativeTrialFailed):
+        T.check_snapshot(_snapshot(**change), _fills(), 5)
+
+
+class _Book:
+    def __init__(self, ts):
+        self.ts = ts
+
+
+class _Columns:
+    name = "fake"
+
+    def __init__(self, sizes):
+        self.sizes = sizes
+
+    def session_columns(self, split, *, warmup=0):
+        from src.core.data.columns import SessionColumns
+
+        for session, n in self.sizes.items():
+            ts = session * 10 ** 12 + np.arange(n, dtype=np.int64) * 10_000_000
+            yield SessionColumns(session, ts, np.full(n, 100.0), np.ones(n, np.int64), np.ones(n, np.int8))
+
+    def book_for(self, session):
+        return _Book(session * 10 ** 12 + np.arange(0, 10 ** 12, 5_000_000_000, dtype=np.int64)[:10])
+
+
+def test_short_windows_cross_sessions_and_cover_openings():
+    import random
+
+    R = _runner()
+    R.SHORT_AUDIT_EVENTS = 30
+    data = _Columns({1: 40, 2: 40, 3: 40})
+    seen_open = False
+    for seed in range(60):
+        [window] = R.plan_windows(data, [1, 2, 3], False, random.Random(seed))
+        assert all(0 <= start < 40 for _, start, _ in window)
+        sessions = [s for s, _, _ in window]
+        assert sessions == sorted(sessions) and len(set(sessions)) == len(sessions)
+        seen_open |= len(window) > 1 and window[1][1] == 0
+    assert seen_open
+
+
+def test_deep_windows_start_at_the_previous_close():
+    import random
+
+    R = _runner()
+    windows = R.plan_windows(_Columns({1: 40, 2: 40, 3: 40, 4: 40, 5: 40, 6: 40}), [1, 2, 3, 4, 5, 6], True,
+                             random.Random(3))
+    assert len(windows) == 5
+    starts = [w[0][0] for w in windows]
+    assert len(set(starts)) == len(starts)
+    for w in windows:
+        assert w[-1][1] == 0 and w[-1][2] is None
+        if len(w) == 2:
+            assert w[0][1] == 39 and w[0][0] + 1 == w[1][0]

@@ -218,6 +218,53 @@ def audit_strategy_source(source: str, state, last_price: float = 0.0) -> str:
                                   last_price=int(np.asarray([last_price], np.float64).view(np.uint64)[0]))
 
 
+def events_in(trade_ts: np.ndarray, book_ts: np.ndarray, after: int) -> int:
+    """Trades plus book events from just after `after` through the last of these trades."""
+    if not trade_ts.size:
+        return 0
+    releases = np.unique(book_ts - book_ts % 1_000_000) + 1_000_000
+    return int(trade_ts.size + np.count_nonzero((releases > after) & (releases <= trade_ts[-1])))
+
+
+def check_snapshot(snapshot: dict, columns: dict, start_trade: int) -> None:
+    """Refuse a saved engine that the native fills before it do not explain.
+
+    The audit compares only fills inside its window, from this state. A wrong position, fill
+    count or order id here would carry an earlier native error into the audit unseen.
+    """
+    seq = snapshot["seq"]
+    before = columns["seq"] <= seq
+    problems = []
+    signed = int((columns["side"][before].astype(np.int64) * columns["size"][before]).sum())
+    if signed != snapshot["position"]:
+        problems.append(f"position {snapshot['position']} but the fills before it sum to {signed}")
+    price = snapshot["last_price"]
+    if not np.isfinite(price) or price < 0 or (price == 0 and start_trade != 0):
+        problems.append(f"last price {price}")
+    ints, doubles = snapshot["order_ints"], snapshot["order_doubles"]
+    ids = ints[:, 0] if ints.size else np.zeros(0, np.int64)
+    used = max(int(columns["order_id"][before].max()) if before.any() else 0, int(ids.max()) if ids.size else 0)
+    if snapshot["next_id"] <= used:
+        problems.append(f"next order id {snapshot['next_id']} is not above {used}")
+    if ids.size != np.unique(ids).size or (ids.size and ids.min() < 1):
+        problems.append("order ids repeat or are not positive")
+    for row, (limit, queue) in zip(ints.tolist(), doubles.tolist()):
+        o = dict(zip(ORDER_FIELDS, row))
+        own = int(columns["size"][before & (columns["order_id"] == o["id"])].sum())
+        if o["size"] < 1 or o["filled"] != own or o["filled"] >= o["size"]:
+            problems.append(f"order {o['id']} size {o['size']} filled {o['filled']} against {own} in its fills")
+        if any(o[k] not in (0, 1) for k in ("buy", "market", "gtc", "cancelling", "placed", "has_queue")):
+            problems.append(f"order {o['id']} has an invalid flag")
+        if not o["market"] and not (np.isfinite(limit) and limit > 0):
+            problems.append(f"order {o['id']} limit {limit}")
+        if o["has_queue"] and not (np.isfinite(queue) and queue >= 0):
+            problems.append(f"order {o['id']} queue {queue}")
+        if o["row"] < -1 or o["eligible_seq"] > seq + 1 or o["eligible_ts"] < 0:
+            problems.append(f"order {o['id']} row or eligibility")
+    if problems:
+        raise NativeTrialFailed("invalid snapshot: " + "; ".join(problems[:5]))
+
+
 ORDER_FIELDS = ("id", "buy", "market", "gtc", "size", "filled", "eligible_seq", "eligible_ts", "cancelling",
                 "cancel_at", "placed", "session", "row", "has_queue")
 

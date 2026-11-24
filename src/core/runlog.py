@@ -418,6 +418,8 @@ class LedgerRun:
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         if not self.written:
-            self.written = True
+            # Marked written only once the row is on disk. A row that failed to build or append
+            # is not written, so nothing downstream may treat the trial as recorded.
             append_ledger(self.ledger_path, self.row_builder(self.record))
+            self.written = True
         return False        # never swallow: an invalidated trial is still a raise

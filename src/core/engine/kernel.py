@@ -23,7 +23,8 @@ import ctypes
 
 CONSTANTS = {
     "E_TS": 0, "E_SEQ": 1, "E_SESSION": 2, "E_SIZE": 3, "E_POSITION": 4, "E_SIDE": 5,
-    "E_ACTIONABLE": 6, "E_N_WORKING": 7, "E_WORKING": 8,
+    "E_ACTIONABLE": 6, "E_N_WORKING": 7, "E_WORKING": 8, "E_KIND": 40,
+    "EVENT_TRADE": 0, "EVENT_BOOK": 1,
     "B_PRICE": 0, "B_OK": 1, "B_N_BID": 2, "B_N_ASK": 3, "B_BID_PX": 4, "B_BID_QTY": 9,
     "B_ASK_PX": 14, "B_ASK_QTY": 19,
     "O_OP": 0, "O_KIND": 1, "O_TIF": 2, "O_SIZE": 3, "O_LIMIT": 4, "O_ORDER_ID": 5,
@@ -153,7 +154,7 @@ class CompiledKernel:
         @cfunc(signature)
         def entry(event_ptr, book_ptr, state_ptr, order_ptr, state_len, capacity):
             try:
-                event = carray(event_ptr, (40,))
+                event = carray(event_ptr, (41,))
                 book = carray(book_ptr, (24,))
                 state = carray(state_ptr, (state_len,))
                 orders = carray(order_ptr, (capacity, 6))

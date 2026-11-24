@@ -59,7 +59,7 @@ def test_outside_the_language_is_refused(bad):
 
 
 def call(kernel):
-    event = np.zeros(40, np.int64)
+    event = np.zeros(41, np.int64)
     book = np.zeros(24)
     orders = np.zeros((4, 6))
     return kernel._entry.ctypes(event.ctypes.data_as(kernel._entry.ctypes.argtypes[0]),
@@ -69,7 +69,7 @@ def call(kernel):
 
 
 @needs_numba
-@pytest.mark.parametrize("line", ["return int(event[40])", "state[64] = 1.0\n    return 0",
+@pytest.mark.parametrize("line", ["return int(event[41])", "state[64] = 1.0\n    return 0",
                                   "orders[4, 0] = 1.0\n    return 0", "return int(book[24])"])
 def test_an_out_of_bounds_read_or_write_stops_the_run(line):
     kernel = K.CompiledKernel(f"def kernel(event, book, state, orders):\n    {line}\n", state_size=64)
@@ -192,3 +192,57 @@ def test_a_book_reading_kernel_matches_the_python_engine():
         assert kernel.state[0] == strategy.count
         assert kernel.state[1] == strategy.checksum and kernel.state[2] == strategy.missing
         assert fast.fill_digest() == engine.fill_log_digest() and fast.position == engine.position
+
+
+class BookEventParityStrategy(BookParityStrategy):
+    """The same decisions, also taken on every book update."""
+
+    name = "check/book-event-parity"
+
+    def on_book_event(self, ctx):
+        self.on_tick(ctx)
+
+
+@needs_numba
+@pytest.mark.skipif(not native.LIBRARY.exists(), reason="the native library is not built")
+@pytest.mark.parametrize("latency", [0, 1_000_000, 45_000_000_000])
+def test_book_update_events_match_the_python_engine(latency):
+    from test_native_event_loop import native_book
+
+    spec = SyntheticSpec(n_sessions=40, ticks_per_session=240, tick_spacing_ns=5_000_000_000, session_gap_ns=0,
+                         start_price=30000.0, tick_size=0.1, vol_per_tick=6.0, early_close_rate=0.0, length_jitter=0.0,
+                         session_open_utc="00:00", size_scale=20, book=True, seed=5)
+    dataset = SyntheticDataset(spec)
+    strategy = BookEventParityStrategy()
+    engine = Engine(dataset, strategy, ticket=RunTicket.for_calibration("book event parity"), split=Split.VALIDATION,
+                    fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5, commission_bps=2.0,
+                    maker_commission_bps=0.0, latency_ns=latency, book_features=True, book_events=True)
+    engine.run()
+    lib = native.load()
+    kernel = K.CompiledKernel(BOOK_KERNEL)
+    trades_seen = 0
+    with native.NativeEngine(lib, latency_ns=latency, require_two_sided=False, book_features=True,
+                             book_events=True) as fast:
+        for session in dataset.scored_sessions(Split.VALIDATION, 0):
+            ticks = dataset._session_ticks(session)
+            trades_seen += len(ticks)
+            trades = (np.array([t.ts for t in ticks], np.int64), np.array([t.price for t in ticks], float),
+                      np.array([t.size for t in ticks], np.int64),
+                      np.array([1 if t.side is Side.BUY else -1 if t.side is Side.SELL else 0 for t in ticks], np.int8))
+            fast.run_session(native_book(dataset, session), trades, session, dataset.session_bounds(session)[1],
+                             callback=kernel.callback(lib), user=kernel.user_pointer())
+        assert kernel.error == 0 and strategy.count > trades_seen and len(engine.fill_log) > 5
+        assert kernel.state[0] == strategy.count
+        assert kernel.state[1] == strategy.checksum and kernel.state[2] == strategy.missing
+        assert fast.fill_digest() == engine.fill_log_digest() and fast.position == engine.position
+
+
+def test_book_events_refuse_a_strategy_without_the_callback():
+    spec = SyntheticSpec(n_sessions=40, ticks_per_session=20, tick_spacing_ns=5_000_000_000, session_gap_ns=0,
+                         start_price=30000.0, tick_size=0.1, vol_per_tick=6.0, early_close_rate=0.0, length_jitter=0.0,
+                         session_open_utc="00:00", size_scale=20, book=True, seed=5)
+    engine = Engine(SyntheticDataset(spec), BookParityStrategy(), ticket=RunTicket.for_calibration("book event refusal"),
+                    split=Split.VALIDATION, fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5,
+                    commission_bps=2.0, maker_commission_bps=0.0, book_features=True, book_events=True)
+    with pytest.raises(ValueError, match="on_book_event"):
+        engine.run()

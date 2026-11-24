@@ -355,6 +355,8 @@ struct FcEvent {
     int64_t working[32];
     int32_t n_bid, n_ask;
     double bid_px[5], bid_qty[5], ask_px[5], ask_qty[5];
+    int32_t kind;  // 0 trade, 1 book update
+    int32_t pad;
 };
 
 // op: 1 buy, 2 sell, 3 cancel. kind: 0 market, 1 limit. tif: 0 day, 1 good-till-cancelled.
@@ -369,7 +371,7 @@ typedef int32_t (*FcCallback)(const FcEvent*, FcAction*, int32_t, void*);
 
 struct FcEngine {
     int64_t latency, max_age;
-    int32_t scale, require_two_sided, action_cap, want_book;
+    int32_t scale, require_two_sided, action_cap, want_book, book_events;
     int64_t seq = -1, next_id = 1, position = 0, stepped = 0, callbacks = 0;
     std::vector<Order> working;
     std::vector<FillRow> fills;
@@ -459,7 +461,7 @@ void apply_actions(FcEngine* e, const FcAction* actions, int32_t count, int64_t 
 
 extern "C" {
 
-int32_t fc_abi_version() { return 4; }
+int32_t fc_abi_version() { return 5; }
 
 // status: 0 keeps waiting, 1 filled, 2 refused because it exceeds the visible levels.
 int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double* ask,
@@ -488,7 +490,8 @@ int64_t fc_take_market_batch(const int64_t* ts, const double* bid, const double*
 }
 
 FcEngine* fc_engine_new(int64_t latency_ns, int64_t max_age_ns, int32_t scale,
-                        int32_t require_two_sided, int32_t action_cap, int32_t want_book) {
+                        int32_t require_two_sided, int32_t action_cap, int32_t want_book,
+                        int32_t book_events) {
     FcEngine* e = new FcEngine();
     e->latency = latency_ns;
     e->max_age = max_age_ns;
@@ -496,6 +499,7 @@ FcEngine* fc_engine_new(int64_t latency_ns, int64_t max_age_ns, int32_t scale,
     e->require_two_sided = require_two_sided;
     e->action_cap = action_cap;
     e->want_book = want_book;
+    e->book_events = book_events;
     e->actions.resize(static_cast<size_t>(action_cap));
     return e;
 }
@@ -513,9 +517,46 @@ int64_t fc_engine_run_session(FcEngine* e, const int64_t* ts, const double* bid,
     const Book b = make_book(ts, bid, ask, bid_qty, ask_qty, bid_px, bid_lots, ask_px, ask_lots,
                              rows, e->scale, e->require_two_sided, e->max_age);
     FcEvent event{};
+    const auto notify = [&](int64_t when, int64_t seq, double price, int64_t size, int32_t side,
+                            int32_t kind) {
+        if (callback == nullptr) return true;
+        event.ts = when;
+        event.seq = seq;
+        event.session = session;
+        event.price = price;
+        event.size = size;
+        event.side = side;
+        event.kind = kind;
+        event.position = e->position;
+        event.actionable = actionable;
+        event.n_working = 0;
+        for (const Order& o : e->working) {
+            if (event.n_working == 32) break;
+            event.working[event.n_working++] = o.id;
+        }
+        if (e->want_book) visible_book(b, when, &event);
+        ++e->callbacks;
+        const int32_t count = callback(&event, e->actions.data(), e->action_cap, user);
+        if (count < 0) return false;
+        if (actionable && count > 0) apply_actions(e, e->actions.data(), count, when, seq);
+        return true;
+    };
+    int64_t book_row = 0;
+    double last_price = 0.0;
     for (int64_t t = 0; t < trades; ++t) {
-        const int64_t seq = ++e->seq;
         const int64_t now = trade_ts[t];
+        // A row is known from the start of the next millisecond, before a trade at that time.
+        while (e->book_events && book_row < rows) {
+            const int64_t base = ts[book_row] - ts[book_row] % 1000000;
+            const int64_t release = base + 1000000;
+            if (release > now) break;
+            while (book_row < rows && ts[book_row] - ts[book_row] % 1000000 == base) ++book_row;
+            if (release <= trade_ts[0]) continue;
+            const int64_t book_seq = ++e->seq;
+            if (!notify(release, book_seq, last_price, 0, 0, 1)) return -1;
+        }
+        const int64_t seq = ++e->seq;
+        last_price = trade_price[t];
         ++e->stepped;
         size_t keep = 0;
         for (size_t k = 0; k < e->working.size(); ++k) {
@@ -553,25 +594,7 @@ int64_t fc_engine_run_session(FcEngine* e, const int64_t* ts, const double* bid,
             }
         }
         e->working.resize(keep);
-        if (callback == nullptr) continue;
-        event.ts = now;
-        event.seq = seq;
-        event.session = session;
-        event.price = trade_price[t];
-        event.size = trade_size[t];
-        event.side = trade_side[t];
-        event.position = e->position;
-        event.actionable = actionable;
-        event.n_working = 0;
-        for (const Order& o : e->working) {
-            if (event.n_working == 32) break;
-            event.working[event.n_working++] = o.id;
-        }
-        if (e->want_book) visible_book(b, now, &event);
-        ++e->callbacks;
-        const int32_t count = callback(&event, e->actions.data(), e->action_cap, user);
-        if (count < 0) return -1;
-        if (actionable && count > 0) apply_actions(e, e->actions.data(), count, now, seq);
+        if (!notify(now, seq, trade_price[t], trade_size[t], trade_side[t], 0)) return -1;
     }
     size_t keep = 0;
     for (size_t k = 0; k < e->working.size(); ++k) {
@@ -620,9 +643,10 @@ int32_t fc_kernel_callback(const FcEvent* event, FcAction* actions, int32_t cap,
     FcKernelUser* k = static_cast<FcKernelUser*>(user);
     constexpr int kMaxOrders = 64;
     const int32_t room = cap < kMaxOrders ? cap : kMaxOrders;
-    int64_t ints[40] = {event->ts, event->seq, event->session, event->size, event->position,
+    int64_t ints[41] = {event->ts, event->seq, event->session, event->size, event->position,
                         event->side, event->actionable, event->n_working};
     for (int i = 0; i < event->n_working; ++i) ints[8 + i] = event->working[i];
+    ints[40] = event->kind;
     double floats[24] = {event->price, static_cast<double>(event->book_ok),
                          static_cast<double>(event->n_bid), static_cast<double>(event->n_ask)};
     for (int i = 0; i < 5; ++i) {

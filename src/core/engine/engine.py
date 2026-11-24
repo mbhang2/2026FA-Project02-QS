@@ -549,6 +549,9 @@ class Engine:
         allow_overnight: bool = True,
         # Amendment 22: a profile may let its strategy read `ctx.book()`.
         book_features: bool = False,
+        # Calls `strategy.on_book_event(ctx)` once per millisecond with a book update.
+        # Not reachable from a profile or the strategy API: no campaign uses it.
+        book_events: bool = False,
         # Amendment 23: no book fill from a row with an empty best bid or ask.
         two_sided_book: bool = False,
         # Paid on taker fills as a cost, in price points per contract and in basis
@@ -603,6 +606,9 @@ class Engine:
         self.maker_commission_bps = maker_commission_bps
         self._no_new_orders = False
         self.book_features = bool(book_features)
+        self.book_events = bool(book_events)
+        if self.book_events and not self.book_features:
+            raise ValueError("book_events needs book_features")
         self._book_access = {"requested": False}
         self._book_fill = hasattr(self.model, "bind_book")
         if self._book_fill:
@@ -1046,6 +1052,10 @@ class Engine:
         self._quoted_walk = (
             self.model.requires.has_quotes or self._quote_subscribed
         )
+        if self.book_events and not callable(getattr(self.strategy, "on_book_event", None)):
+            raise ValueError("book_events needs a strategy with on_book_event(ctx)")
+        if self.book_events and self._quoted_walk:
+            raise ValueError("book_events runs on the trade walk, not the quoted walk")
         if self._quoted_walk and self._custom_execution:
             raise ValueError("latency_ns, slippage and allow_overnight=False support "
                              "single-asset, trade-based runs only")
@@ -1092,6 +1102,9 @@ class Engine:
             self._session_seq0 = seq + 1
             if self._quoted_walk:
                 seq = self._walk_quoted(batch, session, actionable, seq)
+                continue
+            if self.book_events:
+                seq = self._walk_book_events(batch, session, actionable, seq)
                 continue
             if isinstance(batch, SessionColumns):
                 price, tsarr, sizes, sides = batch.price, batch.ts, batch.size, batch.side
@@ -1152,7 +1165,8 @@ class Engine:
             # Trades-only, `n_ticks` is the next sequence: ticks and sequence
             # move together, skipped spans included. The quote walk steps
             # quotes as well, so it records the next sequence itself.
-            close_at = self._close_seq if self._quoted_walk else self.n_ticks
+            close_at = (self._close_seq if self._quoted_walk or self.book_events
+                        else self.n_ticks)
             self._close_session(session, close_at,
                                 actionable=self._is_actionable(session))
 
@@ -1188,6 +1202,40 @@ class Engine:
                 self.n_ticks += 1
                 self.n_stepped += 1
                 self._step(tick, actionable)
+        self._close_seq = seq + 1
+        return seq
+
+    def _walk_book_events(self, batch, session: int, actionable: bool, seq: int) -> int:
+        """Trades, with one book event for each millisecond that has a book update.
+
+        Timestamps are milliseconds, so a row is known only from the start of the next
+        millisecond. That instant is the event's time, and at an equal time the book event
+        goes first because `ctx.book()` at that trade already shows the row. Events run
+        strictly after the session's first trade and through its last. Fills stay on trades.
+        """
+        book_ts = np.asarray(self.dataset.book_for(session).ts)
+        first, last = int(batch[0].ts), int(batch[-1].ts)
+        releases = np.unique(book_ts - book_ts % 1_000_000) + 1_000_000
+        releases = releases[(releases > first) & (releases <= last)]
+        next_release = 0
+        for ti in range(len(batch)):
+            src = batch[ti]
+            while next_release < releases.size and releases[next_release] <= src.ts:
+                seq += 1
+                if self._deadline and seq >= self._next_budget_seq:
+                    self._next_budget_seq = seq + BUDGET_CHECK_EVERY_TICKS
+                    self._check_budget()
+                when = int(releases[next_release])
+                next_release += 1
+                self._dispatch("book", None, Tick(when, self.last_price, 0, session, seq, None),
+                               actionable)
+            seq += 1
+            if self._deadline and seq >= self._next_budget_seq:
+                self._next_budget_seq = seq + BUDGET_CHECK_EVERY_TICKS
+                self._check_budget()
+            self.n_ticks += 1
+            self.n_stepped += 1
+            self._step(Tick(src.ts, src.price, src.size, session, seq, src.side), actionable)
         self._close_seq = seq + 1
         return seq
 
@@ -2163,6 +2211,9 @@ class Engine:
         elif kind == "quote":
             ctx = QuoteContext(port, queue, quote=event, **common)
             handler = self.strategy.on_quote
+        elif kind == "book":
+            ctx = QuoteContext(port, queue, quote=event, **common)
+            handler = self.strategy.on_book_event
         elif kind == "fill":
             ctx = FillContext(port, queue, fill=event, **common)
             handler = self.strategy.on_fill

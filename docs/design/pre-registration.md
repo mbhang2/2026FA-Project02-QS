@@ -2697,3 +2697,99 @@ Any fill on a two-sided row, the walk through visible levels, queue rules, quote
 - A change to a fill on a two-sided row.
 
 Code: `src/core/engine/fills.py`, `src/core/engine/engine.py`, `run.py`, `scripts/replay.py`.
+
+## Amendment 24 — 2026-11-23 — native kernel trials and BTC market making
+
+**Status: DRAFT, NOT IN FORCE.** Drafted 2026-11-23 by Claude on request and not signed. The code reads this line, so nothing below applies until Michael signs it. No candidate kernel has run. The native engine has run only fixed check strategies, which wrote no ledger row.
+
+### Why
+
+The native engine reproduces the Python engine's fills about 100 to 200 times faster on the checks run so far, which makes per-event strategies affordable. Three things must be fixed before a candidate runs on it.
+
+1. **Accounting.** A candidate must count toward N. A calibration ticket is reserved for the committed reference strategy, and the accounting test refused a first runner that used one for a candidate.
+2. **Timing.** Market making reacts to book updates, which Amendment 22 rule f did not allow.
+3. **The null.** The sign-flip null flips each round turn's P&L. Amendment 22 records that it does not validly judge a strategy whose edge is earned spread.
+
+**Real results preceded this.** `btc-cvd-02`, `btc-absorption-01` and `btc-book-absorption-01` failed and their validation reads are known. This amendment does not rescore them. Every campaign under it joins the same BTC validation family, so **the next one has `M = 4`**.
+
+### Part A: how a native trial is run and counted
+
+| | rule |
+|---|---|
+| A1 | A profile enables this with `engine: native`. Without it, the run and its digests are unchanged. |
+| A2 | **One ledger row is opened before the kernel is parsed.** A refused source, compile failure, crash, timeout, invalid fill or failed audit is that row's outcome and counts toward N. |
+| A3 | The kernel is compiled and run only in a child process. The child returns plain numeric fill columns. The parent reads them without pickle and rejects a wrong type, an impossible value, or a fill outside its session. |
+| A4 | A kernel sees one event, the visible top five levels, and its own state of at most 4,096 numbers. It may not import, call arbitrary functions, loop without a literal bound, or write to the event or book. Bounds checks stay on, and an out-of-bounds access ends the trial. |
+| A5 | The score is computed from the validated fills by the unchanged reconstruction and scorer. |
+| A6 | The row records the kernel source digest, native library digest, ABI version, Numba version, fill-log digest and audit result. |
+| A7 | A native run supports only what has been proved equal to the Python engine. Any other order type or profile option is refused before the run and recorded under A2. |
+
+### Part B: the two-tier audit
+
+| | rule |
+|---|---|
+| B1 | **Every trial:** the first 250,000 scored events, or the whole first scored session if shorter, are replayed through the Python engine behind a process boundary. |
+| B2 | Warmup places no orders, so the position is flat when it ends. The audit starts from the kernel state saved at that point, and a test must prove that this start is equivalent to replaying warmup. |
+| B3 | **Every trial that passes the train gate:** the first five scored sessions are replayed before its validation run is opened. |
+| B4 | Any difference in fills, order, price, size, liquidity or mid **invalidates the trial, and it still counts toward N**. A native-engine mismatch stops the campaign until it is explained. |
+| B5 | **The holdout is scored by the Python engine only**, through `scripts/holdout.py`, and is opened once as before. |
+
+### Part C: book-update events
+
+| | rule |
+|---|---|
+| C1 | A profile enables this with `book_events: true`. It amends Amendment 22 rule f for those profiles only. |
+| C2 | OKX timestamps are milliseconds, so a book row is known from the **start of the next millisecond**. That instant is the event's time. |
+| C3 | All rows in one millisecond produce one event, showing the last of them. A strategy cannot react within a millisecond. |
+| C4 | At an equal timestamp the book event comes before the trade. |
+| C5 | Events run strictly after the session's first trade and through its last. |
+| C6 | **Fills occur only on trades.** An order sent on a book event arrives after the registered latency and is processed at the next trade. |
+| C7 | Registered terms stay those of Amendment 22: 0 bp maker, 2 bp taker, 1 ms latency, `book-queue-pessimistic`. |
+| C8 | **No session is removed for a poor book.** During a gap the strategy sees no book and the existing fill rules apply. Sessions where more than 5% of trades had no usable book are listed in the record as a diagnostic. |
+
+### Part D: market-making campaigns
+
+| | rule |
+|---|---|
+| D1 | A campaign declares `gate: spread_capture` in its question **before its first trial**. It cannot switch gates afterward. |
+| D2 | **Inventory cap: 0.10 BTC (1,000 lots) in either direction.** An order is refused if the position plus all same-side working orders could exceed the cap. |
+| D3 | Each fill's P&L is reported as spread captured, adverse selection at 100 ms, 1 s and 10 s, fees, and inventory P&L. These are diagnostics and do not enter the gate. |
+| D4 | **The gate tests net profit.** The null is that mean net per-session return is at or below zero, after all fees, funding and inventory marks. |
+| D5 | A campaign passes train only if Amendment 18's Newey-West lower bound is above zero at `q/N`, and validation only if it is above zero at `q/M`. The sign-flip null is not used for these campaigns. |
+| D6 | The holdout uses the same bound at `q`. Amendment 18's lag rule, the score and the exposure floor are unchanged. |
+| D7 | Any result must state that it is **simulated and conditional on 0 bp maker, 2 bp taker and 1 ms latency**, and that the strategy's own orders do not move the simulated book. |
+
+### What it does NOT change
+
+Recorded campaigns, the score, costs of existing profiles, funding, fill rules on trades, splits, embargo, holdout lock, `B`, `q`, the gate for campaigns that do not declare `spread_capture`, or the N-on-train and M-on-validation convention.
+
+### Acceptance, before signing
+
+1. Tests pin rules A1 to A7, B1 to B5, C1 to C8 and D1 to D3.
+2. **An adversarial review** of the kernel checker and child boundary, by a reviewer given the code and not this conclusion, finds no route to later data, the ledger, or forged fills. Every finding is fixed or recorded.
+3. **A lookahead test:** replacing every trade and book row after an event's visible data with random values leaves that event's actions unchanged.
+4. Existing real NQ, Binance and OKX runs reproduce their digests and scores.
+5. Native and Python fills, scores and diagnostics are identical on real train sessions, with warmup, at 1 ms and 100 ms.
+6. **A control on a simulated book**, with best-of-5 market-making campaigns, `alpha = 0.01`, 1 ms latency, 0 bp maker, 2 bp taker and rule D5. Five strategies quote one tick from the touch at inventory-skew settings 0, 0.25, 0.5, 0.75 and 1.
+
+   **Edges are fixed first, on calibration seeds 620001 to 620100**, by varying the adverse selection of simulated order flow on a grid committed with the control script. The unprofitable setting is the one closest to break-even whose five variants all have a 99% upper bound on mean net return below zero. The strong setting is the smallest edge at which all five average a per-session Sharpe of at least 0.30. If either does not exist, the control fails. The chosen settings are committed before any arm runs.
+
+   | arm | seeds | campaigns | pass condition |
+   |---|---|---|---|
+   | unprofitable | 621001 to 622000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 622001 to 622400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge | 622401 to 622500 | 100 | **at least 80** pass the full gate |
+
+Each arm runs once, from a clean commit. If any arm fails, this amendment is **not signed**, and a revision needs new seeds and its own pre-registration.
+
+### What would invalidate this amendment
+
+- A candidate kernel run without a ledger row, or on a calibration ticket.
+- A failed audit left out of N, or a trial advanced to validation before its deeper audit passed.
+- A kernel reading data later than its event's visible row.
+- A campaign changing gate after its first trial.
+- The timing rules, inventory cap, audit size, seeds or a pass condition changed after a control or real result is seen, without a new amendment.
+- A BTC campaign validated on this split and left out of the declared family.
+- A market-making result reported without D7's conditions.
+
+Code, once implemented: `run.py`, `scripts/holdout.py`, `src/core/engine/native.py`, `src/core/engine/native_trial.py`, `src/core/engine/kernel.py`, `native/fastcore/fastcore.cpp`, and a new market-making control script.

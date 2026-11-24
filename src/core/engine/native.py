@@ -74,9 +74,10 @@ class NativeEngine:
                  book_events: bool = False, inventory_cap: int = 0):
         from ..runlog import RunNotAccounted, RunTicket
 
-        # Like `Engine`: a native run is accounted for, through a trial's child or a test.
-        if not isinstance(ticket, RunTicket) or ticket.kind not in ("native", "test"):
-            raise RunNotAccounted("NativeEngine needs RunTicket.for_native_child or RunTicket.for_test")
+        # Like `Engine`: a native run is accounted for, through a trial's child, a committed
+        # control's calibration ticket, or a test. `tests/test_accounting.py` names every site.
+        if not isinstance(ticket, RunTicket) or ticket.kind not in ("native", "calibration", "test"):
+            raise RunNotAccounted("NativeEngine needs RunTicket.for_native_child, for_calibration or for_test")
         self.ticket = ticket
         self.lib = lib
         self.scale = scale

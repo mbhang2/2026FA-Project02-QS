@@ -384,7 +384,10 @@ def test_native_engines_are_built_only_by_the_accounted_runner():
         if rel == "src/core/runlog.py":
             continue
         for line, name in calls_named(path, {"NativeEngine", "for_native_child"}):
-            if rel != "scripts/run_native_trial.py":
+            # The control runs only its own committed kernels, on a calibration ticket.
+            allowed = {"scripts/run_native_trial.py": {"NativeEngine", "for_native_child"},
+                       "scripts/crypto_mm_control.py": {"NativeEngine"}}
+            if name not in allowed.get(rel, set()):
                 offenders.setdefault(rel, []).append(f"line {line}: {name}")
     assert not offenders, offenders
     assert calls_named(REPO_ROOT / "scripts/run_native_trial.py", {"NativeEngine"})

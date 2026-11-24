@@ -76,6 +76,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
+| `scripts/crypto_mm_control.py` | Amendment 24's acceptance control: market makers on a simulated order book. |
 | `scripts/crypto_reversal_control.py` | Amendment 21's acceptance control: the gate on strategies that reverse directly. |
 | `scripts/detectability.py` | What size of edge could this gate have found? Power, from our own nulls. |
 | `scripts/gen_agent_data.py` | Generate the data reference the RESEARCH agent is handed. |
@@ -476,6 +477,7 @@ What each test file pins.
 | `tests/test_max_of_m.py` | The L2 gate: the best of M campaign winners, on validation. |
 | `tests/test_metrics.py` | Property tests for the scoring metric. |
 | `tests/test_missing_tabulated_null.py` | A dataset with no tabulated null loses a diagnostic and keeps its gate. |
+| `tests/test_mm_control.py` | Amendment 24's market-making control: its market, kernels and setting rules. |
 | `tests/test_model_options.py` | Every agent part's model can be chosen, reaches its own call, and is recorded. |
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
 | `tests/test_native_acceptance.py` | Amendment 24 acceptance: no lookahead, and an audit that starts after warmup is exact. |

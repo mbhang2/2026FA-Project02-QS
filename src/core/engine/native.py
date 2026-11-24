@@ -112,13 +112,21 @@ class NativeEngine:
     def position(self) -> int:
         return int(self.lib.fc_engine_position(self.handle))
 
-    def fill_records(self) -> list[FillRecord]:
+    def fill_columns(self) -> dict:
         n = int(self.lib.fc_engine_fill_count(self.handle))
         seq, ts, session, oid, size = (np.empty(n, np.int64) for _ in range(5))
         side, maker = np.empty(n, np.int8), np.empty(n, np.int8)
         price, mid = np.empty(n, np.float64), np.empty(n, np.float64)
         self.lib.fc_engine_copy_fills(self.handle, *[a.ctypes.data for a in (
             seq, ts, session, oid, side, size, price, maker, mid)])
+        return {"seq": seq, "ts": ts, "session": session, "order_id": oid, "side": side, "size": size,
+                "price": price, "maker": maker, "mid": mid}
+
+    def fill_records(self) -> list[FillRecord]:
+        c = self.fill_columns()
+        seq, ts, session, oid, side, size, price, maker, mid = (
+            c["seq"], c["ts"], c["session"], c["order_id"], c["side"], c["size"], c["price"], c["maker"], c["mid"])
+        n = seq.size
         return [FillRecord(int(seq[i]), int(ts[i]), int(session[i]), int(oid[i]),
                            Side.BUY if side[i] > 0 else Side.SELL, int(size[i]), float(price[i]),
                            "maker" if maker[i] else "taker", "", DEFAULT_ASSET, float(mid[i]))

@@ -10,7 +10,6 @@ import pytest
 from src.core.data.okx_book import SessionBook, encode_depth
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec
 from src.core.engine import Engine, native
-from src.core.runlog import RunTicket
 from src.core.types import Side, Split
 
 if not native.LIBRARY.exists():
@@ -76,8 +75,7 @@ def test_the_fill_log_matches_the_python_engine(latency):
                          session_open_utc="00:00", size_scale=20, book=True, seed=5)
     dataset = SyntheticDataset(spec)
     params = (7, 5, 3, 25, 4)
-    engine = Engine(dataset, ParityStrategy(*params), ticket=RunTicket.for_calibration("native parity"),
-                    split=Split.VALIDATION, fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5,
+    engine = Engine.for_test(dataset, ParityStrategy(*params), split=Split.VALIDATION, fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5,
                     commission_bps=2.0, maker_commission_bps=0.0 if latency else None, latency_ns=latency)
     engine.run()
     lib = native.load()

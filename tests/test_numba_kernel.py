@@ -10,7 +10,6 @@ import pytest
 from src.core.data.synthetic import SyntheticDataset, SyntheticSpec
 from src.core.engine import Engine, native
 from src.core.engine import kernel as K
-from src.core.runlog import RunTicket
 from src.core.types import Side, Split
 
 needs_numba = pytest.mark.skipif(importlib.util.find_spec("numba") is None, reason="numba is not installed")
@@ -174,7 +173,7 @@ def test_a_book_reading_kernel_matches_the_python_engine():
                          session_open_utc="00:00", size_scale=20, book=True, seed=5)
     dataset = SyntheticDataset(spec)
     strategy = BookParityStrategy()
-    engine = Engine(dataset, strategy, ticket=RunTicket.for_calibration("kernel parity"), split=Split.VALIDATION,
+    engine = Engine.for_test(dataset, strategy, split=Split.VALIDATION,
                     fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5, commission_bps=2.0,
                     maker_commission_bps=0.0, latency_ns=1_000_000, book_features=True)
     engine.run()
@@ -214,7 +213,7 @@ def test_book_update_events_match_the_python_engine(latency):
                          session_open_utc="00:00", size_scale=20, book=True, seed=5)
     dataset = SyntheticDataset(spec)
     strategy = BookEventParityStrategy()
-    engine = Engine(dataset, strategy, ticket=RunTicket.for_calibration("book event parity"), split=Split.VALIDATION,
+    engine = Engine.for_test(dataset, strategy, split=Split.VALIDATION,
                     fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5, commission_bps=2.0,
                     maker_commission_bps=0.0, latency_ns=latency, book_features=True, book_events=True)
     engine.run()
@@ -241,8 +240,7 @@ def test_book_events_refuse_a_strategy_without_the_callback():
     spec = SyntheticSpec(n_sessions=40, ticks_per_session=20, tick_spacing_ns=5_000_000_000, session_gap_ns=0,
                          start_price=30000.0, tick_size=0.1, vol_per_tick=6.0, early_close_rate=0.0, length_jitter=0.0,
                          session_open_utc="00:00", size_scale=20, book=True, seed=5)
-    engine = Engine(SyntheticDataset(spec), BookParityStrategy(), ticket=RunTicket.for_calibration("book event refusal"),
-                    split=Split.VALIDATION, fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5,
+    engine = Engine.for_test(SyntheticDataset(spec), BookParityStrategy(), split=Split.VALIDATION, fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5,
                     commission_bps=2.0, maker_commission_bps=0.0, book_features=True, book_events=True)
     with pytest.raises(ValueError, match="on_book_event"):
         engine.run()
@@ -260,8 +258,7 @@ def test_native_fills_score_identically_through_the_unchanged_scorer():
                          start_price=30000.0, tick_size=0.1, vol_per_tick=6.0, early_close_rate=0.0, length_jitter=0.0,
                          session_open_utc="00:00", size_scale=20, book=True, seed=5)
     dataset = SyntheticDataset(spec)
-    engine = Engine(dataset, BookEventParityStrategy(), ticket=RunTicket.for_calibration("native score parity"),
-                    split=Split.VALIDATION, fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5,
+    engine = Engine.for_test(dataset, BookEventParityStrategy(), split=Split.VALIDATION, fill_model="book-queue-pessimistic", warmup_sessions=0, seed=5,
                     commission_bps=2.0, maker_commission_bps=0.0, latency_ns=1_000_000, book_features=True,
                     book_events=True)
     engine.run()

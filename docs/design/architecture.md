@@ -270,6 +270,7 @@ The immutable side of the split. What a strategy can see and do, and when.
 | `src/core/engine/fills.py` | `FavorableFill` / `UnfavorableFill`, capability checking |
 | `src/core/engine/native.py` | The C interface to the native event core. No backtest uses it until each piece reproduces the Python fill model exactly |
 | `src/core/engine/kernel.py` | Checks and compiles a restricted per-event Numba strategy. A kernel sees one event, its visible book and its own state, never the session arrays |
+| `src/core/engine/native_trial.py` | Refusal rules, fill validation and the audit adapter for native kernels. It runs no trial, because how a candidate kernel counts toward N needs an amendment |
 | `src/core/engine/view.py` | `HistoryView` / `BarHistory` — the read surface that cannot reach forward |
 | `src/core/engine/reconstruct.py` | `reconstruct(fills)` — the blotter the fill log implies, as a pure function; `log_digest` |
 

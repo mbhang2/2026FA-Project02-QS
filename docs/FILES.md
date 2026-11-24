@@ -62,6 +62,7 @@ Calibration, checks, inventory and one-off tools.
 | File | What it does |
 |---|---|
 | `scripts/agent_check.py` | The research agent's only entry point. It reads the file; it does not run it. |
+| `scripts/build_fastcore.py` | Build the native event core with the Zig C++ compiler. |
 | `scripts/calibrate.py` | Null and power calibration for the simulator's accept gate, two metrics at once. |
 | `scripts/campaign.py` | Run a campaign: a pre-registered budget of trials, then the correction. |
 | `scripts/campaign_summary.py` | Write the tier-2 campaign summary — the artifact tier 3 reads. |
@@ -136,6 +137,7 @@ The backtest walk, fills, and the isolated child process.
 | `src/core/engine/context.py` | What a strategy is handed, and the only surface it can act through. |
 | `src/core/engine/engine.py` | The event loop: the immutable side of the split. |
 | `src/core/engine/fills.py` | Trade-based fill models, and the reason the loop scores on the pessimistic one. |
+| `src/core/engine/native.py` | The native event core, through a plain C interface. Not used by any backtest yet. |
 | `src/core/engine/reconstruct.py` | Rebuild position, average price and P&L from the fill log alone. |
 | `src/core/engine/remote/__init__.py` | Run the strategy in its own process. See `docs/design/architecture.md` §5c. |
 | `src/core/engine/remote/_surface.py` | The context surface, classified. GENERATED -- do not edit. |
@@ -417,6 +419,7 @@ What each test file pins.
 | `tests/test_amendment_18.py` | Amendment 18: a crypto pass must show profit after costs. No control arm runs here. |
 | `tests/test_amendment_19.py` | Amendment 19: execution latency and an overnight rule. Synthetic data only. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
+| `tests/test_binary_boundary.py` | The engine-to-strategy channel is exact, and the engine never decodes binary. |
 | `tests/test_book_campaign_ready.py` | A book-aware campaign can be told about the book, probed and read quickly. |
 | `tests/test_book_features.py` | Amendment 22: a strategy may read the book visible before its own millisecond. |
 | `tests/test_book_fills.py` | Amendment 20: fills against a real book, pinned on hand-built books. |
@@ -472,6 +475,7 @@ What each test file pins.
 | `tests/test_missing_tabulated_null.py` | A dataset with no tabulated null loses a diagnostic and keeps its gate. |
 | `tests/test_model_options.py` | Every agent part's model can be chosen, reaches its own call, and is recorded. |
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
+| `tests/test_native_fastcore.py` | The native market-order walk matches the Python fill model exactly. |
 | `tests/test_no_depth_counted_roots.py` | No tree outside `src/core/**` finds its root by counting directories. |
 | `tests/test_nq_adapter.py` | The NQ adapter, checked against what was already established about this data. |
 | `tests/test_okx_arrow.py` | The Arrow trade store is exact, read-only and read without copying. |

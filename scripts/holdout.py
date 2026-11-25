@@ -423,6 +423,11 @@ def main() -> int:
         sys.exit("no candidate: the L2 verdict names no best campaign "
                  "(and --campaign is rehearsal-only)")
     champ = champion_of(campaign)
+    record = json.loads((CAMPAIGNS / campaign / "campaign.json").read_text()).get("record") or {}
+    if (record.get("agent_config") or {}).get("gate") == "spread_capture" or \
+            json.loads((CAMPAIGNS / campaign / "validation.json").read_text()).get("engine") == "native":
+        sys.exit("the champion is a native kernel. Amendment 24 B5 scores it on the holdout with the "
+                 "Python engine only, and that path is not built. Nothing was opened.")
 
     fitted = champ["weights"] is not None
     if a.rehearse:

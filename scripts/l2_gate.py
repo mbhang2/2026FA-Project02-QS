@@ -227,6 +227,27 @@ def build_validation_null(name: str, *, b: int = B_NULL) -> list[float]:
     return sample, rescored
 
 
+def gate_of(name: str) -> str | None:
+    """The gate a campaign registered (Amendment 24 D1), from its record."""
+    record = json.loads((CAMPAIGNS / name / "campaign.json").read_text()).get("record") or {}
+    return (record.get("agent_config") or {}).get("gate")
+
+
+def combine_spread(out: dict, spread: list[dict], m_family: int) -> dict:
+    """Amendment 24 D8: the family passes if the sign-flip test passes or any spread_capture
+    campaign's bound passes. The best campaign is the sign-flip test's when it passed, else the
+    passing spread_capture campaign with the highest validation score."""
+    out = {**out, "m_family": m_family, "spread_capture": spread}
+    passing = sorted((s for s in spread if s["passes"]),
+                     key=lambda s: -(s["validation_primary"] if s["validation_primary"] is not None else float("-inf")))
+    if out.get("verdict") == "PASS":
+        return out
+    if passing:
+        return {**out, "verdict": "PASS", "best_campaign": passing[0]["campaign_id"],
+                "passed_by": "spread_capture"}
+    return {**out, "verdict": "FAIL", "best_campaign": out.get("best_campaign")}
+
+
 def validation_profitability(name: str, alpha: float) -> dict | None:
     """Amendment 18's bound on one winner's validation run, or None if it does not apply.
 
@@ -247,6 +268,9 @@ def validation_profitability(name: str, alpha: float) -> dict | None:
         return None
     rows = [json.loads(x) for x in (d / "validation.jsonl").read_text().splitlines()
             if x.strip()]
+    if rows[-1].get("session_returns") is not None:
+        # A native validation row carries its returns, whatever the fill-log cap.
+        return profitability_bound(rows[-1]["session_returns"], alpha)
     fills = load_fill_log(rows[-1])
     if not fills:
         raise SystemExit(f"{name}: the validation run left no fill log for Amendment 18")
@@ -299,8 +323,17 @@ def main() -> int:
 
     print(f"declared family: M = {len(family)}\n")
     winners, t0 = [], time.monotonic()
+    spread = []
     for name in family:
         c = next(x for x in cands if x["campaign_id"] == name)
+        if gate_of(name) == "spread_capture":
+            # Amendment 24 D5 and D8: this campaign's own net-profit bound at q/M, no null.
+            bound = validation_profitability(name, a.q / len(family))
+            spread.append({"campaign_id": name, "validation_primary": c["validation_primary"],
+                           "profitability": bound, "passes": bool(bound and bound.get("passes"))})
+            print(f"  {name:28} spread_capture bound {None if bound is None else bound.get('lower_bound')} "
+                  f"at alpha {a.q / len(family):g}: {spread[-1]['passes']}", flush=True)
+            continue
         try:
             sample, rescored = build_validation_null(name)
             if rescored:
@@ -337,7 +370,13 @@ def main() -> int:
     # the behaviour cannot drift apart.
     statistic = "standardised" if prereg.in_force(10) else "raw"
     print(f"\n  statistic: {statistic}  ({prereg.status(10)})")
-    out = max_of_m(winners, b=B_NULL, q=a.q, statistic=statistic)
+    # Amendment 24 D8: with spread_capture campaigns in the family, the max_of_m test over the
+    # other m runs at q*m/M, so with each spread_capture bound at q/M the family stays within q.
+    # With none, m = M and this is the test as it always was.
+    if winners:
+        out = max_of_m(winners, b=B_NULL, q=a.q * len(winners) / len(family), statistic=statistic)
+    else:
+        out = {"m_campaigns": 0, "verdict": None, "withheld": "no sign-flip campaigns in the family"}
 
     print(f"\n  M                {out['m_campaigns']}")
     print(f"  best campaign    {out.get('best_campaign')}")
@@ -385,6 +424,9 @@ def main() -> int:
     print("\n  Not a promotion. Section 5 is a pass rule; promotion beyond the "
           "MVP is a\n  human decision on all of the evidence.")
 
+    if spread:
+        out = combine_spread(out, spread, len(family))
+        print(f"\n  with spread_capture campaigns: VERDICT {out['verdict']}  best {out.get('best_campaign')}")
     if a.dry_run:
         print("\n  dry run: no verdict file written")
         return 0

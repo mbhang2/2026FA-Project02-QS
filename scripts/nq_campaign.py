@@ -466,7 +466,8 @@ def validation_profile_for(train_profile: str, fitted: bool) -> str:
     v, t = c["profiles"][want], c["profiles"][train_profile]
     if v.get("split") != "validation":
         sys.exit(f"profile {want!r} is not a validation split ({v.get('split')!r})")
-    for key in ("dataset", "fill_model", "book_features", "commission_per_contract",
+    for key in ("dataset", "fill_model", "book_features", "engine", "book_events",
+                "inventory_cap_lots", "gate", "commission_per_contract",
                 "commission_bps", "maker_commission_per_contract", "maker_commission_bps",
                 "slippage_per_contract", "slippage_bps", "latency_ns", "allow_overnight"):
         if v.get(key) != t.get(key):
@@ -488,6 +489,68 @@ def _winner(rows: list[dict]) -> dict | None:
     scored = [r for r in rows if isinstance(r.get("score"), dict)
               and r["score"].get("primary") is not None]
     return max(scored, key=lambda r: r["score"]["primary"]) if scored else None
+
+
+def _validate_native(name, d, record, win, source, out) -> None:
+    """Amendment 24 B3 then section 5, for a native kernel: the winner's deep audit, and only if it
+    matched, one validation run. Both go to `validation.jsonl`, and neither is a trial."""
+    import subprocess
+
+    from src.core.loop.campaign import NATIVE_PYTHON
+
+    trial_id, sha = win.get("trial_id"), win.get("kernel_sha256")
+    if not trial_id or not sha:
+        sys.exit(f"{name}: the winner's row names no trial id or kernel digest; it is not a native trial.")
+    profile = validation_profile_for(record.profile, False)
+    kernel = d / "kernels" / f"validation-{win.get('strategy_digest')}.py"
+    kernel.parent.mkdir(parents=True, exist_ok=True)
+    kernel.write_text(source)
+
+    def native(*args) -> dict | None:
+        subprocess.run([NATIVE_PYTHON, "scripts/run_native_trial.py", "--kernel", str(kernel),
+                        "--ledger", str(out), *args], capture_output=True, text=True, cwd=str(ROOT))
+        rows = [json.loads(x) for x in out.read_text().splitlines() if x.strip()] if out.exists() else []
+        return rows[-1] if rows else None
+
+    print(f"{name}: deep audit of trial {trial_id} before validation (Amendment 24 B3)")
+    audit = native("--profile", record.profile, "--deep", "--audit-of", trial_id)
+    if audit is None or audit.get("audit_of") != trial_id:
+        sys.exit(f"{name}: the deep audit left no row naming trial {trial_id}.")
+    matched = audit.get("outcome") == "completed" and (audit.get("audit") or {}).get("matched") is True
+    deep = {"outcome": audit.get("outcome"), "matched": matched, "trial_id": audit.get("trial_id"),
+            "windows": (audit.get("audit") or {}).get("windows"), "error": audit.get("error")}
+    if not matched:
+        (d / "validation.json").write_text(json.dumps({
+            "schema": "campaign-validation/1", "campaign_id": name, "engine": "native",
+            "winner_digest": win.get("strategy_digest"), "winner_campaign_index": win.get("campaign_index"),
+            "deep_audit": deep, "validation": None, "rule_a_sortino_positive": False,
+            "note": "Amendment 24 B3: the deep audit did not match, so validation was not opened."},
+            indent=2, default=str))
+        sys.exit(f"{name}: the deep audit did not match ({audit.get('outcome')}); validation stays closed.")
+
+    v = native("--profile", profile, "--validates", trial_id, "--train-profile", record.profile)
+    if v is None or v.get("validates") != trial_id or v.get("kernel_sha256") != sha:
+        sys.exit(f"{name}: the validation run left no row for this kernel and trial.")
+    train_score = win["score"]["primary"]
+    vscore = (v.get("score") or {}).get("primary")
+    result = {
+        "schema": "campaign-validation/1", "campaign_id": name, "engine": "native",
+        "winner_digest": win.get("strategy_digest"), "winner_campaign_index": win.get("campaign_index"),
+        "winner_trial_id": trial_id, "kernel_sha256": sha, "deep_audit": deep,
+        "train": {"profile": record.profile, "primary": train_score,
+                  "primary_uncharged": win["score"].get("primary_uncharged"), "score": win.get("score"),
+                  "diagnostics": win.get("diagnostics")},
+        "validation": {"profile": profile, "primary": vscore,
+                       "primary_uncharged": (v.get("score") or {}).get("primary_uncharged"),
+                       "outcome": v.get("outcome"), "score": v.get("score"), "diagnostics": v.get("diagnostics"),
+                       "git_sha": v.get("git_sha"), "audit": v.get("audit")},
+        "rule_a_sortino_positive": (vscore is not None and vscore > 0),
+        "rule_c_decay": (None if vscore is None else vscore - train_score),
+        "note": ("Section 5 with Amendment 24: the winner's deep audit matched before this single look. "
+                 "Both rows have purpose 'audit' or 'check' and are not trials."),
+    }
+    (d / "validation.json").write_text(json.dumps(result, indent=2, default=str))
+    print(f"  deep audit matched; validation {vscore}")
 
 
 def stage_validate(name: str) -> None:
@@ -539,6 +602,9 @@ def stage_validate(name: str) -> None:
             "ONCE per campaign (section 5). Re-running would be a second look that "
             "the L2 correction does not know about -- delete the file deliberately "
             "if you really mean to discard the first look and record why.")
+
+    if cfg()["profiles"][record.profile].get("engine") == "native":
+        return _validate_native(name, d, record, win, source, out)
 
     # **A fitted champion is source AND weights; carrying only the source
     # carries half of it.** For an unfitted strategy the source IS the whole

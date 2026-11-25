@@ -442,7 +442,9 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
             raise T.NativeTrialRefused(f"trial {validates} has no matching deep audit, so validation stays closed")
     elif validates:
         raise T.NativeTrialRefused("only a validation run names the trial it validates")
-    purpose = ("audit" if deep else "trial") if signed else "check"
+    # A deep audit re-runs a trial and a validation run looks once at held-out data. Neither
+    # searches, so neither is a trial in N, the same as `stage_validate`'s `--purpose check`.
+    purpose = ("audit" if deep else "check" if split is Split.VALIDATION else "trial") if signed else "check"
     started = time.perf_counter()
 
     def recovered_row(record, entry, copy):
@@ -550,6 +552,8 @@ def main(argv=None) -> int:
     ap.add_argument("--ledger", type=Path)
     ap.add_argument("--deep", action="store_true")
     ap.add_argument("--audit-of", dest="audit_of")
+    ap.add_argument("--validates")
+    ap.add_argument("--train-profile", dest="train_profile")
     args = ap.parse_args(argv)
     if args.child:
         fd = os.environ.get("NATIVE_TRIAL_SPEC_FD")
@@ -565,7 +569,8 @@ def main(argv=None) -> int:
     if not (args.profile and args.kernel and args.ledger):
         ap.error("--profile, --kernel and --ledger are required")
     _stop_on_terminate()
-    record = run_trial(args.profile, args.kernel, args.ledger, deep=args.deep, audit_of=args.audit_of)
+    record = run_trial(args.profile, args.kernel, args.ledger, deep=args.deep, audit_of=args.audit_of,
+                       validates=args.validates, train_profile=args.train_profile)
     print(json.dumps({k: record.get(k) for k in ("outcome", "fills", "audit", "native_seconds", "audit_seconds", "error")}))
     return 0 if record["outcome"] == "completed" else 1
 

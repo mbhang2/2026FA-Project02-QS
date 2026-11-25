@@ -481,6 +481,7 @@ What each test file pins.
 | `tests/test_missing_tabulated_null.py` | A dataset with no tabulated null loses a diagnostic and keeps its gate. |
 | `tests/test_mm_campaign.py` | Amendment 24: market-making campaigns use the net-profit gate and the native runner. |
 | `tests/test_mm_control.py` | Amendment 24's market-making control: its market, kernels and setting rules. |
+| `tests/test_mm_family.py` | Amendment 24 D8: a family with spread_capture campaigns, and native validation's purposes. |
 | `tests/test_model_options.py` | Every agent part's model can be chosen, reaches its own call, and is recorded. |
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
 | `tests/test_native_acceptance.py` | Amendment 24 acceptance: no lookahead, and an audit that starts after warmup is exact. |

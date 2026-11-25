@@ -2758,6 +2758,7 @@ The native engine reproduces the Python engine's fills about 100 to 200 times fa
 | D5 | A campaign passes train only if Amendment 18's Newey-West lower bound is above zero at `q/N`, and validation only if it is above zero at `q/M`. The sign-flip null is not used for these campaigns. |
 | D6 | The holdout uses the same bound at `q`. Amendment 18's lag rule, the score and the exposure floor are unchanged. |
 | D7 | Any result must state that it is **simulated and conditional on 0 bp maker, 2 bp taker and 1 ms latency**, and that the strategy's own orders do not move the simulated book. |
+| D8 | In a validation family with both kinds of campaign, each `spread_capture` campaign passes on its own bound at `q/M`, and the `max_of_m` test over the other `m` campaigns runs at `q * m / M`. The family passes if either does, so its false-pass rate stays within `q`. With no `spread_capture` campaign, `m = M` and the test is unchanged. |
 
 ### What it does NOT change
 

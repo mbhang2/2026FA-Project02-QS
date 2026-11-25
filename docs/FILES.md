@@ -477,6 +477,7 @@ What each test file pins.
 | `tests/test_max_of_m.py` | The L2 gate: the best of M campaign winners, on validation. |
 | `tests/test_metrics.py` | Property tests for the scoring metric. |
 | `tests/test_missing_tabulated_null.py` | A dataset with no tabulated null loses a diagnostic and keeps its gate. |
+| `tests/test_mm_campaign.py` | Amendment 24: market-making campaigns use the net-profit gate and the native runner. |
 | `tests/test_mm_control.py` | Amendment 24's market-making control: its market, kernels and setting rules. |
 | `tests/test_model_options.py` | Every agent part's model can be chosen, reaches its own call, and is recorded. |
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |

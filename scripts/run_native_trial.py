@@ -32,7 +32,7 @@ for entry in (str(REPO_ROOT), str(REPO_ROOT / "scripts")):
 
 # Scoring is imported before `run`, so the fingerprint `run` takes at import covers every
 # scoring module this script uses and the integrity check compares like with like.
-from src.core.scoring.metrics import session_calendar  # noqa: E402
+from src.core.scoring.metrics import session_calendar, session_returns  # noqa: E402
 from src.core.scoring.scorer import score, score_diagnostics  # noqa: E402
 from src.core.scoring.terms import scoring_terms  # noqa: E402
 import prereg  # noqa: E402
@@ -43,7 +43,7 @@ from src.core.engine import native_trial as T  # noqa: E402
 from src.core.engine.engine import MAX_FILL_LOG  # noqa: E402
 from src.core.engine.reconstruct import log_digest, reconstruct  # noqa: E402
 from src.core.engine.remote import RemoteStrategy  # noqa: E402
-from src.core.runlog import LedgerRun, RunTicket, append_ledger  # noqa: E402
+from src.core.runlog import LedgerRun, RunTicket, append_ledger, store_fill_log  # noqa: E402
 from src.core.types import Side, Split  # noqa: E402
 
 SHORT_AUDIT_EVENTS = 250_000
@@ -513,6 +513,9 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                 record.update(outcome="completed", dataset=dataset.name, dataset_digest=dataset.digest(),
                               fill_model=profile["fill_model"], seed=profile["seed"], fills=len(fills),
                               fill_log_digest=log_digest(fills), score=result.as_dict(),
+                              fill_log_source=store_fill_log(Path(ledger_path), log_digest(fills), fills),
+                              execution=execution,
+                              session_returns=[float(x) for x in session_returns(blotter, period, **kw)],
                               diagnostics=score_diagnostics(blotter, period, **kw).as_dict(),
                               native_library_sha256=hashlib.sha256(native.LIBRARY.read_bytes()).hexdigest(),
                               native_abi=native.ABI_VERSION, numba_version=__import__("numba").__version__,

@@ -920,6 +920,9 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
         if mode not in _tx.MODES:
             sys.exit(f"txnsim_mode must be one of {_tx.MODES}, not {mode!r}")
         agent_cfg["txnsim_mode"] = mode
+    gate = gate_for(profile)
+    if gate:
+        agent_cfg["gate"] = gate
     agent_cfg["correction"] = cc["correction"]
     agent_cfg["b_null"] = B_NULL
     agent_cfg["model_served_at_registration"] = served["served"]
@@ -1331,6 +1334,8 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         shown = list(rows)
         champ_now = champion if champion.exists() else None
 
+        native = cfg()["profiles"][record.profile].get("engine") == "native"
+
         def _one(slot_and_index):
             slot, i = slot_and_index
             a = agents[slot]
@@ -1342,13 +1347,13 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
                     source, profile=record.profile, ledger=ledger,
                     campaign_id=record.campaign_id, index=i,
                     allow_fitted=record.allow_fitted_proposals,
-                    purpose=purpose)
+                    purpose=purpose, native=native)
             w = workers[slot]
             wledger = w / "runs" / "ledger.jsonl"
             row = run_trial(source, profile=record.profile, ledger=wledger,
                             campaign_id=record.campaign_id, index=i,
                             allow_fitted=record.allow_fitted_proposals,
-                            root=w, purpose=purpose)
+                            root=w, purpose=purpose, native=native)
             _merge(w, wledger)
             return i, slot, source, row
 
@@ -1454,6 +1459,19 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
               f"scripts/worker_tree.py --destroy removes them", flush=True)
     print(f"{name}: {record.budget} trials in {(time.monotonic() - t0) / 60:.0f} min "
           f"(generations of {width})")
+
+
+def gate_for(profile: dict, in_force=None) -> str | None:
+    """Amendment 24 D1: a profile declaring `gate: spread_capture` registers that gate, frozen in
+    the record. Refused while Amendment 24 is not in force, so it cannot be switched later."""
+    if profile.get("gate") != "spread_capture":
+        return None
+    if in_force is None:
+        import prereg as _prereg
+        in_force = _prereg.in_force(24)
+    if not in_force:
+        sys.exit("the profile declares gate: spread_capture, and Amendment 24 is not in force.")
+    return "spread_capture"
 
 
 def stage_nulls(name: str) -> None:
@@ -1618,7 +1636,22 @@ def stage_nulls(name: str) -> None:
         print(f"  correction_rule 'aligned': one shared randomisation per "
               f"replicate (seed {COMMON_NULL_SEED}), so the nulls can be read "
               f"jointly", flush=True)
+    gate_kind = (_rec.agent_config or {}).get("gate")
+    if gate_kind == "spread_capture" and not profit_on:
+        raise SystemExit(f"{name}: gate spread_capture needs Amendment 18's bound on a notional profile")
     for i, row in enumerate(rows):
+        if gate_kind == "spread_capture":
+            # Amendment 24 D5: the bound only. A native row carries its session returns, so the
+            # bound does not depend on whether its fill log fitted under the storage cap.
+            score = row.get("score") or {}
+            returns = row.get("session_returns")
+            if returns is not None and score.get("primary") is not None and not score.get("rejected"):
+                if len(returns) != len(calendar):
+                    raise SystemExit(f"{name} trial {i}: {len(returns)} session returns for a "
+                                     f"{len(calendar)}-session calendar")
+                profitability[str(row.get("campaign_index"))] = profitability_bound(returns, profit_alpha)
+            samples.append([])
+            continue
         fills = load_fill_log(row)
         score = row.get("score") or {}
         if not fills or score.get("primary") is None or score.get("rejected"):
@@ -1683,6 +1716,9 @@ def stage_nulls(name: str) -> None:
     # trial was actually ranked against.
     payload = {"source": source, "b": B_NULL, "samples": samples,
                "spec": "docs/design/pre-registration.md section 3b"}
+    if gate_kind == "spread_capture":
+        payload.update(source="none", b=0, gate="spread_capture",
+                       spec="Amendment 24 D5: the net-profit bound at q/N, no null")
     if profit_on:
         payload["profitability"] = profitability
     if null_unit != rt.UNIT_FLAT:
@@ -1880,7 +1916,8 @@ def stage_report(name: str) -> None:
                         exclude=excluded_trials(d, record.agent_config),
                         profitability=profitability,
                         risk_units=(nulls.get("risk_units", {})
-                                    if (record.agent_config or {}).get("null_unit") else None))
+                                    if (record.agent_config or {}).get("null_unit") else None),
+                        gate_kind=(record.agent_config or {}).get("gate"))
 
     # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
     # same route every other campaign's do rather than through this script.

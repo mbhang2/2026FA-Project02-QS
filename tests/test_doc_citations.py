@@ -57,9 +57,6 @@ TOP_LEVEL = {
 # Cited on purpose, and absent on purpose. Each entry states which, because an
 # allowlist without reasons becomes the place failures go to be forgotten.
 ABSENT_BY_DESIGN: dict[str, str] = {
-    "docs/reviews/crypto-a24/edges-r2.json":
-        "written only after Amendment 24's second control revision calibrates, and committed "
-        "before any of its arms runs.",
     "secrets/litellm-local.yaml":
         "**it must never exist here.** `docs/setup/LOCAL_PROXY.md` tells a "
         "reader to write it when running the loop against their own API key, "

@@ -2806,6 +2806,8 @@ The noise setting was not a market without an edge. In the calibration every var
 
 **Second revision, 2026-11-25, before any new run.** The noise setting is the smallest impact at which every variant's mean net return over the calibration seeds is at or below zero, so no variant makes money there. The unprofitable setting is the smallest impact above it whose five variants all have a 99% upper bound below zero. The strong rule is unchanged. The grid is 0, 0.3, 0.35, 0.4 and 0.45, then 0.52 to 0.64 in steps of 0.005, then 0.7 and 1.0 ticks. Calibration seeds are 640001 to 640100. The arms are 641001 to 642000 (unprofitable), 642001 to 642400 (noise) and 642401 to 642500 (strong). The settings go in `docs/reviews/crypto-a24/edges-r2.json` before any arm runs, and output goes to `~/crypto-controls/a24-r2/`. The three pass conditions are unchanged.
 
+*The second revision's calibration ran once from commit `ca0c7c0` on seeds 640001 to 640100, with 3,200 jobs (`~/crypto-controls/a24-r2/calibration.json`, SHA-256 `2d798769816bec1fe2dff94cb1cb60b9ccf14b7fb0191e6a7d2e2d896598df28`). It selected a strong setting of 0.35 ticks, where the weakest variant averaged a Sharpe of 0.39, a noise setting of 0.57 ticks, where every variant's mean net return was between -1.8e-5 and -5.4e-6, and an unprofitable setting of 0.575 ticks. They are committed in `docs/reviews/crypto-a24/edges-r2.json` before any arm runs.*
+
 ### What would invalidate this amendment
 
 - A candidate kernel run without a ledger row, or on a calibration ticket.

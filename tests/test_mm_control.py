@@ -77,3 +77,24 @@ def test_one_variant_runs_and_respects_the_cap():
     blotter, calendar, terms, fills = M.run_variant(data, 0.5, cfg, cfg["profiles"][M.PROFILE])
     assert fills > 1000 and len(calendar) > 30
     assert max(abs(r.position_after) for r in blotter.rows) <= M.limit_for(0.5)
+
+
+def test_the_grid_is_fine_where_returns_cross_zero():
+    fine = [i for i in M.IMPACT_GRID if 0.4 <= i <= 0.8]
+    assert len(fine) == 21 and all(abs(b - a - 0.02) < 1e-9 for a, b in zip(fine, fine[1:]))
+    assert list(M.IMPACT_GRID) == sorted(set(M.IMPACT_GRID))
+
+
+def test_noise_is_chosen_strictly_below_the_unprofitable_setting():
+    """The first calibration's failure: the point closest to zero was also the unprofitable one."""
+    chosen = M.select_settings(_rows({0.0: (4e-4, 0.5), 0.5: (4.6e-5, 0.1), 0.6: (-2.6e-5, -0.03),
+                                      0.7: (-9e-5, -0.1)}))
+    # 0.6 is both closest to zero and the smallest all-negative point if its bounds are negative,
+    # so noise must come from below it.
+    assert chosen["noise_impact"] is not None and chosen["noise_impact"] < chosen["unprofitable_impact"]
+
+
+def test_the_revised_market_trades_every_ten_seconds():
+    spec = M.spec_for(9301)
+    assert spec.tick_spacing_ns == 10_000_000_000 and spec.ticks_per_session == 8640
+    assert set(M.CALIBRATION_SEEDS).isdisjoint(range(620_001, 622_501))

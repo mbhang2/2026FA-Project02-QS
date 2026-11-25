@@ -5,7 +5,8 @@
     python scripts/crypto_mm_control.py --stage calibrate --workers 3
     python scripts/crypto_mm_control.py --stage run --workers 3
 
-The market: one tick either side of the mid, a small displayed size at the touch, and trades
+The market: one tick either side of the mid, a small displayed size at the touch, a trade every
+10 seconds, and trades
 from aggressors who move the mid their own way after they trade by a Poisson number of ticks.
 The mean of that jump is the adverse selection a quoting strategy suffers. Its half-spread is one
 tick, so a mean jump of one tick is break-even before costs.
@@ -25,6 +26,7 @@ commit. `run` reads the settings from `docs/reviews/crypto-a24/edges.json`, comm
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import math
 import pathlib
@@ -54,18 +56,22 @@ LATENCY_NS = 1_000_000
 SKEWS = (0.0, 0.25, 0.5, 0.75, 1.0)
 CAP_LOTS = 10
 ALPHA = gate.Q / len(SKEWS)
-IMPACT_GRID = tuple(round(0.1 * i, 1) for i in range(0, 21))    # mean jump, in ticks
+# Mean jump, in ticks. Fine where net returns cross zero: the first calibration's grid of 0.1
+# put the noise and unprofitable settings on one point (Amendment 24).
+IMPACT_GRID = ((0.0, 0.1, 0.2, 0.3) + tuple(round(0.4 + 0.02 * i, 2) for i in range(21))
+               + (1.0, 1.5, 2.0))
+TRADE_SPACING_NS = 10_000_000_000      # one trade every 10 s, three times the first control's
 N_SESSIONS = 150
-CALIBRATION_SEEDS = tuple(range(620_001, 620_101))
-UNPROFITABLE_SEEDS = tuple(range(621_001, 622_001))
-NOISE_SEEDS = tuple(range(622_001, 622_401))
-STRONG_SEEDS = tuple(range(622_401, 622_501))
+CALIBRATION_SEEDS = tuple(range(630_001, 630_101))
+UNPROFITABLE_SEEDS = tuple(range(631_001, 632_001))
+NOISE_SEEDS = tuple(range(632_001, 632_401))
+STRONG_SEEDS = tuple(range(632_401, 632_501))
 MIN_STRONG_SHARPE = 0.30
 SCALE = 10                      # ticks per price unit: a tick is 0.1
 START_TICKS = 1_000_000         # 100,000.0
 DEPTH_LOTS = 1_000
 EDGES_PATH = REPO / "docs" / "reviews" / "crypto-a24" / "edges.json"
-DEFAULT_DIR = pathlib.Path.home() / "crypto-controls" / "a24"
+DEFAULT_DIR = pathlib.Path.home() / "crypto-controls" / "a24-revised"
 
 KERNEL = """
 def kernel(event, book, state, orders):
@@ -184,7 +190,9 @@ class MarketMakingDataset(gate.CryptoControlDataset):
 
 
 def spec_for(seed: int):
-    return gate.spec_for(0.0, seed, N_SESSIONS)
+    base = gate.spec_for(0.0, seed, N_SESSIONS)
+    per_day = 86_400_000_000_000 // TRADE_SPACING_NS
+    return dataclasses.replace(base, tick_spacing_ns=TRADE_SPACING_NS, ticks_per_session=per_day)
 
 
 def run_variant(dataset, skew: float, cfg: dict, profile: dict):
@@ -232,8 +240,9 @@ def select_settings(rows: list[dict]) -> dict:
 
     Unprofitable: the smallest impact whose five variants all have a 99% upper bound below zero.
     Strong: the largest impact at which all five average a per-session Sharpe of at least 0.30.
-    Noise: the impact whose mean return, over the five variants and the calibration seeds, is
-    closest to zero after costs. They must be ordered strong < noise < unprofitable.
+    Noise: among impacts below the unprofitable one, the one whose mean return over the five
+    variants and the calibration seeds is closest to zero after costs. They must be ordered
+    strong < noise < unprofitable.
     """
     upper, sharpe = {}, {}
     for impact in sorted({r["impact"] for r in rows}):
@@ -247,7 +256,8 @@ def select_settings(rows: list[dict]) -> dict:
     best = max(strong) if strong else None
     centre = {impact: math.fsum(math.fsum(r["means"]) for r in rows if r["impact"] == impact)
               / (len(SKEWS) * sum(r["impact"] == impact for r in rows)) for impact in upper}
-    noise = min(centre, key=lambda impact: (abs(centre[impact]), impact))
+    below = [i for i in centre if unprofitable is not None and i < unprofitable]
+    noise = min(below, key=lambda impact: (abs(centre[impact]), impact)) if below else None
     if None in (unprofitable, best) or not best < noise < unprofitable:
         unprofitable = best = noise = None
     return {"unprofitable_impact": unprofitable, "strong_impact": best, "noise_impact": noise,

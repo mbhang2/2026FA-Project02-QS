@@ -2774,17 +2774,21 @@ Recorded campaigns, the score, costs of existing profiles, funding, fill rules o
 3. **A lookahead test:** replacing every trade and book row after an event's visible data with random values leaves that event's actions unchanged.
 4. Existing real NQ, Binance and OKX runs reproduce their digests and scores.
 5. Native and Python fills, scores and diagnostics are identical on real train sessions, with warmup, at 1 ms and 100 ms.
-6. **A control on a simulated book** (`scripts/crypto_mm_control.py`), with best-of-5 market-making campaigns over 150 sessions, `alpha = 0.01`, 1 ms latency, 0 bp maker, 2 bp taker and rule D5. The book shows one tick either side of the mid with 1 to 10 lots at the touch. After each trade the mid moves toward the aggressor by a Poisson number of ticks whose mean is the impact, plus one tick of noise either way. Five native kernels quote one lot at the best bid and ask under a 10-lot cap. A skew setting s of 0, 0.25, 0.5, 0.75 or 1 stops quoting a side at max(1, round(10(1 - s))) lots that way.
+6. **A control on a simulated book** (`scripts/crypto_mm_control.py`), with best-of-5 market-making campaigns over 150 sessions with a trade every 10 seconds, `alpha = 0.01`, 1 ms latency, 0 bp maker, 2 bp taker and rule D5. The book shows one tick either side of the mid with 1 to 10 lots at the touch. After each trade the mid moves toward the aggressor by a Poisson number of ticks whose mean is the impact, plus one tick of noise either way. Five native kernels quote one lot at the best bid and ask under a 10-lot cap. A skew setting s of 0, 0.25, 0.5, 0.75 or 1 stops quoting a side at max(1, round(10(1 - s))) lots that way.
 
-   **Settings are fixed first, on calibration seeds 620001 to 620100**, over impacts 0 to 2.0 ticks in steps of 0.1. The unprofitable setting is the smallest impact whose five variants all have a 99% upper bound on mean net return below zero. The strong setting is the largest impact at which all five average a per-session Sharpe of at least 0.30. The noise setting is the impact whose mean net return over the five variants and the calibration seeds is closest to zero. They must be ordered strong < noise < unprofitable. If any does not exist, the control fails. The chosen settings are committed before any arm runs. An unregistered pilot on seeds 9301 to 9304 found net returns crossing zero near 0.6 ticks.
+   **Settings are fixed first, on calibration seeds 630001 to 630100**, over impacts 0, 0.1, 0.2 and 0.3, then 0.40 to 0.80 in steps of 0.02, then 1.0, 1.5 and 2.0 ticks. The unprofitable setting is the smallest impact whose five variants all have a 99% upper bound on mean net return below zero. The strong setting is the largest impact at which all five average a per-session Sharpe of at least 0.30. The noise setting is, among impacts below the unprofitable one, the one whose mean net return over the five variants and the calibration seeds is closest to zero. They must be ordered strong < noise < unprofitable. If any does not exist, the control fails. The chosen settings are committed before any arm runs. An unregistered pilot on seeds 9301 to 9304 found net returns crossing zero near 0.6 ticks.
 
    | arm | seeds | campaigns | pass condition |
    |---|---|---|---|
-   | unprofitable | 621001 to 622000 | 1,000 | **36 or fewer** pass the full gate |
-   | noise | 622001 to 622400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
-   | strong edge | 622401 to 622500 | 100 | **at least 80** pass the full gate |
+   | unprofitable | 631001 to 632000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 632001 to 632400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge | 632401 to 632500 | 100 | **at least 80** pass the full gate |
 
 Each arm runs once, from a clean commit. If any arm fails, this amendment is **not signed**, and a revision needs new seeds and its own pre-registration.
+
+### The first calibration failed
+
+The control's calibration ran once from commit `0413fd5` on seeds 620001 to 620100, with 2,100 jobs (`~/crypto-controls/a24/calibration.json`, SHA-256 `24256f9db6733437ef749131712dca951572a847cd3db37db7808731a54a086a`). **It failed the ordering rule, so no arm was drawn.** The smallest impact whose five variants all had a 99% upper bound below zero was 0.6 ticks. The impact whose mean net return was closest to zero was also 0.6 ticks: -2.6e-5, against +4.6e-5 at 0.5. The noise and unprofitable settings were therefore the same point, not strong < noise < unprofitable. The strong setting would have been 0.0, where the lowest variant averaged a Sharpe of 0.31 against the 0.30 bar. The cause is a grid of 0.1 ticks that is coarse where returns cross zero. The pass conditions are unchanged. **Revised 2026-11-24 before any new run:** the grid is 0.02 ticks fine between 0.4 and 0.8, the noise setting is chosen strictly below the unprofitable one, the simulated market trades every 10 seconds instead of 30, so a strong market maker clears the Sharpe bar with room, and every calibration and arm seed is new (630001 onward). The 0.30 bar and the three pass conditions are unchanged.
 
 ### What would invalidate this amendment
 

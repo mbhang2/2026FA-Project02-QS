@@ -319,6 +319,7 @@ Every prompt a model is given. Each is fingerprinted.
 | `config/prompts/fidelity-judge.md` | The per-trial question-fidelity reviewer (scripts/fidelity_judge.py). An ARTIFACT: hashed like every other prompt. |
 | `config/prompts/hypothesis-refine.md` | The refinement prompt. Amendment 11 of docs/design/pre-registration.md governs what may be done with what it produces. |
 | `config/prompts/hypothesis-review.md` | The hypothesis reviewer. An ARTIFACT: hashed like every other prompt, because it shaped which questions were allowed to spend trials. |
+| `config/prompts/kernel-agent.md` | The proposing agent's prompt for native kernels (Amendment 24). An artifact, not a string literal: it is hashed into the campaign record like the strategy pr... |
 | `config/prompts/paper-distil.md` | Your job: turn one paper into a research question we can register |
 | `config/prompts/paper-rank.md` | Your job: two separate judgements about this paper |
 | `config/prompts/paper-screen.md` | Your job: can this paper's claim be tested on OUR data? |
@@ -463,6 +464,7 @@ What each test file pins.
 | `tests/test_holdout.py` | The single look. 73 sessions, once, ever. |
 | `tests/test_hypothesis.py` | The campaign's question: linted, hashed, and inert when absent. |
 | `tests/test_idle_charge.py` | The idle-capital charge (pre-registration Amendment 3). |
+| `tests/test_kernel_agent.py` | Amendment 24: the LLM agent's kernel mode, its prompt and its interface document. |
 | `tests/test_knowledge.py` | Cross-campaign constraints: store, compiler, frozen snapshot, prompt slot. |
 | `tests/test_l2_gate.py` | The L2 gate's plumbing: a validation null per winner, and a declared family. |
 | `tests/test_latency_sweep.py` | The latency analysis, and the nanosecond rules around it. Synthetic data only. |
@@ -557,6 +559,8 @@ What each test file pins.
 | `docs/README.md` | Documentation map |
 | `docs/RUN-SEQUENCE.md` | What a run calls, in order |
 | `docs/agent/data.md` | Data available to a strategy |
+| `docs/agent/kernel-api.md` | The kernel interface |
+| `docs/agent/kernel-baseline.py` | *(no description in the file)* |
 | `docs/agent/strategy-api.md` | Writing a strategy |
 | `docs/data-inventory.md` | Data Inventory |
 | `docs/datasets/crypto.md` | Crypto perpetuals: Binance, Bybit, OKX |

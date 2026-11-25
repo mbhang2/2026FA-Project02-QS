@@ -424,6 +424,7 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
         # subtracts the profile's fit window from it, so a fitted campaign's
         # agent is told the scored count rather than the split count.
         champion=champion,
+        kind="kernel" if profile.get("engine") == "native" else "strategy",
         run_facts=run_facts(profile, scored_session_count(profile)))
 
 
@@ -935,6 +936,9 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
 
     agent_cfg["idle_charge"] = cc.get("idle_charge", IDLE_CHARGE)
     agent_cfg["probe_before_trial"] = bool(cc.get("probe_before_trial"))
+    if profile.get("engine") == "native" and agent_cfg["probe_before_trial"]:
+        sys.exit("probe_before_trial runs Python strategies, and this profile runs native kernels. "
+                 "Register with probe_before_trial: false.")
     # Frozen with the campaign: a repair fixes a file, so it need not re-derive it.
     agent_cfg["repair_reasoning_effort"] = REPAIR_REASONING_EFFORT
     # **Who wrote the question, in the record.** None for a file a human

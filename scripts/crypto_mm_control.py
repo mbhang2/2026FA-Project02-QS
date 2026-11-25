@@ -67,6 +67,10 @@ N_SESSIONS = 150
 CALIBRATION_SEEDS = tuple(range(640_001, 640_101))
 UNPROFITABLE_SEEDS = tuple(range(641_001, 642_001))
 NOISE_SEEDS = tuple(range(642_001, 642_401))
+# The noise arm again, once, with 1,000 campaigns (Amendment 24). The second revision's noise
+# arm passed 14 of 400, and 400 campaigns could not show a rate below 5% at that count.
+NOISE_RERUN_SEEDS = tuple(range(652_001, 653_001))
+PRIOR_NOISE = (14, 400)
 STRONG_SEEDS = tuple(range(642_401, 642_501))
 MIN_STRONG_SHARPE = 0.30
 SCALE = 10                      # ticks per price unit: a tick is 0.1
@@ -328,6 +332,44 @@ def stage_calibrate(out: pathlib.Path, workers: int) -> int:
     return 0 if chosen["unprofitable_impact"] is not None and chosen["strong_impact"] is not None else 1
 
 
+def noise_rerun_verdict(passes: int, campaigns: int) -> dict:
+    """Both must hold: the new 1,000 alone, and the new and the earlier 400 together, each with a
+    Wilson 95% upper bound on the pass rate at or below 0.05. The earlier result is not discarded."""
+    if campaigns != len(NOISE_RERUN_SEEDS):
+        raise ValueError(f"the rerun is defined on {len(NOISE_RERUN_SEEDS)} campaigns, got {campaigns}")
+    prior_passes, prior_campaigns = PRIOR_NOISE
+    checks = {
+        "rerun_wilson_upper_at_most_0.05": gate.wilson(passes, campaigns)[1] <= 0.05,
+        "combined_wilson_upper_at_most_0.05":
+            gate.wilson(passes + prior_passes, campaigns + prior_campaigns)[1] <= 0.05,
+    }
+    return {"checks": checks, "accepted": all(checks.values())}
+
+
+def stage_noise_rerun(out: pathlib.Path, workers: int) -> int:
+    source = c3b.provenance()
+    source["amendment_24_in_force"] = prereg.in_force(24)
+    settings = json.loads(EDGES_PATH.read_text())
+    path = out / "noise-rerun.json"
+    c3b.claim(path)
+    jobs = [("noise", settings["noise_impact"], seed) for seed in NOISE_RERUN_SEEDS]
+    rows = c3b._map(_job, jobs, workers)
+    passes = sum(bool(r["passed"]) for r in rows)
+    result = noise_rerun_verdict(passes, len(rows))
+    low, high = gate.wilson(passes, len(rows))
+    print(f"noise rerun   {passes:4d} of {len(rows):4d}  Wilson 95% [{low:.4f}, {high:.4f}]")
+    both = gate.wilson(passes + PRIOR_NOISE[0], len(rows) + PRIOR_NOISE[1])
+    print(f"with earlier  {passes + PRIOR_NOISE[0]:4d} of {len(rows) + PRIOR_NOISE[1]:4d}  "
+          f"Wilson 95% [{both[0]:.4f}, {both[1]:.4f}]")
+    for name, ok in result["checks"].items():
+        print(f"{'PASS' if ok else 'FAIL'}  {name}")
+    path.write_text(json.dumps({**source, "settings": settings, "alpha": ALPHA, "passes": passes,
+                                "campaigns": len(rows), "prior": list(PRIOR_NOISE), **result, "rows": rows},
+                               indent=1) + "\n")
+    print(f"wrote {path}")
+    return 0 if result["accepted"] else 1
+
+
 def stage_run(out: pathlib.Path, workers: int) -> int:
     source = c3b.provenance()
     source["amendment_24_in_force"] = prereg.in_force(24)
@@ -358,7 +400,7 @@ def stage_run(out: pathlib.Path, workers: int) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--stage", choices=("calibrate", "run"))
+    ap.add_argument("--stage", choices=("calibrate", "run", "noise-rerun"))
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--pilot", type=int, default=0, help="seeds per impact from 9301; no verdict")
     ap.add_argument("--out-dir", type=pathlib.Path, default=DEFAULT_DIR)
@@ -371,7 +413,8 @@ def main() -> int:
         return 0
     if not a.stage:
         ap.error("--stage or --pilot is required")
-    return (stage_calibrate if a.stage == "calibrate" else stage_run)(a.out_dir, a.workers)
+    stage = {"calibrate": stage_calibrate, "run": stage_run, "noise-rerun": stage_noise_rerun}[a.stage]
+    return stage(a.out_dir, a.workers)
 
 
 if __name__ == "__main__":

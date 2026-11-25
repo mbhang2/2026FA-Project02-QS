@@ -2821,6 +2821,17 @@ The arms ran once from commit `e123578` (`~/crypto-controls/a24-r2/control.json`
 
 In this noise market no variant made money in calibration, and the gate passed 3.5% of campaigns. That is below 5%, but the condition asks for the 95% upper bound to be at or below 5%, which needs 11 or fewer passes of 400. The control therefore does not show the market-making gate's false-positive rate to be below 5%. Three controls have now run on this design; any further change must be weighed against having tried until one passed.
 
+### The noise arm again, with 1,000 campaigns — written 2026-11-25, before it runs
+
+Michael chose this after the result above: 400 campaigns cannot show a rate below 5% unless 11 or fewer pass, while 1,000 allow 36. It reruns **only the noise arm**, once, at the second revision's committed noise setting of 0.57 ticks, with the same control, gate and best-of-5 campaigns, on new seeds 652001 to 653000 (`scripts/crypto_mm_control.py --stage noise-rerun`, output `~/crypto-controls/a24-r2/noise-rerun.json`). The unprofitable and strong arms of the second revision passed and stand.
+
+**The earlier 14 of 400 is not discarded.** The rerun passes only if both hold:
+
+1. the new 1,000 campaigns alone have a Wilson 95% upper bound on the pass rate at or below 0.05, which is 36 or fewer passes;
+2. the new 1,000 and the earlier 400 together do too, which is 54 or fewer of 1,400.
+
+If either fails, Part D is not signed and no further noise run is made on this design.
+
 ### What would invalidate this amendment
 
 - A candidate kernel run without a ledger row, or on a calibration ticket.

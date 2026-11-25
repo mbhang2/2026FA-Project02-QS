@@ -101,3 +101,13 @@ def test_the_revised_market_trades_every_ten_seconds():
     assert spec.tick_spacing_ns == 10_000_000_000 and spec.ticks_per_session == 8640
     assert set(M.CALIBRATION_SEEDS + M.UNPROFITABLE_SEEDS + M.NOISE_SEEDS + M.STRONG_SEEDS).isdisjoint(
         set(range(620_001, 622_501)) | set(range(630_001, 632_501)))
+
+
+def test_the_noise_rerun_seeds_are_new_and_its_rule_keeps_the_earlier_result():
+    used = set(M.CALIBRATION_SEEDS + M.UNPROFITABLE_SEEDS + M.NOISE_SEEDS + M.STRONG_SEEDS)
+    used |= set(range(620_001, 622_501)) | set(range(630_001, 632_501))
+    assert len(M.NOISE_RERUN_SEEDS) == 1000 and used.isdisjoint(M.NOISE_RERUN_SEEDS)
+    assert M.noise_rerun_verdict(36, 1000)["accepted"] is True
+    assert M.noise_rerun_verdict(37, 1000)["accepted"] is False
+    with pytest.raises(ValueError):
+        M.noise_rerun_verdict(10, 400)

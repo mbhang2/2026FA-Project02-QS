@@ -2732,7 +2732,7 @@ The native engine reproduces the Python engine's fills about 100 to 200 times fa
 | B2 | The points are drawn from the operating system's randomness in the parent process after the trial is opened. The kernel cannot see them. The native child saves the engine just before each point: the position, next order id, last trade price, kernel state, and every working order with its queue state. The Python engine resumes from that state, and tests must prove that resuming is exact. The points are recorded in the row after the run. |
 | B3 | **Every trial that passes the train gate:** five scored sessions, drawn as in B2, are replayed in full before its validation run is opened. Each replay starts at the last trade of the session before it, so the close, the orders kept overnight and the open are compared. Before any replay, the saved engine must agree with the native fills before it: position, each order's filled size, order ids, and finite prices and queues. |
 | B4 | Any difference in fills, order, price, size, liquidity or mid **invalidates the trial, and it still counts toward N**. A native-engine mismatch stops the campaign until it is explained. |
-| B5 | **The holdout is scored by the Python engine only**, through `scripts/holdout.py`, and is opened once as before. |
+| B5 | **The holdout is scored by the Python engine only**, through `scripts/holdout.py`, and is opened once as before. The kernel's source runs there as an ordinary strategy, the same generated form the audit checks, from zero state, on the `<base>-holdout` profile, which must match its train profile's costs, timing, book events, cap and gate. |
 
 ### Part C: book-update events
 

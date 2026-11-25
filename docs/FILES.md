@@ -465,6 +465,7 @@ What each test file pins.
 | `tests/test_hypothesis.py` | The campaign's question: linted, hashed, and inert when absent. |
 | `tests/test_idle_charge.py` | The idle-capital charge (pre-registration Amendment 3). |
 | `tests/test_kernel_agent.py` | Amendment 24: the LLM agent's kernel mode, its prompt and its interface document. |
+| `tests/test_kernel_holdout.py` | Amendment 24 B5 and D6: the kernel holdout, on the Python engine, judged by the bound. |
 | `tests/test_knowledge.py` | Cross-campaign constraints: store, compiler, frozen snapshot, prompt slot. |
 | `tests/test_l2_gate.py` | The L2 gate's plumbing: a validation null per winner, and a declared family. |
 | `tests/test_latency_sweep.py` | The latency analysis, and the nanosecond rules around it. Synthetic data only. |

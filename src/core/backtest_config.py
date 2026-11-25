@@ -27,7 +27,8 @@ ALLOWED_KEYS = {
     # Amendment 24: a native kernel run, book-update events, an inventory cap, a declared gate.
     "engine", "book_events", "inventory_cap_lots", "gate",
 }
-ENGINES = {"native"}
+# "reference" is the Python engine with book events and the cap, for the holdout only (B5).
+ENGINES = {"native", "reference"}
 GATES = {"spread_capture"}
 REQUIRED_KEYS = {"dataset", "split", "use_quotes", "costs"}
 
@@ -82,10 +83,12 @@ def compile_backtests(cfg: dict, path: Path | None = None) -> dict:
         if "gate" in merged and merged["gate"] not in GATES:
             raise BacktestConfigError(f"backtest {name!r}: gate must be one of {sorted(GATES)}")
         native_only = ("book_events", "inventory_cap_lots", "gate")
-        if any(k in merged for k in native_only) and merged.get("engine") != "native":
-            raise BacktestConfigError(f"backtest {name!r}: {list(native_only)} need engine: native")
-        if merged.get("engine") == "native" and not (merged.get("book_features") and merged.get("book_events")):
-            raise BacktestConfigError(f"backtest {name!r}: engine: native needs book_features and book_events")
+        if any(k in merged for k in native_only) and merged.get("engine") not in ENGINES:
+            raise BacktestConfigError(f"backtest {name!r}: {list(native_only)} need an engine of {sorted(ENGINES)}")
+        if merged.get("engine") in ENGINES and not (merged.get("book_features") and merged.get("book_events")):
+            raise BacktestConfigError(f"backtest {name!r}: engine: {merged['engine']} needs book_features and book_events")
+        if merged.get("engine") == "reference" and merged["split"] != "holdout":
+            raise BacktestConfigError(f"backtest {name!r}: engine: reference is for the holdout only (Amendment 24 B5)")
         profiles[name] = merged
     return cfg
 

@@ -76,3 +76,19 @@ backtests:
     book_events: true
     inventory_cap_lots: 1000
     gate: spread_capture
+
+  # Amendment 24 B5: the holdout scores a kernel champion with the Python engine only, its source
+  # run as an ordinary strategy. About 180 us per event over 160 sessions, so the budget is long.
+  # Run only by scripts/holdout.py, once.
+  btc-okx-mm-holdout:
+    dataset: crypto-btc-okx-book
+    split: holdout
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: reference
+    book_events: true
+    inventory_cap_lots: 1000
+    gate: spread_capture
+    wall_clock_budget_s: 259200

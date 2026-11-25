@@ -380,7 +380,7 @@ def test_the_market_making_profiles_are_as_approved():
     (dict(engine="native", book_events=True, inventory_cap_lots=0), "inventory_cap_lots"),
     (dict(engine="native", book_events=True, inventory_cap_lots=True), "inventory_cap_lots"),
     (dict(engine="native", book_events=True, gate="sign_flip"), "gate must be"),
-    (dict(inventory_cap_lots=10), "need engine: native"),
+    (dict(inventory_cap_lots=10), "need an engine of"),
     (dict(engine="native"), "needs book_features and book_events"),
 ])
 def test_bad_native_profiles_are_refused(tmp_path, entry, message):

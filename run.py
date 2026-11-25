@@ -579,6 +579,8 @@ def main(argv: list[str] | None = None, *, latency_override_ns: int | None = Non
             sys.exit("a latency override is for a train-split check run only")
         profile = {**profile, "latency_ns": latency_override_ns}
 
+    if profile.get("engine") == "reference" and not human:
+        sys.exit(f"profile {profile_name!r} is the kernel holdout; only scripts/holdout.py runs it.")
     if profile.get("engine") == "native":
         sys.exit(f"profile {profile_name!r} runs native kernels; use scripts/run_native_trial.py (Amendment 24)")
     split = Split(profile["split"])
@@ -700,6 +702,9 @@ def _walk(args, cfg, profile, profile_name, dataset, split, seed, fill_model,
                 commission_bps=profile.get("commission_bps", 0.0),
                 book_features=bool(profile.get("book_features")),
                 two_sided_book=_two_sided_book(profile),
+                # Amendment 24 B5: the reference engine for a kernel holdout. Absent everywhere else.
+                **({"book_events": True, "inventory_cap": profile.get("inventory_cap_lots")}
+                   if profile.get("engine") == "reference" else {}),
                 **execution_terms(profile),
             )
             record = _run_and_score(cfg, profile, engine, strategy, split, seed,
@@ -889,6 +894,12 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
         ),
     ).as_dict()
     record = engine.record.as_dict()
+    if profile.get("gate") == "spread_capture":
+        # Amendment 24 D6 needs the session returns, whether or not the fill log fits its cap.
+        from src.core.scoring.metrics import session_returns
+        record["session_returns"] = [float(x) for x in session_returns(
+            scored_blotter, period,
+            **{k: terms[k] for k in ("notional_base", "idle_charge", "funding")})]
     attach_fill_log(record, engine, ledger_path)
     attach_weights(record, engine, ledger_path)
     return record

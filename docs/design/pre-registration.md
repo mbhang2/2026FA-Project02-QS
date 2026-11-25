@@ -2792,6 +2792,20 @@ The control's calibration ran once from commit `0413fd5` on seeds 620001 to 6201
 
 *The revised calibration ran once from commit `fae72fd` on seeds 630001 to 630100, with 2,800 jobs (`~/crypto-controls/a24-revised/calibration.json`, SHA-256 `83123b624b4147967a0e15bc136a40930f59e5901050f0aafff48c99dbbddb58`). It selected a strong setting of 0.40 ticks, where the weakest variant averaged a Sharpe of about 0.31, a noise setting of 0.56 ticks with a mean net return of +1.5e-5, and an unprofitable setting of 0.58 ticks. They are committed in `docs/reviews/crypto-a24/edges.json` before any arm runs.*
 
+### The revised control failed its noise arm
+
+The arms ran once from commit `11a49d6` (`~/crypto-controls/a24-revised/control.json`, SHA-256 `7f9c8afe3b9ec482ed0b27ab732d54e17aa566df542ea4862a0f6a2a494a91e1`). **The control is not accepted, so this amendment cannot be signed as written.**
+
+| arm | impact | passed | condition | result |
+|---|---|---|---|---|
+| unprofitable | 0.58 | 10 of 1,000 | 36 or fewer | pass |
+| noise | 0.56 | 52 of 400, Wilson 95% upper 0.167 | upper <= 0.05 | **fail** |
+| strong | 0.40 | 100 of 100 | at least 80 | pass |
+
+The noise setting was not a market without an edge. In the calibration every variant had a positive mean net return at 0.56 ticks, with t-statistics of +2.1 to +7.8 over 100 seeds, so the gate was passing a small real profit there. The rule chose the grid point whose average return was closest to zero, and no grid point had every variant at or below zero except those already in the unprofitable range. The unprofitable arm, 0.02 ticks further, where every variant lost slightly, passed 1.0% of campaigns. The pass conditions are unchanged. A revision needs a noise market in which no variant has an edge, new seeds, and its own pre-registration here before it runs.
+
+**Second revision, 2026-11-25, before any new run.** The noise setting is the smallest impact at which every variant's mean net return over the calibration seeds is at or below zero, so no variant makes money there. The unprofitable setting is the smallest impact above it whose five variants all have a 99% upper bound below zero. The strong rule is unchanged. The grid is 0, 0.3, 0.35, 0.4 and 0.45, then 0.52 to 0.64 in steps of 0.005, then 0.7 and 1.0 ticks. Calibration seeds are 640001 to 640100. The arms are 641001 to 642000 (unprofitable), 642001 to 642400 (noise) and 642401 to 642500 (strong). The settings go in `docs/reviews/crypto-a24/edges-r2.json` before any arm runs, and output goes to `~/crypto-controls/a24-r2/`. The three pass conditions are unchanged.
+
 ### What would invalidate this amendment
 
 - A candidate kernel run without a ledger row, or on a calibration ticket.

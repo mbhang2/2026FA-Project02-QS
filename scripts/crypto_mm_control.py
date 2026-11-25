@@ -58,20 +58,22 @@ CAP_LOTS = 10
 ALPHA = gate.Q / len(SKEWS)
 # Mean jump, in ticks. Fine where net returns cross zero: the first calibration's grid of 0.1
 # put the noise and unprofitable settings on one point (Amendment 24).
-IMPACT_GRID = ((0.0, 0.1, 0.2, 0.3) + tuple(round(0.4 + 0.02 * i, 2) for i in range(21))
-               + (1.0, 1.5, 2.0))
+# The second revision: 0.005 ticks fine from 0.52 to 0.64, where the revised control's returns
+# crossed zero, and coarse where the strong setting fell (0.40).
+IMPACT_GRID = ((0.0, 0.3, 0.35, 0.4, 0.45) + tuple(round(0.52 + 0.005 * i, 3) for i in range(25))
+               + (0.7, 1.0))
 TRADE_SPACING_NS = 10_000_000_000      # one trade every 10 s, three times the first control's
 N_SESSIONS = 150
-CALIBRATION_SEEDS = tuple(range(630_001, 630_101))
-UNPROFITABLE_SEEDS = tuple(range(631_001, 632_001))
-NOISE_SEEDS = tuple(range(632_001, 632_401))
-STRONG_SEEDS = tuple(range(632_401, 632_501))
+CALIBRATION_SEEDS = tuple(range(640_001, 640_101))
+UNPROFITABLE_SEEDS = tuple(range(641_001, 642_001))
+NOISE_SEEDS = tuple(range(642_001, 642_401))
+STRONG_SEEDS = tuple(range(642_401, 642_501))
 MIN_STRONG_SHARPE = 0.30
 SCALE = 10                      # ticks per price unit: a tick is 0.1
 START_TICKS = 1_000_000         # 100,000.0
 DEPTH_LOTS = 1_000
-EDGES_PATH = REPO / "docs" / "reviews" / "crypto-a24" / "edges.json"
-DEFAULT_DIR = pathlib.Path.home() / "crypto-controls" / "a24-revised"
+EDGES_PATH = REPO / "docs" / "reviews" / "crypto-a24" / "edges-r2.json"
+DEFAULT_DIR = pathlib.Path.home() / "crypto-controls" / "a24-r2"
 
 KERNEL = """
 def kernel(event, book, state, orders):
@@ -238,11 +240,14 @@ def _calibration_job(args) -> dict:
 def select_settings(rows: list[dict]) -> dict:
     """Three settings from the calibration, fixed before any arm runs.
 
-    Unprofitable: the smallest impact whose five variants all have a 99% upper bound below zero.
+    Noise: the smallest impact at which no variant makes money, every variant's mean net return
+    over the calibration seeds being at or below zero. The revised control's noise market, chosen
+    by the average closest to zero, still let every variant profit slightly, and the gate rightly
+    passed it.
+    Unprofitable: the smallest impact above the noise one whose five variants all have a 99% upper
+    bound below zero.
     Strong: the largest impact at which all five average a per-session Sharpe of at least 0.30.
-    Noise: among impacts below the unprofitable one, the one whose mean return over the five
-    variants and the calibration seeds is closest to zero after costs. They must be ordered
-    strong < noise < unprofitable.
+    They must be ordered strong < noise < unprofitable.
     """
     upper, sharpe = {}, {}
     for impact in sorted({r["impact"] for r in rows}):
@@ -250,18 +255,21 @@ def select_settings(rows: list[dict]) -> dict:
         upper[impact] = [c3b.upper_bound([r["means"][v] for r in sub], reversal.T_CRITICAL_99)
                          for v in range(len(SKEWS))]
         sharpe[impact] = [math.fsum(r["sharpes"][v] for r in sub) / len(sub) for v in range(len(SKEWS))]
-    losing = [i for i, u in upper.items() if all(x < 0 for x in u)]
+    variant_means = {impact: [math.fsum(r["means"][v] for r in rows if r["impact"] == impact)
+                              / sum(r["impact"] == impact for r in rows) for v in range(len(SKEWS))]
+                     for impact in upper}
+    centre = {impact: math.fsum(m) / len(m) for impact, m in variant_means.items()}
+    flat = [i for i, m in variant_means.items() if all(x <= 0 for x in m)]
+    noise = min(flat) if flat else None
+    losing = [i for i, u in upper.items() if noise is not None and i > noise and all(x < 0 for x in u)]
     strong = [i for i, s in sharpe.items() if all(x >= MIN_STRONG_SHARPE for x in s)]
     unprofitable = min(losing) if losing else None
     best = max(strong) if strong else None
-    centre = {impact: math.fsum(math.fsum(r["means"]) for r in rows if r["impact"] == impact)
-              / (len(SKEWS) * sum(r["impact"] == impact for r in rows)) for impact in upper}
-    below = [i for i in centre if unprofitable is not None and i < unprofitable]
-    noise = min(below, key=lambda impact: (abs(centre[impact]), impact)) if below else None
     if None in (unprofitable, best) or not best < noise < unprofitable:
         unprofitable = best = noise = None
     return {"unprofitable_impact": unprofitable, "strong_impact": best, "noise_impact": noise,
             "mean_returns": {str(k): v for k, v in centre.items()},
+            "variant_means": {str(k): v for k, v in variant_means.items()},
             "upper_bounds": {str(k): v for k, v in upper.items()},
             "mean_sharpes": {str(k): v for k, v in sharpe.items()}}
 

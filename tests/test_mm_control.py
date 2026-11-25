@@ -51,18 +51,29 @@ def test_the_next_session_opens_where_the_last_closed():
 
 
 def _rows(table):
+    """`table[impact] = (mean, sharpe)`: every seed and variant gets exactly that mean."""
     rows = []
     for impact, (mean, sharpe) in table.items():
         for seed in range(4):
-            rows.append({"impact": impact, "seed": seed, "means": [mean + 1e-6 * seed] * 5,
-                         "sharpes": [sharpe] * 5})
+            noise = (seed - 1.5) * 1e-7
+            rows.append({"impact": impact, "seed": seed, "means": [mean + noise] * 5, "sharpes": [sharpe] * 5})
     return rows
 
 
 def test_settings_are_chosen_and_ordered():
-    chosen = M.select_settings(_rows({0.0: (4e-4, 0.5), 0.3: (2e-4, 0.2), 0.6: (-1e-6, 0.0),
-                                      0.9: (-3e-4, -0.3)}))
-    assert (chosen["strong_impact"], chosen["noise_impact"], chosen["unprofitable_impact"]) == (0.0, 0.6, 0.9)
+    chosen = M.select_settings(_rows({0.0: (4e-4, 0.5), 0.3: (2e-4, 0.2), 0.56: (1.5e-5, 0.05),
+                                      0.57: (-2e-7, -0.001), 0.58: (-3e-5, -0.04), 0.9: (-3e-4, -0.3)}))
+    assert (chosen["strong_impact"], chosen["noise_impact"], chosen["unprofitable_impact"]) == (0.0, 0.57, 0.58)
+
+
+def test_noise_is_where_no_variant_makes_money():
+    """The revised control's failure: at its noise setting every variant still profited slightly."""
+    rows = _rows({0.0: (4e-4, 0.5), 0.56: (-1e-5, 0.0), 0.6: (-5e-5, -0.1), 0.7: (-9e-5, -0.2)})
+    for r in rows:
+        if r["impact"] == 0.56:
+            r["means"][4] = 2e-5            # one variant still profits here
+    chosen = M.select_settings(rows)
+    assert (chosen["noise_impact"], chosen["unprofitable_impact"]) == (0.6, 0.7)
 
 
 def test_a_calibration_without_a_strong_setting_fails():
@@ -80,21 +91,13 @@ def test_one_variant_runs_and_respects_the_cap():
 
 
 def test_the_grid_is_fine_where_returns_cross_zero():
-    fine = [i for i in M.IMPACT_GRID if 0.4 <= i <= 0.8]
-    assert len(fine) == 21 and all(abs(b - a - 0.02) < 1e-9 for a, b in zip(fine, fine[1:]))
+    fine = [i for i in M.IMPACT_GRID if 0.52 <= i <= 0.64]
+    assert len(fine) == 25 and all(abs(b - a - 0.005) < 1e-9 for a, b in zip(fine, fine[1:]))
     assert list(M.IMPACT_GRID) == sorted(set(M.IMPACT_GRID))
-
-
-def test_noise_is_chosen_strictly_below_the_unprofitable_setting():
-    """The first calibration's failure: the point closest to zero was also the unprofitable one."""
-    chosen = M.select_settings(_rows({0.0: (4e-4, 0.5), 0.5: (4.6e-5, 0.1), 0.6: (-2.6e-5, -0.03),
-                                      0.7: (-9e-5, -0.1)}))
-    # 0.6 is both closest to zero and the smallest all-negative point if its bounds are negative,
-    # so noise must come from below it.
-    assert chosen["noise_impact"] is not None and chosen["noise_impact"] < chosen["unprofitable_impact"]
 
 
 def test_the_revised_market_trades_every_ten_seconds():
     spec = M.spec_for(9301)
     assert spec.tick_spacing_ns == 10_000_000_000 and spec.ticks_per_session == 8640
-    assert set(M.CALIBRATION_SEEDS).isdisjoint(range(620_001, 622_501))
+    assert set(M.CALIBRATION_SEEDS + M.UNPROFITABLE_SEEDS + M.NOISE_SEEDS + M.STRONG_SEEDS).isdisjoint(
+        set(range(620_001, 622_501)) | set(range(630_001, 632_501)))

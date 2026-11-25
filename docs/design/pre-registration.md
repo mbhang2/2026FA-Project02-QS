@@ -2808,6 +2808,18 @@ The noise setting was not a market without an edge. In the calibration every var
 
 *The second revision's calibration ran once from commit `ca0c7c0` on seeds 640001 to 640100, with 3,200 jobs (`~/crypto-controls/a24-r2/calibration.json`, SHA-256 `2d798769816bec1fe2dff94cb1cb60b9ccf14b7fb0191e6a7d2e2d896598df28`). It selected a strong setting of 0.35 ticks, where the weakest variant averaged a Sharpe of 0.39, a noise setting of 0.57 ticks, where every variant's mean net return was between -1.8e-5 and -5.4e-6, and an unprofitable setting of 0.575 ticks. They are committed in `docs/reviews/crypto-a24/edges-r2.json` before any arm runs.*
 
+### The second revision failed its noise arm narrowly
+
+The arms ran once from commit `e123578` (`~/crypto-controls/a24-r2/control.json`, SHA-256 `278ee0560ea03be9f17f013cdb7d5013b13e030a8b3afddefa78f54c679f5b04`). **The control is not accepted, so Part D cannot be signed as written.**
+
+| arm | impact | passed | condition | result |
+|---|---|---|---|---|
+| unprofitable | 0.575 | 18 of 1,000 | 36 or fewer | pass |
+| noise | 0.57 | 14 of 400 (3.5%), Wilson 95% [0.021, 0.058] | upper <= 0.05 | **fail** |
+| strong | 0.35 | 100 of 100 | at least 80 | pass |
+
+In this noise market no variant made money in calibration, and the gate passed 3.5% of campaigns. That is below 5%, but the condition asks for the 95% upper bound to be at or below 5%, which needs 11 or fewer passes of 400. The control therefore does not show the market-making gate's false-positive rate to be below 5%. Three controls have now run on this design; any further change must be weighed against having tried until one passed.
+
 ### What would invalidate this amendment
 
 - A candidate kernel run without a ledger row, or on a calibration ticket.

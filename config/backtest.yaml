@@ -49,3 +49,30 @@ backtests:
     book_features: true
     costs: BTCUSDT@hft-0-2
     latency_ns: 1000000
+
+  # Amendment 24: market makers as native kernels, with book-update events, a 0.10 BTC
+  # (1,000-lot) inventory cap and the net-profit gate. Only scripts/run_native_trial.py runs
+  # them, and only after Amendment 24 is signed; run.py refuses them.
+  btc-okx-mm-train:
+    dataset: crypto-btc-okx-book
+    split: train
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: native
+    book_events: true
+    inventory_cap_lots: 1000
+    gate: spread_capture
+
+  btc-okx-mm-validation:
+    dataset: crypto-btc-okx-book
+    split: validation
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: native
+    book_events: true
+    inventory_cap_lots: 1000
+    gate: spread_capture

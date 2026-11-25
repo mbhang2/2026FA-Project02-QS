@@ -24,7 +24,11 @@ ALLOWED_KEYS = {
     "wall_clock_budget_s", "latency_ns", "allow_overnight", "scoring_units",
     "idle_charge_fraction", "funding", "record_fill_spread", "action_cap", "history_window",
     "book_features",
+    # Amendment 24: a native kernel run, book-update events, an inventory cap, a declared gate.
+    "engine", "book_events", "inventory_cap_lots", "gate",
 }
+ENGINES = {"native"}
+GATES = {"spread_capture"}
 REQUIRED_KEYS = {"dataset", "split", "use_quotes", "costs"}
 
 
@@ -68,6 +72,20 @@ def compile_backtests(cfg: dict, path: Path | None = None) -> dict:
                                           "use_quotes: true")
         if merged.get("book_features") and not merged["use_quotes"]:
             raise BacktestConfigError(f"backtest {name!r}: book_features needs use_quotes: true")
+        if "engine" in merged and merged["engine"] not in ENGINES:
+            raise BacktestConfigError(f"backtest {name!r}: engine must be one of {sorted(ENGINES)}")
+        if "book_events" in merged and not isinstance(merged["book_events"], bool):
+            raise BacktestConfigError(f"backtest {name!r}: book_events must be true or false")
+        cap = merged.get("inventory_cap_lots")
+        if cap is not None and (isinstance(cap, bool) or not isinstance(cap, int) or cap < 1):
+            raise BacktestConfigError(f"backtest {name!r}: inventory_cap_lots must be a whole number >= 1")
+        if "gate" in merged and merged["gate"] not in GATES:
+            raise BacktestConfigError(f"backtest {name!r}: gate must be one of {sorted(GATES)}")
+        native_only = ("book_events", "inventory_cap_lots", "gate")
+        if any(k in merged for k in native_only) and merged.get("engine") != "native":
+            raise BacktestConfigError(f"backtest {name!r}: {list(native_only)} need engine: native")
+        if merged.get("engine") == "native" and not (merged.get("book_features") and merged.get("book_events")):
+            raise BacktestConfigError(f"backtest {name!r}: engine: native needs book_features and book_events")
         profiles[name] = merged
     return cfg
 

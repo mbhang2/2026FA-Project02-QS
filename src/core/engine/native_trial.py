@@ -56,8 +56,8 @@ def deep_audit_passed(ledger_path, trial_id: str, kernel_sha256: str, profile: s
 
 def refusal(profile: dict) -> str | None:
     """Why this profile cannot run natively, or None."""
-    if Split(profile["split"]) is not Split.TRAIN:
-        return "the native check runs on the train split only"
+    if Split(profile["split"]) not in (Split.TRAIN, Split.VALIDATION):
+        return "the holdout is scored by the Python engine only (Amendment 24 B5)"
     if profile.get("fill_model") != BOOK_MODEL:
         return f"the native engine implements only {BOOK_MODEL}"
     if not profile.get("book_features"):

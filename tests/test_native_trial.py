@@ -24,7 +24,7 @@ def columns(n=2):
                 maker=np.zeros(n, np.int8), mid=np.full(n, 100.0))
 
 
-@pytest.mark.parametrize("change", [dict(split="validation"), dict(split="holdout"), dict(fill_model="favorable"),
+@pytest.mark.parametrize("change", [dict(split="holdout"), dict(fill_model="favorable"),
                                     dict(book_features=False), dict(fit_sessions=2), dict(action_cap=32),
                                     dict(weights_path="w"), dict(allow_overnight=False)])
 def test_unproved_profiles_are_refused(change):
@@ -352,3 +352,69 @@ def test_validation_needs_a_matching_deep_audit(tmp_path):
     with ledger.open("a") as fh:
         fh.write(json.dumps(good) + "\n")
     assert T.deep_audit_passed(ledger, "t1", "k", "p")
+
+
+def test_validation_is_allowed_and_the_holdout_is_not():
+    assert T.refusal({**GOOD, "split": "validation"}) is None
+    assert "Python engine only" in T.refusal({**GOOD, "split": "holdout"})
+
+
+def test_the_market_making_profiles_are_as_approved():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import run
+
+    profiles = run.load_config()["profiles"]
+    for name, split in (("btc-okx-mm-train", "train"), ("btc-okx-mm-validation", "validation")):
+        p = profiles[name]
+        assert (p["split"], p["engine"], p["book_events"], p["inventory_cap_lots"], p["gate"]) == \
+            (split, "native", True, 1000, "spread_capture")
+        assert (p["maker_commission_bps"], p["commission_bps"], p["latency_ns"]) == (0.0, 2.0, 1_000_000)
+        assert T.refusal(p) is None
+
+
+@pytest.mark.parametrize("entry,message", [
+    (dict(engine="python"), "engine must be"),
+    (dict(engine="native", book_events=True, inventory_cap_lots=0), "inventory_cap_lots"),
+    (dict(engine="native", book_events=True, inventory_cap_lots=True), "inventory_cap_lots"),
+    (dict(engine="native", book_events=True, gate="sign_flip"), "gate must be"),
+    (dict(inventory_cap_lots=10), "need engine: native"),
+    (dict(engine="native"), "needs book_features and book_events"),
+])
+def test_bad_native_profiles_are_refused(tmp_path, entry, message):
+    import yaml
+
+    from src.core.backtest_config import BacktestConfigError, compile_backtests
+
+    base = dict(dataset="d", split="train", use_quotes=True, book_features=True, costs="c")
+    path = tmp_path / "backtest.yaml"
+    path.write_text(yaml.safe_dump({"backtests": {"x": {**base, **entry}}}))
+    with pytest.raises(BacktestConfigError, match=message):
+        compile_backtests({"profiles": {}, "datasets": {"d": {"book": True}}}, path)
+
+
+def test_run_py_refuses_a_native_profile():
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    done = subprocess.run([sys.executable, str(root / "run.py"), "--profile", "btc-okx-mm-train", "--quiet"],
+                          cwd=root, capture_output=True, text=True, timeout=120)
+    assert done.returncode != 0 and "run_native_trial.py" in done.stderr
+
+
+def test_native_validation_needs_a_deep_audit(tmp_path):
+    R = _runner()
+    ledger = R.SCRATCH / "test-validation-gate" / "ledger.jsonl"
+    kernel = tmp_path / "k.py"
+    kernel.write_text(T.CHECK_KERNEL)
+    with pytest.raises(T.NativeTrialRefused, match="names the train trial"):
+        R.run_trial("btc-okx-mm-validation", kernel, ledger)
+    with pytest.raises(T.NativeTrialRefused, match="no matching deep audit"):
+        R.run_trial("btc-okx-mm-validation", kernel, ledger, validates="t1", train_profile="btc-okx-mm-train")
+    with pytest.raises(T.NativeTrialRefused, match="only a validation run"):
+        R.run_trial("btc-okx-mm-train", kernel, ledger, validates="t1")
+    assert not ledger.exists()

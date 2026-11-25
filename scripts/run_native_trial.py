@@ -197,7 +197,8 @@ def _child_run(spec: dict) -> dict:
     dataset = run.build_dataset(cfg, profile["dataset"], profile["seed"])
     terms = run.execution_terms(profile)
     warmup = int(profile.get("warmup_sessions", 0))
-    warm = set(dataset.warmup_sessions(Split.TRAIN, warmup))
+    split = Split(spec["split"])
+    warm = set(dataset.warmup_sessions(split, warmup))
     keep = set(spec["sessions"])
     points = {int(k): int(v) for k, v in spec["snapshots"].items()}
     kernel = K.CompiledKernel(spec["source"])
@@ -206,7 +207,7 @@ def _child_run(spec: dict) -> dict:
     with native.NativeEngine(lib, ticket=ticket, latency_ns=terms["latency_ns"],
                              require_two_sided=run._two_sided_book(profile), book_features=True,
                              book_events=True, inventory_cap=int(profile.get("inventory_cap_lots") or 0)) as fast:
-        for columns in dataset.session_columns(Split.TRAIN, warmup=warmup):
+        for columns in dataset.session_columns(split, warmup=warmup):
             is_warm = columns.session in warm
             if not is_warm and columns.session not in keep:
                 continue
@@ -300,11 +301,11 @@ class _AuditWindow:
                 yield columns[i]
 
 
-def _session_columns(dataset, session):
-    return next(c for c in dataset.session_columns(Split.TRAIN, warmup=0) if c.session == session)
+def _session_columns(dataset, session, split=Split.TRAIN):
+    return next(c for c in dataset.session_columns(split, warmup=0) if c.session == session)
 
 
-def plan_windows(dataset, chosen: list[int], deep: bool, rng=None) -> list[list[tuple]]:
+def plan_windows(dataset, chosen: list[int], deep: bool, rng=None, split=Split.TRAIN) -> list[list[tuple]]:
     """Audit windows, each a list of consecutive (session, first trade, trade count or None).
 
     Drawn from the operating system's randomness here, after the trial opens. The kernel runs in
@@ -316,7 +317,7 @@ def plan_windows(dataset, chosen: list[int], deep: bool, rng=None) -> list[list[
     """
     rng = rng or random.SystemRandom()
     sizes = {}
-    for columns in dataset.session_columns(Split.TRAIN, warmup=0):
+    for columns in dataset.session_columns(split, warmup=0):
         if columns.session in set(chosen):
             sizes[columns.session] = len(columns)
     order = [s for s in chosen if s in sizes]
@@ -340,7 +341,7 @@ def plan_windows(dataset, chosen: list[int], deep: bool, rng=None) -> list[list[
         index += 1
     segments, budget, start = [], SHORT_AUDIT_EVENTS, pick
     for session in order[index:]:
-        ts = np.asarray(_session_columns(dataset, session).ts)
+        ts = np.asarray(_session_columns(dataset, session, split).ts)
         after = int(ts[start - 1]) if start else int(ts[0])
         book_ts = np.asarray(dataset.book_for(session).ts)
         count = T.trades_for_events(ts[start:], book_ts, budget, after)
@@ -352,11 +353,11 @@ def plan_windows(dataset, chosen: list[int], deep: bool, rng=None) -> list[list[
     return [segments]
 
 
-def _audit_window(profile, dataset, source, columns, snap, segments, ticket) -> tuple:
+def _audit_window(profile, dataset, source, columns, snap, segments, ticket, split=Split.TRAIN) -> tuple:
     """Resume the Python engine at the saved point and require the same fills. Returns
     (engine, record of the window)."""
     session, start, _ = segments[0]
-    ts = np.asarray(_session_columns(dataset, session).ts)
+    ts = np.asarray(_session_columns(dataset, session, split).ts)
     T.check_snapshot(snap, columns, start)
     resume = T.resume_from_snapshot(snap, int(ts[start - 1]) if start else int(ts[0]))
     folder = SCRATCH / "native-audit"
@@ -369,7 +370,7 @@ def _audit_window(profile, dataset, source, columns, snap, segments, ticket) -> 
     try:
         with RemoteStrategy(path, class_name="Strategy", action_cap=profile.get("action_cap", 64), window=1,
                             tick_window=1, timeout_s=profile.get("wall_clock_budget_s")) as strategy:
-            engine = Engine(_AuditWindow(dataset, segments), strategy, ticket=ticket, split=Split.TRAIN,
+            engine = Engine(_AuditWindow(dataset, segments), strategy, ticket=ticket, split=split,
                             fill_model=profile["fill_model"], warmup_sessions=0, seed=profile["seed"],
                             commission_bps=profile.get("commission_bps", 0.0), book_features=True, book_events=True,
                             two_sided_book=run._two_sided_book(profile), resume=resume,
@@ -403,7 +404,8 @@ def _audit_window(profile, dataset, source, columns, snap, segments, ticket) -> 
 # one trial
 # --------------------------------------------------------------------------- #
 def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessions=None, deep=False,
-              timeout_s=None, latency_ns: int | None = None, audit_of: str | None = None) -> dict:
+              timeout_s=None, latency_ns: int | None = None, audit_of: str | None = None,
+              validates: str | None = None, train_profile: str | None = None) -> dict:
     """`latency_ns` overrides the profile for an unsigned check only, like `run.main`'s override.
 
     `deep` is Amendment 24 B3's audit of a trial that passed train. It names that trial in
@@ -430,6 +432,16 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
         raise T.NativeTrialRefused("a deep audit names the trial it verifies in audit_of")
     if audit_of and not deep:
         raise T.NativeTrialRefused("only a deep audit names another trial")
+    split = Split(profile["split"]) if "split" in profile else Split.TRAIN
+    if split is Split.VALIDATION:
+        # Amendment 24 B3: validation opens only for a trial whose deep audit matched.
+        if deep or not validates or not train_profile:
+            raise T.NativeTrialRefused("a validation run names the train trial it validates and its profile")
+        if not T.deep_audit_passed(ledger_path, validates, hashlib.sha256(source.encode()).hexdigest(),
+                                   train_profile):
+            raise T.NativeTrialRefused(f"trial {validates} has no matching deep audit, so validation stays closed")
+    elif validates:
+        raise T.NativeTrialRefused("only a validation run names the trial it validates")
     purpose = ("audit" if deep else "trial") if signed else "check"
     started = time.perf_counter()
 
@@ -444,9 +456,10 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                                                                     strategy_path=copy))
     try:
         with run_log:
-            record = {"engine": "native", "outcome": "crashed", "split": str(Split.TRAIN), "score": None,
+            record = {"engine": "native", "outcome": "crashed", "split": str(split), "score": None,
                       "trial_id": trial_id, "kernel_sha256": hashlib.sha256(source.encode()).hexdigest(),
-                      **({"audit_of": audit_of} if audit_of else {})}
+                      **({"audit_of": audit_of} if audit_of else {}),
+                      **({"validates": validates} if validates else {})}
             run_log.update(record)
             try:
                 if unknown:
@@ -458,15 +471,15 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                 if not prereg.in_force(22):
                     raise T.NativeTrialRefused("Amendment 22 is not in force")
                 dataset = run.build_dataset(cfg, profile["dataset"], profile["seed"])
-                scored = list(dataset.scored_sessions(Split.TRAIN, 0))
+                scored = list(dataset.scored_sessions(split, 0))
                 chosen = sorted(sessions) if sessions is not None else scored
                 if not chosen or not set(chosen) <= set(scored):
-                    raise T.NativeTrialRefused("sessions must be a non-empty part of the train split")
-                windows = plan_windows(dataset, chosen, deep)
+                    raise T.NativeTrialRefused(f"sessions must be a non-empty part of the {split} split")
+                windows = plan_windows(dataset, chosen, deep, split=split)
                 record["audit"] = {"tier": "deep" if deep else "short", "planned": [[list(s) for s in w] for w in windows]}
                 run_log.update(record)
                 spec = {"profile": profile_name, "source": source, "sessions": chosen, "latency_ns": latency_ns,
-                        "trial_id": trial_id, "journal": str(entry), "nonce": nonce,
+                        "trial_id": trial_id, "journal": str(entry), "nonce": nonce, "split": str(split),
                         "ledger": str(Path(ledger_path).resolve()),
                         "snapshots": {str(w[0][0]): w[0][1] for w in windows}}
                 with tempfile.TemporaryDirectory(prefix="native-trial-") as folder:
@@ -478,7 +491,7 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                 audited = []
                 for window in windows:
                     engine, info = _audit_window(profile, dataset, source, columns, snapshots[window[0][0]], window,
-                                                 run_log.ticket)
+                                                 run_log.ticket, split)
                     audited.append(info)
                 audit_s = time.perf_counter() - audit_started
                 run.integrity.check(run.SCORING_AT_IMPORT, run.integrity.fingerprint())

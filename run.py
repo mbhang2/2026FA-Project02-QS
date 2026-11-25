@@ -579,6 +579,8 @@ def main(argv: list[str] | None = None, *, latency_override_ns: int | None = Non
             sys.exit("a latency override is for a train-split check run only")
         profile = {**profile, "latency_ns": latency_override_ns}
 
+    if profile.get("engine") == "native":
+        sys.exit(f"profile {profile_name!r} runs native kernels; use scripts/run_native_trial.py (Amendment 24)")
     split = Split(profile["split"])
     seed = profile["seed"]
     dataset = build_dataset(cfg, profile["dataset"], seed)

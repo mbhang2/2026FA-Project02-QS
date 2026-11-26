@@ -249,12 +249,15 @@ def kernel_champion(champ: dict, path: pathlib.Path) -> dict:
 
 
 def judge_spread(row: dict) -> dict:
-    """Amendment 24 D6: confirmed only if the net-profit bound on the holdout returns is above zero at
-    q. No sign-flip null. A missing or empty set of returns is not confirmed."""
+    """Amendment 24 D6 with Amendment 25 E3: confirmed only if the net-profit bound on the holdout
+    returns is above zero at q/2. No sign-flip null. Missing or empty returns are not confirmed."""
     from src.core.scoring.profitability import profitability_bound
 
     returns = row.get("session_returns")
-    bound = profitability_bound(returns, Q) if returns else None
+    from src.core.engine.native_trial import SPREAD_CAPTURE_ALPHA_FACTOR
+
+    # Amendment 25 E3: half the holdout error, q/2.
+    bound = profitability_bound(returns, Q * SPREAD_CAPTURE_ALPHA_FACTOR) if returns else None
     passes = bool(bound and bound.get("passes"))
     return {"gate": "spread_capture", "profitability": bound, "rule_i_sortino_positive": passes,
             "rule_ii_evaluable": False, "rule_ii_reject": None, "rule_ii_p": None,

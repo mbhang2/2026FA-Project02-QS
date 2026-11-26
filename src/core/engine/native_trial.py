@@ -16,6 +16,9 @@ COLUMN_TYPES = {"seq": np.int64, "ts": np.int64, "session": np.int64, "order_id"
                 "side": np.int8, "size": np.int64, "price": np.float64, "maker": np.int8,
                 "mid": np.float64}
 BOOK_MODEL = "book-queue-pessimistic"
+# Amendment 25: every market-making test spends half the error it would under A24 Part D:
+# q/(2N) on train, q/(2M) on validation, q/2 on the holdout.
+SPREAD_CAPTURE_ALPHA_FACTOR = 0.5
 
 
 class NativeTrialRefused(ValueError):
@@ -54,16 +57,17 @@ def deep_audit_passed(ledger_path, trial_id: str, kernel_sha256: str, profile: s
     return False
 
 
-def refusal(profile: dict) -> str | None:
-    """Why this profile cannot run natively, or None."""
+def refusal(profile: dict, *, market_making: bool = False) -> str | None:
+    """Why this profile cannot run natively, or None. `market_making` is whether Amendment 25 is
+    in force; the caller reads it, because this module may not import the scripts."""
     if Split(profile["split"]) not in (Split.TRAIN, Split.VALIDATION):
         return "the holdout is scored by the Python engine only (Amendment 24 B5)"
     if profile.get("fill_model") != BOOK_MODEL:
         return f"the native engine implements only {BOOK_MODEL}"
     if not profile.get("book_features"):
         return "the native check needs book_features: true"
-    if profile.get("gate") == "spread_capture":
-        return "Amendment 24 Part D (the market-making gate) was not accepted"
+    if profile.get("gate") == "spread_capture" and not market_making:
+        return "the market-making gate needs Amendment 25 in force (A24 Part D was not accepted)"
     if profile.get("fit_sessions", 0) or profile.get("weights_path"):
         return "fitted strategies are not ported"
     if profile.get("action_cap", 64) != 64:

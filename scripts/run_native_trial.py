@@ -467,7 +467,7 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                 if unknown:
                     raise T.NativeTrialRefused(f"unknown profile {profile_name!r}")
                 K.check(source)
-                problem = T.refusal(profile)
+                problem = T.refusal(profile, market_making=prereg.in_force(25))
                 if problem:
                     raise T.NativeTrialRefused(problem)
                 if not prereg.in_force(22):

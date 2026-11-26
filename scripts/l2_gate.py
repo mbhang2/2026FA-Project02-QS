@@ -327,12 +327,14 @@ def main() -> int:
     for name in family:
         c = next(x for x in cands if x["campaign_id"] == name)
         if gate_of(name) == "spread_capture":
-            # Amendment 24 D5 and D8: this campaign's own net-profit bound at q/M, no null.
-            bound = validation_profitability(name, a.q / len(family))
+            # Amendment 25 E2 and E4: this campaign's own net-profit bound at q/(2M), no null.
+            from src.core.engine.native_trial import SPREAD_CAPTURE_ALPHA_FACTOR
+            bound = validation_profitability(name, a.q * SPREAD_CAPTURE_ALPHA_FACTOR / len(family))
             spread.append({"campaign_id": name, "validation_primary": c["validation_primary"],
                            "profitability": bound, "passes": bool(bound and bound.get("passes"))})
             print(f"  {name:28} spread_capture bound {None if bound is None else bound.get('lower_bound')} "
-                  f"at alpha {a.q / len(family):g}: {spread[-1]['passes']}", flush=True)
+                  f"at alpha {a.q * SPREAD_CAPTURE_ALPHA_FACTOR / len(family):g}: {spread[-1]['passes']}",
+                  flush=True)
             continue
         try:
             sample, rescored = build_validation_null(name)

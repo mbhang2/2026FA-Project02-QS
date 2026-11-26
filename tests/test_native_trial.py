@@ -372,7 +372,8 @@ def test_the_market_making_profiles_are_as_approved():
         assert (p["split"], p["engine"], p["book_events"], p["inventory_cap_lots"], p["gate"]) == \
             (split, "native", True, 1000, "spread_capture")
         assert (p["maker_commission_bps"], p["commission_bps"], p["latency_ns"]) == (0.0, 2.0, 1_000_000)
-        assert "Part D" in T.refusal(p)
+        assert "Amendment 25" in T.refusal(p)
+        assert T.refusal(p, market_making=True) is None
 
 
 @pytest.mark.parametrize("entry,message", [

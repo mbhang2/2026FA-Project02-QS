@@ -278,7 +278,7 @@ def select_settings(rows: list[dict]) -> dict:
             "mean_sharpes": {str(k): v for k, v in sharpe.items()}}
 
 
-def run_campaign(impact: float, seed: int) -> dict:
+def run_campaign(impact: float, seed: int, alpha: float = ALPHA) -> dict:
     cfg = gate.load_config()
     profile = cfg["profiles"][PROFILE]
     floor = cfg.get("campaign", {}).get("min_exposed_fraction")
@@ -292,7 +292,7 @@ def run_campaign(impact: float, seed: int) -> dict:
             continue
         primaries.append(result.primary)
         chosen_skews.append(skew)
-        bounds.append(gate.profitability_bound(gate.session_returns(blotter, calendar, **terms), ALPHA))
+        bounds.append(gate.profitability_bound(gate.session_returns(blotter, calendar, **terms), alpha))
     if not primaries:
         return {"impact": impact, "seed": seed, "best": None, "passed": False, "fills": fills}
     best = max(primaries)
@@ -302,8 +302,55 @@ def run_campaign(impact: float, seed: int) -> dict:
 
 
 def _job(args) -> dict:
-    arm, impact, seed = args
-    return {**run_campaign(impact, seed), "arm": arm}
+    arm, impact, seed = args[:3]
+    alpha = args[3] if len(args) > 3 else ALPHA
+    return {**run_campaign(impact, seed, alpha), "arm": arm}
+
+
+# Amendment 25: the same control at half the error, on new seeds, with 1,000 noise campaigns.
+A25_ALPHA = ALPHA / 2
+A25_UNPROFITABLE_SEEDS = tuple(range(661_001, 662_001))
+A25_NOISE_SEEDS = tuple(range(662_001, 663_001))
+A25_STRONG_SEEDS = tuple(range(663_001, 663_101))
+A25_DIR = pathlib.Path.home() / "crypto-controls" / "a25"
+
+
+def a25_verdict(passes: dict[str, int], counts: dict[str, int]) -> dict:
+    expected = {"unprofitable": len(A25_UNPROFITABLE_SEEDS), "noise": len(A25_NOISE_SEEDS),
+                "strong": len(A25_STRONG_SEEDS)}
+    if counts != expected:
+        raise ValueError(f"the arms are defined on {expected}, got {counts}")
+    checks = {
+        "unprofitable_wilson_upper_at_most_0.05": gate.wilson(passes["unprofitable"], counts["unprofitable"])[1] <= 0.05,
+        "noise_wilson_upper_at_most_0.05": gate.wilson(passes["noise"], counts["noise"])[1] <= 0.05,
+        "strong_at_least_80": passes["strong"] >= 80,
+    }
+    return {"checks": checks, "accepted": all(checks.values())}
+
+
+def stage_a25(out: pathlib.Path, workers: int) -> int:
+    source = c3b.provenance()
+    source["amendment_25_in_force"] = prereg.in_force(25)
+    settings = json.loads(EDGES_PATH.read_text())
+    path = A25_DIR / "control.json"
+    c3b.claim(path)
+    arms = {"unprofitable": (settings["unprofitable_impact"], A25_UNPROFITABLE_SEEDS),
+            "noise": (settings["noise_impact"], A25_NOISE_SEEDS),
+            "strong": (settings["strong_impact"], A25_STRONG_SEEDS)}
+    jobs = [(arm, impact, seed, A25_ALPHA) for arm, (impact, seeds) in arms.items() for seed in seeds]
+    rows = c3b._map(_job, jobs, workers)
+    counts = {arm: sum(r["arm"] == arm for r in rows) for arm in arms}
+    passes = {arm: sum(r["arm"] == arm and r["passed"] for r in rows) for arm in arms}
+    result = a25_verdict(passes, counts)
+    for arm in arms:
+        low, high = gate.wilson(passes[arm], counts[arm])
+        print(f"{arm:13} {passes[arm]:4d} of {counts[arm]:4d}  Wilson 95% [{low:.4f}, {high:.4f}]")
+    for name, ok in result["checks"].items():
+        print(f"{'PASS' if ok else 'FAIL'}  {name}")
+    path.write_text(json.dumps({**source, "settings": settings, "alpha": A25_ALPHA, "passes": passes,
+                                "counts": counts, **result, "rows": rows}, indent=1) + "\n")
+    print(f"wrote {path}")
+    return 0 if result["accepted"] else 1
 
 
 def verdict(passes: dict[str, int], counts: dict[str, int]) -> dict:
@@ -400,7 +447,7 @@ def stage_run(out: pathlib.Path, workers: int) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--stage", choices=("calibrate", "run", "noise-rerun"))
+    ap.add_argument("--stage", choices=("calibrate", "run", "noise-rerun", "a25"))
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--pilot", type=int, default=0, help="seeds per impact from 9301; no verdict")
     ap.add_argument("--out-dir", type=pathlib.Path, default=DEFAULT_DIR)
@@ -413,7 +460,8 @@ def main() -> int:
         return 0
     if not a.stage:
         ap.error("--stage or --pilot is required")
-    stage = {"calibrate": stage_calibrate, "run": stage_run, "noise-rerun": stage_noise_rerun}[a.stage]
+    stage = {"calibrate": stage_calibrate, "run": stage_run, "noise-rerun": stage_noise_rerun,
+             "a25": stage_a25}[a.stage]
     return stage(a.out_dir, a.workers)
 
 

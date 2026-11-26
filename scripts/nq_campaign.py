@@ -1531,14 +1531,18 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
           f"(generations of {width})")
 
 
-def gate_for(profile: dict) -> str | None:
-    """Amendment 24 D1 would register `gate: spread_capture`. Its control failed (37 of 1,000 noise
-    passes against 36), so Part D was not accepted and signing Amendment 24 does not enable it.
-    Registration refuses it until an amendment accepts a market-making gate."""
+def gate_for(profile: dict, in_force=None) -> str | None:
+    """`gate: spread_capture` (A24 D1), registered and frozen in the record only while Amendment 25 is
+    in force. A24 Part D's own control failed, so A24 alone never enables it."""
     if profile.get("gate") != "spread_capture":
         return None
-    sys.exit("the profile declares gate: spread_capture. Amendment 24 Part D was not accepted, so no "
-             "campaign may register that gate until a later amendment accepts one.")
+    if in_force is None:
+        import prereg as _prereg
+        in_force = _prereg.in_force(25)
+    if not in_force:
+        sys.exit("the profile declares gate: spread_capture, which needs Amendment 25 in force. "
+                 "Amendment 24 Part D was not accepted.")
+    return "spread_capture"
 
 
 def stage_nulls(name: str) -> None:
@@ -1716,7 +1720,10 @@ def stage_nulls(name: str) -> None:
                 if len(returns) != len(calendar):
                     raise SystemExit(f"{name} trial {i}: {len(returns)} session returns for a "
                                      f"{len(calendar)}-session calendar")
-                profitability[str(row.get("campaign_index"))] = profitability_bound(returns, profit_alpha)
+                # Amendment 25 E1: half the train error, q/(2N).
+                from src.core.engine.native_trial import SPREAD_CAPTURE_ALPHA_FACTOR
+                profitability[str(row.get("campaign_index"))] = profitability_bound(
+                    returns, profit_alpha * SPREAD_CAPTURE_ALPHA_FACTOR)
             samples.append([])
             continue
         fills = load_fill_log(row)

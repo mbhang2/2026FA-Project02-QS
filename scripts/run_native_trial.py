@@ -40,6 +40,7 @@ import run  # noqa: E402
 from src.core.data.columns import SessionColumns  # noqa: E402
 from src.core.engine import Engine, kernel as K, native  # noqa: E402
 from src.core.engine import native_trial as T  # noqa: E402
+from src.core.engine import column_score  # noqa: E402
 from src.core.engine.engine import MAX_FILL_LOG  # noqa: E402
 from src.core.engine.reconstruct import log_digest, reconstruct  # noqa: E402
 from src.core.engine.remote import RemoteStrategy  # noqa: E402
@@ -47,6 +48,11 @@ from src.core.runlog import LedgerRun, RunTicket, append_ledger, store_fill_log 
 from src.core.types import Side, Split  # noqa: E402
 
 SHORT_AUDIT_EVENTS = 250_000
+# A market maker can fill tens of millions of times over a split. Above this many fills a trial is
+# scored from its fill columns (`column_score`, proved equal to the blotter path) and its fills are
+# stored as compressed arrays, because one Python object per fill does not fit in memory.
+COLUMN_SCORING_FILLS = 2_000_000
+NATIVE_MAX_FILLS = 80_000_000
 DEEP_AUDIT_SESSIONS = 5
 SCRATCH = REPO_ROOT / ".scratch"
 OPEN_DIR = "open-native-trials"
@@ -224,8 +230,8 @@ def _child_run(spec: dict) -> dict:
                     f"{T.KERNEL_STOP_REASONS.get(kernel.error, f'error code {kernel.error}')}") from None
             if columns.session in points:
                 saved[columns.session] = fast.snapshot()
-            if lib.fc_engine_fill_count(fast.handle) > MAX_FILL_LOG:
-                raise T.NativeTrialFailed(f"the kernel exceeded {MAX_FILL_LOG:,} fills")
+            if lib.fc_engine_fill_count(fast.handle) > NATIVE_MAX_FILLS:
+                raise T.NativeTrialFailed(f"the kernel exceeded {NATIVE_MAX_FILLS:,} fills")
         out = fast.fill_columns()
     for i, session in enumerate(sorted(points)):
         snap = saved.get(session)
@@ -505,27 +511,43 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                 run.integrity.check(run.SCORING_AT_IMPORT, run.integrity.fingerprint())
                 run.integrity.check_artifacts(run.ARTIFACTS_AT_IMPORT, run.integrity.artifact_digests())
                 execution = run.execution_terms(profile)
-                fills = T.records_from_columns(columns)
-                blotter = reconstruct(fills, commission_per_contract=engine.commission,
-                                      commission_bps=engine.commission_bps,
-                                      slippage_per_contract=execution["slippage_per_contract"],
-                                      slippage_bps=execution["slippage_bps"],
-                                      maker_commission_per_contract=execution["maker_commission_per_contract"],
-                                      maker_commission_bps=execution["maker_commission_bps"])
+                costs = dict(commission_per_contract=engine.commission, commission_bps=engine.commission_bps,
+                             slippage_per_contract=execution["slippage_per_contract"],
+                             slippage_bps=execution["slippage_bps"],
+                             maker_commission_per_contract=execution["maker_commission_per_contract"],
+                             maker_commission_bps=execution["maker_commission_bps"])
                 period = session_calendar(dataset, chosen)
                 terms = scoring_terms(cfg, profile, dataset, period)
                 kw = dict(notional_base=terms["notional_base"], idle_charge=terms["idle_charge"], funding=terms["funding"])
-                result = score(blotter, period=period,
-                               min_exposed_fraction=cfg.get("campaign", {}).get("min_exposed_fraction"), **kw)
+                floor = cfg.get("campaign", {}).get("min_exposed_fraction")
+                n_fills = int(columns["seq"].size)
+                if n_fills > COLUMN_SCORING_FILLS:
+                    result, returns = column_score.score_columns(columns, costs=costs, period=period,
+                                                                 min_exposed_fraction=floor, **kw)
+                    digest = column_score.columns_digest(columns)
+                    stored = Path(ledger_path).resolve().parent / "fills" / f"{digest}.npz"
+                    stored.parent.mkdir(parents=True, exist_ok=True)
+                    if not stored.exists():
+                        np.savez_compressed(stored, **columns)
+                    facts = dict(scoring_path="columns", fill_log_digest=None, fill_columns_sha256=digest,
+                                 fill_columns_source=str(stored),
+                                 diagnostics={"skipped": f"more than {COLUMN_SCORING_FILLS:,} fills",
+                                              "fills": n_fills,
+                                              "maker_share": float(columns["maker"].mean()) if n_fills else None})
+                else:
+                    fills = T.records_from_columns(columns)
+                    blotter = reconstruct(fills, **costs)
+                    result = score(blotter, period=period, min_exposed_fraction=floor, **kw)
+                    returns = session_returns(blotter, period, **kw)
+                    facts = dict(scoring_path="blotter", fill_log_digest=log_digest(fills),
+                                 fill_log_source=store_fill_log(Path(ledger_path), log_digest(fills), fills,
+                                                                limit=MAX_FILL_LOG),
+                                 diagnostics=score_diagnostics(blotter, period, **kw).as_dict())
                 record["audit"].update(windows=audited, matched=True)
                 record.update(outcome="completed", dataset=dataset.name, dataset_digest=dataset.digest(),
-                              fill_model=profile["fill_model"], seed=profile["seed"], fills=len(fills),
-                              fill_log_digest=log_digest(fills), score=result.as_dict(),
-                              fill_log_source=store_fill_log(Path(ledger_path), log_digest(fills), fills,
-                                                             limit=MAX_FILL_LOG),
-                              execution=execution,
-                              session_returns=[float(x) for x in session_returns(blotter, period, **kw)],
-                              diagnostics=score_diagnostics(blotter, period, **kw).as_dict(),
+                              fill_model=profile["fill_model"], seed=profile["seed"], fills=n_fills,
+                              score=result.as_dict(), execution=execution,
+                              session_returns=[float(x) for x in returns], **facts,
                               native_library_sha256=hashlib.sha256(native.LIBRARY.read_bytes()).hexdigest(),
                               native_abi=native.ABI_VERSION, numba_version=__import__("numba").__version__,
                               native_seconds=round(native_s, 3), audit_seconds=round(audit_s, 3))

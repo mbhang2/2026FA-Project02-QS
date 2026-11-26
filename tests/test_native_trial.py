@@ -445,3 +445,12 @@ def test_native_fill_logs_are_kept_past_the_default_cap(tmp_path):
 
     fills = [object()] * (MAX_STORED_FILLS + 1)
     assert store_fill_log(tmp_path / "ledger.jsonl", "d", fills) == ""
+
+
+def test_the_runner_scores_large_trials_from_columns():
+    R = _runner()
+    from pathlib import Path
+
+    text = Path(R.__file__).read_text()
+    assert R.COLUMN_SCORING_FILLS == 2_000_000 and R.NATIVE_MAX_FILLS == 80_000_000
+    assert "column_score.score_columns(columns" in text and "np.savez_compressed(stored" in text

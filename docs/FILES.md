@@ -136,6 +136,7 @@ The backtest walk, fills, and the isolated child process.
 |---|---|
 | `src/core/engine/__init__.py` | The simulator: event loop, order lifecycle, fill models, bars, context. |
 | `src/core/engine/bars.py` | Time-bar aggregation, anchored to the session open. |
+| `src/core/engine/column_score.py` | Score a native run from its fill columns, for runs too large to hold one object per fill. |
 | `src/core/engine/context.py` | What a strategy is handed, and the only surface it can act through. |
 | `src/core/engine/engine.py` | The event loop: the immutable side of the split. |
 | `src/core/engine/fills.py` | Trade-based fill models, and the reason the loop scores on the pessimistic one. |
@@ -435,6 +436,7 @@ What each test file pins.
 | `tests/test_campaign_script.py` | `scripts/campaign.py` renders its own summary. |
 | `tests/test_capacity.py` | The conditioning stage: what the machine can carry, decided before a run. |
 | `tests/test_causality_probe.py` | The no-lookahead claim, measured rather than asserted. |
+| `tests/test_column_score.py` | Scoring from fill columns equals scoring the reconstructed blotter, exactly. |
 | `tests/test_columnar_ticks.py` | Columnar ticks are an optimisation: every run must match the object path exactly. |
 | `tests/test_commission_reaches_the_engine.py` | The rate a profile declares is the rate the engine charges. |
 | `tests/test_committee.py` | The four-auditor committee: isolated, veto-only, and outside the harness. |

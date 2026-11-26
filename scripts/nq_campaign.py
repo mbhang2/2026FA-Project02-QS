@@ -480,6 +480,24 @@ def validation_profile_for(train_profile: str, fitted: bool) -> str:
     return want
 
 
+def campaign_rows(d: pathlib.Path) -> list[dict]:
+    """The campaign's ledger rows, each carrying its trial index.
+
+    A one-worker campaign's rows are written in trial order and, before native trials recorded
+    their own index, could arrive without one. Those take their position, which is their index.
+    A row that already names its index keeps it.
+    """
+    rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines() if x.strip()]
+    if any(r.get("campaign_index") is None for r in rows):
+        record = json.loads((d / "campaign.json").read_text()).get("record") or {}
+        if int(record.get("generation_width") or 1) != 1:
+            raise SystemExit(f"{d.name}: rows without a trial index in a parallel campaign")
+        for i, r in enumerate(rows):
+            if r.get("campaign_index") is None:
+                r["campaign_index"] = i
+    return rows
+
+
 def _winner(rows: list[dict]) -> dict | None:
     """The campaign's gate winner: the highest primary score among completed runs.
 
@@ -575,8 +593,7 @@ def stage_validate(name: str) -> None:
 
     d = OUT / name
     record, _ = CampaignRecord.read(d / "campaign.json")
-    rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines()
-            if x.strip()]
+    rows = campaign_rows(d)
     win = _winner(rows)
     if win is None:
         sys.exit(f"{name}: no completed trial has a score; nothing to validate.")
@@ -1558,7 +1575,7 @@ def stage_nulls(name: str) -> None:
     if (d / "nulls.json").exists():
         print(f"{name}: nulls already computed")
         return
-    rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines() if x.strip()]
+    rows = campaign_rows(d)
     # **The campaign's OWN profile, not the module default.** This read
     # `cfg()["profiles"][PROFILE]`, so the null was always reassembled onto the
     # nq-train calendar whatever the campaign actually ran on. Every real
@@ -1969,7 +1986,7 @@ def stage_report(name: str) -> None:
 
     d = OUT / name
     record, digest = CampaignRecord.read(d / "campaign.json")
-    rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines() if x.strip()]
+    rows = campaign_rows(d)
     nulls = json.loads((d / "nulls.json").read_text())
     samples = nulls["samples"]
 

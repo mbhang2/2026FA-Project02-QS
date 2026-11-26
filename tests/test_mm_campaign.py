@@ -84,6 +84,7 @@ def test_a_native_trial_goes_through_the_native_runner(tmp_path, monkeypatch):
     argv = calls[0]
     assert argv[0] == C.NATIVE_PYTHON and argv[1] == "scripts/run_native_trial.py"
     assert argv[argv.index("--profile") + 1] == "btc-okx-mm-train"
+    assert argv[argv.index("--campaign-index") + 1] == "7" and argv[argv.index("--campaign-id") + 1] == "mm"
     kernel = Path(argv[argv.index("--kernel") + 1])
     assert kernel.read_text().startswith("def kernel") and kernel.name == "mm-0007.py"
     assert row["campaign_index"] == 7 and row["campaign_id"] == "mm"
@@ -93,3 +94,18 @@ def test_a_native_trial_without_a_row_is_a_harness_failure(tmp_path, monkeypatch
     monkeypatch.setattr(C.subprocess, "run", lambda argv, **kw: None)
     row = C.run_trial("x", profile="p", ledger=tmp_path / "ledger.jsonl", campaign_id="mm", index=0, native=True)
     assert row["outcome"] == "harness_failed"
+
+
+def test_one_worker_rows_without_an_index_take_their_position(tmp_path):
+    import nq_campaign
+
+    d = tmp_path / "c"
+    d.mkdir()
+    (d / "campaign.json").write_text(json.dumps({"record": {"generation_width": 1}}))
+    (d / "ledger.jsonl").write_text("".join(json.dumps(r) + "\n" for r in
+                                            ({"outcome": "completed"}, {"outcome": "crashed", "campaign_index": 5},
+                                             {"outcome": "completed"})))
+    assert [r["campaign_index"] for r in nq_campaign.campaign_rows(d)] == [0, 5, 2]
+    (d / "campaign.json").write_text(json.dumps({"record": {"generation_width": 2}}))
+    with pytest.raises(SystemExit):
+        nq_campaign.campaign_rows(d)

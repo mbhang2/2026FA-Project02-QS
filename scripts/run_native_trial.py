@@ -417,7 +417,8 @@ def _audit_window(profile, dataset, source, columns, snap, segments, ticket, spl
 # --------------------------------------------------------------------------- #
 def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessions=None, deep=False,
               timeout_s=None, latency_ns: int | None = None, audit_of: str | None = None,
-              validates: str | None = None, train_profile: str | None = None) -> dict:
+              validates: str | None = None, train_profile: str | None = None,
+              campaign_id: str | None = None, campaign_index: int | None = None) -> dict:
     """`latency_ns` overrides the profile for an unsigned check only, like `run.main`'s override.
 
     `deep` is Amendment 24 B3's audit of a trial that passed train. It names that trial in
@@ -473,7 +474,9 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
             record = {"engine": "native", "outcome": "crashed", "split": str(split), "score": None,
                       "trial_id": trial_id, "kernel_sha256": hashlib.sha256(source.encode()).hexdigest(),
                       **({"audit_of": audit_of} if audit_of else {}),
-                      **({"validates": validates} if validates else {})}
+                      **({"validates": validates} if validates else {}),
+                      **({"campaign_id": campaign_id, "campaign_index": campaign_index}
+                         if campaign_id is not None else {})}
             run_log.update(record)
             try:
                 if unknown:
@@ -583,6 +586,8 @@ def main(argv=None) -> int:
     ap.add_argument("--audit-of", dest="audit_of")
     ap.add_argument("--validates")
     ap.add_argument("--train-profile", dest="train_profile")
+    ap.add_argument("--campaign-id", dest="campaign_id")
+    ap.add_argument("--campaign-index", dest="campaign_index", type=int)
     args = ap.parse_args(argv)
     if args.child:
         fd = os.environ.get("NATIVE_TRIAL_SPEC_FD")
@@ -599,7 +604,8 @@ def main(argv=None) -> int:
         ap.error("--profile, --kernel and --ledger are required")
     _stop_on_terminate()
     record = run_trial(args.profile, args.kernel, args.ledger, deep=args.deep, audit_of=args.audit_of,
-                       validates=args.validates, train_profile=args.train_profile)
+                       validates=args.validates, train_profile=args.train_profile,
+                       campaign_id=args.campaign_id, campaign_index=args.campaign_index)
     print(json.dumps({k: record.get(k) for k in ("outcome", "fills", "audit", "native_seconds", "audit_seconds", "error")}))
     return 0 if record["outcome"] == "completed" else 1
 

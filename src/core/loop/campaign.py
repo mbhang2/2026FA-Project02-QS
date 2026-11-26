@@ -332,7 +332,8 @@ def _run_native_trial(source: str, *, profile: str, ledger: Path, campaign_id: s
     path.write_text(source)
     before = _line_count(ledger)
     subprocess.run([NATIVE_PYTHON, "scripts/run_native_trial.py", "--profile", profile,
-                    "--kernel", str(path), "--ledger", str(ledger)],
+                    "--kernel", str(path), "--ledger", str(ledger),
+                    "--campaign-id", campaign_id, "--campaign-index", str(index)],
                    capture_output=True, text=True, cwd=str(root))
     rows = _read_rows(ledger)
     if len(rows) <= before:

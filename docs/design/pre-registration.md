@@ -2954,6 +2954,8 @@ The same control design as Amendment 25 (`scripts/crypto_mm_control.py`): a simu
 
 **1. Calibration, once, with marks.** The impact grid, the selection rules and the minimum strong Sharpe of 0.30 are Amendment 24's second revision, unchanged. They run on new seeds **670001 to 670100**. The chosen settings are committed to `docs/reviews/crypto-a26/edges.json` before any arm is drawn. If the rules cannot pick three settings in the order strong < noise < unprofitable, this amendment is not signed.
 
+*The calibration ran once from commit `2780444` (`~/crypto-controls/a26/calibration.json`, SHA-256 `558cef8a9185034772e1113c5fbe557470920bbbcfba49dcf3acee96b538c792`), 3,200 jobs with every return marked.* It chose **strong 0.40, noise 0.57 and unprofitable 0.58** ticks of impact, in the required order. A25's unmarked calibration had chosen 0.35, 0.57 and 0.575. The settings are committed in `docs/reviews/crypto-a26/edges.json` before any arm is drawn.
+
 **2. The arms, once, from a clean commit, after the settings are committed:**
 
 | arm | impact | seeds | campaigns | pass condition |

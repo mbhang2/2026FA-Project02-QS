@@ -23,7 +23,7 @@ def test_the_holdout_bound_is_taken_at_half_q(monkeypatch):
 
     seen = []
     monkeypatch.setattr(P, "profitability_bound", lambda returns, alpha: seen.append(alpha) or {"passes": True})
-    holdout.judge_spread({"session_returns": [1e-3] * 50})
+    holdout.judge_spread({"session_returns": [1e-3] * 50, "inventory_marked": True})
     assert seen == [pytest.approx(holdout.Q / 2)]
 
 

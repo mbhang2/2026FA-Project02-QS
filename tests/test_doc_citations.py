@@ -57,6 +57,10 @@ TOP_LEVEL = {
 # Cited on purpose, and absent on purpose. Each entry states which, because an
 # allowlist without reasons becomes the place failures go to be forgotten.
 ABSENT_BY_DESIGN: dict[str, str] = {
+    "docs/reviews/crypto-a26/edges.json":
+        "**not written yet.** Amendment 26 step 1 names where its marked calibration commits the "
+        "market settings, before the arms run. `crypto_mm_control.py --stage a26-calibrate` writes "
+        "it; the exemption is removed when that commit lands.",
     "secrets/litellm-local.yaml":
         "**it must never exist here.** `docs/setup/LOCAL_PROXY.md` tells a "
         "reader to write it when running the loop against their own API key, "

@@ -64,7 +64,7 @@ def test_the_holdout_verdict_is_the_bound_alone(returns, confirmed):
 
     if returns and returns[0] > 0:
         returns = list(np.array(returns) + np.random.default_rng(0).normal(0, 1e-4, len(returns)))
-    verdict = holdout.judge_spread({"session_returns": returns})
+    verdict = holdout.judge_spread({"session_returns": returns, "inventory_marked": True})
     assert verdict["confirmed"] is confirmed and verdict["rule_ii_evaluable"] is False
 
 

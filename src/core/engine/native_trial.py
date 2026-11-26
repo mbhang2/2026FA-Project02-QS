@@ -331,3 +331,9 @@ def trades_for_events(trade_ts: np.ndarray, book_ts: np.ndarray, limit: int, aft
     releases = releases[releases > (trade_ts[0] if after is None else after)]
     events = np.arange(1, trade_ts.size + 1) + np.searchsorted(releases, trade_ts, side="right")
     return min(int(np.searchsorted(events, limit, side="left")) + 1, trade_ts.size)
+
+
+def marked_returns(row: dict) -> list | None:
+    """Amendment 26 F4: a spread_capture row's session returns, only if they carry inventory marks."""
+    returns = row.get("session_returns")
+    return returns if returns is not None and row.get("inventory_marked") is True else None

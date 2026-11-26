@@ -1733,7 +1733,11 @@ def stage_nulls(name: str) -> None:
             # Amendment 24 D5: the bound only. A native row carries its session returns, so the
             # bound does not depend on whether its fill log fitted under the storage cap.
             score = row.get("score") or {}
-            returns = row.get("session_returns")
+            from src.core.engine.native_trial import marked_returns
+            returns = marked_returns(row)
+            if row.get("session_returns") is not None and returns is None:
+                raise SystemExit(f"{name} trial {i}: session returns without inventory marks; "
+                                 f"Amendment 26 F4 refuses them for gate spread_capture")
             if returns is not None and score.get("primary") is not None and not score.get("rejected"):
                 if len(returns) != len(calendar):
                     raise SystemExit(f"{name} trial {i}: {len(returns)} session returns for a "

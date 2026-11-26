@@ -2946,7 +2946,7 @@ Amendments 24 Part D and 25 apply as written, with these additions.
 | F3 | **Where it applies.** Every number the `spread_capture` gate reads: the train bound (E1), the validation bound (E2), the holdout bound (E3), the family test (E4), and the session returns recorded on each row. Net P&L on a `spread_capture` row includes the final open position's value. |
 | F4 | **Recorded on the row.** Each `spread_capture` row records `inventory_marked: true`. A row without it is not read by the gate. |
 | F5 | **A position open with no close price is an error,** not a zero mark. The native child returns each scored session's close and the runner checks them against the sessions it asked for. |
-| F6 | **The selection score is unchanged.** Trials are still ranked by the registered score. Only the profitability bound and the recorded returns carry the marks. |
+| F6 | **Trials are ranked on the marked returns.** The registered score is computed as before, from the marked session returns, so the trial a campaign selects is judged on the same returns its bound reads. Otherwise a trial that only collects funding on an open position would still be selected and waste the campaign. On the holdout only the bound is read. |
 
 ### The control, before signing
 
@@ -2981,4 +2981,4 @@ The levels of Amendment 25 (E1 to E4), the selection score, costs, funding, the 
 - The close price, the seeds, the settings or a pass condition changed after a calibration, control or real result is seen, without a new amendment.
 - A further market-making control on this design after a failure.
 
-Code, once implemented: `src/core/engine/column_score.py` (done), `scripts/run_native_trial.py` (done), `run.py` (done), `scripts/crypto_mm_control.py` (marks, the A26 seeds and stages), `scripts/nq_campaign.py` and `src/core/engine/native_trial.py` (the A26 check, done; F4's refusal of unmarked rows in `stage_nulls`, `scripts/l2_gate.py` and `scripts/holdout.py`, not yet).
+Code, once implemented: `src/core/engine/column_score.py` (done), `scripts/run_native_trial.py` (done), `run.py` (done), `scripts/crypto_mm_control.py` (marks, the A26 seeds and the stages `a26-calibrate` and `a26`), `scripts/nq_campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py` and `src/core/engine/native_trial.py` (the A26 check and F4's refusal of unmarked rows).

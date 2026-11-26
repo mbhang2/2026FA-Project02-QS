@@ -418,6 +418,7 @@ What each test file pins.
 | `tests/l1_engine/test_state_resume.py` | Tests for state persistence, atomicity, session continuity and resume. |
 | `tests/l1_engine/test_strategy_protocol.py` | Tests for the experiment contract: ExperimentSpec, Strategy protocol, loader. |
 | `tests/test_a25.py` | Amendment 25: every market-making test at half the error, and its control's definition. |
+| `tests/test_a26.py` | Amendment 26: market-making returns with inventory marked, and its control's definition. |
 | `tests/test_accounting.py` | No engine without a ledger row, and no free evaluation. |
 | `tests/test_agent_docs.py` | The two documents the research agent reads have to agree with each other. |
 | `tests/test_allow_fitted_proposals.py` | Whether the proposing agent may write a strategy that fits. |

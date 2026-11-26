@@ -270,6 +270,14 @@ def validation_profitability(name: str, alpha: float) -> dict | None:
             if x.strip()]
     if rows[-1].get("session_returns") is not None:
         # A native validation row carries its returns, whatever the fill-log cap.
+        if gate_of(name) == "spread_capture":
+            from src.core.engine.native_trial import marked_returns
+            returns = marked_returns(rows[-1])
+            if returns is None:
+                # Amendment 26 F4: an unmarked market-making row is not read.
+                return {"passes": False, "lower_bound": None, "mean": None, "alpha": alpha,
+                        "refused": "session returns without inventory marks (Amendment 26 F4)"}
+            return profitability_bound(returns, alpha)
         return profitability_bound(rows[-1]["session_returns"], alpha)
     fills = load_fill_log(rows[-1])
     if not fills:

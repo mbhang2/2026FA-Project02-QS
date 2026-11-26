@@ -45,6 +45,7 @@ import crypto_reversal_control as reversal  # noqa: E402
 import prereg  # noqa: E402
 from src.core.data.okx_book import SessionBook  # noqa: E402
 from src.core.data.synthetic import SyntheticDataset  # noqa: E402
+from src.core.engine import column_score  # noqa: E402
 from src.core.engine import kernel as K  # noqa: E402
 from src.core.engine import native  # noqa: E402
 from src.core.runlog import RunTicket  # noqa: E402
@@ -201,8 +202,11 @@ def spec_for(seed: int):
     return dataclasses.replace(base, tick_spacing_ns=TRADE_SPACING_NS, ticks_per_session=per_day)
 
 
-def run_variant(dataset, skew: float, cfg: dict, profile: dict):
-    """One market maker through the native engine: its blotter, calendar, terms and fill count."""
+def run_variant(dataset, skew: float, cfg: dict, profile: dict, columns_out: dict | None = None):
+    """One market maker through the native engine: its blotter, calendar, terms and fill count.
+
+    With `columns_out`, the fill columns are copied into it as well.
+    """
     lib = native.load()
     kernel = K.CompiledKernel(kernel_source(skew))
     warmup = int(profile.get("warmup_sessions", 0))
@@ -220,19 +224,42 @@ def run_variant(dataset, skew: float, cfg: dict, profile: dict):
         blotter = fast.reconstructed(commission_per_contract=profile["commission_per_contract"],
                                      commission_bps=profile["commission_bps"],
                                      maker_commission_bps=profile["maker_commission_bps"])
+        if columns_out is not None:
+            columns_out.update(fast.fill_columns())
     calendar = session_calendar(dataset, scored)
     return blotter, calendar, gate.scoring_terms(cfg, profile, dataset, calendar), len(blotter.rows)
 
 
+def closes_for(dataset, calendar) -> dict[int, float]:
+    """Amendment 26 F1: each session's close is its last trade price."""
+    return {s.session: float(dataset.trades(s.session)[1][-1]) for s in calendar}
+
+
+def marked_variant(dataset, skew: float, cfg: dict, profile: dict, floor=None):
+    """Amendment 26: one market maker's score and session returns with inventory marked at each
+    session's close (F1, F2), and its fill count."""
+    columns = {}
+    _, calendar, terms, count = run_variant(dataset, skew, cfg, profile, columns_out=columns)
+    costs = {"commission_per_contract": profile["commission_per_contract"],
+             "commission_bps": profile["commission_bps"], "maker_commission_bps": profile["maker_commission_bps"]}
+    result, returns = column_score.score_columns(columns, costs=costs, period=calendar, min_exposed_fraction=floor,
+                                                 closes=closes_for(dataset, calendar), **terms)
+    return result, returns, count
+
+
 def _calibration_job(args) -> dict:
-    impact, seed = args
+    impact, seed = args[:2]
+    marked = len(args) > 2 and bool(args[2])
     cfg = gate.load_config()
     profile = cfg["profiles"][PROFILE]
     dataset = MarketMakingDataset(spec_for(seed), impact)
     means, sharpes, fills = [], [], []
     for skew in SKEWS:
-        blotter, calendar, terms, count = run_variant(dataset, skew, cfg, profile)
-        returns = gate.session_returns(blotter, calendar, **terms)
+        if marked:
+            _, returns, count = marked_variant(dataset, skew, cfg, profile)
+        else:
+            blotter, calendar, terms, count = run_variant(dataset, skew, cfg, profile)
+            returns = gate.session_returns(blotter, calendar, **terms)
         mean = math.fsum(returns) / len(returns)
         sd = statistics.stdev(returns)
         means.append(mean)
@@ -278,21 +305,26 @@ def select_settings(rows: list[dict]) -> dict:
             "mean_sharpes": {str(k): v for k, v in sharpe.items()}}
 
 
-def run_campaign(impact: float, seed: int, alpha: float = ALPHA) -> dict:
+def run_campaign(impact: float, seed: int, alpha: float = ALPHA, marked: bool = False) -> dict:
     cfg = gate.load_config()
     profile = cfg["profiles"][PROFILE]
     floor = cfg.get("campaign", {}).get("min_exposed_fraction")
     dataset = MarketMakingDataset(spec_for(seed), impact)
     primaries, bounds, fills, chosen_skews = [], [], [], []
     for skew in SKEWS:
-        blotter, calendar, terms, count = run_variant(dataset, skew, cfg, profile)
+        if marked:
+            # Amendment 26 F2 and F6: the variant is ranked and bounded on its marked returns.
+            result, returns, count = marked_variant(dataset, skew, cfg, profile, floor)
+        else:
+            blotter, calendar, terms, count = run_variant(dataset, skew, cfg, profile)
+            result = gate.score(blotter, period=calendar, min_exposed_fraction=floor, **terms)
+            returns = None if result.rejected else gate.session_returns(blotter, calendar, **terms)
         fills.append(count)
-        result = gate.score(blotter, period=calendar, min_exposed_fraction=floor, **terms)
         if result.rejected:
             continue
         primaries.append(result.primary)
         chosen_skews.append(skew)
-        bounds.append(gate.profitability_bound(gate.session_returns(blotter, calendar, **terms), alpha))
+        bounds.append(gate.profitability_bound(returns, alpha))
     if not primaries:
         return {"impact": impact, "seed": seed, "best": None, "passed": False, "fills": fills}
     best = max(primaries)
@@ -304,7 +336,8 @@ def run_campaign(impact: float, seed: int, alpha: float = ALPHA) -> dict:
 def _job(args) -> dict:
     arm, impact, seed = args[:3]
     alpha = args[3] if len(args) > 3 else ALPHA
-    return {**run_campaign(impact, seed, alpha), "arm": arm}
+    marked = len(args) > 4 and bool(args[4])
+    return {**run_campaign(impact, seed, alpha, marked), "arm": arm, "marked": marked}
 
 
 # Amendment 25: the same control at half the error, on new seeds, with 1,000 noise campaigns.
@@ -349,6 +382,83 @@ def stage_a25(out: pathlib.Path, workers: int) -> int:
         print(f"{'PASS' if ok else 'FAIL'}  {name}")
     path.write_text(json.dumps({**source, "settings": settings, "alpha": A25_ALPHA, "passes": passes,
                                 "counts": counts, **result, "rows": rows}, indent=1) + "\n")
+    print(f"wrote {path}")
+    return 0 if result["accepted"] else 1
+
+
+# Amendment 26: A25's control with every return marked, recalibrated and rerun on new seeds.
+A26_ALPHA = A25_ALPHA
+A26_CALIBRATION_SEEDS = tuple(range(670_001, 670_101))
+A26_UNPROFITABLE_SEEDS = tuple(range(671_001, 672_001))
+A26_NOISE_SEEDS = tuple(range(672_001, 673_001))
+A26_STRONG_SEEDS = tuple(range(673_001, 673_101))
+A26_DIR = pathlib.Path.home() / "crypto-controls" / "a26"
+A26_EDGES_PATH = REPO / "docs" / "reviews" / "crypto-a26" / "edges.json"
+SETTING_KEYS = ("unprofitable_impact", "strong_impact", "noise_impact")
+
+
+def a26_verdict(passes: dict[str, int], counts: dict[str, int]) -> dict:
+    expected = {"unprofitable": len(A26_UNPROFITABLE_SEEDS), "noise": len(A26_NOISE_SEEDS),
+                "strong": len(A26_STRONG_SEEDS)}
+    if counts != expected:
+        raise ValueError(f"the arms are defined on {expected}, got {counts}")
+    checks = {
+        "unprofitable_wilson_upper_at_most_0.05": gate.wilson(passes["unprofitable"], counts["unprofitable"])[1] <= 0.05,
+        "noise_wilson_upper_at_most_0.05": gate.wilson(passes["noise"], counts["noise"])[1] <= 0.05,
+        "strong_at_least_80": passes["strong"] >= 80,
+    }
+    return {"checks": checks, "accepted": all(checks.values())}
+
+
+def stage_a26_calibrate(out: pathlib.Path, workers: int) -> int:
+    """Amendment 26 step 1: the calibration once, with marks. Writes the settings to the repo,
+    to be committed before the arms run."""
+    source = c3b.provenance()
+    path = A26_DIR / "calibration.json"
+    c3b.claim(path)
+    jobs = [(impact, seed, True) for impact in IMPACT_GRID for seed in A26_CALIBRATION_SEEDS]
+    rows = c3b._map(_calibration_job, jobs, workers)
+    chosen = select_settings(rows)
+    path.write_text(json.dumps({**source, "marked": True, **chosen, "rows": rows}) + "\n")
+    A26_EDGES_PATH.parent.mkdir(parents=True, exist_ok=True)
+    A26_EDGES_PATH.write_text(json.dumps({**{k: chosen[k] for k in SETTING_KEYS}, "marked": True,
+                                          "calibration_git_sha": source["git_sha"],
+                                          "calibration_seeds": [A26_CALIBRATION_SEEDS[0], A26_CALIBRATION_SEEDS[-1]],
+                                          "mean_returns": chosen["mean_returns"],
+                                          "variant_means": chosen["variant_means"],
+                                          "mean_sharpes": chosen["mean_sharpes"]}, indent=1) + "\n")
+    print(f"unprofitable impact {chosen['unprofitable_impact']}, noise impact {chosen['noise_impact']}, "
+          f"strong impact {chosen['strong_impact']}")
+    print(f"wrote {path} and {A26_EDGES_PATH}")
+    return 0 if None not in (chosen[k] for k in SETTING_KEYS) else 1
+
+
+def stage_a26(out: pathlib.Path, workers: int) -> int:
+    """Amendment 26 step 2: the three arms once, marked, from the committed settings."""
+    source = c3b.provenance()
+    source["amendment_26_in_force"] = prereg.in_force(26)
+    settings = json.loads(A26_EDGES_PATH.read_text())
+    calibration = json.loads((A26_DIR / "calibration.json").read_text())
+    if (not settings.get("marked") or None in (settings[k] for k in SETTING_KEYS)
+            or any(settings[k] != calibration[k] for k in SETTING_KEYS)):
+        raise SystemExit("the committed A26 settings are not the marked calibration's")
+    path = A26_DIR / "control.json"
+    c3b.claim(path)
+    arms = {"unprofitable": (settings["unprofitable_impact"], A26_UNPROFITABLE_SEEDS),
+            "noise": (settings["noise_impact"], A26_NOISE_SEEDS),
+            "strong": (settings["strong_impact"], A26_STRONG_SEEDS)}
+    jobs = [(arm, impact, seed, A26_ALPHA, True) for arm, (impact, seeds) in arms.items() for seed in seeds]
+    rows = c3b._map(_job, jobs, workers)
+    counts = {arm: sum(r["arm"] == arm for r in rows) for arm in arms}
+    passes = {arm: sum(r["arm"] == arm and r["passed"] for r in rows) for arm in arms}
+    result = a26_verdict(passes, counts)
+    for arm in arms:
+        low, high = gate.wilson(passes[arm], counts[arm])
+        print(f"{arm:13} {passes[arm]:4d} of {counts[arm]:4d}  Wilson 95% [{low:.4f}, {high:.4f}]")
+    for name, ok in result["checks"].items():
+        print(f"{'PASS' if ok else 'FAIL'}  {name}")
+    path.write_text(json.dumps({**source, "settings": settings, "alpha": A26_ALPHA, "marked": True,
+                                "passes": passes, "counts": counts, **result, "rows": rows}, indent=1) + "\n")
     print(f"wrote {path}")
     return 0 if result["accepted"] else 1
 
@@ -447,7 +557,7 @@ def stage_run(out: pathlib.Path, workers: int) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--stage", choices=("calibrate", "run", "noise-rerun", "a25"))
+    ap.add_argument("--stage", choices=("calibrate", "run", "noise-rerun", "a25", "a26-calibrate", "a26"))
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--pilot", type=int, default=0, help="seeds per impact from 9301; no verdict")
     ap.add_argument("--out-dir", type=pathlib.Path, default=DEFAULT_DIR)
@@ -461,7 +571,7 @@ def main() -> int:
     if not a.stage:
         ap.error("--stage or --pilot is required")
     stage = {"calibrate": stage_calibrate, "run": stage_run, "noise-rerun": stage_noise_rerun,
-             "a25": stage_a25}[a.stage]
+             "a25": stage_a25, "a26-calibrate": stage_a26_calibrate, "a26": stage_a26}[a.stage]
     return stage(a.out_dir, a.workers)
 
 

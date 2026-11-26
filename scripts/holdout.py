@@ -253,8 +253,10 @@ def judge_spread(row: dict) -> dict:
     returns is above zero at q/2. No sign-flip null. Missing or empty returns are not confirmed."""
     from src.core.scoring.profitability import profitability_bound
 
-    returns = row.get("session_returns")
-    from src.core.engine.native_trial import SPREAD_CAPTURE_ALPHA_FACTOR
+    from src.core.engine.native_trial import SPREAD_CAPTURE_ALPHA_FACTOR, marked_returns
+
+    # Amendment 26 F4: only returns with inventory marks are read.
+    returns = marked_returns(row)
 
     # Amendment 25 E3: half the holdout error, q/2.
     bound = profitability_bound(returns, Q * SPREAD_CAPTURE_ALPHA_FACTOR) if returns else None

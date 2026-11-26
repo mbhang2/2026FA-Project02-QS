@@ -213,6 +213,7 @@ def _child_run(spec: dict) -> dict:
     with native.NativeEngine(lib, ticket=ticket, latency_ns=terms["latency_ns"],
                              require_two_sided=run._two_sided_book(profile), book_features=True,
                              book_events=True, inventory_cap=int(profile.get("inventory_cap_lots") or 0)) as fast:
+        closes = {}
         for columns in dataset.session_columns(split, warmup=warmup):
             is_warm = columns.session in warm
             if not is_warm and columns.session not in keep:
@@ -228,11 +229,15 @@ def _child_run(spec: dict) -> dict:
                 raise T.NativeTrialFailed(
                     f"the kernel stopped the run in session {columns.session}: "
                     f"{T.KERNEL_STOP_REASONS.get(kernel.error, f'error code {kernel.error}')}") from None
+            if not is_warm:
+                closes[columns.session] = float(columns.price[-1])     # A24 D4's mark
             if columns.session in points:
                 saved[columns.session] = fast.snapshot()
             if lib.fc_engine_fill_count(fast.handle) > NATIVE_MAX_FILLS:
                 raise T.NativeTrialFailed(f"the kernel exceeded {NATIVE_MAX_FILLS:,} fills")
         out = fast.fill_columns()
+    out["_close_sessions"] = np.array(sorted(closes), np.int64)
+    out["_close_prices"] = np.array([closes[s] for s in sorted(closes)], np.float64)
     for i, session in enumerate(sorted(points)):
         snap = saved.get(session)
         if snap is None:
@@ -245,7 +250,7 @@ def _child_run(spec: dict) -> dict:
     return out
 
 
-def _spawn_native(spec: dict, folder: str, timeout_s) -> tuple[dict, dict]:
+def _spawn_native(spec: dict, folder: str, timeout_s) -> tuple[dict, dict, dict]:
     out = Path(folder) / "native.npz"
     # The spec goes over an inherited pipe, never a path on the command line.
     read_fd, write_fd = os.pipe()
@@ -276,9 +281,14 @@ def _spawn_native(spec: dict, folder: str, timeout_s) -> tuple[dict, dict]:
         snapshots[session] = {"seq": int(ints[1]), "position": int(ints[2]), "next_id": int(ints[3]),
                               "trade": trade, "last_price": float(price[0]), "order_ints": orders_i,
                               "order_doubles": orders_d, "state": state}
+    sessions, prices = loaded.pop("_close_sessions"), loaded.pop("_close_prices")
+    if (sessions.dtype != np.int64 or prices.dtype != np.float64 or sessions.shape != prices.shape
+            or set(sessions.tolist()) != set(spec["sessions"]) or not np.isfinite(prices).all()
+            or (prices <= 0).any()):
+        raise T.NativeTrialFailed("the child returned invalid session close prices")
     if any(name.startswith("_") for name in loaded):
         raise T.NativeTrialFailed("the child returned unexpected arrays")
-    return loaded, snapshots
+    return loaded, snapshots, dict(zip(sessions.tolist(), prices.tolist()))
 
 
 # --------------------------------------------------------------------------- #
@@ -482,7 +492,7 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                 if unknown:
                     raise T.NativeTrialRefused(f"unknown profile {profile_name!r}")
                 K.check(source)
-                problem = T.refusal(profile, market_making=prereg.in_force(25))
+                problem = T.refusal(profile, market_making=prereg.in_force(25) and prereg.in_force(26))
                 if problem:
                     raise T.NativeTrialRefused(problem)
                 if not prereg.in_force(22):
@@ -500,7 +510,7 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                         "ledger": str(Path(ledger_path).resolve()),
                         "snapshots": {str(w[0][0]): w[0][1] for w in windows}}
                 with tempfile.TemporaryDirectory(prefix="native-trial-") as folder:
-                    columns, snapshots = _spawn_native(
+                    columns, snapshots, closes = _spawn_native(
                         spec, folder, timeout_s if timeout_s is not None else profile.get("wall_clock_budget_s"))
                 native_s = time.perf_counter() - started
                 T.validate_columns(columns, set(chosen), dataset.session_bounds)
@@ -524,15 +534,15 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                 kw = dict(notional_base=terms["notional_base"], idle_charge=terms["idle_charge"], funding=terms["funding"])
                 floor = cfg.get("campaign", {}).get("min_exposed_fraction")
                 n_fills = int(columns["seq"].size)
+                # A24 D4: a market-making campaign's returns carry its inventory marks.
+                marked = profile.get("gate") == "spread_capture"
                 if n_fills > COLUMN_SCORING_FILLS:
-                    result, returns = column_score.score_columns(columns, costs=costs, period=period,
-                                                                 min_exposed_fraction=floor, **kw)
                     digest = column_score.columns_digest(columns)
                     stored = Path(ledger_path).resolve().parent / "fills" / f"{digest}.npz"
                     stored.parent.mkdir(parents=True, exist_ok=True)
                     if not stored.exists():
                         np.savez_compressed(stored, **columns)
-                    facts = dict(scoring_path="columns", fill_log_digest=None, fill_columns_sha256=digest,
+                    facts = dict(fill_log_digest=None, fill_columns_sha256=digest,
                                  fill_columns_source=str(stored),
                                  diagnostics={"skipped": f"more than {COLUMN_SCORING_FILLS:,} fills",
                                               "fills": n_fills,
@@ -540,12 +550,19 @@ def run_trial(profile_name: str, kernel_path: Path, ledger_path: Path, *, sessio
                 else:
                     fills = T.records_from_columns(columns)
                     blotter = reconstruct(fills, **costs)
-                    result = score(blotter, period=period, min_exposed_fraction=floor, **kw)
-                    returns = session_returns(blotter, period, **kw)
-                    facts = dict(scoring_path="blotter", fill_log_digest=log_digest(fills),
+                    facts = dict(fill_log_digest=log_digest(fills),
                                  fill_log_source=store_fill_log(Path(ledger_path), log_digest(fills), fills,
                                                                 limit=MAX_FILL_LOG),
                                  diagnostics=score_diagnostics(blotter, period, **kw).as_dict())
+                if marked or n_fills > COLUMN_SCORING_FILLS:
+                    result, returns = column_score.score_columns(columns, costs=costs, period=period,
+                                                                 min_exposed_fraction=floor,
+                                                                 closes=closes if marked else None, **kw)
+                    facts.update(scoring_path="columns-marked" if marked else "columns", inventory_marked=marked)
+                else:
+                    result = score(blotter, period=period, min_exposed_fraction=floor, **kw)
+                    returns = session_returns(blotter, period, **kw)
+                    facts.update(scoring_path="blotter", inventory_marked=False)
                 record["audit"].update(windows=audited, matched=True)
                 record.update(outcome="completed", dataset=dataset.name, dataset_digest=dataset.digest(),
                               fill_model=profile["fill_model"], seed=profile["seed"], fills=n_fills,

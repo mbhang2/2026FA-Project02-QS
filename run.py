@@ -900,11 +900,23 @@ def _run_and_score(cfg, profile, engine, strategy, split, seed,
     ).as_dict()
     record = engine.record.as_dict()
     if profile.get("gate") == "spread_capture":
-        # Amendment 24 D6 needs the session returns, whether or not the fill log fits its cap.
-        from src.core.scoring.metrics import session_returns
-        record["session_returns"] = [float(x) for x in session_returns(
-            scored_blotter, period,
-            **{k: terms[k] for k in ("notional_base", "idle_charge", "funding")})]
+        # Amendment 24 D4 and D6: the session returns with inventory marked at each session's close,
+        # whether or not the fill log fits its cap.
+        from src.core.engine import column_score
+        closes = {}
+        wanted = {s.session for s in period}
+        for columns in engine.dataset.session_columns(split, warmup=profile.get("warmup_sessions", 0)):
+            if columns.session in wanted:
+                closes[columns.session] = float(columns.price[-1])
+        costs = {"commission_per_contract": engine.commission, "commission_bps": engine.commission_bps,
+                 "slippage_per_contract": engine.slippage_per_contract, "slippage_bps": engine.slippage_bps,
+                 "maker_commission_per_contract": engine.maker_commission_per_contract,
+                 "maker_commission_bps": engine.maker_commission_bps}
+        _, marked_returns = column_score.score_columns(
+            column_score.columns_from_records(engine.fill_log), costs=costs, period=period, closes=closes,
+            **{k: terms[k] for k in ("notional_base", "idle_charge", "funding")})
+        record["session_returns"] = [float(x) for x in marked_returns]
+        record["inventory_marked"] = True
     attach_fill_log(record, engine, ledger_path)
     attach_weights(record, engine, ledger_path)
     return record

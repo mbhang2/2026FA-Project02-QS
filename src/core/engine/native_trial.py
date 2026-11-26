@@ -74,7 +74,8 @@ def refusal(profile: dict, *, market_making: bool = False) -> str | None:
     if not profile.get("book_features"):
         return "the native check needs book_features: true"
     if profile.get("gate") == "spread_capture" and not market_making:
-        return "the market-making gate needs Amendment 25 in force (A24 Part D was not accepted)"
+        return ("the market-making gate needs Amendments 25 and 26 in force: A25's control was scored "
+                "without inventory marks")
     if profile.get("fit_sessions", 0) or profile.get("weights_path"):
         return "fitted strategies are not ported"
     if profile.get("action_cap", 64) != 64:

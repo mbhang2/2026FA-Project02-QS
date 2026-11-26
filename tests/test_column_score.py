@@ -101,3 +101,62 @@ def test_sorted_and_unsorted_columns_give_the_same_score():
     assert a[1] == b[1] and a[0].as_dict() == b[0].as_dict()
     assert C._sequence_order(ordered) is None and C._sequence_order(cols) is not None
     assert C.columns_digest(cols) == C.columns_digest(ordered)
+
+
+def _closes(cal, rng):
+    return {s.session: float(30000 + rng.normal(0, 50)) for s in cal}
+
+
+def test_inventory_marks_add_up_to_the_final_open_value():
+    rng = np.random.default_rng(21)
+    cal = _calendar(30)
+    cols = _fills(rng, 30, 1500)
+    closes = _closes(cal, rng)
+    b = C.blotter_columns(cols, **COSTS[0])
+    marks = C.inventory_marks(b, cal, closes)
+    last = int(np.lexsort((b["seq"], b["ts"]))[-1])
+    final = int(b["position_after"][last]) * (closes[cal[-1].session] - float(b["avg_after"][last]))
+    assert abs(sum(marks) - final) < 1e-6 * max(1.0, abs(final))
+
+
+def test_a_position_flat_at_every_close_is_not_moved_by_marks():
+    rng = np.random.default_rng(5)
+    cal = _calendar(10)
+    rows = []
+    for i, s in enumerate(cal):
+        for k, (side, ts) in enumerate(((1, s.start_ts + 10), (-1, s.start_ts + 20))):
+            rows.append((2 * i + k, ts, s.session, 2 * i + k + 1, side, 3, 100.0 + i + k, 1, 100.0))
+    cols = {name: np.array([r[j] for r in rows], dtype)
+            for j, (name, dtype) in enumerate((("seq", np.int64), ("ts", np.int64), ("session", np.int64),
+                                               ("order_id", np.int64), ("side", np.int8), ("size", np.int64),
+                                               ("price", np.float64), ("maker", np.int8), ("mid", np.float64)))}
+    kw = dict(notional_base=100.0, idle_charge=0.18, funding=None)
+    plain = C.score_columns(cols, costs=COSTS[0], period=cal, **kw)
+    marked = C.score_columns(cols, costs=COSTS[0], period=cal, closes=_closes(cal, rng), **kw)
+    assert plain[1] == marked[1]
+
+
+def test_holding_a_short_for_funding_through_a_rally_now_loses():
+    """btc-mm-wide-01 trial 4: short 600 lots at 17,270, never closed, while funding is collected."""
+    cal = _calendar(60)
+    cols = {"seq": np.array([0], np.int64), "ts": np.array([cal[0].start_ts + 5], np.int64),
+            "session": np.array([cal[0].session], np.int64), "order_id": np.array([1], np.int64),
+            "side": np.array([-1], np.int8), "size": np.array([600], np.int64), "price": np.array([17270.0]),
+            "maker": np.array([1], np.int8), "mid": np.array([17270.0])}
+    closes = {s.session: 17270.0 + 1500.0 * (i + 1) for i, s in enumerate(cal)}
+    funding = [metrics.FundingEvent(ts=int(s.start_ts + h * 3_600_000_000_000), rate=1e-4, mark=closes[s.session])
+               for s in cal for h in (0, 8, 16)]
+    kw = dict(notional_base=17270.0 * 600, idle_charge=0.0, funding=funding)
+    unmarked = C.score_columns(cols, costs=COSTS[0], period=cal, **kw)[1]
+    marked = C.score_columns(cols, costs=COSTS[0], period=cal, closes=closes, **kw)[1]
+    assert sum(unmarked) > 0 > sum(marked)
+
+
+def test_an_open_position_without_a_close_price_is_refused():
+    cal = _calendar(3)
+    cols = {"seq": np.array([0], np.int64), "ts": np.array([cal[0].start_ts + 5], np.int64),
+            "session": np.array([cal[0].session], np.int64), "order_id": np.array([1], np.int64),
+            "side": np.array([1], np.int8), "size": np.array([2], np.int64), "price": np.array([100.0]),
+            "maker": np.array([1], np.int8), "mid": np.array([100.0])}
+    with pytest.raises(ValueError, match="no close price"):
+        C.score_columns(cols, costs=COSTS[0], period=cal, closes={}, notional_base=100.0, idle_charge=0.0)

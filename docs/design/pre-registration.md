@@ -2899,6 +2899,12 @@ Each arm runs once, from a clean commit, after this amendment is committed and b
 | noise | 14 of 1,000 | [0.0084, 0.0234] | upper <= 0.05 | pass |
 | strong | 100 of 100 | [0.9630, 1.0000] | at least 80 | pass |
 
+### The gate is off: the scoring did not mark inventory — recorded 2026-11-26
+
+A24 D4, which this amendment keeps, measures net session return "after all fees, funding and inventory marks". **The code did not mark inventory.** It booked a position's profit or loss only when the position closed, as the scorer does for every other campaign. In `btc-mm-wide-01`, trial 4 went short 600 lots at about 17,270 on 2023-01-10 and held it to the end of the train split, when BTC was about 108,200. Funding paid to the short was counted every day and the open loss, about 5,460 USDT, never was, so the trial scored +1.07. The campaign was stopped and superseded.
+
+Market-making returns now carry each session's change in the open position's value at that session's last trade price, in the native runner and in the Python holdout run. **This amendment's control was scored without those marks**, so it does not show the false-pass rate of the gate as written. The code keeps `gate: spread_capture` refused until Amendment 26 is in force, and a later amendment must rerun the control with the marks, on new seeds, before the gate can open.
+
 ### Acceptance, before signing
 
 1. Tests pin E1 to E4 in the campaign gate, the family test and the holdout.

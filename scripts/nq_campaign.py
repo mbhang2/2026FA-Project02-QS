@@ -1555,10 +1555,11 @@ def gate_for(profile: dict, in_force=None) -> str | None:
         return None
     if in_force is None:
         import prereg as _prereg
-        in_force = _prereg.in_force(25)
+        in_force = _prereg.in_force(25) and _prereg.in_force(26)
     if not in_force:
-        sys.exit("the profile declares gate: spread_capture, which needs Amendment 25 in force. "
-                 "Amendment 24 Part D was not accepted.")
+        sys.exit("the profile declares gate: spread_capture, which needs Amendments 25 and 26 in force. "
+                 "A25's control was scored without A24 D4's inventory marks, so the gate stays off until "
+                 "an amendment reruns it with them.")
     return "spread_capture"
 
 

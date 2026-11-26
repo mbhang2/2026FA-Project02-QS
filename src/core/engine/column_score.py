@@ -35,6 +35,7 @@ def _replay(side, size, price):
     n = side.size
     position_after = np.zeros(n, np.int64)
     realized = np.zeros(n, np.float64)
+    avg_after = np.zeros(n, np.float64)
     position = 0
     avg_price = 0.0
     for i in range(n):
@@ -52,7 +53,8 @@ def _replay(side, size, price):
             avg_price = (avg_price * abs(position) + p * size[i]) / total if total else p
             position += signed
         position_after[i] = position
-    return position_after, realized
+        avg_after[i] = avg_price
+    return position_after, realized, avg_after
 
 
 @njit(cache=False)
@@ -132,7 +134,7 @@ def blotter_columns(columns: dict, *, commission_per_contract: float, commission
     size = pick(columns["size"]).astype(np.int64, copy=False)
     price = pick(columns["price"]).astype(np.float64, copy=False)
     maker = pick(columns["maker"]).astype(bool)
-    position_after, realized = _replay(side, size, price)
+    position_after, realized, avg_after = _replay(side, size, price)
     # `fill_commission`, elementwise and in its order of operations.
     per = np.where(maker, commission_per_contract if maker_commission_per_contract is None
                    else maker_commission_per_contract, commission_per_contract)
@@ -144,7 +146,50 @@ def blotter_columns(columns: dict, *, commission_per_contract: float, commission
         commission = np.where(taker, commission + (slippage_per_contract * size
                                                    + slippage_bps * 1e-4 * price * size), commission)
     return {"seq": pick(columns["seq"]), "ts": pick(columns["ts"]), "position_after": position_after,
-            "realized": realized, "commission": commission}
+            "realized": realized, "commission": commission, "avg_after": avg_after}
+
+
+def inventory_marks(b: dict, calendar: Sequence[metrics.SessionSpan], closes: Mapping[int, float]) -> list[float]:
+    """Amendment 24 D4's inventory marks: per session, the change in the open position's value at
+    that session's close, in price points.
+
+    The value at a close is `position * (close - average entry)` after the last fill at or before the
+    session's end, and zero when flat. Summed over the period, the marks plus realized P&L equal the
+    realized P&L plus the final open position's value, so a position held to the end is charged its
+    loss or credited its gain instead of being ignored.
+    """
+    by_time = np.lexsort((b["seq"], b["ts"]))
+    ts = b["ts"][by_time]
+    positions = b["position_after"][by_time]
+    averages = b["avg_after"][by_time]
+    out, previous = [], 0.0
+    for span in calendar:
+        k = int(np.searchsorted(ts, span.end_ts, side="right")) - 1
+        q = int(positions[k]) if k >= 0 else 0
+        if q == 0:
+            value = 0.0
+        else:
+            close = closes.get(span.session)
+            if close is None or not math.isfinite(close) or close <= 0:
+                raise ValueError(f"no close price to mark session {span.session}, where {q} lots are open")
+            value = q * (close - float(averages[k]))
+        out.append(value - previous)
+        previous = value
+    return out
+
+
+def columns_from_records(fills) -> dict:
+    """Fill records as the columns this module reads, for the Python engine's own runs."""
+    from ..types import Side
+
+    return {"seq": np.array([f.seq for f in fills], np.int64), "ts": np.array([f.ts for f in fills], np.int64),
+            "session": np.array([f.session for f in fills], np.int64),
+            "order_id": np.array([f.order_id for f in fills], np.int64),
+            "side": np.array([1 if f.side is Side.BUY else -1 for f in fills], np.int8),
+            "size": np.array([f.size for f in fills], np.int64),
+            "price": np.array([f.price for f in fills], np.float64),
+            "maker": np.array([1 if f.liquidity == "maker" else 0 for f in fills], np.int8),
+            "mid": np.array([f.mid if f.mid is not None else np.nan for f in fills], np.float64)}
 
 
 def _sequence_order(columns: dict):
@@ -246,8 +291,14 @@ def session_returns_columns(b: dict, calendar: Sequence[metrics.SessionSpan], *,
 def score_columns(columns: dict, *, costs: dict, period: Sequence[metrics.SessionSpan],
                   notional_base: metrics.PerSession = 1.0, idle_charge: metrics.PerSession = metrics.IDLE_CHARGE,
                   funding: Sequence[metrics.FundingEvent] | None = None,
-                  min_exposed_fraction: float | None = None) -> tuple[ScoreTuple, list[float]]:
-    """`score(reconstruct(...), ...)` and its session returns, from fill columns."""
+                  min_exposed_fraction: float | None = None,
+                  closes: Mapping[int, float] | None = None) -> tuple[ScoreTuple, list[float]]:
+    """`score(reconstruct(...), ...)` and its session returns, from fill columns.
+
+    With `closes` (session -> close price), each session's return also carries its inventory mark
+    (A24 D4), and net P&L includes the final open position's value. Without them it is exactly
+    `score(reconstruct(...))`.
+    """
     from dataclasses import replace
 
     from ..scoring.scorer import MIN_DOWNSIDE_SESSIONS, MIN_SESSIONS, REJECT
@@ -256,6 +307,11 @@ def score_columns(columns: dict, *, costs: dict, period: Sequence[metrics.Sessio
     returns, exposure = session_returns_columns(b, period, notional_base=notional_base,
                                                 idle_charge=idle_charge, funding=funding)
     net = _fsum(b["realized"]) - _fsum(b["commission"])
+    if closes is not None:
+        marks = inventory_marks(b, period, closes)
+        returns = [r + m / metrics.per_session(notional_base, s.session)
+                   for r, m, s in zip(returns, marks, period)]
+        net = net + math.fsum(marks)
     trades = int(np.count_nonzero(b["realized"] != 0.0))
     exposed = -1
     if min_exposed_fraction is not None:

@@ -61,13 +61,18 @@ def test_excluding_the_best_selects_the_next():
     assert summary["gate"]["selected_index"] == 2 and summary["gate"]["accept"] is False
 
 
-def test_the_market_making_gate_opens_only_under_amendment_25():
+def test_the_market_making_gate_opens_only_under_amendments_25_and_26():
     import nq_campaign
+    import prereg
 
     assert nq_campaign.gate_for({}, in_force=True) is None
     assert nq_campaign.gate_for({"gate": "spread_capture"}, in_force=True) == "spread_capture"
-    with pytest.raises(SystemExit, match="Amendment 25"):
+    with pytest.raises(SystemExit, match="Amendments 25 and 26"):
         nq_campaign.gate_for({"gate": "spread_capture"}, in_force=False)
+    # A25's control was scored without inventory marks, so the gate is off until A26 is in force.
+    assert not prereg.in_force(26)
+    with pytest.raises(SystemExit, match="inventory marks"):
+        nq_campaign.gate_for({"gate": "spread_capture"})
 
 
 def test_a_native_trial_goes_through_the_native_runner(tmp_path, monkeypatch):

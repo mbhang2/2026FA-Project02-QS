@@ -1531,17 +1531,14 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
           f"(generations of {width})")
 
 
-def gate_for(profile: dict, in_force=None) -> str | None:
-    """Amendment 24 D1: a profile declaring `gate: spread_capture` registers that gate, frozen in
-    the record. Refused while Amendment 24 is not in force, so it cannot be switched later."""
+def gate_for(profile: dict) -> str | None:
+    """Amendment 24 D1 would register `gate: spread_capture`. Its control failed (37 of 1,000 noise
+    passes against 36), so Part D was not accepted and signing Amendment 24 does not enable it.
+    Registration refuses it until an amendment accepts a market-making gate."""
     if profile.get("gate") != "spread_capture":
         return None
-    if in_force is None:
-        import prereg as _prereg
-        in_force = _prereg.in_force(24)
-    if not in_force:
-        sys.exit("the profile declares gate: spread_capture, and Amendment 24 is not in force.")
-    return "spread_capture"
+    sys.exit("the profile declares gate: spread_capture. Amendment 24 Part D was not accepted, so no "
+             "campaign may register that gate until a later amendment accepts one.")
 
 
 def stage_nulls(name: str) -> None:

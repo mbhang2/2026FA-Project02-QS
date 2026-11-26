@@ -303,8 +303,13 @@ def attach_fill_log(record: dict, engine, ledger_path: Path) -> dict:
     at, and the digest without the file only tells you that two runs differed.
     """
     if record.get("fill_log_digest"):
+        # A kernel holdout's null is rebuilt from this file, so it keeps the engine's whole log.
+        from src.core.engine.engine import MAX_FILL_LOG
+
+        limit = MAX_FILL_LOG if getattr(engine, "book_events", False) else None
         record["fill_log_source"] = store_fill_log(
-            ledger_path, record["fill_log_digest"], engine.fill_log
+            ledger_path, record["fill_log_digest"], engine.fill_log,
+            **({"limit": limit} if limit else {})
         )
     return record
 

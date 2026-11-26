@@ -92,3 +92,38 @@ backtests:
     inventory_cap_lots: 1000
     gate: spread_capture
     wall_clock_budget_s: 259200
+
+  # Amendment 24 Parts A to C: high-frequency strategies as native kernels with book-update
+  # events, judged by the usual gate. No inventory cap and no market-making gate (Part D was not
+  # accepted). Only scripts/run_native_trial.py runs the first two, after Amendment 24 is signed;
+  # only scripts/holdout.py runs the third, once.
+  btc-okx-hft-native-train:
+    dataset: crypto-btc-okx-book
+    split: train
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: native
+    book_events: true
+
+  btc-okx-hft-native-validation:
+    dataset: crypto-btc-okx-book
+    split: validation
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: native
+    book_events: true
+
+  btc-okx-hft-native-holdout:
+    dataset: crypto-btc-okx-book
+    split: holdout
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: reference
+    book_events: true
+    wall_clock_budget_s: 259200

@@ -551,7 +551,7 @@ def main() -> int:
     record_path = CAMPAIGNS / campaign / "campaign.json"
     registered = (json.loads(record_path.read_text()).get("record") or {}
                   if record_path.exists() else {})
-    if kernel:
+    if kernel and (registered.get("agent_config") or {}).get("gate") == "spread_capture":
         null, facts = [], {}
         verdict = judge_spread(row)
     else:
@@ -563,7 +563,7 @@ def main() -> int:
     print(f"  round turns      {verdict['round_turns']} "
           f"(rule (ii) needs {verdict['min_round_turns']})")
     print(f"  null draws       {len(null)}")
-    rule_i_name = "profit bound" if (facts.get("profitability") or kernel) else "Sortino > 0"
+    rule_i_name = "profit bound" if (facts.get("profitability") or verdict.get("gate")) else "Sortino > 0"
     print(f"  rule (i)  {rule_i_name:13} {verdict['rule_i_sortino_positive']}")
     if verdict["rule_ii_evaluable"]:
         print(f"  rule (ii) p <= {Q}        {verdict['rule_ii_reject']}  "

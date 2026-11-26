@@ -2747,7 +2747,9 @@ The native engine reproduces the Python engine's fills about 100 to 200 times fa
 | C7 | Registered terms stay those of Amendment 22: 0 bp maker, 2 bp taker, 1 ms latency, `book-queue-pessimistic`. |
 | C8 | **No session is removed for a poor book.** During a gap the strategy sees no book and the existing fill rules apply. Sessions where more than 5% of trades had no usable book are listed in the record as a diagnostic. |
 
-### Part D: market-making campaigns
+### Part D: market-making campaigns — NOT ACCEPTED
+
+**Part D's control failed (see below), so Part D is not accepted.** Signing this amendment puts Parts A to C in force and not Part D: the code refuses `gate: spread_capture` at registration and in the native runner whatever this status line says, and D8 cannot arise because no campaign can register that gate. The rules below are the record of what was proposed. A market-making gate needs its own amendment, seeds and control.
 
 | | rule |
 |---|---|
@@ -2775,7 +2777,7 @@ Recorded campaigns, the score, costs of existing profiles, funding, fill rules o
 3. **A lookahead test:** replacing every trade and book row after an event's visible data with random values leaves that event's actions unchanged.
 4. Existing real NQ, Binance and OKX runs reproduce their digests and scores.
 5. Native and Python fills, scores and diagnostics are identical on real train sessions, with warmup, at 1 ms and 100 ms.
-6. **A control on a simulated book** (`scripts/crypto_mm_control.py`), with best-of-5 market-making campaigns over 150 sessions with a trade every 10 seconds, `alpha = 0.01`, 1 ms latency, 0 bp maker, 2 bp taker and rule D5. The book shows one tick either side of the mid with 1 to 10 lots at the touch. After each trade the mid moves toward the aggressor by a Poisson number of ticks whose mean is the impact, plus one tick of noise either way. Five native kernels quote one lot at the best bid and ask under a 10-lot cap. A skew setting s of 0, 0.25, 0.5, 0.75 or 1 stops quoting a side at max(1, round(10(1 - s))) lots that way.
+6. **For Part D only.** A control on a simulated book (`scripts/crypto_mm_control.py`), with best-of-5 market-making campaigns over 150 sessions with a trade every 10 seconds, `alpha = 0.01`, 1 ms latency, 0 bp maker, 2 bp taker and rule D5. The book shows one tick either side of the mid with 1 to 10 lots at the touch. After each trade the mid moves toward the aggressor by a Poisson number of ticks whose mean is the impact, plus one tick of noise either way. Five native kernels quote one lot at the best bid and ask under a 10-lot cap. A skew setting s of 0, 0.25, 0.5, 0.75 or 1 stops quoting a side at max(1, round(10(1 - s))) lots that way.
 
    **Settings are fixed first, on calibration seeds 630001 to 630100**, over impacts 0, 0.1, 0.2 and 0.3, then 0.40 to 0.80 in steps of 0.02, then 1.0, 1.5 and 2.0 ticks. The unprofitable setting is the smallest impact whose five variants all have a 99% upper bound on mean net return below zero. The strong setting is the largest impact at which all five average a per-session Sharpe of at least 0.30. The noise setting is, among impacts below the unprofitable one, the one whose mean net return over the five variants and the calibration seeds is closest to zero. They must be ordered strong < noise < unprofitable. If any does not exist, the control fails. The chosen settings are committed before any arm runs. An unregistered pilot on seeds 9301 to 9304 found net returns crossing zero near 0.6 ticks.
 

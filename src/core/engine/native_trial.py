@@ -62,6 +62,8 @@ def refusal(profile: dict) -> str | None:
         return f"the native engine implements only {BOOK_MODEL}"
     if not profile.get("book_features"):
         return "the native check needs book_features: true"
+    if profile.get("gate") == "spread_capture":
+        return "Amendment 24 Part D (the market-making gate) was not accepted"
     if profile.get("fit_sessions", 0) or profile.get("weights_path"):
         return "fitted strategies are not ported"
     if profile.get("action_cap", 64) != 64:

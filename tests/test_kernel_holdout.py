@@ -66,3 +66,11 @@ def test_the_holdout_verdict_is_the_bound_alone(returns, confirmed):
         returns = list(np.array(returns) + np.random.default_rng(0).normal(0, 1e-4, len(returns)))
     verdict = holdout.judge_spread({"session_returns": returns})
     assert verdict["confirmed"] is confirmed and verdict["rule_ii_evaluable"] is False
+
+
+def test_the_hft_kernel_holdout_profile_matches_its_train_profile():
+    profiles = run.load_config()["profiles"]
+    h, t = profiles["btc-okx-hft-native-holdout"], profiles["btc-okx-hft-native-train"]
+    for key in ("dataset", "book_events", "commission_bps", "maker_commission_bps", "latency_ns"):
+        assert h[key] == t[key], key
+    assert h.get("gate") is None and t.get("gate") is None

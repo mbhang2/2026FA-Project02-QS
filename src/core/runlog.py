@@ -356,11 +356,15 @@ def store_weights(ledger_path: Path, digest: str, blob: bytes) -> str:
         return str(out)
 
 
-def store_fill_log(ledger_path: Path, digest: str, fills) -> str:
-    """Keep the run's fills beside the ledger, addressed by their digest."""
+def store_fill_log(ledger_path: Path, digest: str, fills, limit: int = MAX_STORED_FILLS) -> str:
+    """Keep the run's fills beside the ledger, addressed by their digest.
+
+    `limit` is raised for native and reference-engine runs (Amendment 24), whose gate rebuilds its
+    null from this file and whose high-frequency strategies pass the default.
+    """
     import gzip
 
-    if not fills or len(fills) > MAX_STORED_FILLS:
+    if not fills or len(fills) > limit:
         return ""
     out = ledger_path.parent / "fills" / f"{digest}.jsonl.gz"
     out.parent.mkdir(parents=True, exist_ok=True)

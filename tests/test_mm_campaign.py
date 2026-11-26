@@ -61,13 +61,12 @@ def test_excluding_the_best_selects_the_next():
     assert summary["gate"]["selected_index"] == 2 and summary["gate"]["accept"] is False
 
 
-def test_the_gate_is_registered_only_once_amendment_24_is_signed():
+def test_the_market_making_gate_is_refused_because_part_d_failed():
     import nq_campaign
 
-    assert nq_campaign.gate_for({"gate": "spread_capture"}, in_force=True) == "spread_capture"
-    assert nq_campaign.gate_for({}, in_force=True) is None
-    with pytest.raises(SystemExit):
-        nq_campaign.gate_for({"gate": "spread_capture"}, in_force=False)
+    assert nq_campaign.gate_for({}) is None
+    with pytest.raises(SystemExit, match="Part D was not accepted"):
+        nq_campaign.gate_for({"gate": "spread_capture"})
 
 
 def test_a_native_trial_goes_through_the_native_runner(tmp_path, monkeypatch):

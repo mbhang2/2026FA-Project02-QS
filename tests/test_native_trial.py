@@ -372,7 +372,7 @@ def test_the_market_making_profiles_are_as_approved():
         assert (p["split"], p["engine"], p["book_events"], p["inventory_cap_lots"], p["gate"]) == \
             (split, "native", True, 1000, "spread_capture")
         assert (p["maker_commission_bps"], p["commission_bps"], p["latency_ns"]) == (0.0, 2.0, 1_000_000)
-        assert T.refusal(p) is None
+        assert "Part D" in T.refusal(p)
 
 
 @pytest.mark.parametrize("entry,message", [
@@ -418,3 +418,29 @@ def test_native_validation_needs_a_deep_audit(tmp_path):
     with pytest.raises(T.NativeTrialRefused, match="only a validation run"):
         R.run_trial("btc-okx-mm-train", kernel, ledger, validates="t1")
     assert not ledger.exists()
+
+
+def test_the_hft_native_profiles_have_no_cap_or_gate_and_run():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import run
+
+    profiles = run.load_config()["profiles"]
+    for name, split, engine in (("btc-okx-hft-native-train", "train", "native"),
+                                ("btc-okx-hft-native-validation", "validation", "native"),
+                                ("btc-okx-hft-native-holdout", "holdout", "reference")):
+        p = profiles[name]
+        assert (p["split"], p["engine"], p["book_events"]) == (split, engine, True)
+        assert "gate" not in p and "inventory_cap_lots" not in p
+        assert (p["maker_commission_bps"], p["commission_bps"], p["latency_ns"]) == (0.0, 2.0, 1_000_000)
+    assert T.refusal(profiles["btc-okx-hft-native-train"]) is None
+    assert T.refusal(profiles["btc-okx-hft-native-validation"]) is None
+
+
+def test_native_fill_logs_are_kept_past_the_default_cap(tmp_path):
+    from src.core.runlog import MAX_STORED_FILLS, store_fill_log
+
+    fills = [object()] * (MAX_STORED_FILLS + 1)
+    assert store_fill_log(tmp_path / "ledger.jsonl", "d", fills) == ""

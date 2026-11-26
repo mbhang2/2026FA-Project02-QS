@@ -2832,6 +2832,15 @@ Michael chose this after the result above: 400 campaigns cannot show a rate belo
 
 If either fails, Part D is not signed and no further noise run is made on this design.
 
+*It ran once from commit `f0f78bd` (`~/crypto-controls/a24-r2/noise-rerun.json`, SHA-256 `44c00a65b5c299d9644da0032791010124f7da93ef9ca97aee473a6488199dbc`).* **It failed by one campaign.**
+
+| check | passed | Wilson 95% | condition | result |
+|---|---|---|---|---|
+| new 1,000 alone | 37 of 1,000 | [0.0270, 0.0506] | upper <= 0.05 (36 or fewer) | **fail** |
+| with the earlier 400 | 51 of 1,400 | [0.0278, 0.0476] | upper <= 0.05 (54 or fewer) | pass |
+
+**Part D is not signed, and no further noise run is made on this design.** Across both runs the gate passed about 3.6% of campaigns in a market where no variant made money. That is below 5%, but this control does not show it with the confidence it asked for. A market-making gate now needs a new design, for example a stricter bound, with its own amendment, seeds and control. Parts A to C do not depend on this control.
+
 ### What would invalidate this amendment
 
 - A candidate kernel run without a ledger row, or on a calibration ticket.

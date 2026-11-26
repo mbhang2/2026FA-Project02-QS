@@ -1,0 +1,512 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 9,
+    "diagnostics": {
+      "avg_holding_period_ns": 36170348035682.02,
+      "best_session_share": 0.024513939734077016,
+      "by_hour_utc": {
+        "00": 54337.248786871976,
+        "01": -425379.53110025486,
+        "02": -226714.2142815019,
+        "03": -855613.5402839837,
+        "04": -447462.8105542281,
+        "05": -521567.22411403514,
+        "06": -511500.542591488,
+        "07": -256654.74881451094,
+        "08": -626425.9406312595,
+        "09": -325048.023984354,
+        "10": -357899.60815136356,
+        "11": -467349.9758557205,
+        "12": -141619.67455410416,
+        "13": -426995.29350141063,
+        "14": 25102.725708092927,
+        "15": -40733.25862554464,
+        "16": -337343.4289682964,
+        "17": -1524768.8751619877,
+        "18": -259938.08192584536,
+        "19": -239411.59174483857,
+        "20": 82262.80564940347,
+        "21": -155506.6329181222,
+        "22": 70566.62141469371,
+        "23": -278703.2843942051
+      },
+      "by_hour_utc_entry": {
+        "00": -2589975.1751998616,
+        "01": -225503.399999999,
+        "02": -493820.44459823315,
+        "03": -67971.99999999808,
+        "04": 571087.037600002,
+        "05": -312916.00000000634,
+        "06": -297322.9999999939,
+        "07": -182823.53519999876,
+        "08": -11238.342399954563,
+        "09": -344642.699999996,
+        "10": 1122164.8351999954,
+        "11": -102968.49999999678,
+        "12": -985640.2495999832,
+        "13": -1279534.8000000047,
+        "14": -882687.199999989,
+        "15": -1166013.200000024,
+        "16": -2596188.1463999776,
+        "17": 126581.27360000569,
+        "18": 1172681.3304000425,
+        "19": 149055.39999997558,
+        "20": 904580.8000000126,
+        "21": 917549.200000007,
+        "22": -1456520.0000000063,
+        "23": -162300.0639999872
+      },
+      "by_month": {
+        "2023-01": -848788.5829837893,
+        "2023-02": 85386.42717154339,
+        "2023-03": 735173.0030122494,
+        "2023-04": -411388.9302307976,
+        "2023-05": -59266.978144585475,
+        "2023-06": 350168.868375376,
+        "2023-07": -18469.99999999578,
+        "2023-08": -1055480.5984225115,
+        "2023-09": -176910.6793552726,
+        "2023-10": 787440.0890429928,
+        "2023-11": 471195.2224777058,
+        "2023-12": 854351.3180990729,
+        "2024-01": 180270.29729008104,
+        "2024-02": -1667291.3090506913,
+        "2024-03": 356774.3679186391,
+        "2024-04": 761221.8638960484,
+        "2024-05": -1384214.5630960437,
+        "2024-06": -172382.32204445836,
+        "2024-07": 264464.39346980373,
+        "2024-08": 1331373.2342876545,
+        "2024-09": -1403396.5337980413,
+        "2024-10": 587767.009814084,
+        "2024-11": -1058764.1309874158,
+        "2024-12": 426666.2590696601,
+        "2025-01": 214039.47920563305,
+        "2025-02": -899353.5796818965,
+        "2025-03": -1587558.1698007383,
+        "2025-04": -1211776.8924992268,
+        "2025-05": -824587.6828315187,
+        "2025-06": 155154.97316175472,
+        "2025-07": -1977617.3967437218,
+        "2025-08": -998565.337219569
+      },
+      "by_weekday": {
+        "Fri": -1685918.9240643098,
+        "Mon": -1567466.246754916,
+        "Sat": -1703665.0133107922,
+        "Sun": -3166532.9616697268,
+        "Thu": -2508901.0065439288,
+        "Tue": 521176.14973083895,
+        "Wed": 1916941.12201487
+      },
+      "commission": 8641.036,
+      "fill_model_spread": null,
+      "gross_pnl": -8185725.844597994,
+      "max_drawdown": -106.16181799551929,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 21.2767,
+        "exposure_share": 1.0,
+        "return_dispersion": 0.0104,
+        "trades_per_session": 0.943
+      },
+      "primary_after_drop": {},
+      "profit_concentration_top5pct": 0.39922911604024847,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny. **Read `by_hour_utc` against `by_hour_utc_entry` before calling anything concentrated.** The first buckets P&L at the instant it was REALISED, which for any position held across time is the close -- and for an option the close is a cash settlement at an expiry the strategy neither chose nor can prevent. The second buckets the same P&L at the hour the position was OPENED. Where they disagree, the first is describing the expiry calendar and the second is describing the strategy. Note also that an hour-of-day is only a market clock if the dataset has one: on the synthetic calendar a session is a few hours long and its start drifts across the day, so hour-of-day there is arithmetic on the session index and carries no regime information at all",
+      "sessions_to_zero": 0,
+      "sessions_with_exposure": 960,
+      "trade_count": 39381,
+      "turnover_contracts_per_session": 1942.3958333333333,
+      "win_rate": 0.5205809908331429
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 506,
+      "kurtosis": 6.577256202541301,
+      "metric": "sortino_per_session",
+      "min_exposed_fraction": 0.7,
+      "n_sessions": 960,
+      "net_pnl": -8194366.880597995,
+      "primary": -0.048767952252584144,
+      "reject_reason": "",
+      "rejected": false,
+      "sessions_exposed": 960,
+      "sharpe": -0.03484652007134117,
+      "significance": -1.5110197352231751,
+      "skew": 0.3928747463753587,
+      "sortino": -0.048767952252584144,
+      "trade_count": 39381
+    },
+    "source": "def kernel(event, book, state, orders):\n    # ==================================================================\n    # BTC-USDT perpetual maker.  Ninth proposal on the brief \"shift the\n    # quotes with order flow, so a trend does not run you over\".\n    #\n    # Score history on the same 960 real OKX sessions:\n    #   #0 -0.438  #1 -0.382  #2 -0.374  #3 -0.383   taker-flatten era\n    #   #4 -0.068  touch quoting + flow/imb/trend lean, no taker  (BEST)\n    #   #5 -0.081  ladder one spread behind the touch\n    #   #6 -0.215  queue-preserving, rare requotes\n    #   #7 -0.207  fast 10 s flow + queue-length veto\n    #   #8 -0.085  source #4 + global stand-aside on volatility bursts\n    #\n    # What those eight establish, read as one result rather than as a\n    # parameter table:\n    #\n    # * The taker flatten was the whole of -0.38; two basis points of\n    #   notional is ~150 ticks of captured spread, so a crossed exit can\n    #   never be paid for.  No market order appears here under any\n    #   condition.\n    # * Depth is not the lever (#5 moved the whole ladder a spread back\n    #   and did the same fills for the same score).\n    # * Neither is standing aside (#8's burst gate: -0.085 vs -0.068), nor\n    #   a faster flow (#7), nor longer rests (#6).  Everything that has\n    #   been tried is a variation on WHEN to quote.  Nothing has yet\n    #   changed WHERE in the queue we sit, and that is the one thing the\n    #   fill model punishes.\n    #\n    # THE FILL MODEL.  \"A resting limit order joins behind the displayed\n    # size at its price... and fills when trade volume exceeds what is\n    # ahead of it.\"  At the touch of a liquid BTC perp the displayed size\n    # is far larger than our 40 lots, so a touch quote is LAST in a deep\n    # queue.  It therefore only ever fills once the whole level has been\n    # eaten -- i.e. precisely on the trades that break the level.  Every\n    # fill we get is a sweep fill, which is the definition of adverse\n    # selection, and it is why the per-fill edge has been stuck at a\n    # small constant negative no matter how the quotes were leaned.\n    #\n    # THE ONE STRUCTURAL CHANGE: BUY THE FRONT OF THE QUEUE.\n    # At a price where nothing is displayed our order has zero size ahead\n    # of it and fills on the first trade that prints at or through that\n    # price -- the beginning of a burst rather than its end.  Most bursts\n    # are absorbed by the level and the price holds; those are exactly\n    # the fills a deep-queue maker never gets.  So when the spread is\n    # wide enough to pay for it, the quote is placed one tick INSIDE the\n    # touch instead of at it:\n    #\n    #     bid at bid0 + step,  ask at ask0 - step,\n    #     only when  (ask0 - bid0) >= 3 * step\n    #\n    # which leaves a round-trip capture of spread - 2*step >= step, still\n    # strictly positive, in exchange for being alone at the price.  When\n    # the spread is too narrow to improve safely, the quote falls back to\n    # the touch exactly as in #4.  Nothing else about the placement\n    # changes: the lean, the pulls and the inventory rules are #4's.\n    #\n    # 'step' must be a VALID price increment or the row is refused.  It is\n    # estimated as the smallest two-sided spread seen so far in the run.\n    # Every observed spread is an integer multiple of the tick, so the\n    # minimum of them is too, and bid0 + step is always a legal price.\n    # The estimate is kept across sessions because the contract's tick\n    # does not change overnight and a wide book at a session open must\n    # not be mistaken for the tick.\n    #\n    # Kept verbatim from #4 (mechanically clean over 960 sessions, no\n    # refused rows, no invalid cancels): the sequential-id map, fill\n    # inference from ids leaving the working list, the in-flight guard,\n    # the 1 s evaluation throttle, the row budget paced across the UTC\n    # day, the reactive pick-off cancel, and the flow/imbalance/trend\n    # lean with its hysteresis.\n    #\n    # Memory map (64 floats, persists across calls and sessions):\n    #   0  EWMA signed aggressive volume (buy - sell), 30 s, lots\n    #   1  ts of the last trade folded into the flow EWMA\n    #   2  session id currently tracked\n    #   3  order rows emitted this session\n    #   4  ts of the last requote that cancelled something (rest timer)\n    #   5  price of the bid we believe is resting (0 = none)\n    #   6  price of the ask we believe is resting (0 = none)\n    #   7  EWMA absolute aggressive volume, normaliser for state[0]\n    #   8  ts of the first event of this session\n    #   9  working id of the resting bid (0 = not learned yet)\n    #  10  working id of the resting ask (0 = not learned yet)\n    #  11  slow (30 min) EWMA of the mid\n    #  12  fast (2 min) EWMA of the mid\n    #  13  ts of the last mid / vol update\n    #  14  ts of the last throttled quote evaluation\n    #  15  pick-off cancels used this session\n    #  16  ts of the last pick-off cancel\n    #  17  short (20 s) EWMA of |change in mid|\n    #  18  long (30 min) EWMA of |change in mid|\n    #  19  last mid, for the volatility estimate\n    #  20  largest order id we have ever been shown\n    #  21  number of submissions in flight (0, 1 or 2)\n    #  22  side of the first submission in flight (+1 buy, -1 sell)\n    #  23  side of the second submission in flight\n    #  24  ts at which those submissions were sent\n    #  25  step: smallest two-sided spread ever seen (a valid tick\n    #      multiple); 0 until the first valid book arrives\n    # ==================================================================\n    ts = event[E_TS]\n    sess = event[E_SESSION]\n\n    # ---- session bookkeeping -------------------------------------------\n    # TIF_DAY orders die with the old session, so quote beliefs, counters\n    # and the pick-off budget restart.  The position, the decaying\n    # estimates and the step estimate carry across, because the market\n    # never closed and the tick never changed.\n    if sess != state[2] or state[8] == 0.0:\n        state[2] = float(sess)\n        state[3] = 0.0\n        state[4] = 0.0\n        state[5] = 0.0\n        state[6] = 0.0\n        state[8] = float(ts)\n        state[9] = 0.0\n        state[10] = 0.0\n        state[14] = 0.0\n        state[15] = 0.0\n        state[16] = 0.0\n        state[21] = 0.0\n        state[22] = 0.0\n        state[23] = 0.0\n        state[24] = 0.0\n\n    # ---- mid EWMAs, two volatility EWMAs, and the step estimate --------\n    # All alphas are elapsed-time alphas, so a burst of book updates and a\n    # sparse run integrate to the same estimate.  Both volatility EWMAs\n    # estimate E[|dmid|]; their ratio is ~1 when the tape is stationary\n    # and rises when the recent past is more violent than the recent half\n    # hour.  The spread itself is tracked only as a running minimum: that\n    # is the tick estimate the queue-priority placement needs.\n    if event[E_KIND] == EVENT_BOOK:\n        if book[B_OK] > 0.5:\n            pb0 = book[B_BID_PX]\n            pa0 = book[B_ASK_PX]\n            if pb0 > 0.0 and pa0 > pb0:\n                sp = pa0 - pb0\n                if state[25] <= 0.0:\n                    state[25] = sp\n                else:\n                    if sp < state[25]:\n                        state[25] = sp\n                mid = 0.5 * (pb0 + pa0)\n                lm = state[13]\n                if lm <= 0.0:\n                    state[11] = mid\n                    state[12] = mid\n                    state[19] = mid\n                    state[13] = float(ts)\n                else:\n                    dt = (ts - lm) * 0.000000001\n                    if dt > 0.0:\n                        if dt > 120.0:\n                            dt = 120.0\n                        af = dt / (120.0 + dt)\n                        al = dt / (1800.0 + dt)\n                        state[12] = state[12] + (mid - state[12]) * af\n                        state[11] = state[11] + (mid - state[11]) * al\n                        dm = mid - state[19]\n                        if dm < 0.0:\n                            dm = -dm\n                        state[19] = mid\n                        if state[18] <= 0.0:\n                            # seed on the first observable move; a stale\n                            # zero would make the ratio meaningless\n                            state[17] = dm\n                            state[18] = dm\n                        else:\n                            av = dt / (20.0 + dt)\n                            aw = dt / (1800.0 + dt)\n                            state[17] = state[17] + (dm - state[17]) * av\n                            state[18] = state[18] + (dm - state[18]) * aw\n                        state[13] = float(ts)\n\n    # ---- aggressive order flow, kept entirely in our own memory ---------\n    # Every trade event carries its aggressor and size, so there is no\n    # unknown-side branch to write.  Signed and absolute volume decay with\n    # the same elapsed-time (30 s) factor, so their ratio is a volume-\n    # weighted average aggressor side in [-1, 1] over roughly the last\n    # 30 s of tape.  This is #4's proven window.\n    if event[E_KIND] == EVENT_TRADE:\n        sz = event[E_SIZE]\n        if sz > 0.0:\n            last = state[1]\n            f = 2.0\n            if last > 0.0:\n                dt = (ts - last) * 0.000000001\n                if dt > 0.0:\n                    if dt > 600.0:\n                        dt = 600.0\n                    f = 30.0 / (30.0 + dt)\n            state[0] = state[0] * f + event[E_SIDE] * sz\n            state[7] = state[7] * f + sz\n            state[1] = float(ts)\n\n    # ---- learn which working id belongs to which side -------------------\n    # Ids are issued in sequence and the working list is oldest first, so\n    # any id above everything we have seen belongs to the submission made\n    # in the previous call, in row order (bid row first when both sent).\n    w = event[E_N_WORKING]\n    newn = 0\n    if w > 0:\n        for i in range(32):\n            if i < w:\n                oid = event[E_WORKING + i]\n                if oid > state[20]:\n                    state[20] = float(oid)\n                    if newn == 0:\n                        if state[22] > 0.5:\n                            state[9] = float(oid)\n                        elif state[22] < -0.5:\n                            state[10] = float(oid)\n                    else:\n                        if state[23] > 0.5:\n                            state[9] = float(oid)\n                        elif state[23] < -0.5:\n                            state[10] = float(oid)\n                    newn = newn + 1\n    if newn > 0:\n        state[21] = 0.0\n        state[22] = 0.0\n        state[23] = 0.0\n\n    # ---- detect fills: an id we owned that is no longer shown -----------\n    # Fills are never reported; the only evidence is a working id we\n    # believed in vanishing.  The belief is dropped and the side becomes\n    # eligible to re-quote, which is how a partial exit gets replaced.\n    b_present = 0.0\n    a_present = 0.0\n    if w > 0:\n        for i in range(32):\n            if i < w:\n                oid = event[E_WORKING + i]\n                if state[9] > 0.0:\n                    if oid == state[9]:\n                        b_present = 1.0\n                if state[10] > 0.0:\n                    if oid == state[10]:\n                        a_present = 1.0\n    if state[21] < 0.5:\n        if state[9] > 0.0:\n            if b_present < 0.5:\n                state[9] = 0.0\n                state[5] = 0.0\n        else:\n            if state[5] > 0.0:\n                state[5] = 0.0\n        if state[10] > 0.0:\n            if a_present < 0.5:\n                state[10] = 0.0\n                state[6] = 0.0\n        else:\n            if state[6] > 0.0:\n                state[6] = 0.0\n\n    if event[E_ACTIONABLE] == 0:\n        return 0\n\n    # ---- wait for a submission to appear before making another one ------\n    if state[21] > 0.5:\n        if ts - state[24] < 3000000000:\n            return 0\n        # it never appeared (refused, or filled before we saw the id):\n        # forget it and let the ordinary logic re-quote\n        if state[22] > 0.5:\n            state[5] = 0.0\n            state[9] = 0.0\n        if state[22] < -0.5:\n            state[6] = 0.0\n            state[10] = 0.0\n        if state[23] > 0.5:\n            state[5] = 0.0\n            state[9] = 0.0\n        if state[23] < -0.5:\n            state[6] = 0.0\n            state[10] = 0.0\n        state[21] = 0.0\n        state[22] = 0.0\n        state[23] = 0.0\n\n    if book[B_OK] == 0.0:\n        return 0\n    bid0 = book[B_BID_PX]\n    ask0 = book[B_ASK_PX]\n    if bid0 <= 0.0 or ask0 <= 0.0 or ask0 <= bid0:\n        return 0\n    spread = ask0 - bid0\n    pos = event[E_POSITION]\n\n    # ---- action budget, paced across the UTC day ------------------------\n    # 64 rows a session is the hard cap and the scarcest thing we own.\n    # Pacing it as a smooth ramp means there is always a row left for a\n    # protective pull, which is the one thing that must never be skipped.\n    elapsed = (ts - state[8]) * 0.000000000000011574\n    if elapsed < 0.0:\n        elapsed = 0.0\n    if elapsed > 1.0:\n        elapsed = 1.0\n    budget = 10.0 + 50.0 * elapsed\n\n    # ---- visible book imbalance -----------------------------------------\n    nb = book[B_N_BID]\n    na = book[B_N_ASK]\n\n    bq0 = 0.0\n    aq0 = 0.0\n    if nb > 0.5:\n        bq0 = book[B_BID_QTY]\n    if na > 0.5:\n        aq0 = book[B_ASK_QTY]\n    t0 = bq0 + aq0\n    itouch = 0.0\n    if t0 > 0.0:\n        itouch = (bq0 - aq0) / t0\n\n    bqd = 0.0\n    aqd = 0.0\n    for i in range(5):\n        if i < nb:\n            bqd = bqd + book[B_BID_QTY + i]\n        if i < na:\n            aqd = aqd + book[B_ASK_QTY + i]\n    td = bqd + aqd\n    idepth = 0.0\n    if td > 0.0:\n        idepth = (bqd - aqd) / td\n\n    # The touch is where a fill would actually happen, so it outweighs the\n    # five-level sum, which counts size we can never reach from here.\n    imb = 0.55 * itouch + 0.45 * idepth\n\n    # ---- combine flow, book, trend into one directional pressure --------\n    ofi = state[0] / (state[7] + 1.0)\n    if ofi > 1.0:\n        ofi = 1.0\n    if ofi < -1.0:\n        ofi = -1.0\n\n    # 20 bp of fast-vs-slow mid gap is a full unit of trend: a real\n    # directional day, not the ordinary wobble of a two-minute average.\n    trend = 0.0\n    if state[11] > 0.0:\n        trend = (state[12] - state[11]) / state[11]\n        trend = trend / 0.0020\n        if trend > 1.0:\n            trend = 1.0\n        if trend < -1.0:\n            trend = -1.0\n\n    sig = 0.45 * ofi + 0.25 * imb + 0.30 * trend\n    if sig > 1.0:\n        sig = 1.0\n    if sig < -1.0:\n        sig = -1.0\n\n    # Inventory lean saturates near 250 lots; the hard rules below bite at\n    # 200 so the position oscillates well inside the 1000-lot cap and no\n    # order is ever silently refused.\n    inv = pos * 0.006\n    if inv > 1.5:\n        inv = 1.5\n    if inv < -1.5:\n        inv = -1.5\n    desire = sig - 1.1 * inv\n\n    # Volatility regime: >1 means the last 20 s moved more than the last\n    # half hour did.  Both sides step back when it is hot.\n    volr = 1.0\n    if state[18] > 0.000000000001:\n        volr = state[17] / state[18]\n    volx = (volr - 1.10) / 0.90\n    if volx > 1.0:\n        volx = 1.0\n    if volx < 0.0:\n        volx = 0.0\n\n    # Directional pressure on each side.  Positive = that side is in\n    # trouble, i.e. a fill there is likely to be followed by the price\n    # going the wrong way.  Both sides inherit the volatility term.\n    pb = 0.0\n    if desire < 0.0:\n        pb = -desire\n    pa = 0.0\n    if desire > 0.0:\n        pa = desire\n    pb = pb + 0.45 * volx\n    pa = pa + 0.45 * volx\n\n    # Inventory override.  Past 200 lots the side that would GROW the\n    # position is removed outright and the side that would SHRINK it is\n    # pinned to the touch, so an exit always exists.\n    if pos > 200.0:\n        pb = 2.0\n        pa = 0.0\n    if pos < -200.0:\n        pa = 2.0\n        pb = 0.0\n\n    has_b = 0.0\n    if state[5] > 0.0:\n        has_b = 1.0\n    has_a = 0.0\n    if state[6] > 0.0:\n        has_a = 1.0\n\n    # ---- where each side wants to be ------------------------------------\n    # Base is the touch.  Hysteresis: a side already stepped back only\n    # returns to the touch once the pressure has genuinely fallen, and a\n    # side at the touch only steps back once it has risen.  Without the\n    # gap the quote would flap and eat the whole row budget.\n    cur_b_back = 0.0\n    if state[5] > 0.0:\n        if state[5] < bid0 - 0.5 * spread:\n            cur_b_back = 1.0\n    cur_a_back = 0.0\n    if state[6] > 0.0:\n        if state[6] > ask0 + 0.5 * spread:\n            cur_a_back = 1.0\n\n    thr_b = 0.20\n    if cur_b_back < 0.5:\n        thr_b = 0.40\n    thr_a = 0.20\n    if cur_a_back < 0.5:\n        thr_a = 0.40\n\n    wb = bid0\n    if pb >= 0.62:\n        wb = 0.0\n    else:\n        if pb >= thr_b:\n            wb = bid0 - spread\n            if wb <= 0.0:\n                wb = 0.0\n\n    wa = ask0\n    if pa >= 0.62:\n        wa = 0.0\n    else:\n        if pa >= thr_a:\n            wa = ask0 + spread\n\n    # ---- QUEUE-PRIORITY PLACEMENT (this trial's one structural change) --\n    # A touch quote sits behind the whole displayed size and therefore\n    # only fills when that size has been eaten -- the break of the level.\n    # At a price with nothing displayed there is nobody ahead of us, so\n    # the order fills on the FIRST trade that prints at or through it,\n    # which is the start of a burst and, most of the time, a burst the\n    # level absorbs.  So when the spread can pay for it, step one valid\n    # tick inside the touch: capture falls from `spread` to\n    # `spread - 2*step`, still >= one step, and the fill becomes a fair\n    # one instead of a sweep.\n    #\n    # 'step' is the smallest two-sided spread seen in the run.  Every\n    # observed spread is an integer multiple of the contract's tick, so\n    # the minimum is too, and bid0 + step is always a legal price.  The\n    # 3*step condition guarantees bid0 + step < ask0 - step, so neither\n    # quote crosses the book or the other.\n    step = state[25]\n    if step > 0.0:\n        if spread >= 3.0 * step:\n            if wb > 0.0:\n                if wb >= bid0 - 0.000000001:\n                    wb = bid0 + step\n            if wa > 0.0:\n                if wa <= ask0 + 0.000000001:\n                    wa = ask0 - step\n\n    # ---- pick-off protection --------------------------------------------\n    # A quote the market has travelled THROUGH is stale and will be swept\n    # at a price nobody else is on.  Kept as the backstop for a jump that\n    # arrives with no warning.\n    sb = 0.0\n    sa = 0.0\n    if state[15] < 12.0:\n        if ts - state[16] > 1000000000:\n            if has_b > 0.5:\n                if bid0 < state[5] - 0.000000001:\n                    sb = 1.0\n            if has_a > 0.5:\n                if ask0 > state[6] + 0.000000001:\n                    sa = 1.0\n\n    # ---- decide cancels and placements ----------------------------------\n    cb = 0.0\n    ca = 0.0\n    qb = 0.0\n    qa = 0.0\n\n    # pulls are immediate: the next print is the one we are avoiding\n    if has_b > 0.5:\n        if wb <= 0.0:\n            cb = 1.0\n    if has_a > 0.5:\n        if wa <= 0.0:\n            ca = 1.0\n    if sb > 0.5:\n        cb = 1.0\n    if sa > 0.5:\n        ca = 1.0\n\n    # moves and fresh placements only at the 1 s throttle: a millisecond\n    # book would otherwise burn the whole day inside one minute\n    if ts - state[14] >= 1000000000:\n        state[14] = float(ts)\n        if cb < 0.5:\n            if has_b > 0.5:\n                if wb > 0.0:\n                    d = wb - state[5]\n                    if d < 0.0:\n                        d = -d\n                    if d > 0.6 * spread:\n                        # moving a resting quote throws away its place in\n                        # line, so it must have earned some queue time\n                        if ts - state[4] > 20000000000:\n                            cb = 1.0\n                            qb = wb\n            else:\n                if wb > 0.0:\n                    # after a pick-off, sit out a little: whatever swept\n                    # us is often still working\n                    if ts - state[16] > 5000000000:\n                        qb = wb\n        if ca < 0.5:\n            if has_a > 0.5:\n                if wa > 0.0:\n                    d = wa - state[6]\n                    if d < 0.0:\n                        d = -d\n                    if d > 0.6 * spread:\n                        if ts - state[4] > 20000000000:\n                            ca = 1.0\n                            qa = wa\n            else:\n                if wa > 0.0:\n                    if ts - state[16] > 5000000000:\n                        qa = wa\n\n    # a cancel we cannot address is not a cancel\n    if cb > 0.5:\n        if state[9] <= 0.0:\n            cb = 0.0\n            qb = 0.0\n    if ca > 0.5:\n        if state[10] <= 0.0:\n            ca = 0.0\n            qa = 0.0\n\n    cost = 0.0\n    if cb > 0.5:\n        cost = cost + 1.0\n    if ca > 0.5:\n        cost = cost + 1.0\n    if qb > 0.0:\n        cost = cost + 1.0\n    if qa > 0.0:\n        cost = cost + 1.0\n    if cost < 0.5:\n        return 0\n\n    # Under budget pressure placements go first: keeping a stale quote\n    # alive costs more than losing a little time at the touch.\n    if state[3] + cost > budget:\n        qb = 0.0\n        qa = 0.0\n        cost = 0.0\n        if cb > 0.5:\n            cost = cost + 1.0\n        if ca > 0.5:\n            cost = cost + 1.0\n        if state[3] + cost > budget:\n            cb = 0.0\n            ca = 0.0\n            cost = 0.0\n    if cost < 0.5:\n        return 0\n\n    # ---- emit: cancel by id, only ids this event actually showed --------\n    count = 0\n    if cb > 0.5 or ca > 0.5:\n        for i in range(32):\n            if i < w:\n                oid = event[E_WORKING + i]\n                hit = 0.0\n                if cb > 0.5:\n                    if state[9] > 0.0:\n                        if oid == state[9]:\n                            hit = 1.0\n                if ca > 0.5:\n                    if state[10] > 0.0:\n                        if oid == state[10]:\n                            hit = 1.0\n                if hit > 0.5:\n                    orders[count, O_OP] = OP_CANCEL\n                    orders[count, O_ORDER_ID] = oid\n                    count = count + 1\n\n    if cb > 0.5:\n        state[5] = 0.0\n        state[9] = 0.0\n        if sb > 0.5:\n            state[15] = state[15] + 1.0\n            state[16] = float(ts)\n    if ca > 0.5:\n        state[6] = 0.0\n        state[10] = 0.0\n        if sa > 0.5:\n            state[15] = state[15] + 1.0\n            state[16] = float(ts)\n\n    pend = 0.0\n    side1 = 0.0\n    side2 = 0.0\n\n    # 40 lots is 0.004 BTC.  A resting order sits behind displayed size, so\n    # its fill probability per lot does not depend on its own size while\n    # its P&L does; trials #2/#3 proved size is not the lever.\n    if qb > 0.0:\n        orders[count, O_OP] = OP_BUY\n        orders[count, O_KIND] = KIND_LIMIT\n        orders[count, O_TIF] = TIF_DAY\n        orders[count, O_SIZE] = 40.0\n        orders[count, O_LIMIT] = qb\n        orders[count, O_ORDER_ID] = 0.0\n        count = count + 1\n        state[5] = qb\n        state[9] = 0.0\n        pend = pend + 1.0\n        side1 = 1.0\n\n    if qa > 0.0:\n        orders[count, O_OP] = OP_SELL\n        orders[count, O_KIND] = KIND_LIMIT\n        orders[count, O_TIF] = TIF_DAY\n        orders[count, O_SIZE] = 40.0\n        orders[count, O_LIMIT] = qa\n        orders[count, O_ORDER_ID] = 0.0\n        count = count + 1\n        state[6] = qa\n        state[10] = 0.0\n        pend = pend + 1.0\n        if side1 == 0.0:\n            side1 = -1.0\n        else:\n            side2 = -1.0\n\n    if count == 0:\n        return 0\n\n    if pend > 0.0:\n        state[21] = pend\n        state[22] = side1\n        state[23] = side2\n        state[24] = float(ts)\n\n    state[3] = state[3] + float(count)\n    if cb > 0.5 or ca > 0.5:\n        state[4] = float(ts)\n    return count\n",
+    "source_sha256": "feaa3e8c90b812b82b23493b02721e5d5fcd38bfd68177c8b868987f964a8a41",
+    "strategy_digest": "feaa3e8c90b812b8"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "audit_model": null,
+      "auditor_models": null,
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.0,
+      "constraints": null,
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/kernel-api.md"
+      ],
+      "endpoint": "https://braverock.com/llm/v1",
+      "execution": {
+        "allow_overnight": true,
+        "latency_ns": 1000000,
+        "maker_commission_bps": 0.0,
+        "maker_commission_per_contract": null,
+        "slippage_bps": 0.0,
+        "slippage_per_contract": 0.0
+      },
+      "explore_epsilon": 0.0,
+      "fidelity_judge": null,
+      "gate": "spread_capture",
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "bdf9a9bdb01127165830af850914d88c0a0e918d08f1d5a5a9bb5e6e695ed425",
+        "path": "config/hypotheses/btc-mm-orderflow-skew.md"
+      },
+      "hypothesis_origin": null,
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "kind": "kernel",
+      "knowledge": null,
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 64000,
+      "model": "deepseek-v4.1-flash",
+      "model_served_at_registration": "deepseek-v4.1-flash",
+      "null_source": "round_turn_mc",
+      "null_unit": "zero_crossing",
+      "parent_rng_seed": 0,
+      "probe_before_trial": false,
+      "prompt_template": "config/prompts/kernel-agent.md",
+      "prompt_template_digest": "5cf8f8999a70bc4fff438fbedfd188a37dc8667d2048574aaee4e42a0760f5f8",
+      "proposal_wall_clock_s": 600.0,
+      "registered_fees": {
+        "commission_bps": 2.0,
+        "commission_per_contract": 0.0,
+        "maker_commission_bps": 0.0,
+        "maker_commission_per_contract": 0.0
+      },
+      "repair_reasoning_effort": "low",
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real OKX BTCUSDT perpetual-futures trades. A session is a UTC day (00:00 to 24:00 UTC); the market trades continuously, with no close, no holidays and no overnight gap, so `session` boundaries are a calendar convention, not a market event. Every trade carries its aggressor side, so `unknown_volume` is always zero, 960 scored sessions on the pre-registered train split.\n\nFill model: book-queue-pessimistic. Market orders pay through the visible book and are refused if they need more than five levels. A resting limit joins behind displayed size and fills only when trades reach it.\n\nBook: call `ctx.subscribe(\"book\")` in `setup()`, then `ctx.book()` in a callback. It returns `None` or an object with `ts`, `bid_prices`, `bid_sizes`, `ask_prices` and `ask_sizes`, best level first, sizes in lots. It holds the latest row strictly before this millisecond, and a book over one second old is `None`, so handle `None`. Reading it raises no extra callback.\n\nSizes are integer lots of 0.0001 BTC: `ctx.buy(1)` is 0.0001 BTC, and P&L is the price move in USD times lots, so one lot earns 0.0001 USD per $1 the price moves. Taker fills pay 2 basis points of notional, so a round trip by market order costs 0.04% before spread and depth. These are assumed professional rates. Holding a position through a funding settlement (00:00, 08:00, 16:00 UTC) pays the funding rate on its notional when long and receives it when short (the reverse when the rate is negative). Returns are scored relative to each session's opening price, so a move of 1% counts the same in 2023 and in 2026.\n\nLatency: 1,000,000 ns. Every order, modification and cancel reaches the market that long after your callback, and a resting order can still fill until its cancel arrives.\n\nResting limit fills pay a separate maker fee: 0 points per contract plus 0 bp of notional per side. A negative rate is a rebate.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "btc-mm-orderflow-03",
+    "budget": 20,
+    "campaign_id": "btc-mm-orderflow-03",
+    "dataset": "crypto-btc-okx-book",
+    "profile": "btc-okx-mm-train",
+    "q": 0.05,
+    "record_digest": "39caa410b4adc94994da416141baac36f5bdb6a793250acb39a4d374d888439d",
+    "record_digest_now": "39caa410b4adc94994da416141baac36f5bdb6a793250acb39a4d374d888439d",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-11-26T06:13:04+00:00"
+  },
+  "deflation_view": null,
+  "diagnostics_only": {
+    "correction": null,
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "unavailable": "no tabulated null exists for 'crypto-btc-okx-book', so BH, Holm, the nominal FAR and the deflation view were not computed. The gate below uses this campaign's per-candidate nulls and does not read that table."
+  },
+  "digest": "607cffe3c3f1da1bc2407d2a531fde05931f128dcb2ece79d93c2db9caf69e95",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": null,
+    "b": null,
+    "is_the_gate": true,
+    "n_nulls": null,
+    "note": null,
+    "null_max_at_q": null,
+    "null_max_mean": null,
+    "null_max_quantiles": null,
+    "observed_best": -0.048767952252584144,
+    "p": null,
+    "p_floor": null,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/btc-mm-orderflow-03/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "aeed95c142e4c6f74c1b364e1ca68b41b79e7869acf0aadebb3fd502f940f2e2",
+        "outcome": "completed",
+        "score": -0.437835499099826,
+        "strategy_digest": "dff33b7c463c8276"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "66ce95c3670ef6f6fed913332c7d8b5a42ba8c5c3eb0a93768e6643e4dd35c29",
+        "outcome": "completed",
+        "score": -0.38202593830860804,
+        "strategy_digest": "b277d6e03d0bf1df"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "6fbd31f50bfa13d268d472b7aacfa5498ce10998479aa4510f237582a5f8e173",
+        "outcome": "completed",
+        "score": -0.37429703256516234,
+        "strategy_digest": "7991c38bfbf03aed"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "4db3f82a7e29d21584e0526303c02e269a9ea1da353df96865b2257fcefd84ef",
+        "outcome": "completed",
+        "score": -0.3833005429470852,
+        "strategy_digest": "a34dbe4c63e449ca"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "85f39dcd3a56cf18f25ef510217f1efca179d2454cf517b1f02823110d040383",
+        "outcome": "completed",
+        "score": -0.06835153548333488,
+        "strategy_digest": "f46e16a0777d7f52"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "111b50b8d3d148e7d38bf30d9ad10a7bc912b678e919b3b280e59d201958244c",
+        "outcome": "completed",
+        "score": -0.0811266947178463,
+        "strategy_digest": "6b4345e92864ea88"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "9f318cf8bdeaa24fd5659d7c28e95c60c75871a4417b3f2cc8acde75d13d8ee2",
+        "outcome": "completed",
+        "score": -0.21466237955359352,
+        "strategy_digest": "dec07501ea521f7c"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "581e2a0716b35a3350cb71f1b27d0236a9e48efb5377fef4b57fcadf8c501ef7",
+        "outcome": "completed",
+        "score": -0.20659574507621725,
+        "strategy_digest": "10adcd694ccd325d"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "8dc011f60f1ef3af11763de9245452b9afbbee184e66d9aaf2b22b25534d6d8b",
+        "outcome": "completed",
+        "score": -0.08519735253602322,
+        "strategy_digest": "a91613be27e21599"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "e23f7c304f97b89e69c87cec407064f925062a07fc0a0e4a7b02d8420c145b31",
+        "outcome": "completed",
+        "score": -0.048767952252584144,
+        "strategy_digest": "feaa3e8c90b812b8"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "6bbbadc19ce09b0e61439dd9b39b32c4eaba73b95f3b8f66acf16fe31f1aa5e5",
+        "outcome": "completed",
+        "score": -0.06176852463693681,
+        "strategy_digest": "464f5291111715c2"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "0604f4a6cc058cdc7be05ae8f707a0f4871c8d1c9d230393cb76e48f6a0e4da9",
+        "outcome": "completed",
+        "score": -0.05073716547771881,
+        "strategy_digest": "fd1919940f9b34fa"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "7f68ebf9d0f35d2f02ab96b2875323837096a3f820d9e784ec7d4eca13e0dff8",
+        "outcome": "completed",
+        "score": -0.3217604252973244,
+        "strategy_digest": "2703950e8b86ad27"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "188c15c30e9bad7880b1427689cc7eb80ffebb733134c944af98491c9faa594e",
+        "outcome": "completed",
+        "score": -0.08827228140488651,
+        "strategy_digest": "a9b54e9ebc5f4ca0"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "3f47881eb996872880307fb78d024c293599707a2bbb03aa799a797065c4644a",
+        "outcome": "completed",
+        "score": -0.0877330455064844,
+        "strategy_digest": "a9e12059e107fb9a"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "58b1ca31a189698f7f20c54516d46b05ce0de7298cd59522fbdfa8e8936ef709",
+        "outcome": "completed",
+        "score": -0.06185010927383507,
+        "strategy_digest": "2ea277ad6b2cf5bd"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "f2a1c24674893ef976489fee275fb6385a036f9e1f981e70ceabe579345f9aab",
+        "outcome": "completed",
+        "score": -0.05044307635265284,
+        "strategy_digest": "789a57c392efe87f"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "93ece58b50a1abaeceeb8f4a4109242549a7c1842f1c4f124baebc9a3c236b5a",
+        "outcome": "completed",
+        "score": -0.05073730374499138,
+        "strategy_digest": "e9fb59cb4bd8b01f"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "f795a6fd3ab88ec865dac6192e5f21cdcffd196653236e10722bc1dc3b0b75f9",
+        "outcome": "completed",
+        "score": -0.05073568903547256,
+        "strategy_digest": "b012cb5051fef7e9"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": null,
+        "outcome": "crashed",
+        "score": null,
+        "strategy_digest": "9b6d67b9698c59e5"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 19,
+      "crashed": 1
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 20,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": false,
+    "why": "fewer than two null draws"
+  },
+  "provenance": {
+    "artifact_fingerprint": "04c2aa9d297704fb12473d3a32df01cf90a04f923cdf2129afe68b965dc6273d",
+    "artifacts": {
+      "config/backtest.yaml": "b292973d74f1d9b59baf9a7fd6040fd040e52e615066ebc1baf7a3bc201883f2",
+      "config/calendars/crypto-trades.yaml": "341f204519220585953609d475d8f00590493411b02ee65c76417d88a98631f7",
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/calendars/okx-book.yaml": "deccded0c795c56a095f488559b47d422474b210a5b70318e2104d79b8406ba7",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/costs.yaml": "b09a7140a1ba8338f4a3220146537de0272d13f675a9e6e44f50a588882a7546",
+      "config/house-constraints.yaml": "232979be0b3b4bb54b623907251e698fb66f8da211c098a13b6b8e5d47fc6176",
+      "config/hypotheses/auction-market-features.md": "c306848e27d52157a9e1ea478905aa4ad6e585b56b84bc892962aeeb02d826e9",
+      "config/hypotheses/btc-absorption-reversal.md": "6231978392a9eda23deba96d31bd624c05447ba5942bb1c5bd7f62d08713dfd9",
+      "config/hypotheses/btc-book-absorption-reversal.md": "193c6e9533347eb1f98125a411ab15d24770b59c69e7d9475a39dba9da264762",
+      "config/hypotheses/btc-cvd-continuation.md": "f330f7a6e278e0f6c6e61002e34f5bfebd8ea18d2cdcd5da2c075bb88e5a348f",
+      "config/hypotheses/btc-mm-orderflow-skew.md": "bdf9a9bdb01127165830af850914d88c0a0e918d08f1d5a5a9bb5e6e695ed425",
+      "config/hypotheses/flow-continuation-5m.md": "13516e4d73d2286805b68d526fe8590581c3ed64c418e44f2557a319ba7a4fea",
+      "config/hypotheses/flow-continuation.md": "2fd992b524213040d9b59c1ae1cde0b54404fc5ca779d9dc68d774c72dca0528",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-move-continuation-vs-giveback.md": "dd898b0ac0548576dafc2f61169a5334e834d48f7bc83d2cfcaf2c8901cfe876",
+      "config/hypotheses/nq-opening-reversal.md": "37fcea5a90f37b7b05faaab7e15e74990878bbaba226b41171965908b2a40b91",
+      "config/hypotheses/ohlcv-momentum-friction-ceiling.md": "ff9d1893266f2f7eeb05f0f27a2751e9e95a4ea58f8c38f236aa9fc9e7c867a6",
+      "config/hypotheses/opening-range-break-continuation-failure.md": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+      "config/hypotheses/opening-range-break-continuation-or-fade.md": "4e48d6e16fba78098a993549b2528853e8c4c909908d501cf1d6ad3309988440",
+      "config/hypotheses/opening-range-break-hold-or-return.md": "660f66e68d536c243d47ecab73a73fdd6b5a529d97301a2d2f5cabd01488db0e",
+      "config/hypotheses/opening-range-break-resolution.md": "4c41b63249ae6113d53a032cde5c13651d107b7bf77450043f82d58e33488bfe",
+      "config/hypotheses/opening-range-breakout-30m.md": "021eb8f94018416e4294293831f5c8d4370ac0bd6cb1c39b42f3b57771ea6128",
+      "config/hypotheses/opening-range-departure-fates-by-clock.md": "1c0bbe82227d0c4b25c9bcf2c111ae8c3ebad943bf7bd84ee3c587ac44d17b02",
+      "config/hypotheses/opening-range-direction-agnostic.md": "48775a6bedc23838d451279d05dc15c2660300bb598e5cf508f3c677fa22d7e4",
+      "config/hypotheses/opening-range-exit-hold-or-return.md": "8b3d0872c848b58892611d7621245f32f739050b89bd645530888785268b8237",
+      "config/hypotheses/options-no-arbitrage-violation.md": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+      "config/hypotheses/options-surface-shape-and-the-index.md": "268c3ca73b695ff20a591b736b68f6562a21dbaa88b08cd1193ae4e281c9298a",
+      "config/hypotheses/orderflow-absorption-at-carried-levels.md": "97ad8b1db1a60f852bae58c5428270f528327a300832d74131d3fe97c52794d2",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md": "4a97e2e35a2111d81a49331782789191c9765efdb5df34c7aefedeb7234cf557",
+      "config/hypotheses/outsized-move-continuation-refined.md": "25d9b544894e7d214729ba058d1783e6b0d3d16608e560346538076341626c77",
+      "config/hypotheses/outsized-move-continuation-vs-giveback.md": "00074ec0231d64452b65b1515e9669d711425a1220e6039b3e61abd1638766a6",
+      "config/hypotheses/session-move-continuation-robustness.md": "087be6eedd20f472989bdadf3944e054b3a0daa42cafb589170455bc6ecb44b3",
+      "config/prompts/family-review.md": "012935b192b8ca9ff3ed3a3c9635dfdab4df9f8f95dc1db1791f35bc8532fb82",
+      "config/prompts/fidelity-judge.md": "72b333cf364db92cd40b4fa9ec6d484e5a8c7febbef0531bb7edf7e1c07f14e9",
+      "config/prompts/hypothesis-refine.md": "f89af454f9a00652f160ac0085944f533a35372ae0c4c92c381145447a4929a1",
+      "config/prompts/hypothesis-review.md": "fb5465beac2d4e1efcddbc998201a0cceecaee8924042581acd3ebb9fc2d223c",
+      "config/prompts/kernel-agent.md": "5cf8f8999a70bc4fff438fbedfd188a37dc8667d2048574aaee4e42a0760f5f8",
+      "config/prompts/paper-distil.md": "0dcafaf00f0a1d990fd26880d532f3eac423a36b1488d1ebd7b28a8747fb4504",
+      "config/prompts/paper-rank.md": "b8acfdf9c01f9c3ec7c6e0c8da4ca1ff54f401c5e7bf60c41b6b366993c15784",
+      "config/prompts/paper-screen.md": "dc10f5d4cc98dd8aa463c81b79f1c710b648e70e2d9095c4245c100d02b9160a",
+      "config/prompts/question-distil.md": "001e88cb1830847d88d8709360851ac113f1103cb360a7ab7e74e4b34239598a",
+      "config/prompts/strategy-agent.md": "ec04cb06748c9b087210252070f33ae8e10b153a921e67af94a61d622ce45ab2",
+      "config/prompts/strategy-review.md": "4bb7b26f736eb58c38340963aec9723499003756e1b7b975c5c99943125ecb7c",
+      "config/run.yaml": "5e830f5d2ebf2b0e9fac2d800e7c4a64cbced985eed91342296a2a1dca1b5557",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "docs/agent/data.md": "4fcbce1efa221ccc0fff9c7d62dd149bcc58ff6e2ad287aa218e8e2f9a0903a8",
+      "docs/agent/kernel-api.md": "ffae6716bf69df6a5afcbc0e13b4836b665dfd1ead3b6efb9699b713d52f880c",
+      "docs/agent/strategy-api.md": "7f25b80d641ac63a15d8ca824fc8cf29114c7364762b4aca1492f277bd968bd9",
+      "src/strategies/current.py": "78ad8ddd4bfccc92d8161392f03277f023341a21065c8b75251b5c41bab25e03"
+    },
+    "code_fingerprint": "9d65269dd4f13c6ed41b0d5777ecfaf36c073bf21fdc4685b950c5a94d8f8d14",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "890bc8b7545768da63d7095757c2fcf156295ca7f668e540185f88e745b30ea5",
+    "git_sha": "e903a0327b6d2b2cea46fbafba6de5e8355efd0a",
+    "isolation": {
+      "address_space": {
+        "active": true,
+        "mechanism": "RLIMIT_AS"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "",
+      "filesystem": {
+        "active": true,
+        "mechanism": "read-only bind mount, unprivileged user namespace (bubblewrap)"
+      },
+      "level": "isolated",
+      "network": {
+        "active": true,
+        "mechanism": "empty network namespace (bubblewrap --unshare-net)"
+      },
+      "platform": "Linux",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "aabbb0097d5a83b578563ba319631c8801d7e32af2b80a1ef7ad6952d4d90fb9",
+    "python_version": "3.14.4",
+    "scoring_fingerprint": "5ea5ff15ba2f09b6219b16efa43d86c387a553b69b26ee7f1aff1ed9cfd00310"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/2",
+  "written_at": "2026-11-26T09:37:49+00:00"
+}

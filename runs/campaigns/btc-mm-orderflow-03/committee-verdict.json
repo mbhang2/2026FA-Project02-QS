@@ -1,0 +1,108 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "economics"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I could only inspect the strategy source; I could not verify the harness's per-bar view or the event/book field semantics (e.g., whether B_BID_PX is the last closed book snapshot) from this code alone.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [
+        "The gate REJECTs (observed_best = -0.0488, accepted_any = false), so no positive claim is being made on this axis; the best candidate's Sortino is negative and rests on 960 sessions with 506 downside sessions and 39,381 trades, so the ratio is not degenerate in the strategy's favour.",
+        "The missing BH/Holm/deflation views are explained by the absence of a tabulated null for this instrument, and the gate uses per-candidate nulls instead, so the inconsistency check is moot for a rejected result."
+      ],
+      "confidence_note": "No per-candidate null draws or p-values are shown (null_moments unavailable, p = null), so I cannot verify the gate's internal calibration, only that its verdict is a rejection and the headline statistics are not inflated.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "economics",
+      "verdict": "VETO",
+      "reasons": [
+        "The measured result is economically meaningless as presented: net_pnl_points is -8,194,366 with gross_pnl_points -8,185,725, i.e. the strategy lost money before any costs, yet the primary score is -0.0488 and the campaign treats it as the best of nine trials. A negative score paired with a massively negative net P&L means the score is not measuring money made; whatever the ratio is rewarding (inactivity, exposure, scale artifacts), it is not profitability.",
+        "The P&L units are incoherent with the instrument. The evidence is labeled 'NQ is $20 per index point' and 'commission_per_contract_per_side_points: 0.0', but the strategy and pre-registration are BTC-USDT perpetuals on OKX with fees quoted in basis points of notional (0 bp maker / 2 bp taker). There is no mapping from the reported 'index points' to BTC price moves, so the magnitude of the loss cannot be interpreted at all \u2014 it is not knowable whether -8.19M points is a rounding error or total ruin.",
+        "Commission is charged on every fill per the evidence header, yet commission_per_contract_per_side_points is 0.0 while commission_paid_points is 8,641. The cost model that produced the outcome is internally inconsistent, so 'earns money after fees' \u2014 the pre-registered success criterion \u2014 cannot be evaluated from this evidence.",
+        "The strategy's own docstring reports every prior trial scoring between -0.068 and -0.438 and this winner at -0.068 to -0.048; no trial was ever positive. The campaign's conclusion is that the family loses money, which is a legitimate research finding but is not a trading edge, and the evidence as given does not support presenting it as one."
+      ],
+      "confidence_note": "I could not see the backtest engine, the fill simulator, or any per-session P&L breakdown, so I cannot tell whether the -8.19M figure is a unit-scaling bug, a sign error, or a genuine catastrophic loss; either way the reported economics are not interpretable as given.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "robustness",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "Breadth signals conflict: month breadth is acceptable (15/32 positive, 47%) but weekday breadth is narrow (2/7 positive \u2014 only Tue +521K and Wed +1.92M; Mon/Thu/Fri/Sat/Sun all negative, Sun -3.17M) and hour breadth is narrow (4/24 positive). The seasonality_caveat explicitly warns that on this dataset hour-of-day (and by extension weekday) may be arithmetic on a drifting session index carrying no regime information, so I cannot confirm the weekday/hour narrowness is a real distributional finding or a calendar artifact.",
+        "Profitability is front-loaded on the reliable month axis (2023 +713K, 2024 -1.78M, 2025 -7.13M; only 1 of 8 months in 2025 positive). This is either regime/time confinement (a robustness finding) or ordinary performance decay (another axis's concern); with no out-of-sample run I cannot distinguish the two.",
+        "The 'held up by a minority / single session' veto is NOT met: best_session_share is only 2.45%, top-5% concentration is 40%, and the rule acts broadly (39,381 trades across 960 sessions with exposure), so there is no single-trade or single-session dependence to point to."
+      ],
+      "confidence_note": "No validation was run and I cannot verify whether the narrow weekday/hour breakdowns carry real regime information or are calendar artifacts, so I cannot resolve whether the result is genuinely narrow or merely unevenly distributed.",
+      "error": null,
+      "attempts": 1
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 8274,
+      "cached_tokens": 0,
+      "completion_tokens": 65,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 1505,
+      "cached_tokens": 0,
+      "completion_tokens": 198,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 10420,
+      "cached_tokens": 0,
+      "completion_tokens": 488,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4337,
+      "cached_tokens": 0,
+      "completion_tokens": 9059,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "auditor_models": {},
+  "proposer_model": "deepseek-v4.1-flash",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  }
+}

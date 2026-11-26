@@ -1,0 +1,42 @@
+{
+  "campaign_id": "btc-mm-orderflow-03",
+  "record_digest": "39caa410b4adc94994da416141baac36f5bdb6a793250acb39a4d374d888439d",
+  "record_tampered": false,
+  "budget": 20,
+  "q": 0.05,
+  "n_trials": 20,
+  "harness_failures": 0,
+  "unaccounted": 0,
+  "outcomes": {
+    "completed": 19,
+    "crashed": 1
+  },
+  "per_trial_accepts_at_0.001": null,
+  "diagnostics_only": {
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "correction": null,
+    "unavailable": "no tabulated null exists for 'crypto-btc-okx-book', so BH, Holm, the nominal FAR and the deflation view were not computed. The gate below uses this campaign's per-candidate nulls and does not read that table."
+  },
+  "wall_clock_s": 0.0,
+  "gate": {
+    "kind": "spread_capture",
+    "is_the_gate": true,
+    "observed_best": -0.048767952252584144,
+    "selected_index": 9,
+    "profitability": {
+      "n_sessions": 960,
+      "alpha": 0.00125,
+      "z": 3.0233414397391534,
+      "lag": 6,
+      "mean": -0.09962957022407881,
+      "se": 0.09815490955226258,
+      "lower_bound": -0.3963853757872827,
+      "passes": false
+    },
+    "accept": false,
+    "excluded_off_question": [],
+    "floor_note": "Amendment 24 D5: accept = the selected trial's Newey-West lower bound on its mean net session return is above zero at q/N. No sign-flip null is used, and a missing bound fails."
+  },
+  "null_source": "none",
+  "error_control_note": "No error rate has been measured for null_source 'none' with max_of_n, so this campaign's verdict is not calibrated."
+}

@@ -2922,3 +2922,63 @@ Amendment 24 Parts A to C, the sign-flip gate for every other campaign, recorded
 - A further market-making control run on this design after a failure.
 
 Code, once implemented: `scripts/nq_campaign.py`, `src/core/loop/campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py`, `src/core/engine/native_trial.py`, `scripts/crypto_mm_control.py`.
+
+## Amendment 26 — 2026-11-26 — market-making returns with inventory marked
+
+**Status: DRAFT, not in force.** Drafted 2026-11-26 by Claude on request, after the defect recorded under Amendment 25. The code reads this line, and `gate: spread_capture` stays refused until it reads IN FORCE. Nothing here rescores a recorded campaign or reopens one.
+
+### Why
+
+Amendment 24 D4, kept by Amendment 25, measures a market maker's net session return "after all fees, funding and inventory marks". The scorer booked profit or loss only when a position closed, so an open position's gain or loss was never counted. `btc-mm-wide-01` showed what that allows: a 600-lot short held from about 17,270 to about 108,200 collected funding every day, never paid its open loss of about 5,460 USDT, and scored +1.07. With marks it scores −0.10.
+
+**Amendment 25's control has the same defect.** `scripts/crypto_mm_control.py` scored its simulated market makers with the same unmarked session returns. So did the calibration that chose its three markets, so the "noise" market, the one where no variant makes money, was chosen on the wrong returns. Amendment 25's result therefore says nothing about the gate as written, and both the calibration and the arms are run again.
+
+**This amendment is written after seeing that result, and says so.** It changes how returns are measured to match the rule already registered. It does not change any level, the score or the costs.
+
+### The rules
+
+Amendments 24 Part D and 25 apply as written, with these additions.
+
+| | rule |
+|---|---|
+| F1 | **The mark.** After a session, the open position is valued at `position × (close − average entry price)`, in price points, where the close is the **last trade price of that session** and the average entry is the reconstructed blotter's after the last fill at or before the session's end. A flat position is worth zero. |
+| F2 | **The session return.** A market-making session's return is the unmarked return, as before, plus that session's change in the open position's value divided by the session's notional base. Over a period the marks sum to the final open position's value, so a position held to the end is charged its loss or credited its gain. |
+| F3 | **Where it applies.** Every number the `spread_capture` gate reads: the train bound (E1), the validation bound (E2), the holdout bound (E3), the family test (E4), and the session returns recorded on each row. Net P&L on a `spread_capture` row includes the final open position's value. |
+| F4 | **Recorded on the row.** Each `spread_capture` row records `inventory_marked: true`. A row without it is not read by the gate. |
+| F5 | **A position open with no close price is an error,** not a zero mark. The native child returns each scored session's close and the runner checks them against the sessions it asked for. |
+| F6 | **The selection score is unchanged.** Trials are still ranked by the registered score. Only the profitability bound and the recorded returns carry the marks. |
+
+### The control, before signing
+
+The same control design as Amendment 25 (`scripts/crypto_mm_control.py`): a simulated book trading every 10 seconds over 150 sessions, five market-making variants, best-of-5 campaigns, 0 bp maker, 2 bp taker, 1 ms latency, a 10-lot cap, and each campaign passing at **`alpha = q / 10 = 0.005`** (A25 E1 at N = 5). **The only change is that every return is marked under F1 and F2,** with the close being the last simulated trade price of each session.
+
+**1. Calibration, once, with marks.** The impact grid, the selection rules and the minimum strong Sharpe of 0.30 are Amendment 24's second revision, unchanged. They run on new seeds **670001 to 670100**. The chosen settings are committed to `docs/reviews/crypto-a26/edges.json` before any arm is drawn. If the rules cannot pick three settings in the order strong < noise < unprofitable, this amendment is not signed.
+
+**2. The arms, once, from a clean commit, after the settings are committed:**
+
+| arm | impact | seeds | campaigns | pass condition |
+|---|---|---|---|---|
+| unprofitable | from step 1 | 671001 to 672000 | 1,000 | Wilson 95% upper bound <= 0.05 (36 or fewer pass) |
+| noise | from step 1 | 672001 to 673000 | 1,000 | Wilson 95% upper bound <= 0.05 (36 or fewer pass) |
+| strong | from step 1 | 673001 to 673100 | 100 | **at least 80** pass |
+
+**If any arm fails, this amendment is not signed, and no further market-making gate is tested on this control design.** A failure is recorded here with its numbers.
+
+### Acceptance, before signing
+
+1. Tests pin F1 to F6: the marks sum to the final open value, a position flat at every close is unaffected, a held position's loss is counted, a missing close is refused, and unmarked scoring still equals `score(reconstruct())` exactly.
+2. Every stored market-making trial re-scores to its recorded score without marks, exactly. *Done 2026-11-26 for `btc-mm-orderflow-03` and `btc-mm-wide-01`.*
+3. The calibration and the three arms above pass.
+4. Existing campaigns and the recorded BTC family reproduce their results unchanged.
+
+### What it does NOT change
+
+The levels of Amendment 25 (E1 to E4), the selection score, costs, funding, the 0.10 BTC cap, splits, embargo, the holdout lock, `B` and `q`. Campaigns that are not `spread_capture`: their scoring still books P&L at close only. Whether that matters for them is a separate question and is not settled here. Recorded campaigns: `btc-mm-orderflow-03` stays REJECT, and its marked re-check is kept beside it.
+
+### What would invalidate this amendment
+
+- A `spread_capture` row judged without inventory marks.
+- The close price, the seeds, the settings or a pass condition changed after a calibration, control or real result is seen, without a new amendment.
+- A further market-making control on this design after a failure.
+
+Code, once implemented: `src/core/engine/column_score.py` (done), `scripts/run_native_trial.py` (done), `run.py` (done), `scripts/crypto_mm_control.py` (marks, the A26 seeds and stages), `scripts/nq_campaign.py` and `src/core/engine/native_trial.py` (the A26 check, done; F4's refusal of unmarked rows in `stage_nulls`, `scripts/l2_gate.py` and `scripts/holdout.py`, not yet).

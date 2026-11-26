@@ -57,7 +57,13 @@ persists between calls, so anything you need to remember goes here.
 
 ## `orders`: what you return
 
-A zeroed table of 64 rows of 6 floats. Fill rows from 0 upward and return how many you used.
+A zeroed table of 64 rows of 6 floats, **two-dimensional**: write a field as
+`orders[row, column]`, for example `orders[0, O_OP] = OP_BUY` and `orders[1, O_LIMIT] = price`.
+`orders[row * 6 + column]` is wrong: it addresses whole rows, not fields. `event` and `book` are
+one-dimensional, so they are read as `event[E_WORKING + i]` and `book[B_BID_PX + i]`.
+
+Fill rows from 0 upward and return how many you used. **The 64 is per call:** every call may send
+up to 64 rows, and there is no limit on orders per session or per day.
 
 | column | meaning |
 |---|---|
@@ -69,7 +75,8 @@ A zeroed table of 64 rows of 6 floats. Fill rows from 0 upward and return how ma
 | `O_ORDER_ID` | for `OP_CANCEL`: one of the ids in `event[E_WORKING + i]` |
 
 A row with an invalid value, a cancel of an id you were not shown, or a count outside 0 to 64
-stops the run. That is a trial, it counts, and it scores nothing.
+stops the run. That is a trial, it counts, and it scores nothing. The trial's record names which
+of these it was.
 
 ## How orders behave
 
@@ -114,3 +121,41 @@ positions held at settlement times. Your own orders do not move the book.
 `B_BID_PX`, `B_BID_QTY`, `B_ASK_PX`, `B_ASK_QTY`, `O_OP`, `O_KIND`, `O_TIF`, `O_SIZE`,
 `O_LIMIT`, `O_ORDER_ID`, `OP_BUY`, `OP_SELL`, `OP_CANCEL`, `KIND_MARKET`, `KIND_LIMIT`,
 `TIF_DAY`, `TIF_GTC`.
+
+## An example of the mechanics
+
+This shows how to read the book, keep state, cancel and send orders. It is not a recommendation:
+it quotes one lot at the best bid and ask, and replaces both quotes when either best price moves.
+
+```python
+def kernel(event, book, state, orders):
+    # state[0] and state[1]: the bid and ask the current quotes were placed at.
+    if book[B_OK] == 0.0 or event[E_ACTIONABLE] == 0:
+        return 0
+    bid = book[B_BID_PX]
+    ask = book[B_ASK_PX]
+    working = event[E_N_WORKING]
+    if working > 0 and bid == state[0] and ask == state[1]:
+        return 0                        # quotes still at the touch: keep their place in line
+    count = 0
+    for i in range(32):
+        if i < working:
+            orders[count, O_OP] = OP_CANCEL
+            orders[count, O_ORDER_ID] = event[E_WORKING + i]
+            count += 1
+    orders[count, O_OP] = OP_BUY
+    orders[count, O_KIND] = KIND_LIMIT
+    orders[count, O_TIF] = TIF_DAY
+    orders[count, O_SIZE] = 1.0
+    orders[count, O_LIMIT] = bid
+    count += 1
+    orders[count, O_OP] = OP_SELL
+    orders[count, O_KIND] = KIND_LIMIT
+    orders[count, O_TIF] = TIF_DAY
+    orders[count, O_SIZE] = 1.0
+    orders[count, O_LIMIT] = ask
+    count += 1
+    state[0] = bid
+    state[1] = ask
+    return count
+```

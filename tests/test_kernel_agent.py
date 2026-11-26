@@ -63,3 +63,17 @@ def test_a_blocked_kernel_proposal_is_refused_and_still_counts():
     from src.core.loop.campaign import TRIAL_OUTCOMES
 
     assert "refused" in TRIAL_OUTCOMES
+
+
+def test_the_interface_example_is_in_the_language_and_uses_two_dimensional_orders():
+    text = llm.KERNEL_DOC_PATHS["api"].read_text()
+    example = text.split("## An example of the mechanics", 1)[1].split("```python", 1)[1].split("```", 1)[0]
+    K.check(example)
+    assert "orders[count, O_OP]" in example and "* 6" not in example
+    assert "The 64 is per call" in text and "orders[row, column]" in text
+
+
+def test_every_kernel_stop_code_has_a_reason():
+    from src.core.engine import native_trial as T
+
+    assert set(T.KERNEL_STOP_REASONS) == {1, 2, 3, 4}

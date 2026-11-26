@@ -19,6 +19,13 @@ BOOK_MODEL = "book-queue-pessimistic"
 # Amendment 25: every market-making test spends half the error it would under A24 Part D:
 # q/(2N) on train, q/(2M) on validation, q/2 on the holdout.
 SPREAD_CAPTURE_ALPHA_FACTOR = 0.5
+# The codes `fc_kernel_callback` leaves in `FcKernelUser.error` when it stops a run.
+KERNEL_STOP_REASONS = {
+    1: "the kernel raised (for example an index outside its arrays) or returned a negative count",
+    2: "the kernel returned more order rows than the 64 allowed per call",
+    3: "an order row had an invalid op, kind, time in force, size or limit price",
+    4: "the kernel cancelled an order id it was not shown",
+}
 
 
 class NativeTrialRefused(ValueError):

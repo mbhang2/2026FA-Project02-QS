@@ -211,11 +211,17 @@ def _child_run(spec: dict) -> dict:
             is_warm = columns.session in warm
             if not is_warm and columns.session not in keep:
                 continue
-            fast.run_session(dataset.book_for(columns.session),
-                             (columns.ts, columns.price, columns.size, columns.side), columns.session,
-                             dataset.session_bounds(columns.session)[1], actionable=not is_warm,
-                             callback=kernel.callback(lib), user=kernel.user_pointer(),
-                             snapshot_trade=points.get(columns.session, -1), state=kernel.state)
+            try:
+                fast.run_session(dataset.book_for(columns.session),
+                                 (columns.ts, columns.price, columns.size, columns.side), columns.session,
+                                 dataset.session_bounds(columns.session)[1], actionable=not is_warm,
+                                 callback=kernel.callback(lib), user=kernel.user_pointer(),
+                                 snapshot_trade=points.get(columns.session, -1), state=kernel.state)
+            except RuntimeError:
+                # Say which rule the kernel broke, so the row records the cause.
+                raise T.NativeTrialFailed(
+                    f"the kernel stopped the run in session {columns.session}: "
+                    f"{T.KERNEL_STOP_REASONS.get(kernel.error, f'error code {kernel.error}')}") from None
             if columns.session in points:
                 saved[columns.session] = fast.snapshot()
             if lib.fc_engine_fill_count(fast.handle) > MAX_FILL_LOG:

@@ -2700,7 +2700,7 @@ Code: `src/core/engine/fills.py`, `src/core/engine/engine.py`, `run.py`, `script
 
 ## Amendment 24 — 2026-11-23 — native kernel trials and BTC market making
 
-**Status: DRAFT, NOT IN FORCE.** Drafted 2026-11-23 by Claude on request and not signed. The code reads this line, so nothing below applies until Michael signs it. No candidate kernel has run. The native engine has run only fixed check strategies, which wrote rows only to a scratch ledger under `.scratch/`.
+**Status: IN FORCE from 2026-11-25 for Parts A to C only, signed off by Michael.** Part D, the market-making gate, was not accepted, and the code refuses `gate: spread_capture` whatever this line says. Drafted 2026-11-23 by Claude on request and revised before signing. The code reads this line. No candidate kernel had run before signing: the native engine had run only fixed check strategies, writing rows only to a scratch ledger under `.scratch/`. Before signing, two adversarial reviews' findings were fixed or recorded below. The lookahead, warmup and mid-session resume tests passed, and real-data audits matched at 1 ms and 100 ms, including a window across a session close and a deep audit of two whole sessions. A recorded OKX trial reproduced exactly, and a recorded NQ trial gave the same result as main. No recorded real Binance trial existed to replay.
 
 ### Why
 

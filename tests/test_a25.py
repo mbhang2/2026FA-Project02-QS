@@ -41,7 +41,7 @@ def test_the_control_uses_new_seeds_half_the_alpha_and_a_thousand_noise_campaign
     assert M.a25_verdict({"unprofitable": 0, "noise": 0, "strong": 79}, counts)["accepted"] is False
 
 
-def test_the_amendment_is_not_in_force_yet():
+def test_the_amendment_is_in_force():
     import prereg
 
-    assert prereg.in_force(25) is False
+    assert prereg.in_force(25) is True

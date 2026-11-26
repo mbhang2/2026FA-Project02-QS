@@ -2857,7 +2857,7 @@ Code, once implemented: `run.py`, `scripts/holdout.py`, `src/core/engine/native.
 
 ## Amendment 25 — 2026-11-25 — a stricter market-making gate
 
-**Status: DRAFT, NOT IN FORCE.** Drafted 2026-11-25 by Claude on request and not signed. The code reads this line, and until it is signed `gate: spread_capture` stays refused at registration and in the native runner. No market-making campaign has run, and no seed below has been drawn.
+**Status: IN FORCE from 2026-11-25, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line, and `gate: spread_capture` registers and runs only while it is in force. No market-making campaign had run before signing. Its control ran once from commit `31121ed` and passed all three conditions (below).
 
 ### Why
 
@@ -2890,6 +2890,14 @@ The same control as Amendment 24's second revision (`scripts/crypto_mm_control.p
 | strong | 0.35 | 663001 to 663100 | 100 | **at least 80** pass |
 
 Each arm runs once, from a clean commit, after this amendment is committed and before it is signed. **If any arm fails, this amendment is not signed, and no further market-making gate is tested on this control design.**
+
+*The control ran once from commit `31121ed` (`~/crypto-controls/a25/control.json`, SHA-256 `8ad399b8f2912d0af4005854468e0b55786bfc6f504539fc903f340abbb32d04`), with 2,100 campaigns at `alpha = 0.005`.* **It passed all three conditions.**
+
+| arm | passed | Wilson 95% | condition | result |
+|---|---|---|---|---|
+| unprofitable | 9 of 1,000 | [0.0047, 0.0170] | upper <= 0.05 | pass |
+| noise | 14 of 1,000 | [0.0084, 0.0234] | upper <= 0.05 | pass |
+| strong | 100 of 100 | [0.9630, 1.0000] | at least 80 | pass |
 
 ### Acceptance, before signing
 

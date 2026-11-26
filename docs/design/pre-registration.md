@@ -2854,3 +2854,57 @@ If either fails, Part D is not signed and no further noise run is made on this d
 - A market-making result reported without D7's conditions.
 
 Code, once implemented: `run.py`, `scripts/holdout.py`, `src/core/engine/native.py`, `src/core/engine/native_trial.py`, `src/core/engine/kernel.py`, `native/fastcore/fastcore.cpp`, and a new market-making control script.
+
+## Amendment 25 — 2026-11-25 — a stricter market-making gate
+
+**Status: DRAFT, NOT IN FORCE.** Drafted 2026-11-25 by Claude on request and not signed. The code reads this line, and until it is signed `gate: spread_capture` stays refused at registration and in the native runner. No market-making campaign has run, and no seed below has been drawn.
+
+### Why
+
+Amendment 24 Part D proposed a net-profit gate for market makers and was not accepted. In its control, in markets where no variant made money, the gate passed 14 of 400 campaigns and then 37 of 1,000, about 3.6% together. That is below 5%, but the condition required the 95% upper bound to be at or below 5%, and the 1,000-campaign rerun missed it by one campaign.
+
+**This amendment is written after seeing that result, and says so.** It halves the error each test may spend. That makes the gate stricter, never looser, and the control is rerun once on new seeds to show its false-pass rate is below 5%. It does not rescore anything already run.
+
+### The rules
+
+Amendment 24 Part D's rules apply as written, with these changes. In particular, the declared gate (D1), the 0.10 BTC inventory cap (D2), the diagnostics (D3) and the stated conditions (D7) are unchanged.
+
+| | rule |
+|---|---|
+| E1 | **Train:** a `spread_capture` campaign passes only if its selected trial's Newey-West lower bound on mean net session return is above zero at **`q / (2N)`**. A24 D5 used `q/N`. |
+| E2 | **Validation:** the bound must be above zero at **`q / (2M)`**. A24 D5 used `q/M`. |
+| E3 | **Holdout:** the bound must be above zero at **`q / 2`**. A24 D6 used `q`. |
+| E4 | **Mixed families:** each `spread_capture` campaign uses its bound at `q / (2M)`, and the `max_of_m` test over the other `m` campaigns stays at `q * m / M` (A24 D8). The family's false-pass rate is then at most `q`. |
+| E5 | Amendment 18's lag rule, the score, the exposure floor and the sign-flip gate for other campaigns are unchanged. |
+
+### The control, before signing
+
+The same control as Amendment 24's second revision (`scripts/crypto_mm_control.py`): a simulated book trading every 10 seconds over 150 sessions, five market-making variants, best-of-5 campaigns, 0 bp maker, 2 bp taker and 1 ms latency. The only change in the gate is E1: each campaign passes at **`alpha = q / 10 = 0.005`**.
+
+**The market settings are the ones already committed** in `docs/reviews/crypto-a24/edges-r2.json`, from a calibration that did not depend on the gate: strong 0.35, noise 0.57 and unprofitable 0.575 ticks of impact. No new calibration is run.
+
+| arm | impact | seeds | campaigns | pass condition |
+|---|---|---|---|---|
+| unprofitable | 0.575 | 661001 to 662000 | 1,000 | **36 or fewer** pass (Wilson 95% upper bound <= 0.05) |
+| noise | 0.57 | 662001 to 663000 | 1,000 | **36 or fewer** pass (Wilson 95% upper bound <= 0.05) |
+| strong | 0.35 | 663001 to 663100 | 100 | **at least 80** pass |
+
+Each arm runs once, from a clean commit, after this amendment is committed and before it is signed. **If any arm fails, this amendment is not signed, and no further market-making gate is tested on this control design.**
+
+### Acceptance, before signing
+
+1. Tests pin E1 to E4 in the campaign gate, the family test and the holdout.
+2. The control above passes all three conditions.
+3. Existing campaigns and the recorded BTC family reproduce their results unchanged.
+
+### What it does NOT change
+
+Amendment 24 Parts A to C, the sign-flip gate for every other campaign, recorded campaigns, the score, costs, splits, embargo, holdout lock, `B` and `q`.
+
+### What would invalidate this amendment
+
+- A market-making campaign judged at A24 Part D's looser levels.
+- The levels, seeds, settings or a pass condition changed after a control or real result is seen, without a new amendment.
+- A further market-making control run on this design after a failure.
+
+Code, once implemented: `scripts/nq_campaign.py`, `src/core/loop/campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py`, `src/core/engine/native_trial.py`, `scripts/crypto_mm_control.py`.

@@ -30,7 +30,7 @@ from ...types import Subscription
 from . import _surface
 from .protocol import (
     ACTIONS, MAX_SETUP_BYTES, ProtocolError, SetupPayloadTooLarge, encode,
-    recv, send,
+    recv, send, send_to_child,
 )
 
 HERE = Path(__file__).resolve().parent
@@ -499,18 +499,14 @@ class RemoteStrategy:
 
     # -- the wire ---------------------------------------------------------- #
     def _exchange(self, message: dict) -> list[dict]:
-        import json
-
-        blob = json.dumps(message)
         self.messages += 1
-        self.bytes_out += len(blob)
         deadline = None if self.timeout_s is None else time.monotonic() + self.timeout_s
         try:
-            send(self._to_child, message)
+            self.bytes_out += send_to_child(self._to_child, message)
             while True:
                 reply = recv(self._from_child)
                 if reply.get("reply") == "pull":
-                    send(self._to_child, self._serve(reply))
+                    self.bytes_out += send_to_child(self._to_child, self._serve(reply))
                     continue
                 break
         except EOFError:
@@ -526,7 +522,7 @@ class RemoteStrategy:
             raise StrategyRaised(reply.get("error", "the strategy raised"),
                                  reply.get("traceback", ""))
         if message.get("kind") in {"setup", "on_bars", "on_fill",
-                                   "on_lifecycle", "on_tick", "on_quote"}:
+                                   "on_lifecycle", "on_tick", "on_quote", "on_book_event"}:
             self.completed_callbacks += 1
         try:
             return validate_actions(reply.get("actions", []))
@@ -742,6 +738,9 @@ class RemoteStrategy:
 
     def on_quote(self, ctx) -> None:
         self._apply(ctx, self._exchange(self._snapshot(ctx, "on_quote")))
+
+    def on_book_event(self, ctx) -> None:
+        self._apply(ctx, self._exchange(self._snapshot(ctx, "on_book_event")))
 
 
 @dataclass

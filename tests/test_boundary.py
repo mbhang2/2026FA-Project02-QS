@@ -52,6 +52,7 @@ from src.core.types import (  # noqa: E402
     Strategy,
     TickStrategy,
     QuoteStrategy,
+    BookEventStrategy,
 )
 
 INTERVAL = "1m"
@@ -479,7 +480,7 @@ def callbacks_the_engine_calls() -> set[str]:
 
 
 def protocol_callbacks() -> set[str]:
-    """Everything the three Protocols declare between them.
+    """Everything the callback Protocols declare between them.
 
     Only `fit` is taken from `FittedStrategy`, because only `fit` is called by the
     engine. `save_weights` and `load_weights` are called by the harness -- `run.py`
@@ -493,7 +494,7 @@ def protocol_callbacks() -> set[str]:
     `engine.validate_fitted_strategy` is separate from `validate_strategy`.
     """
     out = set()
-    for proto in (Strategy, TickStrategy, QuoteStrategy):
+    for proto in (Strategy, TickStrategy, QuoteStrategy, BookEventStrategy):
         out |= {
             n for n, v in vars(proto).items()
             if not n.startswith("_") and callable(v)
@@ -507,7 +508,7 @@ def test_the_protocol_declares_exactly_what_the_engine_calls():
     assert called, "the AST scan found nothing; the engine was restructured"
     assert called == declared, (
         f"the engine calls {sorted(called)} but "
-        f"types.Strategy/TickStrategy/QuoteStrategy/FittedStrategy declare {sorted(declared)}. "
+        f"types.Strategy/TickStrategy/QuoteStrategy/BookEventStrategy/FittedStrategy declare {sorted(declared)}. "
         "The protocol is the only statement of the contract in the code; a stale "
         "one is worse than none."
     )
@@ -517,7 +518,7 @@ def test_every_declared_callback_takes_exactly_the_context():
     """`FittedStrategy` is excluded on purpose: `fit()` takes nothing and the
     weight methods take a path, so they are not callbacks and are checked by
     `test_the_fitted_protocol_matches_the_arities_the_engine_enforces` instead."""
-    for proto in (Strategy, TickStrategy, QuoteStrategy):
+    for proto in (Strategy, TickStrategy, QuoteStrategy, BookEventStrategy):
         for name, fn in vars(proto).items():
             if name.startswith("_") or not callable(fn):
                 continue

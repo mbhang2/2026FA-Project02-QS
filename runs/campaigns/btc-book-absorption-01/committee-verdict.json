@@ -1,0 +1,109 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I can verify the strategy code itself contains no lookahead, future-dated state, or evaluation peeking, but I cannot see the harness's per-bar view implementation to independently confirm the structural guarantees it relies on.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "statistics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "The campaign winner was never evaluated on a validation split (_validation: NOT RUN), so there is no out-of-sample evidence to corroborate the in-sample score of 0.156.",
+        "The gate's p=0.0017 is computed against per-candidate nulls drawn from the same 960 sessions the winner was selected on, so it is an in-sample selection statistic and cannot substitute for the missing out-of-sample check.",
+        "The diagnostics-only BH/Holm/deflation views are unavailable for this campaign (no tabulated null for 'crypto-btc-okx-book'), so the cross-view coherence check cannot be performed."
+      ],
+      "confidence_note": "I can see the in-sample numbers and the gate, but the absence of any validation-split evaluation means I cannot judge whether the result holds up out of sample.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "The economic evidence is in the wrong units and for the wrong instrument: it is labelled NQ at $20 per index point with commission_per_contract_per_side = 0, while the strategy and pre-registration are BTC-USDT perpetual on OKX with taker fees of 2bp of notional per side; the P&L, commission and per-trade edge cannot be interpreted against the stated cost model.",
+        "The stated commission_per_contract_per_side of 0 contradicts the nonzero commission_paid_points (932,846 of 6,219,587 gross, ~15%), so the cost basis of the result is internally inconsistent and I cannot tell whether the 4bp round-trip taker cost the hypothesis must survive was actually charged.",
+        "avg_holding_period_ns of 1.6e13 ns is about 4.4 hours, which is consistent with the 360-bar time stop but is far longer than the intraday absorption-turn horizon the claim describes; without per-trade P&L attribution I cannot tell whether the measured edge is the absorption reversal or simply time-in-position drift.",
+        "The strategy's own trial log reports #15 at +0.1397 and this file at +0.1561 on 1,159 trades, but the evidence gives no breakdown of maker-fills versus the relaxed-coverage market-order branch, so I cannot tell whether the result survives the 4bp taker round trip the pre-registration says must be survived."
+      ],
+      "confidence_note": "The module docstring is detailed and the code matches the claimed fade direction, but the evidence block is in NQ index-point units with zero per-side commission and no per-trade or per-branch attribution, so cost survival and economic magnitude are unjudgeable on this axis.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Monthly breadth is 19/32 positive (59%), but the total is heavily carried by a minority of months: 2025-01 alone is +1,288,428 and 2024-11/2024-12/2025-05 are each +740k to +890k, while 2024-04 is -316,943 and 2025-08 is -340,041 \u2014 the sign breadth is fine but the magnitude is concentrated in a handful of months with no stated regime reason.",
+        "by_hour_utc shows 14/24 positive but hour 07 alone is +1,680,016 and hour 06 is +891,770 against hour 05 at -353,868 and hour 15 at -332,799; the realised-P&L hour breakdown is dominated by two adjacent hours, and the entry-hour view (00: +1,835,587) disagrees sharply with it, meaning the result is anchored to a narrow slice of the clock rather than spread across the session.",
+        "The strategy holds positions across sessions (953 sessions with exposure, 1159 trades, 20 completed outcomes) so realised-hour P&L is largely an artefact of when positions happen to close/expiry, and the entry-hour distribution \u2014 which is the strategy's actual decision timing \u2014 is itself concentrated in hours 00/01/06 with most other hours near zero or negative, i.e. behaviour confined to a small part of the day with no stated reason why that would persist."
+      ],
+      "confidence_note": "No out-of-sample evidence exists (validation not run), and I cannot see trade-level detail to confirm whether the hour-07/06 concentration is a single recurring setup or an expiry-calendar artefact.",
+      "error": null,
+      "attempts": 1
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 7678,
+      "cached_tokens": 640,
+      "completion_tokens": 61,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 1924,
+      "cached_tokens": 640,
+      "completion_tokens": 193,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4324,
+      "cached_tokens": 1152,
+      "completion_tokens": 447,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 9740,
+      "cached_tokens": 0,
+      "completion_tokens": 398,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "auditor_models": {},
+  "proposer_model": "deepseek-v4.1-flash",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  }
+}

@@ -1,0 +1,532 @@
+{
+  "best_candidate": {
+    "accepted": true,
+    "campaign_index": 18,
+    "diagnostics": {
+      "avg_holding_period_ns": 15955309003147.953,
+      "best_session_share": 0.0038358329884726145,
+      "by_hour_utc": {
+        "00": -12526.591999996708,
+        "01": 248238.68900000257,
+        "02": 205556.10600000047,
+        "03": -99032.61989998478,
+        "04": 224623.5242200019,
+        "05": -353867.55185999366,
+        "06": 891769.7330000174,
+        "07": 1680016.4587000164,
+        "08": -93973.00369999693,
+        "09": -51561.341999989294,
+        "10": 462393.04950000317,
+        "11": 284803.3095000057,
+        "12": 661568.9237200038,
+        "13": 266932.81500000454,
+        "14": 612100.958000001,
+        "15": -332798.72749999556,
+        "16": -70544.49749999767,
+        "17": -23652.189499994653,
+        "18": 56556.51300000351,
+        "19": 371098.6215000024,
+        "20": 17929.021999997658,
+        "21": -169956.6700000013,
+        "22": -205024.37400000132,
+        "23": 716089.9009999977
+      },
+      "by_hour_utc_entry": {
+        "00": 1835586.8186000353,
+        "01": 1130484.2175000175,
+        "02": 390711.28436000913,
+        "03": -58628.964499992755,
+        "04": -469282.58749999496,
+        "05": 454015.58500000695,
+        "06": 1151653.847000001,
+        "07": 35033.93072000566,
+        "08": 282912.71900000307,
+        "09": 71224.61799999964,
+        "10": 32432.29600000255,
+        "11": 124203.37650000384,
+        "12": 66415.38000000703,
+        "13": 59825.28750000436,
+        "14": -69825.48450000069,
+        "15": -82785.9549999959,
+        "16": -198968.03349999955,
+        "17": 163214.26549999902,
+        "18": 159822.07849999846,
+        "19": 322074.7129999961,
+        "20": -66235.02600000029,
+        "21": -47644.48200000008,
+        "22": -259.34000000000026,
+        "23": 759.512
+      },
+      "by_month": {
+        "2023-01": -23368.190000002254,
+        "2023-02": 34855.62849999974,
+        "2023-03": 89913.61699999844,
+        "2023-04": 49883.68249999845,
+        "2023-05": -34731.59250000291,
+        "2023-06": 41728.29849999906,
+        "2023-07": 63672.1394999986,
+        "2023-08": -56334.51100000116,
+        "2023-09": -67570.84550000263,
+        "2023-10": 33663.44649999956,
+        "2023-11": -24965.010000003043,
+        "2023-12": 116406.93999999795,
+        "2024-01": 619503.7845000037,
+        "2024-02": -53984.36950000105,
+        "2024-03": -36547.24699999274,
+        "2024-04": -316943.21899999573,
+        "2024-05": 288652.50000000553,
+        "2024-06": 406897.60900000745,
+        "2024-07": 546364.9026999981,
+        "2024-08": -86091.31049999983,
+        "2024-09": 272857.88750000065,
+        "2024-10": 342112.44760001026,
+        "2024-11": 743625.9456000029,
+        "2024-12": 768313.8805000065,
+        "2025-01": 1288428.2790000066,
+        "2025-02": -129282.7819999817,
+        "2025-03": 1029.2597200183081,
+        "2025-04": 123184.41100000276,
+        "2025-05": 887150.5830000059,
+        "2025-06": -208013.3194399915,
+        "2025-07": -53631.349999988466,
+        "2025-08": -340041.4399999911
+      },
+      "by_weekday": {
+        "Fri": 1067210.7013000133,
+        "Mon": -301291.0936399772,
+        "Sat": 404465.51050001086,
+        "Sun": 770593.6145000133,
+        "Thu": 1234905.1925000153,
+        "Tue": 809841.8300200185,
+        "Wed": 1301014.3010000126
+      },
+      "commission": 932846.58132,
+      "fill_model_spread": null,
+      "gross_pnl": 6219586.637500106,
+      "max_drawdown": -9.343344330415768,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 9.3855,
+        "exposure_share": 0.9927,
+        "return_dispersion": 0.0028,
+        "trades_per_session": 0.0278
+      },
+      "primary_after_drop": {
+        "1": 0.15329075841772766,
+        "10": 0.12893875582665662,
+        "2": 0.15055414878767734,
+        "3": 0.14782760811179313,
+        "5": 0.14241886914088892
+      },
+      "profit_concentration_top5pct": 0.1756309319790764,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny. **Read `by_hour_utc` against `by_hour_utc_entry` before calling anything concentrated.** The first buckets P&L at the instant it was REALISED, which for any position held across time is the close -- and for an option the close is a cash settlement at an expiry the strategy neither chose nor can prevent. The second buckets the same P&L at the hour the position was OPENED. Where they disagree, the first is describing the expiry calendar and the second is describing the strategy. Note also that an hour-of-day is only a market clock if the dataset has one: on the synthetic calendar a session is a few hours long and its start drifts across the day, so hour-of-day there is arithmetic on the session index and carries no regime information at all",
+      "sessions_to_zero": -1,
+      "sessions_with_exposure": 953,
+      "trade_count": 1159,
+      "turnover_contracts_per_session": 198.4375,
+      "win_rate": 0.6005176876617774
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 473,
+      "kurtosis": -1.0547486054625241,
+      "metric": "sortino_per_session",
+      "min_exposed_fraction": 0.7,
+      "n_sessions": 960,
+      "net_pnl": 5286740.0561801065,
+      "primary": 0.1560756089067173,
+      "primary_uncharged": 0.15830765712187114,
+      "reject_reason": "",
+      "rejected": false,
+      "sessions_exposed": 953,
+      "sharpe": 0.09747222121056555,
+      "significance": 4.835825872359185,
+      "skew": 0.16061401227226565,
+      "sortino": 0.1560756089067173,
+      "trade_count": 1159
+    },
+    "source": "\"\"\"Absorption fade on the OKX BTC-USDT perpetual -- eighteenth attempt: the\nmeasured maximum restored, and the held test moved to the level that actually\nabsorbs.\n\nThe claim and the direction are the campaign's and they do not change. After a\ndirectional move, aggressive flow that runs into displayed liquidity which holds\nmarks a turn. **A short entry follows absorbed buying after a rise; a long entry\nfollows absorbed selling after a fall.** No path in this file enters with the\nflow.\n\nWhere the campaign stands\n-------------------------\n    #0  -0.2927   6,341   market entry, tight bracket\n    #1  -0.1051   6,587   market entry\n    #2  -0.1044   3,054   mid-limit entry (adversely selected)\n    #3  -0.1282   4,969   sigma bracket, market\n    #4  -0.1522   2,237   sigma bracket, mid-limit\n    #5  not scored: 156/960 sessions exposed, under the 70% floor\n    #6  -0.0615   1,189   market, 1 round trip/session, 80/55\n    #7  -0.0901   2,715   market, <=4/session\n    #8  -0.0047   1,547   market, 1/session, wide bracket\n    #9  +0.0427   1,213   maker at the touch, 80/55\n    #10 +0.0479   1,231   maker inside the spread, stricter held test, 80/55\n    #11 -0.1073   2,329   maker at touch, sigma move, 2 round trips\n    #12 +0.0563   1,633   90/60, absolute stall cap, size 500\n    #13 +0.0793   1,150   100/75, 4h clock\n    #14 +0.0817   1,132   120/90, 5h clock\n    #15 +0.1397   1,161   125/90, 6h clock          <-- best measured\n    #16 +0.1044   1,144   145/105, 8h clock\n    #17 +0.0942   1,135   150/112.5, 8h clock\n\nWhat the last five rows establish\n---------------------------------\nThe bracket-width lever that looked linear through #13 has stopped paying, and\nthe last two rows say so twice.\n\n#16 -> #17 changed exactly one thing -- the width, 145/105 to 150/112.5, a 1.11x\nproduct at an unchanged 8h clock -- and lost 10% of the score. There is no\nclock story available for that pair: same hold, same ladder, same entry, same\nsignal, and a trade count within 1%. It is a clean measurement of the slope of\nscore against width in the wide regime, and the slope is **negative**: roughly\n-3% of score per 1% of width, at 8h.\n\nThat matters because it means the a*b expansion of the two-barrier problem is\nnot the governing relation out here. a*b*mu/sigma^2 is a first-order expansion\nin mu, and it says that widening both legs multiplies the captured drift; what\nit cannot say is that mu is constant in width. The reversal drift this campaign\nis fading is a finite displacement -- the aggressors who were absorbed do not\npush price back 150bp, they push it back some fixed fraction of the move they\ncreated -- so past the point where the target exceeds the available reversal the\nextra width buys nothing and only lengthens the time the trade sits exposed to\nwhatever the day is doing. #15 sat at 125/90. #16 and #17 walked past it and\npaid.\n\nSo the width is done. #15's 125/90 is the measured maximum in this family, and\nthe two rows above it are worse by 25% and 32%.\n\nWhat this file changes\n----------------------\nTwo things, and only one of them is a change of numbers.\n\n**1. The geometry returns to #15 exactly**: target 125bp, stop 90bp, time stop\n360 one-minute bars, size 100, one round trip per UTC day, ladder untouched.\nNothing here is a new guess about width or runway; it is the best point the\ncampaign has measured, restored.\n\n**2. The held test is moved to the level that actually absorbs.** This is the one\npart of the conjunction that has never been measured at the resolution the claim\nimplies, and it is the part the claim is *about*.\n\nEverything since #10 tests the sum of the top **five** levels: at least 0.80x its\nown 60-bar median, 0.80x the other side's top five, and 0.70x what it was at the\nstart of the stall. That is a real test of a real thing -- a heavy book on the\nabsorbing side -- but it is not a test of a *wall*. Five levels of a BTC\nperpetual sum several price ticks of depth, and an aggressor sweeping into the\noffer never touches levels two through five until level one is gone. A book can\npass every one of those three tests on the strength of levels three to five\nwhile the touch itself is thin, and in that case there was nothing there to\nabsorb the flow: price simply walked up through an empty top of book, which is\nthe continuation the campaign says is the *other* outcome, entered as if it were\nthe signal.\n\nSo the touch is now tested directly, alongside the existing top-five test rather\nthan replacing it:\n\n  * the absorbing side's **best** price level holds at least 0.55x its own\n    60-bar median size, and\n  * at least 0.45x the opposite side's best level.\n\nBoth are deliberately lenient. Top-of-book size on this instrument flickers on\nthe millisecond scale and the row `ctx.book()` hands us is a single snapshot;\nrequiring the touch to be merely *not thin* rather than *heavy* keeps the test a\nfloor rather than a coin flip. The relaxed coverage path scales both down with\nthe same 0.6/0.5 factors the top-five test already uses, so the insurance branch\nstays the same conjunction, weaker -- never a different one.\n\nThis is a tightening, which is the direction every measured improvement in this\ncampaign has come from (#10's refill test, #9's maker entry, the coverage ladder\nrather than a looser signal), and it removes trades rather than adding them,\nwhich is the other thing every measured improvement has done.\n\nWhat is deliberately not changed\n--------------------------------\nThe signal of #10/#13/#15, verbatim, apart from the added touch test above: a\nmove of 25-150bp over the prior 20 bars, the last 5 bars stalled to within 40%\nof it, aggressive flow over those 5 bars at 0.10 of traded volume and still\none-sided, the absorbing side's best price stationary to 5bp, and its top-five\nsize at least 0.80x its own 60-bar median, 0.80x the other side, and 70% of what\nit was at the start of the stall.\n\nNor the entry, which is the largest measured effect in the campaign: #6 and #9\nshare a signal, a bracket and within 2% of a trade count and differ only in\nwhether the entry crosses or rests, and they differ by 0.104. The maker limit a\nquarter of the spread inside the touch fills only when the aggressive flow the\nclaim names comes back to it, so it selects a different and better population,\nand it sits ahead of the queue at a price where nothing is displayed rather than\nbehind the very wall that generated the signal. TIF DAY, cancelled and retried\nafter three bars, six attempts a session.\n\nNor the coverage ladder. Full conjunction while more than five hours remain, the\nsame conjunction with looser magnitudes down to two hours, then the same relaxed\nsignal as a market order -- the direction never changes on any path, so the\ninsurance branch is a weaker test of the claim and never a test of its negation.\n\nNor size (100 lots -- the score has never moved in a way size explains) nor the\none-round-trip-per-UTC-day rule (#11 doubled the round trips and lost 0.155).\n\nHousekeeping, all inherited and all load-bearing: 1m bars with `emit_empty` so\nthe pre-close flatten always has a callback; orders only while `ctx.actionable`;\na round trip counted on the fill, not the submission, and never a reversal;\neverything working cancelled and the position flattened five minutes before\n`ctx.session_end`, so nothing is carried into a funding print; `None` from\nbuy/sell read as \"no order exists\"; no order id kept across callbacks, so a DAY\nexpiry cannot leave a stale reference; every rolling window on `self`, because\n`ctx.book()` carries no history and `ctx.history()` is a bounded push window; and\na missing or stale book row never recorded as a collapse in displayed size.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom collections import deque\nfrom statistics import median\n\nNS_PER_SEC = 1_000_000_000\n\n\nclass Strategy:\n    \"\"\"Fade aggressive flow the visible book absorbed. One maker round trip a day.\"\"\"\n\n    def __init__(\n        self,\n        interval: str = \"1m\",\n        size: int = 100,\n        move_bars: int = 20,\n        stall_bars: int = 5,\n        min_move: float = 0.0025,\n        max_move: float = 0.0150,\n        stall_frac: float = 0.40,\n        min_flow: float = 0.10,\n        depth_window: int = 60,\n        depth_min: int = 15,\n        depth_hold: float = 0.80,\n        depth_vs_other: float = 0.80,\n        refill_hold: float = 0.70,\n        top0_hold: float = 0.55,\n        top0_vs_other: float = 0.45,\n        book_tol: float = 0.0005,\n        target_frac: float = 0.0125,\n        stop_frac: float = 0.0090,\n        max_spread_frac: float = 0.0012,\n        max_hold_bars: int = 360,\n        max_attempts: int = 6,\n        entry_patience: int = 3,\n        retry_cooldown_bars: int = 5,\n        flat_margin_s: int = 300,\n        signal_cutoff_s: int = 18000,\n        last_resort_s: int = 7200,\n    ) -> None:\n        self.interval = interval\n        self.size = max(1, int(size))\n        self.move_bars = max(5, int(move_bars))\n        self.stall_bars = max(2, int(stall_bars))\n        if self.stall_bars >= self.move_bars:\n            self.stall_bars = max(2, self.move_bars - 1)\n\n        self.min_move = float(min_move)\n        self.max_move = float(max_move)\n        self.stall_frac = float(stall_frac)\n        self.min_flow = float(min_flow)\n\n        self.depth_window = max(10, int(depth_window))\n        self.depth_min = max(5, int(depth_min))\n        self.depth_hold = float(depth_hold)\n        self.depth_vs_other = float(depth_vs_other)\n        self.refill_hold = float(refill_hold)\n        self.top0_hold = float(top0_hold)\n        self.top0_vs_other = float(top0_vs_other)\n        self.book_tol = float(book_tol)\n\n        self.target_frac = float(target_frac)\n        self.stop_frac = float(stop_frac)\n        self.max_spread_frac = float(max_spread_frac)\n        self.max_hold_bars = max(5, int(max_hold_bars))\n\n        self.max_attempts = max(1, int(max_attempts))\n        self.entry_patience = max(1, int(entry_patience))\n        self.retry_cooldown_bars = max(0, int(retry_cooldown_bars))\n\n        self.flat_margin_ns = max(60, int(flat_margin_s)) * NS_PER_SEC\n        self.cutoff_ns = max(3600, int(signal_cutoff_s)) * NS_PER_SEC\n        self.last_resort_ns = max(600, int(last_resort_s)) * NS_PER_SEC\n\n        # Everything compared over time lives here.  ctx.history() is a bounded\n        # push window and ctx.book() carries no history at all, so a rolling\n        # statistic has to be maintained as the rows arrive.\n        cap = self.move_bars + self.stall_bars + 16\n        self._closes: deque = deque(maxlen=cap)\n        self._deltas: deque = deque(maxlen=cap)\n        self._volumes: deque = deque(maxlen=cap)\n\n        book_cap = self.depth_window + 24\n        self._ask_px: deque = deque(maxlen=book_cap)\n        self._bid_px: deque = deque(maxlen=book_cap)\n        self._ask_depth: deque = deque(maxlen=book_cap)\n        self._bid_depth: deque = deque(maxlen=book_cap)\n        self._ask_top: deque = deque(maxlen=book_cap)\n        self._bid_top: deque = deque(maxlen=book_cap)\n\n        self._session = None\n        self._entered = False\n        self._attempts = 0\n        self._pending = 0\n        self._cooldown = 0\n        self._hold_bars = 0\n\n    # ------------------------------------------------------------------ wiring\n\n    def setup(self, ctx) -> None:\n        # emit_empty so the pre-close flatten always has a callback to fire on:\n        # a quiet stretch before midnight must not strand a position overnight.\n        ctx.subscribe(self.interval, emit_empty=True)\n        # No callback of its own; this only makes ctx.book() readable.\n        ctx.subscribe(\"book\")\n\n    # -------------------------------------------------------------------- bars\n\n    def on_bars(self, ctx) -> None:\n        if self.interval not in ctx.bars:\n            return\n        bar = ctx.bars[self.interval]\n\n        if ctx.session != self._session:\n            self._session = ctx.session\n            self._entered = False\n            self._attempts = 0\n            self._pending = 0\n            self._cooldown = 0\n            self._hold_bars = 0\n\n        if self._cooldown > 0:\n            self._cooldown -= 1\n\n        book = self._read_book(ctx)\n        if book is not None:\n            ask, bid, ask_depth, bid_depth, ask_top, bid_top = book\n            # Only real rows enter the histories.  A missing or stale row is\n            # not a collapse in displayed size, and recording it as one would\n            # make every feed gap look like the book being eaten.\n            self._ask_px.append(ask)\n            self._bid_px.append(bid)\n            self._ask_depth.append(ask_depth)\n            self._bid_depth.append(bid_depth)\n            self._ask_top.append(ask_top)\n            self._bid_top.append(bid_top)\n        else:\n            ask = 0.0\n            bid = 0.0\n\n        # Empty bars carry the previous close forward at zero volume: they\n        # advance the clocks but they are not evidence about price or flow.\n        if bar.tick_count > 0:\n            self._closes.append(float(bar.close))\n            self._deltas.append(float(bar.delta))\n            self._volumes.append(float(bar.volume))\n\n        remaining = ctx.session_end - ctx.ts\n\n        # --- an open position: the bracket owns the price exits and was armed\n        #     by the engine at the instant of the fill.  Only the clock is left.\n        if ctx.position != 0:\n            self._hold_bars += 1\n            if remaining <= self.flat_margin_ns or self._hold_bars >= self.max_hold_bars:\n                self._flatten(ctx)\n            return\n        self._hold_bars = 0\n\n        if not ctx.actionable:\n            return\n\n        if remaining <= self.flat_margin_ns:\n            if ctx.working_order_ids:\n                ctx.cancel_all()\n            return\n\n        # One round trip a day, and never a reversal: #11 doubled this and lost\n        # everything the entry had earned.\n        if self._entered:\n            return\n\n        # --- an entry still working.  A maker order the flow never came back\n        #     for is not a position; pull it and try again later.\n        if ctx.working_order_ids:\n            self._pending += 1\n            if self._pending > self.entry_patience:\n                ctx.cancel_all()\n                self._pending = 0\n                self._cooldown = self.retry_cooldown_bars\n            return\n        self._pending = 0\n\n        if self._attempts >= self.max_attempts:\n            return\n        if self._cooldown > 0:\n            return\n\n        # Coverage is graded.  With plenty of day left, demand the full\n        # conjunction.  After the cutoff, the same conjunction with looser\n        # thresholds, first as a maker and then, with two hours left, as a\n        # market order.  The direction never changes on any path, so the\n        # insurance branch is still the claim and not its negation.\n        use_market = False\n        if remaining > self.cutoff_ns:\n            direction = self._signal(relaxed=False)\n        elif remaining > self.last_resort_ns:\n            direction = self._signal(relaxed=True)\n        else:\n            direction = self._signal(relaxed=True)\n            use_market = True\n\n        if direction == 0:\n            return\n\n        if use_market:\n            self._enter_market(ctx, direction)\n            return\n\n        if book is None:\n            return\n        if ask <= 0.0 or bid <= 0.0 or ask <= bid:\n            return\n        mid = 0.5 * (ask + bid)\n        if mid <= 0.0 or (ask - bid) > self.max_spread_frac * mid:\n            return\n\n        stop_off = mid * self.stop_frac\n        target_off = mid * self.target_frac\n        if stop_off <= 0.0 or target_off <= 0.0:\n            return\n\n        # Maker entry just inside the touch, not at the mid.  A sell limit at\n        # ask - eps fills only if buyers keep lifting; a buy limit at bid + eps\n        # fills only if sellers keep hitting.  That is the population the claim\n        # names, and -- unlike resting at the touch, tried in #9 and #11 -- the\n        # order is ahead of the displayed queue at its own price rather than\n        # behind the very wall that generated the signal.\n        spread = ask - bid\n        improve = min(0.25 * spread, 0.0002 * mid)\n        if improve <= 0.0:\n            improve = 0.25 * spread\n\n        if direction > 0:\n            limit = bid + improve\n            if limit >= ask:\n                limit = bid\n            order_id = ctx.buy(\n                size=self.size,\n                type=\"limit\",\n                limit=limit,\n                stop_offset=stop_off,\n                target_offset=target_off,\n                tif=\"DAY\",\n                tag=\"absorb-long\",\n            )\n        else:\n            limit = ask - improve\n            if limit <= bid:\n                limit = ask\n            order_id = ctx.sell(\n                size=self.size,\n                type=\"limit\",\n                limit=limit,\n                stop_offset=stop_off,\n                target_offset=target_off,\n                tif=\"DAY\",\n                tag=\"absorb-short\",\n            )\n\n        if order_id is not None:\n            self._attempts += 1\n            self._pending = 0\n\n    # --------------------------------------------------------------- callbacks\n\n    def on_fill(self, ctx) -> None:\n        # Only an entry fill leaves a non-zero position behind it.  Counting the\n        # trade on the fill rather than on the submission means a rejected or\n        # expired entry has not spent the session's one trade.\n        if ctx.fill.position != 0:\n            self._entered = True\n            self._hold_bars = 0\n            self._pending = 0\n\n    def on_lifecycle(self, ctx) -> None:\n        # No order id is kept across callbacks -- the engine holds the bracket\n        # and ctx.cancel_all() reaches it -- so a DAY expiry at the session\n        # close cannot leave a stale reference behind.\n        pass\n\n    # ----------------------------------------------------------------- helpers\n\n    def _read_book(self, ctx):\n        \"\"\"(ask, bid, top-5 ask size, top-5 bid size, level-0 ask, level-0 bid).\n\n        A missing row, a stale row (over a second old reads as None), an empty\n        side, a zero price and a crossed book are all ordinary states here, not\n        errors.\n        \"\"\"\n        try:\n            book = ctx.book()\n        except Exception:\n            return None\n        if book is None:\n            return None\n        try:\n            ask_prices = book.ask_prices\n            bid_prices = book.bid_prices\n            if len(ask_prices) == 0 or len(bid_prices) == 0:\n                return None\n            ask = float(ask_prices[0])\n            bid = float(bid_prices[0])\n            if ask <= 0.0 or bid <= 0.0 or ask <= bid:\n                return None\n            ask_sizes = [float(x) for x in list(book.ask_sizes)[:5]]\n            bid_sizes = [float(x) for x in list(book.bid_sizes)[:5]]\n            if not ask_sizes or not bid_sizes:\n                return None\n            ask_top = float(ask_sizes[0])\n            bid_top = float(bid_sizes[0])\n            ask_depth = float(sum(ask_sizes))\n            bid_depth = float(sum(bid_sizes))\n            if ask_depth <= 0.0 or bid_depth <= 0.0:\n                return None\n            if ask_top <= 0.0 or bid_top <= 0.0:\n                return None\n            return ask, bid, ask_depth, bid_depth, ask_top, bid_top\n        except Exception:\n            return None\n\n    def _signal(self, relaxed: bool = False) -> int:\n        \"\"\"-1 to short absorbed buying, +1 to buy absorbed selling, 0 for none.\n\n        The two branches over `prior` are separate, so the absorbing side of the\n        book and the side of the trade cannot transpose: prior > 0 sets the\n        absorbing side to the asks and the direction to -1 in the same block.\n\n        `relaxed=True` is the coverage path: the same tests with looser\n        magnitudes, never a different test and never a different direction.\n        \"\"\"\n        mb = self.move_bars\n        sb = self.stall_bars\n        if len(self._closes) < mb + sb + 1:\n            return 0\n        if len(self._volumes) < sb or len(self._deltas) < sb:\n            return 0\n\n        # Materialised as lists: a deque supports int indexing but not slicing,\n        # and the stall lookback is a negative-offset index into the series.\n        closes = list(self._closes)\n        deltas = list(self._deltas)\n        volumes = list(self._volumes)\n\n        c_now = closes[-1]\n        c_stall = closes[-1 - sb]\n        c_prior = closes[-1 - sb - mb]\n        if c_now <= 0.0 or c_stall <= 0.0 or c_prior <= 0.0:\n            return 0\n\n        prior = (c_stall - c_prior) / c_prior\n        mag = prior if prior >= 0.0 else -prior\n        min_move = self.min_move * 0.4 if relaxed else self.min_move\n        if mag < min_move:\n            return 0\n        if not relaxed and mag > self.max_move:\n            return 0\n\n        # The move must have stopped: not still extending, and not already\n        # collapsing back through itself.\n        stall = (c_now - c_stall) / c_stall\n        stall_frac = 1.0 if relaxed else self.stall_frac\n        bound = stall_frac * mag\n        if stall > bound or stall < -bound:\n            return 0\n\n        # Aggressive flow still leaning the way the move went.\n        traded = float(sum(volumes[-sb:]))\n        if traded <= 0.0:\n            return 0\n        flow = float(sum(deltas[-sb:])) / traded\n        min_flow = self.min_flow * 0.3 if relaxed else self.min_flow\n\n        if prior > 0.0:\n            # A rise whose buying met an offer that would not lift.\n            # Absorbed buying: fade it short.  Never long here.\n            if flow < min_flow:\n                return 0\n            own = self._ask_depth\n            other = self._bid_depth\n            own0 = self._ask_top\n            other0 = self._bid_top\n            direction = -1\n            # \"The best ask did not move up\", read from the book rather than\n            # from trade wicks.\n            if len(self._ask_px) >= sb + 1:\n                asks = list(self._ask_px)\n                ask_now = asks[-1]\n                ask_start = asks[-1 - sb]\n                tol = 0.0025 if relaxed else self.book_tol\n                if ask_now > ask_start * (1.0 + tol):\n                    return 0\n                if max(asks[-sb:]) > ask_start * (1.0 + tol):\n                    return 0\n            elif not relaxed:\n                return 0\n        else:\n            # A fall, mirrored.  Absorbed selling: fade it long.\n            if flow > -min_flow:\n                return 0\n            own = self._bid_depth\n            other = self._ask_depth\n            own0 = self._bid_top\n            other0 = self._ask_top\n            direction = 1\n            if len(self._bid_px) >= sb + 1:\n                bids = list(self._bid_px)\n                bid_now = bids[-1]\n                bid_start = bids[-1 - sb]\n                tol = 0.0025 if relaxed else self.book_tol\n                if bid_now < bid_start * (1.0 - tol):\n                    return 0\n                if min(bids[-sb:]) < bid_start * (1.0 - tol):\n                    return 0\n            elif not relaxed:\n                return 0\n\n        # The level survived rather than being eaten or abandoned.\n        need = self.depth_min\n        if relaxed:\n            need = max(3, self.depth_min // 3)\n        if len(own) < need or len(other) < 1:\n            return 0\n        history = [v for v in list(own)[-self.depth_window:] if v > 0.0]\n        if len(history) < need:\n            return 0\n        reference = median(history)\n        now_size = float(own[-1])\n        other_size = float(other[-1])\n        if reference <= 0.0 or now_size <= 0.0 or other_size <= 0.0:\n            return 0\n\n        hold_mult = 0.60 if relaxed else 1.0\n        other_mult = 0.30 if relaxed else 1.0\n        if now_size < self.depth_hold * hold_mult * reference:\n            return 0\n        if now_size < self.depth_vs_other * other_mult * other_size:\n            return 0\n\n        # The level must not have been eaten over the stall window itself: a\n        # wall that started huge, stayed above its median and was then halved is\n        # a wall that lost, and #10 measured that check to be worth having.\n        if len(own) >= sb + 1:\n            start_size = float(own[-1 - sb])\n            if start_size > 0.0:\n                refill = 0.30 if relaxed else self.refill_hold\n                if now_size < refill * start_size:\n                    return 0\n\n        # --- the touch.  The top five levels can be heavy while the best price\n        #     is thin, and an aggressor sweeping into an empty touch was never\n        #     absorbed by anything -- price walked, which is continuation, not\n        #     the signal.  Deliberately a floor and not a filter for size.\n        if len(own0) < need or len(other0) < 1:\n            return 0\n        hist0 = [v for v in list(own0)[-self.depth_window:] if v > 0.0]\n        if len(hist0) < need:\n            return 0\n        ref0 = median(hist0)\n        now0 = float(own0[-1])\n        other_top = float(other0[-1])\n        if ref0 <= 0.0 or now0 <= 0.0 or other_top <= 0.0:\n            return 0\n        if now0 < self.top0_hold * hold_mult * ref0:\n            return 0\n        if now0 < self.top0_vs_other * other_mult * other_top:\n            return 0\n\n        return direction\n\n    def _enter_market(self, ctx, direction: int) -> None:\n        \"\"\"Coverage entry.  Only ever called with a direction `_signal` chose.\"\"\"\n        px = 0.0\n        try:\n            px = float(ctx.last_price)\n        except Exception:\n            px = 0.0\n        if px <= 0.0:\n            return\n        stop_off = px * self.stop_frac\n        target_off = px * self.target_frac\n        if stop_off <= 0.0 or target_off <= 0.0:\n            return\n        if direction > 0:\n            order_id = ctx.buy(\n                size=self.size,\n                stop_offset=stop_off,\n                target_offset=target_off,\n                tag=\"fade-long\",\n            )\n        elif direction < 0:\n            order_id = ctx.sell(\n                size=self.size,\n                stop_offset=stop_off,\n                target_offset=target_off,\n                tag=\"fade-short\",\n            )\n        else:\n            return\n        if order_id is not None:\n            self._attempts += 1\n\n    def _flatten(self, ctx) -> None:\n        \"\"\"Cancel anything working and go flat, inside the UTC day.\"\"\"\n        self._hold_bars = 0\n        self._pending = 0\n        if not ctx.actionable:\n            return\n        if ctx.working_order_ids:\n            ctx.cancel_all()\n        if ctx.position != 0:\n            ctx.close()\n",
+    "source_sha256": "a2939b2517dc1d93bb0aacd246486807d9ecf68a5c2baff548ddf2c457ef84ed",
+    "strategy_digest": "a2939b2517dc1d93"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "audit_model": null,
+      "auditor_models": null,
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.0,
+      "constraints": {
+        "digest": "3b76ce3697465900b0c4f0b7372e1f8fc013a6b172368c9c05c51bf3f8122dca",
+        "max_repairs": 2,
+        "path": "config/hypotheses/btc-book-absorption-reversal.constraints.yaml",
+        "policy": "record"
+      },
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://braverock.com/llm/v1",
+      "execution": {
+        "allow_overnight": true,
+        "latency_ns": 1000000,
+        "maker_commission_bps": 0.0,
+        "maker_commission_per_contract": null,
+        "slippage_bps": 0.0,
+        "slippage_per_contract": 0.0
+      },
+      "explore_epsilon": 0.0,
+      "fidelity_judge": {
+        "mode": "repair",
+        "model": "gemini-2.5-pro",
+        "prompt_digest": "72b333cf364db92cd40b4fa9ec6d484e5a8c7febbef0531bb7edf7e1c07f14e9"
+      },
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "193c6e9533347eb1f98125a411ab15d24770b59c69e7d9475a39dba9da264762",
+        "path": "config/hypotheses/btc-book-absorption-reversal.md"
+      },
+      "hypothesis_origin": null,
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "knowledge": null,
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 64000,
+      "model": "deepseek-v4.1-flash",
+      "model_served_at_registration": "deepseek-v4.1-flash",
+      "null_source": "round_turn_mc",
+      "null_unit": "zero_crossing",
+      "parent_rng_seed": 0,
+      "probe_before_trial": true,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "ec04cb06748c9b087210252070f33ae8e10b153a921e67af94a61d622ce45ab2",
+      "proposal_wall_clock_s": 600.0,
+      "registered_fees": {
+        "commission_bps": 2.0,
+        "commission_per_contract": 0.0,
+        "maker_commission_bps": 0.0,
+        "maker_commission_per_contract": 0.0
+      },
+      "repair_reasoning_effort": "low",
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real OKX BTCUSDT perpetual-futures trades. A session is a UTC day (00:00 to 24:00 UTC); the market trades continuously, with no close, no holidays and no overnight gap, so `session` boundaries are a calendar convention, not a market event. Every trade carries its aggressor side, so `unknown_volume` is always zero, 960 scored sessions on the pre-registered train split.\n\nFill model: book-queue-pessimistic. Market orders pay through the visible book and are refused if they need more than five levels. A resting limit joins behind displayed size and fills only when trades reach it.\n\nBook: call `ctx.subscribe(\"book\")` in `setup()`, then `ctx.book()` in a callback. It returns `None` or an object with `ts`, `bid_prices`, `bid_sizes`, `ask_prices` and `ask_sizes`, best level first, sizes in lots. It holds the latest row strictly before this millisecond, and a book over one second old is `None`, so handle `None`. Reading it raises no extra callback.\n\nSizes are integer lots of 0.0001 BTC: `ctx.buy(1)` is 0.0001 BTC, and P&L is the price move in USD times lots, so one lot earns 0.0001 USD per $1 the price moves. Taker fills pay 2 basis points of notional, so a round trip by market order costs 0.04% before spread and depth. These are assumed professional rates. Holding a position through a funding settlement (00:00, 08:00, 16:00 UTC) pays the funding rate on its notional when long and receives it when short (the reverse when the rate is negative). Returns are scored relative to each session's opening price, so a move of 1% counts the same in 2023 and in 2026.\n\nLatency: 1,000,000 ns. Every order, modification and cancel reaches the market that long after your callback, and a resting order can still fill until its cancel arrives.\n\nResting limit fills pay a separate maker fee: 0 points per contract plus 0 bp of notional per side. A negative rate is a rebate.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "btc-book-absorption-01",
+    "budget": 20,
+    "campaign_id": "btc-book-absorption-01",
+    "dataset": "crypto-btc-okx-book",
+    "profile": "btc-okx-hft-train",
+    "q": 0.05,
+    "record_digest": "22abd2482aa58f576bb7ee5e3e83983cab50d3ea13ec929dcb0b0a6b9f565db1",
+    "record_digest_now": "22abd2482aa58f576bb7ee5e3e83983cab50d3ea13ec929dcb0b0a6b9f565db1",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-11-23T19:00:29+00:00"
+  },
+  "deflation_view": null,
+  "diagnostics_only": {
+    "correction": null,
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "unavailable": "no tabulated null exists for 'crypto-btc-okx-book', so BH, Holm, the nominal FAR and the deflation view were not computed. The gate below uses this campaign's per-candidate nulls and does not read that table."
+  },
+  "digest": "f2faec9d01caa2a7c7c977ae54446a5e659a79735b9c2d04d0e2cb9d243a64bb",
+  "gate": {
+    "accepted_any": true,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 19,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": 0.09701484846177992,
+    "null_max_mean": 0.046081855016822104,
+    "null_max_quantiles": {
+      "0.01": 0.124289688149323,
+      "0.05": 0.09701484846177992,
+      "0.1": 0.0838088947332296,
+      "0.2": 0.06829623625042884,
+      "0.5": 0.04348102298930051
+    },
+    "observed_best": 0.1560756089067173,
+    "p": 0.0016998300169983002,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "ACCEPT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/btc-book-absorption-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "bd1e0db5d16c5b007e0d24b525b24851ee8dc5e96e54ffe69f963c889233cd21",
+        "outcome": "completed",
+        "score": -0.29274369039108855,
+        "strategy_digest": "b4c06cbc47309662"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "2e364b015767da5af895fcfdafaa14c68c796b46f440088353e40e2ceb762e56",
+        "outcome": "completed",
+        "score": -0.10507976092009529,
+        "strategy_digest": "af416a24e68a736d"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "cfc4cc62152c8d4d7fdbfeb9c9f5f7f5a897a439b89bb7155cef49c42b9ac514",
+        "outcome": "completed",
+        "score": -0.10441261579977616,
+        "strategy_digest": "c77a69a7367ad1e3"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "d6d541d7374a138d3b2f1ffa245ade2aa383ee03f717af57afc0faabca336e5c",
+        "outcome": "completed",
+        "score": -0.1281753472832645,
+        "strategy_digest": "6d408c11010eb7ca"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "884e632735a60195c1ed6e97c1229c6f38a988508cbe45bd6a2b6b901bd37e23",
+        "outcome": "completed",
+        "score": -0.15224060998455302,
+        "strategy_digest": "a5e523a5c54c85e6"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "a2d0f629d3e265af5ad783c6a89a2d6908bd4e96841543fa8b893d5078222ff5",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "92dcdd93e505fe88"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "2a35676ee510bb7088400f6f746a56bd0b4c7c8d15fb9ca7661e272baaeb887f",
+        "outcome": "completed",
+        "score": -0.06147001030256994,
+        "strategy_digest": "2cdd52a2f6aa4e8c"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "d19867603bb29de4789e8a7b4768cc6cc6586e1887a2cf33fc4f5696b03e584b",
+        "outcome": "completed",
+        "score": -0.09012541366078125,
+        "strategy_digest": "5b5e8327d48973f0"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "92f05696823235229d61519a43674848bb7d4369f4d90bd0c69464d2a7780cca",
+        "outcome": "completed",
+        "score": -0.004731195085573445,
+        "strategy_digest": "8d423682b2b493b1"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "86ac661056c3f67809085cef3eaf7ebcfe69243a822be11cfc9b4ef518b9252d",
+        "outcome": "completed",
+        "score": 0.04270825225252823,
+        "strategy_digest": "b0774e9c1b3dc1b4"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "1fd7b3bcc974cc8f2be7a11a6d11e22f787cac9f24931dc446d178352cbb566d",
+        "outcome": "completed",
+        "score": 0.04786646434353928,
+        "strategy_digest": "b96bf17d95869463"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "c3ddf0e05cf70281ca9ff757016f1c6ffe2fe432705471d7797ec05dfa064c5f",
+        "outcome": "completed",
+        "score": -0.1073141345317587,
+        "strategy_digest": "1d7c2a89e71127b8"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "91ce1bfdf976eba805feac2ebdbd9d199673d03e9c10a8cf88dcd075f0ef6610",
+        "outcome": "completed",
+        "score": 0.05627276572190436,
+        "strategy_digest": "eacae76fdba09b42"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "03881bbdaed16e39d291f994b8dbd8d2868c5516850d15e7384b86382bd9da8a",
+        "outcome": "completed",
+        "score": 0.07926697883902317,
+        "strategy_digest": "8e4588906dc8531f"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "637e42c3e023bf6d2f5654dad9b55492c41d7543455aba3cc5315dcd80b366a8",
+        "outcome": "completed",
+        "score": 0.08173309009354929,
+        "strategy_digest": "4e948a2aec45ba5c"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "58d177f0bef5309651388d40cc4c6a6a66310e89921ef09e05762f69e106be18",
+        "outcome": "completed",
+        "score": 0.13974630754698977,
+        "strategy_digest": "0d8da212f92d9700"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "a081b1d27352f6f6f4534adf3a3a44040cf809e974cb8e14c535fe61f88da5d4",
+        "outcome": "completed",
+        "score": 0.10444845165815748,
+        "strategy_digest": "a33e4887e3bde645"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "621187e1161c7587bff9557d90b2bab2991a7d0ef85c8fd78262c9dea29ff538",
+        "outcome": "completed",
+        "score": 0.09415580184653725,
+        "strategy_digest": "09385ae0db125643"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "f40caf73af167e1217cbfd64253866edb5657022c36cfe3af979d955e50c35ba",
+        "outcome": "completed",
+        "score": 0.1560756089067173,
+        "strategy_digest": "a2939b2517dc1d93"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": "91effb9e0d50d5a816e71f7b4a80f743f0ad35fa6340f3cae4000d02c21c4df7",
+        "outcome": "completed",
+        "score": 0.15064069797597776,
+        "strategy_digest": "b911d42d0b82b378"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 20
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 20,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 0.17877130598282032,
+    "mean": -0.08964253915414269,
+    "min": -0.4754751196659736,
+    "n_draws": 190000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.10192505015669706
+  },
+  "provenance": {
+    "artifact_fingerprint": "df286f9dddc560190fca759ea25b9b54c1ac333e5afbdcfcea3647f56d664562",
+    "artifacts": {
+      "config/backtest.yaml": "04e84ef5505890fff201e20ba91b4b62684798ecf5a99ab5bb35d66870f3ce51",
+      "config/calendars/crypto-trades.yaml": "341f204519220585953609d475d8f00590493411b02ee65c76417d88a98631f7",
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/calendars/okx-book.yaml": "deccded0c795c56a095f488559b47d422474b210a5b70318e2104d79b8406ba7",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/costs.yaml": "b09a7140a1ba8338f4a3220146537de0272d13f675a9e6e44f50a588882a7546",
+      "config/house-constraints.yaml": "232979be0b3b4bb54b623907251e698fb66f8da211c098a13b6b8e5d47fc6176",
+      "config/hypotheses/auction-market-features.md": "c306848e27d52157a9e1ea478905aa4ad6e585b56b84bc892962aeeb02d826e9",
+      "config/hypotheses/btc-absorption-reversal.md": "6231978392a9eda23deba96d31bd624c05447ba5942bb1c5bd7f62d08713dfd9",
+      "config/hypotheses/btc-book-absorption-reversal.md": "193c6e9533347eb1f98125a411ab15d24770b59c69e7d9475a39dba9da264762",
+      "config/hypotheses/btc-cvd-continuation.md": "f330f7a6e278e0f6c6e61002e34f5bfebd8ea18d2cdcd5da2c075bb88e5a348f",
+      "config/hypotheses/flow-continuation-5m.md": "13516e4d73d2286805b68d526fe8590581c3ed64c418e44f2557a319ba7a4fea",
+      "config/hypotheses/flow-continuation.md": "2fd992b524213040d9b59c1ae1cde0b54404fc5ca779d9dc68d774c72dca0528",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-move-continuation-vs-giveback.md": "dd898b0ac0548576dafc2f61169a5334e834d48f7bc83d2cfcaf2c8901cfe876",
+      "config/hypotheses/nq-opening-reversal.md": "37fcea5a90f37b7b05faaab7e15e74990878bbaba226b41171965908b2a40b91",
+      "config/hypotheses/ohlcv-momentum-friction-ceiling.md": "ff9d1893266f2f7eeb05f0f27a2751e9e95a4ea58f8c38f236aa9fc9e7c867a6",
+      "config/hypotheses/opening-range-break-continuation-failure.md": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+      "config/hypotheses/opening-range-break-continuation-or-fade.md": "4e48d6e16fba78098a993549b2528853e8c4c909908d501cf1d6ad3309988440",
+      "config/hypotheses/opening-range-break-hold-or-return.md": "660f66e68d536c243d47ecab73a73fdd6b5a529d97301a2d2f5cabd01488db0e",
+      "config/hypotheses/opening-range-break-resolution.md": "4c41b63249ae6113d53a032cde5c13651d107b7bf77450043f82d58e33488bfe",
+      "config/hypotheses/opening-range-breakout-30m.md": "021eb8f94018416e4294293831f5c8d4370ac0bd6cb1c39b42f3b57771ea6128",
+      "config/hypotheses/opening-range-departure-fates-by-clock.md": "1c0bbe82227d0c4b25c9bcf2c111ae8c3ebad943bf7bd84ee3c587ac44d17b02",
+      "config/hypotheses/opening-range-direction-agnostic.md": "48775a6bedc23838d451279d05dc15c2660300bb598e5cf508f3c677fa22d7e4",
+      "config/hypotheses/opening-range-exit-hold-or-return.md": "8b3d0872c848b58892611d7621245f32f739050b89bd645530888785268b8237",
+      "config/hypotheses/options-no-arbitrage-violation.md": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+      "config/hypotheses/options-surface-shape-and-the-index.md": "268c3ca73b695ff20a591b736b68f6562a21dbaa88b08cd1193ae4e281c9298a",
+      "config/hypotheses/orderflow-absorption-at-carried-levels.md": "97ad8b1db1a60f852bae58c5428270f528327a300832d74131d3fe97c52794d2",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md": "4a97e2e35a2111d81a49331782789191c9765efdb5df34c7aefedeb7234cf557",
+      "config/hypotheses/outsized-move-continuation-refined.md": "25d9b544894e7d214729ba058d1783e6b0d3d16608e560346538076341626c77",
+      "config/hypotheses/outsized-move-continuation-vs-giveback.md": "00074ec0231d64452b65b1515e9669d711425a1220e6039b3e61abd1638766a6",
+      "config/hypotheses/session-move-continuation-robustness.md": "087be6eedd20f472989bdadf3944e054b3a0daa42cafb589170455bc6ecb44b3",
+      "config/prompts/family-review.md": "012935b192b8ca9ff3ed3a3c9635dfdab4df9f8f95dc1db1791f35bc8532fb82",
+      "config/prompts/fidelity-judge.md": "72b333cf364db92cd40b4fa9ec6d484e5a8c7febbef0531bb7edf7e1c07f14e9",
+      "config/prompts/hypothesis-refine.md": "f89af454f9a00652f160ac0085944f533a35372ae0c4c92c381145447a4929a1",
+      "config/prompts/hypothesis-review.md": "fb5465beac2d4e1efcddbc998201a0cceecaee8924042581acd3ebb9fc2d223c",
+      "config/prompts/paper-distil.md": "0dcafaf00f0a1d990fd26880d532f3eac423a36b1488d1ebd7b28a8747fb4504",
+      "config/prompts/paper-rank.md": "b8acfdf9c01f9c3ec7c6e0c8da4ca1ff54f401c5e7bf60c41b6b366993c15784",
+      "config/prompts/paper-screen.md": "dc10f5d4cc98dd8aa463c81b79f1c710b648e70e2d9095c4245c100d02b9160a",
+      "config/prompts/question-distil.md": "001e88cb1830847d88d8709360851ac113f1103cb360a7ab7e74e4b34239598a",
+      "config/prompts/strategy-agent.md": "ec04cb06748c9b087210252070f33ae8e10b153a921e67af94a61d622ce45ab2",
+      "config/prompts/strategy-review.md": "4bb7b26f736eb58c38340963aec9723499003756e1b7b975c5c99943125ecb7c",
+      "config/run.yaml": "5e830f5d2ebf2b0e9fac2d800e7c4a64cbced985eed91342296a2a1dca1b5557",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "b4c06cbc473096629f43fc1cd5b177982716a27f891e35c565ada104cc4b7df8"
+    },
+    "code_fingerprint": "e91372f54b55aa3ee8c554fd8c67b39027376bf046c2d11c31307cf443c5e9b9",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "518bb97bdeca748c98a93dbec6cee3169fab1282d927a02fb9c5145126cc5714",
+    "git_sha": "e5d83ebce5f7fe5d969ae34872a80ef0c3f65bc4",
+    "isolation": {
+      "address_space": {
+        "active": true,
+        "mechanism": "RLIMIT_AS"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "",
+      "filesystem": {
+        "active": true,
+        "mechanism": "read-only bind mount, unprivileged user namespace (bubblewrap)"
+      },
+      "level": "isolated",
+      "network": {
+        "active": true,
+        "mechanism": "empty network namespace (bubblewrap --unshare-net)"
+      },
+      "platform": "Linux",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "absent",
+    "python_version": "3.14.4",
+    "scoring_fingerprint": "5ea5ff15ba2f09b6219b16efa43d86c387a553b69b26ee7f1aff1ed9cfd00310"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/2",
+  "written_at": "2026-11-23T21:29:31+00:00"
+}

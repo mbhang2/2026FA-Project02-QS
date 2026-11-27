@@ -1,0 +1,47 @@
+{
+  "campaign_id": "btc-cvd-01",
+  "record_digest": "2cbc0f0852b2390e15d6c5af1d6b652390057bf243ba54f3a637b9b5ee6299a7",
+  "record_tampered": false,
+  "budget": 20,
+  "q": 0.05,
+  "n_trials": 0,
+  "harness_failures": 20,
+  "unaccounted": 0,
+  "outcomes": {
+    "harness_failed": 20
+  },
+  "per_trial_accepts_at_0.001": 0,
+  "diagnostics_only": {
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "correction": {
+      "n": 0,
+      "q": 0.05,
+      "bh_discoveries": 0,
+      "holm_discoveries": 0,
+      "uncorrected_discoveries": 0,
+      "best_far": null,
+      "best_label": "",
+      "decisions": [],
+      "expected_max_note": ""
+    }
+  },
+  "wall_clock_s": 0.0,
+  "gate": {
+    "n_trials": 0,
+    "b": 10000,
+    "p": 1.0,
+    "p_floor": 9.999000099990002e-05,
+    "reject": false,
+    "note": "no per-trial nulls were supplied",
+    "correction_rule": "independent",
+    "is_the_gate": true,
+    "observed_best": -Infinity,
+    "observed_best_positive": false,
+    "accept": false,
+    "profitability": null,
+    "excluded_off_question": [],
+    "floor_note": "accept = reject AND the selected trial's Amendment 18 profitability bound is above zero."
+  },
+  "null_source": "round_turn_mc",
+  "error_control_note": "This campaign's null is the sign-flip over round turns, not the conditional null, so Task 38's FWER of 0.060 CI [0.041, 0.088] does NOT describe it. The figure that does is Task 57's, measured on this configuration (round_turn_mc x max_of_n, q = 0.05, B = 10,000) at both N = 10 and N = 50: 0 acceptances in 400 campaigns per arm, FWER below about 0.010 at 95%, below 0.005 pooled over 800. It is conservative rather than merely correct, and Task 59 prices the conservatism: 80% power at a signal strength of 0.287 against 0.242 for the conditional null. See docs/design/pre-registration.md sections 3a and 3b."
+}

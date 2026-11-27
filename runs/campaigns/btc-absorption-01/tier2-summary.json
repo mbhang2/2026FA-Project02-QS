@@ -1,0 +1,521 @@
+{
+  "best_candidate": {
+    "accepted": false,
+    "campaign_index": 17,
+    "diagnostics": {
+      "avg_holding_period_ns": 10901577635431.918,
+      "best_session_share": 0.04469164537594818,
+      "by_hour_utc": {
+        "00": -30952.574000000008,
+        "01": -58654.78949999994,
+        "02": -71392.65049999992,
+        "03": 57630.1498999998,
+        "04": 4957.829000000329,
+        "05": -74283.74900000142,
+        "06": -64682.907500000554,
+        "07": -25990.88749999991,
+        "08": 1223.0410000001402,
+        "09": -79.22850000021197,
+        "10": 997.3939999999433,
+        "11": -2130.519500000179,
+        "12": -29367.18600000011,
+        "13": -12547.33250000012,
+        "14": 34975.89999999994,
+        "15": -12143.877000000255,
+        "16": -14607.586500000123,
+        "17": 363.54549999999995,
+        "18": 8355.350999999928,
+        "19": -821.0445,
+        "20": 5485.06300000003,
+        "21": -2812.568999999971,
+        "22": -1532.4995000000874,
+        "23": -2502.4745000001094
+      },
+      "by_hour_utc_entry": {
+        "00": 41668.079000000005,
+        "01": -9796.148099999817,
+        "02": -115337.17400000169,
+        "03": -122632.25100000041,
+        "04": -13180.531499999868,
+        "05": -33421.6874999998,
+        "06": 12144.467999999673,
+        "07": -2702.821500000001,
+        "08": 2864.9809999997956,
+        "09": -9760.123000000023,
+        "10": -18455.648000000125,
+        "11": 6378.627499999839,
+        "12": -15180.947500000211,
+        "13": -17394.90650000012,
+        "14": 439.987999999978,
+        "15": 7483.977499999948,
+        "17": 5731.84150000003,
+        "18": -4238.7694999999785,
+        "19": -1398.96750000008,
+        "20": -3328.8255000000872,
+        "21": -396.76350000002185
+      },
+      "by_month": {
+        "2023-01": 459.5429999999778,
+        "2023-02": 1165.9975000001307,
+        "2023-03": -8561.504499999955,
+        "2023-04": 2359.3245000000506,
+        "2023-05": -26716.06099999997,
+        "2023-06": -13644.074499999944,
+        "2023-07": -5846.240499999921,
+        "2023-08": -7376.306999999942,
+        "2023-09": -6705.619500000104,
+        "2023-10": -9111.794999999825,
+        "2023-11": -4602.3415000000305,
+        "2023-12": 6350.410999999988,
+        "2024-01": -13982.834999999977,
+        "2024-02": -9887.682000000012,
+        "2024-03": 34831.37940000003,
+        "2024-04": -27779.09050000007,
+        "2024-05": -5029.185500000248,
+        "2024-06": -11731.343500000063,
+        "2024-07": -34373.9284999999,
+        "2024-08": 1429.742499999984,
+        "2024-09": 1942.7970000000134,
+        "2024-10": -215.8120000002911,
+        "2024-11": 29292.99649999979,
+        "2024-12": 20776.218999999357,
+        "2025-01": 9202.200500000316,
+        "2025-02": -16176.179000000435,
+        "2025-03": -344.40900000040347,
+        "2025-04": -43638.00749999959,
+        "2025-05": 9396.95099999933,
+        "2025-06": -14078.014000000505,
+        "2025-07": -50129.95900000026,
+        "2025-08": -97790.77500000047
+      },
+      "by_weekday": {
+        "Fri": -17712.743599999816,
+        "Mon": -53109.205000000475,
+        "Sat": 7196.147499999391,
+        "Sun": -6224.14300000038,
+        "Thu": 13145.593499999628,
+        "Tue": -93418.62300000084,
+        "Wed": -140390.62850000046
+      },
+      "commission": 418179.4021,
+      "fill_model_spread": null,
+      "gross_pnl": 127665.79999999708,
+      "max_drawdown": -5.529431569809187,
+      "null_assumption": "the tabulated null is the reference strategy's; a candidate far from it on null_reference_divergence has a null this table does not describe",
+      "null_reference_divergence": {
+        "avg_holding_period": 6.4127,
+        "exposure_share": 0.7115,
+        "return_dispersion": 0.0002,
+        "trades_per_session": 0.0163
+      },
+      "primary_after_drop": {},
+      "profit_concentration_top5pct": 0.5109961723179602,
+      "seasonality_caveat": "descriptive, not inferential: at a few hundred sessions the per-cell counts in these breakdowns are tiny. **Read `by_hour_utc` against `by_hour_utc_entry` before calling anything concentrated.** The first buckets P&L at the instant it was REALISED, which for any position held across time is the close -- and for an option the close is a cash settlement at an expiry the strategy neither chose nor can prevent. The second buckets the same P&L at the hour the position was OPENED. Where they disagree, the first is describing the expiry calendar and the second is describing the strategy. Note also that an hour-of-day is only a market clock if the dataset has one: on the synthetic calendar a session is a few hours long and its start drifts across the day, so hour-of-day there is arithmetic on the session index and carries no regime information at all",
+      "sessions_to_zero": 0,
+      "sessions_with_exposure": 683,
+      "trade_count": 681,
+      "turnover_contracts_per_session": 14.229166666666666,
+      "win_rate": 0.4845814977973568
+    },
+    "note": "the best-scoring candidate. `accepted` is the gate's verdict on it, and is false whenever the campaign accepted nothing -- which is most campaigns.",
+    "score": {
+      "downside_sessions": 662,
+      "kurtosis": 15.006631395689155,
+      "metric": "sortino_per_session",
+      "min_exposed_fraction": 0.7,
+      "n_sessions": 960,
+      "net_pnl": -290513.6021000029,
+      "primary": -0.12614556869467955,
+      "primary_uncharged": -0.12381142095835761,
+      "reject_reason": "",
+      "rejected": false,
+      "sessions_exposed": 683,
+      "sharpe": -0.09300339970367057,
+      "significance": -3.908477494018861,
+      "skew": 0.9262292854616941,
+      "sortino": -0.12614556869467955,
+      "trade_count": 681
+    },
+    "source": "\"\"\"Absorption reversal on the OKX BTC perpetual -- #15's entry, unchanged in\nevery threshold on both tiers, with the two levers that the campaign's own\narithmetic leaves open pulled as far as the evidence will carry them.\n\nClaim under test (campaign question, 2026-11-22): after a directional move,\naggressive flow in that direction that fails to extend price marks absorption,\nand price tends to turn. A long follows absorbed selling after a fall; a short\nfollows absorbed buying after a rise. Nothing here ever trades with the\nabsorbed flow.\n\nThe sixteen trials, restated as one number each\n-----------------------------------------------\n    #1   tight 35/70bp bracket             1892  -0.2761   -1.46e-4/tr\n    #3   3h horizon, tail bracket          1257  -0.1706   -1.36e-4/tr\n    #6   1.2-sigma moves + volume climax   1200  -0.2099   -1.75e-4/tr\n    #7   2m sweep-and-reclaim, 40 min       917  -0.2940   -3.21e-4/tr\n    #8   2m, stricter tier + late fallback 1604  -0.3082   -1.92e-4/tr\n    #9   5m, one entry/day + controller     748  -0.2377   -3.18e-4/tr\n    #10  5m, #3 entry + controller          818  -0.2576   -3.15e-4/tr\n    #11  5m, loosened #3 + range filter     950  -0.1676   -1.76e-4/tr\n    #12  5m, 1h horizon + controller        942  -0.2465   -2.62e-4/tr\n    #13  5m, #11 entry, 0.75 coverage gate  717  -0.1552   -2.16e-4/tr\n    #14  5m, #11 entry, 1h, 0.73 gate       701  -0.2103   -3.00e-4/tr\n    #15  5m, #11 entry, 3h, 0.72 gate       688  -0.1415   -2.06e-4/tr\n\nA round trip is 10bp of notional in commission, so `gross = 1.0e-3 + net`.\nThe per-trade net is negative in all sixteen and the gross is between +6.8 and\n+8.6bp in all sixteen, which is the strongest statement the campaign can make:\nthe entry carries a real edge in the direction the claim names, and the edge is\nroughly 2bp short of the toll. Nothing in sixteen trials has moved that\nintercept outside +-0.6bp of +8.1bp, and nothing is going to: the pooled\nstandard error on the intercept is about 0.55bp, and the per-trial spread\nacross the whole campaign is smaller than one per-trial standard error.\n\nSo E[score] = N x (gross - 0.001) with N the number of round trips and the\nmultiplier negative. There are exactly two levers, and this file pulls both.\n\nLever one: fewer tolls\n----------------------\nThe registered floor is 70% of 960 scored sessions -- 672 sessions that must\nhold a position at some point -- and a session cannot be exposed without at\nleast one fill, so a flat-to-flat trade is the cheapest unit of exposure that\nexists. 672 is the arithmetic bound on N and -0.134 is the arithmetic bound on\nthe score. #15 sat at 688 trades and -0.1415: 0.0075 of headroom, every part of\nit bought by removing a toll that was never needed for coverage.\n\n`cover_target` therefore goes 0.72 -> 0.712. The gate is a one-session-granular\nservo: at each session open it asks whether `traded/seen` has already reached\nthe target and skips if it has, so the realised fraction converges to just\nunder the target and cannot drift below it for long -- when it does, the gate\nstops skipping and every session trades until the ratio is back. #15 asked for\n0.72 and realised 0.7167 (a deficit of 0.0033, three sessions, from allowed\nsessions whose entry never filled). Asking for 0.712 should realise about\n0.7087 -- 680 sessions, eight clear of the floor.\n\nThe margin is deliberately not smaller. Eight sessions is worth 0.0016 of\nscore by the arithmetic above, and a run that lands under the floor is scored\nnothing at all, which is the single most expensive outcome available and has\nalready voided four proposals in this campaign (#0, #2, #4, #5). Trading 0.0016\nof expected value for that tail is not a trade worth making.\n\nThe backstop is the insurance tier, a loosened absorption reversal admitted\nonly after 60% of the session has elapsed and only while running coverage sits\nbelow `cover_floor = 0.706`. It cannot fire on a session the gate skipped, so a\nskipped day stays skipped, and it is the reason the strict tier does not have\nto be loosened to guarantee the floor.\n\nLever two: the horizon was deleting the last three hours of every session\n-------------------------------------------------------------------------\n#15 requires `left_ns > hold_bars x bar_ns + flat_buffer` before it will even\nevaluate a signal. With `hold_bars = 36` and a fifteen-minute buffer that is a\nhard cutoff at 20:45 UTC: every strict-tier absorption between 20:45 and the\nclose is computed, found, and thrown away. Those are not worse signals -- they\nare the same signal -- and discarding them pushes the session onto the weaker\ninsurance tier, or onto nothing at all, which the gate then has to recover\nlater with a session it would otherwise have skipped.\n\nThat is a pure loss with no offsetting benefit. The horizon is a *planned*\nexit, not a required one: the trade is closed at market either way, and a\nplanned hold that ends at the UTC flatten is exactly as well defined as one\nthat ends three hours after the fill. So the entry window now runs to the\nsession close and the planned hold is `min(hold_bars, time left before the\nflatten buffer)` -- 36 bars for almost every trade, fewer only for the handful\ntaken in the last three hours, and never fewer than six (30 minutes), below\nwhich the trade is not a horizon trade at all and the session is left to the\ninsurance tier.\n\nThis is not the change #14 made. #14 shortened the horizon for *every* trade\n(36 -> 12 bars) and scored 0.94bp worse per trade doing it. The evidence on the\nhorizon is that it is flat between one and three hours: #12 (1h) 7.4bp, #15\n(3h) 7.9bp, #3 (3h) 8.6bp -- a spread of 1.2bp against a per-trial standard\nerror near 2bp. Nothing here shortens the horizon of a trade that has room for\nit. It only stops the horizon from silently deleting signals that have no room.\n\nWhat is deliberately not changed, again\n---------------------------------------\nThe entry. Five filters, both tiers, every threshold identical to #11/#13/#15,\nbecause twelve trials have failed to move the per-trade number by more than one\nstandard error and a thirteenth attempt is a coin flip dressed as a finding.\n\nThe exit. Market in, market out. Passive execution was rejected in #12 on\nprinciple and is rejected here for the measured reason: fills here are\nbook-queue pessimistic -- a resting order fills only when trades print strictly\nthrough it -- and this strategy's central filter is that the absorption bar's\nlow does not undercut the prior twelve. A passive bid placed under the\nabsorption close fills precisely on the states that invalidate the signal, and\na limit that does not fill costs nothing in score but costs everything in\ncoverage.\n\nThe size. 10 lots is 0.001 BTC; the score is a sum of per-trade *fractional*\nreturns and is invariant to it. Size is not a lever and pretending otherwise\nwould be a way to lose money faster.\n\nThe entry, restated\n-------------------\nEvery feature is read from deques holding bars strictly *before* the bar being\njudged -- `_signal` runs before `_update` -- so no bar can move the threshold it\nhas to clear.\n\n* Prior move. Close-to-close over the previous 12 closed 5m bars, one hour,\n  measured to the bar before the absorption bar. Required magnitude\n  0.55 x sigma_bar x sqrt(12) from the last 96 bar returns, held incrementally,\n  floored at 10bp.\n* Flow drove the move. Sum of `bar.delta` over those twelve bars over the sum\n  of `bar.volume` must agree in sign with the price move and be at least 1%.\n* Unusually large delta on the absorption bar. `delta / volume` z-scored\n  against the same ratio over the previous 48, sign-matched, at least 0.50\n  sigma and at least 3.5% absolute. The ratio rather than contracts: BTC volume\n  differs by orders of magnitude across hours and years, and a raw delta z\n  would mostly be a clock.\n* Flow without movement. The bar's range may not exceed twice the average of\n  the previous 24 -- the claim's literal form.\n* Fails to extend, and rejects its own extreme. The low may not undercut the\n  lowest low of the previous twelve (mirror for highs) and the bar must close\n  in the favourable 22% of its own range.\n\nClassification. One entry a session, never a direct reversal, flat to flat\ninside the UTC day with fifteen minutes to spare. The 2% stop and 6% target ride\nalong as catastrophe protection only; they exist so that no single bar can be a\ndisaster on a book that is otherwise exited on a clock.\n\nRobustness\n----------\nEvery feature is maintained incrementally on bounded deques with running sums:\n97 closes, 96 returns, 48 ratios, 24 ranges, 12 extremes, 12 deltas. Nothing\ngrows across 960 sessions, nothing re-walks history, and there is no\n`ctx.history()` call anywhere -- no `WindowTooShort`, no quadratic cost. Features\naccumulate through warmup and deliberately persist across the UTC boundary: this\nmarket has no close and no gap, and clearing a four-hour flow window every\nmidnight would leave the first hours of every day blind. Warmup sessions are\nexcluded from the coverage fraction, since nothing can be traded in them. Empty\n`emit_empty` bars carry no volume, are excluded from every feature, and exist\nonly so the end-of-day flatten and the session counter always have a callback.\nEvery order id returned by `buy`/`sell` is checked for `None`.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport math\nfrom collections import deque\n\nNS_PER_SECOND = 1_000_000_000\n\n\nclass Strategy:\n    def __init__(\n        self,\n        interval: str = \"5m\",\n        size: int = 10,\n        # feature windows, in bars of `interval`\n        move_window: int = 12,\n        vol_window: int = 96,\n        flow_window: int = 48,\n        extreme_window: int = 12,\n        range_window: int = 24,\n        # primary tier: #11's entry, verbatim, which is #15's entry verbatim\n        move_sigmas: float = 0.55,\n        move_floor: float = 0.0010,\n        delta_floor: float = 0.035,\n        delta_sigmas: float = 0.50,\n        close_frac: float = 0.22,\n        flow_agree: float = 0.010,\n        range_mult: float = 2.0,\n        # insurance tier: floors the exposure, dormant at the steady state\n        i_move_sigmas: float = 0.25,\n        i_move_floor: float = 0.0005,\n        i_delta_floor: float = 0.020,\n        i_delta_sigmas: float = 0.15,\n        i_close_frac: float = 0.12,\n        # exits\n        stop_frac: float = 0.020,\n        target_frac: float = 0.060,\n        hold_bars: int = 36,\n        min_hold_bars: int = 6,\n        flat_buffer_s: int = 900,\n        # coverage cadence\n        cover_target: float = 0.712,\n        cover_floor: float = 0.706,\n        cover_grace: int = 3,\n        relax_after_frac: float = 0.60,\n        max_entries: int = 1,\n    ) -> None:\n        self.interval = interval\n        self.size = max(1, int(size))\n\n        self.move_window = max(3, int(move_window))\n        self.vol_window = max(40, int(vol_window))\n        self.flow_window = max(24, int(flow_window))\n        self.extreme_window = max(3, int(extreme_window))\n        self.range_window = max(5, int(range_window))\n\n        self.move_sigmas = float(move_sigmas)\n        self.move_floor = float(move_floor)\n        self.delta_floor = float(delta_floor)\n        self.delta_sigmas = float(delta_sigmas)\n        self.close_frac = float(close_frac)\n        self.flow_agree = float(flow_agree)\n        self.range_mult = float(range_mult)\n\n        self.i_move_sigmas = float(i_move_sigmas)\n        self.i_move_floor = float(i_move_floor)\n        self.i_delta_floor = float(i_delta_floor)\n        self.i_delta_sigmas = float(i_delta_sigmas)\n        self.i_close_frac = float(i_close_frac)\n\n        self.stop_frac = float(stop_frac)\n        self.target_frac = float(target_frac)\n        self.hold_bars = max(1, int(hold_bars))\n        self.min_hold_bars = max(1, int(min_hold_bars))\n        self.max_entries = max(1, int(max_entries))\n        self.flat_buffer_ns = int(flat_buffer_s) * NS_PER_SECOND\n\n        self.cover_target = float(cover_target)\n        self.cover_floor = float(cover_floor)\n        self.cover_grace = max(0, int(cover_grace))\n        self.relax_after_frac = float(relax_after_frac)\n\n        m = self.move_window\n\n        # Bounded, incrementally maintained feature state. Nothing grows.\n        self.closes: deque = deque(maxlen=max(self.vol_window + 1, m + 1))\n        self.highs: deque = deque(maxlen=self.extreme_window)\n        self.lows: deque = deque(maxlen=self.extreme_window)\n        self.rets: deque = deque(maxlen=self.vol_window)\n        self.ratios: deque = deque(maxlen=self.flow_window)\n        self.ranges: deque = deque(maxlen=self.range_window)\n        self.mdeltas: deque = deque(maxlen=m)\n        self.mvols: deque = deque(maxlen=m)\n\n        self._ret_sum = 0.0\n        self._ret_sq = 0.0\n        self._ratio_sum = 0.0\n        self._ratio_sq = 0.0\n        self._range_sum = 0.0\n        self._md_sum = 0.0\n        self._mv_sum = 0.0\n\n        # Session, coverage and trade bookkeeping.\n        self._session = None\n        self._counted = False\n        self._allow = True\n        self._traded = False\n        self._seen = 0\n        self._traded_n = 0\n        self._entries = 0\n        self._bar_ns = 0\n        self._entry_ts = 0\n        self._hold_ns = 0\n        self._flattening = False\n\n    # ------------------------------------------------------------------ setup\n\n    def setup(self, ctx) -> None:\n        # emit_empty so the end-of-day flatten always has a callback to run in,\n        # even in a tape with no trades in the final interval.\n        ctx.subscribe(self.interval, emit_empty=True)\n\n    # --------------------------------------------------------------- features\n\n    def _push(self, dq: deque, val: float, attr: str, sq: str = \"\") -> None:\n        \"\"\"Append to a bounded deque, maintaining the running sum (and squares).\"\"\"\n        if dq.maxlen is not None and len(dq) == dq.maxlen:\n            old = dq[0]\n            setattr(self, attr, getattr(self, attr) - old)\n            if sq:\n                setattr(self, sq, getattr(self, sq) - old * old)\n        dq.append(val)\n        setattr(self, attr, getattr(self, attr) + val)\n        if sq:\n            setattr(self, sq, getattr(self, sq) + val * val)\n\n    def _update(self, bar) -> None:\n        \"\"\"Fold a *real* closed bar into the statistics. Called after `_signal`.\"\"\"\n        close = float(bar.close)\n        hi = float(bar.high)\n        lo = float(bar.low)\n        vol = float(bar.volume)\n        delta = float(bar.delta)\n\n        if self.closes:\n            prev = self.closes[-1]\n            if prev > 0.0:\n                self._push(self.rets, (close - prev) / prev,\n                           \"_ret_sum\", \"_ret_sq\")\n\n        self.closes.append(close)\n        self.highs.append(hi)\n        self.lows.append(lo)\n        self._push(self.ranges, hi - lo, \"_range_sum\")\n\n        ratio = (delta / vol) if vol > 0.0 else 0.0\n        self._push(self.ratios, ratio, \"_ratio_sum\", \"_ratio_sq\")\n        self._push(self.mdeltas, delta, \"_md_sum\")\n        self._push(self.mvols, vol, \"_mv_sum\")\n\n    # ----------------------------------------------------------------- signal\n\n    def _signal(self, bar, loose: bool) -> int:\n        \"\"\"+1 absorbed selling after a fall, -1 absorbed buying after a rise.\n\n        Called before `_update`, so the absorption bar is never part of the\n        statistics it has to clear.\n        \"\"\"\n        vol = float(bar.volume)\n        if vol <= 0.0:\n            return 0\n\n        hi = float(bar.high)\n        lo = float(bar.low)\n        close = float(bar.close)\n        rng = hi - lo\n        if rng <= 0.0:\n            return 0\n\n        if loose:\n            dfloor = self.i_delta_floor\n            zthr = self.i_delta_sigmas\n            msig = self.i_move_sigmas\n            mfloor = self.i_move_floor\n            cfrac = self.i_close_frac\n            fagree = 0.0\n        else:\n            dfloor = self.delta_floor\n            zthr = self.delta_sigmas\n            msig = self.move_sigmas\n            mfloor = self.move_floor\n            cfrac = self.close_frac\n            fagree = self.flow_agree\n\n        # 0. Flow without movement: a bar carrying heavy aggressive flow\n        #    normally prints a wide range. It may not here.\n        nr = len(self.ranges)\n        if nr >= self.range_window:\n            avg = self._range_sum / nr\n            if avg > 0.0 and rng > self.range_mult * avg:\n                return 0\n\n        # 1. This bar's aggressive flow leans hard in one direction, and the\n        #    trade we take is against that lean, never with it.\n        dr = float(bar.delta) / vol\n        if -dfloor < dr < dfloor:\n            return 0\n        long_side = dr < 0.0\n\n        # 2. ... and that lean is unusual against the last four hours.\n        n = len(self.ratios)\n        if n < 24:\n            return 0\n        mu = self._ratio_sum / n\n        var = self._ratio_sq / n - mu * mu\n        if var <= 1e-12:\n            return 0\n        z = (dr - mu) / math.sqrt(var)\n        if (z < 0.0) != long_side:\n            return 0\n        if abs(z) < zthr:\n            return 0\n\n        # 3. A directional move was already in progress into this bar, measured\n        #    to the bar before it so the absorption bar cannot dilute it.\n        m = self.move_window\n        if len(self.closes) < m + 1:\n            return 0\n        start = self.closes[-1 - m]\n        end = self.closes[-1]\n        if start <= 0.0 or end <= 0.0:\n            return 0\n        move = (end - start) / start\n        if (move < 0.0) != long_side:\n            return 0\n\n        k = len(self.rets)\n        if k < 40:\n            return 0\n        mr = self._ret_sum / k\n        vr = self._ret_sq / k - mr * mr\n        if vr <= 0.0:\n            return 0\n        thr = msig * math.sqrt(vr) * math.sqrt(m)\n        if thr < mfloor:\n            thr = mfloor\n        if abs(move) < thr:\n            return 0\n\n        # 4. Aggressive flow drove that move. A drift on balanced flow carries\n        #    no absorption to read, so no trade.\n        if fagree > 0.0:\n            if len(self.mdeltas) < m or self._mv_sum <= 0.0:\n                return 0\n            imb = self._md_sum / self._mv_sum\n            if (imb < 0.0) != long_side:\n                return 0\n            if abs(imb) < fagree:\n                return 0\n\n        # 5. The flow failed to extend price, and the bar rejected its extreme.\n        if len(self.lows) < self.extreme_window:\n            return 0\n        if len(self.highs) < self.extreme_window:\n            return 0\n\n        if long_side:\n            if lo < min(self.lows):\n                return 0\n            if (close - lo) < cfrac * rng:\n                return 0\n            return 1\n\n        if hi > max(self.highs):\n            return 0\n        if (hi - close) < cfrac * rng:\n            return 0\n        return -1\n\n    # ------------------------------------------------------- coverage control\n\n    def _loose_allowed(self, ctx) -> bool:\n        \"\"\"Admit the insurance tier only while running coverage lags the floor.\n\n        `_traded_n / _seen` is the fraction of *completed actionable* sessions on\n        which anything was held. The tier exists for one job -- keeping that\n        fraction above the registered 70% when the strict tier has a quiet\n        stretch -- so it is admitted against `cover_floor`, seven tenths of a\n        point above the registered floor, and never on a session the gate\n        skipped.\n        \"\"\"\n        span = ctx.session_end - ctx.session_start\n        if span <= 0:\n            return False\n        if (ctx.ts - ctx.session_start) < self.relax_after_frac * span:\n            return False\n        if self._seen < self.cover_grace:\n            return False\n        return self._traded_n < self.cover_floor * self._seen\n\n    # ------------------------------------------------------------------- walk\n\n    def on_bars(self, ctx) -> None:\n        if self.interval not in ctx.bars:\n            return\n        bar = ctx.bars[self.interval]\n        real = bar.tick_count > 0\n\n        # ---- session boundary, coverage bookkeeping, and the cadence gate.\n        #      Only actionable sessions are counted: warmup delivers real bars\n        #      but nothing can be traded in them, so counting them would make\n        #      the fraction unreadable.\n        if ctx.session != self._session:\n            if self._session is not None and self._counted:\n                self._seen += 1\n                if self._traded:\n                    self._traded_n += 1\n            self._session = ctx.session\n            self._counted = bool(ctx.actionable)\n            self._traded = False\n            self._entries = 0\n            # Is today a session worth spending a round trip's toll on? The only\n            # input is the running fraction of completed sessions already\n            # traded -- a counter, never a price, a bar, a delta or a volume.\n            # Skipping is therefore uncorrelated with the signal, and the\n            # per-trade of the retained sessions is the per-trade of all of them.\n            self._allow = True\n            if (self._counted and self._seen >= self.cover_grace\n                    and self._traded_n >= self.cover_target * self._seen):\n                self._allow = False\n\n        if self._bar_ns == 0 and bar.close_ts > bar.open_ts:\n            self._bar_ns = bar.close_ts - bar.open_ts\n\n        if not ctx.actionable:\n            if real:\n                self._update(bar)\n            return\n\n        left_ns = ctx.session_end - ctx.ts\n\n        # ---- carrying a trade: the horizon clock, the session clock and the\n        #      catastrophe bracket are the only exits. Never reverse here.\n        if ctx.position != 0:\n            if not self._flattening:\n                timed_out = (self._hold_ns > 0 and self._entry_ts > 0\n                             and (ctx.ts - self._entry_ts) >= self._hold_ns)\n                if timed_out or left_ns <= self.flat_buffer_ns:\n                    self._flattening = True\n                    self._flatten(ctx)\n            if real:\n                self._update(bar)\n            return\n\n        self._flattening = False\n\n        # ---- is there room for a horizon trade before the UTC flatten? The\n        #      planned hold is the full horizon when the session allows it and\n        #      the time that is left when it does not -- a late absorption is\n        #      the same signal as an early one and is no longer deleted.\n        avail_ns = left_ns - self.flat_buffer_ns\n        min_hold_ns = self.min_hold_bars * self._bar_ns\n\n        side = 0\n        if (real and self._allow and self._entries < self.max_entries\n                and not ctx.working_order_ids\n                and self._bar_ns > 0\n                and avail_ns >= min_hold_ns):\n            side = self._signal(bar, False)\n            if side == 0 and self._loose_allowed(ctx):\n                side = self._signal(bar, True)\n\n        # Fold the bar in only after it has been judged, so it can never move\n        # the threshold it has to clear.\n        if real:\n            self._update(bar)\n\n        if side == 0:\n            return\n        if self._entries >= self.max_entries or ctx.working_order_ids:\n            return\n\n        price = ctx.last_price\n        if price <= 0.0:\n            return\n\n        full_ns = self.hold_bars * self._bar_ns\n        self._hold_ns = full_ns if full_ns < avail_ns else avail_ns\n\n        stop = price * self.stop_frac\n        target = price * self.target_frac\n        if side > 0:\n            oid = ctx.buy(size=self.size, stop_offset=stop,\n                          target_offset=target, tag=\"absorb-long\")\n        else:\n            oid = ctx.sell(size=self.size, stop_offset=stop,\n                           target_offset=target, tag=\"absorb-short\")\n        if oid is None:\n            return\n        self._entries += 1\n\n    # ------------------------------------------------------------------ exits\n\n    def _flatten(self, ctx) -> None:\n        # Cancel the armed bracket first: a reduce-only leg left working after\n        # the position is gone would keep `ctx.working_order_ids` non-empty and\n        # block every later entry.\n        if ctx.working_order_ids:\n            ctx.cancel_all()\n        if ctx.position != 0:\n            ctx.close(tag=\"horizon-exit\")\n\n    # -------------------------------------------------------------- callbacks\n\n    def on_fill(self, ctx) -> None:\n        if ctx.fill.position != 0:\n            if self._entry_ts == 0:\n                self._entry_ts = ctx.fill.ts\n            self._traded = True\n        else:\n            self._entry_ts = 0\n            self._hold_ns = 0\n            self._flattening = False\n\n    def on_lifecycle(self, ctx) -> None:\n        pass\n",
+    "source_sha256": "5e1ff0cb8ab90581ea53c6ed235b4e7357cb7a4938aed36f907f47e6c570dee5",
+    "strategy_digest": "5e1ff0cb8ab90581"
+  },
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "audit_model": null,
+      "auditor_models": null,
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.0,
+      "constraints": {
+        "digest": "762018afec3f3e163678a35546e71347adec38c5715282e4c14134f98ca4db5c",
+        "max_repairs": 2,
+        "path": "config/hypotheses/btc-absorption-reversal.constraints.yaml",
+        "policy": "record"
+      },
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://braverock.com/llm/v1",
+      "execution": {
+        "allow_overnight": true,
+        "latency_ns": 100000000,
+        "maker_commission_bps": null,
+        "maker_commission_per_contract": null,
+        "slippage_bps": 0.0,
+        "slippage_per_contract": 0.0
+      },
+      "explore_epsilon": 0.0,
+      "fidelity_judge": {
+        "mode": "repair",
+        "model": "gemini-2.5-pro",
+        "prompt_digest": "72b333cf364db92cd40b4fa9ec6d484e5a8c7febbef0531bb7edf7e1c07f14e9"
+      },
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "6231978392a9eda23deba96d31bd624c05447ba5942bb1c5bd7f62d08713dfd9",
+        "path": "config/hypotheses/btc-absorption-reversal.md"
+      },
+      "hypothesis_origin": null,
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "knowledge": null,
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 64000,
+      "model": "deepseek-v4.1-flash",
+      "model_served_at_registration": "deepseek-v4.1-flash",
+      "null_source": "round_turn_mc",
+      "parent_rng_seed": 0,
+      "probe_before_trial": true,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "ec04cb06748c9b087210252070f33ae8e10b153a921e67af94a61d622ce45ab2",
+      "proposal_wall_clock_s": 600.0,
+      "registered_fees": {
+        "commission_bps": 5.0,
+        "commission_per_contract": 0.0,
+        "maker_commission_bps": 5.0,
+        "maker_commission_per_contract": 0.0
+      },
+      "repair_reasoning_effort": "low",
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real OKX BTCUSDT perpetual-futures trades. A session is a UTC day (00:00 to 24:00 UTC); the market trades continuously, with no close, no holidays and no overnight gap, so `session` boundaries are a calendar convention, not a market event. Every trade carries its aggressor side, so `unknown_volume` is always zero, 960 scored sessions on the pre-registered train split.\n\nFill model: book-queue-pessimistic -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nSizes are integer lots of 0.0001 BTC: `ctx.buy(1)` is 0.0001 BTC, and P&L is the price move in USD times lots, so one lot earns 0.0001 USD per $1 the price moves. Commission: 5 basis points of notional per side (0.10% a round trip), charged on every fill: a round trip must move the price 0.10% just to break even -- $30 at $30,000, $100 at $100,000 -- so high turnover is very expensive here. Holding a position through a funding settlement (00:00, 08:00, 16:00 UTC) pays the funding rate on its notional when long and receives it when short (the reverse when the rate is negative). Returns are scored relative to each session's opening price, so a move of 1% counts the same in 2023 and in 2026.\n\nLatency: 100,000,000 ns. Every order, modification and cancel reaches the market that long after your callback, and a resting order can still fill until its cancel arrives.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "btc-absorption-01",
+    "budget": 20,
+    "campaign_id": "btc-absorption-01",
+    "dataset": "crypto-btc-okx-book",
+    "profile": "btc-okx-book-train",
+    "q": 0.05,
+    "record_digest": "cb349c2495de73f8206deae9dfb79d8e28562790d49691f68d24b34ba49a7bde",
+    "record_digest_now": "cb349c2495de73f8206deae9dfb79d8e28562790d49691f68d24b34ba49a7bde",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-11-22T22:27:38+00:00"
+  },
+  "deflation_view": null,
+  "diagnostics_only": {
+    "correction": null,
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all.",
+    "unavailable": "no tabulated null exists for 'crypto-btc-okx-book', so BH, Holm, the nominal FAR and the deflation view were not computed. The gate below uses this campaign's per-candidate nulls and does not read that table."
+  },
+  "digest": "6d6cb31bda95656b8d86bb6ac7fa440e067e7f5415f64e43158febdad4d87917",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": false,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 16,
+    "note": "Trials are positively correlated once an agent sees history, which narrows the true distribution of the maximum. Drawing each trial's null independently therefore overstates the spread, so the test is conservative in that direction rather than optimistic.",
+    "null_max_at_q": -0.06927806539745707,
+    "null_max_mean": -0.11176292524502028,
+    "null_max_quantiles": {
+      "0.01": -0.04533593179196097,
+      "0.05": -0.06927806539745707,
+      "0.1": -0.08058718098219997,
+      "0.2": -0.09244076481758706,
+      "0.5": -0.11382162003626914
+    },
+    "observed_best": -0.12614556869467955,
+    "p": 0.7142285771422858,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/btc-absorption-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": "2be0ea4d991b9dc36920e76db0197b3f63e4e3410d52d2cc38f8535f45909007",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "8109229a4f10057c"
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": "20caca62e8048b10f048f233f250c30bbd3c146dc5460125f6aa547a0d1ea18d",
+        "outcome": "completed",
+        "score": -0.27611202130340545,
+        "strategy_digest": "3fc3992e46dd134d"
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": "410f6e71c91e21dfc7b40f0008de40530961ff23d4c7a7f277ed2002adbacce3",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "a92e9456bed382af"
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": "199ceb5d911a85c5aa07b18b344601a6582450a30d61207b5d8e825b798d6fa9",
+        "outcome": "completed",
+        "score": -0.17062887278088149,
+        "strategy_digest": "5ab3c13b2bc3dc1e"
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": "598285e6831431f917de15c01b7979f944548c7ae28788bc2d83520d2ec20a04",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "64fefb3e6a3dc889"
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": "c8f6f52a901f55d05c8f24f375bf3d4151376f5398b3086649879f4c4626e85e",
+        "outcome": "completed",
+        "score": -Infinity,
+        "strategy_digest": "a7bedc6b5577ee0b"
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": "fb0b7f3ce5bbe6ff3949af794fe4e983ed5be3acbcd8b6117fbca646e9990c19",
+        "outcome": "completed",
+        "score": -0.20989609594448794,
+        "strategy_digest": "300156b3922fc8d1"
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": "c1d4f5eb295f2076116ae353dd6b76aab4104c594b405a784295c9eb492f7189",
+        "outcome": "completed",
+        "score": -0.29396843690446123,
+        "strategy_digest": "99a226041200fadb"
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": "128c6c1735efece07a4e829e8d195c4e782e5f1c183ee487846c7161b3778f78",
+        "outcome": "completed",
+        "score": -0.3082412301482449,
+        "strategy_digest": "5d76b25c631d9fb4"
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": "acd1013014948fbc704d740a5423f967cbe84e0af98f0bc31bbfabd355372264",
+        "outcome": "completed",
+        "score": -0.23766473425567336,
+        "strategy_digest": "c442df8503dd67bc"
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": "7f3e938e0f5114034c69f16f1eed833d995b7c52134dbd95dc177247754af9b8",
+        "outcome": "completed",
+        "score": -0.25763589799013675,
+        "strategy_digest": "ae6ce9653baae40d"
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": "f889a6072459da32a588f5859086abc1f47b862a4ae73d674936d1fee6da6d31",
+        "outcome": "completed",
+        "score": -0.16755588199392846,
+        "strategy_digest": "d9f902b4e5ff6587"
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": "777439fe7921b22dee5a813be027e68fe273ab89e81c299a27a7e2129a1ea541",
+        "outcome": "completed",
+        "score": -0.24654039283853912,
+        "strategy_digest": "40668b2576e7eb70"
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": "ccdfc995e9472665e191d6639375d34e67878bb197b7b25d2680dd83339b8ad6",
+        "outcome": "completed",
+        "score": -0.1552227910003244,
+        "strategy_digest": "d732b45ed9acc874"
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": "c351d3acdd98dff0970db27f400627d6e2aace0c17eba9b9e88640d41da4830b",
+        "outcome": "completed",
+        "score": -0.2102620842825691,
+        "strategy_digest": "f9fb7906291e5d18"
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": "b4df07ff7c14b9883812640dd8ad232c76d01d7485a81d77c699752001b3ddf1",
+        "outcome": "completed",
+        "score": -0.14149661119850543,
+        "strategy_digest": "a33734312e357c39"
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": "e30e8aad27afc7b044e3c53c0a55ec5b42800bbe26bc4e3daded013911394544",
+        "outcome": "completed",
+        "score": -0.17845134144267807,
+        "strategy_digest": "2f7f75a6d6feb68a"
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": "c8daae2391ec36f66fbd4280773b2b0e160bf0621c9aa34200e1d456f84dfb5c",
+        "outcome": "completed",
+        "score": -0.12614556869467955,
+        "strategy_digest": "5e1ff0cb8ab90581"
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": "f2a67a7dae061a91c8da3be336b14e64e2a7570e3c45b26b07743bd5ea2e4abb",
+        "outcome": "completed",
+        "score": -0.13467383614435952,
+        "strategy_digest": "9e06862da9703391"
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": "3f892391d95c1fdc5aa5e8343e8175c2cd21e8436e8a185463ad58dbe10074a9",
+        "outcome": "completed",
+        "score": -0.13538805151386135,
+        "strategy_digest": "37391b8e78e5e645"
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "completed": 20
+    },
+    "harness_failures": 0,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 20,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": true,
+    "max": 0.0016334563730801461,
+    "mean": -0.22131281627503377,
+    "min": -0.41557290208695374,
+    "n_draws": 160000,
+    "note": "pooled across candidates. For a deflation cross-check only -- tier 2 owns the correction and tier 3 does not recompute a bar from these.",
+    "sd": 0.06863081550457381
+  },
+  "provenance": {
+    "artifact_fingerprint": "928ff224ee4ce7d13394c4c6a7973542f17d3d87dccc6a2a16480e5bfa517cca",
+    "artifacts": {
+      "config/backtest.yaml": "9c0ecc68d88d2eabc98098edefd17096cca669b2ea8a82ff80b2fdf886920b93",
+      "config/calendars/crypto-trades.yaml": "341f204519220585953609d475d8f00590493411b02ee65c76417d88a98631f7",
+      "config/calendars/nq-trades.yaml": "a33f569de17ee96a07e1ea8f08e5a43dc3790f688dce5e7840bb34f937ca6f40",
+      "config/calendars/okx-book.yaml": "deccded0c795c56a095f488559b47d422474b210a5b70318e2104d79b8406ba7",
+      "config/corrections.yaml": "0fe7991f30992cb95cfa22e99400397e0796630e6302d6bb3faab33d9d1c66b2",
+      "config/costs.yaml": "2af88ebe4d4674a1281c5265b84e6a097bff3bc394718b71bd4477b2c61b1437",
+      "config/house-constraints.yaml": "232979be0b3b4bb54b623907251e698fb66f8da211c098a13b6b8e5d47fc6176",
+      "config/hypotheses/auction-market-features.md": "c306848e27d52157a9e1ea478905aa4ad6e585b56b84bc892962aeeb02d826e9",
+      "config/hypotheses/btc-absorption-reversal.md": "6231978392a9eda23deba96d31bd624c05447ba5942bb1c5bd7f62d08713dfd9",
+      "config/hypotheses/btc-cvd-continuation.md": "f330f7a6e278e0f6c6e61002e34f5bfebd8ea18d2cdcd5da2c075bb88e5a348f",
+      "config/hypotheses/flow-continuation-5m.md": "13516e4d73d2286805b68d526fe8590581c3ed64c418e44f2557a319ba7a4fea",
+      "config/hypotheses/flow-continuation.md": "2fd992b524213040d9b59c1ae1cde0b54404fc5ca779d9dc68d774c72dca0528",
+      "config/hypotheses/intraday-continuation.md": "38c817dc28bab4877ae5095491e00279c931019b3afd6c2b6d097e71ce23cca2",
+      "config/hypotheses/intraday-move-continuation-vs-giveback.md": "dd898b0ac0548576dafc2f61169a5334e834d48f7bc83d2cfcaf2c8901cfe876",
+      "config/hypotheses/nq-opening-reversal.md": "37fcea5a90f37b7b05faaab7e15e74990878bbaba226b41171965908b2a40b91",
+      "config/hypotheses/ohlcv-momentum-friction-ceiling.md": "ff9d1893266f2f7eeb05f0f27a2751e9e95a4ea58f8c38f236aa9fc9e7c867a6",
+      "config/hypotheses/opening-range-break-continuation-failure.md": "94268539fd168f7067cbbc7098ad15780aa63fa3bef3e096b011ec2c4b147483",
+      "config/hypotheses/opening-range-break-continuation-or-fade.md": "4e48d6e16fba78098a993549b2528853e8c4c909908d501cf1d6ad3309988440",
+      "config/hypotheses/opening-range-break-hold-or-return.md": "660f66e68d536c243d47ecab73a73fdd6b5a529d97301a2d2f5cabd01488db0e",
+      "config/hypotheses/opening-range-break-resolution.md": "4c41b63249ae6113d53a032cde5c13651d107b7bf77450043f82d58e33488bfe",
+      "config/hypotheses/opening-range-breakout-30m.md": "021eb8f94018416e4294293831f5c8d4370ac0bd6cb1c39b42f3b57771ea6128",
+      "config/hypotheses/opening-range-departure-fates-by-clock.md": "1c0bbe82227d0c4b25c9bcf2c111ae8c3ebad943bf7bd84ee3c587ac44d17b02",
+      "config/hypotheses/opening-range-direction-agnostic.md": "48775a6bedc23838d451279d05dc15c2660300bb598e5cf508f3c677fa22d7e4",
+      "config/hypotheses/opening-range-exit-hold-or-return.md": "8b3d0872c848b58892611d7621245f32f739050b89bd645530888785268b8237",
+      "config/hypotheses/options-no-arbitrage-violation.md": "da215169619b795166a0a8af3ab73cb2ffa3e9efa55edf4549dc11c0d6c0ba2a",
+      "config/hypotheses/options-surface-shape-and-the-index.md": "268c3ca73b695ff20a591b736b68f6562a21dbaa88b08cd1193ae4e281c9298a",
+      "config/hypotheses/orderflow-absorption-at-carried-levels.md": "97ad8b1db1a60f852bae58c5428270f528327a300832d74131d3fe97c52794d2",
+      "config/hypotheses/orderflow-absorption.md": "70bcc32aa38bead10010c9fa99b0f6962c758a466639cb8966ab48d10baff65a",
+      "config/hypotheses/outsized-intraday-move-continuation-vs-giveback.md": "4a97e2e35a2111d81a49331782789191c9765efdb5df34c7aefedeb7234cf557",
+      "config/hypotheses/outsized-move-continuation-refined.md": "25d9b544894e7d214729ba058d1783e6b0d3d16608e560346538076341626c77",
+      "config/hypotheses/outsized-move-continuation-vs-giveback.md": "00074ec0231d64452b65b1515e9669d711425a1220e6039b3e61abd1638766a6",
+      "config/hypotheses/session-move-continuation-robustness.md": "087be6eedd20f472989bdadf3944e054b3a0daa42cafb589170455bc6ecb44b3",
+      "config/prompts/family-review.md": "012935b192b8ca9ff3ed3a3c9635dfdab4df9f8f95dc1db1791f35bc8532fb82",
+      "config/prompts/fidelity-judge.md": "72b333cf364db92cd40b4fa9ec6d484e5a8c7febbef0531bb7edf7e1c07f14e9",
+      "config/prompts/hypothesis-refine.md": "f89af454f9a00652f160ac0085944f533a35372ae0c4c92c381145447a4929a1",
+      "config/prompts/hypothesis-review.md": "fb5465beac2d4e1efcddbc998201a0cceecaee8924042581acd3ebb9fc2d223c",
+      "config/prompts/paper-distil.md": "0dcafaf00f0a1d990fd26880d532f3eac423a36b1488d1ebd7b28a8747fb4504",
+      "config/prompts/paper-rank.md": "b8acfdf9c01f9c3ec7c6e0c8da4ca1ff54f401c5e7bf60c41b6b366993c15784",
+      "config/prompts/paper-screen.md": "dc10f5d4cc98dd8aa463c81b79f1c710b648e70e2d9095c4245c100d02b9160a",
+      "config/prompts/question-distil.md": "001e88cb1830847d88d8709360851ac113f1103cb360a7ab7e74e4b34239598a",
+      "config/prompts/strategy-agent.md": "ec04cb06748c9b087210252070f33ae8e10b153a921e67af94a61d622ce45ab2",
+      "config/prompts/strategy-review.md": "4bb7b26f736eb58c38340963aec9723499003756e1b7b975c5c99943125ecb7c",
+      "config/run.yaml": "b36bd63130efada37bd53d55afabc1f879a6327231ae7be134cd31739a37fce6",
+      "data/calibration/ablation-fixed-bracket-continuous.json": "104c11d03f8e8c4e1d8f16ac0de2fbc21cf84a599a59e3926b6a0ff7e41d1771",
+      "data/calibration/ablation-vol-scaled-parametric-rule.json": "fa191a30e50165cb23305a4806b346bc521feeca349a6a749ee2460b923e0bd5",
+      "data/calibration/empirical-null-nq-trades-verification.json": "90ecb322bd7d05aa34faeed4b72806b73a4705d51a895d4093844f75cde2746b",
+      "data/calibration/empirical-null-nq-trades.json": "a8c9610f88822004a2f176f912b831b854490cf93131f179507ccfc6db0144a0",
+      "data/calibration/empirical-null-verification.json": "339053036c71c160110544e1e78bc703789354312226ea96d39652f398a44283",
+      "data/calibration/empirical-null.json": "6e2635ffc333f67abd7b2544034b4f3a07fca2ee0a616f33a28eaf365f64d044",
+      "data/calibration/placeholder-per-trade-t.json": "b8d1d7e03a8e10ab17b7c029892678cf698c1155acf73ef68983a246c618370b",
+      "data/calibration/profile-null.json": "66a34d9793589920ae0c2ba7e8c770be18f78e0312f4762ed3bf48e73b247936",
+      "data/calibration/sortino-empirical-null.json": "bcd2fab24b28067fce4616a5dad045aab062dcd43d14d0163897069592807f19",
+      "data/calibration/sortino-per-session.json": "cbe05f603b7903eeda35ca6c48117c90db3cb56b5926c374746487566f37a7b5",
+      "data/dbn-version-equivalence.json": "09b0a89663752c15d79115286df6f3790ab55dde9f20540ac111be4c5e6b8469",
+      "data/manifest.json": "9b4626e865b9d33acd64b6a2c7cbfacd51b68e7ffbe12a3e41cb88c9b782eb51",
+      "data/nq-contract-selection.json": "98b4e0ba72bab0bb4a64329dd6918bcaec33d36e15943f5de66e4a82e1ff01d3",
+      "data/nq-session-closes.json": "5f2436840e36e22751e3480b9edcb48199b1ed160b94d665b5afa00f3fb96816",
+      "src/strategies/current.py": "8109229a4f10057c684e4f5fb64015918e72f10a31c1b33c7161d559579dbd55"
+    },
+    "code_fingerprint": "6e8226cb1125a215ae0305f44a91b6d620983f0dea282a5bc04fe98bff60e030",
+    "code_fingerprint_unique_across_trials": true,
+    "environment_fingerprint": "518bb97bdeca748c98a93dbec6cee3169fab1282d927a02fb9c5145126cc5714",
+    "git_sha": "1e4e1e43374573bc6170330d9a51317afc1b5a58",
+    "isolation": {
+      "address_space": {
+        "active": true,
+        "mechanism": "RLIMIT_AS"
+      },
+      "cpu": {
+        "active": true,
+        "mechanism": "RLIMIT_CPU"
+      },
+      "detail": "",
+      "filesystem": {
+        "active": true,
+        "mechanism": "read-only bind mount, unprivileged user namespace (bubblewrap)"
+      },
+      "level": "isolated",
+      "network": {
+        "active": true,
+        "mechanism": "empty network namespace (bubblewrap --unshare-net)"
+      },
+      "platform": "Linux",
+      "wall_clock": {
+        "active": true,
+        "mechanism": "the engine's own budget, enforced by the parent"
+      }
+    },
+    "lockfile_digest": "absent",
+    "python_version": "3.14.4",
+    "scoring_fingerprint": "fdf7fffdf1c7fba6fa6cd8792a32dc67323961f9461820a3dcc9d524aee65c04"
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/2",
+  "written_at": "2026-11-22T23:33:54+00:00"
+}

@@ -96,7 +96,7 @@ class RunTicket:
                 "RunTicket.for_test, never by calling RunTicket(...) directly. "
                 "Every engine run has to be accounted for somewhere."
             )
-        if self.kind not in ("ledger", "calibration", "test"):
+        if self.kind not in ("ledger", "calibration", "test", "native"):
             raise RunNotAccounted(f"unknown ticket kind {self.kind!r}")
 
     @classmethod
@@ -151,6 +151,15 @@ class RunTicket:
         if not reason:
             raise RunNotAccounted("for_null_calibration() needs a reason")
         return cls._mint(_MINT, "calibration", f"null calibration: {reason}")
+
+    @classmethod
+    def for_native_child(cls, trial_id: str) -> RunTicket:
+        """The native child of one Amendment 24 trial. Its parent holds that trial's ledger row
+        and an open-trial journal entry naming `trial_id`; the child refuses to start without
+        one. `tests/test_accounting.py` asserts the only caller is `scripts/run_native_trial.py`."""
+        if not trial_id:
+            raise RunNotAccounted("for_native_child() needs the trial id")
+        return cls._mint(_MINT, "native", trial_id)
 
     @classmethod
     def for_test(cls, reason: str = "fixture") -> RunTicket:
@@ -347,11 +356,15 @@ def store_weights(ledger_path: Path, digest: str, blob: bytes) -> str:
         return str(out)
 
 
-def store_fill_log(ledger_path: Path, digest: str, fills) -> str:
-    """Keep the run's fills beside the ledger, addressed by their digest."""
+def store_fill_log(ledger_path: Path, digest: str, fills, limit: int = MAX_STORED_FILLS) -> str:
+    """Keep the run's fills beside the ledger, addressed by their digest.
+
+    `limit` is raised for native and reference-engine runs (Amendment 24), whose gate rebuilds its
+    null from this file and whose high-frequency strategies pass the default.
+    """
     import gzip
 
-    if not fills or len(fills) > MAX_STORED_FILLS:
+    if not fills or len(fills) > limit:
         return ""
     out = ledger_path.parent / "fills" / f"{digest}.jsonl.gz"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -409,6 +422,8 @@ class LedgerRun:
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         if not self.written:
-            self.written = True
+            # Marked written only once the row is on disk. A row that failed to build or append
+            # is not written, so nothing downstream may treat the trial as recorded.
             append_ledger(self.ledger_path, self.row_builder(self.record))
+            self.written = True
         return False        # never swallow: an invalidated trial is still a raise

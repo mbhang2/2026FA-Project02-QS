@@ -1,0 +1,51 @@
+{
+  "constraints": [],
+  "cores": {
+    "brand": "unknown",
+    "cgroup_quota": null,
+    "efficiency": null,
+    "performance": null,
+    "schedulable": 20,
+    "total": 20,
+    "usable": 20,
+    "usable_basis": "sched_getaffinity"
+  },
+  "disk": {
+    "free": 535071502336,
+    "total": 1081101176832,
+    "used_pct": 45.420107728206254
+  },
+  "footprint": null,
+  "headroom": 0.85,
+  "ignored": "native kernel trials: scripts/capacity.py measures run.py trials, and run.py refuses native profiles. One worker on a 15 GB machine; native trials used under 1 GB in the A24 and A25 controls, and the Python audit a few GB.",
+  "limits": {
+    "RLIMIT_AS": {
+      "hard": -1,
+      "soft": -1,
+      "unlimited": true
+    },
+    "RLIMIT_NOFILE": {
+      "hard": 1048576,
+      "soft": 1048576,
+      "unlimited": false
+    },
+    "RLIMIT_NPROC": {
+      "hard": 63377,
+      "soft": 63377,
+      "unlimited": false
+    }
+  },
+  "machine": "59d8f1c5e62606e0",
+  "memory": {
+    "available": 15072210944,
+    "available_basis": "/proc/meminfo MemAvailable",
+    "cgroup_limit": null,
+    "swap_total": 4294967296,
+    "swap_used": 186388480,
+    "total": 16623960064
+  },
+  "profile": "btc-okx-mm-train",
+  "reason": "no measured per-trial footprint for profile 'btc-okx-mm-train' on this machine (59d8f1c5e62606e0). Run `scripts/capacity.py --measure --profile btc-okx-mm-train` first; it spends one purpose=check trial, which N does not count. Refusing to guess a footprint.",
+  "verdict": "UNKNOWN",
+  "width": 1
+}

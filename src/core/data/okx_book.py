@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Iterator, Sequence
 
 import numpy as np
+import pyarrow as pa
 
 from .._roots import repo_root
 from ..types import NS_PER_SECOND, DataCapabilities, Side, Split, Tick, Ts
@@ -57,6 +58,36 @@ def to_lots(quantity: np.ndarray, lot: float, what: str) -> np.ndarray:
     if raw.size and np.abs(raw - lots).max() > 1e-6:
         raise ValueError(f"{what}: a quantity is not a whole number of {lot} lots")
     return lots.astype(np.int64)
+
+
+_TRADE_SCHEMA = pa.schema([("ts", pa.int64()), ("price", pa.float64()),
+                           ("size", pa.int64()), ("side", pa.int8())])
+
+
+def write_trade_arrow(path: Path, arrays: tuple) -> None:
+    """One session's trades as an uncompressed Arrow file, written atomically."""
+    ts, price, size, side = (np.asarray(a) for a in arrays)
+    batch = pa.record_batch([pa.array(ts, pa.int64()), pa.array(price, pa.float64()),
+                             pa.array(size, pa.int64()), pa.array(side, pa.int8())],
+                            schema=_TRADE_SCHEMA)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".arrow.tmp")
+    os.close(fd)
+    try:
+        with pa.OSFile(tmp, "wb") as sink, pa.ipc.new_file(sink, _TRADE_SCHEMA) as writer:
+            writer.write_batch(batch)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+def read_trade_arrow(path: Path) -> tuple:
+    """Read-only arrays over the mapped file. No value is copied or decompressed."""
+    with pa.memory_map(str(path), "r") as source:
+        table = pa.ipc.open_file(source).read_all()
+    return tuple(table.column(name).chunk(0).to_numpy(zero_copy_only=True)
+                 for name in ("ts", "price", "size", "side"))
 
 
 def encode_depth(prices: np.ndarray, lots: np.ndarray, scale: int) -> tuple[np.ndarray, np.ndarray]:
@@ -271,6 +302,9 @@ class OKXBookDataset:
         if d not in self._quotes or d not in self._sessions:
             raise KeyError(f"no OKX session {d}")
         path = self._trade_path(d)
+        store = path.with_suffix(".arrow")
+        if self.spec.cache and store.exists():
+            return read_trade_arrow(store)
         if self.spec.cache and path.exists():
             with np.load(path, allow_pickle=False) as z:
                 return z["ts"], z["price"], z["size"], z["side"]
@@ -371,7 +405,9 @@ class OKXBookDataset:
         where = self._book_dir(d)
         if not where.exists():
             self._build_book(d, where)
-        arrays = {n: np.load(where / f"{n}.npy", mmap_mode="r")
+        # A plain read-only view of the mapped file: the same pages, without the cost of
+        # `np.memmap.__getitem__` on every scalar the fill model reads.
+        arrays = {n: np.asarray(np.load(where / f"{n}.npy", mmap_mode="r"))
                   for n in ("ts", "bid", "ask", "bid_qty", "ask_qty")}
 
         def deep() -> dict:
@@ -392,10 +428,27 @@ class OKXBookDataset:
     def _load_depth(self, where: Path) -> dict | None:
         if not (where / "depth.ok").exists():
             return None
-        out = {name: np.load(where / f"depth_{name}.npy", mmap_mode="r")
+        out = {name: np.asarray(np.load(where / f"depth_{name}.npy", mmap_mode="r"))
                for name in ("bid_px", "bid_lots", "ask_px", "ask_lots")}
         out["scale"] = json.loads((where / "depth.ok").read_text())["scale"]
         return out
+
+    def has_trade_store(self, session) -> bool:
+        return self._trade_path(self._as_date(session)).with_suffix(".arrow").exists()
+
+    def warm_trade_store(self, session) -> None:
+        """Write the Arrow trade store from the verified cache, and prove it matches."""
+        d = self._as_date(session)
+        path = self._trade_path(d)
+        store = path.with_suffix(".arrow")
+        if store.exists():
+            return
+        arrays = self._load_arrays(d)
+        write_trade_arrow(store, arrays)
+        for name, a, b in zip(("ts", "price", "size", "side"), arrays, read_trade_arrow(store)):
+            if a.dtype != b.dtype or not np.array_equal(a, b):
+                store.unlink(missing_ok=True)
+                raise ValueError(f"{d}: the Arrow {name} column differs from the cache")
 
     def has_depth(self, session) -> bool:
         return (self._book_dir(self._as_date(session)) / "depth.ok").exists()

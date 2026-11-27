@@ -49,3 +49,81 @@ backtests:
     book_features: true
     costs: BTCUSDT@hft-0-2
     latency_ns: 1000000
+
+  # Amendment 24: market makers as native kernels, with book-update events, a 0.10 BTC
+  # (1,000-lot) inventory cap and the net-profit gate. Only scripts/run_native_trial.py runs
+  # them, and only after Amendment 24 is signed; run.py refuses them.
+  btc-okx-mm-train:
+    dataset: crypto-btc-okx-book
+    split: train
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: native
+    book_events: true
+    inventory_cap_lots: 1000
+    gate: spread_capture
+
+  btc-okx-mm-validation:
+    dataset: crypto-btc-okx-book
+    split: validation
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: native
+    book_events: true
+    inventory_cap_lots: 1000
+    gate: spread_capture
+
+  # Amendment 24 B5: the holdout scores a kernel champion with the Python engine only, its source
+  # run as an ordinary strategy. About 180 us per event over 160 sessions, so the budget is long.
+  # Run only by scripts/holdout.py, once.
+  btc-okx-mm-holdout:
+    dataset: crypto-btc-okx-book
+    split: holdout
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: reference
+    book_events: true
+    inventory_cap_lots: 1000
+    gate: spread_capture
+    wall_clock_budget_s: 259200
+
+  # Amendment 24 Parts A to C: high-frequency strategies as native kernels with book-update
+  # events, judged by the usual gate. No inventory cap and no market-making gate (Part D was not
+  # accepted). Only scripts/run_native_trial.py runs the first two, after Amendment 24 is signed;
+  # only scripts/holdout.py runs the third, once.
+  btc-okx-hft-native-train:
+    dataset: crypto-btc-okx-book
+    split: train
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: native
+    book_events: true
+
+  btc-okx-hft-native-validation:
+    dataset: crypto-btc-okx-book
+    split: validation
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: native
+    book_events: true
+
+  btc-okx-hft-native-holdout:
+    dataset: crypto-btc-okx-book
+    split: holdout
+    use_quotes: true
+    book_features: true
+    costs: BTCUSDT@hft-0-2
+    latency_ns: 1000000
+    engine: reference
+    book_events: true
+    wall_clock_budget_s: 259200

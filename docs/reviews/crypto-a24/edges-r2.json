@@ -1,0 +1,9 @@
+{
+ "unprofitable_impact": 0.575,
+ "noise_impact": 0.57,
+ "strong_impact": 0.35,
+ "calibration_commit": "ca0c7c0b215f833e525088c9b3a0a4d297a038cc",
+ "calibration_sha256": "2d798769816bec1fe2dff94cb1cb60b9ccf14b7fb0191e6a7d2e2d896598df28",
+ "calibration_seeds": "640001-640100",
+ "rows": 3200
+}

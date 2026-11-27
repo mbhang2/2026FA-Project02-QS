@@ -1,0 +1,18 @@
+{
+  "schema": "research-session/1",
+  "session": "btc-book-absorption-s01",
+  "plan": "/home/mbhang2/.claude/jobs/01690ec9/tmp/book-absorption-plan.yaml",
+  "declared_family": [
+    "btc-book-absorption-01"
+  ],
+  "started": "2026-11-23T19:00:26+00:00",
+  "campaigns": {
+    "btc-book-absorption-01": "complete"
+  },
+  "validation": "NOT RUN -- --train-only. This session is a measurement about the machinery, not a search for a candidate, and validation is one look per campaign.",
+  "l2": null,
+  "stopped_by_cue": false,
+  "family_note": "every campaign in the plan, written before the session ran.",
+  "train_only": true,
+  "finished": "2026-11-23T21:41:47+00:00"
+}

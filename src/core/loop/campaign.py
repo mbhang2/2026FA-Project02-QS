@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -251,7 +252,7 @@ def declares_fit(source: str) -> bool:
 
 def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
               index: int, allow_fitted: bool | None = None,
-              root: Path | None = None, purpose: str = "trial") -> dict:
+              root: Path | None = None, purpose: str = "trial", native: bool = False) -> dict:
     """One proposal, one isolated run, one ledger row. Returns the row.
 
     The strategy file is written, `run.py` is invoked exactly as a human would
@@ -268,6 +269,9 @@ def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
     to be invisible in the result.
     """
     root = root or REPO_ROOT
+    if native:
+        return _run_native_trial(source, profile=profile, ledger=ledger, campaign_id=campaign_id,
+                                 index=index, root=root)
     if declares_fit(source) and not allow_fitted:
         # Refused before `current.py` is touched and before `run.py` is invoked,
         # so the proposal never reaches the data. It is NOT a ledger row and does
@@ -305,6 +309,36 @@ def run_trial(source: str, *, profile: str, ledger: Path, campaign_id: str,
         return {"outcome": "harness_failed", "campaign_id": campaign_id,
                 "campaign_index": index, "score": None,
                 "error": "run.py produced no ledger row"}
+    row = rows[-1]
+    row["campaign_id"] = campaign_id
+    row["campaign_index"] = index
+    return row
+
+
+NATIVE_PYTHON = os.environ.get("PRACTICUM_NATIVE_PYTHON",
+                               str(Path.home() / ".venvs" / "practicum-fast" / "bin" / "python"))
+
+
+def _run_native_trial(source: str, *, profile: str, ledger: Path, campaign_id: str, index: int,
+                      root: Path) -> dict:
+    """Amendment 24: the kernel goes to `scripts/run_native_trial.py`, which owns its one ledger
+    row. The kernel file is kept beside the ledger so the source that ran can be read back.
+
+    `purpose` is not passed: the native runner sets it from whether Amendment 24 is signed.
+    """
+    kernels = Path(ledger).resolve().parent / "kernels"
+    kernels.mkdir(parents=True, exist_ok=True)
+    path = kernels / f"{campaign_id}-{index:04d}.py"
+    path.write_text(source)
+    before = _line_count(ledger)
+    subprocess.run([NATIVE_PYTHON, "scripts/run_native_trial.py", "--profile", profile,
+                    "--kernel", str(path), "--ledger", str(ledger),
+                    "--campaign-id", campaign_id, "--campaign-index", str(index)],
+                   capture_output=True, text=True, cwd=str(root))
+    rows = _read_rows(ledger)
+    if len(rows) <= before:
+        return {"outcome": "harness_failed", "campaign_id": campaign_id, "campaign_index": index,
+                "score": None, "error": "run_native_trial.py produced no ledger row"}
     row = rows[-1]
     row["campaign_id"] = campaign_id
     row["campaign_index"] = index
@@ -356,11 +390,15 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
               null_routes: list | None = None,
               exclude: set | None = None,
               profitability: dict | None = None,
-              risk_units: dict | None = None,) -> dict:
+              risk_units: dict | None = None,
+              gate_kind: str | None = None) -> dict:
     """The correction over the campaign, and the uncorrected view beside it.
 
     `profitability` is Amendment 18's `{campaign_index: bound}`. When supplied, the
     selected trial's bound replaces the `observed_best > 0` floor in `accept`.
+
+    `gate_kind="spread_capture"` is Amendment 24 D5, frozen in the registered record: the
+    selected trial passes only on its net-profit bound at q/N, and no sign-flip null is used.
 
     **`max_of_n` over per-candidate nulls is the gate; BH and Holm are
     diagnostics.** Task 32 demoted the tabulated FAR column to screening: it is
@@ -471,7 +509,24 @@ def summarise(result: CampaignResult, *, dataset: str | None = None,
                      "(Task 33). A rising share means the loop is producing "
                      "something atypical, and that the bill is going up."),
         }
-    if null_samples:
+    if gate_kind == "spread_capture":
+        observed_best = max(gate_scores) if gate_scores else float("-inf")
+        winner = next((r for r in trials
+                       if r.get("campaign_index") not in exclude
+                       and (r.get("score") or {}).get("primary") == observed_best
+                       and not (r.get("score") or {}).get("rejected")), None)
+        bound = ((profitability or {}).get(str(winner.get("campaign_index")))
+                 if winner is not None else None)
+        out["gate"] = {
+            "kind": "spread_capture", "is_the_gate": True, "observed_best": observed_best,
+            "selected_index": None if winner is None else winner.get("campaign_index"),
+            "profitability": bound, "accept": bool(bound and bound.get("passes")),
+            "excluded_off_question": sorted(exclude),
+            "floor_note": ("Amendment 24 D5: accept = the selected trial's Newey-West lower bound on "
+                           "its mean net session return is above zero at q/N. No sign-flip null is "
+                           "used, and a missing bound fails."),
+        }
+    elif null_samples:
         observed_best = max(gate_scores) if gate_scores else float("-inf")
         # The rule comes from the REGISTERED record, never from an argument.
         rule = (result.record.correction_rule or "independent")

@@ -1,0 +1,296 @@
+{
+  "best_candidate": null,
+  "campaign": {
+    "agent": "src.core.loop.llm.LLMAgent",
+    "agent_config": {
+      "audit_model": null,
+      "auditor_models": null,
+      "b_null": 10000,
+      "champion_carry_forward": false,
+      "commission_per_contract": 0.0,
+      "constraints": {
+        "digest": "5b266d930247ef9f6ab8df269c6421dfc0fc7e504140f370e168bda92aa11af4",
+        "max_repairs": 2,
+        "path": "config/hypotheses/btc-cvd-continuation.constraints.yaml",
+        "policy": "record"
+      },
+      "correction": "max_of_n",
+      "documents_shown": [
+        "docs/agent/data.md",
+        "docs/agent/strategy-api.md",
+        "docs/design/context-api.md"
+      ],
+      "endpoint": "https://braverock.com/llm/v1",
+      "execution": {
+        "allow_overnight": true,
+        "latency_ns": 100000000,
+        "maker_commission_bps": null,
+        "maker_commission_per_contract": null,
+        "slippage_bps": 0.0,
+        "slippage_per_contract": 0.0
+      },
+      "explore_epsilon": 0.0,
+      "fidelity_judge": {
+        "mode": "repair",
+        "model": "gemini-2.5-pro",
+        "prompt_digest": "72b333cf364db92cd40b4fa9ec6d484e5a8c7febbef0531bb7edf7e1c07f14e9"
+      },
+      "history_full_sources": 2,
+      "hypothesis": {
+        "digest": "f330f7a6e278e0f6c6e61002e34f5bfebd8ea18d2cdcd5da2c075bb88e5a348f",
+        "path": "config/hypotheses/btc-cvd-continuation.md"
+      },
+      "hypothesis_origin": null,
+      "idle_charge": 0.18,
+      "implementation": "src.core.loop.llm.LLMAgent",
+      "knowledge": null,
+      "max_probe_repairs": 2,
+      "max_repair_attempts": 2,
+      "max_tokens": 64000,
+      "model": "deepseek-v4.1-flash",
+      "model_served_at_registration": "deepseek-v4.1-flash",
+      "null_source": "round_turn_mc",
+      "parent_rng_seed": 0,
+      "probe_before_trial": true,
+      "prompt_template": "config/prompts/strategy-agent.md",
+      "prompt_template_digest": "ec04cb06748c9b087210252070f33ae8e10b153a921e67af94a61d622ce45ab2",
+      "proposal_wall_clock_s": 600.0,
+      "registered_fees": {
+        "commission_bps": 5.0,
+        "commission_per_contract": 0.0,
+        "maker_commission_bps": 5.0,
+        "maker_commission_per_contract": 0.0
+      },
+      "repair_reasoning_effort": "low",
+      "request_timeout_s": 600.0,
+      "retries_allowed": false,
+      "run_facts": "Dataset: real OKX BTCUSDT perpetual-futures trades. A session is a UTC day (00:00 to 24:00 UTC); the market trades continuously, with no close, no holidays and no overnight gap, so `session` boundaries are a calendar convention, not a market event. Every trade carries its aggressor side, so `unknown_volume` is always zero, 960 scored sessions on the pre-registered train split.\n\nFill model: book-queue-pessimistic -- a fill requires a trade strictly through your limit, so you pay the spread on every entry and exit.\n\nSizes are integer lots of 0.0001 BTC: `ctx.buy(1)` is 0.0001 BTC, and P&L is the price move in USD times lots, so one lot earns 0.0001 USD per $1 the price moves. Commission: 5 basis points of notional per side (0.10% a round trip), charged on every fill: a round trip must move the price 0.10% just to break even -- $30 at $30,000, $100 at $100,000 -- so high turnover is very expensive here. Holding a position through a funding settlement (00:00, 08:00, 16:00 UTC) pays the funding rate on its notional when long and receives it when short (the reverse when the rate is negative). Returns are scored relative to each session's opening price, so a move of 1% counts the same in 2023 and in 2026.\n\nLatency: 100,000,000 ns. Every order, modification and cancel reaches the market that long after your callback, and a resting order can still fill until its cancel arrives.\n\nAction cap: 64 per session. History window: 512 bars.\n",
+      "seed": null,
+      "show_history": true,
+      "shows_the_gate": false,
+      "temperature": 0.7
+    },
+    "arm": "btc-cvd-01",
+    "budget": 20,
+    "campaign_id": "btc-cvd-01",
+    "dataset": "crypto-btc-okx-book",
+    "profile": "btc-okx-book-train",
+    "q": 0.05,
+    "record_digest": "2cbc0f0852b2390e15d6c5af1d6b652390057bf243ba54f3a637b9b5ee6299a7",
+    "record_digest_now": "2cbc0f0852b2390e15d6c5af1d6b652390057bf243ba54f3a637b9b5ee6299a7",
+    "record_tampered": false,
+    "split": "train",
+    "stopping_rule": "fixed budget; no early stop on any observed result",
+    "written_at": "2026-11-22T18:50:12+00:00"
+  },
+  "deflation_view": null,
+  "diagnostics_only": {
+    "correction": {
+      "best_far": null,
+      "best_label": "",
+      "bh_discoveries": 0,
+      "decisions": [],
+      "expected_max_note": "",
+      "holm_discoveries": 0,
+      "n": 0,
+      "q": 0.05,
+      "uncorrected_discoveries": 0
+    },
+    "note": "BH and Holm over the tabulated FAR column are DIAGNOSTICS. The column is one strategy's null (Task 30 measured 10-17x its stated rate for candidates that trade differently), and N <= q(R+1) caps how large a campaign a per-trial p-value can survive at all."
+  },
+  "digest": "60806f4cecb2f3d247bae5e6feb30ca2f0bdac5387ed48f963b55cd8b9b02a24",
+  "gate": {
+    "accepted_any": false,
+    "at_floor": null,
+    "b": 10000,
+    "is_the_gate": true,
+    "n_nulls": 0,
+    "note": "no per-trial nulls were supplied",
+    "null_max_at_q": null,
+    "null_max_mean": null,
+    "null_max_quantiles": null,
+    "observed_best": -Infinity,
+    "p": 1.0,
+    "p_floor": 9.999000099990002e-05,
+    "q": 0.05,
+    "verdict": "REJECT"
+  },
+  "holdout": {
+    "note": "no holdout data, no path to it, and no split identity beyond the name of the one this campaign ran on. An auditor whose verdict could depend on data the gate has not conditioned on is spending a budget nobody pre-registered.",
+    "seen": false
+  },
+  "ledger": {
+    "note": "rows by reference, not content: a summary that inlines its evidence is a summary that can disagree with it",
+    "path": "runs/campaigns/btc-cvd-01/ledger.jsonl",
+    "rows": [
+      {
+        "campaign_index": 0,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 1,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 2,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 3,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 4,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 5,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 6,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 7,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 8,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 9,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 10,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 11,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 12,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 13,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 14,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 15,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 16,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 17,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 18,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      },
+      {
+        "campaign_index": 19,
+        "fill_log_digest": null,
+        "outcome": "harness_failed",
+        "score": null,
+        "strategy_digest": null
+      }
+    ]
+  },
+  "n": {
+    "by_outcome": {
+      "harness_failed": 20
+    },
+    "harness_failures": 20,
+    "note": "every trial including crashes; the ledger's definition. Tier 2 owns the correction -- this number is for display and for sanity-checking, never for recomputing a bar.",
+    "trials": 0,
+    "unaccounted": 0
+  },
+  "null_moments": {
+    "available": false,
+    "why": "fewer than two null draws"
+  },
+  "provenance": {
+    "artifact_fingerprint": null,
+    "artifacts": null,
+    "code_fingerprint": null,
+    "code_fingerprint_unique_across_trials": false,
+    "environment_fingerprint": null,
+    "git_sha": null,
+    "isolation": null,
+    "lockfile_digest": null,
+    "python_version": null,
+    "scoring_fingerprint": null
+  },
+  "routing": null,
+  "schema": "tier2-campaign-summary/2",
+  "written_at": "2026-11-22T19:18:43+00:00"
+}

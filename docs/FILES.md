@@ -62,6 +62,7 @@ Calibration, checks, inventory and one-off tools.
 | File | What it does |
 |---|---|
 | `scripts/agent_check.py` | The research agent's only entry point. It reads the file; it does not run it. |
+| `scripts/build_fastcore.py` | Build the native event core with the Zig C++ compiler. |
 | `scripts/calibrate.py` | Null and power calibration for the simulator's accept gate, two metrics at once. |
 | `scripts/campaign.py` | Run a campaign: a pre-registered budget of trials, then the correction. |
 | `scripts/campaign_summary.py` | Write the tier-2 campaign summary — the artifact tier 3 reads. |
@@ -75,6 +76,7 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/crypto_c3b_control.py` | C3b: does the crypto gate reject a truly unprofitable edge? Simulated data only. |
 | `scripts/crypto_fetch.py` | Download Binance, Bybit and OKX perpetual-futures archives into the local crypto lake. |
 | `scripts/crypto_gate_control.py` | Does the crypto gate pass a planted edge and fail noise? Simulated data only. |
+| `scripts/crypto_mm_control.py` | Amendment 24's acceptance control: market makers on a simulated order book. |
 | `scripts/crypto_reversal_control.py` | Amendment 21's acceptance control: the gate on strategies that reverse directly. |
 | `scripts/detectability.py` | What size of edge could this gate have found? Power, from our own nulls. |
 | `scripts/gen_agent_data.py` | Generate the data reference the RESEARCH agent is handed. |
@@ -98,12 +100,14 @@ Calibration, checks, inventory and one-off tools.
 | `scripts/release/resign_redacted_records.py` | Re-sign committed run records after the public-release redaction. |
 | `scripts/replay.py` | Re-run a ledger row from the strategy source stored beside it. |
 | `scripts/review_strategy.py` | A reviewer for the candidate code, not the question. |
+| `scripts/run_native_trial.py` | Run one Numba kernel on the native engine, under one ledger row (Amendment 24). |
 | `scripts/session_closes.py` | Record when each early-closing session actually ends. |
 | `scripts/supervise_campaign.sh` | Keep a campaign's run stage advancing until its budget is met. |
 | `scripts/tabulate_null.py` | Build the empirical null and commit it. |
 | `scripts/tabulate_profile_null.py` | Build the profile-indexed null and commit it. |
 | `scripts/warm_cache.py` | Populate the session cache in one process, before a parallel campaign. |
 | `scripts/warm_crypto_cache.py` | Populate the crypto session cache before a crypto run, in parallel. |
+| `scripts/warm_okx_arrow.py` | Write immutable Arrow trade files for OKX train and validation. |
 | `scripts/warm_okx_depth.py` | Store OKX book levels 2 to 5 for train and validation, so reads need no decode. |
 | `scripts/worker_tree.py` | Isolated working copies, so trials can run in parallel without lying. |
 
@@ -132,9 +136,13 @@ The backtest walk, fills, and the isolated child process.
 |---|---|
 | `src/core/engine/__init__.py` | The simulator: event loop, order lifecycle, fill models, bars, context. |
 | `src/core/engine/bars.py` | Time-bar aggregation, anchored to the session open. |
+| `src/core/engine/column_score.py` | Score a native run from its fill columns, for runs too large to hold one object per fill. |
 | `src/core/engine/context.py` | What a strategy is handed, and the only surface it can act through. |
 | `src/core/engine/engine.py` | The event loop: the immutable side of the split. |
 | `src/core/engine/fills.py` | Trade-based fill models, and the reason the loop scores on the pessimistic one. |
+| `src/core/engine/kernel.py` | Restricted per-event strategy kernels, compiled by Numba for the native event loop. |
+| `src/core/engine/native.py` | The native event core, through a plain C interface. Not used by any backtest yet. |
+| `src/core/engine/native_trial.py` | The checks a native kernel trial must pass. Nothing here runs a trial or writes a ledger row. |
 | `src/core/engine/reconstruct.py` | Rebuild position, average price and P&L from the fill log alone. |
 | `src/core/engine/remote/__init__.py` | Run the strategy in its own process. See `docs/design/architecture.md` §5c. |
 | `src/core/engine/remote/_surface.py` | The context surface, classified. GENERATED -- do not edit. |
@@ -312,6 +320,7 @@ Every prompt a model is given. Each is fingerprinted.
 | `config/prompts/fidelity-judge.md` | The per-trial question-fidelity reviewer (scripts/fidelity_judge.py). An ARTIFACT: hashed like every other prompt. |
 | `config/prompts/hypothesis-refine.md` | The refinement prompt. Amendment 11 of docs/design/pre-registration.md governs what may be done with what it produces. |
 | `config/prompts/hypothesis-review.md` | The hypothesis reviewer. An ARTIFACT: hashed like every other prompt, because it shaped which questions were allowed to spend trials. |
+| `config/prompts/kernel-agent.md` | The proposing agent's prompt for native kernels (Amendment 24). An artifact, not a string literal: it is hashed into the campaign record like the strategy pr... |
 | `config/prompts/paper-distil.md` | Your job: turn one paper into a research question we can register |
 | `config/prompts/paper-rank.md` | Your job: two separate judgements about this paper |
 | `config/prompts/paper-screen.md` | Your job: can this paper's claim be tested on OUR data? |
@@ -408,6 +417,8 @@ What each test file pins.
 | `tests/l1_engine/test_splitting.py` | The split is read from a committed calendar, never derived (Task 2.4, Task 40). |
 | `tests/l1_engine/test_state_resume.py` | Tests for state persistence, atomicity, session continuity and resume. |
 | `tests/l1_engine/test_strategy_protocol.py` | Tests for the experiment contract: ExperimentSpec, Strategy protocol, loader. |
+| `tests/test_a25.py` | Amendment 25: every market-making test at half the error, and its control's definition. |
+| `tests/test_a26.py` | Amendment 26: market-making returns with inventory marked, and its control's definition. |
 | `tests/test_accounting.py` | No engine without a ledger row, and no free evaluation. |
 | `tests/test_agent_docs.py` | The two documents the research agent reads have to agree with each other. |
 | `tests/test_allow_fitted_proposals.py` | Whether the proposing agent may write a strategy that fits. |
@@ -416,6 +427,7 @@ What each test file pins.
 | `tests/test_amendment_18.py` | Amendment 18: a crypto pass must show profit after costs. No control arm runs here. |
 | `tests/test_amendment_19.py` | Amendment 19: execution latency and an overnight rule. Synthetic data only. |
 | `tests/test_architecture_doc.py` | Every module under `src/` must be named in `docs/design/architecture.md`. |
+| `tests/test_binary_boundary.py` | The engine-to-strategy channel is exact, and the engine never decodes binary. |
 | `tests/test_book_campaign_ready.py` | A book-aware campaign can be told about the book, probed and read quickly. |
 | `tests/test_book_features.py` | Amendment 22: a strategy may read the book visible before its own millisecond. |
 | `tests/test_book_fills.py` | Amendment 20: fills against a real book, pinned on hand-built books. |
@@ -425,6 +437,7 @@ What each test file pins.
 | `tests/test_campaign_script.py` | `scripts/campaign.py` renders its own summary. |
 | `tests/test_capacity.py` | The conditioning stage: what the machine can carry, decided before a run. |
 | `tests/test_causality_probe.py` | The no-lookahead claim, measured rather than asserted. |
+| `tests/test_column_score.py` | Scoring from fill columns equals scoring the reconstructed blotter, exactly. |
 | `tests/test_columnar_ticks.py` | Columnar ticks are an optimisation: every run must match the object path exactly. |
 | `tests/test_commission_reaches_the_engine.py` | The rate a profile declares is the rate the engine charges. |
 | `tests/test_committee.py` | The four-auditor committee: isolated, veto-only, and outside the harness. |
@@ -455,6 +468,8 @@ What each test file pins.
 | `tests/test_holdout.py` | The single look. 73 sessions, once, ever. |
 | `tests/test_hypothesis.py` | The campaign's question: linted, hashed, and inert when absent. |
 | `tests/test_idle_charge.py` | The idle-capital charge (pre-registration Amendment 3). |
+| `tests/test_kernel_agent.py` | Amendment 24: the LLM agent's kernel mode, its prompt and its interface document. |
+| `tests/test_kernel_holdout.py` | Amendment 24 B5 and D6: the kernel holdout, on the Python engine, judged by the bound. |
 | `tests/test_knowledge.py` | Cross-campaign constraints: store, compiler, frozen snapshot, prompt slot. |
 | `tests/test_l2_gate.py` | The L2 gate's plumbing: a validation null per winner, and a declared family. |
 | `tests/test_latency_sweep.py` | The latency analysis, and the nanosecond rules around it. Synthetic data only. |
@@ -469,10 +484,19 @@ What each test file pins.
 | `tests/test_max_of_m.py` | The L2 gate: the best of M campaign winners, on validation. |
 | `tests/test_metrics.py` | Property tests for the scoring metric. |
 | `tests/test_missing_tabulated_null.py` | A dataset with no tabulated null loses a diagnostic and keeps its gate. |
+| `tests/test_mm_campaign.py` | Amendment 24: market-making campaigns use the net-profit gate and the native runner. |
+| `tests/test_mm_control.py` | Amendment 24's market-making control: its market, kernels and setting rules. |
+| `tests/test_mm_family.py` | Amendment 24 D8: a family with spread_capture campaigns, and native validation's purposes. |
 | `tests/test_model_options.py` | Every agent part's model can be chosen, reaches its own call, and is recorded. |
 | `tests/test_multi_asset_state.py` | Multi-asset, stages 1-2: the asset dimension exists and costs nothing. |
+| `tests/test_native_acceptance.py` | Amendment 24 acceptance: no lookahead, and an audit that starts after warmup is exact. |
+| `tests/test_native_event_loop.py` | The native event loop reproduces the Python engine's fill log. |
+| `tests/test_native_fastcore.py` | The native market-order walk matches the Python fill model exactly. |
+| `tests/test_native_trial.py` | The native trial path refuses what it has not proved and rejects forged fills. |
 | `tests/test_no_depth_counted_roots.py` | No tree outside `src/core/**` finds its root by counting directories. |
 | `tests/test_nq_adapter.py` | The NQ adapter, checked against what was already established about this data. |
+| `tests/test_numba_kernel.py` | Restricted Numba kernels are checked, bounded and exact on the native engine. |
+| `tests/test_okx_arrow.py` | The Arrow trade store is exact, read-only and read without copying. |
 | `tests/test_one_sided_book.py` | Amendment 23: no fill is priced from a book with an empty best side. |
 | `tests/test_open_questions.py` | Questions we asked and could not answer — the third kind of context. |
 | `tests/test_options_as_an_asset.py` | Options as a tradeable asset: naming, filling, size, and settlement. |
@@ -541,6 +565,8 @@ What each test file pins.
 | `docs/README.md` | Documentation map |
 | `docs/RUN-SEQUENCE.md` | What a run calls, in order |
 | `docs/agent/data.md` | Data available to a strategy |
+| `docs/agent/kernel-api.md` | The kernel interface |
+| `docs/agent/kernel-baseline.py` | *(no description in the file)* |
 | `docs/agent/strategy-api.md` | Writing a strategy |
 | `docs/data-inventory.md` | Data Inventory |
 | `docs/datasets/crypto.md` | Crypto perpetuals: Binance, Bybit, OKX |

@@ -1,0 +1,339 @@
+"""The checks a native kernel trial must pass. Nothing here runs a trial or writes a ledger row.
+
+The score is computed only from fills, so `validate_columns` refuses anything a sound run could
+not have produced. `audit_strategy_source` turns a kernel into an ordinary strategy file for the
+process boundary. `scripts/run_native_trial.py` owns the ledger row, under Amendment 24.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
+from ..types import Side, Split
+from . import kernel as K
+
+COLUMN_TYPES = {"seq": np.int64, "ts": np.int64, "session": np.int64, "order_id": np.int64,
+                "side": np.int8, "size": np.int64, "price": np.float64, "maker": np.int8,
+                "mid": np.float64}
+BOOK_MODEL = "book-queue-pessimistic"
+# Amendment 25: every market-making test spends half the error it would under A24 Part D:
+# q/(2N) on train, q/(2M) on validation, q/2 on the holdout.
+SPREAD_CAPTURE_ALPHA_FACTOR = 0.5
+# The codes `fc_kernel_callback` leaves in `FcKernelUser.error` when it stops a run.
+KERNEL_STOP_REASONS = {
+    1: "the kernel raised (for example an index outside its arrays) or returned a negative count",
+    2: "the kernel returned more order rows than the 64 allowed per call",
+    3: "an order row had an invalid op, kind, time in force, size or limit price",
+    4: "the kernel cancelled an order id it was not shown",
+}
+
+
+class NativeTrialRefused(ValueError):
+    """The profile or source is outside what the native path has proved."""
+
+
+class NativeTrialFailed(RuntimeError):
+    """A child failed, returned invalid fills, or disagreed with the audit."""
+
+
+class AuditMismatch(NativeTrialFailed):
+    """The native fills differ from the Python replay. The trial is invalid and still counts."""
+
+
+def deep_audit_passed(ledger_path, trial_id: str, kernel_sha256: str, profile: str) -> bool:
+    """Amendment 24 B3: whether a completed deep audit of this trial's kernel matched.
+
+    A validation run of a native kernel must call this and refuse when it is False. The audit row
+    names the trial it verifies, and only a row for the same kernel and profile counts.
+    """
+    import json
+    from pathlib import Path
+
+    path = Path(ledger_path)
+    if not path.is_file():
+        return False
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        audit = row.get("audit") or {}
+        if (row.get("engine") == "native" and row.get("outcome") == "completed" and row.get("audit_of") == trial_id
+                and row.get("kernel_sha256") == kernel_sha256 and row.get("profile") == profile
+                and audit.get("tier") == "deep" and audit.get("matched") is True and audit.get("windows")):
+            return True
+    return False
+
+
+def refusal(profile: dict, *, market_making: bool = False) -> str | None:
+    """Why this profile cannot run natively, or None. `market_making` is whether Amendment 25 is
+    in force; the caller reads it, because this module may not import the scripts."""
+    if Split(profile["split"]) not in (Split.TRAIN, Split.VALIDATION):
+        return "the holdout is scored by the Python engine only (Amendment 24 B5)"
+    if profile.get("fill_model") != BOOK_MODEL:
+        return f"the native engine implements only {BOOK_MODEL}"
+    if not profile.get("book_features"):
+        return "the native check needs book_features: true"
+    if profile.get("gate") == "spread_capture" and not market_making:
+        return ("the market-making gate needs Amendments 25 and 26 in force: A25's control was scored "
+                "without inventory marks")
+    if profile.get("fit_sessions", 0) or profile.get("weights_path"):
+        return "fitted strategies are not ported"
+    if profile.get("action_cap", 64) != 64:
+        return "the native engine and its audit are proved only at an action cap of 64"
+    if not profile.get("allow_overnight", True):
+        return "the overnight flatten is not ported"
+    return None
+
+
+def validate_columns(columns: dict, sessions: set[int], bounds) -> dict:
+    """Refuse anything a sound run could not have produced."""
+    if set(columns) != set(COLUMN_TYPES):
+        raise NativeTrialFailed("the child returned the wrong fill columns")
+    n = columns["seq"].size
+    for name, dtype in COLUMN_TYPES.items():
+        a = columns[name]
+        if a.dtype != np.dtype(dtype) or a.ndim != 1 or a.size != n:
+            raise NativeTrialFailed(f"fill column {name} has the wrong type or length")
+    if not n:
+        return columns
+    checks = {
+        "sequence": (np.diff(columns["seq"]) >= 0).all() and columns["seq"][0] >= 0,
+        "order id": (columns["order_id"] > 0).all(),
+        "side": np.isin(columns["side"], (-1, 1)).all(),
+        "size": (columns["size"] > 0).all(),
+        "maker flag": np.isin(columns["maker"], (0, 1)).all(),
+        "price": np.isfinite(columns["price"]).all() and (columns["price"] > 0).all(),
+        "mid": np.isfinite(columns["mid"]).all() and (columns["mid"] > 0).all(),
+    }
+    for name, good in checks.items():
+        if not good:
+            raise NativeTrialFailed(f"the child returned an invalid fill {name}")
+    for session in np.unique(columns["session"]).tolist():
+        if session not in sessions:
+            raise NativeTrialFailed(f"the child returned a fill from session {session}")
+        low, high = bounds(session)
+        ts = columns["ts"][columns["session"] == session]
+        if ts.min() < low or ts.max() > high:
+            raise NativeTrialFailed(f"a fill falls outside session {session}")
+    return columns
+
+
+def records_from_columns(columns: dict) -> list:
+    from ..types import DEFAULT_ASSET, FillRecord
+
+    c = columns
+    return [FillRecord(int(c["seq"][i]), int(c["ts"][i]), int(c["session"][i]), int(c["order_id"][i]),
+                       Side.BUY if c["side"][i] > 0 else Side.SELL, int(c["size"][i]), float(c["price"][i]),
+                       "maker" if c["maker"][i] else "taker", "", DEFAULT_ASSET, float(c["mid"][i]))
+            for i in range(c["seq"].size)]
+
+
+# The only kernel the runner accepts until Amendment 24 is signed. It is a fixed engine check.
+CHECK_KERNEL = """
+def kernel(event, book, state, orders):
+    state[0] += 1.0
+    if book[B_OK] == 0.0:
+        state[2] += 1.0
+        return 0
+    for i in range(5):
+        if i < book[B_N_BID]:
+            state[1] = (state[1] * 31.0 + book[B_BID_PX + i] * book[B_BID_QTY + i]) % 1000000007.0
+    for i in range(5):
+        if i < book[B_N_ASK]:
+            state[1] = (state[1] * 31.0 + book[B_ASK_PX + i] * book[B_ASK_QTY + i]) % 1000000007.0
+    if state[0] % 50.0 != 0.0:
+        return 0
+    step = int(state[0]) // 50
+    if event[E_N_WORKING] > 0 and step % 7 == 0:
+        orders[0, O_OP] = OP_CANCEL
+        orders[0, O_ORDER_ID] = event[E_WORKING]
+        return 1
+    if event[E_N_WORKING] >= 4:
+        return 0
+    buy = event[E_POSITION] < 0 or (event[E_POSITION] == 0 and step % 2 == 0)
+    orders[0, O_OP] = OP_BUY if buy else OP_SELL
+    orders[0, O_SIZE] = 20.0
+    orders[0, O_TIF] = TIF_GTC if step % 3 == 0 else TIF_DAY
+    if step % 5 == 0:
+        orders[0, O_KIND] = KIND_MARKET
+    else:
+        orders[0, O_KIND] = KIND_LIMIT
+        orders[0, O_LIMIT] = book[B_BID_PX] if buy else book[B_ASK_PX]
+    return 1
+"""
+
+_AUDIT_TEMPLATE = """import numpy as np
+
+{constants}
+
+{kernel}
+
+
+class Strategy:
+    name = "check/kernel-audit"
+
+    def __init__(self):
+        self.state = np.array({state!r}, dtype=np.uint64).view(np.float64)
+        self.last_price = np.array([{last_price!r}], dtype=np.uint64).view(np.float64)[0]
+
+    def setup(self, ctx):
+        ctx.subscribe("tick")
+        ctx.subscribe("book")
+
+    def on_bars(self, ctx):
+        pass
+
+    def on_fill(self, ctx):
+        pass
+
+    def on_lifecycle(self, ctx):
+        pass
+
+    def on_tick(self, ctx):
+        tick = ctx.tick
+        self.last_price = tick.price
+        side = 0 if tick.side is None else int(tick.side.sign)
+        self._run(ctx, tick.price, tick.size, side, EVENT_TRADE)
+
+    def on_book_event(self, ctx):
+        self._run(ctx, self.last_price, 0, 0, EVENT_BOOK)
+
+    def _run(self, ctx, price, size, side, kind):
+        event, values, orders = np.zeros(41, np.int64), np.zeros(24), np.zeros((64, 6))
+        working = tuple(ctx.working_order_ids)[:32]
+        event[E_TS], event[E_SESSION], event[E_SIZE] = ctx.ts, ctx.session, size
+        event[E_POSITION], event[E_SIDE] = ctx.position, side
+        event[E_ACTIONABLE], event[E_N_WORKING], event[E_KIND] = int(ctx.actionable), len(working), kind
+        if working:
+            event[E_WORKING:E_WORKING + len(working)] = working
+        values[B_PRICE] = price
+        view = ctx.book()
+        if view is not None:
+            values[B_OK], values[B_N_BID], values[B_N_ASK] = 1.0, len(view.bid_prices), len(view.ask_prices)
+            for offset, levels in ((B_BID_PX, view.bid_prices), (B_BID_QTY, view.bid_sizes),
+                                   (B_ASK_PX, view.ask_prices), (B_ASK_QTY, view.ask_sizes)):
+                values[offset:offset + len(levels)] = levels
+        count = int(kernel(event, values, self.state, orders))
+        if count < 0 or count > 64:
+            raise ValueError("the kernel returned an invalid action count")
+        for i in range(count):
+            self._apply(ctx, orders[i], working)
+
+    @staticmethod
+    def _apply(ctx, row, working):
+        op, kind, tif, size, limit, order_id = (float(x) for x in row)
+        if op in (OP_BUY, OP_SELL):
+            good = kind in (KIND_MARKET, KIND_LIMIT) and tif in (TIF_DAY, TIF_GTC) and np.isfinite(size) \\
+                and 1.0 <= size <= 2.0 ** 53 and np.floor(size) == size \\
+                and (kind == KIND_MARKET or (np.isfinite(limit) and limit > 0.0))
+            if not good:
+                raise ValueError("the kernel returned an invalid order")
+            place = ctx.buy if op == OP_BUY else ctx.sell
+            when = "GTC" if tif == TIF_GTC else "DAY"
+            if kind == KIND_MARKET:
+                place(int(size), tif=when)
+            else:
+                place(int(size), type="limit", limit=limit, tif=when)
+        elif op == OP_CANCEL:
+            if not any(float(w) == order_id for w in working):
+                raise ValueError("the kernel cancelled an order it cannot see")
+            ctx.cancel(int(order_id))
+        else:
+            raise ValueError("the kernel returned an invalid action")
+"""
+
+
+def audit_strategy_source(source: str, state, last_price: float = 0.0) -> str:
+    """The kernel as an ordinary strategy file, for the process boundary.
+
+    Python executes the kernel source here, so the audit does not trust Numba's compiled code.
+    `state` is the kernel's buffer at the end of warmup, handed over as its exact bits.
+    """
+    K.check(source)
+    constants = "\n".join(f"{name} = {value}" for name, value in K.CONSTANTS.items())
+    return _AUDIT_TEMPLATE.format(constants=constants, kernel=source.strip(),
+                                  state=np.asarray(state, np.float64).view(np.uint64).tolist(),
+                                  last_price=int(np.asarray([last_price], np.float64).view(np.uint64)[0]))
+
+
+def events_in(trade_ts: np.ndarray, book_ts: np.ndarray, after: int) -> int:
+    """Trades plus book events from just after `after` through the last of these trades."""
+    if not trade_ts.size:
+        return 0
+    releases = np.unique(book_ts - book_ts % 1_000_000) + 1_000_000
+    return int(trade_ts.size + np.count_nonzero((releases > after) & (releases <= trade_ts[-1])))
+
+
+def check_snapshot(snapshot: dict, columns: dict, start_trade: int) -> None:
+    """Refuse a saved engine that the native fills before it do not explain.
+
+    The audit compares only fills inside its window, from this state. A wrong position, fill
+    count or order id here would carry an earlier native error into the audit unseen.
+    """
+    seq = snapshot["seq"]
+    before = columns["seq"] <= seq
+    problems = []
+    signed = int((columns["side"][before].astype(np.int64) * columns["size"][before]).sum())
+    if signed != snapshot["position"]:
+        problems.append(f"position {snapshot['position']} but the fills before it sum to {signed}")
+    price = snapshot["last_price"]
+    if not np.isfinite(price) or price < 0 or (price == 0 and start_trade != 0):
+        problems.append(f"last price {price}")
+    ints, doubles = snapshot["order_ints"], snapshot["order_doubles"]
+    ids = ints[:, 0] if ints.size else np.zeros(0, np.int64)
+    used = max(int(columns["order_id"][before].max()) if before.any() else 0, int(ids.max()) if ids.size else 0)
+    if snapshot["next_id"] <= used:
+        problems.append(f"next order id {snapshot['next_id']} is not above {used}")
+    if ids.size != np.unique(ids).size or (ids.size and ids.min() < 1):
+        problems.append("order ids repeat or are not positive")
+    for row, (limit, queue) in zip(ints.tolist(), doubles.tolist()):
+        o = dict(zip(ORDER_FIELDS, row))
+        own = int(columns["size"][before & (columns["order_id"] == o["id"])].sum())
+        if o["size"] < 1 or o["filled"] != own or o["filled"] >= o["size"]:
+            problems.append(f"order {o['id']} size {o['size']} filled {o['filled']} against {own} in its fills")
+        if any(o[k] not in (0, 1) for k in ("buy", "market", "gtc", "cancelling", "placed", "has_queue")):
+            problems.append(f"order {o['id']} has an invalid flag")
+        if not o["market"] and not (np.isfinite(limit) and limit > 0):
+            problems.append(f"order {o['id']} limit {limit}")
+        if o["has_queue"] and not (np.isfinite(queue) and queue >= 0):
+            problems.append(f"order {o['id']} queue {queue}")
+        if o["row"] < -1 or o["eligible_seq"] > seq + 1 or o["eligible_ts"] < 0:
+            problems.append(f"order {o['id']} row or eligibility")
+    if problems:
+        raise NativeTrialFailed("invalid snapshot: " + "; ".join(problems[:5]))
+
+
+ORDER_FIELDS = ("id", "buy", "market", "gtc", "size", "filled", "eligible_seq", "eligible_ts", "cancelling",
+                "cancel_at", "placed", "session", "row", "has_queue")
+
+
+def resume_from_snapshot(snapshot: dict, after_ts: int) -> dict:
+    """A native snapshot as the Python engine's `resume`, with sequence numbers made relative
+    to the resumed run, whose first event is the native engine's `seq + 1`."""
+    first = snapshot["seq"] + 1
+    orders = []
+    for ints, doubles in zip(snapshot["order_ints"].tolist(), snapshot["order_doubles"].tolist()):
+        order = dict(zip(ORDER_FIELDS, ints))
+        order["eligible_seq"] -= first
+        order["limit"], order["queue"] = doubles
+        orders.append(order)
+    return {"position": snapshot["position"], "next_id": snapshot["next_id"], "last_price": snapshot["last_price"],
+            "orders": orders, "after_ts": int(after_ts), "first_seq": first}
+
+
+def trades_for_events(trade_ts: np.ndarray, book_ts: np.ndarray, limit: int, after: int | None = None) -> int:
+    """How many leading trades cover at least `limit` events, trades and book events together.
+
+    Book events count only after `after`, which is the session's first trade unless the run
+    resumes mid-session, where it is the trade before the first one here.
+    """
+    releases = np.unique(book_ts - book_ts % 1_000_000) + 1_000_000
+    releases = releases[releases > (trade_ts[0] if after is None else after)]
+    events = np.arange(1, trade_ts.size + 1) + np.searchsorted(releases, trade_ts, side="right")
+    return min(int(np.searchsorted(events, limit, side="left")) + 1, trade_ts.size)
+
+
+def marked_returns(row: dict) -> list | None:
+    """Amendment 26 F4: a spread_capture row's session returns, only if they carry inventory marks."""
+    returns = row.get("session_returns")
+    return returns if returns is not None and row.get("inventory_marked") is True else None

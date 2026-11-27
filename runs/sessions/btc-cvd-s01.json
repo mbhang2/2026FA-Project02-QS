@@ -1,0 +1,33 @@
+{
+  "schema": "research-session/1",
+  "session": "btc-cvd-s01",
+  "plan": "/home/mbhang2/.claude/jobs/01690ec9/tmp/btc-plan.yaml",
+  "declared_family": [
+    "btc-cvd-01"
+  ],
+  "started": "2026-11-22T18:50:10+00:00",
+  "campaigns": {
+    "btc-cvd-01": "complete"
+  },
+  "validation": {
+    "btc-cvd-01": "failed"
+  },
+  "l2": {
+    "error": "the L2 gate exited 1 and no verdict about this family was produced.",
+    "declared_family": [
+      "btc-cvd-01"
+    ],
+    "verdict_file_family": [
+      "nq-s07-01",
+      "nq-s07-02",
+      "nq-s07-03"
+    ],
+    "note": "a verdict file exists but is about a different family, so it is NOT this session's result and is not recorded as one",
+    "stderr_tail": "not scored on validation, so cannot be in a family: btc-cvd-01\n"
+  },
+  "stopped_by_cue": false,
+  "family_note": "every campaign in the plan, written before the session ran.",
+  "holdout_check_clear": false,
+  "holdout": "checked only; not armed",
+  "finished": "2026-11-22T19:31:05+00:00"
+}

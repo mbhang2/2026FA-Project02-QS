@@ -82,6 +82,16 @@ DOC_PATHS = {
     "data": REPO_ROOT / "docs" / "agent" / "data.md",
 }
 
+# Amendment 24: what a native-kernel agent reads instead. A kernel has no context object, so
+# `context_api` points at the kernel interface too and its template does not use it.
+KERNEL_TEMPLATE_PATH = REPO_ROOT / "config" / "prompts" / "kernel-agent.md"
+KERNEL_DOC_PATHS = {
+    "api": REPO_ROOT / "docs" / "agent" / "kernel-api.md",
+    "context_api": REPO_ROOT / "docs" / "agent" / "kernel-api.md",
+    "data": REPO_ROOT / "docs" / "agent" / "data.md",
+}
+KERNEL_BASELINE_PATH = REPO_ROOT / "docs" / "agent" / "kernel-baseline.py"
+
 FENCE = re.compile(r"```(?:python|py)?\s*\n(.*?)```", re.DOTALL)
 
 BLOCKED_TEMPLATE = '''"""This proposal was blocked. It is a trial and it counts toward N.
@@ -424,6 +434,10 @@ class LLMAgent:
     # never blocks -- a reviewer that blocks needs its error rate first.
     judge: "Callable[[str], dict] | None" = None
     judge_mode: str = "shadow"
+    # **"strategy" or "kernel" (Amendment 24).** A kernel agent reads the kernel interface,
+    # is checked by `src.core.engine.kernel.check`, and skips the probes, perturbation and
+    # reviewer, which run Python strategies. "strategy" is every campaign before this field.
+    kind: str = "strategy"
     # Everything below is state, not configuration.
     calls: list[Call] = field(default_factory=list, init=False, repr=False)
     _pending: list[Call] = field(default_factory=list, init=False, repr=False)
@@ -452,8 +466,12 @@ class LLMAgent:
             raise LLMError("LITELLM_BASE_URL is not set; the driver has no endpoint")
         if not os.environ.get("LITELLM_API_KEY"):
             raise LLMError("LITELLM_API_KEY is not set")
+        if self.kind not in ("strategy", "kernel"):
+            raise ValueError(f"kind must be 'strategy' or 'kernel', got {self.kind!r}")
+        if self.kind == "kernel" and self.template_path == TEMPLATE_PATH:
+            self.template_path = KERNEL_TEMPLATE_PATH
         self._template = self.template_path.read_text()
-        self._docs = {k: v.read_text() for k, v in DOC_PATHS.items()}
+        self._docs = {k: v.read_text() for k, v in self._doc_paths().items()}
         if not 0.0 <= float(self.explore_epsilon) <= 1.0:
             raise ValueError(
                 f"explore_epsilon must be in [0, 1]; got "
@@ -473,8 +491,9 @@ class LLMAgent:
             "endpoint": self.base_url,
             "prompt_template": str(self.template_path.relative_to(REPO_ROOT)),
             "prompt_template_digest": template_digest(self.template_path),
-            "documents_shown": sorted(
-                str(p.relative_to(REPO_ROOT)) for p in DOC_PATHS.values()),
+            "documents_shown": sorted({
+                str(p.relative_to(REPO_ROOT)) for p in self._doc_paths().values()}),
+            **({"kind": "kernel"} if self.kind == "kernel" else {}),
             "run_facts": self.run_facts,
             # The question, by path and digest rather than by value. The text
             # is in a committed file whose commit date is the pre-registration;
@@ -587,6 +606,10 @@ class LLMAgent:
             if time.monotonic() > deadline:
                 return self._blocked("proposal_wall_clock", message)
             repair = (
+                "Your previous kernel is outside the kernel language in the interface. "
+                "Nothing was run. Fix exactly this and return the whole file again:\n\n"
+                f"{message}\n\nPrevious file:\n\n```python\n{source}\n```"
+            ) if self.kind == "kernel" else (
                 "Your previous file did not pass the static check, which runs "
                 "`compile()`, an AST pass and mypy against the Strategy protocol "
                 "and executes nothing. It reports no score and touches no market "
@@ -613,6 +636,8 @@ class LLMAgent:
         trials. A repair that breaks the static check is discarded and the last
         statically-clean file stands.
         """
+        if self.kind == "kernel":
+            return source            # the probes and reviewer run Python strategies
         if self.constraints is None:
             return self._after_static(shown, source, deadline)
         found = self._mechanical(source)
@@ -829,7 +854,21 @@ class LLMAgent:
         return BLOCKED_TEMPLATE.format(
             reason=reason, detail=detail.replace('"""', "'''")[:800])
 
+    def _doc_paths(self) -> dict:
+        return KERNEL_DOC_PATHS if self.kind == "kernel" else DOC_PATHS
+
     def _static_ok(self, source: str) -> tuple[bool, str]:
+        if self.kind == "kernel":
+            from ..engine.kernel import KernelRejected, check
+
+            try:
+                check(source)
+            except KernelRejected as exc:
+                return False, str(exc)
+            return True, ""
+        return self._static_ok_strategy(source)
+
+    def _static_ok_strategy(self, source: str) -> tuple[bool, str]:
         """`scripts/agent_check.py`'s check, on a scratch copy. Executes nothing.
 
         Deliberately not run against `src/strategies/current.py`: the campaign
@@ -921,7 +960,7 @@ class LLMAgent:
             self._parent = self._pick_parent(history)
         current = self._parent.text
         if not current:
-            current = BASELINE_PATH.read_text()
+            current = (KERNEL_BASELINE_PATH if self.kind == "kernel" else BASELINE_PATH).read_text()
         return self._template.format(
             api=self._docs["api"],
             context_api=self._docs["context_api"],

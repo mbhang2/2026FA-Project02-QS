@@ -2697,3 +2697,298 @@ Any fill on a two-sided row, the walk through visible levels, queue rules, quote
 - A change to a fill on a two-sided row.
 
 Code: `src/core/engine/fills.py`, `src/core/engine/engine.py`, `run.py`, `scripts/replay.py`.
+
+## Amendment 24 — 2026-11-23 — native kernel trials and BTC market making
+
+**Status: IN FORCE from 2026-11-25 for Parts A to C only, signed off by Michael.** Part D, the market-making gate, was not accepted, and the code refuses `gate: spread_capture` whatever this line says. Drafted 2026-11-23 by Claude on request and revised before signing. The code reads this line. No candidate kernel had run before signing: the native engine had run only fixed check strategies, writing rows only to a scratch ledger under `.scratch/`. Before signing, two adversarial reviews' findings were fixed or recorded below. The lookahead, warmup and mid-session resume tests passed, and real-data audits matched at 1 ms and 100 ms, including a window across a session close and a deep audit of two whole sessions. A recorded OKX trial reproduced exactly, and a recorded NQ trial gave the same result as main. No recorded real Binance trial existed to replay.
+
+### Why
+
+The native engine reproduces the Python engine's fills about 100 to 200 times faster on the checks run so far, which makes per-event strategies affordable. Three things must be fixed before a candidate runs on it.
+
+1. **Accounting.** A candidate must count toward N. A calibration ticket is reserved for the committed reference strategy, and the accounting test refused a first runner that used one for a candidate.
+2. **Timing.** Market making reacts to book updates, which Amendment 22 rule f did not allow.
+3. **The null.** The sign-flip null flips each round turn's P&L. Amendment 22 records that it does not validly judge a strategy whose edge is earned spread.
+
+**Real results preceded this.** `btc-cvd-02`, `btc-absorption-01` and `btc-book-absorption-01` failed and their validation reads are known. This amendment does not rescore them. Every campaign under it joins the same BTC validation family, so **the next one has `M = 4`**.
+
+### Part A: how a native trial is run and counted
+
+| | rule |
+|---|---|
+| A1 | A profile enables this with `engine: native`. Without it, the run and its digests are unchanged. |
+| A2 | **One ledger row is opened before the kernel is parsed.** A refused source, compile failure, crash, timeout, invalid fill or failed audit is that row's outcome and counts toward N. An open-trial entry is written first and removed only after the row is appended. An entry left behind, for example by a killed process, becomes a crashed row on the next run. |
+| A3 | The kernel is compiled and run only in a child process, started over an inherited pipe for an open trial, under a ticket that only the trial runner may mint. The native engine refuses to run without a ticket. The child returns plain numeric fill columns. The parent reads them without pickle and rejects a wrong type, an impossible value, or a fill outside its session. |
+| A4 | A kernel sees one event, the visible top five levels, and its own state of at most 4,096 numbers. It may not import, call arbitrary functions, loop without a literal bound, or write to the event or book. Bounds checks stay on, and an out-of-bounds access ends the trial. |
+| A5 | The score is computed from the validated fills by the unchanged reconstruction and scorer. |
+| A6 | The row records the kernel source digest, native library digest, ABI version, Numba version, fill-log digest and audit result. |
+| A7 | A native run supports only what has been proved equal to the Python engine. Any other order type or profile option is refused before the run and recorded under A2. |
+
+### Part B: the two-tier audit
+
+| | rule |
+|---|---|
+| B1 | **Every trial:** 250,000 events, starting at a trade drawn uniformly from all trades of the scored sessions and continuing across session closes, are replayed through the Python engine behind a process boundary. Python executes the kernel source, not the compiled code. |
+| B2 | The points are drawn from the operating system's randomness in the parent process after the trial is opened. The kernel cannot see them. The native child saves the engine just before each point: the position, next order id, last trade price, kernel state, and every working order with its queue state. The Python engine resumes from that state, and tests must prove that resuming is exact. The points are recorded in the row after the run. |
+| B3 | **Every trial that passes the train gate:** five scored sessions, drawn as in B2, are replayed in full before its validation run is opened. Each replay starts at the last trade of the session before it, so the close, the orders kept overnight and the open are compared. Before any replay, the saved engine must agree with the native fills before it: position, each order's filled size, order ids, and finite prices and queues. |
+| B4 | Any difference in fills, order, price, size, liquidity or mid **invalidates the trial, and it still counts toward N**. A native-engine mismatch stops the campaign until it is explained. |
+| B5 | **The holdout is scored by the Python engine only**, through `scripts/holdout.py`, and is opened once as before. The kernel's source runs there as an ordinary strategy, the same generated form the audit checks, from zero state, on the `<base>-holdout` profile, which must match its train profile's costs, timing, book events, cap and gate. |
+
+### Part C: book-update events
+
+| | rule |
+|---|---|
+| C1 | A profile enables this with `book_events: true`. It amends Amendment 22 rule f for those profiles only. |
+| C2 | OKX timestamps are milliseconds, so a book row is known from the **start of the next millisecond**. That instant is the event's time. |
+| C3 | All rows in one millisecond produce one event, showing the last of them. A strategy cannot react within a millisecond. |
+| C4 | At an equal timestamp the book event comes before the trade. |
+| C5 | Events run strictly after the session's first trade and through its last. |
+| C6 | **Fills occur only on trades.** An order sent on a book event arrives after the registered latency and is processed at the next trade. |
+| C7 | Registered terms stay those of Amendment 22: 0 bp maker, 2 bp taker, 1 ms latency, `book-queue-pessimistic`. |
+| C8 | **No session is removed for a poor book.** During a gap the strategy sees no book and the existing fill rules apply. Sessions where more than 5% of trades had no usable book are listed in the record as a diagnostic. |
+
+### Part D: market-making campaigns — NOT ACCEPTED
+
+**Part D's control failed (see below), so Part D is not accepted.** Signing this amendment puts Parts A to C in force and not Part D: the code refuses `gate: spread_capture` at registration and in the native runner whatever this status line says, and D8 cannot arise because no campaign can register that gate. The rules below are the record of what was proposed. A market-making gate needs its own amendment, seeds and control.
+
+| | rule |
+|---|---|
+| D1 | A campaign declares `gate: spread_capture` in its question **before its first trial**. It cannot switch gates afterward. |
+| D2 | **Inventory cap: 0.10 BTC (1,000 lots) in either direction.** An order is refused if the position plus all same-side working orders could exceed the cap. |
+| D3 | Each fill's P&L is reported as spread captured, adverse selection at 100 ms, 1 s and 10 s, fees, and inventory P&L. These are diagnostics and do not enter the gate. |
+| D4 | **The gate tests net profit.** The null is that mean net per-session return is at or below zero, after all fees, funding and inventory marks. |
+| D5 | A campaign passes train only if Amendment 18's Newey-West lower bound is above zero at `q/N`, and validation only if it is above zero at `q/M`. The sign-flip null is not used for these campaigns. |
+| D6 | The holdout uses the same bound at `q`. Amendment 18's lag rule, the score and the exposure floor are unchanged. |
+| D7 | Any result must state that it is **simulated and conditional on 0 bp maker, 2 bp taker and 1 ms latency**, and that the strategy's own orders do not move the simulated book. |
+| D8 | In a validation family with both kinds of campaign, each `spread_capture` campaign passes on its own bound at `q/M`, and the `max_of_m` test over the other `m` campaigns runs at `q * m / M`. The family passes if either does, so its false-pass rate stays within `q`. With no `spread_capture` campaign, `m = M` and the test is unchanged. |
+
+### What it does NOT change
+
+Recorded campaigns, the score, costs of existing profiles, funding, fill rules on trades, splits, embargo, holdout lock, `B`, `q`, the gate for campaigns that do not declare `spread_capture`, or the N-on-train and M-on-validation convention.
+
+### Acceptance, before signing
+
+1. Tests pin rules A1 to A7, B1 to B5, C1 to C8 and D1 to D3.
+2. **An adversarial review** of the kernel checker and child boundary, by a reviewer given the code and not this conclusion, finds no route to later data, the ledger, or forged fills. Every finding is fixed or recorded.
+
+   *Recorded 2026-11-24, before signing.* A first review found no route to later data, outside memory or forged fills. It found that native runs could bypass the ledger, that a killed process could leave no row, and that an audit fixed at the start of a run let a kernel know where it stopped. Native and Python differ on some integer overflow and NaN conversions, so a kernel can tell which engine runs it. These led to A2's open-trial entry, A3's ticket and pipe, and B1 to B3's random audit points. One difference remains unfixed: `int(nan)` is 0 under Numba and an error in Python. The audit treats it as a crash, which counts toward N and cannot raise a score.
+
+   *Recorded 2026-11-24, before signing.* A second review of the revised code again found no route to later data or to the audit points. It found that a failed row write could still delete the trial's entry, that the child's entry check could be forged, that a saved engine was accepted unchecked, that short windows almost never covered a session's open, and three smaller recovery faults. All were fixed: a row counts as written only once it is on disk, the child checks a one-time nonce, the canonical entry and a live parent's lock, saved engines are checked against the native fills (B3), windows are drawn over all trades and cross session closes (B1), entries are written atomically with their own source copy, and planned audit points are recorded before the run. Still open: a resting order's queue in a saved engine is checked for range but not recomputed from the book. B3 is a deep-audit row with purpose `audit` naming its trial, and `deep_audit_passed` is the check a native validation run must pass; no native validation run exists yet. D2's cap is enforced the same way in both engines through a profile's `inventory_cap_lots`.
+3. **A lookahead test:** replacing every trade and book row after an event's visible data with random values leaves that event's actions unchanged.
+4. Existing real NQ, Binance and OKX runs reproduce their digests and scores.
+5. Native and Python fills, scores and diagnostics are identical on real train sessions, with warmup, at 1 ms and 100 ms.
+6. **For Part D only.** A control on a simulated book (`scripts/crypto_mm_control.py`), with best-of-5 market-making campaigns over 150 sessions with a trade every 10 seconds, `alpha = 0.01`, 1 ms latency, 0 bp maker, 2 bp taker and rule D5. The book shows one tick either side of the mid with 1 to 10 lots at the touch. After each trade the mid moves toward the aggressor by a Poisson number of ticks whose mean is the impact, plus one tick of noise either way. Five native kernels quote one lot at the best bid and ask under a 10-lot cap. A skew setting s of 0, 0.25, 0.5, 0.75 or 1 stops quoting a side at max(1, round(10(1 - s))) lots that way.
+
+   **Settings are fixed first, on calibration seeds 630001 to 630100**, over impacts 0, 0.1, 0.2 and 0.3, then 0.40 to 0.80 in steps of 0.02, then 1.0, 1.5 and 2.0 ticks. The unprofitable setting is the smallest impact whose five variants all have a 99% upper bound on mean net return below zero. The strong setting is the largest impact at which all five average a per-session Sharpe of at least 0.30. The noise setting is, among impacts below the unprofitable one, the one whose mean net return over the five variants and the calibration seeds is closest to zero. They must be ordered strong < noise < unprofitable. If any does not exist, the control fails. The chosen settings are committed before any arm runs. An unregistered pilot on seeds 9301 to 9304 found net returns crossing zero near 0.6 ticks.
+
+   | arm | seeds | campaigns | pass condition |
+   |---|---|---|---|
+   | unprofitable | 631001 to 632000 | 1,000 | **36 or fewer** pass the full gate |
+   | noise | 632001 to 632400 | 400 | Wilson 95% upper bound on the pass rate <= 0.05 |
+   | strong edge | 632401 to 632500 | 100 | **at least 80** pass the full gate |
+
+Each arm runs once, from a clean commit. If any arm fails, this amendment is **not signed**, and a revision needs new seeds and its own pre-registration.
+
+### The first calibration failed
+
+The control's calibration ran once from commit `0413fd5` on seeds 620001 to 620100, with 2,100 jobs (`~/crypto-controls/a24/calibration.json`, SHA-256 `24256f9db6733437ef749131712dca951572a847cd3db37db7808731a54a086a`). **It failed the ordering rule, so no arm was drawn.** The smallest impact whose five variants all had a 99% upper bound below zero was 0.6 ticks. The impact whose mean net return was closest to zero was also 0.6 ticks: -2.6e-5, against +4.6e-5 at 0.5. The noise and unprofitable settings were therefore the same point, not strong < noise < unprofitable. The strong setting would have been 0.0, where the lowest variant averaged a Sharpe of 0.31 against the 0.30 bar. The cause is a grid of 0.1 ticks that is coarse where returns cross zero. The pass conditions are unchanged. **Revised 2026-11-24 before any new run:** the grid is 0.02 ticks fine between 0.4 and 0.8, the noise setting is chosen strictly below the unprofitable one, the simulated market trades every 10 seconds instead of 30, so a strong market maker clears the Sharpe bar with room, and every calibration and arm seed is new (630001 onward). The 0.30 bar and the three pass conditions are unchanged.
+
+*The revised calibration ran once from commit `fae72fd` on seeds 630001 to 630100, with 2,800 jobs (`~/crypto-controls/a24-revised/calibration.json`, SHA-256 `83123b624b4147967a0e15bc136a40930f59e5901050f0aafff48c99dbbddb58`). It selected a strong setting of 0.40 ticks, where the weakest variant averaged a Sharpe of about 0.31, a noise setting of 0.56 ticks with a mean net return of +1.5e-5, and an unprofitable setting of 0.58 ticks. They are committed in `docs/reviews/crypto-a24/edges.json` before any arm runs.*
+
+### The revised control failed its noise arm
+
+The arms ran once from commit `11a49d6` (`~/crypto-controls/a24-revised/control.json`, SHA-256 `7f9c8afe3b9ec482ed0b27ab732d54e17aa566df542ea4862a0f6a2a494a91e1`). **The control is not accepted, so this amendment cannot be signed as written.**
+
+| arm | impact | passed | condition | result |
+|---|---|---|---|---|
+| unprofitable | 0.58 | 10 of 1,000 | 36 or fewer | pass |
+| noise | 0.56 | 52 of 400, Wilson 95% upper 0.167 | upper <= 0.05 | **fail** |
+| strong | 0.40 | 100 of 100 | at least 80 | pass |
+
+The noise setting was not a market without an edge. In the calibration every variant had a positive mean net return at 0.56 ticks, with t-statistics of +2.1 to +7.8 over 100 seeds, so the gate was passing a small real profit there. The rule chose the grid point whose average return was closest to zero, and no grid point had every variant at or below zero except those already in the unprofitable range. The unprofitable arm, 0.02 ticks further, where every variant lost slightly, passed 1.0% of campaigns. The pass conditions are unchanged. A revision needs a noise market in which no variant has an edge, new seeds, and its own pre-registration here before it runs.
+
+**Second revision, 2026-11-25, before any new run.** The noise setting is the smallest impact at which every variant's mean net return over the calibration seeds is at or below zero, so no variant makes money there. The unprofitable setting is the smallest impact above it whose five variants all have a 99% upper bound below zero. The strong rule is unchanged. The grid is 0, 0.3, 0.35, 0.4 and 0.45, then 0.52 to 0.64 in steps of 0.005, then 0.7 and 1.0 ticks. Calibration seeds are 640001 to 640100. The arms are 641001 to 642000 (unprofitable), 642001 to 642400 (noise) and 642401 to 642500 (strong). The settings go in `docs/reviews/crypto-a24/edges-r2.json` before any arm runs, and output goes to `~/crypto-controls/a24-r2/`. The three pass conditions are unchanged.
+
+*The second revision's calibration ran once from commit `ca0c7c0` on seeds 640001 to 640100, with 3,200 jobs (`~/crypto-controls/a24-r2/calibration.json`, SHA-256 `2d798769816bec1fe2dff94cb1cb60b9ccf14b7fb0191e6a7d2e2d896598df28`). It selected a strong setting of 0.35 ticks, where the weakest variant averaged a Sharpe of 0.39, a noise setting of 0.57 ticks, where every variant's mean net return was between -1.8e-5 and -5.4e-6, and an unprofitable setting of 0.575 ticks. They are committed in `docs/reviews/crypto-a24/edges-r2.json` before any arm runs.*
+
+### The second revision failed its noise arm narrowly
+
+The arms ran once from commit `e123578` (`~/crypto-controls/a24-r2/control.json`, SHA-256 `278ee0560ea03be9f17f013cdb7d5013b13e030a8b3afddefa78f54c679f5b04`). **The control is not accepted, so Part D cannot be signed as written.**
+
+| arm | impact | passed | condition | result |
+|---|---|---|---|---|
+| unprofitable | 0.575 | 18 of 1,000 | 36 or fewer | pass |
+| noise | 0.57 | 14 of 400 (3.5%), Wilson 95% [0.021, 0.058] | upper <= 0.05 | **fail** |
+| strong | 0.35 | 100 of 100 | at least 80 | pass |
+
+In this noise market no variant made money in calibration, and the gate passed 3.5% of campaigns. That is below 5%, but the condition asks for the 95% upper bound to be at or below 5%, which needs 11 or fewer passes of 400. The control therefore does not show the market-making gate's false-positive rate to be below 5%. Three controls have now run on this design; any further change must be weighed against having tried until one passed.
+
+### The noise arm again, with 1,000 campaigns — written 2026-11-25, before it runs
+
+Michael chose this after the result above: 400 campaigns cannot show a rate below 5% unless 11 or fewer pass, while 1,000 allow 36. It reruns **only the noise arm**, once, at the second revision's committed noise setting of 0.57 ticks, with the same control, gate and best-of-5 campaigns, on new seeds 652001 to 653000 (`scripts/crypto_mm_control.py --stage noise-rerun`, output `~/crypto-controls/a24-r2/noise-rerun.json`). The unprofitable and strong arms of the second revision passed and stand.
+
+**The earlier 14 of 400 is not discarded.** The rerun passes only if both hold:
+
+1. the new 1,000 campaigns alone have a Wilson 95% upper bound on the pass rate at or below 0.05, which is 36 or fewer passes;
+2. the new 1,000 and the earlier 400 together do too, which is 54 or fewer of 1,400.
+
+If either fails, Part D is not signed and no further noise run is made on this design.
+
+*It ran once from commit `f0f78bd` (`~/crypto-controls/a24-r2/noise-rerun.json`, SHA-256 `44c00a65b5c299d9644da0032791010124f7da93ef9ca97aee473a6488199dbc`).* **It failed by one campaign.**
+
+| check | passed | Wilson 95% | condition | result |
+|---|---|---|---|---|
+| new 1,000 alone | 37 of 1,000 | [0.0270, 0.0506] | upper <= 0.05 (36 or fewer) | **fail** |
+| with the earlier 400 | 51 of 1,400 | [0.0278, 0.0476] | upper <= 0.05 (54 or fewer) | pass |
+
+**Part D is not signed, and no further noise run is made on this design.** Across both runs the gate passed about 3.6% of campaigns in a market where no variant made money. That is below 5%, but this control does not show it with the confidence it asked for. A market-making gate now needs a new design, for example a stricter bound, with its own amendment, seeds and control. Parts A to C do not depend on this control.
+
+### What would invalidate this amendment
+
+- A candidate kernel run without a ledger row, or on a calibration ticket.
+- A failed audit left out of N, or a trial advanced to validation before its deeper audit passed.
+- A kernel reading data later than its event's visible row.
+- A campaign changing gate after its first trial.
+- The timing rules, inventory cap, audit size, seeds or a pass condition changed after a control or real result is seen, without a new amendment.
+- A BTC campaign validated on this split and left out of the declared family.
+- A market-making result reported without D7's conditions.
+
+Code, once implemented: `run.py`, `scripts/holdout.py`, `src/core/engine/native.py`, `src/core/engine/native_trial.py`, `src/core/engine/kernel.py`, `native/fastcore/fastcore.cpp`, and a new market-making control script.
+
+## Amendment 25 — 2026-11-25 — a stricter market-making gate
+
+**Status: IN FORCE from 2026-11-25, signed off by Michael.** Drafted the same day by Claude on request. The code reads this line, and `gate: spread_capture` registers and runs only while it is in force. No market-making campaign had run before signing. Its control ran once from commit `31121ed` and passed all three conditions (below).
+
+### Why
+
+Amendment 24 Part D proposed a net-profit gate for market makers and was not accepted. In its control, in markets where no variant made money, the gate passed 14 of 400 campaigns and then 37 of 1,000, about 3.6% together. That is below 5%, but the condition required the 95% upper bound to be at or below 5%, and the 1,000-campaign rerun missed it by one campaign.
+
+**This amendment is written after seeing that result, and says so.** It halves the error each test may spend. That makes the gate stricter, never looser, and the control is rerun once on new seeds to show its false-pass rate is below 5%. It does not rescore anything already run.
+
+### The rules
+
+Amendment 24 Part D's rules apply as written, with these changes. In particular, the declared gate (D1), the 0.10 BTC inventory cap (D2), the diagnostics (D3) and the stated conditions (D7) are unchanged.
+
+| | rule |
+|---|---|
+| E1 | **Train:** a `spread_capture` campaign passes only if its selected trial's Newey-West lower bound on mean net session return is above zero at **`q / (2N)`**. A24 D5 used `q/N`. |
+| E2 | **Validation:** the bound must be above zero at **`q / (2M)`**. A24 D5 used `q/M`. |
+| E3 | **Holdout:** the bound must be above zero at **`q / 2`**. A24 D6 used `q`. |
+| E4 | **Mixed families:** each `spread_capture` campaign uses its bound at `q / (2M)`, and the `max_of_m` test over the other `m` campaigns stays at `q * m / M` (A24 D8). The family's false-pass rate is then at most `q`. |
+| E5 | Amendment 18's lag rule, the score, the exposure floor and the sign-flip gate for other campaigns are unchanged. |
+
+### The control, before signing
+
+The same control as Amendment 24's second revision (`scripts/crypto_mm_control.py`): a simulated book trading every 10 seconds over 150 sessions, five market-making variants, best-of-5 campaigns, 0 bp maker, 2 bp taker and 1 ms latency. The only change in the gate is E1: each campaign passes at **`alpha = q / 10 = 0.005`**.
+
+**The market settings are the ones already committed** in `docs/reviews/crypto-a24/edges-r2.json`, from a calibration that did not depend on the gate: strong 0.35, noise 0.57 and unprofitable 0.575 ticks of impact. No new calibration is run.
+
+| arm | impact | seeds | campaigns | pass condition |
+|---|---|---|---|---|
+| unprofitable | 0.575 | 661001 to 662000 | 1,000 | **36 or fewer** pass (Wilson 95% upper bound <= 0.05) |
+| noise | 0.57 | 662001 to 663000 | 1,000 | **36 or fewer** pass (Wilson 95% upper bound <= 0.05) |
+| strong | 0.35 | 663001 to 663100 | 100 | **at least 80** pass |
+
+Each arm runs once, from a clean commit, after this amendment is committed and before it is signed. **If any arm fails, this amendment is not signed, and no further market-making gate is tested on this control design.**
+
+*The control ran once from commit `31121ed` (`~/crypto-controls/a25/control.json`, SHA-256 `8ad399b8f2912d0af4005854468e0b55786bfc6f504539fc903f340abbb32d04`), with 2,100 campaigns at `alpha = 0.005`.* **It passed all three conditions.**
+
+| arm | passed | Wilson 95% | condition | result |
+|---|---|---|---|---|
+| unprofitable | 9 of 1,000 | [0.0047, 0.0170] | upper <= 0.05 | pass |
+| noise | 14 of 1,000 | [0.0084, 0.0234] | upper <= 0.05 | pass |
+| strong | 100 of 100 | [0.9630, 1.0000] | at least 80 | pass |
+
+### The gate is off: the scoring did not mark inventory — recorded 2026-11-26
+
+A24 D4, which this amendment keeps, measures net session return "after all fees, funding and inventory marks". **The code did not mark inventory.** It booked a position's profit or loss only when the position closed, as the scorer does for every other campaign. In `btc-mm-wide-01`, trial 4 went short 600 lots at about 17,270 on 2023-01-10 and held it to the end of the train split, when BTC was about 108,200. Funding paid to the short was counted every day and the open loss, about 5,460 USDT, never was, so the trial scored +1.07. The campaign was stopped and superseded.
+
+Market-making returns now carry each session's change in the open position's value at that session's last trade price, in the native runner and in the Python holdout run. **This amendment's control was scored without those marks**, so it does not show the false-pass rate of the gate as written. The code keeps `gate: spread_capture` refused until Amendment 26 is in force, and a later amendment must rerun the control with the marks, on new seeds, before the gate can open.
+
+### Acceptance, before signing
+
+1. Tests pin E1 to E4 in the campaign gate, the family test and the holdout.
+2. The control above passes all three conditions.
+3. Existing campaigns and the recorded BTC family reproduce their results unchanged.
+
+### What it does NOT change
+
+Amendment 24 Parts A to C, the sign-flip gate for every other campaign, recorded campaigns, the score, costs, splits, embargo, holdout lock, `B` and `q`.
+
+### What would invalidate this amendment
+
+- A market-making campaign judged at A24 Part D's looser levels.
+- The levels, seeds, settings or a pass condition changed after a control or real result is seen, without a new amendment.
+- A further market-making control run on this design after a failure.
+
+Code, once implemented: `scripts/nq_campaign.py`, `src/core/loop/campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py`, `src/core/engine/native_trial.py`, `scripts/crypto_mm_control.py`.
+
+## Amendment 26 — 2026-11-26 — market-making returns with inventory marked
+
+**Status: DRAFT, not in force.** Drafted 2026-11-26 by Claude on request, after the defect recorded under Amendment 25. The code reads this line, and `gate: spread_capture` stays refused until it reads IN FORCE. Nothing here rescores a recorded campaign or reopens one.
+
+### Why
+
+Amendment 24 D4, kept by Amendment 25, measures a market maker's net session return "after all fees, funding and inventory marks". The scorer booked profit or loss only when a position closed, so an open position's gain or loss was never counted. `btc-mm-wide-01` showed what that allows: a 600-lot short held from about 17,270 to about 108,200 collected funding every day, never paid its open loss of about 5,460 USDT, and scored +1.07. With marks it scores −0.10.
+
+**Amendment 25's control has the same defect.** `scripts/crypto_mm_control.py` scored its simulated market makers with the same unmarked session returns. So did the calibration that chose its three markets, so the "noise" market, the one where no variant makes money, was chosen on the wrong returns. Amendment 25's result therefore says nothing about the gate as written, and both the calibration and the arms are run again.
+
+**This amendment is written after seeing that result, and says so.** It changes how returns are measured to match the rule already registered. It does not change any level, the score or the costs.
+
+### The rules
+
+Amendments 24 Part D and 25 apply as written, with these additions.
+
+| | rule |
+|---|---|
+| F1 | **The mark.** After a session, the open position is valued at `position × (close − average entry price)`, in price points, where the close is the **last trade price of that session** and the average entry is the reconstructed blotter's after the last fill at or before the session's end. A flat position is worth zero. |
+| F2 | **The session return.** A market-making session's return is the unmarked return, as before, plus that session's change in the open position's value divided by the session's notional base. Over a period the marks sum to the final open position's value, so a position held to the end is charged its loss or credited its gain. |
+| F3 | **Where it applies.** Every number the `spread_capture` gate reads: the train bound (E1), the validation bound (E2), the holdout bound (E3), the family test (E4), and the session returns recorded on each row. Net P&L on a `spread_capture` row includes the final open position's value. |
+| F4 | **Recorded on the row.** Each `spread_capture` row records `inventory_marked: true`. A row without it is not read by the gate. |
+| F5 | **A position open with no close price is an error,** not a zero mark. The native child returns each scored session's close and the runner checks them against the sessions it asked for. |
+| F6 | **Trials are ranked on the marked returns.** The registered score is computed as before, from the marked session returns, so the trial a campaign selects is judged on the same returns its bound reads. Otherwise a trial that only collects funding on an open position would still be selected and waste the campaign. On the holdout only the bound is read. |
+
+### The control, before signing
+
+The same control design as Amendment 25 (`scripts/crypto_mm_control.py`): a simulated book trading every 10 seconds over 150 sessions, five market-making variants, best-of-5 campaigns, 0 bp maker, 2 bp taker, 1 ms latency, a 10-lot cap, and each campaign passing at **`alpha = q / 10 = 0.005`** (A25 E1 at N = 5). **The only change is that every return is marked under F1 and F2,** with the close being the last simulated trade price of each session.
+
+**1. Calibration, once, with marks.** The impact grid, the selection rules and the minimum strong Sharpe of 0.30 are Amendment 24's second revision, unchanged. They run on new seeds **670001 to 670100**. The chosen settings are committed to `docs/reviews/crypto-a26/edges.json` before any arm is drawn. If the rules cannot pick three settings in the order strong < noise < unprofitable, this amendment is not signed.
+
+*The calibration ran once from commit `2780444` (`~/crypto-controls/a26/calibration.json`, SHA-256 `558cef8a9185034772e1113c5fbe557470920bbbcfba49dcf3acee96b538c792`), 3,200 jobs with every return marked.* It chose **strong 0.40, noise 0.57 and unprofitable 0.58** ticks of impact, in the required order. A25's unmarked calibration had chosen 0.35, 0.57 and 0.575. The settings are committed in `docs/reviews/crypto-a26/edges.json` before any arm is drawn.
+
+**2. The arms, once, from a clean commit, after the settings are committed:**
+
+| arm | impact | seeds | campaigns | pass condition |
+|---|---|---|---|---|
+| unprofitable | from step 1 | 671001 to 672000 | 1,000 | Wilson 95% upper bound <= 0.05 (36 or fewer pass) |
+| noise | from step 1 | 672001 to 673000 | 1,000 | Wilson 95% upper bound <= 0.05 (36 or fewer pass) |
+| strong | from step 1 | 673001 to 673100 | 100 | **at least 80** pass |
+
+**If any arm fails, this amendment is not signed, and no further market-making gate is tested on this control design.** A failure is recorded here with its numbers.
+
+*The arms ran once from commit `5dced06` (`~/crypto-controls/a26/control.json`, SHA-256 `ad30c53aabe0eea031c2bf0063ea0beff4312a1313ccd986199fc52b2d04ce60`), with 2,100 campaigns at `alpha = 0.005` and every return marked.* **They passed all three conditions.**
+
+| arm | impact | passed | Wilson 95% | condition | result |
+|---|---|---|---|---|---|
+| unprofitable | 0.58 | 5 of 1,000 | [0.0021, 0.0117] | upper <= 0.05 | pass |
+| noise | 0.57 | 13 of 1,000 | [0.0076, 0.0221] | upper <= 0.05 | pass |
+| strong | 0.40 | 100 of 100 | [0.9630, 1.0000] | at least 80 | pass |
+
+### Acceptance, before signing
+
+1. Tests pin F1 to F6: the marks sum to the final open value, a position flat at every close is unaffected, a held position's loss is counted, a missing close is refused, and unmarked scoring still equals `score(reconstruct())` exactly.
+2. Every stored market-making trial re-scores to its recorded score without marks, exactly. *Done 2026-11-26 for `btc-mm-orderflow-03` and `btc-mm-wide-01`.*
+3. The calibration and the three arms above pass.
+4. Existing campaigns and the recorded BTC family reproduce their results unchanged.
+
+### What it does NOT change
+
+The levels of Amendment 25 (E1 to E4), the selection score, costs, funding, the 0.10 BTC cap, splits, embargo, the holdout lock, `B` and `q`. Campaigns that are not `spread_capture`: their scoring still books P&L at close only. Whether that matters for them is a separate question and is not settled here. Recorded campaigns: `btc-mm-orderflow-03` stays REJECT, and its marked re-check is kept beside it.
+
+### What would invalidate this amendment
+
+- A `spread_capture` row judged without inventory marks.
+- The close price, the seeds, the settings or a pass condition changed after a calibration, control or real result is seen, without a new amendment.
+- A further market-making control on this design after a failure.
+
+Code, once implemented: `src/core/engine/column_score.py` (done), `scripts/run_native_trial.py` (done), `run.py` (done), `scripts/crypto_mm_control.py` (marks, the A26 seeds and the stages `a26-calibrate` and `a26`), `scripts/nq_campaign.py`, `scripts/l2_gate.py`, `scripts/holdout.py` and `src/core/engine/native_trial.py` (the A26 check and F4's refusal of unmarked rows).

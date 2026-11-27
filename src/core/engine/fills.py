@@ -315,6 +315,7 @@ class BookQueueFill:
         self._rejected: dict[int, str] = {}
         # Amendment 23. Off until signed, so earlier runs replay as they ran.
         self.require_two_sided = False
+        self._gap_book = (None, False)
 
     def bind_book(self, book_for) -> None:
         self._book_for = book_for
@@ -359,7 +360,7 @@ class BookQueueFill:
         if row is None:
             return None
         rows = self._taker_rows(book, at, row)
-        if self.require_two_sided and any(self._one_sided(book, r) for r in rows):
+        if self._needs_gap_check(book) and any(self._one_sided(book, r) for r in rows):
             if at == tick.ts:
                 return None
             at, row = tick.ts, self._fresh_row(book, tick.ts)
@@ -392,6 +393,15 @@ class BookQueueFill:
         """Every row sharing this millisecond, and the state just before them."""
         first = int(np.searchsorted(book.ts, at, side="left"))
         return range(max(first - 1, 0), row + 1) if first <= row else (row,)
+
+    def _needs_gap_check(self, book) -> bool:
+        """Amendment 23's row check, skipped for a session with no one-sided row."""
+        if not self.require_two_sided:
+            return False
+        if self._gap_book[0] is not book:
+            bid, ask = np.asarray(book.bid), np.asarray(book.ask)
+            self._gap_book = (book, bool(np.isnan(bid).any() or np.isnan(ask).any()))
+        return self._gap_book[1]
 
     @staticmethod
     def _one_sided(book, row: int) -> bool:
@@ -451,7 +461,7 @@ class BookQueueFill:
                 at, row = tick.ts, self._fresh_row(book, tick.ts)
             if row is None:
                 return None
-            if self.require_two_sided and self._one_sided(book, row):
+            if self._needs_gap_check(book) and self._one_sided(book, row):
                 if at == tick.ts:
                     return None
                 at, row = tick.ts, self._fresh_row(book, tick.ts)
@@ -467,7 +477,8 @@ class BookQueueFill:
             state = self._resting[order.order_id]
         row = book.row_at(tick.ts)
         self._advance(state, order, tick.session, book, row)
-        if self.require_two_sided and (row < 0 or self._one_sided(book, row)):
+        if self.require_two_sided and (row < 0 or (self._needs_gap_check(book)
+                                                   and self._one_sided(book, row))):
             return None
         mid = None if row < 0 else (float(book.bid[row]) + float(book.ask[row])) / 2
         through = (tick.price < limit - _PRICE_TOL if order.side is Side.BUY

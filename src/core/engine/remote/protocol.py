@@ -1,10 +1,11 @@
 """Frames, encoders and the action whitelist for the isolated strategy process.
 
-Length-prefixed JSON frames over anonymous pipes. **JSON in both directions, and
-never `pickle`**: unpickling a frame from the child is arbitrary code execution
-by the process this whole boundary exists to distrust. It is 2.4x slower at 200
-bars and the Task 24 projection was made at the slower number, so there is no
-budget argument for changing it.
+Length-prefixed frames over anonymous pipes. **What the engine reads from the child
+is always JSON, and never `pickle` or `marshal`**: decoding a binary frame from the
+process this whole boundary exists to distrust would hand it a parser to attack.
+
+The engine-to-child direction carries nearly all the bytes and may use `marshal`,
+because the writer is the trusted engine and only the sandboxed child decodes it.
 
 One request and one reply per callback. The engine blocks on the strategy: there
 is no concurrency to reason about and no scheduling nondeterminism, which is what
@@ -20,6 +21,7 @@ cost anyone can plan around.
 from __future__ import annotations
 
 import json
+import marshal
 import os
 import struct
 
@@ -101,7 +103,35 @@ def send(fd: int, obj) -> None:
         written += os.write(fd, blob[written:])
 
 
+def send_to_child(fd: int, obj) -> int:
+    """Engine to strategy only. Returns the frame's size in bytes."""
+    try:
+        blob = b"M" + marshal.dumps(obj, 4)
+    except ValueError:                # a value marshal refuses still crosses as JSON
+        blob = b"J" + json.dumps(obj).encode()
+    os.write(fd, HEADER.pack(len(blob)))
+    written = 0
+    while written < len(blob):
+        written += os.write(fd, blob[written:])
+    return len(blob)
+
+
+def recv_from_parent(fd: int):
+    """Strategy side only: decode a frame written by the trusted engine."""
+    frame = _read_frame(fd)
+    if frame[:1] == b"M":
+        return marshal.loads(memoryview(frame)[1:])
+    if frame[:1] == b"J":
+        return json.loads(bytes(frame[1:]))
+    return json.loads(bytes(frame))
+
+
 def recv(fd: int):
+    """Engine side: a frame from the child is JSON, whatever it claims to be."""
+    return json.loads(bytes(_read_frame(fd)))
+
+
+def _read_frame(fd: int) -> bytearray:
     header = b""
     while len(header) < HEADER.size:
         chunk = os.read(fd, HEADER.size - len(header))
@@ -115,7 +145,7 @@ def recv(fd: int):
         if not chunk:
             raise EOFError("the peer closed the pipe mid-frame")
         out += chunk
-    return json.loads(bytes(out))
+    return out
 
 
 def validate(actions) -> list[dict]:
@@ -152,10 +182,17 @@ from dataclasses import fields as _fields  # noqa: E402
 from enum import Enum  # noqa: E402
 
 
+_FIELD_NAMES: dict[type, tuple[str, ...]] = {}
+
+
 def encode(obj) -> list:
+    kind = type(obj)
+    names = _FIELD_NAMES.get(kind)
+    if names is None:
+        names = _FIELD_NAMES[kind] = tuple(field.name for field in _fields(obj))
     out = []
-    for field in _fields(obj):
-        value = getattr(obj, field.name)
+    for name in names:
+        value = getattr(obj, name)
         out.append(str(value) if isinstance(value, Enum) else value)
     return out
 

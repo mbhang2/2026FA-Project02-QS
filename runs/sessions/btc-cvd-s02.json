@@ -1,0 +1,79 @@
+{
+  "schema": "research-session/1",
+  "session": "btc-cvd-s02",
+  "plan": "/home/mbhang2/.claude/jobs/01690ec9/tmp/btc-plan.yaml",
+  "declared_family": [
+    "btc-cvd-02"
+  ],
+  "started": "2026-11-22T21:14:07+00:00",
+  "campaigns": {
+    "btc-cvd-02": "complete"
+  },
+  "validation": {
+    "btc-cvd-02": "done"
+  },
+  "l2": {
+    "m_campaigns": 1,
+    "campaigns": [
+      "btc-cvd-02"
+    ],
+    "b": 10000,
+    "q": 0.05,
+    "observed_best": 0.014449086866670964,
+    "best_campaign": "btc-cvd-02",
+    "rule_a_sortino_positive": {
+      "btc-cvd-02": false
+    },
+    "rule_a_pass": false,
+    "incomplete": [],
+    "note": "max_of_m is max_of_n with the campaign as the unit, and that is deliberate rather than lazy: section 4 of the pre-registration chooses it over a Holm budget because it uses the actual null distribution of the maximum, and says the L2 gate INHERITS the family-wise error rate measured for that machinery (0.060, CI [0.041, 0.088] at R = 150, Task 38) rather than needing its own calibration study. A second implementation of the same simulation would be a second thing to calibrate.",
+    "per_campaign": [
+      {
+        "campaign_id": "btc-cvd-02",
+        "validation_primary": 0.014449086866670964,
+        "null_mean": -0.007315609580810052,
+        "null_sd": 0.02158803113067114,
+        "sds_above_own_null": 1.0081834844382302
+      }
+    ],
+    "standardised_view": {
+      "best_campaign": "btc-cvd-02",
+      "observed_best_sds": 1.0081834844382302,
+      "p": 0.5006499350064993,
+      "reject": false,
+      "null_max_mean": 0.009399846016385124,
+      "note": "diagnostic unless statistic='standardised' set the verdict. The maximum over (observed - null mean) / null sd per campaign, which is the pivotal form step_down_max already assumes. Task 70 measured the raw maximum as valid but blind: on our six real validation nulls, whose sds differ by 20x, it named two of the six campaigns the best of M zero times in 4,000 families and a third of them once, and it rejected at 0.0505 against an eight-sigma planted effect in a tight-null campaign where the standardised maximum rejected at 1.0000."
+    },
+    "statistic": "standardised",
+    "p": 0.5006499350064993,
+    "p_floor": 9.999000099990002e-05,
+    "at_floor": false,
+    "reject": false,
+    "null_max_mean": 0.009399846016385124,
+    "null_max_quantiles": {
+      "0.5": 1.0081834844382302,
+      "0.2": 1.0081834844382302,
+      "0.1": 1.0081834844382302,
+      "0.05": 1.0081834844382302,
+      "0.01": 1.0081834844382302
+    },
+    "raw_view": {
+      "best_campaign": "btc-cvd-02",
+      "observed_best": 0.014449086866670964,
+      "p": 0.5006499350064993,
+      "reject": false
+    },
+    "passes": false,
+    "verdict": "FAIL",
+    "rule_a_basis": "amendment_18_profitability_bound",
+    "schema": "l2-verdict/1",
+    "declared_family": [
+      "btc-cvd-02"
+    ]
+  },
+  "stopped_by_cue": false,
+  "family_note": "every campaign in the plan, written before the session ran.",
+  "holdout_check_clear": false,
+  "holdout": "checked only; not armed",
+  "finished": "2026-11-22T21:27:53+00:00"
+}

@@ -1,0 +1,107 @@
+{
+  "schema": "committee-verdict/1",
+  "verdict": "VETO",
+  "is_veto": true,
+  "vetoed_by": [
+    "robustness"
+  ],
+  "can_approve": false,
+  "approval_note": "The committee cannot approve. PASS means no auditor found anything to veto on its own axis with the evidence it was given. Reading that as approval is a caller's policy -- pre-registration.md 6a -- and its error rate is unmeasured.",
+  "auditors": [
+    {
+      "axis": "leakage",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "I verified the signal/feature ordering (_signal before _update, deques holding only prior closed bars), the coverage gate's use of only completed-session counters, and the absence of any scorer/dataset/split access; I could not see the harness's per-bar view implementation to independently confirm the structural guarantee.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "statistics",
+      "verdict": "PASS",
+      "reasons": [],
+      "confidence_note": "The gate rejected the campaign outright (p=0.714, observed best -0.126 vs null max mean -0.112), so there is no positive claim to stress-test; the Sortino denominator (662 downside sessions of 960) is well-populated and the p-value is far above the resolution floor.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "economics",
+      "verdict": "CANNOT_TELL",
+      "reasons": [
+        "The economic evidence is internally inconsistent and cannot be reconciled with the strategy: net_pnl_points = -290,513.6 and gross_pnl_points = +127,665.8 imply commission_paid_points = 418,179.4, yet commission_per_contract_per_side_points is reported as 0.0, so the commission figure is not derivable from any stated rate and the cost share cannot be computed.",
+        "The magnitude is uninterpretable: 681 trades at 10 lots (0.001 BTC) on BTC perpetual cannot plausibly produce -290,513 index points of net P&L (roughly -$5.8M at $20/point) on that notional, and the evidence gives no per-trade return, notional, or price scale to reconcile it.",
+        "The stated metric is sortino_per_session with primary = -0.1261, but the strategy docstring's own arithmetic predicts a score near -0.134 at the 672-session floor and about -0.128 at 681 trades; the reported figure is better than the strategy's own bound, so the score cannot be tied to the P&L shown.",
+        "avg_holding_period_ns is 1.09e13 ns (~3.03 hours), which matches the 36-bar planned horizon but is inconsistent with the strategy's own claim that most trades hold 36 bars and only a handful are truncated at the session close; the evidence does not show the distribution needed to check this.",
+        "sessions_with_exposure (683) exceeds trade_count (681), which the strategy's own logic says is impossible (a session cannot be exposed without at least one fill), so at least one of the two counters is wrong."
+      ],
+      "confidence_note": "No per-trade returns, notional, price scale, or commission rate are given, so I could not verify whether the negative net P&L is a real economic failure of the absorption-reversal claim or an artifact of the reporting; the code's direction (fade the absorbed flow) does match the pre-registered claim.",
+      "error": null,
+      "attempts": 1
+    },
+    {
+      "axis": "robustness",
+      "verdict": "VETO",
+      "reasons": [
+        "Breadth is narrow on every breakdown: only 11 of 32 months (34%), 2 of 7 weekdays (29%), and 8 of 24 hours (33%) are positive; the total is held up by a minority of periods.",
+        "Weekday distribution is severely lopsided: Wed (-140,390) and Tue (-93,418) alone account for the bulk of losses while only Thu (+13,145) and Sat (+7,196) are meaningfully positive, indicating the result is regime/weekday-specific rather than broad-based.",
+        "Monthly P&L is dominated by a handful of large winners (2024-03 +34,831; 2024-11 +29,293; 2024-12 +20,776) against many large losers (2025-07 -50,130; 2025-08 -97,791; 2025-04 -43,638), so the sign of the total depends on a few months.",
+        "Hour-of-day P&L is highly uneven (e.g. 03: +57,630 vs 05: -74,284 and 02: -71,393), and the entry-hour view disagrees sharply (02: -115,337; 03: -122,632), suggesting the realised-P&L view is driven by settlement timing rather than a stable intraday edge."
+      ],
+      "confidence_note": "No out-of-sample validation was run, so I cannot assess whether this narrow distribution persists beyond the training sample; the veto rests on the in-sample breadth/concentration pattern alone.",
+      "error": null,
+      "attempts": 1
+    }
+  ],
+  "seats_total": 4,
+  "seats_ran": 4,
+  "seats_failed": [],
+  "incomplete": false,
+  "incomplete_note": "",
+  "usage": [
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 1936,
+      "cached_tokens": 640,
+      "completion_tokens": 98,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 7228,
+      "cached_tokens": 128,
+      "completion_tokens": 81,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 4227,
+      "cached_tokens": 0,
+      "completion_tokens": 421,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    },
+    {
+      "model_served": "mimo-v2.6-pro",
+      "prompt_tokens": 9348,
+      "cached_tokens": 1536,
+      "completion_tokens": 503,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop"
+    }
+  ],
+  "model": "mimo-v2.6-pro",
+  "auditor_models": {},
+  "proposer_model": "deepseek-v4.1-flash",
+  "independent": true,
+  "independence_note": "",
+  "model_served": "mimo-v2.6-pro",
+  "prompt_digests": {
+    "_shared.md": "e3a7bf407e59cad2",
+    "economics.md": "5fb68f8ca3b2124c",
+    "leakage.md": "b5f7af4181d9bb74",
+    "robustness.md": "570bc857a32c64c9",
+    "statistics.md": "b7471556c6784238"
+  }
+}

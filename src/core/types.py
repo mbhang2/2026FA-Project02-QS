@@ -944,6 +944,15 @@ class QuoteStrategy(Strategy, Protocol):
     def on_quote(self, ctx: Any) -> None: ...
 
 
+class BookEventStrategy(Strategy, Protocol):
+    """A strategy run with the engine option `book_events=True`.
+
+    Called once for each millisecond with a book update. No profile sets the option.
+    """
+
+    def on_book_event(self, ctx: Any) -> None: ...
+
+
 class FittedStrategy(Strategy, Protocol):
     """A strategy whose behaviour depends on parameters fitted to data.
 

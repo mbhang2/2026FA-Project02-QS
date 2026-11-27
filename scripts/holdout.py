@@ -199,6 +199,74 @@ def blocked(rehearse: bool) -> list[str]:
     return out
 
 
+def is_kernel_campaign(campaign: str) -> bool:
+    """Whether the champion is a native kernel (Amendment 24)."""
+    d = CAMPAIGNS / campaign
+    record = json.loads((d / "campaign.json").read_text()).get("record") or {}
+    validation = json.loads((d / "validation.json").read_text()) if (d / "validation.json").exists() else {}
+    return ((record.get("agent_config") or {}).get("gate") == "spread_capture"
+            or validation.get("engine") == "native")
+
+
+def kernel_holdout_profile(campaign: str) -> str:
+    """`<base>-train` scores its holdout on `<base>-holdout`, which must cost and behave the same."""
+    import yaml
+    from src.core.backtest_config import prepare_config
+
+    d = CAMPAIGNS / campaign
+    train = (json.loads((d / "campaign.json").read_text()).get("record") or {}).get("profile") or ""
+    base = train[:-len("-train")] if train.endswith("-train") else train
+    want = f"{base}-holdout"
+    profiles = prepare_config(yaml.safe_load((ROOT / "config" / "run.yaml").read_text()))["profiles"]
+    if want not in profiles or train not in profiles:
+        sys.exit(f"no kernel holdout profile {want!r} for {train!r}. Nothing was opened.")
+    h, t = profiles[want], profiles[train]
+    if h.get("split") != "holdout" or h.get("engine") != "reference":
+        sys.exit(f"{want!r} is not a reference-engine holdout profile. Nothing was opened.")
+    for key in ("dataset", "fill_model", "book_features", "book_events", "inventory_cap_lots", "gate",
+                "commission_per_contract", "commission_bps", "maker_commission_per_contract",
+                "maker_commission_bps", "slippage_per_contract", "slippage_bps", "latency_ns", "allow_overnight"):
+        if h.get(key) != t.get(key):
+            sys.exit(f"{want!r} and {train!r} disagree on {key}. Nothing was opened.")
+    return want
+
+
+def kernel_champion(champ: dict, path: pathlib.Path) -> dict:
+    """The kernel as an ordinary strategy file for the Python engine (Amendment 24 B5).
+
+    The same generated source the audit runs, from zero state, because the holdout starts its own
+    walk. The digest checked against the ledger row is that file's; the kernel's is kept beside it.
+    """
+    import numpy as np
+
+    from src.core.engine.native_trial import audit_strategy_source
+    from src.core.runlog import strategy_digest
+
+    text = champ["source"].read_text()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(audit_strategy_source(text, np.zeros(64), 0.0))
+    return {**champ, "source": path, "digest": strategy_digest(path), "kernel_digest": champ["digest"]}
+
+
+def judge_spread(row: dict) -> dict:
+    """Amendment 24 D6 with Amendment 25 E3: confirmed only if the net-profit bound on the holdout
+    returns is above zero at q/2. No sign-flip null. Missing or empty returns are not confirmed."""
+    from src.core.scoring.profitability import profitability_bound
+
+    from src.core.engine.native_trial import SPREAD_CAPTURE_ALPHA_FACTOR, marked_returns
+
+    # Amendment 26 F4: only returns with inventory marks are read.
+    returns = marked_returns(row)
+
+    # Amendment 25 E3: half the holdout error, q/2.
+    bound = profitability_bound(returns, Q * SPREAD_CAPTURE_ALPHA_FACTOR) if returns else None
+    passes = bool(bound and bound.get("passes"))
+    return {"gate": "spread_capture", "profitability": bound, "rule_i_sortino_positive": passes,
+            "rule_ii_evaluable": False, "rule_ii_reject": None, "rule_ii_p": None,
+            "not_evaluable_because": "Amendment 24 D6: a spread_capture champion is judged by the bound alone",
+            "round_turns": None, "min_round_turns": None, "confirmed": passes}
+
+
 def run_once(champ: dict, *, profile: str, reason: str | None,
              ledger: pathlib.Path) -> dict:
     """One `run.py` invocation on a holdout profile. Restores everything after."""
@@ -423,9 +491,16 @@ def main() -> int:
         sys.exit("no candidate: the L2 verdict names no best campaign "
                  "(and --campaign is rehearsal-only)")
     champ = champion_of(campaign)
+    kernel = is_kernel_campaign(campaign)
+    if kernel:
+        if a.rehearse:
+            sys.exit("there is no synthetic book profile to rehearse a kernel holdout on. Nothing was opened.")
+        champ = kernel_champion(champ, CAMPAIGNS / campaign / "kernels" / "holdout-strategy.py")
 
     fitted = champ["weights"] is not None
-    if a.rehearse:
+    if kernel:
+        profile = kernel_holdout_profile(campaign)
+    elif a.rehearse:
         profile = "holdout"          # SYNTHETIC. The rehearsal surface.
         if fitted:
             sys.exit("the synthetic holdout profile has no weights_path, so a "
@@ -481,15 +556,19 @@ def main() -> int:
     record_path = CAMPAIGNS / campaign / "campaign.json"
     registered = (json.loads(record_path.read_text()).get("record") or {}
                   if record_path.exists() else {})
-    null, facts = holdout_null(row, profile,
-                               (registered.get("agent_config") or {}).get("null_unit", "flat"))
-    verdict = judge(row, null, facts)
+    if kernel and (registered.get("agent_config") or {}).get("gate") == "spread_capture":
+        null, facts = [], {}
+        verdict = judge_spread(row)
+    else:
+        null, facts = holdout_null(row, profile,
+                                   (registered.get("agent_config") or {}).get("null_unit", "flat"))
+        verdict = judge(row, null, facts)
 
     print(f"\n  score            {(row.get('score') or {}).get('primary')}")
     print(f"  round turns      {verdict['round_turns']} "
           f"(rule (ii) needs {verdict['min_round_turns']})")
     print(f"  null draws       {len(null)}")
-    rule_i_name = "profit bound" if facts.get("profitability") else "Sortino > 0"
+    rule_i_name = "profit bound" if (facts.get("profitability") or verdict.get("gate")) else "Sortino > 0"
     print(f"  rule (i)  {rule_i_name:13} {verdict['rule_i_sortino_positive']}")
     if verdict["rule_ii_evaluable"]:
         print(f"  rule (ii) p <= {Q}        {verdict['rule_ii_reject']}  "

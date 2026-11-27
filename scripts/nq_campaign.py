@@ -424,6 +424,7 @@ def agent_for(champion: pathlib.Path | None, hypothesis: pathlib.Path | None,
         # subtracts the profile's fit window from it, so a fitted campaign's
         # agent is told the scored count rather than the split count.
         champion=champion,
+        kind="kernel" if profile.get("engine") == "native" else "strategy",
         run_facts=run_facts(profile, scored_session_count(profile)))
 
 
@@ -465,7 +466,8 @@ def validation_profile_for(train_profile: str, fitted: bool) -> str:
     v, t = c["profiles"][want], c["profiles"][train_profile]
     if v.get("split") != "validation":
         sys.exit(f"profile {want!r} is not a validation split ({v.get('split')!r})")
-    for key in ("dataset", "fill_model", "book_features", "commission_per_contract",
+    for key in ("dataset", "fill_model", "book_features", "engine", "book_events",
+                "inventory_cap_lots", "gate", "commission_per_contract",
                 "commission_bps", "maker_commission_per_contract", "maker_commission_bps",
                 "slippage_per_contract", "slippage_bps", "latency_ns", "allow_overnight"):
         if v.get(key) != t.get(key):
@@ -478,6 +480,24 @@ def validation_profile_for(train_profile: str, fitted: bool) -> str:
     return want
 
 
+def campaign_rows(d: pathlib.Path) -> list[dict]:
+    """The campaign's ledger rows, each carrying its trial index.
+
+    A one-worker campaign's rows are written in trial order and, before native trials recorded
+    their own index, could arrive without one. Those take their position, which is their index.
+    A row that already names its index keeps it.
+    """
+    rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines() if x.strip()]
+    if any(r.get("campaign_index") is None for r in rows):
+        record = json.loads((d / "campaign.json").read_text()).get("record") or {}
+        if int(record.get("generation_width") or 1) != 1:
+            raise SystemExit(f"{d.name}: rows without a trial index in a parallel campaign")
+        for i, r in enumerate(rows):
+            if r.get("campaign_index") is None:
+                r["campaign_index"] = i
+    return rows
+
+
 def _winner(rows: list[dict]) -> dict | None:
     """The campaign's gate winner: the highest primary score among completed runs.
 
@@ -487,6 +507,68 @@ def _winner(rows: list[dict]) -> dict | None:
     scored = [r for r in rows if isinstance(r.get("score"), dict)
               and r["score"].get("primary") is not None]
     return max(scored, key=lambda r: r["score"]["primary"]) if scored else None
+
+
+def _validate_native(name, d, record, win, source, out) -> None:
+    """Amendment 24 B3 then section 5, for a native kernel: the winner's deep audit, and only if it
+    matched, one validation run. Both go to `validation.jsonl`, and neither is a trial."""
+    import subprocess
+
+    from src.core.loop.campaign import NATIVE_PYTHON
+
+    trial_id, sha = win.get("trial_id"), win.get("kernel_sha256")
+    if not trial_id or not sha:
+        sys.exit(f"{name}: the winner's row names no trial id or kernel digest; it is not a native trial.")
+    profile = validation_profile_for(record.profile, False)
+    kernel = d / "kernels" / f"validation-{win.get('strategy_digest')}.py"
+    kernel.parent.mkdir(parents=True, exist_ok=True)
+    kernel.write_text(source)
+
+    def native(*args) -> dict | None:
+        subprocess.run([NATIVE_PYTHON, "scripts/run_native_trial.py", "--kernel", str(kernel),
+                        "--ledger", str(out), *args], capture_output=True, text=True, cwd=str(ROOT))
+        rows = [json.loads(x) for x in out.read_text().splitlines() if x.strip()] if out.exists() else []
+        return rows[-1] if rows else None
+
+    print(f"{name}: deep audit of trial {trial_id} before validation (Amendment 24 B3)")
+    audit = native("--profile", record.profile, "--deep", "--audit-of", trial_id)
+    if audit is None or audit.get("audit_of") != trial_id:
+        sys.exit(f"{name}: the deep audit left no row naming trial {trial_id}.")
+    matched = audit.get("outcome") == "completed" and (audit.get("audit") or {}).get("matched") is True
+    deep = {"outcome": audit.get("outcome"), "matched": matched, "trial_id": audit.get("trial_id"),
+            "windows": (audit.get("audit") or {}).get("windows"), "error": audit.get("error")}
+    if not matched:
+        (d / "validation.json").write_text(json.dumps({
+            "schema": "campaign-validation/1", "campaign_id": name, "engine": "native",
+            "winner_digest": win.get("strategy_digest"), "winner_campaign_index": win.get("campaign_index"),
+            "deep_audit": deep, "validation": None, "rule_a_sortino_positive": False,
+            "note": "Amendment 24 B3: the deep audit did not match, so validation was not opened."},
+            indent=2, default=str))
+        sys.exit(f"{name}: the deep audit did not match ({audit.get('outcome')}); validation stays closed.")
+
+    v = native("--profile", profile, "--validates", trial_id, "--train-profile", record.profile)
+    if v is None or v.get("validates") != trial_id or v.get("kernel_sha256") != sha:
+        sys.exit(f"{name}: the validation run left no row for this kernel and trial.")
+    train_score = win["score"]["primary"]
+    vscore = (v.get("score") or {}).get("primary")
+    result = {
+        "schema": "campaign-validation/1", "campaign_id": name, "engine": "native",
+        "winner_digest": win.get("strategy_digest"), "winner_campaign_index": win.get("campaign_index"),
+        "winner_trial_id": trial_id, "kernel_sha256": sha, "deep_audit": deep,
+        "train": {"profile": record.profile, "primary": train_score,
+                  "primary_uncharged": win["score"].get("primary_uncharged"), "score": win.get("score"),
+                  "diagnostics": win.get("diagnostics")},
+        "validation": {"profile": profile, "primary": vscore,
+                       "primary_uncharged": (v.get("score") or {}).get("primary_uncharged"),
+                       "outcome": v.get("outcome"), "score": v.get("score"), "diagnostics": v.get("diagnostics"),
+                       "git_sha": v.get("git_sha"), "audit": v.get("audit")},
+        "rule_a_sortino_positive": (vscore is not None and vscore > 0),
+        "rule_c_decay": (None if vscore is None else vscore - train_score),
+        "note": ("Section 5 with Amendment 24: the winner's deep audit matched before this single look. "
+                 "Both rows have purpose 'audit' or 'check' and are not trials."),
+    }
+    (d / "validation.json").write_text(json.dumps(result, indent=2, default=str))
+    print(f"  deep audit matched; validation {vscore}")
 
 
 def stage_validate(name: str) -> None:
@@ -511,8 +593,7 @@ def stage_validate(name: str) -> None:
 
     d = OUT / name
     record, _ = CampaignRecord.read(d / "campaign.json")
-    rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines()
-            if x.strip()]
+    rows = campaign_rows(d)
     win = _winner(rows)
     if win is None:
         sys.exit(f"{name}: no completed trial has a score; nothing to validate.")
@@ -538,6 +619,9 @@ def stage_validate(name: str) -> None:
             "ONCE per campaign (section 5). Re-running would be a second look that "
             "the L2 correction does not know about -- delete the file deliberately "
             "if you really mean to discard the first look and record why.")
+
+    if cfg()["profiles"][record.profile].get("engine") == "native":
+        return _validate_native(name, d, record, win, source, out)
 
     # **A fitted champion is source AND weights; carrying only the source
     # carries half of it.** For an unfitted strategy the source IS the whole
@@ -920,6 +1004,9 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
         if mode not in _tx.MODES:
             sys.exit(f"txnsim_mode must be one of {_tx.MODES}, not {mode!r}")
         agent_cfg["txnsim_mode"] = mode
+    gate = gate_for(profile)
+    if gate:
+        agent_cfg["gate"] = gate
     agent_cfg["correction"] = cc["correction"]
     agent_cfg["b_null"] = B_NULL
     agent_cfg["model_served_at_registration"] = served["served"]
@@ -932,6 +1019,9 @@ def stage_register(name: str, hypothesis: pathlib.Path | None,
 
     agent_cfg["idle_charge"] = cc.get("idle_charge", IDLE_CHARGE)
     agent_cfg["probe_before_trial"] = bool(cc.get("probe_before_trial"))
+    if profile.get("engine") == "native" and agent_cfg["probe_before_trial"]:
+        sys.exit("probe_before_trial runs Python strategies, and this profile runs native kernels. "
+                 "Register with probe_before_trial: false.")
     # Frozen with the campaign: a repair fixes a file, so it need not re-derive it.
     agent_cfg["repair_reasoning_effort"] = REPAIR_REASONING_EFFORT
     # **Who wrote the question, in the record.** None for a file a human
@@ -1331,6 +1421,8 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
         shown = list(rows)
         champ_now = champion if champion.exists() else None
 
+        native = cfg()["profiles"][record.profile].get("engine") == "native"
+
         def _one(slot_and_index):
             slot, i = slot_and_index
             a = agents[slot]
@@ -1342,13 +1434,13 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
                     source, profile=record.profile, ledger=ledger,
                     campaign_id=record.campaign_id, index=i,
                     allow_fitted=record.allow_fitted_proposals,
-                    purpose=purpose)
+                    purpose=purpose, native=native)
             w = workers[slot]
             wledger = w / "runs" / "ledger.jsonl"
             row = run_trial(source, profile=record.profile, ledger=wledger,
                             campaign_id=record.campaign_id, index=i,
                             allow_fitted=record.allow_fitted_proposals,
-                            root=w, purpose=purpose)
+                            root=w, purpose=purpose, native=native)
             _merge(w, wledger)
             return i, slot, source, row
 
@@ -1456,6 +1548,21 @@ def stage_run(name: str, ignore_capacity: str | None = None) -> None:
           f"(generations of {width})")
 
 
+def gate_for(profile: dict, in_force=None) -> str | None:
+    """`gate: spread_capture` (A24 D1), registered and frozen in the record only while Amendment 25 is
+    in force. A24 Part D's own control failed, so A24 alone never enables it."""
+    if profile.get("gate") != "spread_capture":
+        return None
+    if in_force is None:
+        import prereg as _prereg
+        in_force = _prereg.in_force(25) and _prereg.in_force(26)
+    if not in_force:
+        sys.exit("the profile declares gate: spread_capture, which needs Amendments 25 and 26 in force. "
+                 "A25's control was scored without A24 D4's inventory marks, so the gate stays off until "
+                 "an amendment reruns it with them.")
+    return "spread_capture"
+
+
 def stage_nulls(name: str) -> None:
     """The sign-flip null per candidate. Seconds, not hours -- section 3b."""
     from src.core.engine.reconstruct import reconstruct
@@ -1469,7 +1576,7 @@ def stage_nulls(name: str) -> None:
     if (d / "nulls.json").exists():
         print(f"{name}: nulls already computed")
         return
-    rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines() if x.strip()]
+    rows = campaign_rows(d)
     # **The campaign's OWN profile, not the module default.** This read
     # `cfg()["profiles"][PROFILE]`, so the null was always reassembled onto the
     # nq-train calendar whatever the campaign actually ran on. Every real
@@ -1618,7 +1725,29 @@ def stage_nulls(name: str) -> None:
         print(f"  correction_rule 'aligned': one shared randomisation per "
               f"replicate (seed {COMMON_NULL_SEED}), so the nulls can be read "
               f"jointly", flush=True)
+    gate_kind = (_rec.agent_config or {}).get("gate")
+    if gate_kind == "spread_capture" and not profit_on:
+        raise SystemExit(f"{name}: gate spread_capture needs Amendment 18's bound on a notional profile")
     for i, row in enumerate(rows):
+        if gate_kind == "spread_capture":
+            # Amendment 24 D5: the bound only. A native row carries its session returns, so the
+            # bound does not depend on whether its fill log fitted under the storage cap.
+            score = row.get("score") or {}
+            from src.core.engine.native_trial import marked_returns
+            returns = marked_returns(row)
+            if row.get("session_returns") is not None and returns is None:
+                raise SystemExit(f"{name} trial {i}: session returns without inventory marks; "
+                                 f"Amendment 26 F4 refuses them for gate spread_capture")
+            if returns is not None and score.get("primary") is not None and not score.get("rejected"):
+                if len(returns) != len(calendar):
+                    raise SystemExit(f"{name} trial {i}: {len(returns)} session returns for a "
+                                     f"{len(calendar)}-session calendar")
+                # Amendment 25 E1: half the train error, q/(2N).
+                from src.core.engine.native_trial import SPREAD_CAPTURE_ALPHA_FACTOR
+                profitability[str(row.get("campaign_index"))] = profitability_bound(
+                    returns, profit_alpha * SPREAD_CAPTURE_ALPHA_FACTOR)
+            samples.append([])
+            continue
         fills = load_fill_log(row)
         score = row.get("score") or {}
         if not fills or score.get("primary") is None or score.get("rejected"):
@@ -1683,6 +1812,9 @@ def stage_nulls(name: str) -> None:
     # trial was actually ranked against.
     payload = {"source": source, "b": B_NULL, "samples": samples,
                "spec": "docs/design/pre-registration.md section 3b"}
+    if gate_kind == "spread_capture":
+        payload.update(source="none", b=0, gate="spread_capture",
+                       spec="Amendment 24 D5: the net-profit bound at q/N, no null")
     if profit_on:
         payload["profitability"] = profitability
     if null_unit != rt.UNIT_FLAT:
@@ -1859,7 +1991,7 @@ def stage_report(name: str) -> None:
 
     d = OUT / name
     record, digest = CampaignRecord.read(d / "campaign.json")
-    rows = [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines() if x.strip()]
+    rows = campaign_rows(d)
     nulls = json.loads((d / "nulls.json").read_text())
     samples = nulls["samples"]
 
@@ -1880,7 +2012,8 @@ def stage_report(name: str) -> None:
                         exclude=excluded_trials(d, record.agent_config),
                         profitability=profitability,
                         risk_units=(nulls.get("risk_units", {})
-                                    if (record.agent_config or {}).get("null_unit") else None))
+                                    if (record.agent_config or {}).get("null_unit") else None),
+                        gate_kind=(record.agent_config or {}).get("gate"))
 
     # `campaign_summary.py` reads `result.json`, so the rows reach tier 2 by the
     # same route every other campaign's do rather than through this script.

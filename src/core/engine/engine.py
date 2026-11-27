@@ -549,6 +549,14 @@ class Engine:
         allow_overnight: bool = True,
         # Amendment 22: a profile may let its strategy read `ctx.book()`.
         book_features: bool = False,
+        # Calls `strategy.on_book_event(ctx)` once per millisecond with a book update.
+        # Not reachable from a profile or the strategy API: no campaign uses it.
+        book_events: bool = False,
+        # Amendment 24's audit only: start the first session from a native engine's saved state.
+        # See `_apply_resume`. Nothing on a scored path passes it.
+        resume: dict | None = None,
+        # Amendment 24 D2, for declared market-making runs: lots either way, None for no cap.
+        inventory_cap: int | None = None,
         # Amendment 23: no book fill from a row with an empty best bid or ask.
         two_sided_book: bool = False,
         # Paid on taker fills as a cost, in price points per contract and in basis
@@ -603,6 +611,16 @@ class Engine:
         self.maker_commission_bps = maker_commission_bps
         self._no_new_orders = False
         self.book_features = bool(book_features)
+        self.book_events = bool(book_events)
+        if resume is not None and not self.book_events:
+            raise ValueError("resume is for the book-event audit only")
+        self._resume, self._resumed = resume, False
+        if inventory_cap is not None and (isinstance(inventory_cap, bool) or not isinstance(inventory_cap, int)
+                                          or inventory_cap < 1):
+            raise ValueError(f"inventory_cap must be a whole number of lots >= 1, got {inventory_cap!r}")
+        self.inventory_cap = inventory_cap
+        if self.book_events and not self.book_features:
+            raise ValueError("book_events needs book_features")
         self._book_access = {"requested": False}
         self._book_fill = hasattr(self.model, "bind_book")
         if self._book_fill:
@@ -1046,6 +1064,10 @@ class Engine:
         self._quoted_walk = (
             self.model.requires.has_quotes or self._quote_subscribed
         )
+        if self.book_events and not callable(getattr(self.strategy, "on_book_event", None)):
+            raise ValueError("book_events needs a strategy with on_book_event(ctx)")
+        if self.book_events and self._quoted_walk:
+            raise ValueError("book_events runs on the trade walk, not the quoted walk")
         if self._quoted_walk and self._custom_execution:
             raise ValueError("latency_ns, slippage and allow_overnight=False support "
                              "single-asset, trade-based runs only")
@@ -1092,6 +1114,9 @@ class Engine:
             self._session_seq0 = seq + 1
             if self._quoted_walk:
                 seq = self._walk_quoted(batch, session, actionable, seq)
+                continue
+            if self.book_events:
+                seq = self._walk_book_events(batch, session, actionable, seq)
                 continue
             if isinstance(batch, SessionColumns):
                 price, tsarr, sizes, sides = batch.price, batch.ts, batch.size, batch.side
@@ -1152,7 +1177,8 @@ class Engine:
             # Trades-only, `n_ticks` is the next sequence: ticks and sequence
             # move together, skipped spans included. The quote walk steps
             # quotes as well, so it records the next sequence itself.
-            close_at = self._close_seq if self._quoted_walk else self.n_ticks
+            close_at = (self._close_seq if self._quoted_walk or self.book_events
+                        else self.n_ticks)
             self._close_session(session, close_at,
                                 actionable=self._is_actionable(session))
 
@@ -1190,6 +1216,85 @@ class Engine:
                 self._step(tick, actionable)
         self._close_seq = seq + 1
         return seq
+
+    def _walk_book_events(self, batch, session: int, actionable: bool, seq: int) -> int:
+        """Trades, with one book event for each millisecond that has a book update.
+
+        Timestamps are milliseconds, so a row is known only from the start of the next
+        millisecond. That instant is the event's time, and at an equal time the book event
+        goes first because `ctx.book()` at that trade already shows the row. Events run
+        strictly after the session's first trade and through its last. Fills stay on trades.
+        """
+        book_ts = np.asarray(self.dataset.book_for(session).ts)
+        first, last = int(batch[0].ts), int(batch[-1].ts)
+        releases = np.unique(book_ts - book_ts % 1_000_000) + 1_000_000
+        low = first
+        if self._resume is not None and not self._resumed:
+            low = self._apply_resume()
+        releases = releases[(releases > low) & (releases <= last)]
+        next_release = 0
+        for ti in range(len(batch)):
+            src = batch[ti]
+            while next_release < releases.size and releases[next_release] <= src.ts:
+                seq += 1
+                if self._deadline and seq >= self._next_budget_seq:
+                    self._next_budget_seq = seq + BUDGET_CHECK_EVERY_TICKS
+                    self._check_budget()
+                when = int(releases[next_release])
+                next_release += 1
+                self._dispatch("book", None, Tick(when, self.last_price, 0, session, seq, None),
+                               actionable)
+            seq += 1
+            if self._deadline and seq >= self._next_budget_seq:
+                self._next_budget_seq = seq + BUDGET_CHECK_EVERY_TICKS
+                self._check_budget()
+            self.n_ticks += 1
+            self.n_stepped += 1
+            self._step(Tick(src.ts, src.price, src.size, session, seq, src.side), actionable)
+        self._close_seq = seq + 1
+        return seq
+
+    def _exceeds_cap(self, submit) -> bool:
+        """Position plus every same-side working order plus this one, against the cap."""
+        buy = submit.side is Side.BUY
+        exposure = (self.position if buy else -self.position) + submit.size
+        for order in self._working.values():
+            if (order.side is Side.BUY) == buy:
+                exposure += order.size - order.filled_size
+        return exposure > self.inventory_cap
+
+    def _apply_resume(self) -> int:
+        """Put a native engine's saved state in place before the first event. Returns the
+        time after which this session's book events are still to come.
+
+        The native engine saved it just before one trade: the position, the next order id, the
+        last trade price, and each working order with its queue state. Sequence numbers in it
+        are already relative to this run's first event.
+        """
+        from .fills import _Resting
+
+        r = self._resume
+        self._resumed = True
+        self._state.position = int(r["position"])
+        self.last_price = float(r["last_price"])
+        self._book.next_id = int(r["next_id"])
+        resting = getattr(self.model, "_resting", None)
+        for o in r["orders"]:
+            order = Order(order_id=int(o["id"]), side=Side.BUY if o["buy"] else Side.SELL, size=int(o["size"]),
+                          order_type=OrderType.MARKET if o["market"] else OrderType.LIMIT,
+                          tif=TimeInForce.GTC if o["gtc"] else TimeInForce.DAY,
+                          limit_price=None if o["market"] else float(o["limit"]),
+                          eligible_from_seq=int(o["eligible_seq"]), status=OrderStatus.WORKING,
+                          filled_size=int(o["filled"]), eligible_from_ts=int(o["eligible_ts"]),
+                          cancel_at_ts=int(o["cancel_at"]) if o["cancelling"] else None)
+            self._book.all[order.order_id] = order
+            self._book.working[order.order_id] = order
+            if o["placed"]:
+                if resting is None:
+                    raise ValueError("resume needs the book queue fill model")
+                resting[order.order_id] = _Resting(int(o["session"]), int(o["row"]),
+                                                   float(o["queue"]) if o["has_queue"] else None)
+        return int(r["after_ts"])
 
     def _on_quote(self, quote: Quote, seq: int, actionable: bool) -> None:
         """Update the book, then tell a subscribed strategy. No fill here.
@@ -2163,6 +2268,9 @@ class Engine:
         elif kind == "quote":
             ctx = QuoteContext(port, queue, quote=event, **common)
             handler = self.strategy.on_quote
+        elif kind == "book":
+            ctx = QuoteContext(port, queue, quote=event, **common)
+            handler = self.strategy.on_book_event
         elif kind == "fill":
             ctx = FillContext(port, queue, fill=event, **common)
             handler = self.strategy.on_fill
@@ -2202,6 +2310,9 @@ class Engine:
                     a = self._clamp_reduce_only(a, tick, oid)
                     if a is None:
                         continue
+                if self.inventory_cap is not None and self._exceeds_cap(a):
+                    self.actions_dropped += 1      # Amendment 24 D2; the id stays used
+                    continue
                 self._new_order(a, tick, order_id=oid)
             elif isinstance(a, Cancel):
                 o = self.orders.get(a.order_id)

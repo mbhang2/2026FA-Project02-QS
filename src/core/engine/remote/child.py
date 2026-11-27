@@ -73,7 +73,7 @@ def _load_sibling(name: str):
 
 _protocol = _load_sibling("protocol")
 _surface = _load_sibling("_surface")
-recv, send = _protocol.recv, _protocol.send
+recv, send = _protocol.recv_from_parent, _protocol.send
 from enum import Enum  # noqa: E402
 
 # `src.core.types` and nothing else. `src/core/__init__.py` is empty, so this

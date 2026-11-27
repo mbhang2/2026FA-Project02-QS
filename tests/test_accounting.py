@@ -32,7 +32,8 @@ STRATEGY_PATH = REPO_ROOT / "src" / "strategies" / "current.py"
 
 # Where the engine may be constructed, and with which ticket. Anything else is a
 # new route and has to be argued for rather than merged.
-LEDGER_SITES = {"run.py", "scripts/nq_smoke.py", "scripts/replay.py"}
+# `run_native_trial.py` (Amendment 24): one ledger row per kernel, audited behind RemoteStrategy.
+LEDGER_SITES = {"run.py", "scripts/nq_smoke.py", "scripts/replay.py", "scripts/run_native_trial.py"}
 CALIBRATION_SITES = {
     "src/core/scoring/calibration/null.py",
     "src/core/scoring/calibration/_sweep.py",
@@ -373,3 +374,20 @@ def test_the_oracle_answer_does_not_depend_on_the_threshold(tmp_path):
         report = static_check(path, source)
         answers.add((report.ok, tuple(str(f) for f in report.findings)))
     assert len(answers) == 1, answers
+
+
+def test_native_engines_are_built_only_by_the_accounted_runner():
+    """Amendment 24 A2: a native run belongs to a trial's row. Tests use `RunTicket.for_test`."""
+    offenders = {}
+    for path in python_files():
+        rel = str(path.relative_to(REPO_ROOT))
+        if rel == "src/core/runlog.py":
+            continue
+        for line, name in calls_named(path, {"NativeEngine", "for_native_child"}):
+            # The control runs only its own committed kernels, on a calibration ticket.
+            allowed = {"scripts/run_native_trial.py": {"NativeEngine", "for_native_child"},
+                       "scripts/crypto_mm_control.py": {"NativeEngine"}}
+            if name not in allowed.get(rel, set()):
+                offenders.setdefault(rel, []).append(f"line {line}: {name}")
+    assert not offenders, offenders
+    assert calls_named(REPO_ROOT / "scripts/run_native_trial.py", {"NativeEngine"})

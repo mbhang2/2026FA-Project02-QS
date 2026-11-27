@@ -1,0 +1,87 @@
+{
+  "binding": "cores",
+  "constraints": [
+    {
+      "advisory": true,
+      "detail": "1.67 GiB per-trial RSS x W vs 14.09 GiB available (/proc/meminfo MemAvailable), 85% headroom -- ADVISORY: RSS is per-process and does not add",
+      "fits": 7,
+      "name": "memory (model)"
+    },
+    {
+      "detail": "20 usable cores via sched_getaffinity",
+      "fits": 20,
+      "name": "cores"
+    },
+    {
+      "detail": "550.5 GiB free (40% used), ~8 MiB budgeted per worker tree",
+      "fits": 70460,
+      "name": "disk"
+    },
+    {
+      "detail": "soft limit 1048576, ~64 descriptors budgeted per worker",
+      "fits": 16384,
+      "name": "open files"
+    }
+  ],
+  "cores": {
+    "brand": "unknown",
+    "cgroup_quota": null,
+    "efficiency": null,
+    "performance": null,
+    "schedulable": 20,
+    "total": 20,
+    "usable": 20,
+    "usable_basis": "sched_getaffinity"
+  },
+  "disk": {
+    "free": 591065432064,
+    "total": 1081101176832,
+    "used_pct": 40.240765504929655
+  },
+  "footprint": {
+    "measured_at": "2026-11-23T18:57:13+00:00",
+    "peak_rss_bytes": 1788383232,
+    "profile": "btc-okx-hft-train",
+    "purpose": "check",
+    "python": "3.14.4",
+    "wall_s": 378.41335180497845
+  },
+  "headroom": 0.85,
+  "history": {
+    "completed": 40,
+    "width": 2
+  },
+  "ignored": null,
+  "limits": {
+    "RLIMIT_AS": {
+      "hard": -1,
+      "soft": -1,
+      "unlimited": true
+    },
+    "RLIMIT_NOFILE": {
+      "hard": 1048576,
+      "soft": 1048576,
+      "unlimited": false
+    },
+    "RLIMIT_NPROC": {
+      "hard": 63377,
+      "soft": 63377,
+      "unlimited": false
+    }
+  },
+  "machine": "59d8f1c5e62606e0",
+  "max_width": 20,
+  "max_width_basis": "measured capacity",
+  "memory": {
+    "available": 15128977408,
+    "available_basis": "/proc/meminfo MemAvailable",
+    "cgroup_limit": null,
+    "swap_total": 4294967296,
+    "swap_used": 532066304,
+    "total": 16623960064
+  },
+  "profile": "btc-okx-hft-train",
+  "reason": "cores allows 20 concurrent trial(s) (20 usable cores via sched_getaffinity)",
+  "verdict": "OK",
+  "width": 2
+}

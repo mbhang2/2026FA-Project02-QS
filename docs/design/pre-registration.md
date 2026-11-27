@@ -2966,6 +2966,14 @@ The same control design as Amendment 25 (`scripts/crypto_mm_control.py`): a simu
 
 **If any arm fails, this amendment is not signed, and no further market-making gate is tested on this control design.** A failure is recorded here with its numbers.
 
+*The arms ran once from commit `5dced06` (`~/crypto-controls/a26/control.json`, SHA-256 `ad30c53aabe0eea031c2bf0063ea0beff4312a1313ccd986199fc52b2d04ce60`), with 2,100 campaigns at `alpha = 0.005` and every return marked.* **They passed all three conditions.**
+
+| arm | impact | passed | Wilson 95% | condition | result |
+|---|---|---|---|---|---|
+| unprofitable | 0.58 | 5 of 1,000 | [0.0021, 0.0117] | upper <= 0.05 | pass |
+| noise | 0.57 | 13 of 1,000 | [0.0076, 0.0221] | upper <= 0.05 | pass |
+| strong | 0.40 | 100 of 100 | [0.9630, 1.0000] | at least 80 | pass |
+
 ### Acceptance, before signing
 
 1. Tests pin F1 to F6: the marks sum to the final open value, a position flat at every close is unaffected, a held position's loss is counted, a missing close is refused, and unmarked scoring still equals `score(reconstruct())` exactly.
